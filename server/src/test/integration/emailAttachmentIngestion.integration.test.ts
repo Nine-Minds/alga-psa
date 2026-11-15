@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import path from 'node:path';
 import process from 'node:process';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -978,8 +979,12 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 });
 
 async function createRegisteredAttachmentActions(): Promise<Record<string, { execute: (params: any, context: any) => Promise<any> }>> {
-  const workflowWorkerModulePath =
-    '../../../../' + 'services/workflow-worker/src/actions/registerEmailAttachmentActions';
+  // Absolute: vitest 4 resolves a relative specifier held in a variable against
+  // the project root, not this file.
+  const workflowWorkerModulePath = path.resolve(
+    __dirname,
+    '../../../../services/workflow-worker/src/actions/registerEmailAttachmentActions',
+  );
   const { registerEmailAttachmentActions } = await import(workflowWorkerModulePath);
 
   const actions = new Map<string, { execute: (params: any, context: any) => Promise<any> }>();

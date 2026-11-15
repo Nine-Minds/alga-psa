@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components';
-import MspLoginForm from './MspLoginForm';
+import MspLoginForm, { type RequestSignInLinks } from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
@@ -12,7 +12,11 @@ import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-r
 import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 interface MspSignInProps {
+  /** Server action that emails per-organization sign-in links; bound by the page. */
+  requestSignInLinks: RequestSignInLinks;
   initialEmail?: string;
+  /** Organization the page is scoped to by a validated `?tenant=<slug>`. */
+  scopedTenant?: { slug: string; name?: string };
 }
 
 // Marketing panel. Kept as data so each entry carries its own key rather than
@@ -27,7 +31,7 @@ const FEATURES = [
   { key: 'documents', icon: FileText, defaultValue: 'Centralized Document Uploads and Storage' },
 ] as const;
 
-export default function MspSignIn({ initialEmail }: MspSignInProps) {
+export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTenant }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -40,6 +44,12 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
   // presented, so the page can say more than "Access Denied".
   const reason = parseOAuthMappingFailureCode(searchParams?.get('reason'));
   const providerEmail = searchParams?.get('providerEmail') ?? '';
+  // The IdP proved the mailbox, but the email spans organizations: hand off to
+  // the same "email me sign-in links" offer the password form shows.
+  const ssoTenantRequired = error === 'AccessDenied' && reason === 'tenant_required';
+  const unscopedSignInHref = searchParams?.get('callbackUrl')
+    ? `/auth/msp/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : '/auth/msp/signin';
 
   // Handle error messages from URL parameters
   useEffect(() => {
@@ -202,11 +212,33 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
               <CardDescription className="text-center">
                 {t('signIn.subtitle', 'Access your managed services platform')}
               </CardDescription>
+              {scopedTenant && (
+                <div className="text-center space-y-1 pt-2" id="msp-scoped-tenant-banner">
+                  <p className="text-sm font-medium text-[rgb(var(--color-text-800))]">
+                    {scopedTenant.name
+                      ? t('signIn.scopedTenant.signingInTo', {
+                          name: scopedTenant.name,
+                          defaultValue: 'Signing in to {{name}}',
+                        })
+                      : t('signIn.scopedTenant.signingInToUnnamed', 'Signing in to the organization from your link')}
+                  </p>
+                  <a
+                    id="msp-scoped-tenant-back-link"
+                    href={unscopedSignInHref}
+                    className="text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
+                  >
+                    {t('signIn.scopedTenant.notYourOrganization', 'Not your organization? Sign in without choosing one')}
+                  </a>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <MspLoginForm
+                requestSignInLinks={requestSignInLinks}
                 callbackUrl={callbackUrl}
-                initialEmail={initialEmail}
+                initialEmail={ssoTenantRequired && providerEmail ? providerEmail : initialEmail}
+                tenantSlug={scopedTenant?.slug}
+                initialTenantRequired={ssoTenantRequired}
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
               />

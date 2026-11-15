@@ -86,8 +86,8 @@ async function findContractEndBlocks(
  *
  * Mirrors expiredCreditsHandler but hour blocks KEEP their remaining minutes
  * for display ("expired with 3.5 hrs unused") — the audit row records the
- * amount. Balance/eligibility queries filter on status, so keeping the minutes
- * is display-only and never lets an expired block burn.
+ * amount. Expired minutes are excluded from current availability, but contract
+ * work performed within the block and assignment dates may draw them later.
  *
  * Contract-end pass (captain decision 2): an ACTIVE contract block whose assignment has ended
  * without renewal (end_date passed in the tenant business date, or the assignment is no longer
@@ -100,8 +100,8 @@ async function findContractEndBlocks(
  *    them, and voiding one would leave an invoice line with no block. They stay pending; if the
  *    invoice is finalized after the end date the block activates and the next pass forfeits it
  *    (audit row included), so nothing active outlives its contract.
- * Time that already drew a forfeited block keeps its allocations (the re-draw never moves entries
- * pinned to an expired block), so it stays billed exactly once.
+ * Invoiced allocations remain fixed. Uninvoiced time is rechecked against the
+ * work-date boundaries when the line is reconciled.
  */
 export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): Promise<void> {
   const { tenantId, clientId } = data;
@@ -216,6 +216,7 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
                 client_contract_id: contractEnd.client_contract_id,
                 assignment_end_date: contractEnd.end_date,
                 assignment_status: contractEnd.assignment_status,
+                effective_end_date: contractEnd.assignment_status === 'expired' ? contractEnd.end_date : businessDate,
                 expiration_date: block.expiration_date ? toCalendarDateString(block.expiration_date) : null,
                 remaining_minutes_at_expiration: Number(block.remaining_minutes),
               },
@@ -249,9 +250,8 @@ export async function expiredHourBlocksHandler(data: ExpiredHourBlocksJobData): 
         }
 
         // Expiry shrinks the line's available pool: re-draw uninvoiced entries so
-        // work that was only covered by the expired block's remainder falls to
-        // overage (entries already drawn against the expired block stay as they
-        // were). The audit rows above are kept as-is.
+        // Recheck uninvoiced entries against the block and assignment dates;
+        // invoiced allocations stay fixed. The audit rows above are kept as-is.
         // An ended contract owes nothing further: cancel the line's scheduled issuances (config row is
         // already locked above) before the re-draw.
         for (const lineId of [...contractEndLineIds].sort()) {

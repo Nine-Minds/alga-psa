@@ -1,8 +1,18 @@
 import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { IContractLinePrepaidBlock, PrepaidBlockReplenishmentTier } from '@alga-psa/types';
-import { syncPrepaidBlockIssuancesForContractLine } from './prepaidBlockIssuanceSync';
+import {
+  PREPAID_BLOCK_ISSUE_MODES,
+  PREPAID_BLOCK_MAX_ROLLOVER_PERIODS,
+  type IContractLinePrepaidBlock,
+  type PrepaidBlockIssueMode,
+  type PrepaidBlockReplenishmentTier,
+} from '@alga-psa/types';
+import {
+  scheduleStartIssuanceAfterCadenceSwitch,
+  syncPrepaidBlockIssuancesForContractLine,
+} from './prepaidBlockIssuanceSync';
+import { syncRecurringServicePeriodsForContractLine } from '../actions/recurringServicePeriodSync';
 
 /**
  * Transaction-level helpers for the Prepaid Block line config
@@ -24,6 +34,10 @@ export const PREPAID_BLOCK_REPLENISHMENT_TIERS: readonly PrepaidBlockReplenishme
 export const PREPAID_BLOCK_MAX_EXPIRY_MONTHS = 120;
 
 export interface PrepaidBlockConfigInput {
+  /** 'consumption' (default) or 'cadence' (one block per service period, billed in advance). */
+  issue_mode?: PrepaidBlockIssueMode;
+  /** Cadence mode only: further periods a block stays valid after its own (0..12, default 0). */
+  rollover_periods?: number;
   /** Block size in minutes. Fractional hours are fine (e.g. 90 = 1.5 h). */
   block_minutes: number;
   /** Minor units of the contract currency. */
@@ -40,6 +54,8 @@ export interface PrepaidBlockConfigInput {
 
 /** Normalised, schema-shaped config (everything defaulted). */
 export interface NormalizedPrepaidBlockConfig {
+  issue_mode: PrepaidBlockIssueMode;
+  rollover_periods: number;
   block_minutes: number;
   block_price: number;
   sold_as_service_id: string | null;
@@ -72,6 +88,51 @@ export function normalizePrepaidBlockConfigInput(input: PrepaidBlockConfigInput)
   if (!Number.isSafeInteger(input.block_price) || input.block_price < 0) {
     throw new Error('Cannot save prepaid block: the block price must be zero or greater (in minor currency units).');
   }
+  const issueMode = input.issue_mode ?? 'consumption';
+  if (!PREPAID_BLOCK_ISSUE_MODES.includes(issueMode)) {
+    throw new Error('Cannot save prepaid block: issue blocks either every billing period or when the current block runs out.');
+  }
+  const rolloverPeriods = input.rollover_periods ?? 0;
+  if (!Number.isInteger(rolloverPeriods) || rolloverPeriods < 0 || rolloverPeriods > PREPAID_BLOCK_MAX_ROLLOVER_PERIODS) {
+    throw new Error(`Cannot save prepaid block: unused hours can carry over for 0 to ${PREPAID_BLOCK_MAX_ROLLOVER_PERIODS} periods.`);
+  }
+  const tier = input.replenishment_tier ?? 'draft';
+  if (!PREPAID_BLOCK_REPLENISHMENT_TIERS.includes(tier)) {
+    throw new Error('Cannot save prepaid block: the follow-on block must be a draft or auto-issued invoice.');
+  }
+  const base = {
+    issue_mode: issueMode,
+    rollover_periods: rolloverPeriods,
+    block_minutes: input.block_minutes,
+    block_price: input.block_price,
+    sold_as_service_id: input.sold_as_service_id ?? null,
+    replenishment_tier: tier,
+  };
+
+  if (issueMode === 'cadence') {
+    // The consumption triggers do not apply (a block per period is issued by the cadence, and
+    // its validity is counted in periods, not months). Only an explicit conflicting value is
+    // refused; unset and "off" values mean the same thing here.
+    if (input.trigger_on_exhaustion
+      || input.trigger_on_expiry
+      || input.trigger_on_renewal
+      || input.trigger_threshold_percent != null
+      || input.expiry_months != null) {
+      throw new Error('Cannot save prepaid block: blocks issued every billing period do not use the exhaustion, threshold, expiry or renewal triggers, or an expiry period. Carry unused hours over with the rollover setting instead.');
+    }
+    return {
+      ...base,
+      expiry_months: null,
+      trigger_on_exhaustion: false,
+      trigger_threshold_percent: null,
+      trigger_on_expiry: false,
+      trigger_on_renewal: false,
+    };
+  }
+  if (rolloverPeriods !== 0) {
+    throw new Error('Cannot save prepaid block: rollover applies only to blocks issued every billing period.');
+  }
+
   const expiryMonths = input.expiry_months ?? null;
   if (expiryMonths !== null
     && (!Number.isInteger(expiryMonths) || expiryMonths < 1 || expiryMonths > PREPAID_BLOCK_MAX_EXPIRY_MONTHS)) {
@@ -85,20 +146,13 @@ export function normalizePrepaidBlockConfigInput(input: PrepaidBlockConfigInput)
   if (threshold !== null && (!Number.isInteger(threshold) || threshold < 1 || threshold > 99)) {
     throw new Error('Cannot save prepaid block: the usage threshold must be between 1 and 99 percent.');
   }
-  const tier = input.replenishment_tier ?? 'draft';
-  if (!PREPAID_BLOCK_REPLENISHMENT_TIERS.includes(tier)) {
-    throw new Error('Cannot save prepaid block: the follow-on block must be a draft or auto-issued invoice.');
-  }
   return {
-    block_minutes: input.block_minutes,
-    block_price: input.block_price,
-    sold_as_service_id: input.sold_as_service_id ?? null,
+    ...base,
     expiry_months: expiryMonths,
     trigger_on_exhaustion: input.trigger_on_exhaustion ?? true,
     trigger_threshold_percent: threshold,
     trigger_on_expiry: triggerOnExpiry,
     trigger_on_renewal: input.trigger_on_renewal ?? false,
-    replenishment_tier: tier,
   };
 }
 
@@ -221,6 +275,36 @@ async function findOtherActiveLineWarnings(
 }
 
 /**
+ * A cadence block is its own recurring stream of the line (plan D3/D9), so a
+ * config change that adds or removes that stream re-synchronizes the line's
+ * service periods in the same transaction (under the config lock the caller
+ * already holds): switching to cadence materializes block periods from the
+ * next unbilled one; switching away (or removing the config) retires the
+ * unbilled ones. Billed periods and live blocks are never touched. Editing a
+ * live cadence config (size, price, rollover) needs no sync: the terms are read
+ * when a period is billed, so it applies to the next unbilled period only.
+ */
+async function applyIssueModeChange(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  previousMode: PrepaidBlockIssueMode | null,
+  nextMode: PrepaidBlockIssueMode | null,
+): Promise<void> {
+  const wasCadence = previousMode === 'cadence';
+  const isCadence = nextMode === 'cadence';
+  if (wasCadence === isCadence) return;
+  await syncRecurringServicePeriodsForContractLine(trx, {
+    tenant,
+    contractLineId,
+    sourceRunPrefix: isCadence ? 'prepaid_block_cadence_enabled' : 'prepaid_block_cadence_disabled',
+  });
+  if (wasCadence && nextMode === 'consumption') {
+    await scheduleStartIssuanceAfterCadenceSwitch(trx, tenant, contractLineId);
+  }
+}
+
+/**
  * Create or replace a line's block config. Validates the line (Hourly, no
  * pools, sold-as service on the line, every covered service rate > 0), writes
  * the row, and syncs the line's block issuances. The config row is locked
@@ -236,7 +320,10 @@ export async function upsertContractLinePrepaidBlockInTransaction(
   const db = tenantDb(trx, tenant);
 
   // Lock an existing config row first; a first-time insert is serialised by the PK.
-  await db.table('contract_line_prepaid_blocks').where({ contract_line_id: contractLineId }).forUpdate().first('contract_line_id');
+  const previous = await db.table('contract_line_prepaid_blocks')
+    .where({ contract_line_id: contractLineId })
+    .forUpdate()
+    .first('contract_line_id', 'issue_mode');
 
   const line = await db.table('contract_lines')
     .where({ contract_line_id: contractLineId })
@@ -280,6 +367,7 @@ export async function upsertContractLinePrepaidBlockInTransaction(
     .merge({ ...normalized, sold_as_service_id: soldAs, updated_at: now });
 
   await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
+  await applyIssueModeChange(trx, tenant, contractLineId, previous?.issue_mode ?? null, normalized.issue_mode);
 
   const config = await db.table('contract_line_prepaid_blocks')
     .where({ contract_line_id: contractLineId })
@@ -312,8 +400,12 @@ export async function removeContractLinePrepaidBlockInTransaction(
     throw new Error('Cannot remove prepaid block configuration: the line has a pending block or a block with hours remaining. Let it be used up or expire (or delete its draft invoice) first.');
   }
 
+  const previousMode = (await db.table('contract_line_prepaid_blocks')
+    .where({ contract_line_id: contractLineId })
+    .first('issue_mode'))?.issue_mode ?? null;
   await db.table('contract_line_prepaid_blocks').where({ contract_line_id: contractLineId }).delete();
   await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
+  await applyIssueModeChange(trx, tenant, contractLineId, previousMode, null);
   return { removed: true };
 }
 
@@ -339,6 +431,8 @@ export async function copyPresetPrepaidBlockToLine(
     block_minutes: Number(preset.block_minutes),
     block_price: Number(preset.block_price),
     sold_as_service_id: soldAs,
+    issue_mode: preset.issue_mode ?? 'consumption',
+    rollover_periods: Number(preset.rollover_periods ?? 0),
     expiry_months: preset.expiry_months == null ? null : Number(preset.expiry_months),
     trigger_on_exhaustion: Boolean(preset.trigger_on_exhaustion),
     trigger_threshold_percent: preset.trigger_threshold_percent == null ? null : Number(preset.trigger_threshold_percent),

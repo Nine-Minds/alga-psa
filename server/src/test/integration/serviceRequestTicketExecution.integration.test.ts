@@ -30,6 +30,18 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+/**
+ * The ticket description is serialized rich-text blocks; the configured prefix,
+ * when present, is the first paragraph. Returns that paragraph's plain text.
+ */
+function descriptionPrefixParagraph(ticket: { attributes?: unknown }): string | undefined {
+  const description = (ticket.attributes as { description?: string } | null)?.description;
+  if (!description) return undefined;
+  const [first] = JSON.parse(description) as Array<{ type?: string; content?: Array<{ text?: string }> }>;
+  if (first?.type !== 'paragraph' || !Array.isArray(first.content)) return undefined;
+  return first.content.map((inline) => inline.text ?? '').join('');
+}
+
 function tenantTable(tenant: string, table: string) {
   return tenantDb(db, tenant).table(table);
 }
@@ -45,6 +57,11 @@ function schemaTable(table: string) {
 }
 
 async function cleanupTenant(tenant: string): Promise<void> {
+  await tenantTable(tenant, 'ticket_audit_logs').del();
+  await tenantTable(tenant, 'ticket_checklist_items').del();
+  await tenantTable(tenant, 'checklist_template_apply_rules').del();
+  await tenantTable(tenant, 'checklist_template_items').del();
+  await tenantTable(tenant, 'checklist_templates').del();
   await tenantTable(tenant, 'service_request_submission_attachments').del();
   await tenantTable(tenant, 'service_request_submissions').del();
   await tenantTable(tenant, 'service_request_definition_versions').del();
@@ -56,6 +73,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
   await tenantTable(tenant, 'boards').del();
   await tenantTable(tenant, 'clients').del();
   await tenantTable(tenant, 'users').del();
+  await tenantTable(tenant, 'tenant_settings').del();
   await tenantRows().where({ tenant }).del();
 }
 
@@ -155,6 +173,7 @@ async function createPublishedDefinition(args: {
   versionId: string;
   executionConfig: Record<string, unknown>;
   linkedServiceId?: string | null;
+  formSchemaSnapshot?: Record<string, unknown>;
 }) {
   await tenantTable(args.tenant, 'service_request_definitions').insert({
     tenant: args.tenant,
@@ -177,7 +196,7 @@ async function createPublishedDefinition(args: {
     definition_id: args.definitionId,
     version_number: 1,
     name: 'Employee Onboarding',
-    form_schema_snapshot: {
+    form_schema_snapshot: args.formSchemaSnapshot ?? {
       fields: [
         { key: 'request_title', type: 'short-text', label: 'Request Title', required: true },
         { key: 'notes', type: 'long-text', label: 'Notes', required: false },
@@ -259,6 +278,11 @@ describe('service request ticket-only execution', () => {
       },
     });
 
+    const templateId = uuidv4();
+    await tenantTable(fixture.tenant, 'checklist_templates').insert({ tenant: fixture.tenant, template_id: templateId, name: 'Service request steps', is_active: true });
+    await tenantTable(fixture.tenant, 'checklist_template_items').insert({ tenant: fixture.tenant, template_id: templateId, item_name: 'Linked before auto-apply', order_number: 0, is_required: false });
+    await tenantTable(fixture.tenant, 'checklist_template_apply_rules').insert({ tenant: fixture.tenant, template_id: templateId, is_enabled: true, where: JSON.stringify({ join: 'and', clauses: [{ path: 'service_request_definition_id', operator: 'equals', value: definitionId }] }) });
+
     const result = await submitPortalServiceRequest({
       knex: db,
       tenant: fixture.tenant,
@@ -286,14 +310,110 @@ describe('service request ticket-only execution', () => {
       .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket).toBeTruthy();
+    const appliedItem = await tenantTable(fixture.tenant, 'ticket_checklist_items')
+      .where({ ticket_id: result.createdTicketId, template_id: templateId }).first();
+    expect(appliedItem?.item_name).toBe('Linked before auto-apply');
     expect(createdTicket.title).toBe('New Hire Laptop');
     expect(createdTicket.board_id).toBe(fixture.boardId);
     expect(createdTicket.status_id).toBe(fixture.statusId);
     expect(createdTicket.priority_id).toBe(fixture.priorityId);
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
     expect(ticketDescription).toContain('Portal Service Request');
-    expect(ticketDescription).toContain('request_title: New Hire Laptop');
-    expect(ticketDescription).toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Request Title"');
+    expect(ticketDescription).toContain('"text":"New Hire Laptop"');
+    expect(ticketDescription).toContain('"text":"Ship before Monday"');
+    expect(ticketDescription).not.toContain('request_title');
+  });
+
+  it('renders the ticket subject template and description prefix by field type', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          {
+            key: 'hardware',
+            type: 'select',
+            label: 'Hardware',
+            options: [{ value: 'laptop', label: 'Laptop' }, { value: 'desktop', label: 'Desktop' }],
+          },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}} ({{hardware}})',
+        descriptionPrefix: 'Requested for {{employee_name}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', hardware: 'laptop' },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)');
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('Requested for Jane Doe');
+  });
+
+  it('formats dates and checkboxes in the tenant default locale', async () => {
+    const fixture = await createTicketFixture();
+    const definitionId = uuidv4();
+    await tenantTable(fixture.tenant, 'tenant_settings').insert({
+      tenant: fixture.tenant,
+      settings: { defaultLocale: 'de' },
+    });
+
+    await createPublishedDefinition({
+      tenant: fixture.tenant,
+      definitionId,
+      versionId: uuidv4(),
+      formSchemaSnapshot: {
+        fields: [
+          { key: 'employee_name', type: 'short-text', label: 'Employee Name', required: true },
+          { key: 'start_date', type: 'date', label: 'Start Date' },
+          { key: 'needs_vpn', type: 'checkbox', label: 'Needs VPN access' },
+        ],
+      },
+      executionConfig: {
+        boardId: fixture.boardId,
+        statusId: fixture.statusId,
+        priorityId: fixture.priorityId,
+        titleTemplate: 'New Hire for Employee: {{employee_name}}, {{start_date}}',
+        descriptionPrefix: 'VPN: {{needs_vpn}}',
+      },
+    });
+
+    const result = await submitPortalServiceRequest({
+      knex: db,
+      tenant: fixture.tenant,
+      definitionId,
+      requesterUserId: fixture.requesterUserId,
+      clientId: fixture.clientId,
+      payload: { employee_name: 'Jane Doe', start_date: '2026-03-02', needs_vpn: true },
+    });
+
+    expect(result.executionStatus).toBe('succeeded');
+    const createdTicket = await tenantTable(fixture.tenant, 'tickets')
+      .where({ ticket_id: result.createdTicketId })
+      .first();
+    expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, 2. März 2026');
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('VPN: Ja');
   });
 
   it('T027: ticket-only execution failure keeps submission persisted with failed status and error summary', async () => {
@@ -493,8 +613,8 @@ describe('service request ticket-only execution', () => {
     expect(createdTicket).toBeTruthy();
     expect(createdTicket.title).toBe('New Hire Setup: Laptop Provisioning');
     const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
-    expect(ticketDescription).toBe('Starter Template Request');
-    expect(ticketDescription).not.toContain('request_title: Laptop Provisioning');
-    expect(ticketDescription).not.toContain('notes: Ship before Monday');
+    expect(ticketDescription).toContain('"text":"Starter Template Request"');
+    expect(ticketDescription).not.toContain('Laptop Provisioning');
+    expect(ticketDescription).not.toContain('Ship before Monday');
   });
 });

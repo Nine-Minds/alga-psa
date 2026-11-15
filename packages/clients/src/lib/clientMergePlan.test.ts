@@ -95,6 +95,20 @@ describe('evaluateMergeGuards', () => {
       targetAncestorClientIds: ['middle-1', 'source-1'],
     }).map((entry) => entry.code)).toContain('PARENT_LINK_CYCLE');
   });
+
+  it('refuses to merge away a client whose co-managed workspace still holds seats', () => {
+    expect(evaluateMergeGuards({
+      source: client({ hasLiveCoManagement: true }),
+      target: client({ clientId: 'target-1' }),
+      targetAncestorClientIds: [],
+    }).map((entry) => entry.code)).toContain('SOURCE_HAS_CO_MANAGEMENT');
+    // Merging another client into a co-managed one leaves its workspace intact.
+    expect(evaluateMergeGuards({
+      source: client(),
+      target: client({ clientId: 'target-1', hasLiveCoManagement: true }),
+      targetAncestorClientIds: [],
+    })).toEqual([]);
+  });
 });
 
 describe('planBillingProfileMoves', () => {

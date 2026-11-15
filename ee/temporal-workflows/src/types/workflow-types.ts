@@ -1,3 +1,5 @@
+import type { ProductCode } from '@alga-psa/types';
+
 // Define ISO8601String locally to avoid import issues
 export type ISO8601String = string;
 
@@ -107,7 +109,7 @@ export interface CreateTenantActivityInput {
   // (e.g. IAP flows); set tenants.plan directly if provided.
   plan?: 'solo' | 'pro';
   // Optional product entitlement seam, orthogonal to billing tier.
-  productCode?: 'psa' | 'algadesk';
+  productCode?: ProductCode;
 
   // Apple IAP data — only set when billingSource === 'apple_iap'.
   appleIap?: AppleIapTenantInput;
@@ -150,7 +152,7 @@ export interface CreateAdminUserActivityResult {
 
 export interface SetupTenantDataActivityInput {
   tenantId: string;
-  adminUserId: string;
+  adminUserId?: string;
   clientId?: string;
   contractLine?: string;
   emailProvider?: 'smtp' | 'resend';

@@ -75,8 +75,16 @@ async function seed() {
     start_date: '2026-01-05',
     end_date: '2026-01-11',
   });
+  // One sheet per (user, period): Alice's approved sheet lives in a later period.
+  const laterPeriodId = uuidv4();
+  await tenantTable(tenantId, 'time_periods').insert({
+    period_id: laterPeriodId,
+    tenant: tenantId,
+    start_date: '2026-01-12',
+    end_date: '2026-01-18',
+  });
   const aliceDraft = await seedSheet(tenantId, alice, periodId, 'DRAFT');
-  const aliceApproved = await seedSheet(tenantId, alice, periodId, 'APPROVED');
+  const aliceApproved = await seedSheet(tenantId, alice, laterPeriodId, 'APPROVED');
   const bobDraft = await seedSheet(tenantId, bob, periodId, 'DRAFT');
   return { tenantId, alice, bob, aliceDraft, aliceApproved, bobDraft };
 }
@@ -138,6 +146,27 @@ describe('TimeSheetService.search (real Postgres)', () => {
     expect(withDates).toHaveLength(2);
     expect(await service.search(parse({ query: 'zebra', date_from: '2026-02-01' }), ctx)).toEqual([]);
     expect(await service.search(parse({ query: 'zebra', date_to: '2026-01-10' }), ctx)).toEqual([]);
+  });
+
+  it('searches note history without exposing the retained time_sheets.notes compatibility column', async () => {
+    const f = await seed();
+    await tenantTable(f.tenantId, 'time_sheets').where({ id: f.aliceDraft }).update({
+      notes: 'N-1 compatibility value',
+    });
+    await tenantTable(f.tenantId, 'time_sheet_notes').insert({
+      tenant: f.tenantId,
+      time_sheet_id: f.aliceDraft,
+      kind: 'legacy',
+      note: 'Quarterly inventory reconciliation',
+      detail: 'Migrated legacy note',
+      created_by: null,
+    });
+    const service = serviceFor(f.tenantId);
+    const ctx = { tenant: f.tenantId, userId: f.alice } as any;
+
+    const matches = await service.search(parse({ query: 'inventory', fields: 'note' }), ctx);
+    expect(matches.map((row) => row.id)).toEqual([f.aliceDraft]);
+    expect(matches[0]).not.toHaveProperty('notes');
   });
 
   it('every real result row matches the documented response row schema (no drift)', async () => {

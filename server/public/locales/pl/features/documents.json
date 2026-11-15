@@ -210,6 +210,7 @@
     "fileError": "Nie udało się przesłać pliku"
   },
   "folders": {
+    "show": "Pokaż foldery",
     "root": "Główny",
     "loadFailed": "Nie udało się wczytać drzewa folderów",
     "deleteConfirm": "Czy na pewno chcesz usunąć folder \"{{name}}\"? Zadziała to tylko, jeśli folder jest pusty.",
@@ -318,6 +319,11 @@
   },
   "ticketDocuments": "Dokumenty zgłoszenia",
   "actions": {
+    "markdown": "Markdown",
+    "print": "Drukuj",
+    "edit": "Edytuj",
+    "upload": "Prześlij",
+    "closePreview": "Zamknij podgląd",
     "save": "Zapisz",
     "saving": "Zapisywanie...",
     "cancel": "Anuluj"
@@ -392,6 +398,18 @@
     "pageCount_few": "{{count}} strony",
     "pageCount_many": "{{count}} stron",
     "pageCount_other": "{{count}} strony"
+  },
+  "fallbackUserName": "Użytkownik",
+  "selectOrCreate": "Wybierz dokument lub utwórz nowy.",
+  "viewMode": {
+    "grid": "Siatka",
+    "list": "Lista"
+  },
+  "unsavedChanges": {
+    "title": "Niezapisane zmiany",
+    "message": "Czy na pewno chcesz anulować? Wszystkie niezapisane zmiany zostaną utracone.",
+    "confirm": "Odrzuć zmiany",
+    "cancel": "Kontynuuj edycję"
   },
   "skeleton": {
     "cardLabel": "Szkielet karty dokumentu"

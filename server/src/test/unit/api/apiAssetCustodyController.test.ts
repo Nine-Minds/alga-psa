@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   calls: [] as string[],
   open: { custody_id: 'c1' } as unknown,
   throwOn: null as null | Error,
+  queueUser: null as any,
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -20,9 +21,12 @@ vi.mock('@/lib/auth/rbac', () => ({
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/assetReadGuard', () => ({
-  guardAssetRead: vi.fn(async () =>
-    state.guard ? new Response(JSON.stringify({ error: { message: 'Asset not found' } }), { status: state.guard.status }) : null
-  ),
+  readAssetGateProjection: vi.fn(async () => state.guard
+    ? { projection: null, denied: new Response(JSON.stringify({ error: { message: 'Asset not found' } }), { status: state.guard.status }) }
+    : { projection: {} as any, denied: null }),
+}));
+vi.mock('server/src/lib/api/controllers/authorizationKernel', () => ({
+  reprojectUnderDecision: vi.fn((_projection: unknown, record: unknown) => record),
 }));
 vi.mock('@alga-psa/assets/lib/custody/service', () => ({
   getAssetCustodyService: vi.fn(async () => {
@@ -41,8 +45,9 @@ vi.mock('@alga-psa/assets/lib/custody/service', () => ({
     if (state.throwOn) throw state.throwOn;
     return { custody: { custody_id: 'c1' }, event: { event_id: 'e2' } };
   }),
-  listCustodyQueueService: vi.fn(async () => {
+  listCustodyQueueService: vi.fn(async (_knex: unknown, _tenant: string, user: unknown) => {
     state.calls.push('queue');
+    state.queueUser = user;
     return { rows: [], total: 0, counts: {} };
   }),
 }));
@@ -53,7 +58,7 @@ const A = '6f1c2b1e-0b57-4a53-9d77-2f0f4d9f1a11';
 const L = '7f1c2b1e-0b57-4a53-9d77-2f0f4d9f1a11';
 const req = (url: string, body?: unknown) => {
   const r: any = new Request(`http://x${url}`, body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) });
-  r.context = { tenant: 't1', user: { user_id: 'u1', user_type: 'internal' } };
+  r.context = { tenant: 't1', user: { user_id: 'u1', user_type: 'internal' }, apiKeyId: 'assigned-key' };
   return r;
 };
 
@@ -63,6 +68,7 @@ beforeEach(() => {
   state.calls = [];
   state.open = { custody_id: 'c1' };
   state.throwOn = null;
+  state.queueUser = null;
 });
 
 describe('ApiAssetCustodyController', () => {
@@ -117,5 +123,6 @@ describe('ApiAssetCustodyController', () => {
   it('queue validates filters and returns the page', async () => {
     expect((await c.queue(req('/api/v1/asset-custody?next_action_party=nobody'))).status).toBe(400);
     expect((await c.queue(req('/api/v1/asset-custody'))).status).toBe(200);
+    expect(state.queueUser).toMatchObject({ user_id: 'u1', apiKeyId: 'assigned-key' });
   });
 });

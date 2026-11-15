@@ -217,7 +217,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <>
             {errorMessage && (
                 <Dialog
                     id="billing-config-error"
@@ -250,54 +250,60 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     <TabsTrigger value="taxRates">{t('billingConfiguration.taxRates', { defaultValue: 'Tax rates' })}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
-                    <BillingConfigForm
-                        billingConfig={billingConfig}
-                        handleSelectChange={handleSelectChange}
-                        contacts={contacts}
-                        clientId={client.client_id}
-                    />
+                    {/* The form wraps only what handleSubmit saves. The Contracts tab renders
+                        ClientContractAssignment, whose edit dialog has its own <form>; it must
+                        never sit inside this one (nested forms are invalid HTML and React submit
+                        events bubble to the outer onSubmit). */}
+                    <form onSubmit={handleSubmit}>
+                        <BillingConfigForm
+                            billingConfig={billingConfig}
+                            handleSelectChange={handleSelectChange}
+                            contacts={contacts}
+                            clientId={client.client_id}
+                        />
 
-                    <ClientBillingSchedule clientId={client.client_id} />
+                        <ClientBillingSchedule clientId={client.client_id} />
 
-                    <ClientBillingProfiles clientId={client.client_id} />
+                        <ClientBillingProfiles clientId={client.client_id} />
 
-                    <ClientZeroDollarInvoiceSettings
-                        clientId={client.client_id}
-                    />
+                        <ClientZeroDollarInvoiceSettings
+                            clientId={client.client_id}
+                        />
 
-                    <ClientDefaultTimeEntryServiceSettings
-                        clientId={client.client_id}
-                    />
+                        <ClientDefaultTimeEntryServiceSettings
+                            clientId={client.client_id}
+                        />
 
-                    <ClientCreditExpirationSettings
-                        clientId={client.client_id}
-                    />
+                        <ClientCreditExpirationSettings
+                            clientId={client.client_id}
+                        />
 
-                    <ClientPrepaidBalanceAlertSettings
-                        clientId={client.client_id}
-                        defaultCurrencyCode={client.default_currency_code}
-                    />
+                        <ClientPrepaidBalanceAlertSettings
+                            clientId={client.client_id}
+                            defaultCurrencyCode={client.default_currency_code}
+                        />
 
-                    <ClientCreditDrawdownSettings
-                        clientId={client.client_id}
-                    />
+                        <ClientCreditDrawdownSettings
+                            clientId={client.client_id}
+                        />
 
-                    <ClientExternalCreditSettings
-                        clientId={client.client_id}
-                    />
+                        <ClientExternalCreditSettings
+                            clientId={client.client_id}
+                        />
 
-                    <DrawerFooter>
-                        <Button
-                            id="save-billing-config-btn"
-                            type="submit"
-                            variant="default"
-                            disabled={isSavingBillingConfig}
-                        >
-                            {isSavingBillingConfig
-                                ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                                : t('billingConfiguration.save', { defaultValue: 'Save Billing Configuration' })}
-                        </Button>
-                    </DrawerFooter>
+                        <DrawerFooter>
+                            <Button
+                                id="save-billing-config-btn"
+                                type="submit"
+                                variant="default"
+                                disabled={isSavingBillingConfig}
+                            >
+                                {isSavingBillingConfig
+                                    ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                                    : t('billingConfiguration.save', { defaultValue: 'Save Billing Configuration' })}
+                            </Button>
+                        </DrawerFooter>
+                    </form>
                 </TabsContent>
 
                 <TabsContent value="contracts" className="space-y-6">
@@ -315,7 +321,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     />
                 </TabsContent>
             </Tabs>
-        </form>
+        </>
     );
 };
 

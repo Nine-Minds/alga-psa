@@ -1,12 +1,13 @@
 import Projects from '@alga-psa/projects/components/Projects';
-import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
+import { getProjects } from '@alga-psa/projects/actions/projectActions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
-import type { IClient, IProject, ITag } from '@alga-psa/types';
+import type { IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,9 +28,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     return boundary;
   }
 
-  const [projectsResult, clientsData, params, smartSearchAvailable] = await Promise.all([
+  const [projectsResult, params, smartSearchAvailable] = await Promise.all([
     getProjects(),
-    getAllClientsForProjects() as Promise<IClient[]>,
     searchParams,
     // Decided on the server so the Smart search affordance is right on first
     // paint. The CE stub answers false; any failure hides it.
@@ -127,14 +127,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   }
 
   return (
+    <>
+    <CoManagedProjectTaskQueueLink />
     <Projects
       initialProjects={projectsData}
-      clients={clientsData}
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}
       smartSearchAvailable={smartSearchAvailable}
     />
+    </>
   );
 }
 

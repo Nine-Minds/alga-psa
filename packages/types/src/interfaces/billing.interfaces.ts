@@ -102,6 +102,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)
   allocated_amount?: number; // Calculated allocated amount (INTEGER cents)
+  /**
+   * Presentation only (bundle component snapshot): the configured/revision
+   * quantity before the `|| 1` clamp applied to detail rows. Never affects amounts.
+   */
+  raw_quantity?: number | null;
+  /** Presentation only: how this service is priced inside its Fixed line. */
+  pricing_basis?: 'unit' | 'bundle';
   // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
@@ -167,6 +174,12 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
    * base rate, overtime hours at the overtime rate); both share `entryId`.
    */
   timeSegment?: 'regular' | 'overtime';
+  /**
+   * Set when the line carries a cadence Prepaid Block: this is the time the
+   * block did not cover, billed at the line's hourly rate in arrears. Drives
+   * the "(over prepaid block)" suffix on the invoice line.
+   */
+  overPrepaidBlock?: boolean;
   /**
    * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
    * when this charge is invoiced. Renderer-only metadata: it must never feed
@@ -255,6 +268,45 @@ export interface IBillingCharge extends TenantEntity {
    * instead of duplicating on regeneration.
    */
   contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+  /**
+   * Set when the charge's source evidence (approved time) is dated inside a
+   * service period that an issued invoice already closed. The charge bills on
+   * this invoice and reports the period of the invoice that closed it; it never
+   * claims this invoice's recurring service period.
+   */
+  lateForServicePeriod?: ILateServicePeriodSource | null;
+}
+
+/**
+ * Approved, uninvoiced hourly time dated inside a service period an issued
+ * invoice already closed. `next_invoice`: bills on the line's next invoice.
+ * `outside_lookback`: older than the lookback; listed for the operator but not billed.
+ */
+export interface ILateHourlyTimeNotice {
+  entryId: string;
+  clientId: string;
+  clientName: string | null;
+  contractLineId: string;
+  contractLineName: string | null;
+  serviceName: string | null;
+  workItemLabel: string | null;
+  technicianName: string | null;
+  workDate: ISO8601String;
+  billableMinutes: number;
+  closedPeriodStart: ISO8601String;
+  closedPeriodEnd: ISO8601String;
+  closedByInvoiceNumber: string | null;
+  closedByInvoiceStatus: string | null;
+  disposition: 'next_invoice' | 'outside_lookback';
+}
+
+export interface ILateServicePeriodSource {
+  /** Inclusive start of the closed service period the evidence is dated in. */
+  servicePeriodStart: ISO8601String;
+  /** Inclusive end of that period. */
+  servicePeriodEnd: ISO8601String;
+  /** The invoice that closed that period. */
+  closedByInvoiceId: string | null;
 }
 
 export interface IContractChangeAdjustmentSource {
@@ -501,7 +553,18 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
  */
 export interface IPrepaidBlockCharge extends IBillingCharge, TenantEntity {
   type: 'prepaid_block';
-  issuance_id: string;
+  /**
+   * The scheduled consumption-mode issuance this charge bills. Null for a
+   * cadence block, which has no issuance: the recurring service period
+   * (`servicePeriodRecordId`) it bills is its identity.
+   */
+  issuance_id: string | null;
+  /** Cadence blocks only: first day the issued block may be drawn (period start). */
+  valid_from?: ISO8601String;
+  /** Cadence blocks only: last day the issued block may be drawn (inclusive). */
+  expiration_date?: ISO8601String;
+  /** Cadence blocks only: cadence periods the block's hours stay usable after its own. */
+  rollover_periods?: number;
   /** The Hourly line carrying the block config; also `client_contract_line_id`. */
   contract_line_id: string;
   /** Catalog service the invoice line is sold as (config.sold_as_service_id). */
@@ -620,6 +683,8 @@ export interface IContractLine extends TenantEntity {
   description?: string | null;
   /** Verbatim invoice line text for fixed-fee charges; falls back to the line name when null. */
   invoice_line_description?: string | null;
+  /** Muted second line under a Fixed bundle's title on invoices; null = none. */
+  invoice_line_subtitle?: string | null;
   billing_frequency: string;
   contract_id?: string | null;
   service_category?: string;

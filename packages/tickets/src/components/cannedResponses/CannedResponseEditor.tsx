@@ -151,6 +151,7 @@ function CannedResponseEditorBody({ cannedResponseId }: CannedResponseEditorProp
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
 
+  // LEVERAGE: pattern template-token-insert — merge-field insertion menu; @alga-psa/ui TemplateTokenInput is the shared version for plain text boxes (this one targets BlockNote)
   const insertMergeField = (key: MergeFieldKey) => {
     const editor = bodyEditorRef.current;
     if (!editor) return;
@@ -158,7 +159,7 @@ function CannedResponseEditorBody({ cannedResponseId }: CannedResponseEditorProp
     editor.focus();
   };
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: unknown }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: unknown }> }) =>
     error.issues.map((issue) => {
       const params = issue.params as { messageKey?: string; messageParams?: Record<string, unknown> } | undefined;
       if (params?.messageKey) return t(params.messageKey.replace(MESSAGE_KEY_PREFIX, ''), issue.message, params.messageParams);

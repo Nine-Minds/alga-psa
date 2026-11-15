@@ -5,6 +5,7 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
   },
 }));
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { getTenantContext } from '@alga-psa/db';
 import {
   extractDocumentViewFileId,
   rewriteTicketCommentImagesToCid,
@@ -26,6 +27,9 @@ function createMockDb(rows: any[]) {
 
 describe('ticketCommentInlineImageEmail', () => {
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -66,6 +70,30 @@ describe('ticketCommentInlineImageEmail', () => {
         reason: 'converted_to_cid',
       }),
     ]);
+  });
+
+  it('downloads the image inside the ticket tenant, which the subscriber has not entered', async () => {
+    const { db } = createMockDb([
+      { document_id: 'doc-1', document_name: 'clipboard-image.png', file_id: 'file-1', mime_type: 'image/png' },
+    ]);
+    let tenantDuringDownload: string | undefined;
+    vi.spyOn(StorageService, 'downloadFile').mockImplementation(async () => {
+      tenantDuringDownload = getTenantContext();
+      return {
+        buffer: Buffer.from('png-bytes'),
+        metadata: { original_name: 'clipboard-image.png', mime_type: 'image/png', size: 9 },
+      };
+    });
+
+    expect(getTenantContext()).toBeUndefined();
+    await rewriteTicketCommentImagesToCid({
+      db,
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-1',
+      html: '<p><img src="/api/documents/view/file-1" /></p>',
+    });
+
+    expect(tenantDuringDownload).toBe('tenant-1');
   });
 
   it('T018: falls back to original URL when CID generation fails', async () => {

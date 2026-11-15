@@ -1,8 +1,12 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
+import { coManagedSeatParticipants } from '@alga-psa/co-managed/seatCapability';
+import { registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import {
@@ -13,6 +17,7 @@ import {
   ensureDefaultBillingSettings,
   setupClientTaxConfiguration,
   unwrapInvoiceResult,
+  generateInvoiceForCycle,
 } from '../../../test-utils/billingTestHelpers';
 import {
   createBillingProfile,
@@ -129,7 +134,6 @@ let db: Knex;
 let tenantId: string;
 let userId: string;
 
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let finalizeInvoice: typeof import('@alga-psa/billing/actions/invoiceModification')['finalizeInvoice'];
 let syncRecurringServicePeriodsForContractLine:
   typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
@@ -323,6 +327,11 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // A dedicated database: the shared `test_database` is recreated by every
     // other integration suite, which would drop this suite's connection.
     db = await createTestDbConnection({ databaseName: 'test_db_client_merge' });
+    // The seat-arrangement merge guard asks the co-managed-seat capability first, as the server
+    // registers it at boot. Point its resolver at this suite's database and cache no verdict, so a
+    // tenant that gains its first arrangement mid-suite is served from that step on.
+    registerCapabilityParticipation('co-managed-seat', ({ tenantIds }) => coManagedSeatParticipants(tenantIds, db));
+    process.env.CAPABILITY_CACHE_TTL_MS = '0';
 
     tenantId = uuidv4();
     await tenantsUnscoped().insert({
@@ -349,7 +358,6 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     await ensureDefaultBillingSettings({ db, tenantId } as any);
     await ensureClientPlanBundlesTable({ db, tenantId } as any);
 
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
     ({ syncRecurringServicePeriodsForContractLine } = await import(
       '@alga-psa/billing/actions/recurringServicePeriodSync'
@@ -363,6 +371,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    delete process.env.CAPABILITY_CACHE_TTL_MS;
     await db?.destroy();
   }, HOOK_TIMEOUT);
 
@@ -376,7 +385,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     // A profile-attributed invoice, produced by the real engine.
     await seedFixedLine(source, 'History Monitoring');
     const attributedCycle = await seedCycle(source, JANUARY_START, FEBRUARY_START, sourceDefault);
-    const attributed = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(attributedCycle));
+    const attributed = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(attributedCycle));
 
     // What a sales order leaves behind: an invoice and its ledger transaction
     // with no profile at all (salesOrderInvoicingActions), plus a transferred
@@ -536,13 +545,13 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     await seedFixedLine(source, 'North Monitoring');
 
     const parentCycle = await seedCycle(target, JANUARY_START, FEBRUARY_START);
-    const parentInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(parentCycle));
+    const parentInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(parentCycle));
     expect(await finalizeInvoice(parentInvoice.invoice_id)).toEqual({ success: true });
     const parentBefore = await invoiceMoneyProjection(parentInvoice.invoice_id);
 
     // The absorbed client's own January invoice, produced before the merge.
     const sourceJanuaryCycle = await seedCycle(source, JANUARY_START, FEBRUARY_START, sourceDefault);
-    const sourceInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(sourceJanuaryCycle));
+    const sourceInvoice = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(sourceJanuaryCycle));
     const sourceBefore = await invoiceMoneyProjection(sourceInvoice.invoice_id);
 
     // An open cycle, which the merge moves intact rather than refusing.
@@ -560,7 +569,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     expect(await table('client_billing_cycles').where({ billing_cycle_id: sourceFebruaryCycle }).first())
       .toMatchObject({ client_id: target, billing_profile_id: sourceDefault });
 
-    const regenerated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(sourceFebruaryCycle));
+    const regenerated = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoiceForCycle(sourceFebruaryCycle));
     expect(await invoiceMoneyProjection(regenerated.invoice_id)).toBe(sourceBefore);
     expect(await table('invoices').where({ invoice_id: regenerated.invoice_id }).first()).toMatchObject({
       client_id: target,
@@ -770,7 +779,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     const targetBackups = await enrol(backups, target);
 
     const assetId = uuidv4();
-    await table('assets').insert({
+    await insertTestAssets(db, {
       tenant: tenantId, asset_id: assetId, asset_type: 'workstation', client_id: source,
       asset_tag: 'RT-1', name: 'RT-1', status: 'active',
     });
@@ -886,7 +895,7 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       });
 
       const assetId = uuidv4();
-      await table('assets').insert({
+      await insertTestAssets(db, {
         tenant: tenantId,
         asset_id: assetId,
         asset_type: 'unknown',
@@ -1027,6 +1036,108 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     } finally {
       if (installedHere) await autopayMigration.down(db);
     }
+  }, HOOK_TIMEOUT);
+
+  it('leaves shared project task references pinned to the client their relationship names', async () => {
+    // The reference's client_id copies the customer relationship's
+    // sponsor_client_id, which this merge cannot reach; re-pointing it would
+    // stop participation lookups from matching the reference to its relationship.
+    const target = await seedClient('Shared Work Group');
+    const source = await seedClient('Shared Work North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const referenceId = uuidv4();
+    await table('co_managed_project_task_references').insert({
+      tenant: tenantId,
+      reference_id: referenceId,
+      customer_tenant: uuidv4(),
+      relationship_id: uuidv4(),
+      task_id: uuidv4(),
+      client_id: source,
+      assigned_to: userId,
+      active: false,
+      task_name: 'Firewall refresh',
+      project_name: 'Network upgrade',
+    });
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('co_managed_project_task_references').where({ reference_id: referenceId }).first())
+      .toMatchObject({ client_id: source, task_name: 'Firewall refresh', revision: 1 });
+  }, HOOK_TIMEOUT);
+
+  it.each(['pending', 'ready'] as const)('preserves %s retained archive files and their original client provenance across a merge', async (status) => {
+    const target = await seedClient(`Archive Group ${status}`);
+    const source = await seedClient(`Archive North ${status}`);
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const customerTenant = uuidv4();
+    const archiveFileId = uuidv4();
+    const content = Buffer.from('Retained customer attachment');
+    await table('co_managed_archive_files').insert({
+      tenant: tenantId,
+      archive_file_id: archiveFileId,
+      customer_tenant: customerTenant,
+      relationship_id: uuidv4(),
+      client_id: source,
+      source_tenant: customerTenant,
+      attachment_id: uuidv4(),
+      thread_id: uuidv4(),
+      comment_id: uuidv4(),
+      ticket_id: uuidv4(),
+      audience: 'shared_it',
+      file_name: 'retained.txt',
+      mime_type: 'text/plain',
+      file_size: content.length,
+      content_hash: createHash('sha256').update(content).digest('hex'),
+      status,
+      staged_bytes: status === 'pending' ? content : null,
+      stored_at: status === 'ready' ? db.fn.now() : null,
+    });
+    const before = await table('co_managed_archive_files').where({ archive_file_id: archiveFileId }).first();
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('co_managed_archive_files').where({ archive_file_id: archiveFileId }).first())
+      .toEqual(before);
+  }, HOOK_TIMEOUT);
+
+  it.each(['active', 'ended'] as const)('handles a %s seat arrangement without transferring its client identity', async (state) => {
+    const target = await seedClient(`Seat Group ${state}`);
+    const source = await seedClient(`Seat North ${state}`);
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    // Both clients have their own arrangement. A merge must neither transfer
+    // seat access nor collide with the target's one-live-arrangement index.
+    const arrangementId = uuidv4();
+    await table('co_managed_seat_arrangements').insert([
+      { tenant: tenantId, arrangement_id: arrangementId, client_id: source,
+        allocation_id: uuidv4(), state, ended_at: state === 'ended' ? new Date() : null },
+      { tenant: tenantId, arrangement_id: uuidv4(), client_id: target,
+        allocation_id: uuidv4(), state: 'active', ended_at: null },
+    ]);
+    const before = await table('co_managed_seat_arrangements').orderBy('arrangement_id');
+    const input = { sourceClientId: source, targetClientId: target };
+    const preview = await db.transaction((trx) => previewClientMerge(trx, tenantId, input));
+
+    if (state === 'active') {
+      expect(preview.blockers).toEqual([expect.objectContaining({ code: 'SOURCE_HAS_CO_MANAGEMENT' })]);
+      await expect(db.transaction((trx) => executeClientMerge(trx, tenantId, userId, input)))
+        .rejects.toMatchObject({ blockers: [expect.objectContaining({ code: 'SOURCE_HAS_CO_MANAGEMENT' })] });
+      expect(await table('clients').where({ client_id: source }).first())
+        .toMatchObject({ merged_into_client_id: null, is_inactive: false });
+    } else {
+      expect(preview.blockers).toEqual([]);
+      await db.transaction((trx) => executeClientMerge(trx, tenantId, userId, input));
+      expect(await table('clients').where({ client_id: source }).first())
+        .toMatchObject({ merged_into_client_id: target, is_inactive: true });
+    }
+    expect(await table('co_managed_seat_arrangements').orderBy('arrangement_id')).toEqual(before);
   }, HOOK_TIMEOUT);
 
   it('TM019: accounts for every client-keyed table in the schema', async () => {

@@ -7,12 +7,32 @@ import {
   type DevelopmentCredentialUser,
 } from '../../lib/developmentCredentials';
 
-const { findUserByEmailMock } = vi.hoisted(() => ({ findUserByEmailMock: vi.fn() }));
+const { findUserByEmailMock, findUsersByEmailAndTypeMock } = vi.hoisted(() => ({
+  findUserByEmailMock: vi.fn(),
+  findUsersByEmailAndTypeMock: vi.fn(),
+}));
 
 vi.mock('@alga-psa/db/models/user', () => ({
-  default: { findUserByEmail: findUserByEmailMock, findUserByEmailAndType: findUserByEmailMock },
+  default: { findUserByEmail: findUserByEmailMock, findUserByEmailAndType: findUserByEmailMock,
+    findUsersByEmailAndType: findUsersByEmailAndTypeMock,
+  },
 }));
 vi.mock('@alga-psa/db', () => ({ getTenantIdBySlug: vi.fn() }));
+// authenticateUser consults the tenant login policy (via passwordLoginGate); return the all-off default
+// so the test does not open an admin DB connection.
+vi.mock('@alga-psa/auth/lib/authPolicyStore', () => ({
+  listBreakGlassCandidates: vi.fn(async () => []),
+  loadTenantAuthPolicy: vi.fn(async () => ({
+    requireSsoForInternalUsers: false,
+    require2faForInternalUsers: false,
+    require2faForClientUsers: false,
+    allowKnownDevice2faSkip: false,
+    passwordBreakGlassUserIds: [],
+    passwordAuthDisabledAt: null,
+  })),
+  recordLoginRefusal: vi.fn(async () => undefined),
+  recordForcedTwoFactorEnrollment: vi.fn(async () => undefined),
+}));
 
 import { authenticateUser } from '@alga-psa/auth/actions';
 
@@ -38,6 +58,7 @@ function makeStore(initialHash: string | null) {
     return true;
   });
   findUserByEmailMock.mockImplementation(async () => user);
+  findUsersByEmailAndTypeMock.mockImplementation(async () => (user ? [user] : []));
   return { user, compareAndSet };
 }
 
@@ -67,6 +88,7 @@ describe('development credential initialization', () => {
   beforeEach(() => {
     vi.stubEnv('NEXTAUTH_SECRET', 'development-credential-regression-secret');
     findUserByEmailMock.mockReset();
+    findUsersByEmailAndTypeMock.mockReset();
   });
   afterEach(() => vi.unstubAllEnvs());
 

@@ -1,4 +1,6 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { PREFERRED_PAYMENT_METHODS } from '@alga-psa/shared/billingClients/paymentPreferences';
+import type { InvoiceUpdateField } from '../../schemas/invoiceUpdateFields';
 import { taxRateListQuerySchema, taxRateListResponseSchema } from '../../schemas/financialSchemas';
 
 export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
@@ -9,7 +11,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const UuidIdParam = registry.registerSchema(
     'FinancialInvoiceUuidIdParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Path UUID parameter resolved by ApiBaseController.extractIdFromPath().'),
+      id: zOpenApi.string().guid().describe('Path UUID parameter resolved by ApiBaseController.extractIdFromPath().'),
     }),
   );
 
@@ -28,17 +30,17 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     'FinancialInvoiceApiSuccess',
     zOpenApi.object({
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const ApiPaginated = registry.registerSchema(
     'FinancialInvoiceApiPaginated',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -47,7 +49,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -63,8 +65,8 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       created_to: zOpenApi.string().optional(),
       updated_from: zOpenApi.string().optional(),
       updated_to: zOpenApi.string().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
-      invoice_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
+      invoice_id: zOpenApi.string().guid().optional(),
       type: zOpenApi.string().optional(),
       status: zOpenApi.string().optional(),
       amount_min: zOpenApi.string().optional(),
@@ -115,11 +117,11 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       updated_from: zOpenApi.string().optional(),
       updated_to: zOpenApi.string().optional(),
       is_active: zOpenApi.enum(['true', 'false']).optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       status: zOpenApi
         .enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied'])
         .optional(),
-      billing_cycle_id: zOpenApi.string().uuid().optional(),
+      billing_cycle_id: zOpenApi.string().guid().optional(),
       due_date_from: zOpenApi.string().optional(),
       due_date_to: zOpenApi.string().optional(),
       amount_min: zOpenApi.string().optional(),
@@ -145,7 +147,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
       updated_from: zOpenApi.string().optional(),
       updated_to: zOpenApi.string().optional(),
       is_active: zOpenApi.enum(['true', 'false']).optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       type: zOpenApi.enum(['credit_card', 'bank_account']).optional(),
       is_default: zOpenApi.enum(['true', 'false']).optional(),
       exclude_deleted: zOpenApi
@@ -171,16 +173,16 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const BillingOverviewResponse = registry.registerSchema(
     'BillingOverviewResponse',
     zOpenApi.object({
-      data: zOpenApi.record(zOpenApi.unknown()),
+      data: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
       count: zOpenApi.number().optional(),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const CalculateBillingBody = registry.registerSchema(
     'FinancialCalculateBillingBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       period_start: zOpenApi.string(),
       period_end: zOpenApi.string(),
     }),
@@ -189,8 +191,8 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const ApplyCreditToInvoiceBody = registry.registerSchema(
     'FinancialApplyCreditToInvoiceBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
-      invoice_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
+      invoice_id: zOpenApi.string().guid(),
       requested_amount: zOpenApi.number().min(0),
     }),
   );
@@ -198,7 +200,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const PrepaymentInvoiceBody = registry.registerSchema(
     'FinancialPrepaymentInvoiceBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       amount: zOpenApi.number().min(0),
       manual_expiration_date: zOpenApi.string().optional(),
     }),
@@ -207,10 +209,10 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const TransferCreditBody = registry.registerSchema(
     'FinancialTransferCreditBody',
     zOpenApi.object({
-      source_credit_id: zOpenApi.string().uuid(),
-      target_client_id: zOpenApi.string().uuid(),
+      source_credit_id: zOpenApi.string().guid(),
+      target_client_id: zOpenApi.string().guid(),
       amount: zOpenApi.number().min(0),
-      user_id: zOpenApi.string().uuid(),
+      user_id: zOpenApi.string().guid(),
       reason: zOpenApi.string().optional(),
     }),
   );
@@ -218,25 +220,25 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const ValidateCreditBody = registry.registerSchema(
     'FinancialValidateCreditBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
     }),
   );
 
   const CreateTransactionBody = registry.registerSchema(
     'FinancialCreateTransactionBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
-      invoice_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid(),
+      invoice_id: zOpenApi.string().guid().optional(),
       amount: zOpenApi.number(),
       type: zOpenApi.string(),
       status: zOpenApi.string().optional(),
-      parent_transaction_id: zOpenApi.string().uuid().optional(),
+      parent_transaction_id: zOpenApi.string().guid().optional(),
       description: zOpenApi.string().optional(),
       reference_number: zOpenApi.string().optional(),
-      metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       balance_after: zOpenApi.number(),
       expiration_date: zOpenApi.string().optional(),
-      related_transaction_id: zOpenApi.string().uuid().optional(),
+      related_transaction_id: zOpenApi.string().guid().optional(),
     }),
   );
 
@@ -245,7 +247,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const CreatePaymentMethodBody = registry.registerSchema(
     'FinancialCreatePaymentMethodBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       type: zOpenApi.enum(['credit_card', 'bank_account']),
       last4: zOpenApi.string().length(4),
       exp_month: zOpenApi.string().optional(),
@@ -258,7 +260,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const CalculateTaxBody = registry.registerSchema(
     'FinancialCalculateTaxBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       amount: zOpenApi.number().min(0),
       tax_region: zOpenApi.string(),
       date: zOpenApi.string().optional(),
@@ -268,9 +270,9 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const BulkInvoiceOperationBody = registry.registerSchema(
     'FinancialBulkInvoiceOperationBody',
     zOpenApi.object({
-      operation: zOpenApi.enum(['send', 'finalize', 'cancel', 'mark_paid']),
-      invoice_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
-      options: zOpenApi.record(zOpenApi.unknown()).optional(),
+      operation: zOpenApi.enum(['finalize', 'cancel']),
+      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(50),
+      parameters: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -278,8 +280,8 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     'FinancialBulkTransactionOperationBody',
     zOpenApi.object({
       operation: zOpenApi.enum(['approve', 'reject', 'void']),
-      transaction_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
-      options: zOpenApi.record(zOpenApi.unknown()).optional(),
+      transaction_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
+      options: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -287,35 +289,73 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     'FinancialBulkCreditOperationBody',
     zOpenApi.object({
       operation: zOpenApi.enum(['expire', 'extend', 'transfer']),
-      credit_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
-      options: zOpenApi.record(zOpenApi.unknown()).optional(),
+      credit_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
+      options: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const InvoiceCreateBody = registry.registerSchema(
     'InvoiceCreateBody',
+    // Mirrors the create surface of INVOICE_FIELD_POLICY (schemas/invoiceFieldPolicy.ts): an
+    // invoice is always created as a draft. Lifecycle (status beyond draft), credit_applied,
+    // is_manual, is_prepayment and billing_cycle_id are server-owned and refused with a 400 when
+    // set to a non-default value; subtotal/tax/total_amount are derived from the charges and
+    // ignored if sent. None of those are published as inputs.
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid().describe('Must be a client in the caller\'s tenant.'),
       invoice_date: zOpenApi.string(),
       due_date: zOpenApi.string(),
-      subtotal: zOpenApi.number().int().min(0),
-      tax: zOpenApi.number().int().min(0),
-      total_amount: zOpenApi.number().int().min(0),
-      status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      credit_applied: zOpenApi.number().int().min(0).optional(),
-      is_manual: zOpenApi.boolean().optional(),
-      is_prepayment: zOpenApi.boolean().optional(),
-      items: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-    }).catchall(zOpenApi.unknown()),
+      payment_method: zOpenApi.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+      billing_profile_id: zOpenApi.string().guid().nullable().optional(),
+      status: zOpenApi
+        .enum(['draft'])
+        .describe('Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status.')
+        .optional(),
+      items: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
+    }).catchall(zOpenApi.unknown()).describe(
+      'New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400.',
+    ),
   );
 
-  const InvoiceUpdateBody = registry.registerSchema('InvoiceUpdateBody', InvoiceCreateBody.partial());
+  // Editable billing terms only (INVOICE_UPDATE_FIELDS). Lifecycle, identity and monetary fields
+  // are owned by dedicated commands and rejected by the runtime strict schema, so they are not
+  // published here. `satisfies Record<InvoiceUpdateField, ...>` fails to compile if a key is added
+  // to or removed from the allowlist without updating this shape (see invoiceUpdateFields.test.ts).
+  // Field types mirror updateInvoiceSchema in schemas/invoiceSchemas.ts.
+  const invoiceUpdateShape = {
+    payment_method: zOpenApi.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+    billing_profile_id: zOpenApi.string().guid().nullable().optional(),
+    due_date: zOpenApi.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD. Draft invoices only.').optional(),
+    invoice_date: zOpenApi.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD. Draft invoices only.').optional(),
+    items: zOpenApi
+      .array(
+        zOpenApi.object({
+          service_id: zOpenApi.string().guid().optional(),
+          contract_line_id: zOpenApi.string().guid().optional(),
+          description: zOpenApi.string().min(1).max(500),
+          quantity: zOpenApi.number().min(0),
+          unit_price: zOpenApi.number().int().min(0),
+          total_price: zOpenApi.number().int().min(0).optional(),
+          tax_amount: zOpenApi.number().int().min(0),
+          net_amount: zOpenApi.number().int().min(0).optional(),
+          rate: zOpenApi.number().min(0),
+          is_manual: zOpenApi.boolean().optional(),
+          is_taxable: zOpenApi.boolean().optional(),
+          is_discount: zOpenApi.boolean().optional(),
+        }),
+      )
+      .describe('Replaces items on draft, non-recurring invoices only.')
+      .optional(),
+    tax_source: zOpenApi.enum(['internal', 'external', 'pending_external']).optional(),
+  } satisfies Record<InvoiceUpdateField, unknown>;
+
+  const InvoiceUpdateBody = registry.registerSchema('InvoiceUpdateBody', zOpenApi.object(invoiceUpdateShape).strict());
 
   const InvoiceManualBody = registry.registerSchema(
     'InvoiceManualBody',
     zOpenApi.object({
-      clientId: zOpenApi.string().uuid(),
-      items: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).min(1),
+      clientId: zOpenApi.string().guid(),
+      items: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).min(1),
       expirationDate: zOpenApi.string().optional(),
       isPrepayment: zOpenApi.boolean().optional(),
     }),
@@ -325,17 +365,17 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     'InvoiceSelectorBody',
     zOpenApi.object({
       selector_input: zOpenApi.object({
-        clientId: zOpenApi.string().uuid(),
+        clientId: zOpenApi.string().guid(),
         windowStart: zOpenApi.string(),
         windowEnd: zOpenApi.string(),
         executionWindow: zOpenApi.object({
           kind: zOpenApi.enum(['client_cadence_window', 'contract_cadence_window']),
           identityKey: zOpenApi.string(),
           cadenceOwner: zOpenApi.enum(['client', 'contract']),
-          clientId: zOpenApi.string().uuid().optional(),
-          billingCycleId: zOpenApi.string().uuid().nullable().optional(),
-          contractId: zOpenApi.string().uuid().nullable().optional(),
-          contractLineId: zOpenApi.string().uuid().nullable().optional(),
+          clientId: zOpenApi.string().guid().optional(),
+          billingCycleId: zOpenApi.string().guid().nullable().optional(),
+          contractId: zOpenApi.string().guid().nullable().optional(),
+          contractLineId: zOpenApi.string().guid().nullable().optional(),
           windowStart: zOpenApi.string().nullable().optional(),
           windowEnd: zOpenApi.string().nullable().optional(),
         }),
@@ -364,7 +404,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     'InvoiceCreditBody',
     zOpenApi.object({
       credit_amount: zOpenApi.number().int().min(0),
-      transaction_id: zOpenApi.string().uuid().optional(),
+      transaction_id: zOpenApi.string().guid().optional(),
     }),
   );
 
@@ -382,7 +422,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const InvoiceTaxBody = registry.registerSchema(
     'InvoiceTaxBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       amount: zOpenApi.number().int().min(0),
       tax_region: zOpenApi.string(),
       calculation_date: zOpenApi.string().optional(),
@@ -392,16 +432,15 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const InvoiceBulkStatusBody = registry.registerSchema(
     'InvoiceBulkStatusBody',
     zOpenApi.object({
-      invoice_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(100),
+      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100),
       status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      finalized_at: zOpenApi.string().optional(),
     }),
   );
 
   const InvoiceBulkSendBody = registry.registerSchema(
     'InvoiceBulkSendBody',
     zOpenApi.object({
-      invoice_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(50),
+      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(50),
       email_template: zOpenApi.string().optional(),
       include_pdf: zOpenApi.boolean().optional(),
     }),
@@ -410,7 +449,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const InvoiceBulkDeleteBody = registry.registerSchema(
     'InvoiceBulkDeleteBody',
     zOpenApi.object({
-      ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
+      ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
       force: zOpenApi.boolean().optional(),
     }),
   );
@@ -418,7 +457,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const InvoiceBulkCreditBody = registry.registerSchema(
     'InvoiceBulkCreditBody',
     zOpenApi.object({
-      invoice_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(100),
+      invoice_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100),
       credit_amount_per_invoice: zOpenApi.number().int().min(0),
     }),
   );
@@ -426,13 +465,13 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   const InvoiceRecurringCreateBody = registry.registerSchema(
     'InvoiceRecurringCreateBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       name: zOpenApi.string(),
       frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'annually']),
       start_date: zOpenApi.string(),
       end_date: zOpenApi.string().optional(),
       is_active: zOpenApi.boolean().optional(),
-      invoice_template: zOpenApi.record(zOpenApi.unknown()),
+      invoice_template: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
       max_generations: zOpenApi.number().optional(),
     }),
   );
@@ -503,7 +542,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   });
 
   const financialBulkRoutes: Array<[string, string, string, any, Record<string, unknown>]> = [
-    ['/api/v1/financial/bulk/invoices', 'Run bulk invoice operation', 'FinancialService.bulkInvoiceOperation() supports send/finalize/cancel/mark_paid operations.', BulkInvoiceOperationBody, {}],
+    ['/api/v1/financial/bulk/invoices', 'Run bulk invoice operation', 'FinancialService.bulkInvoiceOperation() runs finalize or cancel against the canonical invoice engines (1–50 ids). finalize requires invoice:finalize; cancel voids eligible invoices through the canonical void engine (invoice:update, plus accounting_integrations:remote_mutate when an accounting integration is connected). Each id runs independently; per-id results carry success, error and outcome (finalized/voided). Bulk send is unsupported until canonical recipient delivery is implemented; standalone invoice send behavior is unchanged. apply_credit is unsupported: use POST /api/v1/financial/invoices/{id}/credit.', BulkInvoiceOperationBody, {}],
     ['/api/v1/financial/bulk/transactions', 'Run bulk transaction operation', 'FinancialService.bulkTransactionOperation() applies approve/reject/reverse to existing transactions (1–100 ids). reverse posts a compensating transaction linked to the original via related_transaction_id, recomputes the running balance, and syncs the client credit balance for credit-type transactions. Returns per-id results { total_requested, successful, failed, results[] }.', BulkTransactionOperationBody, {}],
     ['/api/v1/financial/bulk/credits', 'Run bulk credit operation', 'FinancialService.bulkCreditOperation() applies expire/extend_expiration/transfer to existing credits (1–100 ids). expire forfeits the remaining amount via a credit_expiration transaction and reduces the client balance; extend_expiration sets a new expiration_date; transfer moves the remaining amount to parameters.target_client_id. Returns per-id results { total_requested, successful, failed, results[] }.', BulkCreditOperationBody, {}],
   ];
@@ -915,7 +954,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices',
     summary: 'Create invoice',
-    description: 'Creates an invoice record via ApiBaseController.create() and invoice create schema.',
+    description: 'Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceCreateBody } },
@@ -952,7 +991,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices/bulk',
     summary: 'Bulk update invoice status',
-    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema.',
+    description: 'Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceBulkStatusBody } },
@@ -1212,7 +1251,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
 
   const invoiceByIdBaseRoutes: Array<[string, string, string, string, any?, number?]> = [
     ['get', '/api/v1/invoices/{id}', 'Get invoice by id', 'Returns one invoice with optional include flags.', undefined, 200],
-    ['put', '/api/v1/invoices/{id}', 'Update invoice', 'Updates an invoice using ApiBaseController.update().', InvoiceUpdateBody, 200],
+    ['put', '/api/v1/invoices/{id}', 'Update invoice', 'Updates editable billing terms only (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source). Status, client, totals, credits and other lifecycle fields are rejected with 400; use the finalize, send and payment endpoints (or the bulk status operation for void) instead.', InvoiceUpdateBody, 200],
     ['delete', '/api/v1/invoices/{id}', 'Delete invoice', 'Deletes one invoice using ApiBaseController.delete().', undefined, 204],
   ];
 

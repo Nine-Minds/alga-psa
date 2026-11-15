@@ -245,6 +245,59 @@ describe('BentoTimelineTile composer heading', () => {
     expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
   });
 
+  it('defaults to Internal when enabled, allows Client, and resets the next reply after sending', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ defaultReplyInternal: true, onAddNewComment });
+
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(true, false, null, undefined, null, undefined);
+      expect(screen.queryByTestId('composer-editor')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenLastCalledWith(false, false, null, undefined, null, undefined);
+      expect(screen.queryByTestId('composer-editor')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+  });
+
+  it('uses the loaded default when opening without changing a reply already being composed', () => {
+    const { rerender } = render(<BentoTimelineTile {...defaultProps} />);
+    rerender(<BentoTimelineTile {...defaultProps} defaultReplyInternal />);
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    rerender(<BentoTimelineTile {...defaultProps} defaultReplyInternal />);
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+  });
+
+  it('resets to Internal after cancelling when enabled', () => {
+    renderTimeline({ defaultReplyInternal: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+  });
+
+  it('preserves the existing visibility retention when the setting is disabled', () => {
+    renderTimeline({ defaultReplyInternal: false });
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+  });
+
   it('shows the no-contact fallback only in the client lane', () => {
     renderTimeline({ contactFirstName: null });
 

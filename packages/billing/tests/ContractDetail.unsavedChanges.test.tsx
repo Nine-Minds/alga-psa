@@ -104,6 +104,8 @@ vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
   useOptionalI18n: () => null,
   useFormatters: () => ({
     formatCurrency: (value: number) => String(value),
+    formatDate: (value: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat("en-US", options).format(new Date(value)),
   }),
 }));
 
@@ -303,6 +305,13 @@ describe("ContractDetail unsaved-changes banner", () => {
     rerender(<ContractDetail resolvedContractId="contract-1" />);
     expect(screen.queryByText(BANNER)).not.toBeInTheDocument();
     expect(everArmed()).toBe(false);
+  });
+
+  it("renders the stored assignment start date as its calendar day", async () => {
+    await renderLoaded();
+    // start_date is midnight UTC; it must not slide to Dec 31 west of UTC.
+    expect(screen.getAllByText("Jan 1, 2025").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Dec 31, 2024")).not.toBeInTheDocument();
   });
 
   it("opening the assignment editor and clicking Done with no change stays clean", async () => {

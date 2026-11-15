@@ -33,6 +33,7 @@ const SUBTYPES = [
   { category: 'Tickets', name: 'Ticket Created Client', description: 'When a new ticket is created (client-facing)' },
   { category: 'Tickets', name: 'Ticket Updated Client', description: 'When a ticket is modified (client-facing)' },
   { category: 'Tickets', name: 'Ticket Auto-Close Warning', description: 'When a ticket is about to be closed automatically due to inactivity' },
+  { category: 'Tickets', name: 'co-managed-routing', description: 'Escalation received, returned, or assignment of a shared (co-managed) ticket' },
   // Surveys
   { category: 'Surveys', name: 'survey-project-closed', description: 'When a customer satisfaction survey invitation is sent after a project is completed' },
   { category: 'Surveys', name: 'survey-ticket-closed', description: 'When a customer satisfaction survey invitation is sent after a ticket is closed' },
@@ -68,6 +69,7 @@ const SUBTYPES = [
   { category: 'Authentication', name: 'portal-invitation', description: 'Invitation email for customer portal access' },
   { category: 'Authentication', name: 'team-invitation', description: 'Invitation email for internal MSP team member access' },
   { category: 'Authentication', name: 'tenant-recovery', description: 'Tenant/organization account recovery and login links' },
+  { category: 'Authentication', name: 'msp-tenant-recovery', description: 'Per-organization sign-in links for MSP users whose email is used in more than one organization' },
   { category: 'Authentication', name: 'no-account-found', description: 'Notification when no account is found for email address' },
   // Appointments
   { category: 'Appointments', name: 'appointment-request-received', description: 'Confirmation that appointment request was received' },

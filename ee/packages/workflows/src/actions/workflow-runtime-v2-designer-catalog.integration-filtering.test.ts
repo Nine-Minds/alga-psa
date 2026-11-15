@@ -103,7 +103,7 @@ vi.mock('@alga-psa/workflows/runtime', () => {
     resolveInputMapping: vi.fn(() => ({})),
     createSecretResolverFromProvider: vi.fn(() => vi.fn()),
     verifySecretsExist: vi.fn(async () => ({ missing: [] })),
-    workflowDefinitionSchema: z.record(z.any()),
+    workflowDefinitionSchema: z.record(z.string(), z.any()),
     getActionRegistryV2: () => ({
       list: () => [
         {

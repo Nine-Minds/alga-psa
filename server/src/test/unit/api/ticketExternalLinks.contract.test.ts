@@ -7,7 +7,7 @@ import {
   createTicketExternalLinkSchema,
   updateExternalLinkSchema,
   externalLinkLookupQuerySchema,
-  createTicketSchema,
+  createTicketFieldsSchema,
   createTicketCommentSchema,
   updateTicketSchema,
 } from '../../../lib/api/schemas/ticket';
@@ -82,13 +82,13 @@ describe('Ticket external links REST API contract', () => {
     });
     expect(parsed.success).toBe(true);
     expect((parsed.data as any)?.external_links).toBeUndefined();
-    expect(createTicketSchema.shape.external_links).toBeDefined();
+    expect(createTicketFieldsSchema.shape.external_links).toBeDefined();
   });
 
   it('accepts inline external_links on ticket and comment create', () => {
     const link = { system: 'discord', external_id: '123' };
-    expect(createTicketSchema.shape.external_links).toBeDefined();
-    expect(createTicketSchema.partial().safeParse({ external_links: [link] }).success).toBe(true);
+    expect(createTicketFieldsSchema.shape.external_links).toBeDefined();
+    expect(createTicketFieldsSchema.partial().safeParse({ external_links: [link] }).success).toBe(true);
     expect(createTicketCommentSchema.safeParse({ comment_text: 'hello', external_links: [link] }).success).toBe(true);
     expect(createTicketCommentSchema.safeParse({ comment_text: 'hello', external_links: [{ system: 'discord', external_id: '' }] }).success).toBe(false);
   });

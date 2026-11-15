@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { useTicketDataSource } from './TicketDataSourceContext';
 import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
+import { unresolvedAssigneeLabel } from '../../lib/assigneeDisplay';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -61,6 +62,7 @@ import {
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -71,6 +73,8 @@ interface TicketInfoProps {
   conversations: IComment[];
   statusOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
+  /** Seat technicians of the ticket's own client, listed apart in the assignee picker. Absent: no group. */
+  clientItUserIds?: readonly string[];
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string; is_from_itil_standard?: boolean }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
@@ -135,6 +139,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   conversations,
   statusOptions,
   agentOptions,
+  clientItUserIds,
   boardOptions,
   priorityOptions,
   onSelectChange,
@@ -206,10 +211,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
@@ -276,6 +279,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
   const hasPendingStatusOverride = Object.prototype.hasOwnProperty.call(pendingChanges, 'status_id');
+  const pendingPriorityValue = pendingChanges.priority_id !== undefined
+    ? pendingChanges.priority_id
+    : (originalTicketValues.priority_id ?? null);
   const pendingStatusValue = hasPendingStatusOverride
     ? (pendingChanges.status_id ?? '')
     : (originalTicketValues.status_id ?? '');
@@ -295,13 +301,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // ticket's own priority stays listed so a legacy value still renders.
   const scopedPriorityOptions = useMemo(() => {
     const wantsItil = effectiveBoardConfig.priority_type === 'itil';
-    const currentPriorityId = pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null;
+    const currentPriorityId = pendingPriorityValue;
 
     return priorityOptions.filter((option) =>
       (wantsItil ? Boolean(option.is_from_itil_standard) : !option.is_from_itil_standard)
       || option.value === currentPriorityId
     );
-  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingChanges.priority_id, originalTicketValues.priority_id]);
+  }, [priorityOptions, effectiveBoardConfig.priority_type, pendingPriorityValue]);
 
   // Calculate ITIL priority when impact and urgency are available
   // Use pending ITIL values if available, otherwise use prop values
@@ -1043,10 +1049,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           }));
           setPendingChanges({});
           setPendingItilChanges({});
-          setNotificationSuppression({
-            suppressContactNotifications: false,
-            suppressInternalNotifications: false,
-          });
+          setNotificationSuppression(defaultNotificationSuppression());
           setPendingBoardConfig(null);
           setPendingCategories(null);
           if (isEditingDescription) {
@@ -1076,10 +1079,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }));
         setPendingChanges({});
         setPendingItilChanges({});
-        setNotificationSuppression({
-          suppressContactNotifications: false,
-          suppressInternalNotifications: false,
-        });
+        setNotificationSuppression(defaultNotificationSuppression());
         setPendingBoardConfig(null);
         setPendingCategories(null);
         if (isEditingDescription) {
@@ -1115,10 +1115,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
     setPendingChanges({});
     setPendingItilChanges({});
-    setNotificationSuppression({
-      suppressContactNotifications: false,
-      suppressInternalNotifications: false,
-    });
+    setNotificationSuppression(defaultNotificationSuppression());
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);
@@ -1465,6 +1462,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     }
                   }}
                   users={usersList}
+                  // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
+                  userGroups={clientItUserIds?.length
+                    ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
+                    : undefined}
                   teams={teams}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
@@ -1472,7 +1473,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   buttonWidth="fit"
                   size="sm"
                   className="!w-fit"
-                  placeholder={t('info.notAssigned', 'Not assigned')}
+                  placeholder={unresolvedAssigneeLabel({
+                    savedAssigneeId: originalTicketValues.assigned_to,
+                    savedAssigneeName: ticket.assigned_to_name,
+                    currentValue: pendingChanges.assigned_to ?? originalTicketValues.assigned_to,
+                    selectableUserIds: usersList.map((user) => user.user_id),
+                  }) ?? t('info.notAssigned', 'Not assigned')}
                   disabled={workflowLocked || isFieldFrozen('assigned_to')}
                 />
                 {(() => {
@@ -1839,7 +1845,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <h5 className="font-bold mb-2">{t('fields.priority', 'Priority')}</h5>
                   <div className={`transition-opacity ${isFieldRemotelyEdited('priority_id') ? 'opacity-60' : ''}`}>
                     <PrioritySelect
-                      value={pendingChanges.priority_id ?? originalTicketValues.priority_id ?? null}
+                      value={pendingPriorityValue}
                       options={scopedPriorityOptions}
                       onValueChange={(value) => handlePendingChange('priority_id', value)}
                       customStyles={customStyles}

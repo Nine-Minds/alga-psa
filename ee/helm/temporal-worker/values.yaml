@@ -213,6 +213,20 @@ sharedTenantSecrets:
   mountPath: /shared-tenant-secrets
   readOnly: false
 
+# Optional root init container that hands the shared tenant-secret mount to the
+# application uid. hostPath volumes ignore fsGroup, so kubelet cannot do this
+# itself. Runs the `alga-runtime-permissions` script, which ships in the
+# alga-psa server image (not in this chart's image), so the server image is
+# required when enabled. Only acts when sharedTenantSecrets.enabled is true.
+fixPermissions:
+  enabled: false
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  uid: 1000
+  gid: 1000
+
 # Database configuration
 # These values should be provided by the parent chart or overridden in production
 db:

@@ -320,13 +320,13 @@ const assignTicketInputSchema = z.object({
 const addNoteInputSchema = z.object({
   ticketId: nonEmptyString,
   note: boundedText('Note'),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const replyToContactInputSchema = z.object({
   ticketId: nonEmptyString,
   reply: boundedText('Reply'),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const logTimeInputSchema = z.object({
@@ -361,7 +361,7 @@ const createTicketFromMessageInputSchema = z.object({
   statusId: nonEmptyString,
   clientId: nonEmptyString,
   contactId: nonEmptyString.optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const updateFromMessageInputSchema = z
@@ -371,7 +371,7 @@ const updateFromMessageInputSchema = z
     projectId: nonEmptyString.optional(),
     updateType: z.enum(['internal_note', 'customer_reply', 'continue_in_tab']),
     content: z.string().trim().max(4000).optional().default(''),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.updateType !== 'continue_in_tab' && value.content.trim().length === 0) {

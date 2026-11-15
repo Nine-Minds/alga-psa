@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "title": "C5 browser recovery preflight (origin unavailable)",
+  "paneId": "376c175b-b142-46db-b907-5be706188acf",
+  "startedAt": "2026-11-02T17:26:19.977Z",
+  "finishedAt": "2026-11-02T17:26:24.516Z",
+  "durationMs": 2193,
+  "width": 1920,
+  "height": 767,
+  "bytes": 13300,
+  "frames": 3,
+  "marks": [
+    {
+      "t": 2.004,
+      "label": "Fresh own-card pane and exact origin attempt 3"
+    },
+    {
+      "t": 2.173,
+      "label": "Screenshot captured; Chromium displays chrome-error page"
+    }
+  ],
+  "files": {
+    "video": "browser-recovery-preflight.webm",
+    "chapters": "browser-recovery-preflight.vtt"
+  }
+}

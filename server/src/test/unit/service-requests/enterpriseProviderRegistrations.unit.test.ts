@@ -13,7 +13,7 @@ describe('enterprise service request provider registrations', () => {
     ]);
 
     expect(registrations.formBehaviorProviders.map((provider) => provider.key)).toEqual(['advanced']);
-    expect(registrations.visibilityProviders.map((provider) => provider.key)).toEqual(['advanced-visibility']);
+    expect(registrations.visibilityProviders.map((provider) => provider.key)).toEqual([]);
     expect(registrations.templateProviders.map((provider) => provider.key)).toEqual([
       'ee-starter-pack',
       'appliance-license',

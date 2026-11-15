@@ -17,6 +17,8 @@ interface FirstInvoiceNoticeProps {
   billingFrequency?: string;
   startDate?: string;
   clientId?: string;
+  /** Names of the lines this sentence covers; shown above it when more than one line could be meant. */
+  lineNames?: string[];
   className?: string;
 }
 
@@ -39,8 +41,9 @@ function useFirstInvoiceDate(input: FirstInvoiceDateInput, clientId?: string) {
 }
 
 /**
- * One plain sentence saying when the fixed-fee line first invoices, for the
- * wizard review step and the post-creation confirmation.
+ * One plain sentence saying when a recurring line (or a group of lines sharing
+ * timing and frequency) first invoices, for the wizard review step and the
+ * post-creation confirmation.
  */
 export function FirstInvoiceNotice({
   id,
@@ -49,6 +52,7 @@ export function FirstInvoiceNotice({
   billingFrequency,
   startDate,
   clientId,
+  lineNames,
   className,
 }: FirstInvoiceNoticeProps) {
   const { t } = useTranslation('msp/contracts');
@@ -68,15 +72,25 @@ export function FirstInvoiceNotice({
     );
   }
 
+  const coversSeveralLines = (lineNames?.length ?? 0) > 1;
+
   return (
     <div id={id} className={className}>
+      {lineNames && lineNames.length > 0 && (
+        <p className="font-medium text-[rgb(var(--color-text-700))]">{lineNames.join(', ')}</p>
+      )}
       <p>{describeFirstInvoice(result, t, formatYmd)}</p>
       {result.status === 'date' && result.scenario.endsWith('arrears') && (
         <p>
-          {t('wizardFirstInvoice.arrearsPreviewNote', {
-            defaultValue:
-              'Until then, an invoice preview for this client has nothing to bill for this line.',
-          })}
+          {coversSeveralLines
+            ? t('wizardFirstInvoice.arrearsPreviewNoteMany', {
+                defaultValue:
+                  'Until then, an invoice preview for this client has nothing to bill for these lines.',
+              })
+            : t('wizardFirstInvoice.arrearsPreviewNote', {
+                defaultValue:
+                  'Until then, an invoice preview for this client has nothing to bill for this line.',
+              })}
         </p>
       )}
     </div>

@@ -1,5 +1,6 @@
 import {
   buildRequest,
+  type BuiltRequest,
   type ChatApiRegistryEntry,
   type CallEndpointArgs,
 } from '@alga-psa/agent-tooling';
@@ -99,7 +100,11 @@ export class InstanceClient {
 
   /** Invoke a registry endpoint, building the request from the entry + args. */
   async callEndpoint(entry: ChatApiRegistryEntry, args: CallEndpointArgs): Promise<EndpointResult> {
-    const built = buildRequest(entry, args);
+    return this.sendBuilt(buildRequest(entry, args));
+  }
+
+  /** Send an already-built request (e.g. the attach_file mapper's output). */
+  async sendBuilt(built: BuiltRequest): Promise<EndpointResult> {
     const url = new URL(`${this.config.instanceUrl}${built.path}`);
     for (const [key, value] of Object.entries(built.query)) {
       url.searchParams.set(key, value);

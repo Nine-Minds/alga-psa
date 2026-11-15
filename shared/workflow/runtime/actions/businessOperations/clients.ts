@@ -1,10 +1,13 @@
 import { deactivateClientScopedChecklistTemplates } from '../../../../lib/ticketChecklists/clientDeletion';
+import { deactivateClientScopedTicketTemplates } from '../../../../lib/ticketTemplates/clientDeletion';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { tenantDb } from '@alga-psa/db';
+import { releaseSeatTicketOnMove } from '@alga-psa/db';
 import {
   createClientWithDefaults,
   type CreateClientWithDefaultsData,
@@ -91,7 +94,7 @@ const clientSummarySchema = z.object({
   url: z.string().nullable().describe('Website'),
   billing_email: z.string().nullable().optional().describe('Billing email address'),
   is_inactive: z.boolean().describe('Is inactive'),
-  properties: z.record(z.unknown()).nullable().describe('Custom properties'),
+  properties: z.record(z.string(), z.unknown()).nullable().describe('Custom properties'),
   updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
@@ -137,7 +140,7 @@ const clientCreateInputSchema = z.object({
   default_currency_code: z.string().optional(),
   notes: z.string().optional(),
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
   parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
   contract_line_id: nullableUuidSchema.optional(),
   is_default: z.boolean().optional(),
@@ -161,7 +164,7 @@ const clientUpdatePatchSchema = z
     default_currency_code: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
-    properties: z.record(z.unknown()).nullable().optional(),
+    properties: z.record(z.string(), z.unknown()).nullable().optional(),
     parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
     contract_line_id: nullableUuidSchema.optional(),
     is_default: z.boolean().nullable().optional(),
@@ -271,6 +274,23 @@ async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: strin
     });
   }
   return client as ClientRow;
+}
+
+/** Refuses a client patch that would make a client with a live seat arrangement inactive. */
+async function refuseStrandingSeatArrangement(
+  ctx: any, tx: TenantTxContext, clientId: string, patch: { is_inactive?: unknown },
+): Promise<void> {
+  try {
+    await assertClientPatchKeepsSeatArrangement(tx.trx, tx.tenantId, clientId, patch);
+  } catch (error) {
+    if (!(error instanceof ClientSeatArrangementError)) throw error;
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: error.message,
+      details: { client_id: clientId, reason: error.code },
+    });
+  }
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, any>> {
@@ -721,11 +741,18 @@ async function cleanupClientDeleteArtifacts(
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
   await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+  await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  // RMM organisations stay mapped to nothing; the client's maintenance windows
+  // go with it. Neither foreign key acts on its own on Citus.
+  await tenantScopedTableForTenant(trx, tenant, 'rmm_organization_mappings')
+    .where('client_id', clientId)
+    .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+  await deleteFromTenantTableIfExists(trx, tenant, 'rmm_maintenance_windows', { client_id: clientId });
   // After every table that references a profile, before the client itself.
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
@@ -1480,6 +1507,8 @@ export function registerClientActions(): void {
         }
 
         if (Object.keys(clientPatch).length > 0) {
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, clientPatch);
           try {
             await tenantScopedTable(tx, 'clients')
               .where('client_id', input.client_id)
@@ -1580,6 +1609,8 @@ export function registerClientActions(): void {
         let archivedAt: string | null = null;
         if (!previousInactive) {
           archivedAt = new Date().toISOString();
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, { is_inactive: true });
           await tenantScopedTable(tx, 'clients')
             .where('client_id', input.client_id)
             .update({ is_inactive: true, updated_at: archivedAt });
@@ -2053,6 +2084,8 @@ export function registerClientActions(): void {
         }
 
         await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).update(patch);
+        // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+        await releaseSeatTicketOnMove(tx.trx, tx.tenantId, input.ticket_id, ticket, { ...ticket, client_id: input.client_id });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

@@ -22,7 +22,7 @@ append after an uncertain response could duplicate rows. This follows Google's
 | `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
 | `integration-full` | `integration-tests.yml` | Selected full integration lane |
 | `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
-| Browser readiness | `e2e-fresh-install-tests.yaml` | After successful installation setup, including failed browser execution; excluded under ACT |
+| Browser readiness | `e2e-fresh-install-tests.yaml` | In each edition's `browser-evidence` job (`Production browser (<edition>)`), once every browser shard's installation setup succeeded, including failed or partial browser execution; excluded under ACT |
 
 Credentials must be available for an external write; fork PRs generally cannot
 access them. Unit and integration recording use `always()` so failed or incomplete
@@ -49,8 +49,12 @@ deployed artifacts or release readiness. Native runs without a configured manife
 retain null; a configured missing or invalid manifest makes metrics incomplete.
 
 `scripts/record-browser-metrics.mjs` consumes this artifact through
-`TEST_METRICS_BROWSER`. The browser workflow invokes it after diagnostics and
-before API execution. With the existing Google metrics credentials it appends
+`TEST_METRICS_BROWSER`. Each browser shard writes metrics for its own share of
+the journeys; the per-edition `browser-evidence` job recomputes the metrics
+from every shard's raw report (`scripts/merge-browser-shards.mjs`) and
+invokes the recorder on that merged document, so one `run` row and one set of
+`journey` rows per edition reach the tab, as before the journeys were sharded.
+With the existing Google metrics credentials it appends
 to `browser_readiness`; without them it still writes a job summary. Live tab
 creation and readback must be verified on the next candidate.
 

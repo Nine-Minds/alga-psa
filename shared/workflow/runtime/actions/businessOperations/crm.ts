@@ -279,9 +279,11 @@ const addQuoteItemInputSchema = z.object({
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
   applies_to_item_id: uuidSchema.optional().nullable(),
   applies_to_service_id: uuidSchema.optional().nullable(),
-  is_taxable: z.boolean().default(true),
+  // Omitted rather than defaulted to true, so an unset value reaches the DAL
+  // undefined and is derived from the service's tax configuration.
+  is_taxable: z.boolean().optional(),
   tax_region: z.string().trim().optional().nullable(),
-  tax_rate: z.number().int().min(0).optional().nullable(),
+  tax_rate: z.number().min(0).optional().nullable(),
   location_id: uuidSchema.optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
@@ -974,6 +976,7 @@ async function resolveQuoteAuthorizationSubject(
   return {
     tenant: tenantId,
     userId: actorUserId,
+    // LEVERAGE: pattern authorization-subject-resolution — workflow CRM actions hand-build a subject; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
     userType: userRow?.user_type === 'client' ? 'client' : userRow?.user_type === 'service' ? 'service' : 'internal',
     roleIds: roleRows.map((row) => row.role_id),
     teamIds: teamRows.map((row) => row.team_id),
@@ -1831,7 +1834,7 @@ export function registerCrmActions(): void {
         const updatedQuote = await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
           status: 'pending_approval' as any,
           updated_by: tx.actorUserId,
-        });
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const comment = input.comment?.trim() || input.reason?.trim() || null;
         if (comment) {
@@ -1922,7 +1925,7 @@ export function registerCrmActions(): void {
 
         try {
           if (input.target === 'contract') {
-            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1945,7 +1948,7 @@ export function registerCrmActions(): void {
           }
 
           if (input.target === 'invoice') {
-            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1967,7 +1970,7 @@ export function registerCrmActions(): void {
             };
           }
 
-          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
           await writeRunAudit(ctx, tx, {
             operation: 'workflow_action:crm.convert_quote',
             changedData: {
@@ -2194,7 +2197,7 @@ export function registerCrmActions(): void {
       created_at: isoDateTimeSchema,
       target_type: z.string(),
       target_id: uuidSchema,
-      target_summary: z.record(z.unknown()).nullable()
+      target_summary: z.record(z.string(), z.unknown()).nullable()
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -2296,7 +2299,7 @@ export function registerCrmActions(): void {
     outputSchema: z.object({
       activities: z.array(activitySummarySchema),
       count: z.number().int(),
-      matched_filters: z.record(z.unknown()),
+      matched_filters: z.record(z.string(), z.unknown()),
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
@@ -2815,14 +2818,9 @@ export function registerCrmActions(): void {
         }
 
         const sentAt = new Date().toISOString();
-        await tenantScopedTable(tx, 'quotes')
-          .where({ quote_id: input.quote_id })
-          .update({
-            status: 'sent',
-            sent_at: sentAt,
-            updated_by: tx.actorUserId,
-            updated_at: sentAt,
-          });
+        await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
+          status: 'sent', sent_at: sentAt, updated_by: tx.actorUserId,
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const updatedQuote = await tenantScopedTable(tx, 'quotes').where({ quote_id: input.quote_id }).first();
         if (!updatedQuote) {

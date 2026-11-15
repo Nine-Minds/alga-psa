@@ -1,0 +1,28 @@
+{
+  "implementationRevision": "d7a067bb76493aabc6f09f2ac903179b7851c0d6",
+  "queued": {
+    "observedAt": "2026-11-01 smoke run",
+    "tickets": ["SLA-MAIL-A", "SLA-MAIL-B"],
+    "source": "The live smoke report says a database poll observed queued before delivery completed.",
+    "rawPollSnapshotRetained": false,
+    "note": "This is a reported live observation from the same implementation revision, not a screenshot or archived query output."
+  },
+  "sent": {
+    "observedAt": "2026-11-01 smoke run final audit snapshot",
+    "tickets": ["SLA-MAIL-A", "SLA-MAIL-B"],
+    "source": "historical-audit-final-20261101.json",
+    "messageIdsPresent": true
+  },
+  "freshFinalResults": {
+    "observedAt": "2026-11-08T17:05:12.013Z",
+    "tickets": ["SLA-REVIEW-A", "SLA-REVIEW-B"],
+    "source": "live-delivery.json",
+    "outcome": "sent",
+    "messageIdsMatchGreenMail": true
+  },
+  "implementationDescription": {
+    "sourceRevision": "d7a067bb76493aabc6f09f2ac903179b7851c0d6",
+    "source": "packages/sla/src/services/escalationService.ts",
+    "description": "The escalation transaction persists queued before the after-commit delivery hook persists sent with a message ID or failed with a reason."
+  }
+}

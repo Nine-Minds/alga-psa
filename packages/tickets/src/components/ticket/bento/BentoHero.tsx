@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketCreatorName } from '../ticketCreatorName';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, Plus, Tag } from 'lucide-react';
@@ -35,8 +36,10 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../.
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
+import { useDefaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
+import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -66,22 +69,19 @@ const trackedHeroFields = [
   'response_state',
 ] as const;
 
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
-
 interface BentoHeroProps {
   id: string;
   /** Observed by TicketDetails' sticky header to float the title on scroll. */
   titleRef?: React.Ref<HTMLHeadingElement>;
-  ticket: ITicket & TicketSlaFields & { source?: string | null; escalated?: boolean; escalation_level?: number | null };
+  ticket: ITicket & TicketSlaFields & { source?: string | null; created_by_display_name?: string | null; escalated?: boolean; escalation_level?: number | null };
   statusOptions: HeroSelectOption[];
   priorityOptions: HeroSelectOption[];
   boardOptions: HeroSelectOption[];
   agentOptions: HeroSelectOption[];
   /** Full user objects backing the assignee picker (individual agents). */
   availableAgents: IUserWithRoles[];
+  /** Seat technicians of the ticket's own client, listed apart in the assignee picker. Absent: no group. */
+  clientItUserIds?: readonly string[];
   /** Teams selectable as the assignee (renders the assigned-team badge too). */
   teams?: ITeam[];
   /** Extra assigned agents; surfaced as a compact "+N" indicator. */
@@ -188,6 +188,7 @@ export function BentoHero({
   boardOptions,
   agentOptions,
   availableAgents,
+  clientItUserIds,
   teams,
   additionalAgents,
   onAssignTeam,
@@ -228,10 +229,13 @@ export function BentoHero({
   const { getTicketStatuses, getTicketCategoriesByBoard } = dataSource.options;
   const { searchUsersForMentions } = dataSource.viewer;
   const activityCrossFeature = useOptionalActivityCrossFeature();
+  // A local creator is a user row; a shared ticket's creator arrives as an attributed display name (null-safe either way).
+  const openedByName = ticketCreatorName(createdByUser, ticket);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const saveSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1003,8 +1007,8 @@ export function BentoHero({
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <div id={`${id}-meta-line`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[rgb(var(--color-text-500))]">
             <p>
-              {createdByUser
-                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
+              {openedByName
+                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: openedByName })
                 : t('bento.tiles.opened', 'Opened')}
               {ticket.source ? ` ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
             </p>
@@ -1089,6 +1093,10 @@ export function BentoHero({
                   await onAssignTeam?.(teamId);
                 }}
                 users={availableAgents}
+                // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
+                userGroups={clientItUserIds?.length
+                  ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
+                  : undefined}
                 teams={teams ?? []}
                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
@@ -1096,7 +1104,12 @@ export function BentoHero({
                 buttonWidth="full"
                 className="min-w-0 flex-1"
                 size="sm"
-                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                placeholder={unresolvedAssigneeLabel({
+                  savedAssigneeId: ticket.assigned_to,
+                  savedAssigneeName: ticket.assigned_to_name,
+                  currentValue: displayValue('assigned_to'),
+                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
               {assignedTeam ? (
@@ -1270,7 +1283,7 @@ export function BentoHero({
                 </button>
               ) : null}
             </>
-          ) : (
+          ) : isFrozen('description') ? null : (
             <button
               id={`${id}-description-empty`}
               type="button"

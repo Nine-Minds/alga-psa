@@ -1,5 +1,6 @@
 'use client';
 
+import type { ComposerAudience } from '../CommentAudienceControl';
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { User, Clock, Users, Pencil, ClipboardList } from 'lucide-react';
@@ -9,8 +10,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
-import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import EntityChip from '@alga-psa/ui/components/EntityChip';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ContentCardVariantProvider, ContentCardFooter } from '@alga-psa/ui/components';
@@ -28,6 +28,7 @@ import type {
   ITeam,
 } from '@alga-psa/types';
 import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import type { PartyDisplayTags } from '../../../lib/partyDisplayTags';
 import type { ITicketExternalLinkView } from '../../../actions/externalLinks/externalLinkActions';
 import TicketChecklistSection from './../TicketChecklistSection';
 import { TicketCredentialsSection } from './../TicketCredentialsSection';
@@ -41,6 +42,7 @@ import TicketWatchListCard from './../TicketWatchListCard';
 import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { useTicketDataSource } from '../TicketDataSourceContext';
 import { resolveTicketFrozenFields } from '../../../lib/ticketDataSource';
+import { contactLocationSuggestion, requesterLocationLine } from '../../../lib/requesterLocation';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { BentoTile, BentoTileAddButton, BentoTileEmpty, BentoTileEmptyScope, BentoTileSkeleton, BentoCollapseEmptyTiles } from '@alga-psa/ui/components/bento/BentoTile';
@@ -74,6 +76,8 @@ export interface TicketBentoLayoutProps {
   priorityOptions: { value: string; label: string }[];
   boardOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
+  /** Seat technicians of the ticket's own client (MSP viewer, live arrangement): the assignee picker's Client IT group. */
+  clientItUserIds?: readonly string[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /** Coalesced multi-field hero save; forwarded to BentoHero. */
   onBatchSelectChange?: (
@@ -83,6 +87,7 @@ export interface TicketBentoLayoutProps {
   /** Persists the hero description when no batch handler is wired. */
   onUpdateDescription?: (content: string) => Promise<boolean>;
   responseStateTrackingEnabled?: boolean;
+  defaultReplyInternal?: boolean;
   hideSlaStatus?: boolean;
   /** App-layer slot content (`slots.appSection`), rendered as its own tile. */
   appSection?: React.ReactNode;
@@ -149,6 +154,7 @@ export interface TicketBentoLayoutProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
@@ -188,10 +194,11 @@ export interface TicketBentoLayoutProps {
   createdByUser?: IUser | null;
   contactInfo?: IContact | null;
   client?: IClient | null;
+  /** Requester and client chip tags for the viewer (display rules). */
+  displayTags?: PartyDisplayTags;
   onContactClick: () => void;
   onClientClick: () => void;
   /** Clients list, used to scope the quick-add-contact modal. */
-  clients?: IClient[];
   /** Persists a contact change (or clear, when null). Enables inline contact editing on the tile — the picker pool is the existing `contacts` prop. */
   onChangeContact?: (contactId: string | null) => void;
   /** Repoints the ticket to a different client (resets contact + location). Enables the inline ClientPicker on the tile. */
@@ -238,7 +245,9 @@ export interface TicketBentoLayoutProps {
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[],
   ) => Promise<void> | void;
-  onUpdateWatchList?: (watchList: any[]) => Promise<boolean>;
+  onAddWatchers?: (inputs: any[]) => Promise<boolean>;
+  onSetWatcherActive?: (email: string, active: boolean) => Promise<boolean>;
+  onRemoveWatcher?: (email: string) => Promise<boolean>;
   watchListSaving?: boolean;
   contacts?: IContact[];
   allContactsForWatchList?: IContact[];
@@ -247,6 +256,8 @@ export interface TicketBentoLayoutProps {
   // Materials / feedback / documents / assets
   hideMaterials?: boolean;
   surveySummaryCard?: React.ReactNode;
+  /** Effort by organization on a seat arrangement's ticket (S28); built for this viewer by the server, absent otherwise. */
+  seatEffortCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   documents: any[];
   onDocumentCreated: () => Promise<void>;
@@ -277,7 +288,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   // Screen-declared frozen fields only: live-collaboration conflicts reach BentoHero (liveFrozenFields), never these gates.
   const frozenFieldSet = React.useMemo(() => new Set(resolveTicketFrozenFields(dataSource.screen)), [dataSource.screen]);
   const { getUserAvatarUrlsBatchAction, getTeamAvatarUrlsBatchAction } = dataSource.avatars;
-  const { getClientBillingProfiles } = dataSource.people;
+  const { getClientBillingProfiles, searchClientsForPicker } = dataSource.people;
   const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
   const ticketId = ticket.ticket_id ?? '';
   // Guards against re-entrant add/remove churn on rapid multi-select changes.
@@ -307,7 +318,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     return null;
   }, [defaultLocation, selectedLocation, t]);
 
-  const canChangeLocation = Boolean(props.onChangeLocation) && (props.locations ?? []).length > 0;
+  const canChangeLocation = Boolean(props.onChangeLocation) && (props.locations ?? []).length > 0 && capabilities.locationEdit;
   const [locationPickerOpen, setLocationPickerOpen] = React.useState(false);
   const [selectedLocationId, setSelectedLocationId] = React.useState<string | null>(null);
   const locationOptions = React.useMemo(() => {
@@ -355,18 +366,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [selectedNewClientId, setSelectedNewClientId] = React.useState<string | null>(null);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
-  // props.clients can contain the same company more than once (joins upstream);
-  // dedupe by client_id so the picker shows each company once.
-  const uniqueClients = React.useMemo(() => {
-    const seen = new Set<string>();
-    return (props.clients ?? []).filter((client) => {
-      if (!client || typeof client.client_id === 'undefined') return false;
-      if (seen.has(client.client_id)) return false;
-      seen.add(client.client_id);
-      return true;
-    });
-  }, [props.clients]);
-
   // Log call/email: the quick-add-interaction flow needs a client, so it is only
   // offered when the ticket resolves to one. A successful add bumps the refresh
   // key so the Calls and emails tile refetches and shows the new row.
@@ -374,6 +373,12 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
   const [isLogInteractionOpen, setIsLogInteractionOpen] = React.useState(false);
   const [interactionRefreshKey, setInteractionRefreshKey] = React.useState(0);
   const logInteractionContactId = props.contactInfo?.contact_name_id ?? ticket.contact_name_id ?? null;
+
+  // Where the requester works, under the tag chips.
+  const requesterLocation = requesterLocationLine(props.contactInfo, t('bento.tiles.remote', 'Remote'));
+  const suggestedContactLocationId = props.onChangeLocation
+    ? contactLocationSuggestion(props.contactInfo, (ticket as { location_id?: string | null }).location_id)
+    : null;
   const handleInteractionClick = React.useCallback((interactionId: string) => {
     void openInteractionDetails(interactionId, () => {
       setInteractionRefreshKey((key) => key + 1);
@@ -398,7 +403,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       id={`${id}-time-tile`}
       title={!showTime ? t('bento.tiles.billing', 'Billing') : !showBilling ? t('bento.tiles.timeLogged', 'Time logged') : t('bento.tiles.timeAndBilling', 'Time & billing')}
       icon={<Clock className="h-4 w-4" />}
-      action={!showTime ? undefined :
+      action={!showTime || !capabilities.timeEntryCreate ? undefined :
         <BentoTileAddButton
           id={`${id}-add-time-entry`}
           label={t('bento.tiles.addTimeEntry', 'Add time entry')}
@@ -660,21 +665,17 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         ) : props.contactInfo || props.client ? (
           <div className="space-y-1.5 text-sm">
             {props.contactInfo ? (
-              <div className="flex items-center gap-2 min-w-0">
-                <ContactAvatar
-                  contactId={props.contactInfo.contact_name_id || ''}
-                  contactName={props.contactInfo.full_name || ''}
-                  avatarUrl={props.contactInfo.avatarUrl ?? null}
-                  size="sm"
-                />
-                <button
-                  id={`${id}-contact-open`}
-                  type="button"
-                  className="font-medium text-[rgb(var(--color-primary-600))] hover:underline text-left truncate"
+              <div className="flex items-center gap-2 min-w-0 font-medium">
+                <EntityChip
+                  kind="contact"
+                  id={props.contactInfo.contact_name_id || ''}
+                  name={props.contactInfo.full_name || ''}
+                  imageUrl={props.contactInfo.avatarUrl ?? null}
+                  tags={props.displayTags?.contact}
+                  maxBadges={3}
+                  buttonId={`${id}-contact-open`}
                   onClick={props.onContactClick}
-                >
-                  {props.contactInfo.full_name}
-                </button>
+                />
               </div>
             ) : canEditContact ? (
               <button
@@ -691,6 +692,23 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             {props.contactInfo?.email ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">{props.contactInfo.email}</div>
             ) : null}
+            {requesterLocation ? (
+              <div className="text-[rgb(var(--color-text-600))] truncate" id={`${id}-contact-location`}>
+                {requesterLocation.name}
+              </div>
+            ) : null}
+            {/* The ticket is somewhere the requester does not work. Never re-pointed on its own:
+                the one click is the operator saying the person's site is the right answer. */}
+            {suggestedContactLocationId ? (
+              <button
+                id={`${id}-contact-use-location`}
+                type="button"
+                className="text-xs text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={() => props.onChangeLocation?.(suggestedContactLocationId)}
+              >
+                {t('bento.tiles.useContactLocation', 'Use contact\'s location')}
+              </button>
+            ) : null}
             {contactPhone ? (
               <div className="text-[rgb(var(--color-text-600))] truncate">
                 <CallLink
@@ -703,21 +721,19 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             {props.client ? (
               <div className="pt-1 border-t border-[rgb(var(--color-border-100))]">
                 <div className="flex items-center gap-2">
-                  <ClientAvatar
-                    clientId={props.client.client_id}
-                    clientName={props.client.client_name}
-                    logoUrl={props.client.logoUrl ?? null}
-                    size="sm"
-                  />
                   <span className="text-xs text-[rgb(var(--color-text-400))]">{t('bento.tiles.client', 'Client')}</span>{' '}
-                  <button
-                    id={`${id}-client-open`}
-                    type="button"
-                    className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
-                    onClick={props.onClientClick}
-                  >
-                    {props.client.client_name}
-                  </button>
+                  <span className="min-w-0 font-medium">
+                    <EntityChip
+                      kind="client"
+                      id={props.client.client_id}
+                      name={props.client.client_name}
+                      imageUrl={props.client.logoUrl ?? null}
+                      tags={props.displayTags?.client}
+                      maxBadges={3}
+                      buttonId={`${id}-client-open`}
+                      onClick={props.onClientClick}
+                    />
+                  </span>
                   {canChangeClient ? (
                     <button
                       id={`${id}-client-edit`}
@@ -742,7 +758,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                   <div className="mt-1.5 space-y-2">
                     <ClientPicker
                       id={`${id}-client-picker`}
-                      clients={uniqueClients}
+                      searchClients={searchClientsForPicker}
                       onSelect={setSelectedNewClientId}
                       selectedClientId={selectedNewClientId || props.client?.client_id || ''}
                       filterState={clientFilterState}
@@ -851,7 +867,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
                 ) : null}
                 {/* Renders nothing while the client holds a single profile
                     (decision D6) — the picker itself owns that rule. */}
-                {props.onChangeBillingProfile ? (
+                {props.onChangeBillingProfile && capabilities.billing ? (
                   <BillingProfilePicker
                     id={`${id}-billing-profile-picker`}
                     clientId={props.client.client_id}
@@ -952,7 +968,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
-        onUpdateWatchList={props.onUpdateWatchList}
+        onAddWatchers={props.onAddWatchers}
+        onSetWatcherActive={props.onSetWatcherActive}
+        onRemoveWatcher={props.onRemoveWatcher}
         watchListSaving={props.watchListSaving}
         internalUsers={props.availableAgents}
         clientContacts={props.contacts}
@@ -965,6 +983,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       />
     ) },
     capabilities.survey && props.surveySummaryCard ? { key: 'feedback', zone: 'start', group: 'who', rank: 16, node: props.surveySummaryCard } : null,
+    props.seatEffortCard ? { key: 'seat-effort', zone: 'start', group: 'who', rank: 17, node: props.seatEffortCard } : null,
     { key: 'calls', zone: 'start', group: 'linked', rank: 46, node: (
       <Suspense fallback={<BentoTileSkeleton id={`${id}-calls-emails-tile-loading`} title={t('bento.tiles.callsAndEmails', 'Calls and emails')} />}>
         <CallsEmailsTile
@@ -1012,7 +1031,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           setIsQuickAddContactOpen(false);
           setContactEditOpen(true);
         },
-        clients: uniqueClients,
         selectedClientId: effectiveClientId ?? null,
       })}
       {isLogInteractionOpen && effectiveClientId
@@ -1049,6 +1067,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           boardOptions={props.boardOptions}
           agentOptions={props.agentOptions}
           availableAgents={props.availableAgents}
+          clientItUserIds={props.clientItUserIds}
           teams={props.teams}
           additionalAgents={props.additionalAgents}
           onAssignTeam={props.onAssignTeam}
@@ -1130,6 +1149,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             refreshKey={props.timelineRefreshKey}
             initialOrder={props.timelineInitialOrder}
             editorKey={props.editorKey}
+            defaultReplyInternal={props.defaultReplyInternal}
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}

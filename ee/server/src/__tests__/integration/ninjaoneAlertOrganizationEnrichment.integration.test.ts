@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -270,12 +271,12 @@ async function seedMappedAsset(
   assetName = `node-${deviceId}`
 ): Promise<void> {
   const asset = assetId;
-  await tenantTable(tenant, 'assets').insert({
+  await insertTestAssets(db, {
     tenant,
     asset_id: asset,
     asset_type: 'server',
     name: assetName,
-    asset_tag: `tag-${deviceId}`,
+    asset_tag: `tag-${deviceId}-${assetId}`,
     serial_number: `sn-${deviceId}`,
     status: 'active',
     client_id: clientId,

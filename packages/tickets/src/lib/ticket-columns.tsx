@@ -6,8 +6,7 @@ import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import EntityChip from '@alga-psa/ui/components/EntityChip';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -105,16 +104,18 @@ function slaMagnitude(minutes: number): string {
 }
 
 function formatSlaCell(
-  sla: { status: SlaTimerStatus; remainingMinutes: number | undefined; isPaused: boolean } | null
+  sla: { status: SlaTimerStatus; remainingMinutes: number | undefined; isPaused: boolean } | null,
+  t: (key: string, fallback: string) => string
 ): { text: string; tone: 'over' | 'soon' | 'ok' } | null {
   if (!sla) return null;
   if (sla.status === 'response_breached' || sla.status === 'resolution_breached') {
-    return { text: 'SLA breached', tone: 'over' };
+    return { text: t('sla.cell.breached', 'SLA breached'), tone: 'over' };
   }
-  if (sla.status === 'paused') return { text: 'SLA paused', tone: 'ok' };
+  if (sla.status === 'paused') return { text: t('sla.cell.paused', 'SLA paused'), tone: 'ok' };
   const mag = sla.remainingMinutes !== undefined ? slaMagnitude(sla.remainingMinutes) : null;
-  if (sla.status === 'at_risk') return { text: mag ? `${mag} left` : 'At risk', tone: 'soon' };
-  return { text: mag ? `${mag} left` : 'On track', tone: 'ok' };
+  const remaining = (magnitude: string) => t('sla.cell.remaining', '{{magnitude}} left').replace('{{magnitude}}', magnitude);
+  if (sla.status === 'at_risk') return { text: mag ? remaining(mag) : t('sla.cell.atRisk', 'At risk'), tone: 'soon' };
+  return { text: mag ? remaining(mag) : t('sla.cell.onTrack', 'On track'), tone: 'ok' };
 }
 
 type TicketListSettings = {
@@ -252,7 +253,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   e.stopPropagation();
                   onToggleBundleExpanded!(record.ticket_id as string);
                 }}
-                aria-label="Toggle bundle children"
+                aria-label={t('bundle.toggleChildren', 'Toggle bundle children')}
               >
                 {isBundleExpanded && isBundleExpanded(record.ticket_id as string) ? (
                   <ChevronDown className="h-4 w-4 text-gray-600" />
@@ -303,7 +304,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
                   style={{ color: 'rgb(var(--color-primary-700))', backgroundColor: 'rgb(var(--color-primary-100))' }}
                 >
-                  Bundled → {record.bundle_master_ticket_number || 'Master'}
+                  {t('bundle.bundledTo', 'Bundled → {{ticketNumber}}').replace('{{ticketNumber}}', record.bundle_master_ticket_number || t('bundle.master', 'Master'))}
                 </span>
               )}
               {showTicketNumberSubtitle && isBundleMaster && (
@@ -370,7 +371,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 style={{ backgroundColor: `rgb(${hue} / 0.14)`, borderColor: `rgb(${hue} / 0.30)` }}
               >
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
-                <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
+                <span className="overflow-hidden text-ellipsis">{value || t('fields.noStatus', 'No Status')}</span>
               </span>
               {/* Response state degrades with the column width: full label → icon
                   → hidden. Thresholds are container queries on the status cell. */}
@@ -416,7 +417,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 className="h-3.5 w-[3px] shrink-0 rounded-full"
                 style={{ backgroundColor: record.priority_color || '#94a3b8' }}
               />
-              <span className="font-medium text-[rgb(var(--color-text-700))]">{value || 'No Priority'}</span>
+              <span className="font-medium text-[rgb(var(--color-text-700))]">{value || t('fields.noPriority', 'No Priority')}</span>
             </div>
           );
         },
@@ -448,50 +449,29 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.client', 'Client'),
         dataIndex: 'client_name',
-        width: '9%',
+        // Fixed px floor for the avatar + 6ch name + two tag badges (see the Contact column note).
+        width: '200px',
         render: (value: string, record: ITicketListItem) => {
-          const hasClient = !!value;
           const multiClient = !record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && (record.bundle_distinct_client_count ?? 0) > 1;
-          const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
-              {hasClient ? (
-                <ClientAvatar
-                  clientId={record.client_id || value}
-                  clientName={value}
-                  logoUrl={record.client_logo_url ?? null}
-                  size="xs"
-                />
-              ) : (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
-                  —
-                </span>
-              )}
-              <span className="flex flex-col gap-0.5 overflow-hidden">
-                <span className="truncate">{value || 'No Client'}</span>
-                {multiClient ? (
-                  <span
-                    className="w-fit rounded px-2 py-0.5 text-[11px] font-medium"
-                    style={{ color: 'rgb(var(--color-accent-700))', backgroundColor: 'rgb(var(--color-accent-100))' }}
-                  >
-                    Multiple clients
-                  </span>
-                ) : null}
-              </span>
-            </span>
-          );
-          if (!onClientClick) {
-            return <span className="text-[rgb(var(--color-text-700))]">{body}</span>;
-          }
           return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (record.client_id) onClientClick(record.client_id);
-              }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
-            >
-              {body}
-            </button>
+            <EntityChip
+              kind="client"
+              id={record.client_id || value}
+              name={value}
+              imageUrl={record.client_logo_url ?? null}
+              tags={record.client_tags}
+              maxBadges={2}
+              emptyLabel={t('fields.noClient', 'No Client')}
+              onClick={onClientClick && record.client_id ? () => onClientClick(record.client_id!) : undefined}
+              extra={multiClient ? (
+                <span
+                  className="w-fit shrink-0 rounded px-2 py-0.5 text-[11px] font-medium"
+                  style={{ color: 'rgb(var(--color-accent-700))', backgroundColor: 'rgb(var(--color-accent-100))' }}
+                >
+                  {t('fields.multipleClients', 'Multiple clients')}
+                </span>
+              ) : null}
+            />
           );
         },
       }
@@ -505,41 +485,37 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: t('fields.contact', 'Contact'),
         dataIndex: 'contact_name',
-        width: '8%',
-        render: (value: string | null, record: ITicketListItem) => {
-          const body = (
-            <span className="flex items-center gap-2 overflow-hidden">
-              {value ? (
-                <ContactAvatar
-                  contactId={record.contact_name_id || value}
-                  contactName={value}
-                  avatarUrl={record.contact_avatar_url ?? null}
-                  size="xs"
-                />
-              ) : (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
-                  —
-                </span>
-              )}
-              <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
-            </span>
-          );
-          if (!onContactClick || !record.contact_name_id) {
-            return <span className="flex text-[rgb(var(--color-text-700))]">{body}</span>;
-          }
-          return (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onContactClick(record.contact_name_id!);
-              }}
-              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
-            >
-              {body}
-            </button>
-          );
-        },
+        // LEVERAGE: friction datatable-min-width — `minWidth` is only a shrink floor (percent widths
+        // are already raised to the ~161px "natural" size), so it cannot reserve room for the
+        // avatar + 6ch name + two tag badges. A fixed px width is the only way to set a floor.
+        width: '200px',
+        render: (value: string | null, record: ITicketListItem) => (
+          <EntityChip
+            kind="contact"
+            id={record.contact_name_id || value}
+            name={value}
+            imageUrl={record.contact_avatar_url ?? null}
+            tags={record.contact_tags}
+            maxBadges={2}
+            onClick={onContactClick && record.contact_name_id ? () => onContactClick(record.contact_name_id!) : undefined}
+          />
+        ),
       }
+    });
+  }
+
+  // Location (off by default; the catalog is the single source for that).
+  if (columnVisibility.location) {
+    columns.push({
+      key: 'location',
+      col: {
+        title: t('fields.location', 'Location'),
+        dataIndex: 'ticket_location_name',
+        width: '10%',
+        render: (value: string | null) => (
+          <span className="text-gray-700 truncate">{value || ''}</span>
+        ),
+      },
     });
   }
 
@@ -568,7 +544,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   +
                 </span>
               )}
-              <span className="truncate">{value || 'Unassigned'}</span>
+              <span className="truncate">{value || t('filters.unassigned', 'Unassigned')}</span>
               {record.assigned_team_id && record.assigned_team_name && (
                 <Tooltip content={record.assigned_team_name}>
                   <span className="inline-flex items-center cursor-help">
@@ -585,7 +561,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 <Tooltip
                   content={
                     <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                      <div className="font-medium text-gray-300 mb-1">{t('info.additionalAgentsTooltip', 'Additional Agents:')}</div>
                       {additionalAgents.map((agent, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <UserAvatar
@@ -628,7 +604,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         width: '9%',
         render: (value: string | null, record: ITicketListItem) => {
           const now = new Date();
-          const sla = formatSlaCell(calculateSlaStatus(record));
+          const sla = formatSlaCell(calculateSlaStatus(record), t);
           const dueDate = value ? new Date(value) : null;
 
           const toneClass = (tone: 'over' | 'soon' | 'ok' | 'muted'): string =>
@@ -644,7 +620,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             secondary = { text: sla.text, tone: sla.tone };
           } else if (dueDate && dueDate.getTime() >= now.getTime()) {
             const d = daysUntil(dueDate, now);
-            if (d >= 2) secondary = { text: `in ${d} days`, tone: 'muted' };
+            if (d >= 2) secondary = { text: t('fields.dueInDays', 'in {{count}} days').replace('{{count}}', String(d)), tone: 'muted' };
           }
 
           // Primary date colour: SLA urgency wins, then due-date urgency.
@@ -663,9 +639,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           } else {
             // No due date — still surface SLA below it if present.
             if (!secondary) {
-              return <div className="text-sm text-[rgb(var(--color-text-400))]">No due date</div>;
+              return <div className="text-sm text-[rgb(var(--color-text-400))]">{t('fields.noDueDate', 'No due date')}</div>;
             }
-            primaryText = 'No due date';
+            primaryText = t('fields.noDueDate', 'No due date');
           }
 
           return (

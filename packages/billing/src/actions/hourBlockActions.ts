@@ -2,10 +2,9 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, resolveTenantToday } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { Temporal } from '@js-temporal/polyfill';
 import type {
   IHourBlock,
   IHourBlockAllocation,
@@ -20,6 +19,7 @@ import {
   getContractLineCoverageForClient,
   getContractLineCoverageRowsForClient,
   classifyContractLineCoverageForWindow,
+  computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateInvoiceNumber } from './invoiceGeneration';
@@ -184,6 +184,11 @@ export interface CreateHourBlockPurchaseInvoiceInternalInput {
   service: DbRow;
   currencyCode: string;
   dueDate: string;
+  /**
+   * Invoice date (YYYY-MM-DD) the due date was derived from. When absent, the
+   * tenant-local today is resolved inside the transaction.
+   */
+  invoiceDate?: string;
   taxSource: unknown;
   invoiceNumber: string;
   createdBy: string | null;
@@ -212,6 +217,7 @@ export async function createHourBlockPurchaseInvoiceInternal(
     service,
     currencyCode,
     dueDate,
+    invoiceDate,
     taxSource,
     invoiceNumber,
     createdBy,
@@ -225,7 +231,7 @@ export async function createHourBlockPurchaseInvoiceInternal(
     invoice_id: invoiceId,
     tenant,
     client_id: clientId,
-    invoice_date: Temporal.Now.plainDateISO().toString(),
+    invoice_date: invoiceDate ?? (await resolveTenantToday(trx, tenant)).toString(),
     due_date: dueDate,
     invoice_number: invoiceNumber,
     status: 'draft',
@@ -322,7 +328,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
       }
 
       const currencyCode = client.default_currency_code || 'USD';
-      const currentDate = Temporal.Now.plainDateISO().toString();
+      const currentDate = (await resolveTenantToday(trx, tenant)).toString();
       const dueDate = await getDueDate(clientId, currentDate);
       if (isActionError(dueDate)) throw new Error(getErrorMessage(dueDate));
       const taxSource = await getInitialInvoiceTaxSource(clientId);
@@ -342,6 +348,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         service,
         currencyCode,
         dueDate,
+        invoiceDate: currentDate,
         taxSource,
         invoiceNumber: await generateInvoiceNumber(),
         createdBy: user.user_id,
@@ -395,6 +402,14 @@ export const grantHourBlock = withAuth(async (
         .where({ client_id: clientId, tenant })
         .first();
       if (!client) throw new Error('Client not found');
+
+      const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+        .where({ service_id: serviceId, tenant })
+        .first();
+      if (!service) throw new Error(`Service ${serviceId} not found`);
+      if (service.billing_method !== 'hourly') {
+        throw new Error('Hour blocks can only be granted for hourly services');
+      }
 
       const blockId = uuidv4();
       const now = new Date().toISOString();
@@ -794,7 +809,8 @@ export const listHourBlocks = withAuth(async (
           scope_services: scopesByBlock.get(row.block_id) ?? [],
           has_allocations: Boolean(row.has_allocations),
           expiration_date: toCalendarDateString(row.expiration_date),
-          remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
+          valid_from: toCalendarDateString(row.valid_from),
+          remaining_value: computeRemainingBlockValueMinor({ remaining_minutes: row.remaining_minutes, hourly_rate: row.hourly_rate }),
         };
         if (coverageRows && isCoverageEligibleBlock(row)) {
           // Same window rule as the single-block helper: tenant today .. expiry
@@ -914,7 +930,8 @@ export const getHourBlockDetail = withAuth(async (
         block: {
           ...block,
           expiration_date: toCalendarDateString(block.expiration_date),
-          remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
+          valid_from: toCalendarDateString(block.valid_from),
+          remaining_value: computeRemainingBlockValueMinor(block),
           ...(contractCoverage ? { contract_coverage: contractCoverage } : {}),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],

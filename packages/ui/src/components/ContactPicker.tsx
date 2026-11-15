@@ -8,12 +8,33 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
+import { EntityTagBadges } from './EntityChip';
 import type { IContact } from '@alga-psa/types';
 import { useTranslation } from '../lib/i18n/client';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, ButtonComponent, FormFieldComponent } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
+
+/**
+ * Where the person works, as secondary text beside the tag badges. A remote worker with no links
+ * reads "Remote" (translated by the caller); a contact with neither reads as nothing rather than
+ * borrowing the client's default location, which is what the dispatcher is about to decide for
+ * themselves.
+ */
+function contactLocationHint(
+  contact: IContact,
+  remoteLabel: string,
+): string | null {
+  const locations = contact.locations ?? [];
+  const primary = locations.find((location) => location.is_primary)
+    ?? (locations.length === 1 ? locations[0] : null)
+    ?? contact.primaryLocation
+    ?? null;
+  const name = primary?.location_name?.trim();
+  if (name) return locations.length > 1 ? `${name} +${locations.length - 1}` : name;
+  return contact.work_arrangement === 'remote' ? remoteLabel : null;
+}
 
 interface ContactPickerProps {
   id?: string;
@@ -97,6 +118,7 @@ export const ContactPicker = ({
   "data-automation-type": dataAutomationType = 'picker',
 }: ContactPickerProps & AutomationProps) => {
   const { t } = useTranslation('common');
+  const remoteLabel = t('pickers.contactRemoteLocation', { defaultValue: 'Remote' });
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -325,8 +347,16 @@ export const ContactPicker = ({
                       size="sm"
                     />
                     <div className="flex-1">
-                      <div>{contact.full_name}</div>
-                      <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contact.email}</div>
+                      <div className="flex items-center gap-2">
+                        <span>{contact.full_name}</span>
+                        <EntityTagBadges tags={contact.displayTags} maxBadges={2} />
+                      </div>
+                      <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {contact.email}
+                        {contactLocationHint(contact, remoteLabel) ? (
+                          <span data-contact-location={contact.contact_name_id}> · {contactLocationHint(contact, remoteLabel)}</span>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                   {contact.is_inactive && <span className="text-xs text-gray-400">(Inactive)</span>}
@@ -470,6 +500,12 @@ export const ContactPicker = ({
                 />
               )}
               <span className={!selectedContact ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
+              {selectedContact && <EntityTagBadges tags={selectedContact.displayTags} maxBadges={2} />}
+              {selectedContact && contactLocationHint(selectedContact, remoteLabel) ? (
+                <span className="text-xs text-gray-500" data-contact-location-selected>
+                  {contactLocationHint(selectedContact, remoteLabel)}
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center">
               <ChevronDown className={`h-4 w-4 ${disabled ? 'text-gray-400' : ''}`} />

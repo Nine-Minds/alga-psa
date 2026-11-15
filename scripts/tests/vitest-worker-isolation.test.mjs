@@ -6,77 +6,68 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const vitest = fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url));
+const vitest = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url));
 
-test('full-unit CLI override gives each file a fresh worker', { timeout: 30000 }, (t) => {
-  const root = mkdtempSync(path.join(tmpdir(), 'alga-unit-isolation-'));
+// Each fixture file records its pid and the window it ran in, so a run reports
+// both whether files shared a process and whether they overlapped.
+function fixture(t, prefix, config) {
+  const root = mkdtempSync(path.join(tmpdir(), prefix));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  writeFileSync(path.join(root, 'vitest.config.mjs'), `export default ${JSON.stringify({ test: {
-    globals: true, include: ['*.test.js'], fileParallelism: false, maxWorkers: 1,
-    isolate: true, pool: 'forks', poolOptions: { forks: { singleFork: true } },
-  } })};`);
-  for (const name of ['first', 'second']) {
+  writeFileSync(path.join(root, 'vitest.config.mjs'), config);
+  for (const name of ['first', 'second', 'third']) {
     writeFileSync(path.join(root, `${name}.test.js`), `
       import { writeFileSync } from 'node:fs';
-      test('records its own runtime', () => {
-        writeFileSync(${JSON.stringify(path.join(root, name + '.pid'))}, String(process.pid));
+      test('records its own runtime', async () => {
+        const start = Date.now();
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        writeFileSync(${JSON.stringify(path.join(root, name + '.run'))}, JSON.stringify({ pid: process.pid, start, end: Date.now() }));
         expect(2 + 2).toBe(4);
       });
     `);
   }
-  const run = (overrides) => {
+  return (overrides, env = {}) => {
+    for (const file of readdirSync(root).filter((name) => name.endsWith('.run'))) rmSync(path.join(root, file));
     const result = spawnSync(process.execPath, [vitest, 'run', ...overrides], {
-      cwd: root, env: { ...process.env, CI: '1' }, encoding: 'utf8', timeout: 10000,
+      cwd: root, env: { ...process.env, CI: '1', ...env }, encoding: 'utf8', timeout: 30000,
     });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    const pids = readdirSync(root).filter((file) => file.endsWith('.pid')).map((file) => readFileSync(path.join(root, file), 'utf8'));
-    assert.equal(pids.length, 2);
-    return new Set(pids).size;
+    const runs = readdirSync(root).filter((file) => file.endsWith('.run'))
+      .map((file) => JSON.parse(readFileSync(path.join(root, file), 'utf8')));
+    assert.equal(runs.length, 3, `every file must run: ${result.stdout}`);
+    const sorted = [...runs].sort((a, b) => a.start - b.start);
+    const overlapped = sorted.some((run, index) => index > 0 && run.start < sorted[index - 1].end);
+    return { processes: new Set(runs.map((run) => run.pid)).size, overlapped };
   };
-  assert.equal(run([]), 1, 'the inherited singleFork setting reuses its process across files');
-  assert.equal(run(['--poolOptions.forks.singleFork=false', '--maxWorkers=1']), 2,
-    'the full-unit override must recycle the process between files');
+}
+
+test('isolate: true gives each file a fresh worker', { timeout: 60000 }, (t) => {
+  const run = fixture(t, 'alga-unit-isolation-', `export default ${JSON.stringify({ test: {
+    globals: true, include: ['*.test.js'], fileParallelism: false, maxWorkers: 1, isolate: true, pool: 'forks',
+  } })};`);
+  assert.deepEqual(run([]), { processes: 3, overlapped: false });
 });
 
-// Vitest forwards only a whitelist of CLI options into project configs, and
-// poolOptions is not on it: once server/vitest.config.ts grew jsdom/node
-// projects, --poolOptions.forks.singleFork=false stopped reaching the workers
-// and every caller silently lost its fresh-fork-per-file guarantee. The config
-// reads VITEST_RECYCLE_FORKS instead (server/package.json's `test` script and
-// unit-tests.yml's calendar-timezone step set it). Pin both halves so a revert
-// to the CLI form fails here instead of quietly serializing CI into one fork.
-test('under projects only the env switch recycles workers', { timeout: 30000 }, (t) => {
-  const root = mkdtempSync(path.join(tmpdir(), 'alga-unit-isolation-projects-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  writeFileSync(path.join(root, 'vitest.config.mjs'), `
-    const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
-    const base = { globals: true, include: ['*.test.js'], fileParallelism: false, maxWorkers: 1,
-      isolate: true, pool: 'forks', poolOptions: { forks: { singleFork } } };
-    export default { test: { ...base, projects: [{ test: { ...base, name: 'node' } }] } };
+// server/vitest.config.ts declares jsdom/node projects (extends: true). A
+// maxWorkers set in config reaches the projects and a CLI --maxWorkers cannot
+// lift it, so the config caps lanes at one worker unless VITEST_RECYCLE_FORKS=1
+// hands the worker count to the CLI (the unit shard runner's --maxWorkers=4).
+// Pin both halves: DB lanes must never parallelize, unit shards must.
+test('under projects VITEST_RECYCLE_FORKS decides whether CLI parallelism applies', { timeout: 60000 }, (t) => {
+  const run = fixture(t, 'alga-unit-isolation-projects-', `
+    const recycleForks = process.env.VITEST_RECYCLE_FORKS === '1';
+    export default { test: {
+      globals: true, include: ['*.test.js'], isolate: true, pool: 'forks', fileParallelism: false,
+      ...(recycleForks ? {} : { maxWorkers: 1 }),
+      projects: [
+        { extends: true, test: { name: 'jsdom', exclude: ['second.test.js', 'third.test.js'] } },
+        { extends: true, test: { name: 'node', exclude: ['first.test.js'] } },
+      ],
+    } };
   `);
-  for (const name of ['first', 'second']) {
-    writeFileSync(path.join(root, `${name}.test.js`), `
-      import { writeFileSync } from 'node:fs';
-      test('records its own runtime', () => {
-        writeFileSync(${JSON.stringify(path.join(root, name + '.pid'))}, String(process.pid));
-        expect(2 + 2).toBe(4);
-      });
-    `);
-  }
-  const run = (overrides, env = {}) => {
-    for (const file of readdirSync(root).filter((name) => name.endsWith('.pid'))) {
-      rmSync(path.join(root, file));
-    }
-    const result = spawnSync(process.execPath, [vitest, 'run', ...overrides], {
-      cwd: root, env: { ...process.env, CI: '1', ...env }, encoding: 'utf8', timeout: 20000,
-    });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
-    const pids = readdirSync(root).filter((file) => file.endsWith('.pid')).map((file) => readFileSync(path.join(root, file), 'utf8'));
-    assert.equal(pids.length, 2, `both files must run: ${result.stdout}`);
-    return new Set(pids).size;
-  };
-  assert.equal(run(['--poolOptions.forks.singleFork=false', '--maxWorkers=1']), 1,
-    'the CLI override does not reach project workers — callers must not rely on it');
-  assert.equal(run(['--maxWorkers=1'], { VITEST_RECYCLE_FORKS: '1' }), 2,
-    'VITEST_RECYCLE_FORKS must recycle the process between files');
+  const parallel = ['--fileParallelism=true', '--maxWorkers=3'];
+  assert.deepEqual(run(parallel), { processes: 3, overlapped: false },
+    'without VITEST_RECYCLE_FORKS the config cap must keep files serial');
+  assert.deepEqual(run(['--maxWorkers=1'], { VITEST_RECYCLE_FORKS: '1' }), { processes: 3, overlapped: false });
+  assert.equal(run(parallel, { VITEST_RECYCLE_FORKS: '1' }).overlapped, true,
+    'VITEST_RECYCLE_FORKS must let the CLI worker count reach project workers');
 });

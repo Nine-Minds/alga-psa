@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { canonicalRecurringFrequency } from '@alga-psa/shared/billingClients/recurringMemberRate';
 import {
   BILLING_FREQUENCY_LABEL_DEFAULTS,
+  BILLING_PERIOD_LABEL_DEFAULTS,
   BILLING_FREQUENCY_VALUES,
   CONTRACT_LINE_TYPE_LABEL_DEFAULTS,
   CONTRACT_LINE_TYPE_VALUES,
@@ -33,6 +35,19 @@ export function useFormatBillingFrequency(): (value: string) => string {
     const fallback =
       BILLING_FREQUENCY_LABEL_DEFAULTS[value as BillingFrequency] ?? value;
     return t(`enums.billingFrequency.${value}`, { defaultValue: fallback });
+  };
+}
+
+/**
+ * A cadence as the period an amount covers ("per year", "per month"), for
+ * printing after a per-period amount. Accepts any stored spelling; null and
+ * unknown cadences read as monthly, the same rule the monthly normalization uses.
+ */
+export function useFormatBillingPeriod(): (value: string | null | undefined) => string {
+  const { t } = useTranslation(BILLING_NAMESPACE);
+  return (value) => {
+    const frequency = canonicalRecurringFrequency(value);
+    return t(`enums.billingPeriod.${frequency}`, { defaultValue: BILLING_PERIOD_LABEL_DEFAULTS[frequency] });
   };
 }
 

@@ -1,5 +1,8 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
+import { OPERATIONAL_PROBE_ALIAS, commercialEntriesOnly, excludeOperationalOnlyTimeSheets } from '../lib/timeApprovalScope';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   ITimeEntry,
@@ -18,7 +21,7 @@ import { toPlainDate } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
-  timeEntrySchema,
+  timeEntryReadSchema,
   timeSheetViewSchema
 } from '../schemas/timeSheet.schemas';
 import { WorkItemType } from '@alga-psa/types';
@@ -117,6 +120,9 @@ export const fetchTimeSheetsForApproval = withAuth(async (
   { tenant },
   includeApproved: boolean = false
 ): Promise<ITimeSheetApprovalView[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.listForApproval(ctx, includeApproved));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -144,6 +150,8 @@ export const fetchTimeSheetsForApproval = withAuth(async (
       );
     scopedDb.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id');
     scopedDb.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
+    // Operational (seat technician) time never reaches an approver: a sheet of only such entries is not queued.
+    excludeOperationalOnlyTimeSheets(query, await resolveTimeEntryReadScope(db, tenant, user, OPERATIONAL_PROBE_ALIAS));
 
     if (!canReadAll) {
       const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
@@ -190,6 +198,9 @@ export const addCommentToTimeSheet = withAuth(async (
   comment: string,
   isApprover: boolean
 ): Promise<ITimeSheetComment | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.comment(ctx, timeSheetId, userId, comment, isApprover));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -240,6 +251,9 @@ export const addCommentToTimeSheet = withAuth(async (
 });
 
 export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string): Promise<{ success: true } | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.bulkApprove(ctx, timeSheetIds, managerId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -273,7 +287,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
         await assertHumanWorkOwner(trx, tenant, user.user_id, 'approved_by');
 
         // Get analytics data before approval
-        const entriesInfo = await scopedDb.table('time_entries')
+        const entriesInfo = await commercialEntriesOnly(scopedDb.table('time_entries'))
           .where({
             time_sheet_id: id,
             tenant
@@ -297,7 +311,7 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
           });
 
         // Update all time entries to approved status
-        await scopedDb.table('time_entries')
+        await commercialEntriesOnly(scopedDb.table('time_entries'))
           .where({
             time_sheet_id: id,
             tenant
@@ -334,6 +348,9 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
 });
 
 export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.read(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -379,6 +396,9 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
 });
 
 export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.listEntries(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -398,8 +418,13 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
 
     await assertCanActOnBehalf(user, tenant, timeSheet.user_id, db);
 
-    const timeEntries: ITimeEntry[] = await scopedDb.table('time_entries')
-      .where('time_sheet_id', timeSheetId)
+    const readScope = await resolveTimeEntryReadScope(db, tenant, user);
+    const timeEntriesQuery = scopedDb.table('time_entries');
+    readScope.apply(timeEntriesQuery);
+    // Someone else reading a sheet (an approver or manager) sees its commercial entries only; the owner sees their own.
+    if (timeSheet.user_id !== user.user_id) commercialEntriesOnly(timeEntriesQuery);
+    const timeEntries: ITimeEntry[] = await timeEntriesQuery
+      .where('time_entries.time_sheet_id', timeSheetId)
       .select(
         'entry_id',
         'work_item_id',
@@ -434,7 +459,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
       work_timezone: entry.work_timezone
     }));
 
-    return validateArray(timeEntrySchema, formattedEntries) as ITimeEntry[];
+    return validateArray(timeEntryReadSchema, formattedEntries) as ITimeEntry[];
   } catch (error) {
     console.error('Error fetching time entries for time sheet:', error);
     const expected = timeSheetActionErrorFrom(error);
@@ -444,6 +469,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
 });
 
 export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.comments(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -508,6 +536,9 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
 });
 
 export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.approve(ctx, timeSheetId, approverId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -539,7 +570,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
       await assertHumanWorkOwner(trx, tenant, approverId, 'approved_by');
 
       // Get analytics data
-      const entriesInfo = await scopedDb.table('time_entries')
+      const entriesInfo = await commercialEntriesOnly(scopedDb.table('time_entries'))
         .where({
           time_sheet_id: timeSheetId,
           tenant
@@ -570,7 +601,7 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
         });
 
       // Update all time entries to approved status
-      await scopedDb.table('time_entries')
+      await commercialEntriesOnly(scopedDb.table('time_entries'))
         .where({
           time_sheet_id: timeSheetId,
           tenant
@@ -601,6 +632,9 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
 });
 
 export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.requestChanges(ctx, timeSheetId, approverId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -662,6 +696,9 @@ export const reverseTimeSheetApproval = withAuth(async (
   approverId: string,
   reason: string
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.reverseApproval(ctx, timeSheetId, approverId, reason));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -719,7 +756,7 @@ export const reverseTimeSheetApproval = withAuth(async (
         });
 
       // Update time entries status
-      await scopedDb.table('time_entries')
+      await commercialEntriesOnly(scopedDb.table('time_entries'))
         .where({
           time_sheet_id: timeSheetId,
           tenant

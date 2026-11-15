@@ -30,6 +30,7 @@ const buildQuery = (firstResult: any, selectResult: any = []) => {
   });
   builder.andWhere = vi.fn().mockImplementation(() => builder);
   builder.whereNull = vi.fn().mockImplementation(() => builder);
+  builder.whereRaw = vi.fn().mockImplementation(() => builder);
   builder.whereIn = vi.fn().mockImplementation(() => builder);
   builder.orderBy = vi.fn().mockImplementation(() => builder);
   builder.join = vi.fn().mockImplementation(() => builder);
@@ -376,14 +377,18 @@ describe("BillingEngine billing timing", () => {
     ]);
     expect(mixedOrderSelection).toMatchObject({
       "client-line": {
-        duePosition: "advance",
-        servicePeriodStart: "2025-02-01",
-        servicePeriodEnd: "2025-02-28",
+        line: {
+          duePosition: "advance",
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-02-28",
+        },
       },
       "contract-line-match": {
-        duePosition: "arrears",
-        servicePeriodStart: "2025-01-01",
-        servicePeriodEnd: "2025-01-31",
+        line: {
+          duePosition: "arrears",
+          servicePeriodStart: "2025-01-01",
+          servicePeriodEnd: "2025-01-31",
+        },
       },
     });
     expect(
@@ -426,9 +431,11 @@ describe("BillingEngine billing timing", () => {
     expect(Object.keys(selections)).toEqual(["client-line"]);
     expect(selections).toMatchObject({
       "client-line": {
-        duePosition: "advance",
-        servicePeriodStart: "2025-02-01",
-        servicePeriodEnd: "2025-02-28",
+        line: {
+          duePosition: "advance",
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-02-28",
+        },
       },
     });
     expect(selections["contract-boundary-line"]).toBeUndefined();
@@ -752,7 +759,7 @@ describe("BillingEngine billing timing", () => {
       "2025-03-01",
       {
         recurringTimingSelections: {
-          "hourly-line": persistedSelection,
+          "hourly-line": { line: persistedSelection },
         },
         recurringTimingSelectionSource: "persisted",
       },
@@ -804,8 +811,10 @@ describe("BillingEngine billing timing", () => {
         {
           recurringTimingSelections: {
             "recurring-line": {
-              ...canonicalSelections["recurring-line"],
-              servicePeriodEnd: "2025-01-30",
+              line: {
+                ...canonicalSelections["recurring-line"].line,
+                servicePeriodEnd: "2025-01-30",
+              },
             },
           },
         },
@@ -865,9 +874,11 @@ describe("BillingEngine billing timing", () => {
 
     expect(recurringTimingSelections).toMatchObject({
       "fixed-line": {
-        duePosition: "advance",
-        servicePeriodStart: "2025-02-01",
-        servicePeriodEnd: "2025-02-28",
+        line: {
+          duePosition: "advance",
+          servicePeriodStart: "2025-02-01",
+          servicePeriodEnd: "2025-02-28",
+        },
       },
     });
     expect(recurringTimingSelections["hourly-line"]).toBeUndefined();

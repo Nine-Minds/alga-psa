@@ -21,17 +21,20 @@ To add a locale, add its exact configuration to `locales.registry.json`, create 
 
 ## Hardcoded-English sweep
 
-`find-untranslated-ui.cjs` is the source-side counterpart to the locale audits: it reads `server/src` and `ee/server/src` looking for English that never reached a locale file.
+`find-untranslated-ui.cjs` is the source-side counterpart to the locale audits: it looks for English that never reached a locale file. It walks five roots — `server/src/components`, `server/src/app`, `ee/server/src/components`, `ee/server/src/app` and all of `packages` — because the shared `@alga-psa/*` packages render most of the product now, and copy there reaches the UI exactly like copy in `server/src`. Build output and dependencies (`dist`, `build`, `out`, `.next`, `coverage`, `node_modules`, `__tests__`) are skipped so a compiled copy of a file never doubles its findings.
 
 ```sh
 node tools/i18n/find-untranslated-ui.cjs                 # ranked report
 node tools/i18n/find-untranslated-ui.cjs --severity=high # only files with no i18n at all
 node tools/i18n/find-untranslated-ui.cjs --file=PATH     # every literal in one file
+node tools/i18n/find-untranslated-ui.cjs --fail-on-high  # the CI gate
 ```
 
 The top section lists files that render JSX yet never import `useTranslation` or call `t()`. Rank those by the fact that they appear, not by their literal count — the count only reflects the shapes the heuristics recognize, so a file with one hit and no i18n import is a whole-file translation pass, while a file with eight hits and a hundred `t()` calls is a cleanup.
 
-Know what it cannot see. Copy that reaches the UI from outside the scanned roots — `packages/*`, server actions, workflow templates, seeded database rows — is out of range, and a clean report is not evidence that a file is translated. It flags positions it understands (JSX text, props, object values, ternaries, fallbacks, returns, call arguments), so copy assembled at runtime or held in a shape it does not model passes silently. In the other direction, brand names and enum-like values (`'Google'`, `'Pro'`, keyboard key names) are the residual false positives; skim before filing work.
+`--fail-on-high` is the ratchet CI runs (`.github/workflows/validate-translations.yml`, and `npm run test:i18n` locally). It fails on any *newly* unwired component and ignores the known debt listed in `unwired-baseline.json` — the files that predate the scan being widened to `packages/`. Delete a line from that file when you wire a component up; the gate also prints baseline entries that are no longer unwired so they can be dropped with `--write-unwired-baseline`. Regenerate the baseline deliberately, never to make a build pass.
+
+Know what it cannot see. Copy that reaches the UI from outside the scanned roots — server actions, workflow templates, seeded database rows, the billing document templates — is out of range, and a clean report is not evidence that a file is translated. It flags positions it understands (JSX text, props, object values, ternaries, fallbacks, returns, call arguments), so copy assembled at runtime or held in a shape it does not model passes silently. In the other direction the residual false positives are: brand names and enum-like values (`'Google'`, `'Pro'`, `'MSP'`, keyboard key names, grouping keys compared elsewhere), English kept deliberately as the `defaultValue` source for a key (a `FIELD_METADATA_DEFAULTS`-style map read through `t(key, { defaultValue })`), locally-named translate functions (`tDoc(…)`, `tProfile(…)`, `tTickets(…)` — only a call literally named `t` is suppressed), format tokens (`'MMM d, yyyy'`) and TypeScript generics the JSX tokenizer reads as text (`as Partial<Foo>`). Skim before filing work.
 
 ## Customer document labels
 

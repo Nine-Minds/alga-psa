@@ -269,6 +269,7 @@ New resources: `inventory`, `vendor`, `purchase_order`, `sales_order`, `stock_tr
 ---
 
 ## 8. UI surfaces
+- **Stock > Receive stock:** Product and Location use searchable dropdowns. Product search matches the displayed product name or SKU; location search matches its name. Search filters the already-loaded choices, and selecting a result preserves the existing quantity, serial-number, and receiving flows.
 - New **Inventory** nav section: **Stock** (on-hand/available by location + low-stock), **Units** (search by **serial or MAC** for RMA/advisory/provisioning), **Locations**, **Vendors**, **Purchase Orders** (incl. drop-ship), **Sales Orders**, **Transfers** (dispatch/receive), **Kits**, **RMA**, **Loaners**, **Movements** (ledger).
 - **ProductsManager** (Billing settings) gains a per-product **Inventory** panel: `track_stock`, `is_serialized`, `is_kit` (+ component editor), reorder point/qty, default location, preferred vendor, `creates_asset_on_delivery`.
 - Ticket/project material dialog: stock-availability indicator + serial/MAC picker.

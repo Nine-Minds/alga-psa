@@ -193,6 +193,29 @@ const tableColumnSchema: z.ZodTypeAny = z.lazy(() =>
   }).strict()
 );
 
+const childRowCellSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    lines: z.array(tableColumnLineSchema).optional(),
+    change: z.object({
+      value: valueExpressionSchema,
+      format: z.literal('signed-number'),
+    }).strict().optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
+const childRowsSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    sourcePath: z.string().min(1),
+    itemBinding: z.string().min(1),
+    cells: z.record(z.string().min(1), childRowCellSchema),
+    parentBlankColumns: z.array(z.string().min(1)).optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
 type ComputationExpressionInput =
   | { type: 'literal'; value: number }
   | { type: 'path'; path: string }
@@ -413,6 +436,7 @@ type NodeInput =
         keyPath?: string;
       };
       columns: TableColumnInput[];
+      childRows?: unknown;
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -535,6 +559,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         keyPath: z.string().min(1).optional(),
       }).strict(),
       columns: z.array(tableColumnSchema).min(1),
+      childRows: childRowsSchema.optional(),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
@@ -607,12 +632,16 @@ export type TemplateAstValidationResult =
       errors: TemplateAstValidationError[];
     };
 
-const issuePathToString = (path: (string | number)[]): string => path.map(String).join('.');
+const issuePathToString = (path: ReadonlyArray<PropertyKey>): string => path.map(String).join('.');
+
+// Zod 4 wraps a failing record key in an invalid_key issue; the key schema's own message sits inside.
+const issueMessage = (issue: z.ZodIssue): string =>
+  issue.code === 'invalid_key' ? (issue.issues[0]?.message ?? issue.message) : issue.message;
 
 const toValidationError = (issue: z.ZodIssue): TemplateAstValidationError => ({
   code: issue.code,
   path: issuePathToString(issue.path),
-  message: issue.message,
+  message: issueMessage(issue),
 });
 
 export const validateTemplateAst = (input: unknown): TemplateAstValidationResult => {

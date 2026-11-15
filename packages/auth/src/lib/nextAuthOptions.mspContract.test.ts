@@ -67,7 +67,7 @@ describe('NextAuth MSP SSO contract', () => {
 
   it('Microsoft sign-in only leaves the production authority behind the simulator gate', () => {
     expect(source).toContain('if (isMicrosoftSsoEmulatorEnabled()) {');
-    expect(source).toContain('getMicrosoftSsoEmulatorEndpoints(config.authority)');
+    expect(source).toContain('buildMicrosoftSsoEmulatorProvider(config)');
     // The gate is the only branch; nothing else may read a base-URL override.
     expect(source).not.toContain('process.env.MICROSOFT_LOGIN_BASE_URL');
     expect(source).not.toContain('process.env.MICROSOFT_GRAPH_BASE_URL');

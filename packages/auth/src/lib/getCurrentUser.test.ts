@@ -24,6 +24,7 @@ vi.mock('@alga-psa/db', () => ({
   getUserWithRoles: vi.fn(),
   getUserWithRolesByEmail: vi.fn(),
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  noteTenantProductCode: vi.fn(),
 }));
 
 import {
@@ -31,7 +32,7 @@ import {
   getCurrentUserWithRevocationCheck,
 } from './getCurrentUser';
 import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
-import { getUserWithRoles } from '@alga-psa/db';
+import { getUserWithRoles, noteTenantProductCode } from '@alga-psa/db';
 
 const envSnapshot = { ...process.env };
 
@@ -53,6 +54,17 @@ afterEach(() => {
 });
 
 describe('getCurrentUser', () => {
+  it('hands the session product code to write admission so a PSA request pays no tenants read', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: 'user-1', tenant: 'tenant-1', product_code: 'psa' },
+    } as any);
+    vi.mocked(getUserWithRoles).mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1', roles: [] } as any);
+
+    await getCurrentUser();
+
+    expect(vi.mocked(noteTenantProductCode)).toHaveBeenCalledWith('tenant-1', 'psa');
+  });
+
   // Note: avatarUrl is intentionally NOT resolved by getCurrentUser anymore —
   // it caused a circular dependency with @alga-psa/documents. Callers needing
   // the avatar use getUserAvatarUrl separately.

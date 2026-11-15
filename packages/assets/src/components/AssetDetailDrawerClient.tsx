@@ -44,7 +44,8 @@ import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export function AssetDetailDrawerClient({
   // F021: a custom status reads as its registry label, not its slug.
   const { statuses: assetStatuses } = useAssetStatusRegistry();
   const translateStatus = useCallback(
-    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses) || formatTitleCase(status),
+    (status: string) => assetStatusLabel(t, status, assetStatuses) || formatTitleCase(status),
     [assetStatuses, t]
   );
 
@@ -560,6 +561,19 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
               day west of UTC, with a meaningless midnight time beside it. */}
           <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
           <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          {/* Site audits: an instant, so it is formatted as one. "Never
+              audited" is a fact worth stating, so the row always renders. */}
+          <ConfigurationRow
+            label={t('assetDetailDrawer.configuration.lastAudited', { defaultValue: 'Last audited' })}
+            value={asset.last_audited_at
+              ? [
+                new Date(asset.last_audited_at).toLocaleDateString(),
+                asset.last_audit_result
+                  ? t(`enums.assetAuditResult.${asset.last_audit_result}`, { defaultValue: asset.last_audit_result })
+                  : null,
+              ].filter(Boolean).join(' • ')
+              : t('assetDetailDrawer.configuration.neverAudited', { defaultValue: 'Never audited' })}
+          />
         </div>
       </Card>
 

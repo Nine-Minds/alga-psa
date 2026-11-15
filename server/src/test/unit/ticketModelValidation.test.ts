@@ -57,7 +57,7 @@ describe('TicketModel Validation Logic', () => {
         client_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
-      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('title: Required');
+      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('title: Invalid input: expected string, received undefined');
     });
   });
 
@@ -241,7 +241,7 @@ describe('TicketModel Validation Logic', () => {
       const result = TicketModel.validateUpdateTicketData(data);
       
       expect(result.valid).toBe(false);
-      expect(result.errors?.[0]).toContain('priority_id: Invalid uuid');
+      expect(result.errors?.[0]).toContain('priority_id: Invalid GUID');
     });
   });
 

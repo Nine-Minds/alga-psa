@@ -5,11 +5,6 @@ import { buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from '@shared/
 
 type InternalUserType = 'internal' | 'client';
 
-async function findUserByEmailAndType(email: string, userType: InternalUserType): Promise<IUser | undefined> {
-  const User = (await import('@alga-psa/db/models/user')).default;
-  return User.findUserByEmailAndType(email, userType);
-}
-
 async function findUserByEmailTenantAndType(
   email: string,
   tenantId: string,
@@ -78,6 +73,8 @@ export interface OAuthProfileMappingInput {
   tenantHint?: string | null;
   vanityHostHint?: string | null;
   userTypeHint?: string | null;
+  /** Server-verified tenant an internal sign-in is scoped to; never from IdP claims. */
+  scopeTenantId?: string | null;
 }
 
 // Expected reasons an OAuth profile never resolves to an AlgaPSA user. Auth.js
@@ -88,7 +85,8 @@ export type OAuthMappingFailureCode =
   | 'missing_email'
   | 'inactive_user'
   | 'user_type_mismatch'
-  | 'tenant_mismatch';
+  | 'tenant_mismatch'
+  | 'tenant_required';
 
 export interface OAuthMappingFailure {
   code: OAuthMappingFailureCode;
@@ -156,6 +154,7 @@ async function locateUser(
   email: string,
   tenantHint?: string | null,
   userTypeHint?: string | null,
+  scopeTenantId?: string | null,
 ): Promise<IUser | undefined> {
   const normalizedType = pickUserType(userTypeHint ?? undefined);
   if (normalizedType === 'client') {
@@ -175,30 +174,17 @@ async function locateUser(
     return findUserByEmailTenantAndType(email, tenantId, 'client');
   }
 
-  const defaultUser = await findUserByEmailAndType(email, normalizedType);
-  if (defaultUser) {
-    return defaultUser;
-  }
-
-  if (tenantHint) {
-    const tenantId =
-      (await resolveTenantIdFromSlug(tenantHint)) ??
-      (await resolveTenantIdFromVanityHost(tenantHint)) ??
-      tenantHint;
-
-    if (tenantId) {
-      const tenantScopedUser = await findUserByEmailTenantAndType(
-        email,
-        tenantId,
-        normalizedType,
-      );
-      if (tenantScopedUser) {
-        return tenantScopedUser;
-      }
-    }
-  }
-
-  return undefined;
+  // Internal users resolve exactly like the password sign-in: by email, scoped
+  // only by a server-verified tenant. `tenantHint` (Google `hd`, Entra `tid`,
+  // state, ...) is IdP-controlled and is never used to pick an internal tenant.
+  const { resolveSignInUser } = await import('@alga-psa/auth/lib/signInUserResolution');
+  const { user } = await resolveSignInUser({
+    email,
+    userType: 'internal',
+    scopeTenantId: scopeTenantId ?? undefined,
+    verify: () => true,
+  });
+  return user;
 }
 
 function coerceString(value: unknown): string | undefined {
@@ -303,7 +289,7 @@ function pickFirstCandidate(candidates: Array<unknown>): string | undefined {
 export async function mapOAuthProfileToExtendedUser(
   input: OAuthProfileMappingInput,
 ): Promise<OAuthProfileMappingResult> {
-  const { provider, email, image, profile, tenantHint, userTypeHint, vanityHostHint } = input;
+  const { provider, email, image, profile, tenantHint, userTypeHint, vanityHostHint, scopeTenantId } = input;
   const requestedUserType = pickUserType(userTypeHint ?? undefined);
 
   if (!email || typeof email !== 'string') {
@@ -313,7 +299,19 @@ export async function mapOAuthProfileToExtendedUser(
 
   const normalizedEmail = email.toLowerCase();
 
-  const user = await locateUser(normalizedEmail, tenantHint, userTypeHint);
+  let user: IUser | undefined;
+  try {
+    user = await locateUser(normalizedEmail, tenantHint, userTypeHint, scopeTenantId);
+  } catch (error) {
+    const { TenantRequiredResolutionError } = await import('@alga-psa/auth/lib/signInUserResolution');
+    if (error instanceof TenantRequiredResolutionError) {
+      logger.warn(`[auth] ${provider} OAuth email spans multiple tenants; scope required`, {
+        email: normalizedEmail,
+      });
+      return buildAuthFailureResult('tenant_required', requestedUserType, normalizedEmail);
+    }
+    throw error;
+  }
   if (!user || !user.user_id) {
     logger.warn(`[auth] User not found during ${provider} OAuth`, { email: normalizedEmail });
     return buildAuthFailureResult('no_matching_user', requestedUserType, normalizedEmail);
@@ -334,7 +332,7 @@ export async function mapOAuthProfileToExtendedUser(
   }
 
   let tenantId = user.tenant;
-  if ((!tenantId || tenantId.length === 0) && tenantHint) {
+  if (requestedUserType === 'client' && (!tenantId || tenantId.length === 0) && tenantHint) {
     const resolvedTenant =
       (await resolveTenantIdFromSlug(tenantHint)) ??
       (await resolveTenantIdFromVanityHost(tenantHint));
@@ -343,7 +341,7 @@ export async function mapOAuthProfileToExtendedUser(
     }
   }
 
-  if ((!tenantId || tenantId.length === 0) && vanityHostHint) {
+  if (requestedUserType === 'client' && (!tenantId || tenantId.length === 0) && vanityHostHint) {
     const resolvedTenant = await resolveTenantIdFromVanityHost(vanityHostHint);
     if (resolvedTenant) {
       tenantId = resolvedTenant;
@@ -455,7 +453,10 @@ export async function applyOAuthAccountHints(
     ...user,
   };
 
-  if (tenantIdFromHints) {
+  // Hints come from the IdP round trip (state, params, ID-token claims). They
+  // may describe a client-portal vanity tenant, but must never assign or
+  // re-label the tenant of an internal user; that comes from the user row.
+  if (tenantIdFromHints && nextUser.user_type !== 'internal') {
     if (!nextUser.tenant) {
       nextUser.tenant = tenantIdFromHints;
       nextUser.tenantSlug = buildTenantPortalSlug(tenantIdFromHints);
@@ -471,7 +472,7 @@ export async function applyOAuthAccountHints(
     }
   }
 
-  if (!nextUser.tenant && tenantHint) {
+  if (!nextUser.tenant && tenantHint && nextUser.user_type !== 'internal') {
     // Preserve tenantHint for downstream debugging by stashing in slug if we resolved nothing.
     nextUser.tenantSlug = coerceString(tenantHint);
   }

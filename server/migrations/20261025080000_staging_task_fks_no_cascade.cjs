@@ -25,6 +25,7 @@ const spec = (onDelete) => ({
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable(L))) return;
   if (await hasConstraint(knex, L, 'project_staging_lines_task_fk')) {
+    // migration-lint: allow 3 - retroactive: the FK is dropped and re-created immediately after by ensureCompositeFk with a different ON DELETE action; the lint cannot see through the helper
     await knex.raw(`ALTER TABLE ${L} DROP CONSTRAINT project_staging_lines_task_fk`);
   }
   await ensureCompositeFk(knex, spec('NO ACTION'));

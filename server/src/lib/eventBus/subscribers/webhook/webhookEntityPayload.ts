@@ -11,18 +11,19 @@
  */
 import type { WebhookEntity } from '../../../webhooks/eventRegistry';
 
-export type EntityWebhookEntity = Extract<WebhookEntity, 'client' | 'contact' | 'client_location'>;
+export type EntityWebhookEntity = Extract<WebhookEntity, 'client' | 'contact' | 'client_location' | 'quote'>;
 
 /** Internal domain-event payload (camelCase, as published on the bus). */
 export type DomainEventPayload = Record<string, unknown> & { tenantId: string };
 
 interface EntityPayloadSpec {
   /** Snake-case key of the entity's own id in the webhook payload. */
-  idKey: 'client_id' | 'contact_id' | 'location_id';
+  idKey: 'client_id' | 'contact_id' | 'location_id' | 'quote_id';
   /** Camel-case key holding that id on the domain event, per internal event. */
   idSource: (internalEvent: string) => string;
   /** Whether the payload carries the parent `client_id` (contact / client_location). */
   parentClient: boolean;
+  carriedFields?: readonly string[];
 }
 
 const ENTITY_PAYLOAD_SPECS: Record<EntityWebhookEntity, EntityPayloadSpec> = {
@@ -35,6 +36,7 @@ const ENTITY_PAYLOAD_SPECS: Record<EntityWebhookEntity, EntityPayloadSpec> = {
   },
   contact: { idKey: 'contact_id', idSource: () => 'contactId', parentClient: true },
   client_location: { idKey: 'location_id', idSource: () => 'locationId', parentClient: true },
+  quote: { idKey: 'quote_id', idSource: () => 'quoteId', parentClient: true, carriedFields: ['clientId', 'quoteNumber', 'version', 'contactId', 'opportunityId', 'previousStatus', 'newStatus', 'currencyCode', 'totalAmount', 'performedByType', 'performedById', 'sentAt', 'viewedAt', 'approvedAt', 'acceptedAt', 'rejectedAt', 'expiredAt', 'convertedAt', 'conversionRevertedAt', 'supersededAt', 'cancelledAt', 'acceptedByName', 'acceptedOnBehalf', 'selectedOptionalItemIds', 'rejectionReason', 'conversionTargets', 'contractId', 'invoiceId', 'salesOrderId', 'releasedInvoiceId', 'supersededByQuoteId', 'nextVersion'] },
 };
 
 function nonEmptyString(value: unknown): string | null {
@@ -76,6 +78,10 @@ export function buildEntityWebhookPayload(
     // Client-less contacts emit too; client_id is simply absent for them.
     const clientId = nonEmptyString(payload.clientId);
     if (clientId) data.client_id = clientId;
+  }
+
+  for (const field of spec.carriedFields ?? []) {
+    if (payload[field] !== undefined) data[toSnakeFieldPath(field)] = payload[field];
   }
 
   if (publicEvent.endsWith('.updated')) {

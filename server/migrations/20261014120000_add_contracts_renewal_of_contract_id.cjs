@@ -17,6 +17,7 @@ exports.up = async function up(knex) {
       table.uuid('renewal_of_contract_id').nullable();
     });
   }
+  // migration-lint: allow 5 - retroactive: one-shot backfill joined on tenant, merged before the lint existed; contracts is a low-volume table so no loop+LIMIT batching was added
   await knex.raw(`
     UPDATE contracts c
        SET renewal_of_contract_id = cc.contract_id

@@ -46,6 +46,7 @@ import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHe
 import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ProfitabilityReport from './ProfitabilityReport';
 import {
@@ -101,7 +102,7 @@ type BucketUsageStatusFilter = 'all' | 'active' | 'expired' | 'voided';
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, locale } = useFormatters();
   const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [activeReport, setActiveReport] = useState('revenue');
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
@@ -164,6 +165,10 @@ const ContractReports: React.FC = () => {
 
   // Format minor units in a specific contract currency; the tenant currency is
   // only a fallback for rows that carry no currency of their own.
+  // Block values are minor units of the block's own currency, so the currency's exponent applies.
+  const formatBlockMinor = (minor: number, currencyCode?: string | null): string =>
+    formatCurrencyFromMinorUnits(minor, locale, currencyCode || tenantCurrency);
+
   const formatCents = (cents: number, currencyCode?: string | null): string => {
     return formatCurrency(cents / 100, currencyCode || tenantCurrency);
   };
@@ -356,6 +361,8 @@ const ContractReports: React.FC = () => {
     { id: 'utilization_percentage', titleKey: 'contractReports.table.utilization', fallback: 'Utilization', defaultVisible: true },
     { id: 'overage_hours', titleKey: 'contractReports.table.overage', fallback: 'Overage', defaultVisible: hasPoolRows },
     { id: 'hourly_rate', titleKey: 'contractReports.table.hourlyRate', fallback: 'Rate / hr', defaultVisible: hasBlockRows },
+    { id: 'remaining_value', titleKey: 'contractReports.table.remainingValue', fallback: 'Remaining value', defaultVisible: hasBlockRows },
+    { id: 'valid_from', titleKey: 'contractReports.table.validFrom', fallback: 'Valid from', defaultVisible: hasBlockRows },
     { id: 'expiration_date', titleKey: 'contractReports.table.expirationDate', fallback: 'Expires', defaultVisible: hasBlockRows },
     { id: 'status', titleKey: 'contractReports.table.status', fallback: 'Status', defaultVisible: hasBlockRows },
   ], [hasPoolRows, hasBlockRows]);
@@ -466,8 +473,20 @@ const ContractReports: React.FC = () => {
       title: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }),
       dataIndex: 'hourly_rate',
       render: (value: number | undefined, record) => record.row_kind === 'block' && value != null
-        ? formatCents(value, record.currency_code ?? tenantCurrency)
+        ? formatBlockMinor(value, record.currency_code)
         : dash
+    },
+    {
+      title: t('contractReports.table.remainingValue', { defaultValue: 'Remaining value' }),
+      dataIndex: 'remaining_value',
+      render: (value: number | undefined, record) => record.row_kind === 'block' && value != null
+        ? formatBlockMinor(value, record.currency_code)
+        : dash
+    },
+    {
+      title: t('contractReports.table.validFrom', { defaultValue: 'Valid from' }),
+      dataIndex: 'valid_from',
+      render: (value: string | null | undefined, record) => record.row_kind !== 'block' || !value ? dash : formatDate(value)
     },
     {
       title: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }),
@@ -540,7 +559,9 @@ const ContractReports: React.FC = () => {
         ? `+${row.overage_hours} ${t('units.hoursShort', { defaultValue: 'hrs' })}`
         : t('units.dash', { defaultValue: '—' })),
     },
-    { key: 'hourly_rate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => row.row_kind === 'block' && row.hourly_rate != null ? formatCents(row.hourly_rate, row.currency_code ?? tenantCurrency) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'hourly_rate', header: t('contractReports.table.hourlyRate', { defaultValue: 'Rate / hr' }), render: (row) => row.row_kind === 'block' && row.hourly_rate != null ? formatBlockMinor(row.hourly_rate, row.currency_code) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'remaining_value', header: t('contractReports.table.remainingValue', { defaultValue: 'Remaining value' }), render: (row) => row.row_kind === 'block' && row.remaining_value != null ? formatBlockMinor(row.remaining_value, row.currency_code) : t('units.dash', { defaultValue: '—' }) },
+    { key: 'valid_from', header: t('contractReports.table.validFrom', { defaultValue: 'Valid from' }), render: (row) => row.row_kind === 'block' && row.valid_from ? formatDate(row.valid_from) : t('units.dash', { defaultValue: '—' }) },
     { key: 'expiration_date', header: t('contractReports.table.expirationDate', { defaultValue: 'Expires' }), render: (row) => row.row_kind !== 'block' ? t('units.dash', { defaultValue: '—' }) : row.expiration_date ? formatDate(row.expiration_date) : t('contractReports.table.neverExpires', { defaultValue: 'Never' }) },
     { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => row.row_kind === 'block' && row.status ? hourBlockStatusLabel(row.status, t) : t('units.dash', { defaultValue: '—' }) },
   ];

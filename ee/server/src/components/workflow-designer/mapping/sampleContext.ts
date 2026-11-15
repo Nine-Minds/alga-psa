@@ -1,3 +1,4 @@
+import { isAssignedVarStepId } from '../workflowDataContext';
 import type { DataField, DataTreeContext } from './SourceDataTree';
 
 /**
@@ -77,7 +78,14 @@ export const buildWorkflowSampleContext = (context: DataTreeContext | undefined)
   const base: WorkflowSampleContext = {
     payload: nestUnderRoot(context?.payload ?? [], 'payload'),
     vars: Object.fromEntries(
-      (context?.vars ?? []).map((step) => [step.saveAs, fieldsToObject(step.fields)])
+      (context?.vars ?? []).map((step) => [
+        step.saveAs,
+        // A variable set to one value has no fields; preview it as a placeholder named after it
+        // rather than as an empty object.
+        step.fields.length === 0 && isAssignedVarStepId(step.stepId)
+          ? placeholderFor({ name: step.saveAs, path: `vars.${step.saveAs}`, type: 'string', source: 'vars' })
+          : fieldsToObject(step.fields),
+      ])
     ),
     meta: fieldsToObject(context?.meta ?? []),
     ...(context?.error?.length ? { error: fieldsToObject(context.error) } : {}),

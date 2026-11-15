@@ -2,14 +2,17 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
+import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
+import { parseVisibilityRules, type VisibilityRule } from './formVisibility';
 
 interface PublishedDefinitionRow {
   tenant: string;
   definition_id: string;
   lifecycle_state: 'draft' | 'published' | 'archived';
+  audience: unknown;
 }
 
 interface DefinitionVersionRow {
@@ -47,6 +50,37 @@ export interface ServiceRequestPortalDefinitionDetail {
   formBehaviorConfig: Record<string, unknown>;
 }
 
+/**
+ * Client portal projection of a definition detail: only what the request form
+ * page renders. Execution/form-behavior config and version identifiers stay
+ * server-side.
+ */
+export interface ServiceRequestPortalFormView {
+  title: string;
+  description: string | null;
+  icon: string | null;
+  formSchema: Record<string, unknown>;
+  initialValues: Record<string, string | boolean | null>;
+  /** Parsed server-side; only the advanced provider carries rules. */
+  visibilityRules: VisibilityRule[];
+}
+
+export function toPortalFormView(
+  detail: ServiceRequestPortalDefinitionDetail
+): ServiceRequestPortalFormView {
+  return {
+    title: detail.title,
+    description: detail.description,
+    icon: detail.icon,
+    formSchema: detail.formSchema,
+    initialValues: detail.initialValues,
+    visibilityRules:
+      detail.formBehaviorProvider === 'advanced'
+        ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+        : [],
+  };
+}
+
 export async function getVisiblePublishedServiceRequestDefinitionDetail(
   knex: Knex,
   context: ServiceRequestPortalCatalogContext,
@@ -56,7 +90,7 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
   const definition = (await db.table('service_request_definitions')
     .where({ definition_id: definitionId })
     .whereNot('lifecycle_state', 'archived')
-    .first('tenant', 'definition_id', 'lifecycle_state')) as PublishedDefinitionRow | undefined;
+    .first('tenant', 'definition_id', 'lifecycle_state', 'audience')) as PublishedDefinitionRow | undefined;
 
   if (!definition) {
     return null;
@@ -115,9 +149,9 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     definitionForVisibility,
     latestVersion.visibility_config ?? {}
   );
-  if (!canAccess) {
-    return null;
-  }
+  if (!canAccess) return null;
+  const requester = await loadRequesterRecord(knex, context.tenant, context);
+  if (!isAudienceSatisfied(definition.audience, requester)) return null;
 
   const formBehaviorProvider = getServiceRequestFormBehaviorProvider(
     latestVersion.form_behavior_provider

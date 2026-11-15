@@ -174,7 +174,7 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
   const { t, i18n } = useTranslation('features/tickets');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const reference = useTicketFieldReferenceData();
+  const reference = useTicketFieldReferenceData('recurring_ticket');
   const permissions = useRecurringTicketPermissions();
   const templatePermissions = useTicketTemplatePermissions();
   const isNew = definitionId === 'new';
@@ -270,7 +270,7 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: Record<string, unknown> }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: Record<string, unknown> }> }) =>
     error.issues.map((issue) => {
       const params = (issue as { params?: { messageKey?: string; messageParams?: Record<string, unknown> } }).params;
       if (params?.messageKey) {

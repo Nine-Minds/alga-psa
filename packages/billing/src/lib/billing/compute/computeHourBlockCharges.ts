@@ -33,7 +33,11 @@ export interface HourBlockBurnRow {
   service_id: string;
   service_name?: string | null;
   remaining_minutes: number;
-  time_entry_id: string;
+  /**
+   * Null when the burn is not attributable to a time entry (a simulated draw):
+   * its minutes count toward the block but no entry can be covered by it.
+   */
+  time_entry_id: string | null;
   minutes: number;
   billable_duration: number;
 }
@@ -77,6 +81,7 @@ export function aggregateHourBlockBurnRows(rows: HourBlockBurnRow[]): HourBlockB
     }
     const allocated = Math.max(0, Number(row.minutes) || 0);
     aggregate.minutesUsed += allocated;
+    if (row.time_entry_id === null) continue;
     allocatedByEntry.set(row.time_entry_id, (allocatedByEntry.get(row.time_entry_id) ?? 0) + allocated);
     entryDurations.set(row.time_entry_id, Math.max(0, Number(row.billable_duration) || 0));
     if (!firstBlockByEntry.has(row.time_entry_id)) {

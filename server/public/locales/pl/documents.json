@@ -56,6 +56,20 @@
     "product": "Produkt",
     "projectPhase": "Faza projektu",
     "qty": "Ilość",
+    "quoteAcceptance": {
+      "title": "Oferta zaakceptowana",
+      "signedBy": "Podpisano przez",
+      "email": "E-mail",
+      "jobTitle": "Stanowisko",
+      "acceptedOn": "Zaakceptowano dnia",
+      "method": "Metoda",
+      "ipAddress": "Adres IP",
+      "methods": {
+        "emailLink": "Link w wiadomości e-mail",
+        "portal": "Portal klienta",
+        "msp": "Zarejestrowane przez MSP"
+      }
+    },
     "quoteNumber": "Oferta nr",
     "quoteTitle": "OFERTA",
     "rate": "Stawka",
@@ -69,6 +83,7 @@
     "sku": "SKU",
     "source": "Źródło",
     "subtotal": "Suma częściowa",
+    "subtotalBeforeDiscounts": "Suma częściowa przed rabatami",
     "tax": "Podatek",
     "termsAndConditions": "Warunki i postanowienia",
     "ticket": "Zgłoszenie",
@@ -93,7 +108,8 @@
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie.",
-      "checkedBy": "Sprawdził(a): ____________________     Data: ____________"
+      "checkedBy": "Sprawdził(a): ____________________     Data: ____________",
+      "releasedBy": "Wydał: ____________________     Podpis: ____________________     Data: ____________"
     },
     "serialNumbers": "Numery seryjne",
     "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji.",
@@ -114,7 +130,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Klient",
     "statusOpen": "Otwarte",
-    "statusSealed": "Zaplombowane"
+    "statusSealed": "Zaplombowane",
+    "rmaReturnSlipTitle": "DOKUMENT ZWROTU RMA",
+    "device": "Urządzenie",
+    "vendor": "Dostawca",
+    "vendorReference": "Referencja dostawcy",
+    "asset": "Zasób",
+    "assetTag": "Tag zasobu",
+    "replacementSerial": "Numer seryjny zamiennika",
+    "shipping": "Wysyłka",
+    "returnBy": "Zwrot do",
+    "returnShipTo": "Adres wysyłki zwrotnej"
   },
   "errors": {
     "permissions": {
@@ -153,6 +179,7 @@
     "upload": {
       "fileRequired": "Wybierz plik przed przesłaniem.",
       "typeNotAllowed": "Ten typ pliku jest niedozwolony.",
+      "contentMismatch": "Zawartość tego pliku nie odpowiada jego typowi, więc nie został przesłany. Sprawdź, czy wybrano właściwy plik.",
       "sessionRequired": "Przesyłanie dokumentów wymaga aktywnej sesji. Zaloguj się ponownie."
     }
   },

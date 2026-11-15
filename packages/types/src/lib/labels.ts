@@ -9,7 +9,7 @@ import type { RecordEntityType } from './recordLinks';
  */
 
 /** Which standard label layout a record is printed with. */
-export const LABEL_CLASSES = ['ticket-work-tag', 'asset-identity', 'stock-unit-identity', 'staging-container'] as const;
+export const LABEL_CLASSES = ['ticket-work-tag', 'asset-identity', 'stock-unit-identity', 'staging-container', 'rma-work-tag'] as const;
 export type LabelClass = (typeof LABEL_CLASSES)[number];
 
 export function isLabelClass(value: unknown): value is LabelClass {
@@ -43,6 +43,7 @@ export const LABEL_CLASS_ENTITY_TYPE: Record<LabelClass, RecordEntityType> = {
   'asset-identity': 'asset',
   'stock-unit-identity': 'stock_unit',
   'staging-container': 'staging_container',
+  'rma-work-tag': 'rma',
 };
 
 export interface LabelTenantClient {
@@ -88,10 +89,23 @@ export interface LabelViewModel {
    * rendered (a printed label is a snapshot). Null for every other label class.
    */
   sequence?: { n: number; total: number } | null;
+  /**
+   * RMA work tag only (C5). `identifier` is the RMA number, `title` the asset (or product) name, `detail` the
+   * "vendor / reference" line, `secondaryIdentifier` + `serialSuffix` the asset tag and serial suffix.
+   * Only what the tag needs on the bench: no reason text, no cost, no free-text notes.
+   */
+  rma?: {
+    statusLabel: string | null;
+    /** Calendar date (YYYY-MM-DD). */
+    returnBy: string | null;
+    /** "UPS 1Z999" style carrier + tracking of the latest leg, or null. */
+    shipping: string | null;
+    ticketNumber: string | null;
+  } | null;
   /** Filled by the renderer, not by providers. */
   tenantClient?: LabelTenantClient | null;
   /** Filled by the renderer from the (already visibility-filtered) fields above: "Asset {tag}", "S/N ...{suffix}". */
-  display?: { assetLine: string | null; serialLine: string | null; sequenceLine?: string | null } | null;
+  display?: { assetLine: string | null; serialLine: string | null; sequenceLine?: string | null; rmaReturnByLine?: string | null; rmaTicketLine?: string | null } | null;
 }
 
 export interface LabelRequestContext {

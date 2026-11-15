@@ -56,6 +56,20 @@
     "product": "Produit",
     "projectPhase": "Phase du projet",
     "qty": "Qté",
+    "quoteAcceptance": {
+      "title": "Devis accepté",
+      "signedBy": "Signé par",
+      "email": "E-mail",
+      "jobTitle": "Titre",
+      "acceptedOn": "Accepté le",
+      "method": "Méthode",
+      "ipAddress": "Adresse IP",
+      "methods": {
+        "emailLink": "Lien par e-mail",
+        "portal": "Portail client",
+        "msp": "Enregistré par le MSP"
+      }
+    },
     "quoteNumber": "Devis n°",
     "quoteTitle": "DEVIS",
     "rate": "Tarif",
@@ -69,6 +83,7 @@
     "sku": "UGS",
     "source": "Source",
     "subtotal": "Sous-total",
+    "subtotalBeforeDiscounts": "Sous-total avant remises",
     "tax": "Taxes",
     "termsAndConditions": "Conditions générales",
     "ticket": "Ticket",
@@ -93,7 +108,8 @@
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande.",
-      "checkedBy": "Vérifié par : ____________________     Date : ____________"
+      "checkedBy": "Vérifié par : ____________________     Date : ____________",
+      "releasedBy": "Libéré par : ____________________     Signature : ____________________     Date : ____________"
     },
     "serialNumbers": "Numéros de série",
     "allocatedSerialsNote": "Numéros de série attribués ; susceptibles de changer lors de l’exécution.",
@@ -114,7 +130,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Client",
     "statusOpen": "Ouvert",
-    "statusSealed": "Scellé"
+    "statusSealed": "Scellé",
+    "rmaReturnSlipTitle": "BORDEREAU DE RETOUR RMA",
+    "device": "Appareil",
+    "vendor": "Fournisseur",
+    "vendorReference": "Référence fournisseur",
+    "asset": "Actif",
+    "assetTag": "Étiquette de l'actif",
+    "replacementSerial": "Numéro de série du remplacement",
+    "shipping": "Expédition",
+    "returnBy": "Retour avant le",
+    "returnShipTo": "Adresse de retour"
   },
   "errors": {
     "permissions": {
@@ -153,6 +179,7 @@
     "upload": {
       "fileRequired": "Choisissez un fichier avant de le téléverser.",
       "typeNotAllowed": "Ce type de fichier n’est pas autorisé.",
+      "contentMismatch": "Le contenu de ce fichier ne correspond pas à son type de fichier ; il n’a donc pas été téléversé. Vérifiez que vous avez choisi le bon fichier.",
       "sessionRequired": "Votre session est requise pour téléverser des documents. Veuillez vous reconnecter."
     }
   },

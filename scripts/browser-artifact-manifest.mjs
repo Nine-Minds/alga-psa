@@ -1,21 +1,26 @@
 import { readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { createBrowserArchiveReceipt, buildBrowserArtifactManifest } from './lib/browser-artifact-manifest.mjs';
+import { createBrowserArchiveReceipt, createBrowserRegistryReceipt, buildBrowserArtifactManifest } from './lib/browser-artifact-manifest.mjs';
 const read = async file => JSON.parse(await readFile(file, 'utf8'));
+// archive  <archive.tar.gz>   <receipt> <record> <service>  verifies archive bytes
+// registry <inspection.json>  <receipt> <record> <service>  verifies a pulled image
+// manifest <inputs.json>      <manifest>                    binds records, receipts and inspections
 const [mode, inputPath, outputPath, recordPath, service] = process.argv.slice(2);
 let protectedOutput = Boolean(outputPath && [inputPath, recordPath].filter(Boolean)
   .some(file => path.resolve(file) === path.resolve(outputPath)));
 try {
-  if (!outputPath || !['archive', 'manifest'].includes(mode)
-    || (mode === 'archive' ? process.argv.length !== 7 : process.argv.length !== 5)
+  const receiptMode = ['archive', 'registry'].includes(mode);
+  if (!outputPath || !(receiptMode || mode === 'manifest')
+    || (receiptMode ? process.argv.length !== 7 : process.argv.length !== 5)
     || [inputPath, recordPath].filter(Boolean).some(file => path.resolve(file) === path.resolve(outputPath))) throw Error('Invalid arguments');
   const context = { revision: process.env.GITHUB_SHA, edition: process.env.E2E_EDITION,
     runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) };
   let result;
-  if (mode === 'archive') {
+  if (receiptMode) {
     const record = await read(recordPath);
     if (record.service !== service) throw Error('Service mismatch');
-    result = await createBrowserArchiveReceipt(record, inputPath, context);
+    result = mode === 'archive' ? await createBrowserArchiveReceipt(record, inputPath, context)
+      : createBrowserRegistryReceipt(record, await read(inputPath), { ...context, registryNamespace: process.env.E2E_REGISTRY_NAMESPACE || undefined });
   } else {
     const entries = await read(inputPath);
     if (Array.isArray(entries)) protectedOutput ||= entries.some(entry => ['record', 'receipt', 'inspection'].some(key =>

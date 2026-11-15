@@ -198,11 +198,20 @@ async function main(): Promise<void> {
 
     // This runtime executes the Microsoft webhook-maintenance activities that
     // can perform the atomic auth-failure auto-pause, but it cannot load the
-    // @alga-psa/notifications vertical (stubbed in this build graph): publish
+    // @alga-psa/notifications vertical's UI-facing action modules: publish
     // the pause on the event bus and let the server-side subscriber deliver
     // the admin notifications (same hand-off as MAINTENANCE_JOB_REQUESTED).
     registerInboundAuthPauseEventPublisher();
     assertInboundAuthPauseNotifierRegistered("ee/temporal-workflows/worker");
+
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      logger.error('Failed to install co-managed write admission:', error);
+    }
 
     // Run startup validations
     try {

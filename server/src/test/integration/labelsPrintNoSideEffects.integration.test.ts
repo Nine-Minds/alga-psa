@@ -80,6 +80,7 @@ const WATCHED_TABLES = [
   'stock_levels', 'stock_units', 'stock_movements', 'invoices', 'invoice_charges', 'time_entries',
   'assets', 'asset_history', 'asset_associations', 'tickets', 'documents', 'document_associations',
   'document_templates', 'document_template_assignments', 'external_files', 'audit_logs',
+  'next_number', 'asset_tag_claims', 'asset_number_reservations', 'asset_tag_audit',
 ];
 
 async function snapshot(): Promise<Record<string, { count: number; maxUpdatedAt: string | null }>> {
@@ -137,30 +138,29 @@ describe('T-noside: printing is read-only', () => {
     try {
       // Ticket batch of 3 including a ticket with a linked asset (the linked-asset query runs).
       ticketBatch = await asRequest(world.tenant, () =>
-        printLabels(deps, caller, { labelClass: 'ticket-work-tag', ids: [t.a1, t.withOneAsset, t.a2] })
+        printLabels(deps, caller, { labelClass: 'ticket-work-tag', labels: [t.a1, t.withOneAsset, t.a2].map((recordId) => ({ recordId })) })
       );
       // Single ticket with a print-time edit and an explicit linked asset choice.
       ticketSingle = await asRequest(world.tenant, () =>
         printLabels(deps, caller, {
           labelClass: 'ticket-work-tag',
-          ids: [t.withTwoAssets],
+          labels: [{ recordId: t.withTwoAssets, linkedAssetId: a.a3 }],
           overrides: { title: 'Edited at print time', detail: 'Edited reason' },
-          linkedAssetId: a.a3,
         })
       );
       // Asset batch of 3.
       assetBatch = await asRequest(world.tenant, () =>
-        printLabels(deps, caller, { labelClass: 'asset-identity', ids: [a.a1, a.a2, a.a3] })
+        printLabels(deps, caller, { labelClass: 'asset-identity', labels: [a.a1, a.a2, a.a3].map((recordId) => ({ recordId })) })
       );
       // Single asset print.
       assetSingle = await asRequest(world.tenant, () =>
-        printLabels(deps, caller, { labelClass: 'asset-identity', ids: [a.a2] })
+        printLabels(deps, caller, { labelClass: 'asset-identity', labels: [{ recordId: a.a2 }] })
       );
       // Mixed batch with unreadable records (record-level deny, missing, cross-tenant): skipped 3.
       mixed = await asRequest(world.tenant, () =>
         printLabels(deps, restrictedCaller, {
           labelClass: 'ticket-work-tag',
-          ids: [t.a1, t.b1, '00000000-0000-4000-8000-000000000000', t.foreign, t.a2],
+          labels: [t.a1, t.b1, '00000000-0000-4000-8000-000000000000', t.foreign, t.a2].map((recordId) => ({ recordId })),
         })
       );
     } finally {

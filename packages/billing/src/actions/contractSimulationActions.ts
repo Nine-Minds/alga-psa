@@ -12,13 +12,17 @@ import type {
   ScenarioAssumptionPrefill,
 } from "@alga-psa/types";
 import {
+  TIER_FEATURES,
+  assertSimulationPeriodCountWithinBounds,
   blockedSimulationResult,
   isContractSimulationRefusalError,
   simulationRefusalToDiagnostic,
+  isLicensedUserType,
 } from "@alga-psa/types";
-import { createTenantKnex } from "@alga-psa/db";
+import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth/withAuth";
 import { hasPermission } from "@alga-psa/auth/rbac";
+import { assertTenantTierAccess } from "@alga-psa/licensing";
 import { isAuthorizationThrow } from "@alga-psa/ui/lib/errorHandling";
 
 function isEnterpriseBuild(): boolean {
@@ -26,6 +30,26 @@ function isEnterpriseBuild(): boolean {
     process.env.EDITION === "ee" ||
     process.env.NEXT_PUBLIC_EDITION === "enterprise"
   );
+}
+
+/**
+ * Single access guard for every simulator action: require an internal user,
+ * then billing:read, then the tenant's tier (the simulator is a Pro feature).
+ * Must run before the EE module loads or any database access. Throws
+ * TierAccessError outside the refusalAware/runAware wrappers so it reaches the
+ * caller.
+ */
+async function assertContractSimulatorAccess(
+  user: Parameters<typeof hasPermission>[0],
+  tenant: string,
+): Promise<void> {
+  if (!isLicensedUserType(user.user_type)) {
+    throw new Error("Permission denied: Contract simulator is for internal users");
+  }
+  if (!(await hasPermission(user, "billing", "read"))) {
+    throw new Error("Permission denied: Cannot read billing");
+  }
+  await assertTenantTierAccess(tenant, TIER_FEATURES.CONTRACT_SIMULATOR);
 }
 
 const UNAVAILABLE: ContractSimulationUnavailable = {
@@ -140,9 +164,7 @@ export const getContractScenarioSnapshot = withAuth(
   ): Promise<
     ContractScenario | ContractSimulationUnavailable | ContractSimulationRefusal
   > => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
-    }
+    await assertContractSimulatorAccess(user, tenant);
 
     const ee = await loadEnterpriseSimulator();
     if (!ee?.snapshotContractToScenario) return UNAVAILABLE;
@@ -167,9 +189,7 @@ export const getContractDraftSimulationScenario = withAuth(
   ): Promise<
     ContractScenario | ContractSimulationUnavailable | ContractSimulationRefusal
   > => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
-    }
+    await assertContractSimulatorAccess(user, tenant);
     const ee = await loadEnterpriseSimulator();
     if (!ee?.draftContractToScenario) return UNAVAILABLE;
     const { knex } = await createTenantKnex();
@@ -192,9 +212,8 @@ export const runContractSimulation = withAuth(
   ): Promise<
     ContractSimulationResult | ContractSimulationUnavailable
   > => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
-    }
+    await assertContractSimulatorAccess(user, tenant);
+    assertSimulationPeriodCountWithinBounds(scenario?.horizon?.period_count);
 
     const ee = await loadEnterpriseSimulator();
     if (!ee?.simulateContractScenario) return UNAVAILABLE;
@@ -217,9 +236,9 @@ export const getRecentContractSimulationAssumptions = withAuth(
     | ContractSimulationUnavailable
     | ContractSimulationRefusal
   > => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
-    }
+    await assertContractSimulatorAccess(user, tenant);
+    assertSimulationPeriodCountWithinBounds(scenario?.horizon?.period_count);
+    assertSimulationPeriodCountWithinBounds(periodCount);
     const ee = await loadEnterpriseSimulator();
     if (!ee?.loadRecentAverageAssumptions) return UNAVAILABLE;
     const { knex } = await createTenantKnex();
@@ -241,9 +260,8 @@ export const getContractSimulationReplayAssumptions = withAuth(
     | ContractSimulationUnavailable
     | ContractSimulationRefusal
   > => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
-    }
+    await assertContractSimulatorAccess(user, tenant);
+    assertSimulationPeriodCountWithinBounds(scenario?.horizon?.period_count);
     const ee = await loadEnterpriseSimulator();
     if (!ee?.loadReplayAssumptions) return UNAVAILABLE;
     const { knex } = await createTenantKnex();
@@ -263,13 +281,15 @@ export const listContractSimulationClients = withAuth(
     user,
     { tenant },
   ): Promise<Array<{ client_id: string; client_name: string }>> => {
-    if (!(await hasPermission(user, "billing", "read"))) {
-      throw new Error("Permission denied: Cannot read billing");
+    await assertContractSimulatorAccess(user, tenant);
+    if (!(await hasPermission(user, "client", "read"))) {
+      throw new Error("Permission denied: Cannot read clients");
     }
 
     const { knex } = await createTenantKnex();
-    return knex("clients")
-      .where({ tenant, is_inactive: false })
+    return tenantDb(knex, tenant)
+      .table("clients")
+      .where({ is_inactive: false })
       .orderBy("client_name", "asc")
       .select("client_id", "client_name");
   },

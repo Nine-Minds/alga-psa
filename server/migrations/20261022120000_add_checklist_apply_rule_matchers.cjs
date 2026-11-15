@@ -40,6 +40,7 @@ exports.up = async function (knex) {
       ADD COLUMN IF NOT EXISTS keyword_target text NOT NULL DEFAULT 'title_and_description'
   `);
 
+  // migration-lint: allow 2 - retroactive: CHECKs added in a guarded DO block on checklist_template_apply_rules, whose new columns are all defaulted; merged before the lint existed
   await knex.raw(`
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'checklist_template_apply_rules_keyword_mode_check') THEN
@@ -55,6 +56,7 @@ exports.up = async function (knex) {
     END $$;
   `);
 
+  // migration-lint: allow 1 - retroactive: GIN index on checklist_template_apply_rules built in the transaction; merged before the lint existed
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS checklist_template_apply_rules_client_ids_gin
       ON ${TABLE} USING GIN (client_ids)

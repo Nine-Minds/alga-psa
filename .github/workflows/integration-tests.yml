@@ -30,8 +30,6 @@ jobs:
       full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -51,9 +49,11 @@ jobs:
     needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
+
     # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21 and the
     # Chromium install below dies with "Playwright does not support chromium
     # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
+
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -100,6 +100,7 @@ jobs:
       INTEGRATION_SHARD_INDEX: ${{ matrix.shard }}
       INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       COMMENT_SMTP_ISOLATED: 'true'
+      RUN_SLA_GREENMAIL_SMOKE: '1'
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
@@ -165,7 +166,35 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
 
       - name: Install PDF comparison tools
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        # poppler-utils provides pdftotext, a hard dependency of the invoice PDF
+        # integration tests. The runner image ships third-party apt sources we do
+        # not control: packages.microsoft.com has returned HTTP 403 for the Ubuntu
+        # InRelease file, `apt-get update` exits 100, and the job dies before
+        # running a single test. Only that failure mode is tolerated: the vendor
+        # source lists are dropped, and a remaining `apt-get update` failure is
+        # forgiven ONLY when every error line is an HTTP 403 fetch failure (or
+        # apt's own "index files failed" summary of it). Any other update error
+        # fails the step. The install itself is never tolerated failing, and
+        # pdftotext is verified afterwards, so a genuinely missing poppler still
+        # stops the job here instead of surfacing as an opaque test failure.
+        run: |
+          set -uo pipefail
+          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure-cli*
+          update_log="$(mktemp)"
+          if ! sudo apt-get update >"$update_log" 2>&1; then
+            cat "$update_log"
+            unexpected="$(grep -E '^E:' "$update_log" | grep -vE '403|Some index files failed to download' || true)"
+            if [ -n "$unexpected" ] || ! grep -qE '403' "$update_log"; then
+              echo "::error::apt-get update failed for a reason other than a third-party HTTP 403"
+              exit 1
+            fi
+            echo "::warning::apt-get update hit a third-party HTTP 403; continuing to the install, which must still succeed."
+          else
+            cat "$update_log"
+          fi
+          set -e
+          sudo apt-get install -y poppler-utils
+          pdftotext -v
 
       - name: Install locked collaboration server for integration tests
         run: npm ci --prefix hocuspocus --ignore-scripts
@@ -187,6 +216,18 @@ jobs:
             echo "Waiting for postgres..."
             sleep 2
           done
+
+      # Suites that exercise the S3 storage provider end to end (resumable
+      # document uploads) default to MinIO's standard local address and
+      # credentials. They are deliberately not exported as STORAGE_S3_* for
+      # the whole job, which would switch every other suite's storage config.
+      - name: Start disposable object storage
+        uses: ./.github/actions/start-minio
+        with:
+          name: integration-test-minio
+          port: '9000'
+          access-key: minioadmin
+          secret-key: minioadmin
 
       # Some tests read credentials from secrets/ files directly (getSecret falls back to env).
       - name: Create secrets files
@@ -220,6 +261,10 @@ jobs:
           TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ''
+
+      - name: Stop disposable object storage
+        if: always()
+        run: docker rm -f integration-test-minio || true
 
       - name: Upload integration execution diagnostics
         if: always()
@@ -418,6 +463,12 @@ jobs:
           path: test-results/infrastructure/
           if-no-files-found: error
           retention-days: 30
+          # Re-running only the failed shard leaves the earlier attempt's
+          # same-named artifact in place; the aggregator's pattern download
+          # then has two "infrastructure-shard-N" artifacts to choose from and
+          # can pick the stale, failing one even though the rerun went green.
+          # Overwrite so a rerun always replaces this shard's own evidence.
+          overwrite: true
 
       # Published only when this shard retried something. The shard bundle above
       # expires in a week; the weekly flaky report reads this one.

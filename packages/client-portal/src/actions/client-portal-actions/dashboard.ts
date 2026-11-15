@@ -17,6 +17,7 @@ import { listDeployableStatusSlugs } from '@alga-psa/assets/lib/assetStatusRegis
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 import { hasClientProjectReadPermission } from './clientProjectPermissions';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -99,7 +100,6 @@ type RecentProjectActivityRow = {
 type RecentServiceRequestActivityRow = {
   name: string;
   status: string;
-  execution_error_summary: string | null;
   timestamp: string | Date;
 };
 
@@ -156,10 +156,7 @@ function formatCurrencyFromCents(
   locale: string,
   currencyCode?: string | null,
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format((Number(value ?? 0) || 0) / 100);
+  return formatCurrencyWithSymbol((Number(value ?? 0) || 0) / 100, locale, currencyCode || 'USD');
 }
 
 function formatRecentInvoiceDescription(invoice: RecentInvoiceActivityRow, locale: string): string {
@@ -447,7 +444,6 @@ export const getRecentActivity = withAuth(async (
         .select([
           'request_name as name',
           'execution_status as status',
-          'execution_error_summary',
           'created_at as timestamp',
         ])
         .orderBy('created_at', 'desc')
@@ -531,7 +527,9 @@ export const getRecentActivity = withAuth(async (
         title: `Service request: ${s.name}`,
         status: s.status,
         timestamp: s.timestamp instanceof Date ? s.timestamp.toISOString() : s.timestamp,
-        description: s.execution_error_summary || '',
+        // Raw execution error text is internal; the dashboard shows a translated
+        // generic description instead (see ClientDashboard).
+        description: '',
       })),
       ...result.appointments.map((a): RecentActivity => ({
         type: 'appointment',

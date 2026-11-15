@@ -601,7 +601,15 @@ export interface HourBlockUsage {
   /** Cents per hour the block is valued at (minor units). */
   hourly_rate: number;
   currency_code: string;
+  /**
+   * Value of the unused hours, minor units of `currency_code`: remaining hours x hourly_rate,
+   * rounded once on the server (computeRemainingBlockValueMinor). Zero unless the block is
+   * active, since an expired or voided block's remaining hours are forfeited.
+   */
+  remaining_value: number;
   purchased_at: string | null;
+  /** First day the block can be drawn (cadence blocks); null = no lower bound. */
+  valid_from: string | null;
   expiration_date: string | null;
 }
 
@@ -630,6 +638,7 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
         'hb.hourly_rate',
         'hb.currency_code',
         'hb.purchased_at',
+        'hb.valid_from',
         'hb.expiration_date',
         'cl.contract_line_name as line_name',
         'c.contract_name',

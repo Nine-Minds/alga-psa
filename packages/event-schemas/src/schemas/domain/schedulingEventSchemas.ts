@@ -19,7 +19,7 @@ export const appointmentCreatedEventPayloadSchema = BaseDomainEventPayloadSchema
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
   timezone: z.string().min(1),
-  assigneeId: z.string().uuid().optional(),
+  assigneeId: z.string().guid().optional(),
   assigneeType: assigneeTypeSchema.optional(),
   createdByUserId: userIdSchema.optional(),
   createdAt: z.string().datetime().optional(),
@@ -72,9 +72,9 @@ export type AppointmentNoShowEventPayload = z.infer<typeof appointmentNoShowEven
 export const appointmentAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   appointmentId: appointmentIdSchema,
   ticketId: ticketIdSchema.optional(),
-  previousAssigneeId: z.string().uuid().optional(),
+  previousAssigneeId: z.string().guid().optional(),
   previousAssigneeType: assigneeTypeSchema.optional(),
-  newAssigneeId: z.string().uuid(),
+  newAssigneeId: z.string().guid(),
   newAssigneeType: assigneeTypeSchema,
   assignedAt: z.string().datetime().optional(),
 }).describe('Payload for APPOINTMENT_ASSIGNED');
@@ -85,7 +85,7 @@ const ownerTypeSchema = z.enum(['user', 'team']).describe('Owner type');
 
 export const scheduleBlockCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   scheduleBlockId: scheduleBlockIdSchema,
-  ownerId: z.string().uuid(),
+  ownerId: z.string().guid(),
   ownerType: ownerTypeSchema,
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
@@ -161,7 +161,7 @@ export type TechnicianCheckedOutEventPayload = z.infer<typeof technicianCheckedO
 export const scheduleEntryEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   entryId: scheduleEntryIdSchema,
   userId: userIdSchema,
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 }).describe('Payload for schedule entry events (SCHEDULE_ENTRY_*)');
 
 export type ScheduleEntryEventPayload = z.infer<typeof scheduleEntryEventPayloadSchema>;
@@ -189,14 +189,14 @@ export const appointmentRequestEventPayloadSchema = BaseDomainEventPayloadSchema
   requesterPhone: z.string().nullable().optional(),
   clientId: entityIdSchema('Client ID', 'client').optional(),
   contactId: entityIdSchema('Contact ID', 'contact').optional(),
-  clientUserId: z.string().uuid().optional(),
-  preferredAssignedUserId: z.string().uuid().optional(),
+  clientUserId: z.string().guid().optional(),
+  preferredAssignedUserId: z.string().guid().optional(),
   companyName: z.string().optional(),
   ticketId: entityIdSchema('Ticket ID', 'ticket').optional(),
   description: z.string().optional(),
-  approvedByUserId: z.string().uuid().optional(),
-  assignedUserId: z.string().uuid().optional(),
-  scheduleEntryId: z.string().uuid().optional(),
+  approvedByUserId: z.string().guid().optional(),
+  assignedUserId: z.string().guid().optional(),
+  scheduleEntryId: z.string().guid().optional(),
   declineReason: z.string().optional(),
 }).describe('Payload for appointment request events (APPOINTMENT_REQUEST_*)');
 

@@ -6,6 +6,8 @@ import { Knex } from 'knex';
 import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
+import { createAssetReadContext, isAssetMutationAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 import {
     assetActionErrorFrom,
     type AssetActionError,
@@ -23,27 +25,50 @@ export const associateDocumentWithAsset = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating (document associations are considered update operations)
-    if (!await hasPermission(user, 'asset', 'update')) {
+    if (!await hasPermission(user, 'asset', 'read') ||
+        !await hasPermission(user, 'asset', 'update') ||
+        !await hasPermission(user, 'document', 'read')) {
+        return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
+    }
+    if (!input || typeof input.entity_id !== 'string' || !input.entity_id.trim() ||
+        typeof input.document_id !== 'string' || !input.document_id.trim()) {
         return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
     }
 
     try {
-        // Create association in the standard document_associations table
-        const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await tenantScopedTable(trx, tenant, 'document_associations')
+        const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const db = tenantDb(trx, tenant);
+            const asset = await db.table('assets')
+                .where({ asset_id: input.entity_id })
+                .forUpdate()
+                .first('asset_id', 'client_id');
+            const context = await createAssetReadContext(trx, tenant, user as any);
+            if (!asset || !await isAssetMutationAllowed(trx, tenant, context, asset, 'update')) {
+                return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
+            }
+
+            const document = await db.table('documents')
+                .where({ document_id: input.document_id })
+                .forUpdate()
+                .first();
+            if (!document || (await authorizeAndRedactDocuments(trx, tenant, user, [document])).length === 0) {
+                return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
+            }
+
+            const [association] = await tenantScopedTable(trx, tenant, 'document_associations')
                 .insert({
                     tenant,
-                    entity_id: input.entity_id,
+                    entity_id: asset.asset_id,
                     entity_type: 'asset',
-                    document_id: input.document_id,
-                    created_by: user.user_id,
-                    notes: input.notes
+                    document_id: document.document_id,
                 })
-                .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'created_by', 'entered_at']);
+                .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'created_at']);
+            return association;
         });
 
+        if ('permissionError' in result) return result;
         revalidatePath(`/assets/${input.entity_id}`);
-        return association;
+        return result;
     } catch (error) {
         console.error('Error associating document with asset:', error);
         const expectedError = assetActionErrorFrom(error);
@@ -62,25 +87,50 @@ export const removeDocumentFromAsset = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permission for asset deletion
-    if (!await hasPermission(user, 'asset', 'delete')) {
+    if (!await hasPermission(user, 'asset', 'read') ||
+        !await hasPermission(user, 'asset', 'delete') ||
+        !await hasPermission(user, 'document', 'read')) {
+        return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
+    }
+    if (typeof association_id !== 'string' || !association_id.trim()) {
         return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
     }
 
     try {
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            // First get the entity_id for revalidation
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const db = tenantDb(trx, tenant);
             const association = await tenantScopedTable(trx, tenant, 'document_associations')
                 .where({ association_id })
+                .forUpdate()
                 .first();
 
-            if (association) {
-                // Then delete the association
-                await tenantScopedTable(trx, tenant, 'document_associations')
-                    .where({ association_id })
-                    .delete();
-
-                revalidatePath(`/assets/${association.entity_id}`);
+            if (!association || association.entity_type !== 'asset') {
+                return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
             }
+
+            const asset = await db.table('assets')
+                .where({ asset_id: association.entity_id })
+                .forUpdate()
+                .first('asset_id', 'client_id');
+            const context = await createAssetReadContext(trx, tenant, user as any);
+            if (!asset ||
+                !await isAssetMutationAllowed(trx, tenant, context, asset, 'delete')) {
+                return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
+            }
+
+            const document = await db.table('documents')
+                .where({ document_id: association.document_id })
+                .forUpdate()
+                .first();
+            if (!document || (await authorizeAndRedactDocuments(trx, tenant, user, [document])).length === 0) {
+                return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
+            }
+
+            await tenantScopedTable(trx, tenant, 'document_associations')
+                .where({ association_id })
+                .delete();
+
+            revalidatePath(`/assets/${asset.asset_id}`);
         });
     } catch (error) {
         console.error('Error removing document from asset:', error);
@@ -100,13 +150,18 @@ export const getAssetDocuments = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permission for asset reading
-    if (!await hasPermission(user, 'asset', 'read')) {
+    if (!await hasPermission(user, 'asset', 'read') || !await hasPermission(user, 'document', 'read')) {
         return permissionError('Permission denied: Cannot read asset documents', 'msp/assets:errors.permissions.readDocuments');
     }
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             const db = tenantDb(trx, tenant);
+            const asset = await db.table('assets').where({ asset_id }).first('asset_id', 'client_id');
+            const context = await createAssetReadContext(trx, tenant, user as any);
+            if (!asset || !await isAssetReadAllowed(trx, tenant, context, asset)) {
+                return permissionError('Permission denied: Cannot read asset documents', 'msp/assets:errors.permissions.readDocuments');
+            }
             const query = db.table('document_associations as da');
             db.tenantJoin(query, 'documents', 'documents.document_id', 'da.document_id');
             db.tenantJoin(query, 'users', 'documents.created_by', 'users.user_id', {
@@ -117,7 +172,7 @@ export const getAssetDocuments = withAuth(async (
                 type: 'left',
                 rootTenantColumn: 'documents.tenant',
             });
-            return await query
+            const documents = await query
             .select(
                 'documents.*',
                 'da.association_id',
@@ -135,6 +190,10 @@ export const getAssetDocuments = withAuth(async (
                 'da.entity_type': 'asset'
             })
             .orderBy('documents.entered_at', 'desc');
+            const visible = user.user_type === 'client'
+                ? documents.filter((document: IDocument) => document.is_client_visible === true)
+                : documents;
+            return authorizeAndRedactDocuments(trx, tenant, user, visible);
         });
     } catch (error) {
         console.error('Error getting asset documents:', error);

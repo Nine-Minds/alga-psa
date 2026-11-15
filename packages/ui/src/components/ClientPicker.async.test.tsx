@@ -6,13 +6,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClientPicker } from './ClientPicker';
 import { AsyncClientPicker, type PickerClientOption } from './AsyncClientPicker';
 import { ClientTagsProvider } from '../context/ClientTagsContext';
+import { ClientPickerSearchProvider } from '../context/ClientPickerSearchContext';
 
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({
   useAutomationIdAndRegister: (info: any) => ({ automationIdProps: { id: info.id }, updateMetadata: vi.fn() }),
 }));
 vi.mock('./CustomSelect', () => ({
-  default: ({ id, value, onValueChange, options }: any) => (
-    <select data-testid={id} value={value} onChange={(e) => onValueChange(e.target.value)}>
+  default: ({ id, value, onValueChange, options, customStyles }: any) => (
+    <select
+      data-testid={id}
+      data-content-class={customStyles?.content ?? ''}
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+    >
       {options.map((o: any) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
@@ -165,6 +171,38 @@ describe('AsyncClientPicker', () => {
     expect(fetchClientTags).not.toHaveBeenCalled();
   });
 
+  it('opens a panel wider than a narrow trigger, with filter lists stacked above it', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
+    renderPicker({ searchClients });
+    open();
+    await screen.findByText('Client 0');
+
+    // jsdom lays the trigger out at 0px wide, the narrowest possible filter-bar trigger.
+    const panel = screen.getByPlaceholderText('Search clients...').closest('[class*="z-["]') as HTMLElement;
+    const zIndexOf = (className: string) => Number(/z-\[(\d+)\]/.exec(className)?.[1]);
+    expect(panel.style.width).toBe('360px');
+    for (const filterId of ['cp-state-filter', 'cp-type-filter']) {
+      const contentClass = screen.getByTestId(filterId).getAttribute('data-content-class') ?? '';
+      expect(zIndexOf(contentClass)).toBeGreaterThan(zIndexOf(panel.className));
+    }
+  });
+
+  it('lets the filter selects shrink so the tag filter is never clipped by the panel', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    renderPicker({ searchClients });
+    open();
+    const tagTrigger = await screen.findByText('tag:vip');
+    const filterRow = tagTrigger.closest('div.flex.items-center') as HTMLElement;
+
+    for (const filterId of ['cp-state-filter', 'cp-type-filter']) {
+      const wrapper = screen.getByTestId(filterId).closest('div[class]') as HTMLElement;
+      expect(wrapper.className).toContain('flex-1');
+      expect(wrapper.className).toContain('min-w-0');
+    }
+    const tagWrapper = [...filterRow.children].at(-1) as HTMLElement;
+    expect(tagWrapper.className).toContain('shrink-0');
+  });
+
   it('does not refetch when a new but equal disabled Set / tooltip arrives while open', async () => {
     const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
     const ui = (set: Set<string>, tip: string) => (
@@ -186,6 +224,18 @@ describe('AsyncClientPicker', () => {
   it('exposes the trigger as `${id}-trigger`', () => {
     renderPicker({ searchClients: vi.fn(async (_p?: any) => ({ clients: [], total: 0 })) });
     expect(screen.getByRole('combobox').getAttribute('id')).toBe('cp-trigger');
+  });
+
+  it('keeps `${id}-option-${clientId}` in the DOM and clickable', async () => {
+    const onSelect = vi.fn();
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(2), total: 2 }));
+    renderPicker({ id: 'client-picker', searchClients, onSelect });
+    open();
+    await screen.findByText('Client 1');
+    const option = document.querySelector('#client-picker-option-Client-1') as HTMLElement;
+    expect(option).not.toBeNull();
+    fireEvent.click(option);
+    expect(onSelect).toHaveBeenCalledWith('Client-1');
   });
 
   it('does not fetch when filters change while closed', async () => {
@@ -240,5 +290,64 @@ describe('ClientPicker', () => {
     fireEvent.click(screen.getByText('Beta'));
     expect(onSelect).toHaveBeenCalledWith('b');
     await waitFor(() => expect(fetchClientTags).toHaveBeenCalledWith(['a', 'b']));
+  });
+
+  it('is async by default (no clients prop) and uses the context searcher', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    render(
+      <ClientPickerSearchProvider value={{ searchClients }}>
+        <ClientPicker id="cp4" onSelect={vi.fn()} selectedClientId={null} />
+      </ClientPickerSearchProvider>
+    );
+    open();
+    await screen.findByText('Client 0');
+    expect(searchClients).toHaveBeenCalled();
+  });
+
+  it('prefers an explicit searchClients prop over the context searcher', async () => {
+    const fromContext = vi.fn(async (_p?: any) => ({ clients: mk(1, 'Ctx'), total: 1 }));
+    const fromProp = vi.fn(async (_p?: any) => ({ clients: mk(1, 'Prop'), total: 1 }));
+    render(
+      <ClientPickerSearchProvider value={{ searchClients: fromContext }}>
+        <ClientPicker id="cp5" searchClients={fromProp} onSelect={vi.fn()} selectedClientId={null} />
+      </ClientPickerSearchProvider>
+    );
+    open();
+    await screen.findByText('Prop 0');
+    expect(fromContext).not.toHaveBeenCalled();
+  });
+
+  it('forwards fitContent and the trigger props into async mode', async () => {
+    const searchClients = vi.fn(async (_p?: any) => ({ clients: mk(1), total: 1 }));
+    render(
+      <ClientPicker
+        id="cp7"
+        searchClients={searchClients}
+        onSelect={vi.fn()}
+        selectedClientId={null}
+        fitContent
+        triggerVariant="ghost"
+        triggerSize="sm"
+        triggerButtonClassName="pl-0 text-left"
+      />
+    );
+    const trigger = screen.getByRole('combobox');
+    expect(trigger.className).toContain('w-auto');
+    expect(trigger.className).not.toContain('w-full');
+    expect(trigger.className).toContain('pl-0');
+    expect(trigger.className).toContain('text-left');
+    // size="sm", and variant="ghost" instead of the outline default.
+    expect(trigger.className).toContain('h-9');
+    expect(trigger.className).not.toContain('border-[rgb(var(--color-border-400))]');
+    expect(trigger.getAttribute('data-automation-type')).toBe('picker');
+    // fitContent shrinks the wrapper too, otherwise the row still reserves full width.
+    expect(document.getElementById('cp7')?.className).toContain('inline-block');
+  });
+
+  it('logs an error and renders an empty in-memory picker when no searcher is available', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<ClientPicker id="cp6" onSelect={vi.fn()} selectedClientId={null} />);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('No client searcher'));
+    error.mockRestore();
   });
 });

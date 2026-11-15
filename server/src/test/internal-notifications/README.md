@@ -320,4 +320,4 @@ await new Promise(resolve => setTimeout(resolve, 100));
 - Actions: `server/src/lib/actions/internal-notification-actions/`
 - Models: `server/src/lib/models/internalNotification.ts`
 - Event Subscriber: `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts`
-- Real-time Broadcaster: `server/src/lib/realtime/internalNotificationBroadcaster.ts`
+- Real-time Broadcaster: `packages/notifications/src/realtime/internalNotificationBroadcaster.ts`

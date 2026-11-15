@@ -118,7 +118,7 @@ export const eventFilterSchema = z.object({
   conditions: z.array(z.object({
     field: z.string(),
     operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-    value: z.any()
+    value: z.any().optional()
   })).optional(),
   tags: z.array(z.string()).optional()
 }).optional();
@@ -128,7 +128,7 @@ export const payloadTransformationSchema = z.object({
   template: z.string().optional(), // Handlebars template
   include_fields: z.array(z.string()).optional(),
   exclude_fields: z.array(z.string()).optional(),
-  custom_fields: z.record(z.any()).optional(),
+  custom_fields: z.record(z.string(), z.any()).optional(),
   flatten_nested: z.boolean().optional().default(false)
 }).optional();
 
@@ -136,7 +136,7 @@ export const payloadTransformationSchema = z.object({
 export const createWebhookSchema = z.object({
   name: z.string().min(1, 'Webhook name is required').max(255),
   description: z.string().optional(),
-  url: urlSchema.refine((url) => url !== undefined, 'Webhook URL is required'),
+  url: z.string({ error: (issue) => (issue.input === undefined ? 'Webhook URL is required' : undefined) }).url(),
   method: httpMethodSchema.default('POST'),
   event_types: z.array(webhookEventTypeSchema).min(1, 'At least one event type is required'),
   
@@ -146,7 +146,7 @@ export const createWebhookSchema = z.object({
   // Payload configuration
   payload_format: webhookPayloadFormatSchema.default('json'),
   content_type: z.string().default('application/json'),
-  custom_headers: z.record(z.string()).optional(),
+  custom_headers: z.record(z.string(), z.string()).optional(),
   
   // Event filtering
   event_filter: eventFilterSchema,
@@ -197,7 +197,7 @@ export const webhookResponseSchema = z.object({
   security: webhookSecurityConfigSchema,
   payload_format: webhookPayloadFormatSchema,
   content_type: z.string(),
-  custom_headers: z.record(z.string()).nullable(),
+  custom_headers: z.record(z.string(), z.string()).nullable(),
   
   event_filter: eventFilterSchema,
   payload_transformation: payloadTransformationSchema,
@@ -257,12 +257,12 @@ export const webhookDeliverySchema = z.object({
   // Request details
   request_url: z.string(),
   request_method: httpMethodSchema,
-  request_headers: z.record(z.string()).optional(),
+  request_headers: z.record(z.string(), z.string()).optional(),
   request_body: z.string().optional(),
   
   // Response details
   response_status: z.number().optional(),
-  response_headers: z.record(z.string()).optional(),
+  response_headers: z.record(z.string(), z.string()).optional(),
   response_body: z.string().optional(),
   
   // Delivery metadata
@@ -283,7 +283,7 @@ export const webhookDeliverySchema = z.object({
 export const webhookTestSchema = z.object({
   webhook_id: uuidSchema.optional(), // If testing existing webhook
   test_event_type: webhookEventTypeSchema,
-  test_payload: z.record(z.any()).optional(),
+  test_payload: z.record(z.string(), z.any()).optional(),
   override_url: urlSchema.optional() // For testing different URL
 });
 
@@ -309,7 +309,7 @@ export const webhookTemplateSchema = z.object({
   default_config: z.object({
     url_template: z.string().optional(), // Template with placeholders
     method: httpMethodSchema,
-    headers: z.record(z.string()).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
     payload_template: z.string(), // Handlebars template
     security_type: webhookSecurityTypeSchema.optional()
   }),
@@ -370,10 +370,10 @@ export const webhookAnalyticsSchema = z.object({
     average_response_time: z.number(), // milliseconds
     
     // Delivery by status
-    deliveries_by_status: z.record(z.number()),
+    deliveries_by_status: z.record(z.string(), z.number()),
     
     // Event type breakdown
-    deliveries_by_event_type: z.record(z.number()),
+    deliveries_by_event_type: z.record(z.string(), z.number()),
     
     // Timeline data
     deliveries_timeline: z.array(z.object({
@@ -400,12 +400,12 @@ export const webhookEventSchema = z.object({
   entity_id: uuidSchema,
   
   // Event data
-  current_data: z.record(z.any()), // Current state of the entity
-  previous_data: z.record(z.any()).optional(), // Previous state (for updates)
+  current_data: z.record(z.string(), z.any()), // Current state of the entity
+  previous_data: z.record(z.string(), z.any()).optional(), // Previous state (for updates)
   changes: z.array(z.object({
     field: z.string(),
-    old_value: z.any(),
-    new_value: z.any()
+    old_value: z.any().optional(),
+    new_value: z.any().optional()
   })).optional(),
   
   // Context
@@ -421,7 +421,7 @@ export const webhookEventSchema = z.object({
   tenant: uuidSchema,
   
   // Metadata
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 // Webhook signature verification

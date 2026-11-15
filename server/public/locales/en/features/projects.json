@@ -1473,6 +1473,7 @@
     "notFoundOrNoAccess": "Project not found or you do not have access to this project."
   },
   "backToProjects": "Back to Projects",
+  "backToSharedTasks": "← Back to Shared Tasks",
   "invalidProjectData": "Invalid project data",
   "viewDetails": "View Details →",
   "details": "Details",
@@ -1510,7 +1511,9 @@
     "addFailed": "Failed to add comment",
     "submitting": "Submitting...",
     "loading": "Loading...",
-    "empty": "No comments yet. Be the first to comment!"
+    "empty": "No comments yet. Be the first to comment!",
+    "loadError": "Failed to load comments.",
+    "retry": "Retry"
   },
   "taskStatusSelect": {
     "ariaLabel": "Task status",

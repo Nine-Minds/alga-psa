@@ -42,7 +42,7 @@ function requireDurableTenantSecretStorage(): void {
 
 function tenantSecretActionErrorFrom(error: unknown): TenantSecretActionError | null {
   if (error instanceof z.ZodError) {
-    const first = error.errors[0];
+    const first = error.issues[0];
     const field = first?.path.join('.');
     return actionError(first ? `${field ? `${field}: ` : ''}${first.message}` : 'Invalid secret input.');
   }

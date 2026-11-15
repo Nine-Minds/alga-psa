@@ -31,8 +31,8 @@ export function CustodyBadge({ badge, id }: { badge: OpenCustodyBadge | undefine
       : t('custody.badge.inOffice', { defaultValue: 'In office' });
   return (
     <span id={id} className="inline-flex max-w-full">
-      <BentoChip tone={withVendor ? 'warning' : 'info'}>
-        <span className="inline-flex max-w-[200px] items-center gap-1 truncate">
+      <BentoChip tone={withVendor ? 'warning' : 'info'} className="min-w-0 max-w-full overflow-hidden">
+        <span className="flex min-w-0 max-w-[200px] items-center gap-1" title={label}>
           <PackageOpen className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{label}</span>
         </span>

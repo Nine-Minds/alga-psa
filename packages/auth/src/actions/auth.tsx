@@ -9,12 +9,23 @@ import { IUser, isInteractiveUserType } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
 import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
+import { normalizeLoginEmail } from '../lib/security/loginEmail';
+import { resolveSignInUser, TenantRequiredResolutionError } from '../lib/signInUserResolution';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
     /** Vanity client-portal host the attempt arrived on, when no slug came with it. */
     portalDomain?: string;
     requireTenantMatch?: boolean;
+    /**
+     * `login` (default) is a password sign-in that may become a session, so the
+     * tenant login policy (SSO-required / 2FA enrollment) is enforced here.
+     * `reauthenticate` only re-verifies the password of someone who is ALREADY
+     * signed in (e.g. confirming an SSO link) and never mints a session, so the
+     * login policy does not apply. Never use it on a path that issues a session.
+     */
+    // LEVERAGE: friction authenticate-user-purpose — authenticateUser is both "verify a password" and "gate a sign-in"; a flag was needed to separate them. A pure verifyCredentials() layer under it would remove the flag.
+    purpose?: 'login' | 'reauthenticate';
 }
 
 async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
@@ -65,44 +76,30 @@ async function resolveTenantFromPortalDomain(portalDomain: string): Promise<stri
 }
 
 /**
- * Client sign-in with no tenant in hand. The old `.first()` lookup answered an
- * arbitrary tenant here, so an email with client users in two portals could be
- * authenticated against — and handed off to — the wrong MSP. Look at every
- * match instead, and when the credentials prove out in more than one tenant,
- * refuse and let the form ask which organization was meant. Only an attempt
- * that already knows the password learns that the email spans tenants.
+ * Sign-in with no tenant in hand: password sign-in uses the shared resolution
+ * engine with the stored hash as the proof. Only an attempt that already knows
+ * the password learns that the email spans tenants.
  */
-async function resolveUnscopedClientUser(
+async function resolveUnscopedUser(
     normalizedEmail: string,
     password: string,
-): Promise<IUser | undefined> {
-    const candidates = await User.findUsersByEmailAndType(normalizedEmail, 'client');
-
-    if (candidates.length <= 1) {
-        return candidates[0];
-    }
-
-    const authenticated: IUser[] = [];
-    for (const candidate of candidates) {
-        if (candidate.is_inactive || !candidate.hashed_password) {
-            continue;
-        }
-        if (await verifyPassword(password, candidate.hashed_password)) {
-            authenticated.push(candidate);
-        }
-    }
-
-    const tenants = new Set(authenticated.map((candidate) => candidate.tenant));
-    if (tenants.size > 1) {
-        logger.warn('[authenticateUser] Email resolves to client users in multiple tenants', {
+    userType: 'client' | 'internal',
+): Promise<{ user: IUser | undefined; passwordVerified: boolean }> {
+    try {
+        const { user, verified } = await resolveSignInUser({
             email: normalizedEmail,
-            tenantCount: tenants.size,
+            userType,
+            verify: (candidate) =>
+                candidate.hashed_password ? verifyPassword(password, candidate.hashed_password) : false,
         });
-        const { TenantRequiredError } = await import('../lib/security/loginProtection');
-        throw new TenantRequiredError();
+        return { user, passwordVerified: verified };
+    } catch (error) {
+        if (error instanceof TenantRequiredResolutionError) {
+            const { TenantRequiredError } = await import('../lib/security/loginProtection');
+            throw new TenantRequiredError();
+        }
+        throw error;
     }
-
-    return authenticated[0];
 }
 
 export async function authenticateUser(
@@ -119,12 +116,12 @@ export async function authenticateUser(
         hasPortalDomain: Boolean(options.portalDomain),
     });
 
-    if (!email || !password) {
+    const normalizedEmail = normalizeLoginEmail(email);
+    if (!normalizedEmail || !password) {
         logger.warn("[authenticateUser] Missing credentials");
         return null;
     }
 
-    const normalizedEmail = email.toLowerCase();
     let resolvedTenantId: string | undefined | null = options.tenantId;
 
     if (!resolvedTenantId && options.tenantSlug) {
@@ -162,12 +159,11 @@ export async function authenticateUser(
     }
 
     let user: IUser | undefined;
+    let passwordVerified = false;
     if (resolvedTenantId) {
         user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
-    } else if (userType === 'client') {
-        user = await resolveUnscopedClientUser(normalizedEmail, password);
     } else {
-        user = await User.findUserByEmailAndType(normalizedEmail, userType);
+        ({ user, passwordVerified } = await resolveUnscopedUser(normalizedEmail, password, userType));
     }
 
     if (!user || !user.user_id) {
@@ -212,10 +208,19 @@ export async function authenticateUser(
         return null;
     }
 
-    const isValid = await verifyPassword(password, user.hashed_password);
+    const isValid = passwordVerified || await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
         return null;
+    }
+
+    // Single choke point for the tenant login policy. Runs only after the password
+    // has verified, so a refusal never reveals anything to someone who does not
+    // already know the password. The NextAuth CredentialsProvider reaches
+    // this function; throws SsoRequiredError / TwoFactorEnrollmentRequiredError.
+    if ((options.purpose ?? 'login') === 'login') {
+        const { enforcePasswordLoginPolicy, surfaceForUserType } = await import('../lib/passwordLoginGate');
+        await enforcePasswordLoginPolicy(user, surfaceForUserType(user.user_type));
     }
 
     return user;
@@ -225,14 +230,14 @@ export async function authenticateUser(
 
 export async function have_two_factor_enabled( password: string, email: string, userType: 'internal' | 'client'): Promise<boolean> {
     logger.system(`Checking if user has 2FA enabled for email ${email}`);
-    const user = await authenticateUser(email, password, userType);
+    const user = await authenticateUser(email, password, userType, { purpose: 'reauthenticate' });
     if (!user || !user.two_factor_enabled) { return false; }
     return true;
 }
 
 export async function userExists( email: string): Promise<boolean> {
     logger.system(`Checking if user exists for email ${email}`);
-    const user = await User.findUserByEmail(email.toLowerCase());
+    const user = await User.findUserByEmail(normalizeLoginEmail(email));
     if (!user || !user.user_id) { return false; }
     return true;
 }

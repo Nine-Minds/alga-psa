@@ -1,3 +1,4 @@
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import type { Knex } from 'knex';
 import type {
   IContract,
@@ -11,11 +12,13 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { tenantDb, withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
+import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
+import { getEffectiveTaxSourceForClient } from '@alga-psa/shared/billingClients/taxSettings';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
   allocatedOneTimeAmountFor,
@@ -323,6 +326,35 @@ async function resolveProductServiceIds(
   return new Set(rows.map((row) => row.service_id as string));
 }
 
+/**
+ * Service category per quoted service. Converted contract lines must carry the
+ * catalog category so category-based billing splits see them like any other line.
+ */
+async function resolveServiceCategoryIds(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  items: IQuoteItem[]
+): Promise<Map<string, string | null>> {
+  const serviceIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.service_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
+  );
+
+  if (serviceIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await knexOrTrx('service_catalog')
+    .where({ tenant })
+    .whereIn('service_id', serviceIds)
+    .select('service_id', 'category_id');
+
+  return new Map(rows.map((row) => [row.service_id as string, (row.category_id as string | null) ?? null]));
+}
+
 function isProductQuoteItem(item: IQuoteItem, productServiceIds: Set<string>): boolean {
   return item.service_item_kind === 'product'
     || (typeof item.service_id === 'string' && productServiceIds.has(item.service_id));
@@ -607,7 +639,7 @@ export async function buildQuoteConversionPreview(
   };
 }
 
-export async function convertQuoteToDraftContract(
+async function convertQuoteToDraftContractRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -623,7 +655,7 @@ export async function convertQuoteToDraftContract(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -671,6 +703,7 @@ export async function convertQuoteToDraftContract(
 
   const nowIso = new Date().toISOString();
   const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, recurringItems);
+  const categoryByServiceId = await resolveServiceCategoryIds(knexOrTrx, tenant, recurringItems);
   const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => {
     const contractLineType = mapQuoteItemToContractLineType(item);
     return {
@@ -694,6 +727,7 @@ export async function convertQuoteToDraftContract(
       contract_line_type: contractLineType,
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
+      service_category: item.service_id ? (categoryByServiceId.get(item.service_id) ?? null) : null,
       // A per-unit line has no bundle total: quantity x unit rate is the charge.
       // A bundle-priced row bills the line rate once, so the line carries the quoted recurring
       // amount (quantity x unit price), not the unit price alone.
@@ -757,12 +791,15 @@ export async function convertQuoteToDraftContract(
       fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
-        // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
-        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
-        // Unit rows and products are per unit; a bundle row is the whole line total (its share).
-        base_rate_basis:
-          isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+        ...resolveFixedMemberRatePair({
+          // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
+          // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+          base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
+          // Unit rows and products are per unit; a bundle row is the whole line total (its share).
+          base_rate_basis:
+            isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+          pricing_basis: isUnitPriced ? 'unit' : 'bundle',
+        }),
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
@@ -875,7 +912,7 @@ export async function convertQuoteToDraftContract(
   };
 }
 
-export async function convertQuoteToDraftSalesOrder(
+async function convertQuoteToDraftSalesOrderRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -891,7 +928,7 @@ export async function convertQuoteToDraftSalesOrder(
     throw new Error('Quote templates cannot be converted to sales orders');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to sales orders');
   }
 
@@ -1026,7 +1063,7 @@ function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : value;
 }
 
-export async function convertQuoteToDraftInvoice(
+async function convertQuoteToDraftInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1042,7 +1079,7 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1128,6 +1165,19 @@ export async function convertQuoteToDraftInvoice(
     invoiceDate,
   );
   const quoteBillingProfileId = billingTerms.billingProfileId;
+  // A quote always estimates tax internally (quotes never reach the accounting
+  // system), but the invoice it becomes must honour the client's effective tax
+  // source like every other invoice path: the client decides, not the quote.
+  // External clients start 'pending_external' with zero tax so the accounting
+  // import fills it after export; internal clients keep the quote's tax so the
+  // invoice matches the accepted quote line for line.
+  const { taxSource: clientTaxSource } = await getEffectiveTaxSourceForClient(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+  );
+  const taxIsExternal = clientTaxSource === 'external';
+  const invoiceTaxSource = taxIsExternal ? 'pending_external' : 'internal';
   await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
@@ -1145,7 +1195,7 @@ export async function convertQuoteToDraftInvoice(
     invoice_number: invoiceNumber,
     credit_applied: 0,
     is_manual: true,
-    tax_source: quote.tax_source ?? 'internal',
+    tax_source: invoiceTaxSource,
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
@@ -1172,7 +1222,9 @@ export async function convertQuoteToDraftInvoice(
     }
 
     const isDiscount = source.is_discount === true;
-    const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
+    // An external-tax invoice carries no tax of its own: the accounting system
+    // computes it and the import writes it back after export.
+    const taxAmount = isDiscount || taxIsExternal ? 0 : Number(source.tax_amount ?? 0);
     const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
@@ -1191,7 +1243,7 @@ export async function convertQuoteToDraftInvoice(
       net_amount: netAmount,
       tax_amount: taxAmount,
       tax_region: source.tax_region ?? null,
-      tax_rate: isDiscount ? 0 : (source.tax_rate ?? 0),
+      tax_rate: isDiscount || taxIsExternal ? 0 : (source.tax_rate ?? 0),
       total_price: netAmount + taxAmount,
       is_manual: true,
       is_taxable: isDiscount ? false : (source.is_taxable ?? true),
@@ -1294,7 +1346,7 @@ export async function convertQuoteToDraftInvoice(
   };
 }
 
-export async function convertQuoteToDraftContractAndInvoice(
+async function convertQuoteToDraftContractAndInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1306,7 +1358,7 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1321,30 +1373,8 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error('Quote must contain both recurring and one-time items to convert to both records');
   }
 
-  const contractResult = await convertQuoteToDraftContract(knexOrTrx, tenant, quoteId, performedBy);
-  const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
-  const nowIso = new Date().toISOString();
-
-  await tenantDb(knexOrTrx, tenant).table('quotes')
-    .where({ quote_id: quoteId })
-    .update({
-      status: 'converted',
-      converted_at: nowIso,
-      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
-      updated_at: nowIso,
-    });
-
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quoteId,
-    activity_type: 'converted',
-    description: 'Quote converted to both a draft contract and a draft invoice',
-    performed_by: performedBy ?? null,
-    metadata: {
-      contract_id: contractResult.contract.contract_id,
-      invoice_id: invoiceResult.invoice.invoice_id,
-    },
-  });
-
+  const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
+  const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);
   const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
   return {
@@ -1353,4 +1383,85 @@ export async function convertQuoteToDraftContractAndInvoice(
     invoice: invoiceResult.invoice,
     clientContractId: contractResult.clientContractId,
   };
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContract(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToContractConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToInvoiceConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContractAndInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToBothConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractAndInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftSalesOrder(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToSalesOrderConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftSalesOrderRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+      details: { salesOrderId: result.salesOrder.so_id },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
 }

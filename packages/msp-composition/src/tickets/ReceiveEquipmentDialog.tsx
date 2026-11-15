@@ -1,7 +1,7 @@
 'use client';
 
 import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { PackageOpen } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
@@ -12,8 +12,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { listAssets } from '@alga-psa/assets/actions/assetActions';
+import { useCustodyBadges } from '@alga-psa/assets/components/custody/CustodyBadge';
+import { CustodyPhotoField } from '@alga-psa/assets/components/custody/CustodyPhotoField';
+import { custodyPhotosWithinLimit } from '@alga-psa/assets/lib/custody/photoLimits';
 import { custodyOutcome, useCustodyLocations } from '@alga-psa/assets/components/custody/custodyClient';
 import {
   CustodyDetailFields,
@@ -22,13 +24,11 @@ import {
   emptyCustodyDetails,
   type CustodyDetailsValue,
 } from '@alga-psa/assets/components/custody/CustodyFields';
-import { DialogShell, HolderPicker } from '@alga-psa/assets/components/custody/CustodyDialogs';
+import { DialogShell, HolderPicker, type DialogSubmitError } from '@alga-psa/assets/components/custody/CustodyDialogs';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from '@alga-psa/assets/components/shared/useAssetTypeOptions';
-import { matchAssetCacheKeys, matchEntityAssetsCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
+import { matchAssetCacheKeys } from '@alga-psa/assets/lib/assetCacheKeys';
 import { receiveEquipment, type ReceiveEquipmentActionData } from './receiveEquipmentActions';
 
-const MAX_PHOTOS = 20;
 
 type Mode = 'existing' | 'new';
 
@@ -68,7 +68,6 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
   const [photos, setPhotos] = useState<File[]>([]);
   const [result, setResult] = useState<ReceiveEquipmentActionData | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const registryEntries = useAssetTypeRegistry(isOpen);
   const assetTypeOptions = useMemo(() => buildAssetTypeOptions(registryEntries, t, { includeUnknown: true }), [registryEntries, t]);
@@ -104,28 +103,39 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
     }
   }, [isOpen, locationId, locations]);
 
+  // Held assets cannot be received again. The batched badge read is silent (empty map) on any refusal, so
+  // a failed read leaves every option enabled and the server refusal (shown at the top) stays the gate.
+  const assetIds = useMemo(() => (assets ?? []).map((a) => a.asset_id), [assets]);
+  const custodyBadges = useCustodyBadges(assetIds);
   const assetOptions = useMemo(
-    () => (assets ?? []).map((a) => ({ value: a.asset_id, label: a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name })),
-    [assets]
+    () =>
+      (assets ?? []).map((a) => {
+        const base = a.asset_tag ? `${a.name} (${a.asset_tag})` : a.name;
+        const badge = custodyBadges.get(a.asset_id);
+        if (!badge) return { value: a.asset_id, label: <span title={base}>{base}</span>, textValue: base };
+        const where =
+          badge.state === 'with_vendor'
+            ? t('custody.badge.withVendor', { defaultValue: 'With vendor' })
+            : badge.location_label ?? t('custody.badge.inOffice', { defaultValue: 'In office' });
+        const heldLabel = t('custody.receiveEquipment.inCustodyOption', {
+          defaultValue: '{{asset}} — In custody: {{location}}',
+          asset: base,
+          location: where,
+        });
+        return { value: a.asset_id, disabled: true, label: <span title={heldLabel}>{heldLabel}</span>, textValue: heldLabel };
+      }),
+    [assets, custodyBadges, t]
   );
 
   if (!ticketId || !clientId || !canUpdate) return null;
 
   const canSubmit =
-    Boolean(locationId) && (mode === 'existing' ? Boolean(assetId) : newItem.name.trim().length > 0);
+    Boolean(locationId) && custodyPhotosWithinLimit(photos) && (mode === 'existing' ? Boolean(assetId) : newItem.name.trim().length > 0);
 
-  const submit = async (): Promise<string | null> => {
-    // Photos first: the documents are client-hidden and removed server-side if the receive fails.
-    const documentIds: string[] = [];
-    for (const file of photos) {
-      const formData = new FormData();
-      formData.append('file', file);
-      // The server uses the authenticated user; `userId` is required by the type only.
-      const uploaded = await uploadDocument(formData, { userId: '', ticketId, isClientVisible: false });
-      if (isActionPermissionError(uploaded)) return uploaded.permissionError;
-      if (!uploaded.success) return uploaded.error;
-      documentIds.push(uploaded.document.document_id);
-    }
+  const id = `receive-equipment-${ticketId}`;
+  const submit = async (): Promise<DialogSubmitError | null> => {
+    const photoForm = new FormData();
+    for (const file of photos) photoForm.append('photos', file);
 
     const outcome = custodyOutcome<ReceiveEquipmentActionData>(
       await receiveEquipment({
@@ -151,23 +161,23 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         follow_up_on: details.follow_up_on || null,
         condition_note: details.condition_note.trim() || null,
         accessories: cleanAccessories(details.accessories),
-        document_ids: documentIds,
-      })
+      }, photoForm)
     );
     if (!outcome.ok) {
-      return outcome.messageKey
+      const message = outcome.messageKey
         ? t(outcome.messageKey, { defaultValue: outcome.message, ...(outcome.messageParams ?? {}) })
         : outcome.message;
+      // Point the refusal at the control the user has to change.
+      if (mode === 'existing') return { message, fieldId: `${id}-asset` };
+      return { message };
     }
     setResult(outcome.data);
-    void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id]));
+    // The ticket id revalidates this ticket's Assets panel (and only this ticket's).
+    void mutate(matchAssetCacheKeys([outcome.data.asset.asset_id, ticketId]));
     void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
-    // The ticket's Assets tile lists linked assets under this key.
-    void mutate(matchEntityAssetsCacheKeys('ticket', ticketId));
     return null;
   };
 
-  const id = `receive-equipment-${ticketId}`;
   return (
     <>
       <ActionTrigger
@@ -224,6 +234,8 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
                 value={assetId}
                 onValueChange={setAssetId}
                 options={assetOptions}
+                // Long "In custody: …" labels: list no wider than the trigger, labels truncate (full text in title).
+                customStyles={{ content: 'max-w-[var(--radix-select-trigger-width)]', item: '[&>span]:min-w-0 [&>span]:truncate' }}
                 placeholder={t('custody.receiveEquipment.assetPlaceholder', { defaultValue: 'Select an asset' })}
               />
             </div>
@@ -277,23 +289,7 @@ export function ReceiveEquipmentDialog({ ticket }: { ticket: ReceiveEquipmentTic
         />
         <CustodyDetailFields idPrefix={id} value={details} onChange={setDetails} />
 
-        <div>
-          <Label htmlFor={`${id}-photos`}>{t('custody.receiveEquipment.photos', { defaultValue: 'Photos (optional)' })}</Label>
-          <input
-            id={`${id}-photos`}
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="block w-full text-sm"
-            onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}
-          />
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-400))]">
-            {t('custody.receiveEquipment.photosHint', {
-              defaultValue: 'Photos are attached to this ticket and are not visible to the client.',
-            })}
-          </p>
-        </div>
+        <CustodyPhotoField id={`${id}-photos`} photos={photos} onChange={setPhotos} />
       </DialogShell>
 
       <Dialog

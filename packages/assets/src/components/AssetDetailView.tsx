@@ -10,7 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 
 const DEEP_LINKABLE_FOCUS_VIEWS = ['software'];
 
@@ -104,7 +105,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
               },
               {
                 label: t('assetDetailView.fields.status', { defaultValue: 'Status' }),
-                value: resolveAssetStatusLabel(t, asset.status, assetStatuses),
+                value: assetStatusLabel(t, asset.status, assetStatuses),
               },
               {
                 label: t('assetDetailView.fields.location', { defaultValue: 'Location' }),

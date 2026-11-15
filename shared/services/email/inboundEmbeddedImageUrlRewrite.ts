@@ -14,6 +14,7 @@
  * what this pipeline wrote is only touched in place, and only while an
  * unresolved `cid:` that matches a mapping remains.
  */
+import type { TenantDb } from '@alga-psa/db';
 
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import type { EmbeddedImageUrlMapping } from './processInboundEmailArtifacts';
@@ -143,17 +144,17 @@ function parseTicketAttributes(raw: unknown): Record<string, unknown> {
 }
 
 interface BodyAccessor {
-  read: (db: any) => Promise<string | null>;
-  write: (db: any, content: string, trx: any) => Promise<void>;
+  read: (db: TenantDb) => Promise<string | null>;
+  write: (db: TenantDb, content: string, trx: any) => Promise<void>;
 }
 
 function commentAccessor(commentId: string): BodyAccessor {
   return {
-    read: async (db: any) => {
+    read: async (db: TenantDb) => {
       const row = await db.table('comments').where({ comment_id: commentId }).first('note');
       return row?.note ?? null;
     },
-    write: async (db: any, content: string, _trx: any) => {
+    write: async (db: TenantDb, content: string, _trx: any) => {
       await db.table('comments')
         .where({ comment_id: commentId })
         .update({ note: content, updated_at: new Date() });
@@ -163,13 +164,13 @@ function commentAccessor(commentId: string): BodyAccessor {
 
 function ticketDescriptionAccessor(ticketId: string): BodyAccessor {
   return {
-    read: async (db: any) => {
+    read: async (db: TenantDb) => {
       const row = await db.table('tickets').where({ ticket_id: ticketId }).first('attributes');
       if (!row) return null;
       const description = parseTicketAttributes(row.attributes).description;
       return typeof description === 'string' ? description : null;
     },
-    write: async (db: any, content: string, trx: any) => {
+    write: async (db: TenantDb, content: string, trx: any) => {
       const row = await db.table('tickets').where({ ticket_id: ticketId }).first('attributes');
       if (!row) return;
       const attributes = parseTicketAttributes(row.attributes);
@@ -217,7 +218,7 @@ export async function applyEmbeddedImageUrlMappingsToStoredBodies(
       : ticketDescriptionAccessor(target.id);
 
     try {
-      await withTenantAdminTransaction(args.tenantId, async (trx: any, db: any) => {
+      await withTenantAdminTransaction(args.tenantId, async (trx: any, db: TenantDb) => {
         const current = await accessor.read(db);
         if (!current) return;
 

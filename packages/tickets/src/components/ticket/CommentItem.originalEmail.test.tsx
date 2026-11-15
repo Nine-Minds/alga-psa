@@ -133,6 +133,16 @@ describe('CommentItem original-email switcher', () => {
     expect(switcher.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('themes the switcher chrome instead of taking the palette default', () => {
+    renderComment(buildComment('comment-chrome', inboundMetadata));
+
+    // A bare `border` resolves to Tailwind's gray default, which stays light
+    // against the dark comment card it sits on.
+    expect(screen.getByRole('group', { name: 'Message view' }).className).toContain(
+      'border-[rgb(var(--color-border-200))]'
+    );
+  });
+
   it('fetches and renders the original email only once the reader switches to it', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

@@ -10,6 +10,8 @@ const webhookModelState = vi.hoisted(() => ({
   updateStatsMock: vi.fn(),
 }));
 
+vi.mock('@/lib/webhooks/deliveryReceipt', () => ({ withWebhookDeliveryReceipt: async (_db: unknown, _job: unknown, deliver: () => Promise<unknown>) => deliver() }));
+vi.mock('@/lib/db/db', () => ({ getConnection: async () => ({}) }));
 vi.mock('@/lib/webhooks/webhookModel', () => ({
   webhookModel: {
     getById: (...args: unknown[]) => webhookModelState.getByIdMock(...args),

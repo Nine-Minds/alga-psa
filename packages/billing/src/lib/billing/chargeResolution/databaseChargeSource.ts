@@ -29,12 +29,18 @@ import type {
 import { lineFacts } from "../domain/calculateContractCharge";
 import type {
   ChargeFamily,
+  CadencePrepaidBlockSupply,
   ConfiguredService,
   ContractChargeSource,
   FactsOf,
+  HourBlockDrawSupply,
+  HourBlockDrawSupplyRow,
+  PrepaidCoverageRow,
   PoolDefinition,
   PoolPeriodState,
   PooledTimeExclusion,
+  PrepaidBlockIssuanceSupply,
+  StreamTimings,
   SuppliedCharge,
   TaxContextDemand,
   TimingRequest,
@@ -67,6 +73,18 @@ export interface DatabaseChargeLoaders {
     timing: ResolvedBillingTiming,
     sink: ContractObligationSink,
   ): Promise<void>;
+  /** Raw issuance rows for the named ids; throws if one is not the client's. */
+  prepaidBlockIssuances(
+    issuanceIds: string[],
+  ): Promise<PrepaidBlockIssuanceSupply[]>;
+  /** The line's cadence-mode Prepaid Block terms, or null if it has none. */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null>;
+  /** The line's block draws on these time entries (raw rows, no decisions). */
+  prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]>;
+  /** Allocation rows of the line's blocks inside the service period, FIFO. */
+  hourBlockDraws(
+    timing: ResolvedBillingTiming,
+  ): Promise<HourBlockDrawSupplyRow[]>;
 }
 
 /** Engine helpers the source needs; thin and structural so tests can stub them. */
@@ -97,8 +115,8 @@ export interface DatabaseChargeSourceInput {
   clientContractLine: IClientContractLine;
   /** Client billing cycle rule, when the caller already knows it. */
   billingCycle?: string;
-  /** A timing the caller already selected for this line, if any. */
-  recurringTimingSelection?: ResolvedBillingTiming;
+  /** The per-stream timings the caller already selected for this line, if any. */
+  recurringTimingSelections?: StreamTimings;
   recurringTimingSelectionSource?: "derived" | "persisted";
   /** Project-driven runs are not cadence-driven (see resolveTiming). */
   projectTarget?: boolean;
@@ -108,6 +126,18 @@ export interface DatabaseChargeSourceInput {
    * never sets this.
    */
   untimedWithoutCadence?: boolean;
+  /**
+   * Prepaid-block issuances the caller selected for this invoice. They belong
+   * to the client's document, not to a line's service period, so only a
+   * document-scope source (see documentScope) is given them.
+   */
+  prepaidBlockIssuanceIds?: string[];
+  /**
+   * The source answers for the client's document rather than a contract line:
+   * `clientContractLine` is a placeholder for the document and its facts carry
+   * no currency, so they are not checked against a line's currency.
+   */
+  documentScope?: boolean;
   loaders: DatabaseChargeLoaders;
 }
 
@@ -150,7 +180,8 @@ export class DatabaseChargeSource implements ContractChargeSource {
     private readonly host: DatabaseChargeHost,
     private readonly input: DatabaseChargeSourceInput,
   ) {
-    this.line = lineFacts(input.clientContractLine, host.tenant);
+    const facts = lineFacts(input.clientContractLine, host.tenant);
+    this.line = input.documentScope ? { ...facts, currencyCode: "" } : facts;
     this.billingPeriod = input.billingPeriod;
   }
 
@@ -182,14 +213,9 @@ export class DatabaseChargeSource implements ContractChargeSource {
   /* -------------------------------------------------------------- */
 
   async resolveTiming(request: TimingRequest): Promise<TimingResolution> {
-    if (request.duePosition !== "line") {
-      throw new Error(
-        `DatabaseChargeSource only resolves the line's own due position (requested "${request.duePosition}")`,
-      );
-    }
     const {
       projectTarget,
-      recurringTimingSelection,
+      recurringTimingSelections,
       recurringTimingSelectionSource,
       billingPeriod,
       clientContractLine,
@@ -211,10 +237,16 @@ export class DatabaseChargeSource implements ContractChargeSource {
         },
       };
     }
+    const recurringTimingSelection = recurringTimingSelections?.[request.stream];
     if (recurringTimingSelection) {
       return { status: "due", timing: recurringTimingSelection };
     }
     if (recurringTimingSelectionSource === "persisted") {
+      return { status: "not-due" };
+    }
+    // A stream other than the line's own (a cadence block fee) is due only by
+    // its persisted service period; there is no derived timing to fall back on.
+    if (request.stream !== "line") {
       return { status: "not-due" };
     }
 
@@ -582,6 +614,55 @@ export class DatabaseChargeSource implements ContractChargeSource {
     return this.drain<"product" | "license">((sink) =>
       this.input.loaders.recurringQuantity(kind, timing, sink),
     );
+  }
+
+  async prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]> {
+    const ids = this.input.prepaidBlockIssuanceIds ?? [];
+    return ids.length > 0 ? this.input.loaders.prepaidBlockIssuances(ids) : [];
+  }
+
+  private cadenceBlock?: Promise<CadencePrepaidBlockSupply | null>;
+
+  /** Memoized: the resolver asks once per stream and once for the overage flag. */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null> {
+    // Blocks belong to a line's service periods; the document-scope and
+    // project-driven sources have no such line.
+    if (this.input.documentScope || this.input.projectTarget) {
+      return Promise.resolve(null);
+    }
+    this.cadenceBlock ??= this.input.loaders.cadencePrepaidBlock();
+    return this.cadenceBlock;
+  }
+
+  async prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]> {
+    // Project-driven runs price project work, not a line's service period.
+    if (this.input.projectTarget || entryIds.length === 0) return [];
+    return this.input.loaders.prepaidCoverage(entryIds);
+  }
+
+  async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
+    const { recurringTimingSelections, recurringTimingSelectionSource, billingCycle } =
+      this.input;
+    // Without a cycle, a selected timing or persisted periods there is no
+    // service period to read draws for.
+    if (
+      !billingCycle &&
+      !recurringTimingSelections?.line &&
+      recurringTimingSelectionSource !== "persisted"
+    ) {
+      return null;
+    }
+    const resolution = await this.resolveTiming({
+      policy: "service-driven",
+      stream: "line",
+    });
+    if (resolution.status !== "due") return null;
+    const { timing } = resolution;
+    return {
+      period: { startDate: timing.servicePeriodStart, endDate: timing.servicePeriodEnd },
+      timing,
+      allocations: await this.input.loaders.hourBlockDraws(timing),
+    };
   }
 
   private async drain<F extends ChargeFamily>(

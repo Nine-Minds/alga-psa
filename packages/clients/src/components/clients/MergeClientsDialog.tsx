@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
 import type { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -98,6 +99,9 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
   const [contactProfiles, setContactProfiles] = useState<Record<string, ContactAssignmentState>>({});
+  // Per contact, the whole location set after the merge. Pre-filled with the links as they stand,
+  // so doing nothing moves them unchanged; a "Use it" click re-points one of them.
+  const [contactLocations, setContactLocations] = useState<Record<string, Array<{ locationId: string; isPrimary: boolean }>>>({});
   const [contractChoices, setContractChoices] = useState<Record<string, ContractChoiceState>>({});
   const [pinPortalGrants, setPinPortalGrants] = useState(true);
   const [confirmText, setConfirmText] = useState('');
@@ -140,6 +144,39 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
     ? clients.find((client) => client.client_id === recordedParentId) ?? null
     : null;
 
+  /** The per-contact location sets as they stand, in the shape both the dry run and the merge take. */
+  const locationAssignments = useCallback(
+    () => Object.entries(contactLocations).map(([contactNameId, locations]) => ({ contactNameId, locations })),
+    [contactLocations],
+  );
+
+  /**
+   * Re-runs the dry run with the chosen location sets and keeps only its blockers: the operator's
+   * own choices are not reset, so this cannot be folded into loadPreview.
+   */
+  const revalidatePreview = useCallback(async () => {
+    if (!sourceClientId || !targetClientId) return true;
+    setIsLoadingPreview(true);
+    try {
+      const result = await previewClientMerge({
+        sourceClientId,
+        targetClientId,
+        contactLocationAssignments: locationAssignments(),
+      });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return false;
+      }
+      setPreview(result);
+      return result.blockers.length === 0;
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      return false;
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, [locationAssignments, sourceClientId, targetClientId]);
+
   const loadPreview = useCallback(async () => {
     if (!sourceClientId || !targetClientId) return;
     setIsLoadingPreview(true);
@@ -165,6 +202,12 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
             canViewProfileTickets: false,
           }]),
       ));
+      // Pre-filled from the current links, suggestion *not* applied: nothing is re-pointed without
+      // the operator's click.
+      setContactLocations(Object.fromEntries(result.contacts.map((contact) => [
+        contact.contactNameId,
+        contact.locations.map((location) => ({ locationId: location.locationId, isPrimary: location.isPrimary })),
+      ])));
       setContractChoices(Object.fromEntries(result.contracts.map((contract) => [
         contract.clientContractId,
         { choice: contract.suggestedChoice, cutoverDate: contract.suggestedCutoverDate },
@@ -188,6 +231,39 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
    * abort the whole merge at COMMIT rather than fail this row — so the picker
    * moves the flag instead of letting the operator create the conflict.
    */
+  /** Toggle one location in a contact's set; a lone link is the primary one. */
+  const toggleContactLocation = useCallback((contactNameId: string, locationId: string, checked: boolean) => {
+    setContactLocations((current) => {
+      const existing = current[contactNameId] ?? [];
+      const next = checked
+        ? [...existing, { locationId, isPrimary: false }]
+        : existing.filter((link) => link.locationId !== locationId);
+      const primary = next.length === 1
+        ? next[0].locationId
+        : next.find((link) => link.isPrimary)?.locationId ?? null;
+      return {
+        ...current,
+        [contactNameId]: next.map((link) => ({ locationId: link.locationId, isPrimary: link.locationId === primary })),
+      };
+    });
+  }, []);
+
+  /** The one-click "Use it": swap this link for the matching target location, keeping the primary flag. */
+  const swapToTargetLocation = useCallback((contactNameId: string, fromLocationId: string, toLocationId: string) => {
+    setContactLocations((current) => {
+      const existing = current[contactNameId] ?? [];
+      const replaced = existing.find((link) => link.locationId === fromLocationId);
+      if (!replaced) return current;
+      const withoutBoth = existing.filter(
+        (link) => link.locationId !== fromLocationId && link.locationId !== toLocationId,
+      );
+      return {
+        ...current,
+        [contactNameId]: [...withoutBoth, { locationId: toLocationId, isPrimary: replaced.isPrimary }],
+      };
+    });
+  }, []);
+
   const updateContactAssignment = useCallback((
     contactNameId: string,
     patch: Partial<ContactAssignmentState>,
@@ -228,6 +304,9 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       setStep('contacts');
       return;
     }
+    // Leaving the Contacts step, the chosen location sets go through the engine's own guard before
+    // the operator is allowed any further; a refusal shows as a blocker on this step.
+    if (step === 'contacts' && !(await revalidatePreview())) return;
     const index = STEP_ORDER.indexOf(step);
     setStep(STEP_ORDER[Math.min(index + 1, STEP_ORDER.length - 1)]);
   };
@@ -255,6 +334,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
           choice: choice.choice,
           cutoverDate: choice.choice === 'cutover' ? choice.cutoverDate : null,
         })),
+        contactLocationAssignments: locationAssignments(),
         pinPortalGrants,
         billingStrategy,
         // Accounting is a separate, post-merge confirmation (Q8): nothing is
@@ -416,6 +496,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
             <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
               <th className="py-1">{t('mergeClients.contactColumn', { defaultValue: 'Contact' })}</th>
               <th className="py-1">{t('mergeClients.profileColumn', { defaultValue: 'Billing profile' })}</th>
+              <th className="py-1">{t('mergeClients.locationsColumn', { defaultValue: 'Locations' })}</th>
               <th className="w-20 py-1">{t('mergeClients.managerColumn', { defaultValue: 'Manager' })}</th>
               <th className="w-32 py-1">
                 {t('mergeClients.seesTicketsColumn', { defaultValue: 'Sees profile tickets' })}
@@ -442,6 +523,76 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
                       placeholder={t('mergeClients.noProfile', { defaultValue: 'No profile' })}
                       className="w-56"
                     />
+                  </td>
+                  <td className="pr-3">
+                    <div id={`merge-contact-locations-${contact.contactNameId}`} className="space-y-1">
+                      {contact.workArrangement === 'remote' && (
+                        <Badge id={`merge-contact-remote-${contact.contactNameId}`} variant="secondary">
+                          {t('mergeClients.remoteBadge', { defaultValue: 'Remote' })}
+                        </Badge>
+                      )}
+                      {(preview?.locationsAfterMerge ?? []).length === 0 ? (
+                        <p className="text-xs text-gray-500">
+                          {t('mergeClients.noLocationsAfterMerge', { defaultValue: 'No locations' })}
+                        </p>
+                      ) : (
+                        (preview?.locationsAfterMerge ?? []).map((location) => {
+                          const chosen = (contactLocations[contact.contactNameId] ?? [])
+                            .find((link) => link.locationId === location.locationId);
+                          return (
+                            <div key={location.locationId} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`merge-contact-location-${contact.contactNameId}-${location.locationId}`}
+                                label={location.locationName || t('mergeClients.unnamedLocation', { defaultValue: 'Location' })}
+                                checked={Boolean(chosen)}
+                                onChange={(event) =>
+                                  toggleContactLocation(contact.contactNameId, location.locationId, event.target.checked)
+                                }
+                              />
+                              {location.fromSource && (
+                                <span className="text-xs text-gray-500">
+                                  {t('mergeClients.movingFrom', {
+                                    defaultValue: 'moving from {{client}}',
+                                    client: preview?.sourceClientName ?? '',
+                                  })}
+                                </span>
+                              )}
+                              {chosen?.isPrimary && (
+                                <span className="text-xs text-gray-500">
+                                  {t('mergeClients.primaryLocation', { defaultValue: 'Primary' })}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                      {/* One hint per link that has a same-named target location. The swap only
+                          happens on the click: nothing is re-pointed behind the operator's back. */}
+                      {contact.locations
+                        .filter((link) => link.suggestedTargetLocationId
+                          && (contactLocations[contact.contactNameId] ?? []).some((chosen) => chosen.locationId === link.locationId))
+                        .map((link) => (
+                          <p key={`hint-${link.locationId}`} className="text-xs text-gray-500">
+                            {t('mergeClients.targetAlsoHas', {
+                              defaultValue: '{{client}} also has "{{location}}"',
+                              client: preview?.targetClientName ?? '',
+                              location: link.locationName ?? '',
+                            })}{' '}
+                            <button
+                              type="button"
+                              id={`merge-contact-use-target-${contact.contactNameId}-${link.locationId}`}
+                              className="text-[rgb(var(--color-primary-600))] underline"
+                              onClick={() => swapToTargetLocation(
+                                contact.contactNameId,
+                                link.locationId,
+                                link.suggestedTargetLocationId!,
+                              )}
+                            >
+                              {t('mergeClients.useIt', { defaultValue: 'Use it' })}
+                            </button>
+                          </p>
+                        ))}
+                    </div>
                   </td>
                   <td>
                     <Checkbox
@@ -693,6 +844,20 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
             ))}
         </ul>
       </div>
+
+      {/* Stated before the merge, not discovered after it: how many links travel and how many the
+          operator re-pointed on the Contacts step. */}
+      <p id="merge-contact-location-summary" className="text-xs text-gray-600">
+        {t('mergeClients.contactLocationSummary', {
+          defaultValue: '{{count}} contact location links, {{repointed}} re-pointed',
+          count: Object.values(contactLocations).reduce((total, links) => total + links.length, 0),
+          repointed: (preview?.contacts ?? []).reduce((total, contact) => {
+            const before = new Set(contact.locations.map((link) => link.locationId));
+            return total + (contactLocations[contact.contactNameId] ?? [])
+              .filter((link) => !before.has(link.locationId)).length;
+          }, 0),
+        })}
+      </p>
 
       <div className="rounded-md border border-gray-200 p-3">
         <p className="text-sm font-medium">

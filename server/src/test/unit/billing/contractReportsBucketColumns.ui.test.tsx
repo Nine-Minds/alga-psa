@@ -97,7 +97,7 @@ import ContractReports from '@alga-psa/billing/components/billing-dashboard/repo
 const PREF_KEY = 'billing.reports.bucketUsage.columnVisibility';
 const TOGGLEABLE_COLUMNS = [
   'service_name', 'total_hours', 'used_hours', 'remaining_hours',
-  'utilization_percentage', 'overage_hours', 'hourly_rate', 'expiration_date', 'status',
+  'utilization_percentage', 'overage_hours', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status',
 ];
 // Client and Contract anchor every row: always shown, never offered in the menu.
 const ALWAYS_ON_COLUMNS = ['client_name', 'contract_name'];
@@ -114,6 +114,8 @@ const blockRow = {
   remaining_hours: 36,
   utilization_percentage: 10,
   hourly_rate: 11000,
+  remaining_value: 396000,
+  valid_from: '2026-10-15',
   currency_code: 'USD',
   purchased_at: '2026-10-15',
   expiration_date: '2027-10-15',
@@ -183,13 +185,15 @@ describe('Bucket Hours Utilization columns', () => {
 
     for (const id of TOGGLEABLE_COLUMNS) expect(toggle(id)).not.toBeDisabled();
     for (const id of ALWAYS_ON_COLUMNS) expect(() => toggle(id)).toThrow(`no toggle for ${id}`);
-    for (const id of ['total_hours', 'used_hours', 'remaining_hours', 'utilization_percentage', 'service_name', 'hourly_rate', 'expiration_date', 'status']) {
+    for (const id of ['total_hours', 'used_hours', 'remaining_hours', 'utilization_percentage', 'service_name', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status']) {
       expect(toggle(id)).toBeChecked();
     }
     expect(toggle('overage_hours')).not.toBeChecked();
     expect(printHeaders()).toEqual([
-      'Client', 'Contract', 'Service', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Rate / hr', 'Expires', 'Status',
+      'Client', 'Contract', 'Service', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Rate / hr', 'Remaining value', 'Valid from', 'Expires', 'Status',
     ]);
+    // 36 h x 110.00/h, formatted from minor units in the block's own currency.
+    expect(within(document.getElementById('bucket-usage-print') as HTMLElement).getByText('$3,960.00')).toBeInTheDocument();
   });
 
   it('defaults to Overage and no block columns when only bucket pools exist', async () => {
@@ -197,7 +201,7 @@ describe('Bucket Hours Utilization columns', () => {
     await renderBucketTab();
 
     expect(toggle('overage_hours')).toBeChecked();
-    for (const id of ['service_name', 'hourly_rate', 'expiration_date', 'status']) expect(toggle(id)).not.toBeChecked();
+    for (const id of ['service_name', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status']) expect(toggle(id)).not.toBeChecked();
     expect(printHeaders()).toEqual(['Client', 'Contract', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Overage']);
   });
 

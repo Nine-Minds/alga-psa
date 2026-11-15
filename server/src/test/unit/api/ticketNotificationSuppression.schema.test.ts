@@ -4,6 +4,8 @@ import {
   addTicketAgentSchema,
   assignTicketTeamSchema,
   createTicketCommentSchema,
+  createTicketFromAssetSchema,
+  createTicketSchema,
   updateTicketAssignmentSchema,
   updateTicketSchema,
   updateTicketStatusSchema,
@@ -12,6 +14,16 @@ import {
 const id = '00000000-0000-4000-8000-000000000001';
 
 const cases = [
+  [
+    'ticket create',
+    createTicketSchema,
+    { title: 'Silent alert', board_id: id, client_id: id, status_id: id, priority_id: id },
+  ],
+  [
+    'ticket create from asset',
+    createTicketFromAssetSchema,
+    { title: 'Silent alert', board_id: id, client_id: id, status_id: id, priority_id: id, asset_id: id },
+  ],
   ['ticket update', updateTicketSchema, { title: 'Silent title' }],
   ['status update', updateTicketStatusSchema, { status_id: id }],
   ['assignment update', updateTicketAssignmentSchema, { assigned_to: id }],

@@ -49,10 +49,12 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import AiUsageSection from './AiUsageSection';
+import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
 import { useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
+import { ServicePrincipalUsageRow } from '../../service-principals/ServicePrincipalUsageRow';
 import { useProduct } from 'server/src/context/ProductContext';
-import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, tierHasFeature, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
 import type { CancellationReasonCategory } from '../../../lib/cancellationFeedbackValidation';
@@ -1271,6 +1273,14 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
         </section>
       )}
 
+      {/* Co-managed IT sponsor pool. The editor asks the server whether the purchase surface is open
+          (kill switch, release flag, price id) and renders nothing when it is not, so ordinary
+          account/subscription controls are unchanged. Not behind `admits`: a purchase is how the
+          first entitlement comes to exist. */}
+      <section id="account-co-managed" className="space-y-4 empty:hidden">
+        <CoManagedPoolEditor showTotals />
+      </section>
+
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
         <Alert variant="info">
@@ -1390,6 +1400,10 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                 <p className="text-2xl font-bold text-blue-600">{licenseInfo?.available_licenses ?? t('licenseDetails.unlimited')}</p>
               </div>
             </div>
+            <ServicePrincipalUsageRow
+              hasPro={tier ? tierHasFeature(tier, TIER_FEATURES.SERVICE_PRINCIPALS) : false}
+              className="flex items-center justify-between border-t pt-3 text-sm"
+            />
           </div>
 
           {/* Pricing Info */}

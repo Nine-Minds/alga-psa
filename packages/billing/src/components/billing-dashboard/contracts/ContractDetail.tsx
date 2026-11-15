@@ -51,9 +51,7 @@ import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQuerie
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
-import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
-import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
+import { AssignmentBillingProfileField } from './AssignmentBillingProfileField';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -62,7 +60,8 @@ import PricingSchedules from './PricingSchedules';
 import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate, toCalendarDisplayDate } from '@alga-psa/core';
+import { currencyFractionDigits, displayCurrencySymbol } from '@alga-psa/core/formatters';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -83,6 +82,23 @@ interface ContractSimulatorProps {
 
 // Dynamic import for the contract simulator (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
+// A component, not inline JSX, so the dynamic() loading copy can reach
+// useTranslation from module scope.
+function ContractSimulatorSkeleton() {
+  const { t } = useTranslation('msp/contracts');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <LoadingIndicator
+          layout="stacked"
+          text={t('contractDetail.simulatorLoading', { defaultValue: 'Loading simulator...' })}
+          spinnerProps={{ size: 'sm' }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 const ContractSimulator = dynamic(
   () =>
     import('@product/billing/entry').then(
@@ -91,40 +107,14 @@ const ContractSimulator = dynamic(
           .ContractSimulator
     ),
   {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <LoadingIndicator
-            layout="stacked"
-            text="Loading simulator..."
-            spinnerProps={{ size: 'sm' }}
-          />
-        </CardContent>
-      </Card>
-    ),
+    loading: () => <ContractSimulatorSkeleton />,
     ssr: false,
   }
 );
 
-const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
-
-const formatDate = (value?: string | Date | null): string => {
-  if (!value) {
-    return '—';
-  }
-
-  try {
-    const plainDate = toPlainDate(value);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return '—';
-  }
-};
 
 const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
@@ -168,10 +158,11 @@ const assignmentsDiffer = (
 };
 
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
-  const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-  const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  const symbol = formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
-  return { fractionDigits, symbol };
+  // The product's own glyph, so a ZAR contract shows "R" and not Intl's "ZAR".
+  return {
+    fractionDigits: currencyFractionDigits(currencyCode),
+    symbol: displayCurrencySymbol(currencyCode),
+  };
 }
 
 interface ContractDetailProps {
@@ -212,77 +203,6 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
   );
 };
 
-interface AssignmentBillingProfileFieldProps {
-  clientContractId: string;
-  clientId: string;
-  billingProfileId: string | null;
-  billingProfileName: string | null;
-  isEditing: boolean;
-  onChange: (billingProfileId: string | null) => void;
-}
-
-/**
- * The billing profile a client assignment bills, on the contract itself.
- *
- * A contract raised against a merged-in client bills that client's profile, and
- * this is the screen where an operator comes back to check or change it. The
- * hook lives in its own component because the assignments are rendered in a
- * map — and it keeps the D6 invisibility rule: a single-profile client sees
- * nothing here at all.
- */
-const AssignmentBillingProfileField: React.FC<AssignmentBillingProfileFieldProps> = ({
-  clientContractId,
-  clientId,
-  billingProfileId,
-  billingProfileName,
-  isEditing,
-  onChange,
-}) => {
-  const { t } = useTranslation('msp/contracts');
-  const { profiles, isSegmented } = useClientBillingProfiles(clientId || null, loadBillingProfiles);
-
-  if (!isSegmented) {
-    return null;
-  }
-
-  const selectedName = billingProfileId
-    ? profiles.find((profile) => profile.billing_profile_id === billingProfileId)?.name
-      ?? billingProfileName
-    : null;
-
-  return (
-    <div>
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        {t('contractDetail.clientAssignment.billingProfile', { defaultValue: 'Billing Profile' })}
-      </Label>
-      {isEditing ? (
-        <div className="mt-1 w-full md:w-72">
-          <BillingProfilePicker
-            id={`assignment-billing-profile-${clientContractId}`}
-            clientId={clientId || null}
-            loadProfiles={loadBillingProfiles}
-            value={billingProfileId}
-            onChange={onChange}
-            label={t('contractDetail.clientAssignment.billingProfileLabel', {
-              defaultValue: 'Assignment billing profile',
-            })}
-            unassignedLabel={t('contractDetail.clientAssignment.billingProfileNone', {
-              defaultValue: "Use the client's default profile",
-            })}
-          />
-        </div>
-      ) : (
-        <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-          {selectedName
-            ?? t('contractDetail.clientAssignment.billingProfileNone', {
-              defaultValue: "Use the client's default profile",
-            })}
-        </p>
-      )}
-    </div>
-  );
-};
-
 const ContractDetail: React.FC<ContractDetailProps> = ({
   resolvedContractId,
   resolvedClientContractId,
@@ -291,7 +211,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate: formatInstant } = useFormatters();
+  // Calendar days (assignment/invoice dates in timestamp columns) are pinned with
+  // toCalendarDisplayDate; created_at/updated_at are true instants and use formatInstant.
+  const formatDate = (value?: string | Date | null): string => {
+    const displayDate = toCalendarDisplayDate(value);
+    return displayDate ? formatInstant(displayDate, { dateStyle: 'medium' }) : '—';
+  };
+  const formatTimestamp = (value?: string | Date | null): string =>
+    value ? formatInstant(value, { dateStyle: 'medium' }) : '—';
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -383,10 +311,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
-    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-    const symbol =
-      formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
+    const { fractionDigits, symbol } = getCurrencyMeta(currencyCode);
 
     return {
       currencyCode,
@@ -547,7 +472,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         setRenewalTicketBoards(
           boards.map((board) => ({
             value: board.board_id ?? '',
-            label: board.board_name ?? 'Unnamed board',
+            label: board.board_name ?? t('contractDetail.unnamedBoard', { defaultValue: 'Unnamed board' }),
           }))
         );
       } catch (loadError) {
@@ -754,7 +679,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       const detailContractId = selectedClientContract?.contract_id ?? contractId;
 
       if (!detailContractId) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -789,7 +714,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       }
 
       if (!contractData) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -803,7 +728,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setDocuments(documentsData);
     } catch (err) {
       console.error('Error loading contract details:', err);
-      setError('Failed to load contract');
+      setError(t('contractDetail.loadFailed', { defaultValue: 'Failed to load contract' }));
     } finally {
       setIsLoading(false);
     }
@@ -842,7 +767,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setInvoiceTemplates(templates);
     } catch (err) {
       console.error('Error loading contract invoices:', err);
-      setInvoiceError('Failed to load invoices for this contract assignment.');
+      setInvoiceError(t('contractDetail.invoicesLoadFailed', { defaultValue: 'Failed to load invoices for this contract assignment.' }));
     } finally {
       setIsLoadingInvoices(false);
     }
@@ -867,7 +792,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       router.push('/msp/billing?tab=client-contracts');
     } catch (err) {
       console.error('Error deleting contract:', err);
-      setError('Failed to delete contract');
+      setError(t('contractDetail.deleteFailed', { defaultValue: 'Failed to delete contract' }));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -909,7 +834,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const handleOpenClientDrawer = async (clientId: string) => {
     openDrawer(
-      <div className="p-4 text-sm text-gray-600">Loading…</div>,
+      <div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.loading', { defaultValue: 'Loading…' })}</div>,
       undefined,
       undefined,
       '900px'
@@ -921,7 +846,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         return;
       }
       if (!clientData) {
-        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.notFound', { defaultValue: 'Client not found.' })}</div>);
         return;
       }
       replaceDrawer(
@@ -936,7 +861,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   variant="outline"
                   onClick={() => window.open(`/msp/clients/${clientData.client_id}`, '_blank', 'noopener,noreferrer')}
                 >
-                  Open Client
+                  {t('contractDetail.clientDrawer.openClient', { defaultValue: 'Open Client' })}
                 </Button>
               </div>
             ),
@@ -945,7 +870,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       );
     } catch (error) {
       console.error('Error fetching client details:', error);
-      replaceDrawer(<div className="p-4 text-sm text-red-600">Failed to load client details.</div>);
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{t('contractDetail.clientDrawer.loadFailed', { defaultValue: 'Failed to load client details.' })}</div>);
     }
   };
 
@@ -1480,7 +1405,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || 'Contract not found'}
+            {error || t('contractDetail.notFound', { defaultValue: 'Contract not found' })}
           </AlertDescription>
         </Alert>
       </div>
@@ -1498,7 +1423,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
+          {t('contractDetail.backToContracts', { defaultValue: 'Back to Contracts' })}
         </Button>
         <ContractHeader contract={contract} summary={summary} liveStatus={primaryAssignmentStatus} />
         {sourceQuote ? (
@@ -1509,7 +1434,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               size="sm"
               onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
             >
-              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+              {t('contractDetail.viewSourceQuote', { defaultValue: 'View Source Quote' })} {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
         ) : null}
@@ -1904,11 +1829,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
-                      <span className="font-medium">{formatDate(contract.created_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
-                      <span className="font-medium">{formatDate(contract.updated_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">

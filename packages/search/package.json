@@ -41,6 +41,11 @@
       "import": "./dist/upsert.mjs",
       "require": "./dist/upsert.js"
     },
+    "./clientScope": {
+      "types": "./src/clientScope.ts",
+      "import": "./dist/clientScope.mjs",
+      "require": "./dist/clientScope.js"
+    },
     "./indexers": {
       "types": "./src/indexers/index.ts",
       "import": "./dist/indexers/index.mjs",
@@ -55,6 +60,11 @@
       "types": "./src/actions/searchActionShared.ts",
       "import": "./dist/actions/searchActionShared.mjs",
       "require": "./dist/actions/searchActionShared.js"
+    },
+    "./projectSearchAccess": {
+      "types": "./src/projectSearchAccess.ts",
+      "import": "./dist/projectSearchAccess.mjs",
+      "require": "./dist/projectSearchAccess.js"
     }
   },
   "scripts": {
@@ -67,7 +77,9 @@
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
     "knex": "^3.1.0",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7",
+    "@alga-psa/co-managed": "*",
+    "@alga-psa/authorization": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

@@ -1,0 +1,106 @@
+[
+  {
+    "id": "F001",
+    "description": "F1: ticketAssetsKey(entityType, entityId) in assetCacheKeys.ts; matchAssetCacheKeys matches it for the given entity id only; matchAnyEntityAssetsKeys for asset-only writers",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "F1: AssociatedAssets reads through useSWR(ticketAssetsKey) with the RSC initialAssets feeding the first read; add/remove revalidate via mutate",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "F1: ReceiveEquipmentDialog invalidates matchAssetCacheKeys([assetId, ticketId]) and the ['custody'] prefix; CustodyCard.refresh invalidates the custody prefix and mounted entity Assets panels",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "F2: packages/assets/src/lib/assetStatus.ts exports ASSET_STATUSES, assetStatusKey, assetStatusLabel, useAssetStatusLabel; the local getAssetStatusLabel copies and resolveAssetStatusLabel are removed and every status surface routes through it",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "F2: assetStatuses.held_by_msp added to every msp/assets locale incl. xx/yy (regenerated); retired associatedAssets.assetStatuses keys",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "F3: panel row name is min-w-0 flex-1 truncate with full-name title; custody chip always renders on its own row below the name (no viewport breakpoints; the panel is ~281px wide on a 1725px desktop); chip gains a full-label title",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "F4: existing-asset picker disables assets with an open custody record via useCustodyBadges and labels them 'In custody: <location>' (locale key custody.receiveEquipment.inCustodyOption); failed badge read leaves options enabled",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "F5: DialogShell shows errors in a sticky top role=alert region that is focused; a named field is focused with preventScroll and scrolled into view with scroll-margin-top = the alert's measured height + padding so the alert never covers it; onSubmit may return {message, fieldId} which focuses the field and sets aria-invalid",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "F5: receive dialog returns fieldId for the existing-asset refusal (location refusals carry no field code, so they stay message-only)",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Playwright spec for receive-without-reload (server/src/test/e2e/receive-equipment-ticket-assets.playwright.test.ts); written, not run",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "listEntityAssets orders newest association first (created_at desc, asset_id tiebreak) so a just-received item is within the panel's collapsed rows",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Bootstrap through SWR only for an uninitialized entity cache; later revalidations own freshness across layout remounts and failures.",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Give the Entry properties rail a usable minimum width while retaining the two-row asset layout and narrow Grid Details navigation.",
+    "implemented": true,
+    "prdRefs": [
+      "Findings to fix"
+    ]
+  }
+]

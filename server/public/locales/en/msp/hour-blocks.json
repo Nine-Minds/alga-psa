@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Expiration",
     "source": "Source",
-    "actions": "Actions"
+    "actions": "Actions",
+    "validFrom": "Valid from {{date}}"
   },
   "status": {
     "pending": "Pending",
@@ -53,8 +54,10 @@
     "rateRequired": "Enter a valid rate.",
     "scopeLabel": "Scope — services this block covers (empty = all labor)",
     "serviceLabel": "Service",
+    "serviceNoResults": "No services found",
     "servicePlaceholder": "Select a service",
     "serviceRequired": "Select a service.",
+    "serviceSearchPlaceholder": "Search services...",
     "submit": "Create draft invoice",
     "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
     "title": "Sell hour block",
@@ -127,7 +130,9 @@
     "voidedLabel": "Voided",
     "purchaseReversed": "Purchase reversed (invoice unfinalized)",
     "unknownUser": "System",
-    "sourceContract": "Contract: {{contract}}"
+    "sourceContract": "Contract: {{contract}}",
+    "remainingValue": "Value of remaining hours: {{value}}",
+    "validFrom": "Valid from {{date}}"
   },
   "expire": {
     "error": "Could not expire the hour block.",

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const reporter = fileURLToPath(new URL('../lib/vitest-flaky-reporter.mjs', import.meta.url));
-const runners = ['../../server/node_modules/vitest/vitest.mjs', '../../node_modules/vitest/vitest.mjs'];
+const runners = ['../../node_modules/vitest/vitest.mjs'];
 
 // A fail-then-pass only exists inside the runner: the JSON report records the
 // final pass. The reporter is the sole record of the retry, so it is driven
@@ -48,8 +48,10 @@ for (const runner of runners) {
     assert.deepEqual({ ...recorded, tests: undefined }, { schemaVersion: 1, suite: 'server-unit',
       job: 'server-unit shard 3/4', shard: { index: 3, total: 4 }, revision: 'f'.repeat(40),
       runId: '4242', runAttempt: 2, eventName: 'pull_request', branch: 'feature/flakes', tests: undefined });
+    // The first attempt's error travels with the record: the default reporter
+    // prints nothing about a retry that passed.
     assert.deepEqual(recorded.tests, [{ testId: 'recovers.test.js > recovers after one retry',
-      file: 'recovers.test.js', name: 'recovers after one retry', retryCount: 1 }]);
+      file: 'recovers.test.js', name: 'recovers after one retry', retryCount: 1, error: 'deliberate first-attempt failure' }]);
 
     // The lane identity is a parameter now, not the server-unit env vars, so the
     // integration and infrastructure runners reuse the same reporter. A push run

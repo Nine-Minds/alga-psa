@@ -4,3 +4,4 @@
 
 export * from './tagActions';
 export * from './tagActionErrors';
+export * from './tagDisplayRuleActions';

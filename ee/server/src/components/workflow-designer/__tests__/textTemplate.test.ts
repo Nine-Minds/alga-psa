@@ -82,6 +82,17 @@ describe('expression preview with sample data', () => {
     });
   });
 
+  it('previews a variable set to one value as a placeholder named after it', () => {
+    const scalarVarSample = buildWorkflowSampleContext({
+      payload: [],
+      // "Set variables" pseudo-step: `<step id>:<variable>`, with no fields of its own.
+      vars: [{ stepId: 'set-vars:senderEmail', stepName: 'Set variables', saveAs: 'senderEmail', fields: [] }],
+      meta: [],
+      error: [],
+    });
+    expect(scalarVarSample.vars).toEqual({ senderEmail: '[sender email]' });
+  });
+
   it('evaluates expressions and reports errors in plain words', async () => {
     const compiled = compileTextTemplate('Follow up with {{vars.client.client.client_name}} by {{payload.endDate}}') as { $expr: string };
     await expect(evaluateExpressionPreview(compiled.$expr, sample as unknown as Record<string, unknown>)).resolves.toEqual({

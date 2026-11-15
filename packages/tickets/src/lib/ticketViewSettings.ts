@@ -1,5 +1,7 @@
 import type { ITicketListFilters } from '@alga-psa/types';
+import { migrateTicketFilters, TICKET_FILTERS_SCHEMA_VERSION } from '@alga-psa/list-views';
 import { normalizeAssignedToIdList } from './ticketFilterUtils';
+import { sanitizeTicketWhere } from './ticketWhere';
 import {
   TICKET_COLUMNS,
   resolveTicketColumnOrder,
@@ -41,6 +43,11 @@ export interface TicketViewSettings {
   densityLevel?: number;
   /** Captured list filters; CAPTURE_EXCLUDED_FILTER_KEYS are stripped before persist. */
   filters?: Partial<ITicketListFilters>;
+  /**
+   * Version of the stored filter shape (see ticketFilterMigration.ts). Absent means v1. Writes
+   * always stamp the current version; reads migrate older documents.
+   */
+  schemaVersion?: number;
 }
 
 /** A view with every layer applied — nothing optional left to decide. */
@@ -156,11 +163,12 @@ export function captureTicketViewSettings(view: {
     if (EXCLUDED_KEY_SET.has(key)) continue;
     if (value === undefined || value === null) continue;
     if (Array.isArray(value) && value.length === 0) continue;
+    if (key === 'where' && (value as { clauses?: unknown[] }).clauses?.length === 0) continue;
     if (value === false && NO_OP_WHEN_FALSE.has(key)) continue;
     (filters as Record<string, unknown>)[key] = value;
   }
 
-  const captured: TicketViewSettings = { filters };
+  const captured: TicketViewSettings = { filters, schemaVersion: TICKET_FILTERS_SCHEMA_VERSION };
   if (view.columnVisibility) {
     captured.columnVisibility = resolveTicketColumnVisibility(view.columnVisibility);
   }
@@ -190,7 +198,7 @@ export function captureTicketViewSettings(view: {
  * undo it.
  *
  * Deliberately hand-rolled rather than a Zod schema: this runs in the browser on
- * the ticket-list render path, and `z.record(z.enum([...]))` *errors* on an
+ * the ticket-list render path, and `z.record(z.string(), z.enum([...]))` *errors* on an
  * unknown key rather than dropping it — the opposite of what is wanted here.
  *
  * Strictness still exists, just at the right end: writes go through
@@ -232,11 +240,20 @@ export function sanitizeStoredTicketView(raw: unknown): TicketViewSettings | nul
   }
 
   if (doc.filters && typeof doc.filters === 'object' && !Array.isArray(doc.filters)) {
-    const storedFilters = doc.filters as Record<string, unknown>;
+    // Stored under an older filter version: migrate first (VIP keys, path aliases). Legacy tag text
+    // stays as it is here; the list codec resolves it at query time.
+    const storedVersion = typeof doc.schemaVersion === 'number' ? doc.schemaVersion : 1;
+    const storedFilters = migrateTicketFilters(doc.filters as Record<string, unknown>, storedVersion) ?? {};
     const filters: Partial<ITicketListFilters> = {};
     for (const [key, value] of Object.entries(storedFilters)) {
       // Board scope can never come from a stored document, however it got there.
       if (EXCLUDED_KEY_SET.has(key)) continue;
+      if (key === 'where') {
+        // A predicate group is not a scalar or a string list; it has its own validation.
+        const { where } = sanitizeTicketWhere(value);
+        if (where) filters.where = where;
+        continue;
+      }
       const isScalar = typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number';
       const isStringList = Array.isArray(value) && value.every((item) => typeof item === 'string');
       if (!isScalar && !isStringList) continue;
@@ -244,6 +261,7 @@ export function sanitizeStoredTicketView(raw: unknown): TicketViewSettings | nul
     }
     out.filters = filters;
   }
+  out.schemaVersion = TICKET_FILTERS_SCHEMA_VERSION;
 
   return out;
 }
@@ -278,9 +296,12 @@ export function validateCapturedFilters(
     priorityIds?: readonly string[];
     categoryIds?: readonly string[];
     clientIds?: readonly string[];
+    contactIds?: readonly string[];
     userIds?: readonly string[];
     teamIds?: readonly string[];
     tags?: readonly string[];
+    /** Tag definition ids by `where` tag path; an absent universe cannot be validated, so is kept. */
+    whereTagIds?: Partial<Record<'tags' | 'contact.tags' | 'client.tags', ReadonlySet<string>>>;
   },
   /** Values that are pseudo-filters rather than ids and must survive validation. */
   sentinels: readonly string[] = [],
@@ -309,11 +330,13 @@ export function validateCapturedFilters(
   out.priorityId = keepScalar(filters.priorityId, known.priorityIds);
   out.categoryId = keepScalar(filters.categoryId, known.categoryIds);
   out.clientId = keepScalar(filters.clientId, known.clientIds);
+  out.contactId = keepScalar(filters.contactId, known.contactIds);
   out.categoryIds = keepList(filters.categoryIds, known.categoryIds);
   out.excludeCategoryIds = keepList(filters.excludeCategoryIds, known.categoryIds);
   out.assignedToIds = keepList(normalizeAssignedToIdList(filters.assignedToIds), known.userIds);
   out.assignedTeamIds = keepList(filters.assignedTeamIds, known.teamIds);
   out.tags = keepList(filters.tags, known.tags);
+  out.where = filters.where ? sanitizeTicketWhere(filters.where, known.whereTagIds).where : undefined;
 
   for (const key of Object.keys(out) as (keyof ITicketListFilters)[]) {
     if (out[key] === undefined) {

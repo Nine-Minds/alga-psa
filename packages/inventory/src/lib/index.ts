@@ -30,3 +30,4 @@ export * from './purchaseOrders';
 export * from './transfers';
 export * from './unitQueries';
 export * from './stockQueries';
+export * from './rma';

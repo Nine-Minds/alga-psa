@@ -58,6 +58,8 @@ export function buildRecurringRunExecutionIdentityKey(
     window.contractLineId ?? undefined,
     window.windowStart ?? undefined,
     window.windowEnd ?? undefined,
+    // Appended last and only when set, so keys of non-block rows are unchanged.
+    window.chargeStream ?? undefined,
   ]).join(':');
 }
 
@@ -90,6 +92,7 @@ export function buildContractCadenceExecutionWindow(input: {
   windowEnd: string;
   contractId?: string | null;
   contractLineId?: string | null;
+  chargeStream?: 'prepaid_block' | null;
 }): IRecurringRunExecutionWindowIdentity {
   const baseWindow = {
     kind: 'contract_cadence_window' as const,
@@ -99,6 +102,7 @@ export function buildContractCadenceExecutionWindow(input: {
     contractLineId: input.contractLineId ?? null,
     windowStart: input.windowStart,
     windowEnd: input.windowEnd,
+    ...(input.chargeStream ? { chargeStream: input.chargeStream } : {}),
   };
 
   return {
@@ -155,6 +159,7 @@ export function buildContractCadenceDueSelectionInput(input: {
   windowEnd: string;
   contractId?: string | null;
   contractLineId?: string | null;
+  chargeStream?: 'prepaid_block' | null;
 }): IRecurringDueSelectionInput {
   return {
     clientId: input.clientId,
@@ -166,6 +171,7 @@ export function buildContractCadenceDueSelectionInput(input: {
       contractLineId: input.contractLineId ?? null,
       windowStart: input.windowStart,
       windowEnd: input.windowEnd,
+      chargeStream: input.chargeStream ?? null,
     }),
   };
 }

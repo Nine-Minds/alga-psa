@@ -10,7 +10,8 @@ import { getContactAssignedAssets } from '../actions/assetAssignmentActions';
 import { getContactSharedWorkspaces } from '../actions/assetGroupActions';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { useAssetDetailDrawer } from './shared/useAssetDetailDrawer';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 
 /**
  * FR-C6 / FR-E12: the contact page's Assets tile — what this person currently
@@ -68,7 +69,7 @@ export function ContactAssetsSection({ contactId, id = 'contact-assets' }: { con
                 {[
                   row.asset_type,
                   row.asset_tag,
-                  resolveAssetStatusLabel(t, row.asset_status, assetStatuses),
+                  assetStatusLabel(t, row.asset_status, assetStatuses),
                 ].filter(Boolean).join(' · ')}
               </span>
             </button>

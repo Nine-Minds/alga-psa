@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         logger.warn('[public-appointment-request] Validation error', {
-          errors: error.errors,
+          errors: error.issues,
           ip: clientIp
         });
 
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
           {
             success: false,
             error: 'Invalid request data',
-            details: error.errors
+            details: error.issues
           },
           { status: 400 }
         );

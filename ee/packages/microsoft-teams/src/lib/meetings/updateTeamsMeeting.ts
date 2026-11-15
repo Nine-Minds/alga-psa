@@ -11,6 +11,8 @@ export interface UpdateTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
   eventId?: string | null;
+  /** Original persisted organizer for reconciliation after configuration changes. */
+  organizerUserId?: string | null;
   startDateTime: string;
   endDateTime: string;
   /** When provided, the Graph event subject is updated too. */
@@ -72,9 +74,10 @@ export async function updateTeamsMeetingWithResult(
     const attendees = config.sendMeetingInvites && input.attendees ? input.attendees : null;
 
     const response = await fetch(
-      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(input.organizerUserId ?? config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'PATCH',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,

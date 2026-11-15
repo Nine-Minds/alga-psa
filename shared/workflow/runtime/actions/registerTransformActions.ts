@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
-import { compileExpression } from '../expressionEngine';
+import { EvaluationBusyError, compileExpression, evaluateWorkflowExpression } from '../expressionEngine';
 import { withWorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import {
   COMPOSE_TEXT_ACTION_ID,
@@ -103,7 +103,7 @@ const genericArrayOutputSchema = z.object({
 });
 
 const objectOutputSchema = z.object({
-  object: z.record(z.unknown()).describe('Transformed object output')
+  object: z.record(z.string(), z.unknown()).describe('Transformed object output')
 });
 
 const coalesceOutputSchema = z.object({
@@ -119,7 +119,7 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() => z.union([
   z.boolean(),
   z.null(),
   z.array(jsonValueSchema),
-  z.record(jsonValueSchema),
+  z.record(z.string(), jsonValueSchema),
 ]));
 
 const jsonTypeSchema = z.enum(['object', 'array', 'string', 'number', 'boolean', 'null']);
@@ -138,7 +138,7 @@ const stringifyJsonOutputSchema = z.object({
 });
 
 const parseJsonInputSchema = z.object({
-  source: z.union([z.string(), z.array(jsonValueSchema), z.record(jsonValueSchema)])
+  source: z.union([z.string(), z.array(jsonValueSchema), z.record(z.string(), jsonValueSchema)])
     .describe('JSON text or literal object/array to parse')
 });
 
@@ -225,14 +225,14 @@ const regexMatchOutputSchema = z.object({
   match: z.string().nullable(),
   index: z.number().int().nullable(),
   groups: z.array(z.string().nullable()),
-  namedGroups: z.record(z.string().nullable())
+  namedGroups: z.record(z.string(), z.string().nullable())
 });
 
 const regexExtractMatchSchema = z.object({
   text: z.string(),
   index: z.number().int(),
   groups: z.array(z.string().nullable()),
-  namedGroups: z.record(z.string().nullable())
+  namedGroups: z.record(z.string(), z.string().nullable())
 });
 
 const regexExtractOutputSchema = z.object({
@@ -351,9 +351,10 @@ export function registerTransformActionsV2(): void {
       }
 
       try {
-        const value = await compiled.evaluate(evaluationContext);
+        const value = await evaluateWorkflowExpression(compiled, evaluationContext);
         return { value };
       } catch (error) {
+        if (error instanceof EvaluationBusyError) throw error;
         throw new Error(`JSON query expression evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
@@ -773,7 +774,7 @@ export function registerTransformActionsV2(): void {
     id: 'transform.pick_fields',
     version: 1,
     inputSchema: z.object({
-      source: z.record(z.unknown()).nullable().default({}).describe('Source object to read from'),
+      source: z.record(z.string(), z.unknown()).nullable().default({}).describe('Source object to read from'),
       fields: z.array(z.string().min(1)).default([]).describe('Field names to keep from the source object')
     }),
     outputSchema: objectOutputSchema,
@@ -801,7 +802,7 @@ export function registerTransformActionsV2(): void {
     id: 'transform.rename_fields',
     version: 1,
     inputSchema: z.object({
-      source: z.record(z.unknown()).default({}).describe('Source object to rename fields on'),
+      source: z.record(z.string(), z.unknown()).default({}).describe('Source object to rename fields on'),
       renames: z.array(z.object({
         from: z.string().min(1).describe('Existing field name'),
         to: z.string().min(1).describe('New field name')

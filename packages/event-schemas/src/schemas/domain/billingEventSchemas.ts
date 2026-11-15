@@ -261,7 +261,7 @@ const runIdSchema = uuidSchema('Run ID');
 
 export const recurringBillingRunStartedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   runId: runIdSchema,
-  scheduleId: z.string().uuid().optional(),
+  scheduleId: z.string().guid().optional(),
   startedAt: z.string().datetime().optional(),
   initiatedByUserId: userIdSchema.optional(),
   selectionKey: z.string().min(1).optional(),

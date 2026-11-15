@@ -31,6 +31,7 @@ vi.mock('@alga-psa/db/admin', () => ({
       where: () => selector,
       whereNull: () => selector,
       whereNotNull: () => selector,
+      whereRaw: () => selector,
       distinct: (_col: string) => Promise.resolve(selectTenantsMock(table)),
     };
     return selector;
@@ -139,19 +140,45 @@ describe('runMaintenanceJob', () => {
     expect(selectTenantsMock).not.toHaveBeenCalled();
   });
 
-  it('narrows the Teams sweep to tenants with an active integration', async () => {
+  it('narrows the Teams sweep to tenants with an active integration (no co-managed rows: native selection unchanged)', async () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }, { tenant: 't3' }]);
-    selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
+    selectTenantsMock.mockImplementation((table: string) => (table === 'teams_integrations' ? [{ tenant: 't2' }] : []));
     const result = await runMaintenanceJob('sweep-teams-online-meetings');
-    expect(selectorTablesSeen).toEqual(['teams_integrations']);
+    expect(selectorTablesSeen).toEqual(['teams_integrations', 'co_managed_meeting_creation_operations', 'online_meetings']);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId: 't2' });
     expect(result).toEqual({ jobName: 'sweep-teams-online-meetings', scope: 'tenant', total: 1, succeeded: 1, failed: 0 });
   });
 
+  it('also sweeps co-managed workspaces with live operations or sync intents after Teams was deactivated, once each', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }, { tenant: 't3' }, { tenant: 't4' }]);
+    selectTenantsMock.mockImplementation((table: string) => ({
+      teams_integrations: [{ tenant: 't2' }],
+      co_managed_meeting_creation_operations: [{ tenant: 't3' }, { tenant: 't2' }],
+      online_meetings: [{ tenant: 't4' }],
+    } as Record<string, Array<{ tenant: string }>>)[table]);
+    const result = await runMaintenanceJob('sweep-teams-online-meetings');
+    expect(result.total).toBe(3);
+    for (const tenantId of ['t2', 't3', 't4']) {
+      expect(tenantHandlerMock).toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId });
+    }
+    expect(tenantHandlerMock).not.toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId: 't1' });
+  });
+
+  it('falls back to the native Teams selection when the co-managed tables or columns are absent', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
+    selectTenantsMock.mockImplementation((table: string) => {
+      if (table === 'teams_integrations') return [{ tenant: 't2' }];
+      throw new Error('relation does not exist');
+    });
+    const result = await runMaintenanceJob('sweep-teams-online-meetings');
+    expect(result.total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId: 't2' });
+  });
+
   it('never runs a selected tenant that is suspended', async () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }]);
-    selectTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 'suspended' }]);
+    selectTenantsMock.mockImplementation((table: string) => (table === 'teams_integrations' ? [{ tenant: 't1' }, { tenant: 'suspended' }] : []));
     const result = await runMaintenanceJob('sweep-teams-online-meetings');
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId: 't1' });

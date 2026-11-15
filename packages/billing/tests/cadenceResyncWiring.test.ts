@@ -50,7 +50,12 @@ describe('Cadence-change resync wiring', () => {
     // contract's ledger, while another contract's invoices must not hide a new
     // contract's first partial period.
     expect(regeneration).toContain('export async function loadClientCadenceContractBilledBoundaries');
-    expect(regeneration).toContain("contract_id: 'cl.contract_id'");
+    // The billed-row filter lives once, in the shared loader that the simulator's
+    // cadence history also reads.
+    const billedLoader = read('../../../shared/billingClients/billedClientCadenceRecurringPeriods.ts');
+    expect(billedLoader).toContain("contract_id: 'cl.contract_id'");
+    expect(regeneration).toContain('loadBilledClientCadenceRecurringPeriods(trx, params)');
+    expect(read('../../../shared/billingClients/billingSchedule.ts')).toContain('loadBilledClientCadenceRecurringPeriods(');
     expect(regeneration).toContain('billedBoundaryByContract.get(obligation.contract_id)');
     const billingAndTax = read('../src/actions/billingAndTax.ts');
     expect(billingAndTax).toContain('?.get(row.contract_id)');

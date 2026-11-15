@@ -9,3 +9,4 @@ export * from './publishCustodyChanged';
 export * from './receiveEquipment';
 export * from './service';
 export * from './actionResult';
+export * from './closeCustodyEpisode';

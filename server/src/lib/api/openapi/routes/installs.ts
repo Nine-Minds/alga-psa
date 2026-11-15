@@ -24,7 +24,7 @@ export function registerInstallRoutes(registry: ApiOpenApiRegistry) {
     'InstallLookupByHostResponse',
     zOpenApi.object({
       tenant_id: zOpenApi.string().describe('Tenant ID from tenant_extension_install.tenant_id for the matching runner domain.'),
-      extension_id: zOpenApi.string().uuid().describe('Extension registry UUID from tenant_extension_install.registry_id.'),
+      extension_id: zOpenApi.string().guid().describe('Extension registry UUID from tenant_extension_install.registry_id.'),
       content_hash: zOpenApi.string().describe('Content hash from extension_bundle.content_hash for the install version. Usually sha256:<64 hex chars>.'),
     }),
   );
@@ -39,8 +39,8 @@ export function registerInstallRoutes(registry: ApiOpenApiRegistry) {
   const InstallValidateQuery = registry.registerSchema(
     'InstallValidateQuery',
     zOpenApi.object({
-      tenant: zOpenApi.string().uuid().describe('Tenant UUID from tenant_extension_install.tenant_id.'),
-      extension: zOpenApi.string().uuid().describe('Extension registry UUID from tenant_extension_install.registry_id.'),
+      tenant: zOpenApi.string().guid().describe('Tenant UUID from tenant_extension_install.tenant_id.'),
+      extension: zOpenApi.string().guid().describe('Extension registry UUID from tenant_extension_install.registry_id.'),
       hash: zOpenApi
         .string()
         .min(1)

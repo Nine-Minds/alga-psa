@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 // Shared aliases so component tests resolve workspace packages from source
 // instead of built dist output.
@@ -15,6 +16,9 @@ const workspaceAliases = [
   { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
   { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../ui/src')}/$1` },
   { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+  // Published @alga-psa/core subpaths come from its exports map (capability
+  // and config/deletion live outside src/lib).
+  ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
   // @alga-psa/core's i18n exports live under src/lib rather than src.
   {
     find: /^@alga-psa\/core\/i18n\/(.*)$/,
@@ -78,10 +82,27 @@ const workspaceAliases = [
 // environment cannot bundle. Component tests mock the document actions, so a
 // load-only stub keeps the module graph resolvable without node builtins.
 const storageStubAlias = [
+  // The ingest error classes are pure (no node builtins); action error mapping needs the real ones.
+  { find: /^@alga-psa\/storage\/ingest\/errors$/, replacement: path.resolve(__dirname, '../storage/src/ingest/errors.ts') },
   { find: /^@alga-psa\/storage(\/.*)?$/, replacement: path.resolve(__dirname, './tests/stubs/storage.ts') },
 ];
 
 const nodeAliases = [
+  { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
+  // This workspace package publishes its runtime entry from dist, which Nx's
+  // no-op build target does not create. Resolve from source so node tests do
+  // not depend on a stale local build artifact being present.
+  {
+    find: /^@alga-psa\/workflow-streams$/,
+    replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts'),
+  },
+  // The ingest error classes are pure (no node builtins); action error mapping needs the real ones.
+  { find: /^@alga-psa\/storage\/ingest\/errors$/, replacement: path.resolve(__dirname, '../storage/src/ingest/errors.ts') },
+  { find: /^@alga-psa\/storage(\/.*)?$/, replacement: path.resolve(__dirname, './tests/stubs/storage.ts') },
+  { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+  { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+  // safeFetch etc. resolve from core source rather than unbuilt dist.
+  ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
   { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },
   { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
   { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
@@ -91,6 +112,8 @@ const nodeAliases = [
   { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/models')}/$1` },
   { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1` },
   { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+  // workflow-streams publishes from dist (unbuilt in tests); behavioural action tests mock it.
+  { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../workflow-streams/src/streams/index.ts') },
 ];
 
 export default defineConfig({
@@ -102,8 +125,17 @@ export default defineConfig({
           name: 'documents-node',
           globals: true,
           environment: 'node',
-          include: ['tests/**/*.test.ts'],
+          include: [
+            'tests/**/*.test.ts',
+            'src/lib/renderHtmlToPng.test.ts',
+            'src/lib/uploadSessionClient.test.ts',
+            'src/lib/documentPreviewProvenance.test.ts',
+            'src/lib/documentPreviewPending.test.ts',
+            'src/lib/renderHtmlToPng.failure.test.ts',
+            'src/handlers/GenericFileDocumentHandler.previewSsrf.test.ts',
+          ],
           testTimeout: 10000,
+          server: { deps: { inline: ['next-auth', '@auth/core', 'next'] } },
         },
         resolve: { alias: nodeAliases },
       },
@@ -119,6 +151,8 @@ export default defineConfig({
           include: [
             'src/components/DocumentUpload.test.tsx',
             'src/components/Documents.uploadBatch.test.tsx',
+            'src/components/Documents.drawer.test.tsx',
+            'src/components/DocumentStorageCard.preview.test.tsx',
           ],
           setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
           sequence: { concurrent: false, shuffle: false },

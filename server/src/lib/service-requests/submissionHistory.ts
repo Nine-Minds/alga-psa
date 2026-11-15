@@ -1,5 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import {
+  CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS,
+  type ClientVisibleSubmissionAuditOperation,
+} from './submissionAudit';
 
 export interface ServiceRequestSubmissionHistoryDetail {
   tenant: string;
@@ -30,22 +34,38 @@ export interface ServiceRequestClientSubmissionListRow {
   ticket_number: string | null;
 }
 
+/**
+ * Client portal projection of a submission. Internal fields (workflow
+ * execution id, raw error text, definition/version ids and numbers) are
+ * deliberately absent so a portal page cannot render them.
+ */
 export interface ServiceRequestClientSubmissionDetail {
   submission_id: string;
-  definition_id: string;
-  definition_version_id: string;
-  /** Immutable version number captured when the submission was created. */
-  definition_version_number: number;
   request_name: string;
   submitted_payload: Record<string, unknown>;
   execution_status: 'pending' | 'succeeded' | 'failed';
-  execution_error_summary: string | null;
   created_ticket_id: string | null;
-  workflow_execution_id: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
-  attachments: ServiceRequestSubmissionAttachmentDetail[];
-  audit_events: ServiceRequestSubmissionAuditEvent[];
+  attachments: ServiceRequestClientSubmissionAttachment[];
+  audit_events: ServiceRequestClientSubmissionHistoryEvent[];
+}
+
+/** Client-visible history event: no user id and no audit details. */
+export interface ServiceRequestClientSubmissionHistoryEvent {
+  audit_id: string;
+  operation: ClientVisibleSubmissionAuditOperation;
+  /** Display name resolved from the acting user, when one is recorded. */
+  actor_name: string | null;
+  timestamp: Date;
+}
+
+/** Client-visible attachment: no file id, size or storage timestamps. */
+export interface ServiceRequestClientSubmissionAttachment {
+  submission_attachment_id: string;
+  field_key: string | null;
+  file_name: string | null;
+  mime_type: string | null;
 }
 
 export interface ServiceRequestSubmissionAuditEvent {
@@ -102,19 +122,25 @@ const UUID_PATTERN =
  * Loads the tenant-scoped audit trail for one submission, oldest first, with
  * actor names resolved from the users table. Callers must have already
  * authorized access to the submission (client- or definition-scoped detail
- * lookup) before fetching its events.
+ * lookup) before fetching its events. `options.operations` restricts the rows
+ * to those operations in SQL; omitted, every event is returned.
  */
 export async function listServiceRequestSubmissionAuditEvents(
   knex: Knex,
   tenant: string,
-  submissionId: string
+  submissionId: string,
+  options: { operations?: readonly string[] } = {}
 ): Promise<ServiceRequestSubmissionAuditEvent[]> {
   const db = tenantDb(knex, tenant);
-  const rows = await db.table('audit_logs')
+  const eventsQuery = db.table('audit_logs')
     .where({
       table_name: 'service_request_submissions',
       record_id: submissionId,
-    })
+    });
+  if (options.operations) {
+    eventsQuery.whereIn('operation', [...options.operations]);
+  }
+  const rows = await eventsQuery
     .orderBy('timestamp', 'asc')
     .select('audit_id', 'operation', 'user_id', 'timestamp', 'details');
 
@@ -327,6 +353,7 @@ export async function listClientServiceRequestSubmissions(
   return rows as unknown as ServiceRequestClientSubmissionListRow[];
 }
 
+// LEVERAGE: friction portal-dto-by-spread — client portal queries build DTOs as `{ ...row }` over a select list shared in spirit with admin queries, so the portal relies on JSX discipline to hide internals; a per-entity portal projection layer is the candidate if tickets/projects show the same shape.
 export async function getClientServiceRequestSubmissionDetail(
   knex: Knex,
   tenant: string,
@@ -345,15 +372,10 @@ export async function getClientServiceRequestSubmissionDetail(
     })
     .first(
       'submission.submission_id',
-      'submission.definition_id',
-      'submission.definition_version_id',
-      'version.version_number as definition_version_number',
       'submission.request_name',
       'submission.submitted_payload',
       'submission.execution_status',
-      'submission.execution_error_summary',
       'submission.created_ticket_id',
-      'submission.workflow_execution_id',
       'submission.created_at as submitted_at',
       'version.form_schema_snapshot'
     );
@@ -368,18 +390,24 @@ export async function getClientServiceRequestSubmissionDetail(
     .select(
       'submission_attachment_id',
       'field_key',
-      'file_id',
       'file_name',
-      'mime_type',
-      'file_size',
-      'created_at'
+      'mime_type'
     );
 
-  const auditEvents = await listServiceRequestSubmissionAuditEvents(knex, tenant, submissionId);
+  // Fail closed: only operations the catalog marks client-visible are loaded.
+  const auditRows = await listServiceRequestSubmissionAuditEvents(knex, tenant, submissionId, {
+    operations: CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS,
+  });
+  const auditEvents: ServiceRequestClientSubmissionHistoryEvent[] = auditRows.map((event) => ({
+    audit_id: event.audit_id,
+    operation: event.operation as ClientVisibleSubmissionAuditOperation,
+    actor_name: event.actor_name,
+    timestamp: event.timestamp,
+  }));
 
   return {
     ...(row as unknown as Omit<ServiceRequestClientSubmissionDetail, 'attachments' | 'audit_events'>),
-    attachments: attachments as ServiceRequestSubmissionAttachmentDetail[],
+    attachments: attachments as ServiceRequestClientSubmissionAttachment[],
     audit_events: auditEvents,
   };
 }

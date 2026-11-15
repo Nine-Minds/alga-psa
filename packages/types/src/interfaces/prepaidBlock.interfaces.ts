@@ -10,7 +10,27 @@ import type { TenantEntity } from './index';
 /** Replenishment tiers available to a block line (the shared tiers minus `notify`). */
 export type PrepaidBlockReplenishmentTier = 'draft' | 'auto_issue';
 
+/**
+ * When blocks are issued.
+ *  - 'consumption' (default): trigger-driven issuances (exhaustion, threshold, expiry, renewal).
+ *  - 'cadence': one block per service period of the line's cadence, billed in
+ *    advance; the consumption triggers and expiry_months do not apply.
+ */
+export type PrepaidBlockIssueMode = 'consumption' | 'cadence';
+
+export const PREPAID_BLOCK_ISSUE_MODES = ['consumption', 'cadence'] as const satisfies readonly PrepaidBlockIssueMode[];
+
+/** Maximum rollover_periods (DB CHECK 0..12). */
+export const PREPAID_BLOCK_MAX_ROLLOVER_PERIODS = 12;
+
 export interface IPrepaidBlockConfigFields {
+  /** Defaults to 'consumption'. Persisted rows always carry it. */
+  issue_mode?: PrepaidBlockIssueMode;
+  /**
+   * Cadence mode only: a block stays valid for its own service period plus this
+   * many further periods of the line's cadence (0..12). Must be 0 otherwise.
+   */
+  rollover_periods?: number;
   /** Block size in minutes (> 0). */
   block_minutes: number;
   /** Price in minor units of the contract currency. */
@@ -28,6 +48,8 @@ export interface IPrepaidBlockConfigFields {
 
 /** contract_line_prepaid_blocks: 1:1 config overlay on an Hourly contract line. */
 export interface IContractLinePrepaidBlock extends TenantEntity, IPrepaidBlockConfigFields {
+  issue_mode: PrepaidBlockIssueMode;
+  rollover_periods: number;
   contract_line_id: string;
   /** Catalog service the block invoice line is sold as; one of the line's services. */
   sold_as_service_id: string | null;
@@ -37,6 +59,8 @@ export interface IContractLinePrepaidBlock extends TenantEntity, IPrepaidBlockCo
 
 /** contract_template_line_prepaid_blocks. */
 export interface IContractTemplateLinePrepaidBlock extends TenantEntity, IPrepaidBlockConfigFields {
+  issue_mode: PrepaidBlockIssueMode;
+  rollover_periods: number;
   template_line_id: string;
   sold_as_service_id?: string | null;
   created_at: string;
@@ -45,6 +69,8 @@ export interface IContractTemplateLinePrepaidBlock extends TenantEntity, IPrepai
 
 /** contract_line_preset_prepaid_blocks. */
 export interface IContractLinePresetPrepaidBlock extends TenantEntity, IPrepaidBlockConfigFields {
+  issue_mode: PrepaidBlockIssueMode;
+  rollover_periods: number;
   preset_id: string;
   sold_as_service_id?: string | null;
   created_at: string;

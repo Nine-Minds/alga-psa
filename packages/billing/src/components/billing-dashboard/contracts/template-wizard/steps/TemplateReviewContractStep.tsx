@@ -9,6 +9,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTemplateMoney } from '../../useTemplateMoney';
 import { draftToInput, minutesToHoursText } from '../../prepaidBlockConfigDraft';
+import { describeRollover } from '../../prepaidBlockLabels';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -375,7 +376,17 @@ export function TemplateReviewContractStep({
                         .map((service) => service.service_name || service.service_id)
                         .join(', ')}
                     </p>
-                    {config && (
+                    {config && config.issue_mode === 'cadence' && (
+                      <p id={`template-review-prepaid-block-${index}-summary`} className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                        {t('templateReview.prepaid.cadenceSummaryNeutral', {
+                          hours: minutesToHoursText(config.block_minutes),
+                          price: money(config.block_price),
+                          defaultValue: "{{hours}} h every billing period for {{price}} (in the client's currency)",
+                        })}
+                        {`, ${describeRollover(t, config.rollover_periods ?? 0)}`}
+                      </p>
+                    )}
+                    {config && config.issue_mode !== 'cadence' && (
                       <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                         {t('templateReview.prepaid.blockSummaryNeutral', {
                           hours: minutesToHoursText(config.block_minutes),

@@ -156,7 +156,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     if (error instanceof UnauthorizedError) {
       return handleApiError(error);

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { pseudoString } from '../lib/pseudo-locale.mjs';
 
 const require = createRequire(import.meta.url);
 const {
@@ -44,6 +45,45 @@ test('Swedish default time-entry service settings have localized copy at both sc
   }
 });
 
+test('pseudo-localized co-managed ticket copy resolves with the same keys as English', () => {
+  const readTicketCopy = (locale) => {
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/msp/licensing.json`, import.meta.url,
+    ), 'utf8'));
+    return collectLeaves(pack.coManaged?.ticket ?? {});
+  };
+  const english = readTicketCopy('en');
+  assert.ok(english.size > 0, 'expected English co-managed ticket copy');
+
+  for (const locale of ['xx', 'yy']) {
+    assert.deepEqual(
+      [...readTicketCopy(locale).keys()].sort(),
+      [...english.keys()].sort(),
+      `${locale}: every co-managed ticket label must resolve in pseudo-localized UI`,
+    );
+  }
+});
+
+test('pseudo-localized service principal messages preserve current copy and layout expansion', () => {
+  const readMessages = (locale) => {
+    const settings = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/msp/settings.json`, import.meta.url,
+    ), 'utf8'));
+    return collectLeaves(settings.servicePrincipals ?? {});
+  };
+  const english = readMessages('en');
+  assert.ok(english.size > 0, 'expected English service principal messages');
+
+  for (const locale of ['xx', 'yy']) {
+    const messages = readMessages(locale);
+    assert.deepEqual([...messages.keys()].sort(), [...english.keys()].sort());
+    for (const [key, source] of english) {
+      assert.equal(messages.get(key), pseudoString(source, locale),
+        `${locale}.${key}: preserve current wording, interpolation tokens and locale expansion`);
+    }
+  }
+});
+
 test('French audit accepts the cognate Question but rejects English question prose', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'question-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -62,6 +102,40 @@ test('French audit accepts the cognate Question but rejects English question pro
   ]);
 });
 
+test('French audit accepts the feminine status Inactive but rejects English status prose', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'inactive-audit-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const language of ['en', 'fr']) {
+    mkdirSync(join(root, language), { recursive: true });
+    writeFileSync(join(root, language, 'keys.json'), JSON.stringify({
+      status: 'Inactive',
+      description: 'Inactive API key',
+      message: 'This key is inactive',
+    }));
+  }
+  const { report } = runAudit({ locale: 'fr', localesDir: root, writeReport: false });
+  assert.equal(report.namespaces.length, 1);
+  assert.deepEqual(report.namespaces[0].untranslated.map(({ key }) => key), [
+    'description', 'message',
+  ]);
+});
+
+for (const locale of ['pt', 'fr']) {
+  test(`${locale} service principal settings pass the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/settings']),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['fr', 'nl']) {
   test(`${locale} service request mapping copy passes the locale quality audit`, () => {
     const { report } = runAudit({
@@ -78,6 +152,21 @@ for (const locale of ['fr', 'nl']) {
   });
 }
 
+for (const locale of ['es', 'nl']) {
+  test(`${locale} shared-project unavailable copy follows the formal register`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/licensing']),
+      writeReport: false,
+    });
+    const namespace = report.namespaces[0];
+    assert.equal(namespace.keyCount > 0, true);
+    assert.deepEqual(namespace.structuralErrors, []);
+    assert.deepEqual(namespace.untranslated, []);
+    assert.deepEqual(namespace.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['pt', 'it']) {
   test(`${locale} time entry copy passes the locale quality audit`, () => {
     const { report } = runAudit({
@@ -86,6 +175,21 @@ for (const locale of ['pt', 'it']) {
       writeReport: false,
     });
     assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
+for (const locale of ['pt', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'sv']) {
+  test(`${locale} RMM alert predicate editor copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/integrations']),
+      writeReport: false,
+    });
     const result = report.namespaces[0];
     assert.ok(result.keyCount > 0);
     assert.deepEqual(result.structuralErrors, []);
@@ -120,7 +224,7 @@ for (const locale of ['pt', 'es', 'fr', 'it']) {
   });
 }
 
-for (const namespace of ['client-portal', 'msp/contacts']) {
+for (const namespace of ['client-portal', 'msp/contacts', 'msp/licensing']) {
   test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
     const { report } = runAudit({
       locale: 'pt',

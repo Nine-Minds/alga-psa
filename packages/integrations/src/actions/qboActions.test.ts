@@ -30,7 +30,9 @@ const getQboOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
   'phone',
   'address'
 ]));
-const getQboEnvironmentMock = vi.hoisted(() => vi.fn(() => 'sandbox' as const));
+const getQboEnvironmentMock = vi.hoisted(() => vi.fn(() => 'sandbox' as 'sandbox' | 'production'));
+const resolveTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => 'sandbox' as 'sandbox' | 'production'));
+const getExplicitTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => null as 'sandbox' | 'production' | null));
 const qboClientCreateMock = vi.hoisted(() => vi.fn(async (): Promise<any> => ({
   query: vi.fn(async () => [])
 })));
@@ -148,6 +150,8 @@ vi.mock('../lib/qbo/qboClientService', () => ({
   getQboRedirectUri: getQboRedirectUriMock,
   getQboOAuthScopes: getQboOAuthScopesMock,
   getQboEnvironment: getQboEnvironmentMock,
+  resolveTenantQboEnvironment: resolveTenantQboEnvironmentMock,
+  getExplicitTenantQboEnvironment: getExplicitTenantQboEnvironmentMock,
   QboClientService: {
     create: qboClientCreateMock
   }
@@ -161,8 +165,10 @@ import {
   getQboClasses,
   getQboDepartments,
   getQboTaxCodes,
+  getQboItems,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
+  setQboEnvironment,
   resetQboCatalogCacheForTenant
 } from './qboActions';
 
@@ -189,6 +195,8 @@ describe('QBO integration actions', () => {
       'openid'
     ]);
     getQboEnvironmentMock.mockReturnValue('sandbox');
+    resolveTenantQboEnvironmentMock.mockResolvedValue('sandbox');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue(null);
     qboClientCreateMock.mockResolvedValue({
       query: vi.fn(async () => [])
     });
@@ -678,6 +686,40 @@ describe('QBO integration actions', () => {
     expect(result[0].description).toBe('Goods and services');
   });
 
+  // --- Item catalog ---
+
+  it('getQboItems: pages past the 100-row default and returns every item', async () => {
+    seedRealm('realm-items-1');
+    // 1200 forces a second page at the 1000-row MAXRESULTS ceiling.
+    const items = Array.from({ length: 1200 }, (_unused, index) => ({
+      Id: `item-${index}`,
+      Name: `Service ${index}`
+    }));
+    const queryMock = vi.fn(async (query: string) => {
+      const page = /STARTPOSITION (\d+) MAXRESULTS (\d+)/.exec(query);
+      const start = page ? Number(page[1]) : 1;
+      const max = page ? Number(page[2]) : 100;
+      return items.slice(start - 1, start - 1 + max);
+    });
+    qboClientCreateMock.mockResolvedValue({ query: queryMock });
+
+    const result = await getQboItems({ realmId: 'realm-items-1' });
+
+    expect(Array.isArray(result)).toBe(true);
+    if (!Array.isArray(result)) return;
+    expect(result).toHaveLength(1200);
+    expect(result[0]).toEqual({ id: 'item-0', name: 'Service 0' });
+    expect(result[1199]).toEqual({ id: 'item-1199', name: 'Service 1199' });
+
+    const itemPages = queryMock.mock.calls
+      .map((call) => String(call[0]))
+      .filter((query) => /FROM Item/i.test(query));
+    expect(itemPages).toEqual([
+      'SELECT Id, Name FROM Item STARTPOSITION 1 MAXRESULTS 1000',
+      'SELECT Id, Name FROM Item STARTPOSITION 1001 MAXRESULTS 1000'
+    ]);
+  });
+
   // --- Automated Sales Tax mode ---
 
   it('getQboAutomatedSalesTaxMode: defaults to off for an unconfigured tenant', async () => {
@@ -728,5 +770,138 @@ describe('QBO integration actions', () => {
     const result = await setQboAutomatedSalesTaxMode({ realmId: '', enabled: true });
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/connected QuickBooks company/i);
+  });
+
+  // --- Intuit environment ---
+
+  it('getQboConnectionStatus: reports the tenant choice and marks it as the tenant\'s', async () => {
+    getQboEnvironmentMock.mockReturnValue('production');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue('sandbox');
+    resolveQboOAuthCredentialsMock.mockResolvedValue(null);
+
+    const result = await getQboConnectionStatus();
+
+    expect(result.environment).toBe('sandbox');
+    // The UI gates the Development-keys warning on this: a tenant that asked
+    // for sandbox must bring its own app, a deployment default need not.
+    expect(result.environmentSource).toBe('tenant');
+    expect(getExplicitTenantQboEnvironmentMock).toHaveBeenCalledWith('tenant-1');
+  });
+
+  it('getQboConnectionStatus: with no tenant choice, reports the deployment default as such', async () => {
+    getQboEnvironmentMock.mockReturnValue('production');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue(null);
+    resolveQboOAuthCredentialsMock.mockResolvedValue(null);
+
+    const result = await getQboConnectionStatus();
+
+    expect(result.environment).toBe('production');
+    expect(result.environmentSource).toBe('deployment');
+  });
+
+  it('getQboConnectionStatus: a connection keeps the environment it was authorized in', async () => {
+    getQboEnvironmentMock.mockReturnValue('production');
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
+      'realm-sandbox': {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        realmId: 'realm-sandbox',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString(),
+        environment: 'sandbox'
+      },
+      'realm-legacy': {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        realmId: 'realm-legacy',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    }));
+    qboClientCreateMock.mockResolvedValue({ query: vi.fn(async () => [{ CompanyName: 'Test Co' }]) });
+
+    const result = await getQboConnectionStatus();
+
+    expect(result.connections.find((c) => c.realmId === 'realm-sandbox')?.environment).toBe('sandbox');
+    // No stamped environment: falls back to the tenant-resolved value.
+    expect(result.connections.find((c) => c.realmId === 'realm-legacy')?.environment).toBe('production');
+  });
+
+  it('setQboEnvironment: stores the choice for a tenant with nothing connected', async () => {
+    const result = await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(result).toEqual({ success: true, environment: 'sandbox' });
+    expect(tenantSettingsRow.current!.settings.qbo).toEqual({ environment: 'sandbox' });
+    expect(revalidatePathMock).toHaveBeenCalledWith('/msp/settings');
+  });
+
+  it('setQboEnvironment: preserves sibling settings subtrees', async () => {
+    tenantSettingsRow.current = {
+      settings: { qboAutomatedSalesTax: { realms: ['realm-ast'] }, clientPortal: { enabled: true } }
+    };
+
+    await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(tenantSettingsRow.current.settings.qboAutomatedSalesTax).toEqual({ realms: ['realm-ast'] });
+    expect(tenantSettingsRow.current.settings.clientPortal).toEqual({ enabled: true });
+    expect(tenantSettingsRow.current.settings.qbo).toEqual({ environment: 'sandbox' });
+  });
+
+  it('setQboEnvironment: rejects an unsupported value', async () => {
+    const result = await setQboEnvironment({ environment: 'staging' as any });
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/sandbox or production/i);
+    expect(tenantSettingsRow.current).toBeNull();
+  });
+
+  it('setQboEnvironment: refuses to switch while a company is connected', async () => {
+    tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
+      'realm-123': {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        realmId: 'realm-123',
+        accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+        refreshTokenExpiresAt: new Date(Date.now() + 86400000).toISOString()
+      }
+    }));
+
+    const result = await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Disconnect QuickBooks/i);
+    expect(tenantSettingsRow.current).toBeNull();
+  });
+
+  it('setQboEnvironment: refuses to switch while a disconnect is pending', async () => {
+    getProviderDisconnectStatusInfoMock.mockResolvedValue({ status: 'pending', targets: [] } as any);
+
+    const result = await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/being disconnected/i);
+    expect(tenantSettingsRow.current).toBeNull();
+  });
+
+  it('setQboEnvironment: requires the manage-connections permission', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const result = await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/permission/i);
+    expect(tenantSettingsRow.current).toBeNull();
+  });
+
+  it('setQboEnvironment in CE returns the Enterprise Edition message', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+
+    const result = await setQboEnvironment({ environment: 'sandbox' });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'QuickBooks Online integration is only available in Enterprise Edition.'
+    });
+    expect(tenantSettingsRow.current).toBeNull();
   });
 });

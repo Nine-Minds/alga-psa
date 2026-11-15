@@ -5,7 +5,8 @@ import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
-import type { IUser } from '@alga-psa/types';
+import type { IUser, IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 import { withAuth } from '@alga-psa/auth';
 import { publishBundleAfterCommitPublication } from '../lib/ticketBundlePublication';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
@@ -200,8 +201,8 @@ function registerBundlePublications(
 }
 
 const bundleTicketsSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  childTicketIds: z.array(z.string().uuid()).min(1),
+  masterTicketId: z.string().guid(),
+  childTicketIds: z.array(z.string().guid()).min(1),
   mode: z.enum(['link_only', 'sync_updates']).default('sync_updates'),
   onClosedMaster: closedMasterChoiceSchema.optional(),
 });
@@ -275,7 +276,7 @@ export const bundleTicketsAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot select a child ticket as the master.',
       masterIsChildKey: 'features/tickets:errors.bundle.childAsMaster',
@@ -302,8 +303,8 @@ export const bundleTicketsAction = withAuth(async (
 });
 
 const addChildrenSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  childTicketIds: z.array(z.string().uuid()).min(1),
+  masterTicketId: z.string().guid(),
+  childTicketIds: z.array(z.string().guid()).min(1),
   onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
@@ -345,7 +346,7 @@ export const addChildrenToBundleAction = withAuth(async (
     return result;
   });
 
-  if (!txResult.ok) {
+  if (txResult.ok === false) {
     return bundleAttachFailureToActionError(txResult, {
       masterIsChildMessage: 'Cannot add children to a bundled child ticket.',
       masterIsChildKey: 'features/tickets:errors.bundle.childrenOnBundledChild',
@@ -365,7 +366,7 @@ export const addChildrenToBundleAction = withAuth(async (
 });
 
 const getBundleMasterClosedContextSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
 });
 
 export type BundleMasterClosedContextActionResult = {
@@ -394,7 +395,14 @@ export const getBundleMasterClosedContextAction = withAuth(async (
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view tickets');
     }
-    const context = await getBundleMasterClosedContext(trx, tenant, data.masterTicketId);
+    // The open-children count shown to the reader covers only children they may read.
+    const readable = await createTicketReadScope(trx, tenant, user as IUserWithRoles);
+    const context = await getBundleMasterClosedContext(
+      trx,
+      tenant,
+      data.masterTicketId,
+      readable.narrowed ? (query) => readable.apply(query, 'tickets') : undefined
+    );
     if (!context) {
       return actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound');
     }
@@ -414,8 +422,8 @@ export const getBundleMasterClosedContextAction = withAuth(async (
 });
 
 const promoteMasterSchema = z.object({
-  oldMasterTicketId: z.string().uuid(),
-  newMasterTicketId: z.string().uuid(),
+  oldMasterTicketId: z.string().guid(),
+  newMasterTicketId: z.string().guid(),
 });
 
 export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input: z.input<typeof promoteMasterSchema>) => {
@@ -529,7 +537,7 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
 });
 
 const updateBundleSettingsSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
   mode: z.enum(['link_only', 'sync_updates']).optional(),
   reopenOnChildReply: z.boolean().optional(),
   /** Required when switching a bundle with a closed master to sync_updates. */
@@ -567,7 +575,7 @@ export const updateBundleSettingsAction = withAuth(async (
       source: TICKET_ACTIVITY_SOURCE.UI,
       occurredAt,
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       if (result.code === 'settings_not_found') throw new Error('Bundle settings not found');
       return bundleAttachFailureToActionError(result);
     }
@@ -582,7 +590,7 @@ export const updateBundleSettingsAction = withAuth(async (
 });
 
 const removeChildSchema = z.object({
-  childTicketId: z.string().uuid(),
+  childTicketId: z.string().guid(),
 });
 
 export const removeChildFromBundleAction = withAuth(async (user, { tenant }, input: z.input<typeof removeChildSchema>) => {
@@ -654,11 +662,11 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
 });
 
 const unbundleSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
 });
 
 const getBundleMasterStatusSchema = z.object({
-  ticketIds: z.array(z.string().uuid()).min(1).max(500),
+  ticketIds: z.array(z.string().guid()).min(1).max(500),
 });
 
 export const getBundleMasterStatusAction = withAuth(async (
@@ -685,9 +693,9 @@ export const getBundleMasterStatusAction = withAuth(async (
 });
 
 const searchEligibleChildTicketsSchema = z.object({
-  boardId: z.string().uuid(),
+  boardId: z.string().guid(),
   searchQuery: z.string().min(1).max(100),
-  excludeTicketId: z.string().uuid().optional(),
+  excludeTicketId: z.string().guid().optional(),
   limit: z.number().int().min(1).max(20).default(10),
 });
 
@@ -827,8 +835,8 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
 });
 
 const previewBundleStatusPropagationSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  newStatusId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
+  newStatusId: z.string().guid(),
 });
 
 /**
@@ -858,8 +866,8 @@ export const previewBundleStatusPropagationAction = withAuth(async (
 });
 
 const previewBulkBundleStatusPropagationSchema = z.object({
-  ticketIds: z.array(z.string().uuid()).min(1).max(500),
-  newStatusId: z.string().uuid(),
+  ticketIds: z.array(z.string().guid()).min(1).max(500),
+  newStatusId: z.string().guid(),
 });
 
 /**

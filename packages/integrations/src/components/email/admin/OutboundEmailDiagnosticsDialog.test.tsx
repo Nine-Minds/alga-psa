@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OutboundEmailDiagnosticsDialog } from './OutboundEmailDiagnosticsDialog';
 
@@ -203,6 +203,53 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     expect(runOutboundEmailDiagnosticsMock).toHaveBeenCalledTimes(1);
   });
 
+  it('clears the copy confirmation after its display interval', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    const view = render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    const button = await screen.findByRole('button', { name: 'Copy report' });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await act(async () => { fireEvent.click(button); });
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(1499); });
+      expect(screen.getByText('Report copied to clipboard.')).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(screen.getByRole('button', { name: 'Copy report' })).toBeInTheDocument();
+      expect(screen.queryByText('Report copied to clipboard.')).not.toBeInTheDocument();
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(['unmount', 'close', 'rerun'] as const)('cancels pending copy feedback on %s', async (transition) => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    const view = render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    const button = await screen.findByRole('button', { name: 'Copy report' });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      await act(async () => { fireEvent.click(button); });
+      expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      expect(vi.getTimerCount()).toBe(1);
+
+      if (transition === 'unmount') view.unmount();
+      else if (transition === 'close') view.rerender(<OutboundEmailDiagnosticsDialog isOpen={false} onClose={() => {}} />);
+      else await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Check again' })); });
+
+      // No deferred state update may outlive the feedback it belongs to.
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it('copies on HTTP installations without the Clipboard API and removes the temporary field', async () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
     let copiedText = '';
@@ -307,6 +354,30 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send test email' }));
     expect(await screen.findByText('We could not confirm whether the test email was sent. Check the recipient’s inbox before trying again.')).toBeInTheDocument();
     expect(screen.queryByText('These checks did not send an email.')).not.toBeInTheDocument();
+  });
+
+  it('shows the provider error and evidence for a failed test email', async () => {
+    runOutboundEmailDiagnosticsMock.mockResolvedValue({ success: true, report: makeReport({
+      summary: { ...makeReport().summary, liveSendPerformed: true, liveSendRequested: true, overallStatus: 'fail' },
+      steps: [{
+        id: 'live_send_test',
+        title: 'Test email',
+        status: 'fail',
+        durationMs: 1,
+        detail: 'The test email could not be sent.',
+        error: {
+          message: 'Send As not granted for support@example.com via helpdesk@example.com. Verify Exchange Send As permission and Mail.Send.Shared consent.',
+          status: 403,
+          code: 'ErrorSendAsDenied',
+          requestId: 'req-send-403',
+        },
+        data: { definitelyNotSent: true },
+      }],
+    }) });
+    render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    expect(await screen.findByText('The test email could not be sent.')).toBeInTheDocument();
+    expect(screen.getByText(/Send As not granted for support@example.com/)).toBeInTheDocument();
+    expect(screen.getByText('(403 · ErrorSendAsDenied · req-send-403)')).toBeInTheDocument();
   });
 
   it('shows test-email acceptance without expanding technical details', async () => {

@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Beschreibung der Rechnungszeile",
         "invoiceLineDescriptionPlaceholder": "z.B. Monatliche Wartung der Telefonanlage gemäß Vertrag von 2019",
         "nameLabel": "Name der Vertragszeile *",
-        "namePlaceholder": "z.B. Verwalteter Support – Gold"
+        "namePlaceholder": "z.B. Verwalteter Support – Gold",
+        "invoiceLineSubtitleLabel": "Untertitel der Rechnungszeile",
+        "invoiceLineSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup",
+        "invoiceLineSubtitleHelp": "Wird als gedämpfte zweite Zeile unter dem Titel angezeigt, wenn diese Pauschalposition auf einer Rechnung erscheint."
       },
       "cardTitle": "Vertragszeile bearbeiten: {{name}} (behoben)",
       "errors": {
@@ -819,7 +822,8 @@
       "notAllowed": "Einer der Werte der Vertragslinie ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Feld der Vertragslinie fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Vertragslinie fehlt: {{field}}.",
-      "advanceTimingNotAllowed": "Abrechnung im Voraus ist nur für Festpreispositionen verfügbar. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde."
+      "advanceTimingNotAllowed": "Abrechnung im Voraus ist nur für Festpreispositionen verfügbar. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde.",
+      "versionConflict": "Diese Vertragsposition wurde von jemand anderem geändert, seit Sie mit der Bearbeitung begonnen haben. Laden Sie sie neu und wenden Sie Ihre Änderung erneut an."
     },
     "templateLine": {
       "unavailable": "Die ausgewählte Vorlagenzeile ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."

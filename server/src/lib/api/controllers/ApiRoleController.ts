@@ -84,7 +84,7 @@ export class ApiRoleController extends ApiBaseController {
             createData = createRoleSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Invalid role data', error.errors);
+              throw new ValidationError('Invalid role data', error.issues);
             }
             throw error;
           }
@@ -130,7 +130,7 @@ export class ApiRoleController extends ApiBaseController {
             updateData = updateRoleSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Invalid update data', error.errors);
+              throw new ValidationError('Invalid update data', error.issues);
             }
             throw error;
           }
@@ -305,7 +305,7 @@ export class ApiRoleController extends ApiBaseController {
           cloneData = cloneRoleSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid clone data', error.errors);
+            throw new ValidationError('Invalid clone data', error.issues);
           }
           throw error;
         }
@@ -377,7 +377,7 @@ export class ApiRoleController extends ApiBaseController {
           permissionsData = assignPermissionsToRoleSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid permissions data', error.errors);
+            throw new ValidationError('Invalid permissions data', error.issues);
           }
           throw error;
         }

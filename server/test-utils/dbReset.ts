@@ -162,7 +162,13 @@ export async function resetDatabase(
         password: adminPassword,
       },
       migrations: {
-        directory: path.join(serverRoot, 'migrations'),
+        // Must agree with createTestDbConnection (dbConfig.ts), which already
+        // honours TEST_MIGRATIONS_DIR. When a lane builds the database from a
+        // CE+EE overlay, the knex_migrations ledger records EE migration names;
+        // re-running migrate.latest() here against the CE-only directory then
+        // fails every caller with "The migration directory is corrupt, the
+        // following files are missing: ..." listing each EE migration.
+        directory: process.env.TEST_MIGRATIONS_DIR || path.join(serverRoot, 'migrations'),
       },
       seeds: {
         directory: path.join(serverRoot, 'seeds', 'dev'),

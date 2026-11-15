@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 
 type Row = Record<string, any>;
 
@@ -121,6 +122,9 @@ function createQueryBuilder(rows: Row[]) {
             });
             return nestedBuilder;
           },
+          // client scoping is asserted by the in-process period match, not by this emulation
+          whereIn: () => nestedBuilder,
+          orWhereIn: () => nestedBuilder,
         };
 
         columnOrCriteria.call(nestedBuilder, nestedBuilder);
@@ -190,6 +194,12 @@ function createQueryBuilder(rows: Row[]) {
         resultRows = resultRows.filter((row) =>
           applyOperator(String(row[column] ?? '').slice(0, 10), operator, expected),
         );
+        return builder;
+      }
+
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (commercialOnly) {
+        resultRows = resultRows.filter(commercialOnly);
         return builder;
       }
 

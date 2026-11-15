@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IQuote, IQuoteItem } from '@alga-psa/types';
 
 const fetchTenantPartyMock = vi.fn();
@@ -7,7 +7,42 @@ vi.mock('./tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: unknown[]) => fetchTenantPartyMock(...args),
 }));
 
-import { mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
+// Identity lookups (contacts/users) run against these rows when a test sets them;
+// every other test keeps the real tenantDb exactly as before.
+const identityRows: { tables: Record<string, Array<Record<string, unknown>>> | null } = { tables: null };
+
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    tenantDb: (knex: unknown, tenant: string) => {
+      if (!identityRows.tables) return actual.tenantDb(knex as never, tenant);
+      return {
+        table: (name: string) => {
+          const filters: Array<[string, unknown]> = [];
+          const builder: any = {
+            select: () => builder,
+            orderBy: () => builder,
+            where: (column: string | Record<string, unknown>, value?: unknown) => {
+              if (typeof column === 'object') filters.push(...Object.entries(column));
+              else filters.push([column, value]);
+              return builder;
+            },
+            andWhere: (column: Record<string, unknown>) => builder.where(column),
+            first: async () =>
+              (identityRows.tables?.[name] ?? []).find((row) => filters.every(([c, v]) => row[c] === v)),
+          };
+          return builder;
+        },
+      };
+    },
+  };
+});
+
+import { mapLoadedQuoteToViewModel, resolveQuoteAcceptedByName, toDateOnlyString, toIsoDateString } from './quoteAdapters';
+import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
+import { renderTemplateAstHtmlDocument } from '../invoice-template-ast/server-render';
+import { getStandardQuoteTemplateAstByCode } from '../quote-template-ast/standardTemplates';
 import { summarizeQuoteTotals } from '../quoteTotals';
 import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
 
@@ -1367,5 +1402,207 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
     expect(viewModel.optional_total).toBe(expectedOptional);
     expect(draft.optional_total).toBe(expectedOptional);
     expect((viewModel.groups_by_cadence_with_optionals ?? []).length > 0).toBe(expectedOptional > 0);
+  });
+
+  describe('resolveQuoteAcceptedByName', () => {
+    const CONTACT_ID = 'contact-1';
+    beforeEach(() => {
+      identityRows.tables = {
+        contacts: [{ contact_name_id: CONTACT_ID, full_name: 'Casey Contact' }],
+        users: [
+          { user_id: 'portal-user', first_name: 'Pat', last_name: 'Portal', contact_id: CONTACT_ID },
+          { user_id: 'msp-user', first_name: 'Morgan', last_name: 'Tech', contact_id: null },
+        ],
+      };
+    });
+    afterEach(() => {
+      identityRows.tables = null;
+    });
+
+    it('prefers the typed name even when a contact also exists', async () => {
+      await expect(
+        resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', {
+          signerName: '  Casey C. Typed ',
+          signerContactId: CONTACT_ID,
+          acceptedBy: 'msp-user',
+        })
+      ).resolves.toBe('Casey C. Typed');
+    });
+
+    it('uses the contact name for a contact-only signer', async () => {
+      await expect(
+        resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', { signerContactId: CONTACT_ID })
+      ).resolves.toBe('Casey Contact');
+    });
+
+    it('uses the contact name for a portal user with a contact_id', async () => {
+      await expect(
+        resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', { acceptedBy: 'portal-user' })
+      ).resolves.toBe('Casey Contact');
+    });
+
+    it('uses first and last name for an MSP user', async () => {
+      await expect(
+        resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', { acceptedBy: 'msp-user' })
+      ).resolves.toBe('Morgan Tech');
+    });
+
+    it('is null when nothing is known', async () => {
+      await expect(resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', {})).resolves.toBeNull();
+      await expect(
+        resolveQuoteAcceptedByName(fakeKnex, 'tenant-1', { acceptedBy: 'ghost', signerContactId: 'nobody' })
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe('acceptance on the quote view model', () => {
+    const acceptedAt = '2026-07-18T12:30:00.000Z';
+    const bindName = async (viewModel: unknown) => {
+      const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
+      if (!ast) throw new Error('Expected the standard quote template to exist.');
+      const evaluation = evaluateTemplateAst(ast, viewModel as Record<string, unknown>);
+      return { evaluation, html: await renderTemplateAstHtmlDocument(ast, evaluation, { title: 'Quote' }) };
+    };
+
+    beforeEach(() => {
+      identityRows.tables = {
+        contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+        users: [],
+      };
+    });
+    afterEach(() => {
+      identityRows.tables = null;
+    });
+
+    it('binds accepted_by_name to a contact signer and renders it in the template', async () => {
+      const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote(), {
+        acceptance: { signerContactId: 'contact-1', signerEmail: 'casey@example.com', acceptedAt, method: 'email_link' },
+      });
+      expect(viewModel.accepted_by_name).toBe('Casey Contact');
+      expect(viewModel.accepted_at).toBe(acceptedAt);
+      expect(viewModel.acceptance).toMatchObject({ signer_name: 'Casey Contact', signer_email: 'casey@example.com', method: 'email_link' });
+      expect((await bindName(viewModel)).html).toContain('Casey Contact');
+    });
+
+    it('binds accepted_by_name to a typed-only signer with no contact', async () => {
+      const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote(), {
+        acceptance: { signerName: 'Typed Signer', acceptedAt, method: 'email_link' },
+      });
+      expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      expect((await bindName(viewModel)).html).toContain('Typed Signer');
+    });
+
+    it('binds accepted_by_name to the typed name when a contact signer exists too (typed wins)', async () => {
+      const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote(), {
+        acceptance: { signerName: 'Typed Signer', signerContactId: 'contact-1', acceptedAt, method: 'email_link' },
+      });
+      expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      expect(viewModel.acceptance?.signer_name).toBe('Typed Signer');
+      const { html } = await bindName(viewModel);
+      expect(html).toContain('Typed Signer');
+      expect(html).not.toContain('Casey Contact');
+    });
+
+    describe('user signers (no regression)', () => {
+      beforeEach(() => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [
+            { user_id: 'msp-user', first_name: 'Morgan', last_name: 'Tech', contact_id: null },
+            { user_id: 'portal-user', first_name: 'Pat', last_name: 'Portal', contact_id: 'contact-1' },
+          ],
+        };
+      });
+
+      it('binds an MSP user (no contact) to their own first and last name, with no acceptance passed', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'msp-user', accepted_at: acceptedAt })
+        );
+        expect(viewModel.accepted_by_name).toBe('Morgan Tech');
+        expect(viewModel.acceptance).toBeNull();
+        expect((await bindName(viewModel)).html).toContain('Morgan Tech');
+      });
+
+      it('binds a portal user through users.contact_id to their contact name', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'portal-user', accepted_at: acceptedAt })
+        );
+        expect(viewModel.accepted_by_name).toBe('Casey Contact');
+        expect((await bindName(viewModel)).html).toContain('Casey Contact');
+      });
+
+      it('lets the typed name win over the accepting user', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'msp-user' }),
+          { acceptance: { signerName: 'Typed Signer', acceptedAt, method: 'email_link' } }
+        );
+        expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      });
+    });
+
+    describe('contact signers from the recorded decision (email-link acceptance, no users row)', () => {
+      const decision = {
+        tenant: 'tenant-1',
+        decision_id: 'decision-1',
+        quote_id: 'quote-1',
+        decision: 'accepted',
+        method: 'email_link',
+        contact_id: 'contact-1',
+        signer_name: null as string | null,
+        signer_email: 'casey@example.com',
+        signer_title: 'Director',
+        ip: '203.0.113.9',
+        decided_at: acceptedAt,
+      };
+      const linkAccepted = () =>
+        buildQuote({ status: 'accepted', accepted_by: null, accepted_at: acceptedAt, contact_id: 'contact-1' });
+
+      it('binds accepted_by_name to the typed signature on any render, with accepted_by null', async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [{ ...decision, signer_name: 'Casey C. Typed' }],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBe('Casey C. Typed');
+        // Naming the signer does not stamp the acceptance block: only the signed copy carries it.
+        expect(viewModel.acceptance).toBeNull();
+        expect((await bindName(viewModel)).html).toContain('Casey C. Typed');
+      });
+
+      it("falls back to the signer contact's name when the decision has no typed name", async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [decision],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBe('Casey Contact');
+        expect((await bindName(viewModel)).html).toContain('Casey Contact');
+      });
+
+      it('ignores rejected decisions', async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [{ ...decision, decision: 'rejected', signer_name: 'Someone Else' }],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBeNull();
+      });
+    });
+
+    it('leaves the sent render unchanged when no acceptance is passed', async () => {
+      const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote());
+      expect(viewModel.acceptance).toBeNull();
+      expect(viewModel.accepted_by_name).toBeNull();
+      expect(viewModel.accepted_at).toBeNull();
+    });
   });
 });

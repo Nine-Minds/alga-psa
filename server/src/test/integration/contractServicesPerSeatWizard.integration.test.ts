@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,7 +24,6 @@ import {
 let db: Knex;
 let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration').generateInvoice;
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync').syncRecurringServicePeriodsForContractLine;
 let scheduleUnitPricingRevision: typeof import('@alga-psa/billing/actions/contractLineUnitPricingActions').scheduleUnitPricingRevision;
 
@@ -154,7 +154,6 @@ describe('contract wizard: per-seat recurring services', () => {
     tenantId = await ensureFixtureTenant(db);
     setupCommonMocks({ tenantId, userId: 'per-seat-test-user', permissionCheck: () => true });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
     ({ scheduleUnitPricingRevision } = await import('@alga-psa/billing/actions/contractLineUnitPricingActions'));
   }, HOOK_TIMEOUT);
@@ -194,7 +193,7 @@ describe('contract wizard: per-seat recurring services', () => {
     // Unit members are billed by quantity x rate; the line has no bundle total.
     expect(await lineBaseRate(result.contract_line_id!)).toBeNull();
 
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(390000);
   }, HOOK_TIMEOUT);
 
@@ -206,7 +205,7 @@ describe('contract wizard: per-seat recurring services', () => {
     const result = await authorAndSync(client, andrewsPackage(catalog), { fixed_base_rate: 999900 });
 
     expect(await lineBaseRate(result.contract_line_id!)).toBeNull();
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(390000);
   }, HOOK_TIMEOUT);
 
@@ -235,14 +234,14 @@ describe('contract wizard: per-seat recurring services', () => {
 
     // The mid-period true-up is quantity-only and settles exactly once, on the
     // invoice that owns the December period: 3 seats x $100 x 16/31.
-    const january = unwrapInvoice(await generateInvoice(januaryCycle));
+    const january = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(january.subtotal)).toBe(390000 + 15484);
     const adjustments = await tenantTable(db, tenantId, 'invoice_charges')
       .where({ tenant: tenantId, invoice_id: january.invoice_id, adjustment_source_kind: 'contract_change' });
     expect(adjustments).toHaveLength(1);
 
     // From the boundary the new count bills: 23x100 + 30x50 + 2x200 = $4,200.
-    const february = unwrapInvoice(await generateInvoice(februaryCycle));
+    const february = unwrapInvoice(await generateInvoiceForCycle(februaryCycle));
     expect(Number(february.subtotal)).toBe(420000);
 
     // The billed invoice is untouched by the later revision.
@@ -285,7 +284,7 @@ describe('contract wizard: per-seat recurring services', () => {
     expect(Number(user.base_rate)).toBe(10000);
 
     // $400 bundle + 5 seats x $100.
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(40000 + 50000);
   }, HOOK_TIMEOUT);
 
@@ -305,7 +304,7 @@ describe('contract wizard: per-seat recurring services', () => {
     expect(user.pricing_basis).toBe('unit');
     expect(Number(user.base_rate)).toBe(10000);
 
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(15000);
   }, HOOK_TIMEOUT);
 
@@ -325,7 +324,7 @@ describe('contract wizard: per-seat recurring services', () => {
       .first();
     expect(contract?.currency_code).toBe('EUR');
 
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(90000);
     const stored = await tenantTable(db, tenantId, 'invoices')
       .where({ tenant: tenantId, invoice_id: invoice.invoice_id })
@@ -359,7 +358,7 @@ describe('contract wizard: per-seat recurring services', () => {
     expect(Number(second.base_rate)).toBe(16667);
     expect(Number(first.base_rate) + Number(second.base_rate)).toBe(25000);
 
-    const invoice = unwrapInvoice(await generateInvoice(januaryCycle));
+    const invoice = unwrapInvoice(await generateInvoiceForCycle(januaryCycle));
     expect(Number(invoice.subtotal)).toBe(25000);
   }, HOOK_TIMEOUT);
 

@@ -255,80 +255,6 @@ function parseAdvancedFormBehaviorConfig(
   };
 }
 
-const advancedVisibilityProvider: ServiceRequestVisibilityProvider = {
-  key: 'advanced-visibility',
-  displayName: 'Advanced Visibility',
-  validateConfig: (config) => {
-    const errors: string[] = [];
-
-    if (
-      'allowAll' in config &&
-      config.allowAll !== true &&
-      config.allowAll !== false
-    ) {
-      errors.push('allowAll must be a boolean');
-    }
-
-    if ('allowedClientIds' in config) {
-      if (!Array.isArray(config.allowedClientIds)) {
-        errors.push('allowedClientIds must be an array');
-      } else if (
-        config.allowedClientIds.some(
-          (value) => typeof value !== 'string' || value.trim().length === 0
-        )
-      ) {
-        errors.push('allowedClientIds must contain only non-empty strings');
-      }
-    }
-
-    if ('allowedRequesterUserIds' in config) {
-      if (!Array.isArray(config.allowedRequesterUserIds)) {
-        errors.push('allowedRequesterUserIds must be an array');
-      } else if (
-        config.allowedRequesterUserIds.some(
-          (value) => typeof value !== 'string' || value.trim().length === 0
-        )
-      ) {
-        errors.push('allowedRequesterUserIds must contain only non-empty strings');
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined,
-    };
-  },
-  async canAccessDefinition(context, _definition, config) {
-    const allowAll = config.allowAll !== false;
-    if (!allowAll) {
-      return false;
-    }
-
-    const allowedClientIds = Array.isArray(config.allowedClientIds)
-      ? config.allowedClientIds.filter(
-          (value): value is string => typeof value === 'string' && value.trim().length > 0
-        )
-      : [];
-    if (allowedClientIds.length > 0 && !allowedClientIds.includes(context.clientId)) {
-      return false;
-    }
-
-    const allowedRequesterUserIds = Array.isArray(config.allowedRequesterUserIds)
-      ? config.allowedRequesterUserIds.filter(
-          (value): value is string => typeof value === 'string' && value.trim().length > 0
-        )
-      : [];
-    if (
-      allowedRequesterUserIds.length > 0 &&
-      !allowedRequesterUserIds.includes(context.requesterUserId)
-    ) {
-      return false;
-    }
-
-    return true;
-  },
-};
-
 const enterpriseTemplateProvider: ServiceRequestTemplateProvider = {
   key: 'ee-starter-pack',
   displayName: 'EE Starter Pack',
@@ -442,7 +368,7 @@ export async function getServiceRequestEnterpriseProviderRegistrations(): Promis
   return {
     executionProviders: [workflowOnlyExecutionProvider, ticketPlusWorkflowExecutionProvider, licenseOrderExecutionProvider],
     formBehaviorProviders: [advancedFormBehaviorProvider],
-    visibilityProviders: [advancedVisibilityProvider],
+    visibilityProviders: [],
     templateProviders: [enterpriseTemplateProvider, licenseOrderTemplateProvider],
     adminExtensionProviders: [],
   };

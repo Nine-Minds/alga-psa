@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
-import { IStockUnit, CreateAssetRequest, Asset } from '@alga-psa/types';
+import { withTransaction, admitOperationalWrite } from '@alga-psa/db';
+import { IStockUnit, CreateAssetRequest } from '@alga-psa/types';
 import { createAsset } from '@alga-psa/assets/actions';
 
 /** A delivered serialized unit awaiting post-commit asset creation (F029). */
@@ -36,7 +36,8 @@ export async function createAndLinkDeliveredAsset(
   const req: CreateAssetRequest = {
     asset_type: assetType,
     client_id: p.clientId,
-    asset_tag: serial,
+    // Delivery supplies inventory identity, not a scanned physical asset tag.
+    // Omit asset_tag so the shared tenant sequence assigns the physical label.
     name: p.serviceName ? `${p.serviceName} ${serial}`.trim() : serial,
     status: 'active',
     serial_number: p.unit.serial_number || undefined,
@@ -48,10 +49,14 @@ export async function createAndLinkDeliveredAsset(
       : {}),
   };
   // createAsset is an ABAC-respecting server action; it runs in its own transaction.
-  const asset = (await createAsset(req)) as Asset;
-  if (!asset?.asset_id) return null;
+  const asset = await createAsset(req);
+  if (!asset || !('asset_id' in asset)) {
+    const error = asset as { actionError?: string; permissionError?: string; messageKey?: string } | null;
+    throw Object.assign(new Error(error?.actionError ?? error?.permissionError ?? 'Asset creation did not return an asset'), { messageKey: error?.messageKey });
+  }
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
+    await admitOperationalWrite(trx, tenant, 'assets', 'asset-link-unit');
     await trx('assets')
       .where({ tenant, asset_id: asset.asset_id })
       .update({ service_id: p.serviceId, stock_unit_id: p.unit.unit_id, updated_at: trx.fn.now() });

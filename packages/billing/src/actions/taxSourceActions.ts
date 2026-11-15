@@ -7,6 +7,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import {
   actionError,
   isActionMessageError,
@@ -180,16 +181,149 @@ export const validateInvoiceFinalization = withAuth(async (
   return validateInvoiceFinalizationInternal(knex, tenant, invoiceId);
 });
 
+export type InvoiceTaxSourceChangeResult = { success: true } | { success: false; error: string };
+
 /**
- * Update an invoice's tax source.
- * Use this when changing from internal to external or vice versa on a draft invoice.
+ * Change an invoice's tax source inside the caller's transaction. Shared by
+ * the server action and the REST invoice update so the two cannot drift.
+ *
+ * A draft may move in either direction; its tax is recomputed and any change
+ * to the total is booked against the client balance. A finalized invoice may
+ * only move from internal tax to pending delegation, and only while it has
+ * never reached an accounting system: amounts stay as they are, the export
+ * then delegates tax and the import back replaces them (alga-2026-0002886).
+ */
+export async function changeInvoiceTaxSourceInternal(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  newTaxSource: TaxSource
+): Promise<InvoiceTaxSourceChangeResult> {
+  const db = tenantDb(trx, tenant);
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
+    .select(
+      'status',
+      'tax_source',
+      'client_id',
+      'invoice_number',
+      'total_amount',
+    )
+    .forUpdate()
+    .first();
+
+  if (!invoice) {
+    return { success: false, error: 'Invoice not found' };
+  }
+  if (invoice.tax_source === newTaxSource) {
+    return { success: true };
+  }
+
+  if (invoice.status !== 'draft') {
+    if (invoice.status === 'cancelled') {
+      return { success: false, error: 'Cannot change tax source on a cancelled invoice' };
+    }
+    if (invoice.tax_source !== 'internal' || newTaxSource !== 'pending_external') {
+      return {
+        success: false,
+        error: 'A finalized invoice can only be switched from internal tax to accounting-system tax delegation',
+      };
+    }
+    try {
+      await assertInvoiceNotExported(trx, tenant, invoiceId, 'change_tax_source');
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+    await db.table('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        tax_source: newTaxSource,
+        updated_at: trx.fn.now(),
+      });
+    return { success: true };
+  }
+
+  const totalBefore = Math.round(Number(invoice.total_amount ?? 0));
+  if (
+    (invoice.tax_source === 'external' || invoice.tax_source === 'pending_external') &&
+    newTaxSource === 'internal'
+  ) {
+    await db.table('invoice_charges')
+      .where({ invoice_id: invoiceId })
+      .update({
+        external_tax_amount: null,
+        external_tax_code: null,
+        external_tax_rate: null,
+        updated_at: trx.fn.now(),
+      });
+  }
+
+  await db.table('invoices')
+    .where({ invoice_id: invoiceId })
+    .update({
+      tax_source: newTaxSource,
+      updated_at: trx.fn.now(),
+    });
+
+  // Import lazily to avoid the invoiceService -> invoiceGeneration ->
+  // taxSourceActions module cycle during server-action initialization.
+  const [{ calculateAndDistributeTax, getClientDetails }, { TaxService }] = await Promise.all([
+    import('../services/invoiceService'),
+    import('../services/taxService'),
+  ]);
+  const client = await getClientDetails(trx, tenant, invoice.client_id);
+  await calculateAndDistributeTax(trx, invoiceId, client, new TaxService(), tenant);
+
+  const charges = await db.table('invoice_charges')
+    .where({ invoice_id: invoiceId })
+    .select('net_amount', 'tax_amount');
+  const subtotal = Math.round(charges.reduce(
+    (sum, charge) => sum + Number(charge.net_amount ?? 0),
+    0,
+  ));
+  const tax = Math.round(charges.reduce(
+    (sum, charge) => sum + Number(charge.tax_amount ?? 0),
+    0,
+  ));
+  const total = subtotal + tax;
+  await db.table('invoices')
+    .where({ invoice_id: invoiceId })
+    .update({ subtotal, tax, total_amount: total, updated_at: trx.fn.now() });
+
+  const delta = total - totalBefore;
+  if (delta !== 0) {
+    const lastTransaction = await db.table('transactions')
+      .where({ client_id: invoice.client_id })
+      .orderBy('created_at', 'desc')
+      .first();
+    const currentBalance = Number(lastTransaction?.balance_after ?? 0);
+    await db.table('transactions').insert({
+      transaction_id: uuidv4(),
+      client_id: invoice.client_id,
+      invoice_id: invoiceId,
+      amount: delta,
+      type: 'invoice_adjustment',
+      status: 'completed',
+      description: `Changed tax source on invoice ${invoice.invoice_number}`,
+      created_at: new Date().toISOString(),
+      tenant,
+      balance_after: currentBalance + delta,
+    });
+  }
+
+  return { success: true };
+}
+
+/**
+ * Update the tax source for an invoice. See changeInvoiceTaxSourceInternal for
+ * which moves are allowed in which state.
  */
 export const updateInvoiceTaxSource = withAuth(async (
   _user,
   { tenant },
   invoiceId: string,
   newTaxSource: TaxSource
-): Promise<{ success: boolean; error?: string } | TaxSourceActionError> => {
+): Promise<InvoiceTaxSourceChangeResult | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'update')) {
     return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
@@ -199,100 +333,9 @@ export const updateInvoiceTaxSource = withAuth(async (
     return { success: false, error: 'No tenant context' };
   }
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
-    const invoice = await db.table('invoices')
-      .where({ invoice_id: invoiceId })
-      .select(
-        'status',
-        'tax_source',
-        'client_id',
-        'invoice_number',
-        'total_amount',
-      )
-      .forUpdate()
-      .first();
-
-    if (!invoice) {
-      return { success: false, error: 'Invoice not found' };
-    }
-    if (invoice.status !== 'draft') {
-      return { success: false, error: 'Can only change tax source on draft invoices' };
-    }
-    if (invoice.tax_source === newTaxSource) {
-      return { success: true };
-    }
-
-    const totalBefore = Math.round(Number(invoice.total_amount ?? 0));
-    if (
-      (invoice.tax_source === 'external' || invoice.tax_source === 'pending_external') &&
-      newTaxSource === 'internal'
-    ) {
-      await db.table('invoice_charges')
-        .where({ invoice_id: invoiceId })
-        .update({
-          external_tax_amount: null,
-          external_tax_code: null,
-          external_tax_rate: null,
-          updated_at: trx.fn.now(),
-        });
-    }
-
-    await db.table('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({
-        tax_source: newTaxSource,
-        updated_at: trx.fn.now(),
-      });
-
-    // Import lazily to avoid the invoiceService -> invoiceGeneration ->
-    // taxSourceActions module cycle during server-action initialization.
-    const [{ calculateAndDistributeTax, getClientDetails }, { TaxService }] = await Promise.all([
-      import('../services/invoiceService'),
-      import('../services/taxService'),
-    ]);
-    const client = await getClientDetails(trx, tenant, invoice.client_id);
-    await calculateAndDistributeTax(trx, invoiceId, client, new TaxService(), tenant);
-
-    const charges = await db.table('invoice_charges')
-      .where({ invoice_id: invoiceId })
-      .select('net_amount', 'tax_amount');
-    const subtotal = Math.round(charges.reduce(
-      (sum, charge) => sum + Number(charge.net_amount ?? 0),
-      0,
-    ));
-    const tax = Math.round(charges.reduce(
-      (sum, charge) => sum + Number(charge.tax_amount ?? 0),
-      0,
-    ));
-    const total = subtotal + tax;
-    await db.table('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({ subtotal, tax, total_amount: total, updated_at: trx.fn.now() });
-
-    const delta = total - totalBefore;
-    if (delta !== 0) {
-      const lastTransaction = await db.table('transactions')
-        .where({ client_id: invoice.client_id })
-        .orderBy('created_at', 'desc')
-        .first();
-      const currentBalance = Number(lastTransaction?.balance_after ?? 0);
-      await db.table('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: invoice.client_id,
-        invoice_id: invoiceId,
-        amount: delta,
-        type: 'invoice_adjustment',
-        status: 'completed',
-        description: `Changed tax source on invoice ${invoice.invoice_number}`,
-        created_at: new Date().toISOString(),
-        tenant,
-        balance_after: currentBalance + delta,
-      });
-    }
-
-    return { success: true };
-  });
+  return withTransaction(knex, (trx: Knex.Transaction) =>
+    changeInvoiceTaxSourceInternal(trx, tenant, invoiceId, newTaxSource)
+  );
 });
 
 /**

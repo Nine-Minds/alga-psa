@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
-import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
+import { canConfigureSsoProvidersAction, getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
 import Spinner from "@alga-psa/ui/components/Spinner";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -34,6 +34,7 @@ export default function ConnectSsoWrapper() {
   const [email, setEmail] = useState("");
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedSsoAccount[]>([]);
+  const [canConfigureProviders, setCanConfigureProviders] = useState(false);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const isMountedRef = useRef(true);
   // Captured once: the params are stripped below so a refresh does not replay
@@ -65,9 +66,10 @@ export default function ConnectSsoWrapper() {
         setLoading(true);
         setError(null);
 
-        const [providersResult, accountsResult] = await Promise.all([
+        const [providersResult, accountsResult, canConfigure] = await Promise.all([
           getSsoProviderOptionsAction(),
           getLinkedSsoAccountsAction(),
+          canConfigureSsoProvidersAction().catch(() => false),
         ]);
 
         // Prevent setState on unmounted component
@@ -90,6 +92,7 @@ export default function ConnectSsoWrapper() {
         }));
 
         setProviderOptions(mappedProviders);
+        setCanConfigureProviders(canConfigure === true);
         setLinkedAccounts(accountsResult.accounts ?? []);
         setEmail(accountsResult.email ?? "");
         setTwoFactorEnabled(accountsResult.twoFactorEnabled ?? false);
@@ -135,6 +138,7 @@ export default function ConnectSsoWrapper() {
       twoFactorEnabled={twoFactorEnabled}
       linkedAccounts={linkedAccounts}
       providerOptions={providerOptions}
+      canConfigureProviders={canConfigureProviders}
       linkStatus={linkOutcome.linkError ? "error" : linkOutcome.linked ? "linked" : undefined}
       linkErrorCode={linkOutcome.linkError}
       linkErrorProviderEmail={linkOutcome.providerEmail}

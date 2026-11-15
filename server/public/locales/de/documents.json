@@ -56,6 +56,20 @@
     "product": "Produkt",
     "projectPhase": "Projektphase",
     "qty": "Menge",
+    "quoteAcceptance": {
+      "title": "Angebot angenommen",
+      "signedBy": "Unterzeichnet von",
+      "email": "E-Mail",
+      "jobTitle": "Titel",
+      "acceptedOn": "Angenommen am",
+      "method": "Methode",
+      "ipAddress": "IP-Adresse",
+      "methods": {
+        "emailLink": "E-Mail-Link",
+        "portal": "Kundenportal",
+        "msp": "Vom MSP erfasst"
+      }
+    },
     "quoteNumber": "Angebot Nr.",
     "quoteTitle": "ANGEBOT",
     "rate": "Satz",
@@ -69,6 +83,7 @@
     "sku": "SKU",
     "source": "Herkunft",
     "subtotal": "Zwischensumme",
+    "subtotalBeforeDiscounts": "Zwischensumme vor Rabatten",
     "tax": "Steuer",
     "termsAndConditions": "Allgemeine Geschäftsbedingungen",
     "ticket": "Ticket",
@@ -93,7 +108,8 @@
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
       "thankYouForOrder": "Vielen Dank für Ihren Auftrag.",
-      "checkedBy": "Geprüft von: ____________________     Datum: ____________"
+      "checkedBy": "Geprüft von: ____________________     Datum: ____________",
+      "releasedBy": "Freigegeben von: ____________________     Unterschrift: ____________________     Datum: ____________"
     },
     "serialNumbers": "Seriennummern",
     "allocatedSerialsNote": "Zugeordnete Seriennummern; können sich bei der Erfüllung ändern.",
@@ -114,7 +130,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Kunde",
     "statusOpen": "Offen",
-    "statusSealed": "Versiegelt"
+    "statusSealed": "Versiegelt",
+    "rmaReturnSlipTitle": "RMA-RÜCKSENDESCHEIN",
+    "device": "Gerät",
+    "vendor": "Lieferant",
+    "vendorReference": "Lieferantenreferenz",
+    "asset": "Asset",
+    "assetTag": "Asset-Tag",
+    "replacementSerial": "Ersatzseriennummer",
+    "shipping": "Versand",
+    "returnBy": "Rückgabe bis",
+    "returnShipTo": "Rücksendung an"
   },
   "errors": {
     "permissions": {
@@ -153,6 +179,7 @@
     "upload": {
       "fileRequired": "Wählen Sie vor dem Hochladen eine Datei aus.",
       "typeNotAllowed": "Dieser Dateityp ist nicht zulässig.",
+      "contentMismatch": "Der Inhalt dieser Datei passt nicht zu ihrem Dateityp, daher wurde sie nicht hochgeladen. Prüfen Sie, ob Sie die richtige Datei ausgewählt haben.",
       "sessionRequired": "Zum Hochladen von Dokumenten ist Ihre Sitzung erforderlich. Bitte melden Sie sich erneut an."
     }
   },

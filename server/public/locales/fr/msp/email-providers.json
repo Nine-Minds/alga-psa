@@ -297,7 +297,7 @@
         "description": "Configurer les options avancées de traitement des e-mails",
         "folderFiltersLabel": "Filtres de dossiers",
         "folderFiltersPlaceholder": "Boîte de réception, support, dossier personnalisé",
-        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception)",
+        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception). Utilisez le nom exact du dossier tel qu’il apparaît dans Outlook et écrivez les dossiers imbriqués sous la forme Boîte de réception/Sous-dossier.",
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID client OAuth",
         "clientSecret": "Secret client OAuth",
         "scopes": "Portées OAuth",
-        "scopesPlaceholder": "portées délimitées par des espaces"
+        "scopesPlaceholder": "portées délimitées par des espaces",
+        "clientSecretHelp": "Le secret client est stocké de manière sécurisée et ne sera pas affiché. Laissez vide pour conserver le secret existant."
       },
       "processing": {
         "title": "Paramètres de traitement",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtres de dossiers",
         "folderFiltersPlaceholder": "Boîte de réception, assistance, tickets",
         "active": "Actif"
+      },
+      "messages": {
+        "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
       "senderDisplayName": "Nom de l'expéditeur",
       "senderDisplayNamePlaceholder": "ex. : Acme Support",
-      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
+      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket.",
+      "oauthClientSecretHelp": "Le secret client est stocké de manière sécurisée et ne sera pas affiché. Laissez vide pour conserver le secret existant."
     },
     "authOptions": {
       "password": "Mot de passe",
@@ -580,6 +585,9 @@
       "saving": "Enregistrement...",
       "updateProvider": "Mettre à jour le fournisseur",
       "createProvider": "Créer un fournisseur"
+    },
+    "messages": {
+      "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
     }
   },
   "microsoftForm": {

@@ -4,7 +4,7 @@ import React from 'react';
 import { BentoChip, BENTO_TONE_TEXT, type BentoTone } from '@alga-psa/ui/components/bento';
 import type { Asset, AssetStatus } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { resolveAssetStatusLabel } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import {
   AGENT_TONE,
   assetExtension,
@@ -130,7 +130,7 @@ export function AssetCoverageCell({
         warrantyPhrase(warrantyDaysRemaining(asset, now), t)
         ?? t('assetCells.coverage.noWarrantyDate', { defaultValue: 'no warranty date' })
       }
-      secondary={resolveAssetStatusLabel(t, asset.status, statuses)}
+      secondary={assetStatusLabel(t, asset.status, statuses)}
     />
   );
 }

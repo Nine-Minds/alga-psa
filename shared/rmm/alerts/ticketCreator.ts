@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
 import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../../services/tickets/ticketWatcherService';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -138,6 +139,8 @@ export async function createTicketForAlert(
     })
     .returning(['ticket_id', 'ticket_number']);
 
+  await TicketWatcherService.seedFromAttributes(trx, tenantId, ticket.ticket_id);
+
   if (params.assetId) {
     await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
   }
@@ -241,6 +244,7 @@ const TEMPLATE_PLACEHOLDERS: Record<string, (params: CreateAlertTicketParams) =>
   organization: ({ organizationName, event }) => organizationName ?? event.externalOrganizationId ?? '',
 };
 
+// LEVERAGE: pattern template-token-render — another {{key}} renderer; packages/tickets/src/lib/titleTokens.ts (listTokens/substituteTokens) is the shared engine
 function renderTemplate(template: string | undefined, params: CreateAlertTicketParams): string | null {
   if (!template) return null;
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) => {
@@ -283,11 +287,13 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
     .join('\n');
 }
 
+// LEVERAGE: pattern rmm-provider-registration — hand-maintained provider label map
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
   datto: 'Datto RMM',
   levelio: 'Level',
+  unifi: 'UniFi',
   huntress: 'Huntress',
   tanium: 'Tanium',
 };

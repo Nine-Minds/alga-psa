@@ -42,6 +42,8 @@ export interface AccountingSyncCycleStats {
   paymentsReversed: number;
   paymentsSkipped: number;
   driftFound: number;
+  /** Invoices voided in the provider and, in turn, voided in Alga this cycle. */
+  externalVoidsApplied: number;
   customersUpdated: number;
   opsProcessed: number;
   opsFailed: number;
@@ -57,6 +59,7 @@ export function emptyCycleStats(): AccountingSyncCycleStats {
     paymentsReversed: 0,
     paymentsSkipped: 0,
     driftFound: 0,
+    externalVoidsApplied: 0,
     customersUpdated: 0,
     opsProcessed: 0,
     opsFailed: 0,

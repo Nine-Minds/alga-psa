@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   redactSensitiveFields: vi.fn(),
   runWithApiKeyUser: vi.fn(),
+  awaitingAcceptance: vi.fn(),
 }));
 
 vi.mock('@alga-psa/users/actions', () => ({
@@ -37,6 +38,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   runAsSystem: mocks.runAsSystem,
+  getAdminConnection: vi.fn(),
+}));
+
+vi.mock('@alga-psa/licensing/lifecycle', () => ({
+  isCoManagedAwaitingAcceptanceLazily: mocks.awaitingAcceptance,
+  coManagedAcceptancePendingError: () => Object.assign(new Error('Customer acceptance required'), { code: 'CO_MANAGED_NOT_ACTIVE' }),
 }));
 
 vi.mock('../../../lib/db', () => ({
@@ -113,6 +120,7 @@ describe('user API context construction rejects client users', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.enforceApiRateLimit.mockResolvedValue(null);
+    mocks.awaitingAcceptance.mockResolvedValue(false);
     mocks.getTenantProduct.mockResolvedValue('psa');
     mocks.resolveProductApiBehavior.mockReturnValue('allowed');
     mocks.runWithTenant.mockImplementation(async (_tenant: string, cb: () => Promise<unknown>) => cb());
@@ -167,6 +175,25 @@ describe('user API context construction rejects client users', () => {
     await expect(
       authenticateApiKeyRequest(apiRequest({ 'x-api-key': 'k' }))
     ).rejects.toThrow('Invalid API key');
+  });
+
+  it('blocks pending customer API and multipart requests before the handler, then admits after acceptance', async () => {
+    mocks.validateApiKeyAnyTenant.mockResolvedValue(validKeyRecord());
+    mocks.findUserByIdForApi.mockResolvedValue(INTERNAL_USER);
+    mocks.awaitingAcceptance.mockResolvedValueOnce(true).mockResolvedValueOnce(true).mockResolvedValue(false);
+    const { withApiKeyAuth: enhanced } = await import('../../../lib/api/middleware/apiAuthMiddleware');
+    const handler = vi.fn(async () => new Response('ok') as any);
+    const wrapped = await enhanced(handler);
+    for (const contentType of ['application/json', 'multipart/form-data; boundary=test']) {
+      const response = await wrapped(new NextRequest('http://localhost/api/v1/tickets', {
+        method: 'POST', headers: { 'x-api-key': 'k', 'content-type': contentType }, body: 'body',
+      }));
+      expect(response.status).toBe(409);
+      expect((await response.json()).error.code).toBe('CO_MANAGED_NOT_ACTIVE');
+    }
+    expect(handler).not.toHaveBeenCalled();
+    expect((await wrapped(apiRequest({ 'x-api-key': 'k' }))).status).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it('legacy withApiKeyAuth and withAuth wrappers reject a client user with 401', async () => {

@@ -20,7 +20,7 @@ import { getConnection } from '@/lib/db/db';
 const reportSchema = z.object({
   contentType: z.enum(['ticket_comment', 'ticket_description']),
   contentId: z.string().min(1).max(200).optional(),
-  contentAuthorUserId: z.string().uuid().optional(),
+  contentAuthorUserId: z.string().guid().optional(),
   reason: z.string().max(2000).optional(),
 });
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }

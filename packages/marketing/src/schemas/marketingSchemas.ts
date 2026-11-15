@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const marketingCampaignStatusSchema = z.enum(['draft', 'active', 'completed', 'archived']);
 export const socialPostStatusSchema = z.enum(['draft', 'scheduled', 'awaiting-manual-publish', 'published', 'expired']);
@@ -13,15 +14,15 @@ export const campaignInputSchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
-export const campaignUpdateSchema = campaignInputSchema.partial();
+export const campaignUpdateSchema = partialWithoutDefaults(campaignInputSchema);
 
 export const contentInputSchema = z.object({
   title: z.string().trim().min(1).max(300),
   body_markdown: z.string().max(50000).default(''),
-  channel_variants: z.record(z.string().max(10000)).default({}),
-  campaign_id: z.string().uuid().optional().nullable(),
+  channel_variants: z.record(z.string(), z.string().max(10000)).default({}),
+  campaign_id: z.string().guid().optional().nullable(),
 });
-export const contentUpdateSchema = contentInputSchema.partial();
+export const contentUpdateSchema = partialWithoutDefaults(contentInputSchema);
 
 export const channelInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
@@ -29,23 +30,23 @@ export const channelInputSchema = z.object({
   handle_or_url: z.string().trim().max(500).optional().nullable(),
   is_active: z.boolean().optional(),
 });
-export const channelUpdateSchema = channelInputSchema.partial();
+export const channelUpdateSchema = partialWithoutDefaults(channelInputSchema);
 
 const slugRegex = /^[a-z0-9][a-z0-9-]{1,60}[a-z0-9]$/;
 export const captureFormInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   slug: z.string().regex(slugRegex, 'slug must be lowercase letters, digits, and dashes'),
   description: z.string().trim().max(2000).optional().nullable(),
-  campaign_id: z.string().uuid().optional().nullable(),
+  campaign_id: z.string().guid().optional().nullable(),
   creates_suggestion: z.boolean().optional(),
   is_active: z.boolean().optional(),
 });
-export const captureFormUpdateSchema = captureFormInputSchema.partial().omit({ slug: true });
+export const captureFormUpdateSchema = partialWithoutDefaults(captureFormInputSchema).omit({ slug: true });
 
 export const postCreateSchema = z.object({
-  content_id: z.string().uuid(),
-  campaign_id: z.string().uuid().optional().nullable(),
-  channel_ids: z.array(z.string().uuid()).min(1),
+  content_id: z.string().guid(),
+  campaign_id: z.string().guid().optional().nullable(),
+  channel_ids: z.array(z.string().guid()).min(1),
   scheduled_at: z.string().datetime({ offset: true }).optional().nullable(),
 });
 
@@ -64,8 +65,8 @@ export const markPublishedSchema = z.object({
 
 export const queueFiltersSchema = z.object({
   status: socialPostTargetStatusSchema.optional(),
-  channel_id: z.string().uuid().optional(),
-  campaign_id: z.string().uuid().optional(),
+  channel_id: z.string().guid().optional(),
+  campaign_id: z.string().guid().optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
 });
@@ -81,13 +82,13 @@ export const sequenceInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional().nullable(),
   status: marketingSequenceStatusSchema.optional(),
-  campaign_id: z.string().uuid().optional().nullable(),
+  campaign_id: z.string().guid().optional().nullable(),
   steps: z.array(sequenceStepInputSchema).max(50).default([]),
 });
-export const sequenceUpdateSchema = sequenceInputSchema.partial();
+export const sequenceUpdateSchema = partialWithoutDefaults(sequenceInputSchema);
 
 export const enrollContactSchema = z.object({
-  contact_id: z.string().uuid(),
+  contact_id: z.string().guid(),
 });
 
 /** Public capture payload — treat as hostile; endpoint layer rate-limits. */

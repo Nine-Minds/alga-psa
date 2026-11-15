@@ -175,7 +175,7 @@ describe('Duplicate ticket (integration)', () => {
       tenant: tenantId,
       apply_rule_id: uuidv4(),
       template_id: templateId,
-      board_id: boardId, // scoped to this test's board so no other data is affected
+      where: JSON.stringify({ join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: boardId }] }),
       is_enabled: true,
     });
     return templateId;
