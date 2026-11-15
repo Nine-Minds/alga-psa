@@ -206,3 +206,16 @@ describe('document binding catalog generation', () => {
     ]);
   });
 });
+
+describe('quote line-item field picker', () => {
+  it('offers the optional-item flags and marker alongside is_recurring', async () => {
+    const { getDocumentItemFields } = await import('./documentBindingCatalog');
+    const byName = Object.fromEntries(getDocumentItemFields('quote').map((field) => [field.name, field.valueType]));
+    expect(byName).toMatchObject({
+      is_recurring: 'boolean',
+      is_optional: 'boolean',
+      is_selected: 'boolean',
+      optional_label: 'string',
+    });
+  });
+});

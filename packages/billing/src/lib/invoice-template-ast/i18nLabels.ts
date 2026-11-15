@@ -1,5 +1,6 @@
 import type {
   TemplateAst,
+  TemplateChildRows,
   TemplateI18nRef,
   TemplateI18nText,
   TemplateNode,
@@ -46,20 +47,56 @@ const resolveExpression = (
   return expression;
 };
 
+/** Value labels resolve like any other display string; keys are data values and never change. */
+const resolveValueLabels = <T extends { valueLabels?: Record<string, TemplateI18nText> }>(
+  holder: T,
+  t: TemplateLabelTranslator
+): T =>
+  holder.valueLabels
+    ? {
+        ...holder,
+        valueLabels: Object.fromEntries(
+          Object.entries(holder.valueLabels).map(([key, label]) => [
+            key,
+            isTemplateI18nRef(label) ? resolveText(label, t) : label,
+          ])
+        ),
+      }
+    : holder;
+
 const resolveColumns = (
   columns: TemplateTableColumn[],
   t: TemplateLabelTranslator
 ): TemplateTableColumn[] =>
-  columns.map((column) =>
-    isTemplateI18nRef(column.header) ? { ...column, header: resolveText(column.header, t) } : column
-  );
+  columns.map((column) => {
+    const withHeader = isTemplateI18nRef(column.header) ? { ...column, header: resolveText(column.header, t) } : column;
+    const withLabels = resolveValueLabels(withHeader, t);
+    return withLabels.lines
+      ? { ...withLabels, lines: withLabels.lines.map((line) => resolveValueLabels(line, t)) }
+      : withLabels;
+  });
+
+const resolveChildRows = (childRows: TemplateChildRows, t: TemplateLabelTranslator): TemplateChildRows => ({
+  ...childRows,
+  cells: Object.fromEntries(
+    Object.entries(childRows.cells).map(([columnId, cell]) => {
+      const withLabels = resolveValueLabels(cell, t);
+      return [
+        columnId,
+        withLabels.lines
+          ? { ...withLabels, lines: withLabels.lines.map((line) => resolveValueLabels(line, t)) }
+          : withLabels,
+      ];
+    })
+  ),
+});
 
 const resolveTotalsRows = (
   rows: TemplateTotalsRow[],
   t: TemplateLabelTranslator
 ): TemplateTotalsRow[] =>
   rows.map((row) =>
-    isTemplateI18nRef(row.label) ? { ...row, label: resolveText(row.label, t) } : row
+    resolveValueLabels(isTemplateI18nRef(row.label) ? { ...row, label: resolveText(row.label, t) } : row, t)
   );
 
 const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNode => {
@@ -79,7 +116,10 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
         ? { ...node, content: resolveExpression(node.content, t) }
         : node;
     case 'field':
-      return isTemplateI18nRef(node.label) ? { ...node, label: resolveText(node.label, t) } : node;
+      return resolveValueLabels(
+        isTemplateI18nRef(node.label) ? { ...node, label: resolveText(node.label, t) } : node,
+        t
+      );
     case 'image':
       return node.alt?.type === 'i18n' ? { ...node, alt: resolveExpression(node.alt, t) } : node;
     case 'table':
@@ -87,6 +127,7 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
       return {
         ...node,
         columns: resolveColumns(node.columns, t),
+        ...(node.type === 'dynamic-table' && node.childRows ? { childRows: resolveChildRows(node.childRows, t) } : {}),
         ...(isTemplateI18nRef(node.emptyStateText)
           ? { emptyStateText: resolveText(node.emptyStateText, t) }
           : {}),
@@ -103,7 +144,8 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
  * translation, leaving literals exactly as authored.
  *
  * Only display fields are walked — section titles, field labels, table column
- * headers, empty-state text, totals row labels and `i18n` text expressions.
+ * headers, empty-state text, totals row labels, value labels and `i18n` text
+ * expressions.
  * Node ids, binding ids, transform ids, column ids and paths are machine
  * identifiers and are never touched: translating one would silently corrupt a
  * rendered document while passing every gate.

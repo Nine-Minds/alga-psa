@@ -11,7 +11,8 @@
       "oneTime": "Engångsdebitering",
       "other": "Övrigt",
       "quarterly": "Kvartalsvis",
-      "semiAnnually": "Halvårsvis"
+      "semiAnnually": "Halvårsvis",
+      "weekly": "Veckovis"
     },
     "cadenceTotal": "{{cadence}} totalt",
     "currency": "Valuta",
@@ -140,7 +141,9 @@
     "replacementSerial": "Ersättningens serienummer",
     "shipping": "Frakt",
     "returnBy": "Retur senast",
-    "returnShipTo": "Returnera till"
+    "returnShipTo": "Returnera till",
+    "yes": "Ja",
+    "no": "Nej"
   },
   "errors": {
     "permissions": {
