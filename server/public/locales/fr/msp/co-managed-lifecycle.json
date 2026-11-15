@@ -77,5 +77,18 @@
     "errorNotFound": "Cet accord est introuvable.",
     "errorGeneric": "La requête n'a pas pu être traitée.",
     "loading": "Chargement…"
+  },
+  "seatProjects": {
+    "errorDenied": "Vous n'avez pas l'autorisation de partager des projets.",
+    "errorProject": "Seul un projet de ce client peut être partagé.",
+    "errorNotFound": "Cet accord est introuvable.",
+    "errorGeneric": "La requête n'a pas pu être traitée.",
+    "columnProject": "Projet",
+    "columnShared": "Partagé avec les techniciens",
+    "inactive": "Inactif",
+    "shareLabel": "Partager {{name}} avec les techniciens",
+    "intro": "Les techniciens ne voient que les projets que vous partagez. L'arrêt du partage prend effet à leur prochaine requête.",
+    "loading": "Chargement des projets…",
+    "empty": "Ce client n'a aucun projet à partager."
   }
 }

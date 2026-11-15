@@ -77,5 +77,18 @@
     "errorNotFound": "Diese Vereinbarung wurde nicht gefunden.",
     "errorGeneric": "Die Anfrage konnte nicht verarbeitet werden.",
     "loading": "Wird geladen…"
+  },
+  "seatProjects": {
+    "errorDenied": "Sie haben keine Berechtigung, Projekte freizugeben.",
+    "errorProject": "Nur ein Projekt dieses Kunden kann freigegeben werden.",
+    "errorNotFound": "Diese Vereinbarung wurde nicht gefunden.",
+    "errorGeneric": "Die Anfrage konnte nicht verarbeitet werden.",
+    "columnProject": "Projekt",
+    "columnShared": "Für Techniker freigegeben",
+    "inactive": "Inaktiv",
+    "shareLabel": "{{name}} für Techniker freigeben",
+    "intro": "Techniker sehen nur die Projekte, die Sie freigeben. Das Aufheben der Freigabe gilt ab ihrer nächsten Anfrage.",
+    "loading": "Projekte werden geladen…",
+    "empty": "Dieser Kunde hat keine Projekte, die freigegeben werden können."
   }
 }

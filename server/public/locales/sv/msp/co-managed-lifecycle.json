@@ -77,5 +77,18 @@
     "errorNotFound": "Det här avtalet hittades inte.",
     "errorGeneric": "Begäran kunde inte behandlas.",
     "loading": "Läser in…"
+  },
+  "seatProjects": {
+    "errorDenied": "Du har inte behörighet att dela projekt.",
+    "errorProject": "Endast ett projekt för den här kunden kan delas.",
+    "errorNotFound": "Det här avtalet hittades inte.",
+    "errorGeneric": "Begäran kunde inte behandlas.",
+    "columnProject": "Projekt",
+    "columnShared": "Delat med tekniker",
+    "inactive": "Inaktiv",
+    "shareLabel": "Dela {{name}} med tekniker",
+    "intro": "Tekniker ser bara de projekt du delar. Att sluta dela gäller från deras nästa begäran.",
+    "loading": "Läser in projekt…",
+    "empty": "Den här kunden har inga projekt att dela."
   }
 }

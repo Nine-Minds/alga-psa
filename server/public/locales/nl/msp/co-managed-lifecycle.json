@@ -77,5 +77,18 @@
     "errorNotFound": "Deze overeenkomst is niet gevonden.",
     "errorGeneric": "Het verzoek kon niet worden verwerkt.",
     "loading": "Laden…"
+  },
+  "seatProjects": {
+    "errorDenied": "U hebt geen toestemming om projecten te delen.",
+    "errorProject": "Alleen een project van deze klant kan worden gedeeld.",
+    "errorNotFound": "Deze overeenkomst is niet gevonden.",
+    "errorGeneric": "Het verzoek kon niet worden verwerkt.",
+    "columnProject": "Project",
+    "columnShared": "Gedeeld met technici",
+    "inactive": "Inactief",
+    "shareLabel": "{{name}} delen met technici",
+    "intro": "Technici zien alleen de projecten die u deelt. Stoppen met delen geldt vanaf hun volgende verzoek.",
+    "loading": "Projecten laden…",
+    "empty": "Deze klant heeft geen projecten om te delen."
   }
 }

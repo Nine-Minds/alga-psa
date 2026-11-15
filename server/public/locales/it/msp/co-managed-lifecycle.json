@@ -77,5 +77,18 @@
     "errorNotFound": "Impossibile trovare questo accordo.",
     "errorGeneric": "Impossibile elaborare la richiesta.",
     "loading": "Caricamento…"
+  },
+  "seatProjects": {
+    "errorDenied": "Non hai l'autorizzazione per condividere progetti.",
+    "errorProject": "È possibile condividere solo un progetto di questo cliente.",
+    "errorNotFound": "Impossibile trovare questo accordo.",
+    "errorGeneric": "Impossibile elaborare la richiesta.",
+    "columnProject": "Progetto",
+    "columnShared": "Condiviso con i tecnici",
+    "inactive": "Inattivo",
+    "shareLabel": "Condividi {{name}} con i tecnici",
+    "intro": "I tecnici vedono solo i progetti che condividi. L'annullamento della condivisione ha effetto dalla loro richiesta successiva.",
+    "loading": "Caricamento dei progetti…",
+    "empty": "Questo cliente non ha progetti da condividere."
   }
 }
