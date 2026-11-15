@@ -87,7 +87,7 @@ describeDb('seat effort summary is projected to the viewer on the server (T037)'
     // The release flag provider is the stand-in; the capability gate and the seat resolvers are real.
     registerFeatureFlagChecker(async () => flag.on);
     flag.on = true;
-    db = await createTestDbConnection({ databaseName: 's28_operational_time_test' });
+    db = await createTestDbConnection({ databaseName: 's28_effort_summary_test' });
     conn.db = db;
   }, 600_000);
   afterEach(() => clearCapabilityCache());
