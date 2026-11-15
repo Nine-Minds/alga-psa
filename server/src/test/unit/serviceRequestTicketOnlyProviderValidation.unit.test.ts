@@ -85,7 +85,7 @@ describe('ticket-only execution provider description', () => {
   it('renders as a filled two-column table in notification email HTML', () => {
     const html = convertBlockNoteToHTML(JSON.parse(buildTicketDescription(ctx(payload), {})));
 
-    expect(html).toContain('<table>');
+    expect(html).toContain('<table');
     expect(html).toContain('Employee Name');
     expect(html).toContain('Jane Doe');
     expect(html).not.toContain('employee_name');
