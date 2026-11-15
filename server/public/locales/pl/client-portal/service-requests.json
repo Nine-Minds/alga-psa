@@ -11,8 +11,6 @@
   "detail": {
     "version": "Wersja {{version}}",
     "submitted": "Zgłoszenie przesłane",
-    "requestIdLabel": "ID zgłoszenia: ",
-    "ticketIdLabel": "ID zgłoszenia: ",
     "unableToSubmit": "Nie można przesłać zgłoszenia",
     "formTitle": "Formularz zgłoszenia",
     "noFields": "Nie skonfigurowano żadnych pól.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Powrót do Moich zgłoszeń",
-    "requestIdLabel": "ID zgłoszenia:",
     "statusSection": "Status",
     "submittedAt": "Przesłano: {{date}}",
     "executionStatus": "Status wykonania: {{status}}",
-    "ticketLabel": "Zgłoszenie:",
     "workflowLabel": "Workflow (ID: {{id}})",
     "submittedAnswersTitle": "Przesłane odpowiedzi",
     "noResponse": "Brak odpowiedzi",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Twoje zgłoszenia"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, przesłano {{date}}"
+  },
+  "ticketReference": {
+    "label": "Zgłoszenie",
+    "viewTicket": "Zobacz zgłoszenie"
   }
 }

@@ -11,8 +11,6 @@
   "detail": {
     "version": "Version {{version}}",
     "submitted": "Anfrage eingereicht",
-    "requestIdLabel": "Anfrage-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Anfrage kann nicht eingereicht werden",
     "formTitle": "Anfrageformular",
     "noFields": "Keine Felder konfiguriert.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Zurück zu Meine Anfragen",
-    "requestIdLabel": "Anfrage-ID:",
     "statusSection": "Status",
     "submittedAt": "Eingereicht: {{date}}",
     "executionStatus": "Ausführungsstatus: {{status}}",
-    "ticketLabel": "Ticket:",
     "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Eingereichte Antworten",
     "noResponse": "Keine Antwort",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Ihre Anfragen"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, eingereicht am {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket anzeigen"
   }
 }

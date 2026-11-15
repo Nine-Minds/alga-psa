@@ -11,8 +11,6 @@
   "detail": {
     "version": "Versione {{version}}",
     "submitted": "Richiesta inviata",
-    "requestIdLabel": "ID richiesta: ",
-    "ticketIdLabel": "ID ticket: ",
     "unableToSubmit": "Impossibile inviare la richiesta",
     "formTitle": "Modulo della richiesta",
     "noFields": "Nessun campo configurato.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Torna a Le mie richieste",
-    "requestIdLabel": "ID richiesta:",
     "statusSection": "Stato",
     "submittedAt": "Inviata: {{date}}",
     "executionStatus": "Stato di esecuzione: {{status}}",
-    "ticketLabel": "Ticket:",
     "workflowLabel": "ID workflow: {{id}}",
     "submittedAnswersTitle": "Risposte inviate",
     "noResponse": "Nessuna risposta",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Le tue richieste"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, inviata il {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Visualizza ticket"
   }
 }

@@ -83,6 +83,7 @@ function buildDetail(overrides: Record<string, unknown> = {}) {
     execution_status: 'succeeded',
     execution_error_summary: null,
     created_ticket_id: null,
+    ticket_number: null,
     workflow_execution_id: null,
     submitted_at: new Date('2026-09-02T12:00:00Z'),
     form_schema_snapshot: {

@@ -17,6 +17,7 @@ type TranslationOptions = {
 
 const listRequestServiceCatalogGroupsActionMock = vi.fn();
 const listMyRecentServiceRequestsActionMock = vi.fn();
+const getMyServiceRequestSubmissionSummaryActionMock = vi.fn();
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
   template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => String(values[key] ?? ''));
@@ -51,6 +52,12 @@ vi.mock('next/link', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
   getServerTranslation: vi.fn().mockResolvedValue({ t }),
+  getServerLocale: vi.fn().mockResolvedValue('en'),
+  formatDate: (date: Date) => `formatted:${date.toISOString()}`,
+}));
+
+vi.mock('@alga-psa/clients/actions/countryActions', () => ({
+  getDateFormatPreference: vi.fn().mockResolvedValue('system'),
 }));
 
 vi.mock('@/lib/serverProductRouteGuard', () => ({
@@ -63,6 +70,14 @@ vi.mock('server/src/app/client-portal/request-services/actions', () => ({
   listMyRecentServiceRequestsAction: (...args: unknown[]) =>
     listMyRecentServiceRequestsActionMock(...args),
 }));
+
+vi.mock(
+  'server/src/app/client-portal/request-services/my-requests/actions',
+  () => ({
+    getMyServiceRequestSubmissionSummaryAction: (...args: unknown[]) =>
+      getMyServiceRequestSubmissionSummaryActionMock(...args),
+  })
+);
 
 vi.mock(
   'server/src/app/client-portal/request-services/my-requests/MyRequestsTable',
@@ -122,5 +137,76 @@ describe('/client-portal/request-services catalog', () => {
     // Both destination modes render as ordinary catalog entries.
     expect(screen.getByText('Onboarding Questionnaire')).toBeInTheDocument();
     expect(screen.getByText('Access Request')).toBeInTheDocument();
+  });
+
+  describe('success banner', () => {
+    const summary = {
+      submission_id: 'submission-guid-1',
+      request_name: 'Access Request',
+      execution_status: 'succeeded',
+      submitted_at: new Date('2026-09-02T12:00:00Z'),
+      created_ticket_id: 'ticket-guid-1',
+      ticket_number: '100150',
+    };
+
+    beforeEach(() => {
+      listRequestServiceCatalogGroupsActionMock.mockResolvedValue([]);
+    });
+
+    it('shows the request name and a linked ticket number without any GUID text', async () => {
+      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(summary);
+
+      render(
+        await ServiceRequestsPage({
+          searchParams: Promise.resolve({ submitted: 'submission-guid-1', ticketId: 'forged-ticket-id' }),
+        })
+      );
+
+      expect(getMyServiceRequestSubmissionSummaryActionMock).toHaveBeenCalledWith('submission-guid-1');
+      expect(screen.getByText(/Access Request, submitted/)).toBeInTheDocument();
+      const link = screen.getByRole('link', { name: '#100150' });
+      expect(link).toHaveAttribute('href', '/client-portal/tickets/ticket-guid-1');
+      expect(screen.queryByText(/submission-guid-1/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/ticket-guid-1/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/forged-ticket-id/)).not.toBeInTheDocument();
+      expect(document.querySelector('a[href*="forged-ticket-id"]')).toBeNull();
+    });
+
+    it('renders no banner when the summary does not resolve', async () => {
+      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(null);
+
+      render(
+        await ServiceRequestsPage({
+          searchParams: Promise.resolve({ submitted: 'unknown-id', ticketId: 'forged-ticket-id' }),
+        })
+      );
+
+      expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
+      expect(screen.queryByText(/forged-ticket-id/)).not.toBeInTheDocument();
+    });
+
+    it('does not look anything up when submitted is absent', async () => {
+      render(await ServiceRequestsPage({}));
+
+      expect(getMyServiceRequestSubmissionSummaryActionMock).not.toHaveBeenCalled();
+      expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
+    });
+
+    it('renders the banner without a ticket line for a store-only submission', async () => {
+      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue({
+        ...summary,
+        created_ticket_id: null,
+        ticket_number: null,
+      });
+
+      render(
+        await ServiceRequestsPage({ searchParams: Promise.resolve({ submitted: 'submission-guid-1' }) })
+      );
+
+      expect(screen.getByText(t('detail.submitted'))).toBeInTheDocument();
+      expect(screen.getByText(/Access Request, submitted/)).toBeInTheDocument();
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.queryByText(t('ticketReference.label'))).not.toBeInTheDocument();
+    });
   });
 });

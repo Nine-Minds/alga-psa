@@ -8,6 +8,7 @@ import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth
 import {
   listClientServiceRequestSubmissions,
   getClientServiceRequestSubmissionDetail,
+  getClientServiceRequestSubmissionSummary,
   type ServiceRequestClientSubmissionListRow,
   type ServiceRequestClientSubmissionDetail,
 } from '../../../../lib/service-requests';
@@ -40,5 +41,21 @@ export const getMyServiceRequestSubmissionDetailAction = withAuth(async (
   return withTransaction(knex, async (trx) => {
     const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
     return getClientServiceRequestSubmissionDetail(trx, tenant, clientId, submissionId);
+  });
+});
+
+export const getMyServiceRequestSubmissionSummaryAction = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  submissionId: string
+): Promise<ServiceRequestClientSubmissionListRow | null> => {
+  if (!isClientUserType(currentUser.user_type)) {
+    return null;
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
+    return getClientServiceRequestSubmissionSummary(trx, tenant, clientId, submissionId);
   });
 });

@@ -41,6 +41,8 @@ export interface ServiceRequestClientSubmissionDetail {
   execution_status: 'pending' | 'succeeded' | 'failed';
   execution_error_summary: string | null;
   created_ticket_id: string | null;
+  /** Display number of the linked ticket (joined from tickets table). */
+  ticket_number: string | null;
   workflow_execution_id: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
@@ -299,22 +301,21 @@ export async function getServiceRequestSubmissionHistoryDetail(
   return (row as unknown as ServiceRequestSubmissionHistoryDetail | undefined) ?? null;
 }
 
-export async function listClientServiceRequestSubmissions(
-  knex: Knex,
-  tenant: string,
-  clientId: string
-): Promise<ServiceRequestClientSubmissionListRow[]> {
+/**
+ * The one client-scoped submission query shape: client filter, tenant-safe left
+ * join to tickets, and the summary columns (including the ticket display number).
+ */
+function clientSubmissionSummaryQuery(knex: Knex, tenant: string, clientId: string) {
   const db = tenantDb(knex, tenant);
   const query = db.table('service_request_submissions as submission');
   db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
     type: 'left',
     rootTenantColumn: 'submission.tenant',
   });
-  const rows = await query
+  return query
     .where({
       'submission.client_id': clientId,
     })
-    .orderBy('submission.created_at', 'desc')
     .select(
       'submission.submission_id',
       'submission.request_name',
@@ -323,8 +324,32 @@ export async function listClientServiceRequestSubmissions(
       'submission.created_ticket_id',
       'ticket.ticket_number'
     );
+}
+
+export async function listClientServiceRequestSubmissions(
+  knex: Knex,
+  tenant: string,
+  clientId: string
+): Promise<ServiceRequestClientSubmissionListRow[]> {
+  const rows = await clientSubmissionSummaryQuery(knex, tenant, clientId).orderBy(
+    'submission.created_at',
+    'desc'
+  );
 
   return rows as unknown as ServiceRequestClientSubmissionListRow[];
+}
+
+export async function getClientServiceRequestSubmissionSummary(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  submissionId: string
+): Promise<ServiceRequestClientSubmissionListRow | null> {
+  const row = await clientSubmissionSummaryQuery(knex, tenant, clientId)
+    .where({ 'submission.submission_id': submissionId })
+    .first();
+
+  return (row as unknown as ServiceRequestClientSubmissionListRow | undefined) ?? null;
 }
 
 export async function getClientServiceRequestSubmissionDetail(
@@ -336,6 +361,10 @@ export async function getClientServiceRequestSubmissionDetail(
   const db = tenantDb(knex, tenant);
   const query = db.table('service_request_submissions as submission');
   db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
+    rootTenantColumn: 'submission.tenant',
+  });
+  db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
+    type: 'left',
     rootTenantColumn: 'submission.tenant',
   });
   const row = await query
@@ -353,6 +382,7 @@ export async function getClientServiceRequestSubmissionDetail(
       'submission.execution_status',
       'submission.execution_error_summary',
       'submission.created_ticket_id',
+      'ticket.ticket_number',
       'submission.workflow_execution_id',
       'submission.created_at as submitted_at',
       'version.form_schema_snapshot'

@@ -11,8 +11,6 @@
   "detail": {
     "version": "Version {{version}}",
     "submitted": "Request submitted",
-    "requestIdLabel": "Request ID: ",
-    "ticketIdLabel": "Ticket ID: ",
     "unableToSubmit": "Unable to submit request",
     "formTitle": "Request Form",
     "noFields": "No fields configured.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Back to My Requests",
-    "requestIdLabel": "Request ID:",
     "statusSection": "Status",
     "submittedAt": "Submitted: {{date}}",
     "executionStatus": "Execution status: {{status}}",
-    "ticketLabel": "Ticket:",
     "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Submitted Answers",
     "noResponse": "No response",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Your requests"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, submitted {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "View ticket"
   }
 }

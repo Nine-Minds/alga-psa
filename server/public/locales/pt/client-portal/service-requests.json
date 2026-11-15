@@ -11,8 +11,6 @@
   "detail": {
     "version": "Versão {{version}}",
     "submitted": "Solicitação enviada",
-    "requestIdLabel": "ID da solicitação:",
-    "ticketIdLabel": "ID do ticket:",
     "unableToSubmit": "Não foi possível enviar a solicitação",
     "formTitle": "Formulário de solicitação",
     "noFields": "Nenhum campo configurado.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Voltar para Meus Pedidos",
-    "requestIdLabel": "ID da solicitação:",
     "statusSection": "Status",
     "submittedAt": "Enviado: {{date}}",
     "executionStatus": "Status de execução: {{status}}",
-    "ticketLabel": "Ticket:",
     "workflowLabel": "Fluxo de trabalho: {{id}}",
     "submittedAnswersTitle": "Respostas enviadas",
     "noResponse": "Sem resposta",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Suas solicitações"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, enviada em {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ver ticket"
   }
 }

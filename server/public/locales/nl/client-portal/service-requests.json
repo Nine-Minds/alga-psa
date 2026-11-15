@@ -11,8 +11,6 @@
   "detail": {
     "version": "Versie {{version}}",
     "submitted": "Aanvraag ingediend",
-    "requestIdLabel": "Aanvraag-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Aanvraag kan niet worden ingediend",
     "formTitle": "Aanvraagformulier",
     "noFields": "Geen velden geconfigureerd.",
@@ -46,11 +44,9 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Terug naar Mijn aanvragen",
-    "requestIdLabel": "Aanvraag-ID:",
     "statusSection": "Status",
     "submittedAt": "Ingediend: {{date}}",
     "executionStatus": "Uitvoeringsstatus: {{status}}",
-    "ticketLabel": "Ticket:",
     "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Ingediende antwoorden",
     "noResponse": "Geen antwoord",
@@ -77,5 +73,12 @@
   },
   "myRequestsAll": {
     "title": "Uw verzoeken"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, ingediend op {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket bekijken"
   }
 }

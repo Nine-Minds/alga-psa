@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration (real DB, extend server/src/test/integration/serviceRequestPortalHistory.integration.test.ts): a ticket-linked submission returns its ticket_number from listClientServiceRequestSubmissions, getClientServiceRequestSubmissionSummary and getClientServiceRequestSubmissionDetail; a store-only submission returns created_ticket_id null and ticket_number null; the summary for another client's submission id returns null",
+    "implemented": true,
+    "featureIds": ["F002", "F003", "F004"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit (server/src/test/unit/app/client-portal/request-services/requestServicesCatalog.page.test.tsx): with submitted=<id> and a resolving summary (ticket_number '100150'), the banner shows the request name and a '#100150' link to /client-portal/tickets/<ticket_id>, and no submission or ticket id text appears; a 'ticketId' search param is never rendered; an unresolved summary (null) renders no banner; a store-only summary renders the banner with no ticket line",
+    "implemented": true,
+    "featureIds": ["F005", "F006", "F008", "F009"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit (update my-requests/[submissionId]/page.test.tsx): detail page renders a '#<ticket_number>' link to /client-portal/tickets/<ticket_id> and the submission_id and created_ticket_id strings do not appear as text; with ticket_number null the link reads 'View ticket'",
+    "implemented": true,
+    "featureIds": ["F006", "F011", "F012"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit (update server/src/test/unit/app/client-portal/request-services/submitRequestServiceDefinitionAction.test.ts): successful submit redirects to /client-portal/request-services?submitted=submission-1 with no ticketId, after the transaction resolves",
+    "implemented": true,
+    "featureIds": ["F001"]
+  }
+]
