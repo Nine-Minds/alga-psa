@@ -19,7 +19,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
-const authMocks = vi.hoisted(() => ({ user: null as any, tenant: null as string | null }));
+const authMocks = vi.hoisted(() => ({ user: null as any, tenant: null as string | null, denied: new Set<string>() }));
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -35,9 +35,11 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth')>()),
   withAuth: (action: any) => (...args: any[]) => action(authMocks.user, { tenant: authMocks.tenant }, ...args),
   withOptionalAuth: (action: any) => (...args: any[]) => action(authMocks.user, { tenant: authMocks.tenant }, ...args),
-  hasPermission: async () => true,
+  hasPermission: async (_user: unknown, resource: string, action: string) => !authMocks.denied.has(`${resource}:${action}`),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async (_user: unknown, resource: string, action: string) => !authMocks.denied.has(`${resource}:${action}`),
+}));
 // Role permissions grant everything here, as the seat role does for tags (`tag:create`, `tag:update`): what refuses a
 // seat technician is the seat authority, not the role.
 vi.mock('../../../../packages/tags/src/lib/authHelpers', () => ({
@@ -141,6 +143,7 @@ describeDb('co-managed seat bulk handoff and seat technician tagging (F064 / F06
     process.env.FORCE_CAPABILITIES = 'co-managed-seat:on';
     authMocks.tenant = f.tenant;
     f.submissionId = randomUUID();
+    authMocks.denied.clear();
     as(f.staff);
   });
   afterAll(async () => { delete process.env.FORCE_CAPABILITIES; await db?.destroy().catch(() => undefined); });
@@ -268,6 +271,12 @@ describeDb('co-managed seat bulk handoff and seat technician tagging (F064 / F06
     const tech = await direction(f.tech);
     const handedBack = tech.tickets.find((t: any) => keyOf(t.ticket_id) === 'tech-qualifies');
     expect(handedBack).toMatchObject({ seat_responsibility: 'msp', seat_responsibility_revision: 2 });
+
+    // The offer is made on the bulk actions' own terms: a reader who may not update tickets is offered neither direction.
+    authMocks.denied.add('ticket:update');
+    expect((await direction(f.tech)).direction).toBeUndefined();
+    expect((await direction(f.staff)).direction).toBeUndefined();
+    expect((await direction(f.staff)).offered).toBe(true);
   });
 
   // T034 / F064: each direction belongs to one kind of caller

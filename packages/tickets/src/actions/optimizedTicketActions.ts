@@ -2363,7 +2363,13 @@ export const getTicketsForList = withAuth(async (
     // Responsibility column: asked only of a reader a provider offers it to (a tenant the seat shape is not released for resolves to none, with no query).
     const responsibility = await resolveTicketResponsibility({ tenant, subject: authorizationContext.authorizationSubject });
     // Bulk handoff: the direction this reader may hand tickets over, and the revision each row's handoff must name.
-    const handoff = await resolveTicketHandoff({ tenant, subject: authorizationContext.authorizationSubject });
+    // Offered on the bulk actions' own terms (an internal user who may update tickets), so the list is the one place
+    // that decides the offer: the page's role-permission list is not, since a seat technician's role cannot read it.
+    // Asked only once a provider offers a direction, so a tenant the seat shape is not released for pays nothing.
+    const offeredHandoff = await resolveTicketHandoff({ tenant, subject: authorizationContext.authorizationSubject });
+    const handoff = offeredHandoff && user.user_type === 'internal' && await hasPermission(user, 'ticket', 'update', trx)
+      ? offeredHandoff
+      : null;
     // One read serves both: the responsibility column and the handoff revisions come from the same statement.
     const reader = responsibility ?? handoff?.provider ?? null;
     if (reader) {

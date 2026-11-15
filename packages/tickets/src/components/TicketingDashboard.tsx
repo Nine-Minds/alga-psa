@@ -3335,7 +3335,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
         showDelete={!workspaceReadOnly}
-        handoffDirection={canUpdateTickets ? seatHandoffDirection : undefined}
+        // The list offers a direction only to a reader the bulk action accepts (it checks ticket:update itself), so
+        // this does not lean on canUpdateTickets: that comes from a role-permission read a seat technician cannot make.
+        handoffDirection={workspaceReadOnly ? undefined : seatHandoffDirection}
         onHandoff={() => setIsBulkHandoffOpen(true)}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
