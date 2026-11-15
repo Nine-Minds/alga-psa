@@ -14,6 +14,12 @@ const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getClientContactVisibilityContextMock = vi.fn();
 
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -195,6 +201,10 @@ function buildTrx(params: {
       };
 
       return queryBuilder;
+    }
+
+    if (table === 'user_client_portfolios') {
+      return { where: vi.fn().mockReturnValue({ orderBy: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue([]) }) }) };
     }
 
     if (table === 'user_roles' || table === 'team_members') {

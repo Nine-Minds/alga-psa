@@ -8,6 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import ErroredSyncOpsDialog from './ErroredSyncOpsDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -46,6 +47,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
   const [healthHidden, setHealthHidden] = React.useState(false);
   const [syncNowRunning, setSyncNowRunning] = React.useState(false);
   const [syncNowFeedback, setSyncNowFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [erroredOpsOpen, setErroredOpsOpen] = React.useState(false);
   const [autoSyncToggling, setAutoSyncToggling] = React.useState(false);
   const [autoProvisionToggling, setAutoProvisionToggling] = React.useState(false);
 
@@ -121,7 +123,7 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
   const providerLabel = isXero ? 'Xero' : 'QuickBooks';
   const nonzeroCounts = [
     { value: health.pendingOps, label: t('integrations.qbo.sync.pendingOps', { defaultValue: 'Pending ops' }) },
-    { value: health.erroredOps, label: t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' }) },
+    { value: health.erroredOps, label: t('integrations.qbo.sync.erroredOps', { defaultValue: 'Errored ops' }), onClick: () => setErroredOpsOpen(true), buttonId: 'qbo-sync-errored-ops-button' },
     { value: health.driftCount, label: t('integrations.qbo.sync.driftCount', { defaultValue: 'Drift' }) },
     { value: health.openExceptions, label: t('integrations.qbo.sync.openExceptions', { defaultValue: 'Open exceptions' }), href: '/msp/user-activities' }
   ].filter((item) => item.value > 0);
@@ -236,7 +238,15 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
                 {nonzeroCounts.map((item) => (
                   <div key={item.label} className="rounded border bg-muted/10 p-3 text-center">
                     <div className="text-2xl font-semibold">
-                      {item.href ? <Link href={item.href} className="underline">{item.value}</Link> : item.value}
+                      {item.href ? <Link href={item.href} className="underline">{item.value}</Link> : item.onClick ? (
+                        <button
+                          type="button"
+                          id={item.buttonId}
+                          className="underline"
+                          aria-label={t('integrations.qbo.sync.erroredOpsOpen', { defaultValue: 'View errored operations' })}
+                          onClick={item.onClick}
+                        >{item.value}</button>
+                      ) : item.value}
                     </div>
                     <div className="text-xs text-muted-foreground">{item.label}</div>
                   </div>
@@ -244,6 +254,14 @@ function SyncHealthPanel({ adapterType }: SyncHealthPanelProps) {
               </div>
             </div>
           ) : null}
+
+          <ErroredSyncOpsDialog
+            isOpen={erroredOpsOpen}
+            onClose={() => setErroredOpsOpen(false)}
+            adapterType={isXero ? 'xero' : 'quickbooks_online'}
+            realmId={defaultRealm}
+            providerLabel={providerLabel}
+          />
 
           {/* QBO 'Automatically apply credits' conflicts with Alga-driven credit application */}
           {health.autoApplyCreditsEnabled === true && (

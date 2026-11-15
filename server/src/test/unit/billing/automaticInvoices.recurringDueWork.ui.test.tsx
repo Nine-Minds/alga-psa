@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import {
@@ -123,6 +124,12 @@ function createQueryBuilder(rows: Row[]) {
         resultRows = resultRows.filter((row) =>
           applyOperator(String(row[column] ?? '').slice(0, 10), operator, expected),
         );
+        return builder;
+      }
+
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (commercialOnly) {
+        resultRows = resultRows.filter(commercialOnly);
         return builder;
       }
 

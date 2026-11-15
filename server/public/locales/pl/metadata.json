@@ -371,6 +371,10 @@
       "title": "Zasoby",
       "custody": {
         "title": "Sprzęt w przechowaniu"
+      },
+      "audits": {
+        "title": "Audyty lokalizacji",
+        "detailTitle": "Audyt lokalizacji"
       }
     },
     "createContact": {

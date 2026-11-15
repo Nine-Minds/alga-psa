@@ -179,6 +179,7 @@
     "upload": {
       "fileRequired": "Escolha um arquivo antes de enviar.",
       "typeNotAllowed": "Este tipo de arquivo não é permitido.",
+      "contentMismatch": "O conteúdo deste arquivo não corresponde ao tipo de arquivo, por isso ele não foi enviado. Verifique se escolheu o arquivo correto.",
       "sessionRequired": "Sua sessão é necessária para enviar documentos. Entre novamente."
     }
   },

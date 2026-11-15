@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import type { ILateHourlyTimeNotice, ILateServicePeriodSource, ISO8601String } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 
 /**
  * Late approved hourly time: approved, uninvoiced time dated inside a service
@@ -177,6 +178,7 @@ export async function findLateApprovedHourlyTime(
   query
     .where('time_entries.approval_status', 'APPROVED')
     .where('time_entries.invoiced', false)
+    .whereRaw(commercialTimeEntrySql('time_entries'))
     .where('time_entries.billable_duration', '>', 0)
     .whereNotNull('time_entries.contract_line_id');
   if (options.clientId) {

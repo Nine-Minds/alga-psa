@@ -33,11 +33,17 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { authorizeApiResourceRead } from './authorizationKernel';
-import { projectRecord } from './projectRecord';
-import { areApiRecordFieldsVisible, isApiRecordFieldHidden, projectApiRecord } from './apiRecordProjection';
-import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { isAuthorizedProjectionFieldReadable, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, reprojectUnderDecisions, type AuthorizedProjection } from './authorizationKernel';
+import {
+  PROJECT_PHASE_RECORD_SOURCE,
+  PROJECT_RECORD_SOURCE,
+  PROJECT_STATUS_MAPPING_SOURCE,
+  PROJECT_TASK_CHECKLIST_ITEM_SOURCE,
+  PROJECT_TASK_RECORD_SOURCE,
+  PROJECT_TICKET_RESPONSE_SOURCE,
+  TICKET_PROJECT_LINK_SOURCE,
+} from '@alga-psa/authorization/recordProjectionDescriptors';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import { ApiRequest, AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
@@ -66,94 +72,84 @@ export class ApiProjectController extends ApiBaseController {
     this.projectService = projectService;
   }
 
-  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
-  private buildProjectRecordContext(project: Record<string, any>) {
-    return buildProjectRecordContext(project);
-  }
-
+  /**
+   * Loads a project and returns its redacted projection. A denied OR suppressed project answers 404 (never 403: that
+   * would confirm the record exists). The row-independent RBAC 403 is raised earlier by checkPermission/hasPermission.
+   */
   private async assertProjectReadAllowed(
     apiRequest: AuthenticatedApiRequest,
     projectId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
-    return (await this.getProjectReadProjection(apiRequest, projectId, knex)).record;
-  }
-
-  private async getProjectReadProjection(
-    apiRequest: AuthenticatedApiRequest,
-    projectId: string,
-    knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<{ record: Record<string, any>; redactedFields: string[] }> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const project = await this.projectService.getById(projectId, apiRequest.context);
     if (!project) {
       throw new NotFoundError('Project not found');
     }
 
-    const decision = await authorizeApiResourceRead({
+    const projection = await projectApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'project',
-      recordContext: this.buildProjectRecordContext(project as Record<string, any>),
+      kind: 'project',
+      record: project as Record<string, any>,
     });
 
-    if (!decision.allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read project');
+    if (!projection) {
+      throw new NotFoundError('Project not found');
     }
 
-    const projected = projectRecord(project as Record<string, any>, decision.redactedFields);
-    if (!projected) throw new NotFoundError('Project not found');
-    return { record: projected, redactedFields: decision.redactedFields };
+    return projection;
   }
 
-  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
-  private buildTicketRecordContext(ticket: Record<string, any>) {
-    return buildTicketRecordContext(ticket);
+  /** Gate every target before the bulk write, then serialize each result under its retained decision. */
+  private async mutateAuthorizedProjects(
+    apiRequest: AuthenticatedApiRequest,
+    projectIds: string[],
+    mutate: () => Promise<Record<string, any>[]>,
+    knex: Awaited<ReturnType<typeof getConnection>>,
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (!Array.isArray(projectIds) || projectIds.some(id => !uuidSchema.safeParse(id).success)) {
+      throw new ValidationError('projectIds must be an array of project UUIDs');
+    }
+    const ids = [...new Set(projectIds)];
+    const projections = await Promise.all(ids.map(id => this.assertProjectReadAllowed(apiRequest, id, knex)));
+    const gates = new Map(ids.map((id, index) => [id, projections[index]]));
+    const results = await mutate();
+    return results.map(project => {
+      const gate = gates.get(project.project_id);
+      const projection = gate ? reprojectUnderDecision(gate, project, PROJECT_RECORD_SOURCE) : null;
+      if (!projection) throw new NotFoundError('Project not found');
+      return projection;
+    });
   }
 
   private async filterAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     projects: Record<string, any>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     if (projects.length === 0) {
       return [];
     }
 
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const rows = await this.authorizeProjectRows(apiRequest, projects, resolvedKnex);
-    return rows.map((row) => row.record);
-  }
-
-  private async authorizeProjectRows(
-    apiRequest: AuthenticatedApiRequest,
-    projects: Record<string, any>[],
-    knex: Awaited<ReturnType<typeof getConnection>>,
-  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
-    const decisions = await Promise.all(projects.map((project) => authorizeApiResourceRead({
-      knex,
+    return projectApiResourceReads({
+      knex: knex ?? await getConnection(apiRequest.context.tenant),
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'project',
-      recordContext: this.buildProjectRecordContext(project),
-    })));
-    return projects.flatMap((project, index) => {
-      const decision = decisions[index];
-      if (!decision.allowed) return [];
-      const record = projectRecord(project, decision.redactedFields);
-      return record ? [{ record: record as Record<string, any>, redactedFields: decision.redactedFields }] : [];
+      kind: 'project',
+      records: projects,
     });
   }
 
   private async listAllAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const authorizedProjects: Array<{ record: Record<string, any>; redactedFields: string[] }> = [];
+    const authorizedProjects: AuthorizedProjection<Record<string, any>>[] = [];
     const pageSize = 100;
     let page = 1;
 
@@ -163,7 +159,9 @@ export class ApiProjectController extends ApiBaseController {
         break;
       }
 
-      authorizedProjects.push(...(await this.authorizeProjectRows(apiRequest, result.data as Record<string, any>[], resolvedKnex)));
+      authorizedProjects.push(
+        ...(await this.filterAuthorizedProjects(apiRequest, result.data as Record<string, any>[], resolvedKnex))
+      );
 
       if (page * pageSize >= result.total || result.data.length < pageSize) {
         break;
@@ -177,63 +175,94 @@ export class ApiProjectController extends ApiBaseController {
 
   private async buildProjectStatsFromAuthorizedRows(
     apiRequest: AuthenticatedApiRequest,
-    projects: Array<{ record: Record<string, any>; redactedFields: string[] }>,
+    authorizedProjects: AuthorizedProjection<Record<string, any>>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
   ) {
+    // Retained row policies decide whether an aggregate may expose its source dimension at all.
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const statusIds = Array.from(new Set(projects.map(({ record }) => record.status).filter(Boolean)));
-    const clientIds = Array.from(new Set(projects.map(({ record }) => record.client_id).filter(Boolean)));
+    const canReadAt = (index: number, field: string) =>
+      isAuthorizedProjectionFieldReadable(authorizedProjects[index], field, PROJECT_RECORD_SOURCE);
+    const canReadAny = (field: string) => authorizedProjects.some((_, index) => canReadAt(index, field));
+    const canReadPairAny = (first: string, second: string) => authorizedProjects.some((_, index) =>
+      canReadAt(index, first) && canReadAt(index, second));
+    const statusAggregatesReadable = canReadAny('status_name');
+    const overdueAggregateReadable = canReadPairAny('status_name', 'end_date');
+    const completedMonthAggregateReadable = canReadPairAny('status_name', 'updated_at');
+    const budgetAggregateReadable = canReadAny('budgeted_hours');
+    const createdMonthAggregateReadable = canReadAny('created_at');
+    const statusIds = Array.from(new Set(authorizedProjects.flatMap((project, index) =>
+      canReadAt(index, 'status_name') && project.status ? [project.status] : [])));
 
-    const [statuses, clients] = await Promise.all([
-      statusIds.length > 0
-        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
-            .whereIn('status_id', statusIds)
-            .select('status_id', 'name')
-        : Promise.resolve([]),
-      clientIds.length > 0
-        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('clients')
-            .whereIn('client_id', clientIds)
-            .select('client_id', 'client_name')
-        : Promise.resolve([]),
-    ]);
+    const statuses = statusIds.length > 0
+      ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
+          .whereIn('status_id', statusIds)
+          .select('status_id', 'name')
+      : [];
 
     const statusNameById = new Map<string, string>(
       (statuses as any[]).map((row) => [String(row.status_id), String(row.name)] as [string, string])
     );
+    const clientIds = Array.from(new Set(
+      authorizedProjects
+        .map((project) => project.client_id)
+        .filter((clientId): clientId is string => typeof clientId === 'string' && clientId.length > 0),
+    ));
+    const clients = clientIds.length > 0
+      ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('clients')
+          .where('tenant', apiRequest.context.tenant)
+          .whereIn('client_id', clientIds)
+          .select('client_id', 'client_name')
+      : [];
     const clientNameById = new Map<string, string>(
-      (clients as any[]).map((row) => [String(row.client_id), String(row.client_name)] as [string, string])
+      (clients as any[])
+        .filter((row) => typeof row.client_id === 'string' && typeof row.client_name === 'string')
+        .map((row) => [row.client_id, row.client_name] as [string, string]),
     );
+    // Enrichment is projected under each row's original decision before any aggregate reads it.
+    const projects = authorizedProjects.flatMap((project) => {
+      const enriched = reprojectUnderDecision<Record<string, any>>(project, {
+        ...project,
+        client_name: typeof project.client_id === 'string'
+          ? clientNameById.get(project.client_id) ?? null
+          : null,
+        status_name: statusNameById.get(project.status) ?? project.status ?? 'unknown',
+      }, PROJECT_RECORD_SOURCE);
+      return enriched ? [enriched] : [];
+    });
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const visible = (fields: readonly string[]) => projects.every(({ redactedFields }) => areApiRecordFieldsVisible('project', fields, redactedFields));
-    const projectedProjects: Record<string, any>[] = projects.map(({ record, redactedFields }) => ({
-      ...record,
-      ...(record.status && !Object.hasOwn(record, 'status_name') && !isApiRecordFieldHidden('project', 'status_name', redactedFields)
-        ? { status_name: statusNameById.get(record.status) }
-        : {}),
-      ...(record.client_id && !Object.hasOwn(record, 'client_name') && !isApiRecordFieldHidden('project', 'client_name', redactedFields)
-        ? { client_name: clientNameById.get(record.client_id) }
-        : {}),
-    }));
-    const projectsByStatus = projectedProjects.reduce((acc: Record<string, number>, project) => {
-      const statusName = String(project.status_name ?? project.status ?? 'unknown');
+    const projectsByStatus = projects.reduce((acc: Record<string, number>, project, index) => {
+      if (!canReadAt(index, 'status_name') || typeof project.status_name !== 'string') return acc;
+      const statusName = project.status_name;
       acc[statusName] = (acc[statusName] ?? 0) + 1;
       return acc;
     }, {});
 
-    const clientCounts = projectedProjects.reduce((acc: Map<string, number>, project) => {
+    const clientCounts = new Map<string, { count: number; clientName: string | null }>();
+    for (const project of projects) {
       if (!project.client_id) {
-        return acc;
+        continue;
       }
-      acc.set(project.client_id, (acc.get(project.client_id) ?? 0) + 1);
-      return acc;
-    }, new Map<string, number>());
+      const existing = clientCounts.get(project.client_id);
+      if (existing) {
+        existing.count += 1;
+        // A name may only come from a project projection where it remains readable.
+        if (existing.clientName === null && typeof project.client_name === 'string') {
+          existing.clientName = project.client_name;
+        }
+      } else {
+        clientCounts.set(project.client_id, {
+          count: 1,
+          clientName: typeof project.client_name === 'string' ? project.client_name : null,
+        });
+      }
+    }
 
-    const topClientsByProjectCount = Array.from(clientCounts.entries())
-      .map(([clientId, count]) => ({
-        client_name: clientNameById.get(clientId) ?? clientId,
+    const topClientsByProjectCount = Array.from(clientCounts.values())
+      .map(({ clientName, count }) => ({
+        client_name: clientName,
         project_count: count,
       }))
       .sort((left, right) => right.project_count - left.project_count)
@@ -242,52 +271,53 @@ export class ApiProjectController extends ApiBaseController {
     const stats: Record<string, unknown> = {
       total_projects: projects.length,
     };
-
-    const statusSources = ['status_name'];
-    if (visible(statusSources)) {
-      stats.active_projects = projectedProjects.filter((project) => project.status_name === 'Active').length;
-      stats.completed_projects = projectedProjects.filter((project) => project.status_name === 'Completed').length;
-      stats.on_hold_projects = projectedProjects.filter((project) => project.status_name === 'On Hold').length;
-      stats.cancelled_projects = projectedProjects.filter((project) => project.status_name === 'Cancelled').length;
+    if (statusAggregatesReadable) {
+      Object.assign(stats, {
+        active_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Active').length,
+        completed_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Completed').length,
+        on_hold_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'On Hold').length,
+        cancelled_projects: projects.filter((project, index) => canReadAt(index, 'status_name') && project.status_name === 'Cancelled').length,
+        projects_by_status: projectsByStatus,
+      });
     }
-    if (visible([...statusSources, 'end_date'])) {
-      stats.overdue_projects = projectedProjects.filter((project) => {
-        if (!project.end_date) return false;
+    if (overdueAggregateReadable) {
+      stats.overdue_projects = projects.filter((project, index) => {
+        if (!canReadAt(index, 'status_name') || !canReadAt(index, 'end_date')) return false;
+        if (!project.end_date || project.status_name === null) return false;
         return new Date(project.end_date) < new Date() && project.status_name !== 'Completed';
       }).length;
     }
-    if (visible(['created_at', 'projects.created_at'])) {
-      stats.projects_created_this_month = projectedProjects.filter(
-        (project) => project.created_at && new Date(project.created_at) >= monthStart,
-      ).length;
-    }
-    if (visible([...statusSources, 'updated_at'])) {
-      stats.projects_completed_this_month = projectedProjects.filter(
-        (project) => project.status_name === 'Completed' && project.updated_at && new Date(project.updated_at) >= monthStart,
-      ).length;
-    }
-
-    if (visible(['budgeted_hours', 'projects.budgeted_hours'])) {
-      stats.total_budgeted_hours = projectedProjects.reduce(
-        (sum, project) => sum + Number(project.budgeted_hours ?? 0),
+    if (budgetAggregateReadable) {
+      stats.total_budgeted_hours = projects.reduce(
+        (sum, project, index) => sum + (canReadAt(index, 'budgeted_hours') ? Number(project.budgeted_hours ?? 0) : 0),
         0,
       );
     }
-    if (visible(statusSources)) {
-      stats.projects_by_status = projectsByStatus;
+    if (createdMonthAggregateReadable) {
+      stats.projects_created_this_month = projects.filter(
+        (project, index) => canReadAt(index, 'created_at') && project.created_at && new Date(project.created_at) >= monthStart,
+      ).length;
     }
-    if (visible(['client_name', 'client_id'])) {
-      stats.top_clients_by_project_count = topClientsByProjectCount;
+    if (completedMonthAggregateReadable) {
+      stats.projects_completed_this_month = projects.filter(
+        (project, index) =>
+          canReadAt(index, 'status_name') && canReadAt(index, 'updated_at') &&
+          project.status_name === 'Completed' &&
+          project.updated_at &&
+          new Date(project.updated_at) >= monthStart,
+      ).length;
     }
+    stats.top_clients_by_project_count = topClientsByProjectCount;
     return stats;
   }
 
-  private convertProjectsToCsv(projects: Record<string, any>[]): string {
+  private convertProjectsToCsv(projects: AuthorizedProjection<Record<string, any>>[]): string {
     if (projects.length === 0) {
       return '';
     }
 
-    const headers = Object.keys(projects[0] ?? {});
+    // Redactions can differ per row, so the header set is the union of the projected rows' keys.
+    const headers = Array.from(new Set(projects.flatMap((project) => Object.keys(project))));
     const rows = projects.map((project) =>
       headers
         .map((header) => {
@@ -343,42 +373,20 @@ export class ApiProjectController extends ApiBaseController {
     apiRequest: AuthenticatedApiRequest,
     phaseId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<string> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const projectId = await this.resolveProjectIdForPhase(phaseId, apiRequest.context.tenant, resolvedKnex);
-    await this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
-    return projectId;
-  }
-
-  private async getPhaseProjectReadProjection(
-    apiRequest: AuthenticatedApiRequest,
-    phaseId: string,
-    knex?: Awaited<ReturnType<typeof getConnection>>
-  ) {
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const projectId = await this.resolveProjectIdForPhase(phaseId, apiRequest.context.tenant, resolvedKnex);
-    return this.getProjectReadProjection(apiRequest, projectId, resolvedKnex);
+    return this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
   }
 
   private async assertTaskProjectAllowed(
     apiRequest: AuthenticatedApiRequest,
     taskId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<string> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const projectId = await this.resolveProjectIdForTask(taskId, apiRequest.context.tenant, resolvedKnex);
-    await this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
-    return projectId;
-  }
-
-  private async getTaskProjectReadProjection(
-    apiRequest: AuthenticatedApiRequest,
-    taskId: string,
-    knex?: Awaited<ReturnType<typeof getConnection>>
-  ) {
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const projectId = await this.resolveProjectIdForTask(taskId, apiRequest.context.tenant, resolvedKnex);
-    return this.getProjectReadProjection(apiRequest, projectId, resolvedKnex);
+    return this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
   }
 
   list() {
@@ -407,7 +415,7 @@ export class ApiProjectController extends ApiBaseController {
           delete filters.order;
 
           const knex = await getConnection(apiRequest.context.tenant);
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -416,19 +424,15 @@ export class ApiProjectController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: (project) =>
-              authorizeApiResourceRead({
+            projectRecord: (project) =>
+              projectApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'project',
-                recordContext: this.buildProjectRecordContext(project),
+                kind: 'project',
+                record: project,
               }),
-            projectRecord: (project, redactedFields) => {
-              const projected = projectRecord(project, redactedFields);
-              return projected as Record<string, any> | null;
-            },
             scanLimit: 100,
           });
 
@@ -676,17 +680,19 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          const authorization = await this.getProjectReadProjection(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const tasks = await this.projectService.getProjectTasks(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.flatMap((task) => {
-            const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
-            return projected ? [this.stripInternalTaskFields(projected as any)] : [];
-          }));
+          const projectedTasks = reprojectUnderDecision(
+            projectGate,
+            tasks.map(task => this.stripInternalTaskFields(task)),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          return createSuccessResponse(projectedTasks);
         });
       } catch (error) {
         return handleApiError(error);
@@ -749,14 +755,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const mappings = await this.projectService.getProjectTaskStatusMappings(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(mappings);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, mappings, PROJECT_STATUS_MAPPING_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -826,13 +832,13 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectProjection = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           // Get pagination params
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -841,16 +847,22 @@ export class ApiProjectController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit },
                 apiRequest.context!
               ),
-            authorizeRecord: (ticket) =>
-              authorizeApiResourceRead({
+            projectRecord: async (ticket) => {
+              const ticketProjection = await projectApiResourceRead({
                 knex,
                 tenant: tenantId!,
                 user,
                 apiKeyId: keyRecord.api_key_id,
-                resource: 'ticket',
-                recordContext: this.buildTicketRecordContext(ticket),
-              }),
-            projectRecord: (ticket, redactedFields) => projectApiRecord('ticket', ticket, redactedFields) as Record<string, any> | null,
+                kind: 'ticket',
+                record: ticket,
+              });
+              if (!ticketProjection) return null;
+              return reprojectUnderDecisions(
+                [projectProjection, ticketProjection],
+                ticket,
+                PROJECT_TICKET_RESPONSE_SOURCE,
+              );
+            },
             scanLimit: 100,
           });
           
@@ -897,19 +909,18 @@ export class ApiProjectController extends ApiBaseController {
           if (!ticket) {
             throw new NotFoundError('Ticket not found');
           }
-          const ticketDecision = await authorizeApiResourceRead({
+          // Gate only: the ticket itself is never serialized here. Denied or suppressed => 404.
+          const ticketProjection = await projectApiResourceRead({
             knex,
             tenant,
             user,
             apiKeyId: apiRequest.context.apiKeyId,
-            resource: 'ticket',
-            recordContext: this.buildTicketRecordContext(ticket),
+            kind: 'ticket',
+            record: ticket as Record<string, any>,
           });
-          if (!ticketDecision.allowed) {
-            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          if (ticketProjection === null) {
+            throw new NotFoundError('Ticket not found');
           }
-          const projectedTicket = projectApiRecord('ticket', ticket, ticketDecision.redactedFields);
-          if (!projectedTicket) throw new NotFoundError('Ticket not found');
 
           const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
           const projects = [...new Map(links.map((l) => [l.project_id, {
@@ -921,15 +932,36 @@ export class ApiProjectController extends ApiBaseController {
             status: l.project_status,
             is_closed: l.project_is_closed,
           }])).values()];
-          const authorizedProjects = new Map(
-            (await this.authorizeProjectRows(apiRequest, projects, knex))
-              .map((row) => [row.record.project_id, row]),
+          // Authorize each joined project once; every link below is reprojected under that retained decision.
+          const readable = new Map(
+            (await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => [p.project_id, p] as const)
           );
-          const data = links.flatMap(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => {
-            const authorization = authorizedProjects.get(link.project_id);
-            if (!authorization) return [];
-            const projected = projectRecord(link, authorization.redactedFields);
-            return projected ? [projected] : [];
+
+          const data = links.flatMap((link) => {
+            const project = readable.get(link.project_id);
+            if (!project) return [];
+
+            // This row flattens link, project, phase, task and status fields.
+            // Pick the response contract explicitly, then apply the retained
+            // ticket and project decisions through each source descriptor before serialization.
+            const response = {
+              link_id: link.link_id,
+              project_id: link.project_id,
+              project_name: link.project_name,
+              project_number: link.project_number,
+              phase_id: link.phase_id,
+              phase_name: link.phase_name,
+              task_id: link.task_id,
+              task_name: link.task_name,
+              project_status_mapping_id: link.project_status_mapping_id,
+              status_name: link.status_name,
+              is_closed: link.is_closed,
+              task_updated_at: link.task_updated_at,
+              bill_under_project: link.bill_under_project,
+              created_at: link.created_at,
+            };
+            const projection = reprojectUnderDecisions([ticketProjection, project], response, TICKET_PROJECT_LINK_SOURCE);
+            return projection ? [projection] : [];
           });
           return createSuccessResponse(data, 200, undefined, apiRequest);
         });
@@ -998,16 +1030,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, updates } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkUpdateProjects(
-            projectIds,
-            updates,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkUpdateProjects(projectIds, updates, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);
@@ -1077,16 +1102,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, assignments } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkAssign(
-            projectIds,
-            assignments,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkAssign(projectIds, assignments, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);
@@ -1156,16 +1174,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, status } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkStatusUpdate(
-            projectIds,
-            status,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkStatusUpdate(projectIds, status, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);
@@ -1238,17 +1249,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          const authorization = await this.getProjectReadProjection(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const phases = await this.projectService.listPhases(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(phases.flatMap((phase) => {
-            const projected = projectApiRecord('phase', phase as Record<string, any>, authorization.redactedFields);
-            return projected ? [projected] : [];
-          }));
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phases, PROJECT_PHASE_RECORD_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1318,7 +1326,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           // Parse and validate body
           const data = await this.validateData(apiRequest as AuthenticatedApiRequest, createProjectPhaseSchema);
@@ -1329,7 +1337,7 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(phase, 201);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phase, PROJECT_PHASE_RECORD_SOURCE), 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1398,7 +1406,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
+          const projectGate = await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
 
           // Parse body
           const data = await req.json();
@@ -1413,7 +1421,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Phase not found');
           }
 
-          return createSuccessResponse(phase);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phase, PROJECT_PHASE_RECORD_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1559,17 +1567,19 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          const authorization = await this.getPhaseProjectReadProjection(apiRequest as AuthenticatedApiRequest, phaseId, knex);
+          const projectGate = await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
 
           const tasks = await this.projectService.listPhaseTasks(
             phaseId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.flatMap((task) => {
-            const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
-            return projected ? [this.stripInternalTaskFields(projected as any)] : [];
-          }));
+          const projectedTasks = reprojectUnderDecision(
+            projectGate,
+            tasks.map(task => this.stripInternalTaskFields(task)),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          return createSuccessResponse(projectedTasks);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1641,7 +1651,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const phase = await tenantDb(knex, tenantId!).table('project_phases')
             .where({ phase_id: phaseId, project_id: projectId })
@@ -1662,7 +1672,10 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(task, 201);
+          return createSuccessResponse(
+            reprojectUnderDecision(projectGate, this.stripInternalTaskFields(task), PROJECT_TASK_RECORD_SOURCE),
+            201,
+          );
         });
       } catch (error) {
         return handleApiError(error);
@@ -1731,7 +1744,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          const authorization = await this.getTaskProjectReadProjection(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           const task = await this.projectService.getTaskById(
             taskId,
@@ -1742,9 +1755,13 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
-          if (!projected) throw new NotFoundError('Task not found');
-          return createSuccessResponse(this.stripInternalTaskFields(projected as any));
+          const projection = reprojectUnderDecision(
+            projectGate,
+            this.stripInternalTaskFields(task),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          if (!projection) throw new NotFoundError('Task not found');
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1813,7 +1830,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           // Parse and validate body — strips unrecognized fields like
           // description_rich_text so they can't be written via the API.
@@ -1837,7 +1854,13 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(this.stripInternalTaskFields(task));
+          const projection = reprojectUnderDecision(
+            projectGate,
+            this.stripInternalTaskFields(task),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          if (!projection) throw new NotFoundError('Task not found');
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1983,14 +2006,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           const checklist = await this.projectService.getTaskChecklistItems(
             taskId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(checklist);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, checklist, PROJECT_TASK_CHECKLIST_ITEM_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -2008,7 +2031,7 @@ export class ApiProjectController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertProjectReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertProjectReadAllowed(apiRequest, id, knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -2019,7 +2042,11 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, PROJECT_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2115,7 +2142,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           // Parse body (accepts the legacy item_text / is_completed spellings too)
           let data;
@@ -2134,7 +2161,7 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(checklistItem, 201);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, checklistItem, PROJECT_TASK_CHECKLIST_ITEM_SOURCE), 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2202,7 +2229,7 @@ export class ApiProjectController extends ApiBaseController {
         const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
 
         return await runWithTenant(tenantId, async () => {
-          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
 
           let data;
           try {
@@ -2215,7 +2242,7 @@ export class ApiProjectController extends ApiBaseController {
           }
 
           const item = await this.projectService.updateChecklistItem(taskId, checklistItemId, data, apiRequest.context!);
-          return createSuccessResponse(item);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, item, PROJECT_TASK_CHECKLIST_ITEM_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);

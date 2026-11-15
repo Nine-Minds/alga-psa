@@ -10,7 +10,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
+import { ITicketListItem, ITicketListFilters, ITicketListViewSummary, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
@@ -115,6 +115,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
     where: decodedWhere.where,
+    listView: params.get('listView') || undefined,
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
@@ -181,6 +182,12 @@ interface TicketingDashboardContainerProps {
     tickets: ITicketListItem[];
     totalCount: number;
     metadata?: TicketListMetadata;
+    /** Named views the caller's list offers, with their counts. Present only for a principal that has views. */
+    views?: ITicketListViewSummary[];
+    /** The reader is offered the responsibility column and filter (the seat shape is released and the reader is MSP staff). */
+    seatResponsibilityOffered?: boolean;
+    /** The handoff the reader may start on selected tickets (MSP staff: to client IT; a seat technician: to the MSP). Absent: none. */
+    seatHandoffDirection?: 'client_it' | 'msp';
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
@@ -248,6 +255,9 @@ export default function TicketingDashboardContainer({
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
+  const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
+  const [seatHandoffDirection, setSeatHandoffDirection] = useState<'client_it' | 'msp' | undefined>(consolidatedData.seatHandoffDirection);
   const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -279,6 +289,9 @@ export default function TicketingDashboardContainer({
   useEffect(() => {
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
+    setNamedViews(consolidatedData.views);
+    setSeatResponsibilityOffered(consolidatedData.seatResponsibilityOffered === true);
+    setSeatHandoffDirection(consolidatedData.seatHandoffDirection);
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
@@ -287,7 +300,7 @@ export default function TicketingDashboardContainer({
     // unsettled (so its finally never runs). The refresh itself delivers fresh
     // data here, so clear the loading spinner — otherwise it hangs forever.
     setIsLoading(false);
-  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection]);
 
   const {
     value: storedPageSize,
@@ -400,6 +413,7 @@ export default function TicketingDashboardContainer({
     }
     const whereParam = encodeTicketWhere(filters.where);
     if (whereParam) params.set('where', whereParam);
+    if (filters.listView) params.set('listView', filters.listView);
     if (filters.sortBy && filters.sortBy !== 'entered_at') {
       params.set('sortBy', filters.sortBy);
     }
@@ -501,6 +515,7 @@ export default function TicketingDashboardContainer({
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled',
+        listView: filters.listView || undefined,
         where: filters.where && filters.where.clauses.length > 0 ? filters.where : undefined,
       };
 
@@ -527,6 +542,9 @@ export default function TicketingDashboardContainer({
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
       setTotalCount(result.totalCount);
+      setNamedViews(result.views);
+      setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);
+      setSeatHandoffDirection(result.seatHandoffDirection);
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
@@ -1147,6 +1165,9 @@ export default function TicketingDashboardContainer({
       clientTagDefinitions={effectiveOptions.clientTagDefinitions}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}
+      namedViews={namedViews}
+      seatResponsibilityOffered={seatResponsibilityOffered}
+      seatHandoffDirection={seatHandoffDirection}
       currentPage={currentPage}
       pageSize={pageSize}
       onPageChange={handlePageChange}

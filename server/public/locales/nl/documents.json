@@ -179,6 +179,7 @@
     "upload": {
       "fileRequired": "Kies een bestand voordat u uploadt.",
       "typeNotAllowed": "Dit bestandstype is niet toegestaan.",
+      "contentMismatch": "De inhoud van dit bestand komt niet overeen met het bestandstype, dus het is niet geüpload. Controleer of u het juiste bestand hebt gekozen.",
       "sessionRequired": "Uw sessie is vereist om documenten te uploaden. Meld u opnieuw aan."
     }
   },

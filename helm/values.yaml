@@ -82,8 +82,12 @@ server:
     tag: "4023e8f"
   hostNetwork: false
   verify_email: true
-  # Maximum body size for Next.js server actions (e.g., extension uploads)
-  serverActionsBodyLimit: "200mb"
+  # Maximum body size for Next.js server actions. NOT a file-size limit (that is
+  # config.storage.providers.*.max_file_size, reached via the chunked upload session API).
+  # 26mb = measured largest non-file action body (3.7 MB) plus the 25 MiB co-managed attachment
+  # action; see the comment in server/next.config.mjs. Extension bundle installs (EE) still ride a
+  # server action: a bundle over this limit is refused with a 413 and needs this raised.
+  serverActionsBodyLimit: "26mb"
   # App-wide search live indexing gate. Keep false during migration/backfill;
   # set true after search:backfill completes so event subscribers write updates.
   searchIndexLive: false
@@ -252,8 +256,10 @@ config:
       local:
         enabled: true
         base_path: '/data/files'  # Base path for file storage
-        # Storage quotas and limits
-        max_file_size: 104857600  # 100MB in bytes
+        # Per-file upload limit, in bytes. Rendered into STORAGE_LOCAL_MAX_FILE_SIZE, the only thing
+        # that reads it (code default: DEFAULT_MAX_FILE_SIZE_BYTES in packages/storage/src/config/storage.ts).
+        # Quoted: helm renders an unquoted number this large in scientific notation (5.24288e+08).
+        max_file_size: "524288000"  # 500MB in bytes
         allowed_mime_types:
           - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
@@ -269,29 +275,11 @@ config:
         access_key: ''  # AWS access key
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
-        # Storage quotas and limits
-        max_file_size: 524288000  # 500MB in bytes
+        # Per-file upload limit, in bytes. Rendered into STORAGE_S3_MAX_FILE_SIZE (see local above).
+        max_file_size: "524288000"  # 500MB in bytes
         allowed_mime_types:
           - '*/*'  # Allow all file types
         retention_days: 30  # Number of days to retain files
-    # Storage locations configuration
-    locations:
-      documents:  # Default location for document storage
-        name: "Documents"
-        path: "/documents"
-        provider: "local"  # References the provider config above
-        max_file_size: 104857600  # 100MB in bytes
-        allowed_mime_types:
-          - '*/*'  # Allow all file types
-      avatars:  # Location for user avatars
-        name: "User Avatars"
-        path: "/avatars"
-        provider: "local"
-        max_file_size: 5242880  # 5MB in bytes
-        allowed_mime_types:
-          - 'image/jpeg'
-          - 'image/png'
-          - 'image/gif'
     # File upload settings
     upload:
       temp_dir: '/tmp/uploads'

@@ -179,6 +179,7 @@
     "upload": {
       "fileRequired": "Wählen Sie vor dem Hochladen eine Datei aus.",
       "typeNotAllowed": "Dieser Dateityp ist nicht zulässig.",
+      "contentMismatch": "Der Inhalt dieser Datei passt nicht zu ihrem Dateityp, daher wurde sie nicht hochgeladen. Prüfen Sie, ob Sie die richtige Datei ausgewählt haben.",
       "sessionRequired": "Zum Hochladen von Dokumenten ist Ihre Sitzung erforderlich. Bitte melden Sie sich erneut an."
     }
   },

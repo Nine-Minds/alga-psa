@@ -221,6 +221,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.sortDirection = sortDirection;
       }
     }
+    if (params?.listView && typeof params.listView === 'string') {
+      // A named view of the list; the server offers it only to a caller entitled to it and ignores any other key.
+      filtersFromURL.listView = params.listView;
+    }
     if (params?.bundleView && typeof params.bundleView === 'string') {
       const bundleView = params.bundleView;
       if (bundleView === 'bundled' || bundleView === 'individual') {
@@ -340,6 +344,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',
       bundleView: initialFilters.bundleView || 'bundled',
+      listView: initialFilters.listView || undefined,
       where: initialFilters.where || undefined,
     };
 

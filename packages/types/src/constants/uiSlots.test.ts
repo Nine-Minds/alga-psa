@@ -11,6 +11,7 @@ describe('UI slot surfaces', () => {
       'msp.navigation.group',
       'ticket.conversation.comment-attachments',
       'ticket.conversation.thread-header',
+      'ticket.details.responsibility',
     ]);
   });
 

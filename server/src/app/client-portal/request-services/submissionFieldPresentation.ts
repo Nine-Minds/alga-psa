@@ -35,6 +35,7 @@ function getFileUploadFields(fields: SubmissionFieldSnapshot[]): SubmissionField
   );
 }
 
+// LEVERAGE: pattern service-request-answer-display — ticketOnlyExecutionProvider.ts describeAnswer resolves the same display values for the ticket description.
 export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],

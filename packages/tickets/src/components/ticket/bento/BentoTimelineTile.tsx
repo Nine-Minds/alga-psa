@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from 'react-hot-toast';
-import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from '../CommentAudienceControl';
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, useDefaultComposerAudience, type ComposerAudience } from '../CommentAudienceControl';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
@@ -477,10 +477,12 @@ export function BentoTimelineTile({
   // internal note can also be the resolution.
   const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>(defaultReplyInternal ? 'internal' : 'client');
   // Shared tickets and co_managed workspaces replace the Client/Internal lane switch with a required
-  // audience choice (no default; send stays blocked until the author picks one). The data source's
+  // audience choice (no default unless the data source names one; send stays blocked until the author picks one). The data source's
   // conversation config decides, never a tenant-wide capability.
   const configuredAudiences = useComposerAudiences();
-  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
+  // The data source may name the audience a fresh composer starts on (the seat shape does).
+  const defaultAudience = useDefaultComposerAudience();
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(defaultAudience);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   // A resolution closes the ticket through the native path, so it never offers `shared_it`.
   const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
@@ -543,11 +545,11 @@ export function BentoTimelineTile({
 
   const openComposer = useCallback((placement: 'top' | 'bottom') => {
     if (configuredAudiences != null) {
-      if (!showComposer) { setComposerAudience(null); setComposerVisibility('client'); }
+      if (!showComposer) { setComposerAudience(defaultAudience); setComposerVisibility(audienceIsInternal(defaultAudience) ? 'internal' : 'client'); }
     } else if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
     setComposerPlacement(placement);
     setShowComposer(true);
-  }, [showComposer, defaultReplyInternal, configuredAudiences]);
+  }, [showComposer, defaultReplyInternal, configuredAudiences, defaultAudience]);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -814,7 +816,7 @@ export function BentoTimelineTile({
     );
     // An unconfirmed publish (false) leaves the composer, draft and audience untouched.
     if (success) {
-      setComposerAudience(null);
+      setComposerAudience(defaultAudience);
       emailRecipients.reset();
       setHasDraft(false);
       setComposeHasContent(false);
@@ -827,7 +829,7 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, audienceMissing, configuredAudiences, chosenAudience, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, audienceMissing, configuredAudiences, chosenAudience, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients, defaultAudience]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {

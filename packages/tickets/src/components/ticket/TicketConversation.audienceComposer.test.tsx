@@ -7,6 +7,7 @@ import TicketConversation from './TicketConversation';
 import { TicketDataSourceProvider } from './TicketDataSourceContext';
 import { nativeTicketDataSource } from '../../lib/nativeTicketDataSource';
 import { composeTicketDataSource, type TicketConversationConfig } from '../../lib/ticketDataSource';
+import { seatConversationConfig } from '../../lib/seatTicketConversation';
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
@@ -272,5 +273,74 @@ describe('TicketConversation audience composer', () => {
     fireEvent.click(submit(container));
     await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
     expect(onAddNewComment.mock.calls[0]).toHaveLength(6);
+  });
+
+  describe('seat arrangement composers (F060, F061)', () => {
+    const options = (container: HTMLElement) => Array.from(audienceSelect(container).options).map((o) => [o.value, o.textContent]);
+
+    it('MSP staff on an arrangement client get Requester, Shared IT and Private in place of the Internal toggle, defaulting to Private', async () => {
+      conversationConfig = seatConversationConfig('msp', 'Private');
+      const onAddNewComment = vi.fn().mockResolvedValue(true);
+      const { container } = renderConversation({ onAddNewComment });
+      open(container);
+      expect(container.querySelector('#ticket-conversation-internal-toggle')).toBeNull();
+      expect(options(container)).toEqual([
+        ['', 'Who can see this?'], ['requester', 'Requester'], ['shared_it', 'Shared IT'], ['organization_private', 'Private'],
+      ]);
+      expect(audienceSelect(container).value).toBe('organization_private');
+      // Posting without touching the select writes Private (internal), through the existing audience argument.
+      expect(submit(container)).not.toBeDisabled();
+      fireEvent.click(submit(container));
+      await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+      expect(onAddNewComment.mock.calls[0][0]).toBe(true);
+      expect(onAddNewComment.mock.calls[0][6]).toBe('organization_private');
+    });
+
+    it('a fresh composer returns to Private after another audience was posted', async () => {
+      conversationConfig = seatConversationConfig('msp', 'Private');
+      const { container } = renderConversation();
+      open(container);
+      fireEvent.change(audienceSelect(container), { target: { value: 'requester' } });
+      fireEvent.click(submit(container));
+      await waitFor(() => expect(container.querySelector('#ticket-conversation-show-comment-editor-btn')).not.toBeNull());
+      open(container);
+      expect(audienceSelect(container).value).toBe('organization_private');
+    });
+
+    it('a seat technician is offered Requester and Shared IT only, never Private, defaulting to Shared IT', async () => {
+      conversationConfig = seatConversationConfig('client_it', 'Private');
+      const onAddNewComment = vi.fn().mockResolvedValue(true);
+      const { container } = renderConversation({ onAddNewComment });
+      open(container);
+      expect(container.querySelector('#ticket-conversation-internal-toggle')).toBeNull();
+      expect(options(container)).toEqual([['', 'Who can see this?'], ['requester', 'Requester'], ['shared_it', 'Shared IT']]);
+      expect(audienceSelect(container).value).toBe('shared_it');
+      fireEvent.click(submit(container));
+      await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+      expect(onAddNewComment.mock.calls[0][6]).toBe('shared_it');
+    });
+
+    it('a ticket without a live arrangement (native config) keeps the legacy Internal toggle and no audience select', () => {
+      conversationConfig = {};
+      const { container } = renderConversation();
+      open(container);
+      expect(container.querySelector('#ticket-conversation-internal-toggle')).not.toBeNull();
+      expect(audienceSelect(container)).toBeNull();
+    });
+
+    it('a source without a default still blocks submit until the author chooses (fail closed is unchanged)', () => {
+      conversationConfig = { audiences: ['requester', 'organization_private'] };
+      const { container } = renderConversation();
+      open(container);
+      expect(audienceSelect(container).value).toBe('');
+      expect(submit(container)).toBeDisabled();
+    });
+
+    it('ignores a default the source does not offer', () => {
+      conversationConfig = { audiences: ['requester', 'shared_it'], defaultAudience: 'organization_private' };
+      const { container } = renderConversation();
+      open(container);
+      expect(audienceSelect(container).value).toBe('');
+    });
   });
 });

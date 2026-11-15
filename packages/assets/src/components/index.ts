@@ -14,4 +14,7 @@ export type { ClientAssetMultiSelectProps } from './ClientAssetMultiSelect';
 export * from './AssetDetailDrawer.types';
 export { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 export { MaintenanceCommandCenter } from './MaintenanceCommandCenter';
+export { AssetAuditsList } from './audits/AssetAuditsList';
+export { AssetAuditDetail } from './audits/AssetAuditDetail';
+export { StartAuditDialog } from './audits/StartAuditDialog';
 export { default as AssetTypesManager } from './settings/AssetTypesManager';

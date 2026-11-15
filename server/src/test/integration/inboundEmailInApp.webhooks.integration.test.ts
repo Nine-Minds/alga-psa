@@ -30,6 +30,41 @@ const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
   queueDepth: 1,
 }));
 let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
+/**
+ * In-memory provider. Inbound artifacts are written through the ingest pipeline's write session
+ * (beginWrite / writePart / completeWrite), so the session collects the parts and hands the whole
+ * body to `storageUploadMock` on complete, keeping the assertions written against `upload`.
+ */
+function fakeStorageProvider() {
+  const sessions = new Map<string, { path: string; mime?: string; parts: Map<number, Buffer> }>();
+  const toBuffer = async (part: any): Promise<Buffer> => {
+    if (Buffer.isBuffer(part)) return part;
+    const chunks: Buffer[] = [];
+    for await (const chunk of part) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
+  };
+  return {
+    upload: (...args: any[]) => storageUploadMock(...args),
+    beginWrite: async (path: string, options: { mimeType?: string } = {}) => {
+      const uploadId = `fake-${sessions.size + 1}-${path}`;
+      sessions.set(uploadId, { path, mime: options.mimeType, parts: new Map() });
+      return { provider: 'fake', path, uploadId };
+    },
+    writePart: async (handle: { uploadId: string }, partNumber: number, part: any, size: number) => {
+      sessions.get(handle.uploadId)!.parts.set(partNumber, await toBuffer(part));
+      return { partNumber, etag: `p${partNumber}`, size };
+    },
+    completeWrite: async (handle: { uploadId: string }) => {
+      const session = sessions.get(handle.uploadId)!;
+      sessions.delete(handle.uploadId);
+      const body = Buffer.concat([...session.parts.entries()].sort(([a], [b]) => a - b).map(([, b]) => b));
+      return storageUploadMock(body, session.path, { mime_type: session.mime });
+    },
+    abortWrite: async (handle: { uploadId: string }) => {
+      sessions.delete(handle.uploadId);
+    },
+  };
+}
 let inboundReplyAckDeciderDecideMock = vi.fn(async () => ({
   decision: 'NOT_ACK',
   source: 'default',
@@ -148,9 +183,7 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
 
 vi.mock('@alga-psa/storage', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));
@@ -158,9 +191,7 @@ vi.mock('@alga-psa/storage', () => ({
 // The artifact orchestrator imports the subpath directly.
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));

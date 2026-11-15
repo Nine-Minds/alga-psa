@@ -21,6 +21,8 @@ export interface ServiceRequestExecutionContext {
   clientId: string;
   contactId?: string | null;
   payload: Record<string, unknown>;
+  /** The submitted form's schema, for presenting answers under their labels. */
+  formSchema?: Record<string, unknown>;
   config: Record<string, unknown>;
 }
 

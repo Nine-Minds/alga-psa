@@ -46,6 +46,31 @@ describe('listUpcomingOccurrences', () => {
     expect(result.map((c) => c.nominal)).toEqual(['2027-06-15', '2028-06-15']);
   });
 
+  it('returns five yearly occurrences for a schedule starting in a future year (no fixed horizon)', () => {
+    // The REST "upcoming" view and the unsaved preview for a yearly APNs renewal starting next year.
+    const march1: RecurrenceRule = { frequency: 'yearly', month: 3, day: 1, end: { type: 'never' } };
+    const result = listUpcomingOccurrences({
+      ...base, rule: march1, startDate: '2027-03-01', now: new Date('2026-11-14T12:00:00Z'),
+    });
+    expect(result.map((c) => c.nominal)).toEqual(['2027-03-01', '2028-03-01', '2029-03-01', '2030-03-01', '2031-03-01']);
+  });
+
+  it('finds the next yearly occurrences under a business-day policy in due order', () => {
+    const result = listUpcomingOccurrences({
+      ...base, rule: yearly, startDate: '2030-06-15', policy: 'previous',
+      calendar: buildFallbackBusinessDayCalendar(), now: new Date('2026-01-01T12:00:00Z'),
+    });
+    expect(result).toHaveLength(5);
+    expect(result.map((c) => c.nominal)).toEqual(['2030-06-15', '2031-06-15', '2032-06-15', '2033-06-15', '2034-06-15']);
+    for (const c of result) expect([0, 6]).not.toContain(new Date(`${c.due}T12:00:00Z`).getUTCDay());
+  });
+
+  it('stops at the end of a counted yearly rule', () => {
+    const counted = { ...yearly, end: { type: 'afterCount', count: 3 } } as RecurrenceRule;
+    const result = listUpcomingOccurrences({ ...base, rule: counted, startDate: '2028-06-15', now: new Date('2026-01-01T12:00:00Z') });
+    expect(result.map((c) => c.nominal)).toEqual(['2028-06-15', '2029-06-15', '2030-06-15']);
+  });
+
   it('returns fewer than requested when the rule has ended', () => {
     const ending: RecurrenceRule = { ...weeklyMon, end: { type: 'onDate', date: '2026-03-10' } } as RecurrenceRule;
     const result = listUpcomingOccurrences({ ...base, rule: ending, now: new Date('2026-03-02T12:00:00Z') });

@@ -248,6 +248,7 @@ function extractRoleIdsFromUser(user: BillingAuthUser): string[] {
     .filter((value): value is string => Boolean(value));
 }
 
+// LEVERAGE: pattern authorization-subject-resolution — quote actions build their own subject; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
 async function resolveAuthorizationSubjectForUser(
   knex: Knex | Knex.Transaction,
   tenant: string,
