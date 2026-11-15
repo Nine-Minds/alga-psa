@@ -12,6 +12,7 @@ Use this guide when you add a system email template, give a template a new varia
 | Variable registry (the Variables panel in the template editor) | `packages/notifications/src/lib/templateVariables/` |
 | Ticket variable audience | `packages/notifications/src/lib/templateVariables/ticketEmailAudience.ts` |
 | Ticket email sending | `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` |
+| Template lookup at send time | `server/src/lib/notifications/emailTemplateLookup.ts` |
 
 ## Ticket emails have two audiences
 
@@ -57,12 +58,45 @@ If building the value can fail (an extra query, a lookup in another module), wra
 const assets = await optionalEmailData('the ticket assets', [], () => loadTicketAssets(db, tenantId, ticketId), { tenantId, ticketId });
 ```
 
+## Adding a template
+
+Follow `ticketUpdatedClient.cjs` for a client template and `ticketUpdated.cjs` for an internal one.
+
+1. Create one file per template under `server/migrations/utils/templates/email/<category>/`. Export `TEMPLATE_NAME`, `SUBTYPE_NAME` and `getTemplate()`. Keep the text of every language in `SUPPORTED_LANGUAGES` (`_shared/constants.cjs`) inline in that file, and build the body with `wrapEmailLayout()`.
+2. Add the notification subtype to `SUBTYPES` in `emailCategoriesAndSubtypes.cjs`.
+3. Add a migration that calls `upsertEmailCategoriesAndSubtypes()` and `upsertEmailTemplate()`. Give it a `down` that deletes the template and the subtype. Do not copy tenant rows in the migration.
+4. Add the template to `server/seeds/dev/68_add_notification_templates.cjs` and to `emailTemplateDefs()` in `server/src/test/unit/migrations/templateLocaleParity.test.ts`.
+5. Add the template and its variables to `seed.ts` and to the inventory, as for a new variable.
+
+### Splitting a client template off a shared ticket template
+
+When an internal template also goes to clients, give clients their own template instead of branching. After the split the two are separate emails: a tenant edits, brands and switches each one on its own, and nothing is borrowed from the other at send time.
+
+1. Add the client template as above. Name it `<internal-name>-client` and its subtype `<Internal Subtype> Client`.
+2. Add the pair to `TICKET_EMAIL_CLIENT_VARIANTS` with `copiedFromShared: true`. Send paths do not change: they keep naming the internal template.
+3. Add a second migration that copies what each tenant had set up for the shared email to the client names. Until the split that setup applied to clients too, so without the copy a tenant with its own template would start sending clients the stock one. Follow `20261115121000_copy_shared_ticket_email_setup_to_client_templates.cjs`:
+
+| What a tenant has for the shared email | What the migration copies |
+|---|---|
+| Its own template rows | Every row, with subject, HTML, text and language unchanged, under the client name |
+| The subtype switched off | The setting, to the client subtype |
+| Users who opted out | The opt-outs, to the client subtype |
+
+The copy never replaces a row that already exists under the client name, so it is safe to re-run. It reads a page at a time, writes one tenant per statement, and checks inside its transaction that every copied row is identical to its source. The planning lives in `server/migrations/utils/templates/_shared/copySharedTemplateSetup.cjs` as pure functions, so you can run it over exported rows to see what a migration would write before it runs anywhere.
+
+Email branding recognises a copied row that it wrote itself (`TICKET_EMAIL_TEMPLATES_COPIED_FROM`). The next branding apply rebuilds that row from the client template in the tenant's colors. A copy of a hand-edited row stays the tenant's.
+
+The template editor lists only client-safe variables for a client template.
+
 ## Checks
 
 ```bash
 # Variable registry, audience classification, and strict rendering of every template in every language
 cd packages/notifications && npx vitest run src/lib/templateVariables
 
-# The audience split against a real database
-cd server && npx vitest run src/test/integration/ticketEmailAudienceSplit.integration.test.ts
+# Every template ships every supported language
+cd server && npx vitest run src/test/unit/migrations/templateLocaleParity.test.ts
+
+# The audience split, the template lookup and the copy migration against a real database
+cd server && npx vitest run src/test/integration/ticketEmailAudienceSplit.integration.test.ts src/test/integration/emailTemplateLookup.integration.test.ts src/test/integration/copySharedTicketEmailSetup.integration.test.ts
 ```
