@@ -145,4 +145,57 @@ describe('sendEventEmail reply-marker layout', () => {
       `${BANNER}\n\nBody text\n\n[ALGA-REPLY-TOKEN ${token} ticketId=ticket-1 commentId=comment-1 threadId=thread-1]\nALGA-TICKET-ID:ticket-1\nALGA-COMMENT-ID:comment-1\nALGA-THREAD-ID:thread-1`
     );
   });
+
+  describe('full document shaped like wrapEmailLayout', () => {
+    const doc = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Ignored title</title><style>.x{color:red}</style></head>
+<body style="margin:0;padding:0;">
+<table role="presentation"><tr><td>
+  <div style="text-transform:uppercase;">New Ticket Created</div>
+  <div style="font-size:22px;">Printer down</div>
+  <div style="margin-top:12px;">High priority &middot; Board: Support</div>
+  <p>Printer on floor 3 is jammed</p>
+  <div>&copy; 2026 Acme MSP &middot; Powered by AlgaPSA</div>
+</td></tr></table>
+</body>
+</html>`;
+
+    it('puts the hidden block right after <body>, before all template content', async () => {
+      const { html } = await sendHtml(doc);
+      const bodyTag = '<body style="margin:0;padding:0;">';
+      const after = html.slice(html.indexOf(bodyTag) + bodyTag.length);
+      expect(after.startsWith('<div data-alga-preheader="true"')).toBe(true);
+      expect(html.indexOf('data-alga-reply-boundary')).toBeLessThan(html.indexOf('New Ticket Created</div>'));
+      expect(html.indexOf('<head>')).toBeLessThan(html.indexOf('data-alga-preheader'));
+    });
+
+    it('first visible text is the preheader made of the header label and title lines', async () => {
+      const { html } = await sendHtml(doc);
+      const body = html.slice(html.indexOf('<body'));
+      const first = textNodes(body)[0];
+      expect(first).toBe('New Ticket Created Printer down');
+      expect(first).not.toContain('Ignored title');
+      expect(first).not.toContain('Printer on floor 3');
+    });
+
+    it('puts the banner before </body>, after the footer, with nothing after </html>', async () => {
+      const { html } = await sendHtml(doc);
+      const footer = html.indexOf('Powered by AlgaPSA');
+      const banner = html.indexOf(`>${BANNER}</p>`);
+      expect(banner).toBeGreaterThan(footer);
+      expect(banner).toBeLessThan(html.toLowerCase().lastIndexOf('</body>'));
+      expect(html.trimEnd().endsWith('</html>')).toBe(true);
+      expect(html.split(BANNER).length - 1).toBe(1);
+    });
+
+    it('leaves the text part unchanged', async () => {
+      const { text } = await sendHtml(doc);
+      const token = sendEmail.mock.calls[0][0].replyContext.conversationToken;
+      expect(text.startsWith(`${BANNER}\n\n`)).toBe(true);
+      expect(text).toContain('New Ticket Created Printer down High priority');
+      expect(text).toContain(`[ALGA-REPLY-TOKEN ${token} ticketId=ticket-1`);
+      expect(text).not.toContain('data-alga');
+    });
+  });
 });

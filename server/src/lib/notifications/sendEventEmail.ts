@@ -199,14 +199,32 @@ function escapeHtmlText(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '\u00b7', copy: '\u00a9',
+  ndash: '\u2013', mdash: '\u2014', hellip: '\u2026',
+};
+
+/** htmlToVisibleText leaves most named entities encoded; decode them so escaping below is not double. */
+function decodeEntities(value: string): string {
+  return value.replace(/&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z]+));/g, (match, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()] ?? match;
+    const code = dec ? parseInt(dec, 10) : parseInt(hex, 16);
+    return Number.isFinite(code) && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+  });
+}
+
 /**
  * Inbox-preview excerpt: the first two non-empty lines of the rendered body,
  * whitespace-collapsed and cut on a word boundary. Built only from rendered output
  * (projection/suppression have already run), never from template variables.
  */
 function buildPreheaderText(html: string, text: string): string {
-  const source = text.trim() ? text : htmlToVisibleText(html);
-  const joined = source
+  // htmlToVisibleText keeps block line breaks (so "first two lines" is meaningful) and drops
+  // <style>/<script>; <head>/<title> text is dropped here. `text` is one collapsed line, so it
+  // is only a fallback.
+  const visible = htmlToVisibleText(html.replace(/<head\b[\s\S]*?<\/head>/gi, ' ').replace(/<title\b[\s\S]*?<\/title>/gi, ' '));
+  const source = visible.trim() ? visible : text;
+  const joined = decodeEntities(source)
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
@@ -245,7 +263,19 @@ function applyReplyMarkers(
     : '';
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
-  const augmentedHtml = `${hiddenPreheader}${hiddenToken}${hiddenBoundary}${html}${visibleBanner}`;
+  const hiddenBlock = `${hiddenPreheader}${hiddenToken}${hiddenBoundary}`;
+
+  // Full documents (wrapEmailLayout): hidden block right after <body …> so it precedes all
+  // content, banner just before the last </body> so it stays inside the card document.
+  // Fragments: prepend the block, append the banner.
+  const bodyOpen = /<body\b[^>]*>/i.exec(html);
+  const withHidden = bodyOpen
+    ? `${html.slice(0, bodyOpen.index + bodyOpen[0].length)}${hiddenBlock}${html.slice(bodyOpen.index + bodyOpen[0].length)}`
+    : `${hiddenBlock}${html}`;
+  const bodyCloseIndex = withHidden.toLowerCase().lastIndexOf('</body>');
+  const augmentedHtml = bodyCloseIndex >= 0
+    ? `${withHidden.slice(0, bodyCloseIndex)}${visibleBanner}${withHidden.slice(bodyCloseIndex)}`
+    : `${withHidden}${visibleBanner}`;
 
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);

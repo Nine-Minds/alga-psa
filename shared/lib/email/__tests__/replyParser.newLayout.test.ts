@@ -91,4 +91,13 @@ describe('replyParser with preheader / textless token layout', () => {
   it('htmlToVisibleText ignores the preheader excerpt', () => {
     expect(htmlToVisibleText('<div data-alga-preheader="true">excerpt text</div><p>Body</p>').trim()).toBe('Body');
   });
+
+  it('handles a quoted full document whose hidden block sits right after <body>', () => {
+    const block = readFixture('new-layout-gmail-reply.html').match(/<div data-alga-preheader[\s\S]*?reply-boundary="true"[^>]*><\/div>/)![0];
+    const html = `<div dir="ltr">${USER_TEXT}</div><br><div class="gmail_quote"><blockquote class="gmail_quote"><html><body style="margin:0">${block}<table><tr><td><div>NEW TICKET</div><p>${EXCERPT} body</p></td></tr></table><p>--- Please reply above this line ---</p></body></html></blockquote></div>`;
+    const result = parseEmailReply({ text: '', html });
+    expect(result.tokens).toMatchObject(TOKENS);
+    expect(htmlToVisibleText(result.sanitizedHtml ?? '').trim()).toBe(USER_TEXT);
+    expect(result.sanitizedHtml).not.toContain('data-alga-preheader');
+  });
 });
