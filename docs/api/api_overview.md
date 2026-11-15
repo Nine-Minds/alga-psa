@@ -55,6 +55,7 @@ The edition is controlled by the `EDITION` environment variable:
   - Role claims embedded in JWTs during authentication
   - Middleware enforces role-based permissions
   - 401/403 responses for authentication/authorization failures
+  - Project, ticket, quote and asset responses are projected through the caller's authorization decision: fields the caller's policy hides are omitted (values derived from them are `null`), and a single record the policy denies for that caller returns `404` rather than `403`, so the response does not confirm the record exists. Lists, search, export and stats drop suppressed rows before paging and counting. A caller missing the RBAC permission outright still gets `403`.
 
 ## 5. Standard Conventions
 ### API Structure
@@ -236,6 +237,38 @@ A ticket template is a reusable starting point for a ticket: its title, descript
 **Client-specific templates:** `client_id` is `null` by default, which offers the template for every client. Set it to bind the template to one client: it then only appears in that client's list and is refused (`400`) when instantiated for anyone else. Deleting the client deactivates and detaches its templates rather than deleting them; merging clients moves them to the surviving client.
 
 **Permissions:** list and read require `ticket_template:read`, create `ticket_template:create`, update and activate `ticket_template:update`, delete `ticket_template:delete`. `instantiate` requires `ticket:create` as well as `ticket_template:read`. The whole surface is internal (MSP) only; it is not exposed in the client portal.
+
+**Documentation links:** a template may carry a `links` array (up to 50) of documentation links, for example Hudu articles or a vendor runbook. Each entry has `system` (a built-in key such as `hudu`, or a custom system key), `external_id`, and optional `realm`, `url`, `title` and `metadata`. Every ticket created from the template — through `instantiate`, a recurring schedule, or the UI — receives a copy of these links as **reference** external links, not visible in the client portal, and a `TICKET_EXTERNAL_LINK_ADDED` event is published for each. The copy is made once, when the ticket is created: editing the template's links later does not touch existing tickets. `PUT` replaces the stored list, and the same `system` + `external_id` twice in one template is rejected with `400`. Because Hudu runs on each tenant's own host, a `hudu` link needs an explicit `url`.
+
+#### Recurring Ticket Definitions
+
+A recurring ticket definition (a "recurring schedule" in the UI) generates a ticket from a ticket template on a schedule, once per client on the definition — for example an annual certificate renewal for every client that uses Apple push notifications. Definitions were UI-only; they are now available over REST and through the MCP integration.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/tickets/recurring` | List definitions. Filters: `status` (`active`, `paused`, `archived`, `all`; default `all`), `search` (name substring); `page`/`limit` paging |
+| `POST` | `/tickets/recurring` | Create a definition |
+| `POST` | `/tickets/recurring/preview` | Compute upcoming dates and the rendered first title for an unsaved draft |
+| `GET` | `/tickets/recurring/{definitionId}` | Read a definition with its clients and effective (template + override) fields |
+| `PUT` | `/tickets/recurring/{definitionId}` | Replace the definition wholesale — omitted fields return to their defaults |
+| `DELETE` | `/tickets/recurring/{definitionId}` | Archive the definition (`204`). There is no unarchive; later writes return `409` |
+| `POST` | `/tickets/recurring/{definitionId}/pause` | Stop generating tickets for every client |
+| `POST` | `/tickets/recurring/{definitionId}/resume` | Resume generation |
+| `GET` | `/tickets/recurring/{definitionId}/upcoming` | Next five due dates plus `definition_status` |
+| `GET` | `/tickets/recurring/{definitionId}/occurrences` | Run history. Filters: `status` (`created`, `skipped`, `missed`, `failed`), `client_id` |
+| `POST` | `/tickets/recurring/{definitionId}/clients` | Add clients: `{ "client_ids": [...] }` (1–100) |
+| `PUT` | `/tickets/recurring/{definitionId}/clients/{clientId}` | Set one client's `overrides`, `contact_id`, `location_id` and `asset_ids` |
+| `DELETE` | `/tickets/recurring/{definitionId}/clients/{clientId}` | Remove the client from the schedule; its occurrence history is kept |
+| `POST` | `/tickets/recurring/{definitionId}/clients/{clientId}/pause` | Pause generation for one client |
+| `POST` | `/tickets/recurring/{definitionId}/clients/{clientId}/resume` | Resume generation for one client |
+
+**Definition body:** `name`, `ticket_template_id` (the template supplies title, description, checklist, tags and default board/priority/category), `overrides` (board, priority, category and assignment groups that replace the template's values for the whole schedule), `status_id`, `assigned_to`, `assigned_team_id`, `additional_agent_ids`, `recurrence`, `start_date`, `create_time` and `due_time` (HH:MM in the tenant time zone; defaults 08:00 and 17:00), `lead_days` (how many days before the due date the ticket is created; default 0), `non_business_day_policy` (`keep`, `previous`, `next`), `open_previous_policy` (`always_create` or `skip` while the previous ticket is still open), `notify_client_on_create` and `is_active`.
+
+**Client paths:** `{clientId}` is the client's `client_id`. A client that is not on the definition returns `404`; an unknown client in the add-clients body returns `400`. Per-client overrides are layered on top of the definition's overrides.
+
+**Upcoming dates:** `/upcoming` and `/preview` ignore pause state and already-generated occurrences, which is why `/upcoming` also returns `definition_status`. The date search looks at most 1500 days ahead, so a yearly rule returns four dates rather than five.
+
+**Permissions:** the `recurring_ticket` resource — `read` for list, read, preview, upcoming and occurrences; `create`; `update` for replace, pause/resume and all client operations; `delete` to archive. A write that decides the board, status or assignment of future tickets, or adds clients, is also authorized as `ticket:create` for each affected client before anything is written; a refusal returns `403`.
 
 #### Ticket Comment Cc/Bcc
 
