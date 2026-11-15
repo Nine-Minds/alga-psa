@@ -407,7 +407,7 @@
   {
     "id": "T045",
     "description": "E2E with the Stripe emulator: an allocation larger than available capacity leads to a purchase review for the new total and completes with one charge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]

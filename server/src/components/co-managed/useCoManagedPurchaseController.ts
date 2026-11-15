@@ -20,7 +20,10 @@ export interface CoManagedPurchaseQuote {
  * pending-operation recovery. A browser callback never grants capacity by
  * itself; callers re-read verified state instead.
  */
-export function useCoManagedPurchaseController() {
+export function useCoManagedPurchaseController(options: {
+  /** Called before the purchase request leaves the browser, so a caller can record the operation it is about to start. */
+  onOperation?: (operation: { operationId: string; quantity: number }) => void;
+} = {}) {
   const [state, setState] = useState<CoManagedBillingState | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [preview, setPreview] = useState<CoManagedPurchaseQuote | null>(null);
@@ -56,6 +59,7 @@ export function useCoManagedPurchaseController() {
   const purchase = useCallback(async (nextQuantity?: number) => {
     const quantityToBuy = nextQuantity ?? preview?.quantity ?? quantity;
     operation.current ??= newCoManagedOperationId();
+    options.onOperation?.({ operationId: operation.current, quantity: quantityToBuy });
     setBusy(true); setError(null);
     try {
       const result = await purchaseCoManagedSeatsAction({ quantity: quantityToBuy, operationId: operation.current });
@@ -84,7 +88,13 @@ export function useCoManagedPurchaseController() {
       await reload().catch(() => undefined);
       return 'ambiguous' as const;
     } finally { setBusy(false); }
-  }, [preview, quantity, reload]);
+  }, [preview, quantity, reload, options.onOperation]);
 
-  return { state, closed, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase };
+  /** Replays an operation this browser already started. The server answers from the operation, so it cannot charge twice. */
+  const replay = useCallback((operationId: string, replayQuantity: number) => {
+    operation.current = operationId;
+    return purchase(replayQuantity);
+  }, [purchase]);
+
+  return { state, closed, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
 }

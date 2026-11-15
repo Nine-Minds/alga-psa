@@ -430,6 +430,16 @@
         "load": "Não foi possível carregar as opções. Atualize e tente novamente.",
         "submit": "A solicitação pode não ter sido concluída. Tente novamente; ela não será aplicada duas vezes."
       },
+      "purchase": {
+        "checking": "A verificar o conjunto…",
+        "review": "O conjunto tem poucos lugares. Reveja a compra para atribuir {{count}} lugares.",
+        "waiting": "A aguardar a conclusão da compra. Os {{count}} lugares serão atribuídos assim que o conjunto os tiver.",
+        "stalled": "Os novos lugares ainda não apareceram. Verifique novamente em breve; não será cobrado duas vezes.",
+        "failed": "O pagamento não foi concluído. Tente a mesma compra novamente para atribuir {{count}} lugares.",
+        "check": "Verificar novamente",
+        "cancel": "Cancelar",
+        "error": "Não foi possível verificar o conjunto. Atualize e tente novamente; nada é cobrado duas vezes."
+      },
       "saved": "Salvo.",
       "boards": {
         "title": "Âmbito dos quadros",
