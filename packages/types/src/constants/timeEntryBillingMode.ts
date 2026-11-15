@@ -59,3 +59,6 @@ export const commercialTimeEntrySql = (alias = 'time_entries'): string => `${ali
 export function commercialTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }>(query: Q, alias = 'time_entries'): Q {
   return query.whereRaw(commercialTimeEntrySql(alias));
 }
+
+/** The same rule for a row already in memory (a rollup over rows read without the SQL predicate). */
+export const isCommercialTimeEntry = (row: { billing_mode?: string | null }): boolean => row.billing_mode !== 'operational';
