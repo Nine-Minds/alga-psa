@@ -120,6 +120,10 @@ export class ApiWebhookController {
   /**
    * Check permissions
    */
+  // LEVERAGE: friction webhook-controller-off-base — this class re-implements ApiBaseController's authenticate and
+  // checkPermission instead of extending it: it has no BaseService/CrudOptions, its authenticate builds a narrower
+  // context (no rate limit, ProductAccessError rather than the base product gate) and every handler is typed on
+  // ApiRequest. Folding it in changes auth behaviour, so the base needs a service-less/option-less mode first.
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
