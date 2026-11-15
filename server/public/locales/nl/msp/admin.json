@@ -601,7 +601,7 @@
         "rulesUnavailable": "De regels van de bundel konden niet worden geladen, dus de toegang wordt geweigerd.",
         "rbacDenied": "De rol van de gebruiker geeft geen {{action}} op {{resource}}.",
         "resolverTemplateDenied": "Een ingebouwde toegangsregel beperkt {{action}} op {{resource}} tot records die niet bij deze gebruiker passen.",
-        "resolverBoardScope": "Het record staat op een board buiten het boardbereik van deze gebruiker, dus {{action}} op {{resource}} is geweigerd.",
+        "resolverBoardScope": "Het record staat op een bord buiten het bordbereik van deze gebruiker, dus {{action}} op {{resource}} is geweigerd.",
         "resolverClientScope": "Het record hoort bij een andere klant dan die waarvoor deze gebruiker een seat heeft, dus {{action}} op {{resource}} is geweigerd."
       }
     },

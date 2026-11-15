@@ -600,9 +600,9 @@
         "notSelfApprover": "Os usuários não podem aprovar os seus próprios registros.",
         "rulesUnavailable": "Não foi possível carregar as regras do pacote, por isso o acesso é negado.",
         "rbacDenied": "A função do usuário não concede {{action}} em {{resource}}.",
-        "resolverTemplateDenied": "Uma regra de acesso integrada limita {{action}} em {{resource}} a registos que não correspondem a este utilizador.",
-        "resolverBoardScope": "O registo está num quadro fora do âmbito de quadros deste utilizador, pelo que {{action}} em {{resource}} é negado.",
-        "resolverClientScope": "O registo pertence a um cliente diferente daquele para o qual este utilizador tem posto, pelo que {{action}} em {{resource}} é negado."
+        "resolverTemplateDenied": "Uma regra de acesso integrada limita {{action}} em {{resource}} a registros que não correspondem a este usuário.",
+        "resolverBoardScope": "O registro está em um quadro fora do escopo de quadros deste usuário, portanto {{action}} em {{resource}} é negado.",
+        "resolverClientScope": "O registro pertence a um cliente diferente daquele para o qual este usuário tem assento, portanto {{action}} em {{resource}} é negado."
       }
     },
     "createDialog": {

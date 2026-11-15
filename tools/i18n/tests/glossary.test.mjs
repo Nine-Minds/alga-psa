@@ -276,3 +276,48 @@ test('it and pl allowlist the loanword "Host" as a field label', () => {
     assert.equal(allowlistMatchers(glossary, config.dialect).isAllowed('Host'), true, `${locale}: Host`);
   }
 });
+
+test('seat technician settings strings respect every locale glossary and use Brazilian Portuguese', () => {
+  // The seat technicians table and effective-access dialog in user administration.
+  // pt is pt-BR: the glossary bans the singular European forms, but the matcher is
+  // whole-word, so plural and progressive forms (utilizadores, registos,
+  // "A verificar") must be kept out of these strings explicitly.
+  const lookup = (obj, key) => key.split('.').reduce((node, part) => node?.[part], obj);
+  const leaves = (node, prefix) => Object.entries(node).flatMap(([name, value]) => {
+    const key = `${prefix}.${name}`;
+    return typeof value === 'string' ? [key] : leaves(value, key);
+  });
+  const findSection = (node, name, path = []) => {
+    if (!node || typeof node !== 'object') return null;
+    if (node[name] && typeof node[name] === 'object') return [...path, name].join('.');
+    for (const [child, value] of Object.entries(node)) {
+      const hit = findSection(value, name, [...path, child]);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/msp/settings.json'), 'utf8'));
+  const sectionKey = findSection(en, 'seatTechnicians');
+  assert.ok(sectionKey, 'en: msp/settings seatTechnicians section must exist');
+  const keys = leaves(lookup(en, sectionKey), sectionKey);
+  for (const required of ['description', 'dialog.help', 'dialog.checking', 'dialog.noReasons']) {
+    assert.ok(keys.includes(`${sectionKey}.${required}`), `en: ${sectionKey}.${required} must exist`);
+  }
+  const europeanPortuguese = /\b(?:utilizador(?:es)?|registos?|ecrã|ficheiros?|contactos?)\b|\bA verificar\b/i;
+
+  for (const [locale, config] of Object.entries(registry)) {
+    if (locale === 'en' || !config.glossary) continue;
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    const matchers = forbiddenMatchers(glossary, config.dialect);
+    const strings = JSON.parse(readFileSync(join(repoRoot, `server/public/locales/${locale}/msp/settings.json`), 'utf8'));
+    for (const key of keys) {
+      const value = lookup(strings, key);
+      nonEmptyString(value, `${locale}: msp/settings:${key} must exist`);
+      const hits = findForbiddenTerms(value, matchers, config.dialect, lookup(en, key), `msp/settings:${key}`);
+      assert.deepEqual(hits.map((hit) => hit.term), [], `${locale}: msp/settings:${key} = ${value}`);
+      if (locale === 'pt') {
+        assert.doesNotMatch(value, europeanPortuguese, `pt: msp/settings:${key} uses European Portuguese: ${value}`);
+      }
+    }
+  }
+});

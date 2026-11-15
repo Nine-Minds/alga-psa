@@ -310,15 +310,15 @@
       "revoking": "Revogando..."
     },
     "seatTechnicians": {
-      "title": "Técnicos de posto",
-      "description": "Pessoas que trabalham no seu PSA através do posto cogerido de um cliente. Não contam para os seus utilizadores licenciados.",
+      "title": "Técnicos de assento",
+      "description": "Pessoas que trabalham no seu PSA por meio do assento cogerenciado de um cliente. Elas não contam para os seus usuários licenciados.",
       "clientUnavailable": "Cliente indisponível",
       "effectiveAccess": "Acesso efetivo",
       "columns": {
         "name": "Nome",
         "email": "E-mail",
         "client": "Cliente",
-        "status": "Estado",
+        "status": "Status",
         "actions": "Ações"
       },
       "state": {
@@ -327,13 +327,13 @@
       },
       "dialog": {
         "title": "Acesso efetivo de {{name}}",
-        "help": "Escolha um ticket para ver se este técnico de posto o pode ler e porquê.",
+        "help": "Escolha um ticket para ver se este técnico de assento pode lê-lo e por quê.",
         "ticket": "Ticket",
         "ticketPlaceholder": "Selecionar um ticket...",
-        "checking": "A verificar o acesso...",
+        "checking": "Verificando o acesso...",
         "allowed": "{{name}} pode ler este ticket.",
         "denied": "{{name}} não pode ler este ticket.",
-        "noReasons": "Não foram comunicados mais detalhes.",
+        "noReasons": "Nenhum detalhe adicional foi informado.",
         "error": "Não foi possível verificar o acesso. Tente novamente.",
         "close": "Fechar",
         "unavailable": "O acesso efetivo não pode ser verificado para este ticket nesta edição ou configuração."
