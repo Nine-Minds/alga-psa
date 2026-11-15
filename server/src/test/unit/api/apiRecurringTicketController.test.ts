@@ -33,8 +33,8 @@ const kernel = vi.hoisted(() => {
       !(input.recordContext.clientId && deniedClients.has(input.recordContext.clientId))),
   };
 });
+// Mock only names the real kernel exports, so a stale import fails here rather than passing on a phantom mock.
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceAction: kernel.authorize,
   authorizeApiResource: kernel.authorize,
 }));
 const templates = vi.hoisted(() => ({ getTicketTemplate: vi.fn() }));
