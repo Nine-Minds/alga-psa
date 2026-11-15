@@ -2,7 +2,7 @@ import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateFieldDisplayFormat, TemplateI18nText, TemplateValueFormat } from '@alga-psa/types';
 import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
-import type { TemplateLabelTranslator } from './i18nLabels';
+import type { TemplateLabelTranslator } from './i18nText';
 import { formatTemplateValue } from './valueFormatting';
 
 type AddressRecord = Record<string, unknown>;

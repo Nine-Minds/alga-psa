@@ -1,5 +1,5 @@
 import type { TemplateI18nText } from '@alga-psa/types';
-import { templateI18nTextToString, type TemplateLabelTranslator } from './i18nLabels';
+import { templateI18nTextToString, type TemplateLabelTranslator } from './i18nText';
 
 /**
  * Wording for the two boolean values when a template supplies no `valueLabels`.

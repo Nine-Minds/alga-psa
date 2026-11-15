@@ -9,27 +9,12 @@ import type {
   TemplateValueExpression,
 } from '@alga-psa/types';
 import { normalizeLocale } from '@alga-psa/core/i18n/config';
+import { isTemplateI18nRef, type TemplateLabelTranslator } from './i18nText';
+
+export { isTemplateI18nRef, templateI18nTextToString, type TemplateLabelTranslator } from './i18nText';
 
 /** Namespace holding the standard document chrome (labels, headers, totals rows). */
 export const DOCUMENT_LABEL_NAMESPACE = 'documents';
-
-export type TemplateLabelTranslator = (
-  key: string,
-  options: { defaultValue: string }
-) => string;
-
-export const isTemplateI18nRef = (value: unknown): value is TemplateI18nRef =>
-  typeof value === 'object' &&
-  value !== null &&
-  typeof (value as TemplateI18nRef).i18nKey === 'string' &&
-  typeof (value as TemplateI18nRef).defaultValue === 'string';
-
-/**
- * The literal a key reference falls back to when nothing resolves it. Used by
- * the renderer so an unresolved key never leaks into a customer's document.
- */
-export const templateI18nTextToString = (value: TemplateI18nText): string =>
-  typeof value === 'string' ? value : value.defaultValue;
 
 const resolveText = (value: TemplateI18nRef, t: TemplateLabelTranslator): string =>
   t(value.i18nKey, { defaultValue: value.defaultValue });
