@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import type { TicketHandoffDirection } from './ticketResponsibility';
 
-// LEVERAGE: pattern derived-operation-id — same sha256-to-UUIDv5-shape derivation as arrangementReturnOperationId in @alga-psa/co-managed seatTicketHandoff
+// LEVERAGE: pattern derived-operation-id — same sha256-to-UUIDv5-shape derivation as arrangementReturnOperationId (seat ticket handoff); find the sibling by slug
 export function bulkHandoffOperationId(submissionId: string, direction: TicketHandoffDirection, ticketId: string): string {
   const hex = createHash('sha256')
     .update(`ticket-bulk-handoff:${submissionId.toLowerCase()}:${direction}:${ticketId.toLowerCase()}`).digest('hex');
