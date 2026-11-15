@@ -16,6 +16,7 @@ import {
   saveServiceRequestDefinitionDraftAction,
   searchLinkedServicesForDefinitionAction,
   updateServiceRequestBasicsAction,
+  updateServiceRequestFormBehaviorConfigAction,
   updateServiceRequestFormBehaviorProviderAction,
   updateServiceRequestExecutionConfigAction,
   setLinkedServiceForDefinitionAction,
