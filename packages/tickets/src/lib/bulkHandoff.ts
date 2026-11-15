@@ -86,7 +86,8 @@ export interface BulkHandoffSummary {
 export function summarizeBulkHandoff<State>(results: readonly BulkHandoffTicketResult<State>[]): BulkHandoffSummary {
   const summary: BulkHandoffSummary = { succeeded: [], failed: [] };
   for (const result of results) {
-    if (result.ok) summary.succeeded.push(result.ticketId);
+    // `=== true`, not truthiness: apps compiled without strictNullChecks (EE server) only narrow on the comparison.
+    if (result.ok === true) summary.succeeded.push(result.ticketId);
     else summary.failed.push({ ticketId: result.ticketId, message: result.message, ...(result.messageKey ? { messageKey: result.messageKey } : {}) });
   }
   return summary;
