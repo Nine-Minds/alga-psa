@@ -430,6 +430,16 @@
         "load": "Impossible de charger les choix. Actualisez et réessayez.",
         "submit": "La demande n’a peut-être pas abouti. Réessayez ; elle ne sera pas appliquée deux fois."
       },
+      "purchase": {
+        "checking": "Vérification du pool…",
+        "review": "Le pool compte trop peu de places. Examinez l'achat pour attribuer {{count}} places.",
+        "waiting": "En attente de la fin de l'achat. Les {{count}} places seront attribuées dès que le pool les aura.",
+        "stalled": "Les nouvelles places ne sont pas encore apparues. Vérifiez à nouveau sous peu ; vous ne serez pas facturé deux fois.",
+        "failed": "Le paiement n'a pas abouti. Relancez le même achat pour attribuer {{count}} places.",
+        "check": "Vérifier à nouveau",
+        "cancel": "Annuler",
+        "error": "Impossible de vérifier le pool. Actualisez et réessayez ; rien n'est facturé deux fois."
+      },
       "saved": "Enregistré.",
       "boards": {
         "title": "Périmètre des tableaux",

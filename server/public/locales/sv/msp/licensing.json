@@ -430,6 +430,16 @@
         "load": "Det gick inte att läsa in valen. Uppdatera och försök igen.",
         "submit": "Begäran kanske inte slutfördes. Försök igen; den tillämpas inte två gånger."
       },
+      "purchase": {
+        "checking": "Kontrollerar poolen…",
+        "review": "Poolen har för få platser. Granska köpet för att tilldela {{count}} platser.",
+        "waiting": "Väntar på att köpet slutförs. {{count}} platser tilldelas så snart poolen har dem.",
+        "stalled": "De nya platserna har inte dykt upp än. Kontrollera igen strax; du debiteras inte två gånger.",
+        "failed": "Betalningen gick inte igenom. Försök samma köp igen för att tilldela {{count}} platser.",
+        "check": "Kontrollera igen",
+        "cancel": "Avbryt",
+        "error": "Poolen kunde inte kontrolleras. Uppdatera och försök igen; inget debiteras två gånger."
+      },
       "saved": "Sparat.",
       "boards": {
         "title": "Tavelomfattning",

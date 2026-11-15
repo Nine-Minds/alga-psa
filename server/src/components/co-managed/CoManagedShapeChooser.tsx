@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CoManagedSeatSetup from './CoManagedSeatSetup';
 import { coManagedSeatMessage } from './coManagedSeatMessage';
+import { readSeatAllocationIntent } from './seatAllocationIntent';
 
 export interface CoManagedSeatEnableView {
   capacity: { purchased: number; allocated: number; available: number };
@@ -15,21 +16,30 @@ export interface CoManagedSeatEnableView {
 /**
  * "Enable co-managed IT" for a client that has no arrangement: two shapes with one sentence each, the
  * pool's seats and any blocker. Workspace continues into the existing provisioning flow, rendered
- * unchanged by the caller; Seat opens the seat setup. The pool purchase is not here: a pool with no
- * seats left shows the blocker and stops.
+ * unchanged by the caller; Seat opens the seat setup. When the pool purchase is offered, a pool with
+ * too few seats continues into setup, which reviews a purchase for the shortfall; otherwise it shows the
+ * blocker and stops.
  */
-export default function CoManagedShapeChooser({ clientId, idPrefix, enable, workspaceSetup, onEnabled, onDirtyChange }: {
+export default function CoManagedShapeChooser({ clientId, idPrefix, enable, workspaceSetup, purchaseOpen = false, onEnabled, onDirtyChange }: {
   clientId: string;
   idPrefix: string;
   enable: CoManagedSeatEnableView;
   /** The workspace flow, or null when the workspace shape is not offered for this client. */
   workspaceSetup: ReactNode | null;
+  /** The pool purchase is offered: an empty pool no longer stops Seat, because setup reviews a purchase for the shortfall. */
+  purchaseOpen?: boolean;
   onEnabled: () => Promise<void> | void;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
   const [choice, setChoice] = useState<'seat' | 'workspace' | null>(null);
-  const { capacity, blocker } = enable;
+  // A request left waiting on a purchase (a reload, a return from checkout) reopens Seat, where setup resumes it.
+  useEffect(() => {
+    if (purchaseOpen && readSeatAllocationIntent(clientId)) setChoice((current) => current ?? 'seat');
+  }, [purchaseOpen, clientId]);
+  // A pool with no seats left is only a blocker when it cannot be bought into; every other refusal still stops here.
+  const blocker = enable.blocker === 'CAPACITY_UNAVAILABLE' && purchaseOpen ? null : enable.blocker;
+  const { capacity } = enable;
   const options = [
     { shape: 'seat' as const, disabled: blocker !== null,
       label: t('coManaged.seat.chooser.seat', { defaultValue: 'Seat' }),
@@ -70,7 +80,7 @@ export default function CoManagedShapeChooser({ clientId, idPrefix, enable, work
         <Card id={`${idPrefix}-seat-card`}>
           <CardHeader><CardTitle>{t('coManaged.seat.setup.title', { defaultValue: 'Seat arrangement' })}</CardTitle></CardHeader>
           <CardContent>
-            <CoManagedSeatSetup clientId={clientId} idPrefix={idPrefix} available={capacity.available}
+            <CoManagedSeatSetup clientId={clientId} idPrefix={idPrefix} available={capacity.available} purchaseOpen={purchaseOpen}
               onEnabled={onEnabled} onDirtyChange={onDirtyChange} />
           </CardContent>
         </Card>

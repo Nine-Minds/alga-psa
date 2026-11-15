@@ -430,6 +430,16 @@
         "load": "Could not load the choices. Refresh and try again.",
         "submit": "The request may not have finished. Try again; it will not be applied twice."
       },
+      "purchase": {
+        "checking": "Checking the pool…",
+        "review": "The pool has too few seats. Review the purchase to allocate {{count}} seats.",
+        "waiting": "Waiting for the purchase to complete. {{count}} seats will be allocated as soon as the pool has them.",
+        "stalled": "The new seats have not appeared yet. Check again shortly; you will not be charged twice.",
+        "failed": "Payment did not go through. Retry the same purchase to allocate {{count}} seats.",
+        "check": "Check again",
+        "cancel": "Cancel",
+        "error": "The pool could not be checked. Refresh and try again; nothing is charged twice."
+      },
       "saved": "Saved.",
       "boards": {
         "title": "Board scope",
