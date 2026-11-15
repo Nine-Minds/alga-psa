@@ -49,6 +49,8 @@ Every ticket email carries `recipient.isInternal`. A template that goes to both 
 
 A path with no entry is MSP-only. The client rendering drops it, and `ticketEmailAudience.test.ts` fails until you classify it.
 
+A tenant's customized template can still reference a variable that clients never receive. It renders empty for them. `sendEventEmail` logs a warning the first time it sends such a template to a client, naming the tenant, the template and the variables.
+
 If building the value can fail (an extra query, a lookup in another module), wrap it with `optionalEmailData()` from `server/src/lib/notifications/optionalEmailData.ts`. On an error it logs and returns your fallback, so the email is still sent:
 
 ```ts

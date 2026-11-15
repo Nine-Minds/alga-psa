@@ -282,10 +282,12 @@ export type TicketRendering = 'msp' | 'client';
  * watcher or a copied address; `msp` for staff (assignee, additional agent, internal watcher,
  * board-rule recipient). A send path names the person, never the template. An out-of-scope seat
  * technician is an external party and gets `client` however they were addressed.
+ *
+ * `addressedAs` has no default: a caller that forgot it would get the staff rendering.
  */
 export function recipientRendering(
   recipient: TicketNotificationRecipient,
-  addressedAs: TicketRendering = 'msp',
+  addressedAs: TicketRendering,
 ): TicketRendering {
   return addressedAs === 'client' || !recipientInScope(recipient) ? 'client' : 'msp';
 }

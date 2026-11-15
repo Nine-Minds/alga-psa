@@ -385,10 +385,10 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(await resolve(otherBoard, { userId: seat })).toEqual(external);
     expect(await resolve(otherClient, { userId: seat })).toEqual(external);
     expect(recipientInScope(await resolve(inScope, { userId: seat }))).toBe(true);
-    expect(recipientRendering(await resolve(inScope, { userId: seat }))).toBe('msp');
+    expect(recipientRendering(await resolve(inScope, { userId: seat }), 'msp')).toBe('msp');
     expect(recipientInScope(await resolve(otherClient, { userId: seat }))).toBe(false);
-    expect(recipientRendering(await resolve(otherClient, { userId: seat }))).toBe('client');
-    expect(recipientRendering(await resolve(inScope, { userId: msp }))).toBe('msp');
+    expect(recipientRendering(await resolve(otherClient, { userId: seat }), 'msp')).toBe('client');
+    expect(recipientRendering(await resolve(inScope, { userId: msp }), 'msp')).toBe('msp');
     expect(await resolve(inScope, { userId: msp })).toEqual({ seat: false });
     expect(await resolve(otherClient, { email: 'someone@elsewhere.example.com' })).toEqual({ seat: false });
   });

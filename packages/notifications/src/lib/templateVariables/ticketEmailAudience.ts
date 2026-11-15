@@ -122,18 +122,21 @@ export function isTicketVariableClassified(path: string): boolean {
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
-function projectNode(node: Record<string, unknown>, prefix: string): Record<string, unknown> {
+function projectNode(node: Record<string, unknown>, prefix: string, dropped: string[]): Record<string, unknown> {
   const projected: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(node)) {
     const path = prefix ? `${prefix}.${key}` : key;
     if (isTicketVariableClassified(path)) {
       if (ticketVariableAudience(path) === "client") projected[key] = value;
+      else dropped.push(path);
       continue;
     }
     // Not classified itself: only its classified children may pass.
     if (isPlainObject(value)) {
-      const child = projectNode(value, path);
+      const child = projectNode(value, path, dropped);
       if (Object.keys(child).length > 0) projected[key] = child;
+    } else {
+      dropped.push(path);
     }
   }
   return projected;
@@ -141,13 +144,37 @@ function projectNode(node: Record<string, unknown>, prefix: string): Record<stri
 
 /**
  * The context one rendering may read. `msp` gets it unchanged; `client` gets a copy holding
- * only client-safe variables.
+ * only client-safe variables, and `dropped` names every path that was left out.
  */
 export function projectTicketEmailContext<T extends Record<string, unknown>>(
   context: T,
   rendering: TicketEmailRendering,
-): Record<string, unknown> {
-  return rendering === "msp" ? context : projectNode(context, "");
+): { context: Record<string, unknown>; dropped: string[] } {
+  if (rendering === "msp") return { context, dropped: [] };
+  const dropped: string[] = [];
+  return { context: projectNode(context, "", dropped), dropped };
+}
+
+const TEMPLATE_VARIABLE_ROOTS = [
+  ...new Set(Object.keys(TICKET_EMAIL_VARIABLE_AUDIENCE).map((path) => path.split(".")[0])),
+];
+const TEMPLATE_VARIABLE_PATTERN = new RegExp(
+  `\\{\\{\\{?\\s*(?:#\\s*)?(?:(?:if|unless|each|with)\\s+)?((?:${TEMPLATE_VARIABLE_ROOTS.join("|")})(?:\\.[A-Za-z_]\\w*)+)`,
+  "g",
+);
+
+/**
+ * The ticket variables a template references that a client rendering never receives: MSP-only
+ * ones and ones nobody classified. They render empty for clients, so a customized template that
+ * uses one is worth a warning. Only full paths are read (`ticket.x`, `comment.x`); a relative
+ * name inside an `{{#each}}` block is covered by the block's own path.
+ */
+export function templateVariablesHiddenFromClients(templateText: string): string[] {
+  const hidden = new Set<string>();
+  for (const match of templateText.matchAll(TEMPLATE_VARIABLE_PATTERN)) {
+    if (ticketVariableAudience(match[1]) !== "client") hidden.add(match[1]);
+  }
+  return [...hidden].sort();
 }
 
 /** The per-recipient variables every ticket email carries. */

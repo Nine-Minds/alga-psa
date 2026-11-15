@@ -744,10 +744,18 @@ async function sendTicketEmailMessage(
     const rendering = recipientRendering(recipient, addressedAs);
     const resolvedTemplate = resolveTicketEmailTemplate(params.template, subtypeName, rendering);
     subtypeName = resolvedTemplate.subtype;
+    const projection = projectTicketEmailContext(params.context, rendering);
+    if (projection.dropped.length > 0) {
+      logger.debug('[TicketEmailSubscriber] Variables left out of the client rendering:', {
+        tenantId: params.tenantId,
+        template: resolvedTemplate.template,
+        dropped: projection.dropped,
+      });
+    }
     params = {
       ...params,
       template: resolvedTemplate.template,
-      context: { ...projectTicketEmailContext(params.context, rendering), ...ticketEmailRecipientVariables(rendering) },
+      context: { ...projection.context, ...ticketEmailRecipientVariables(rendering) },
     };
 
     const gate = await resolveNotificationGate(knex, params.tenantId, subtypeName);

@@ -19,8 +19,38 @@ import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage'
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { persistReplyToken } from './replyTokenPersistence';
+import { templateVariablesHiddenFromClients } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
+
+const warnedHiddenVariables = new Set<string>();
+
+/**
+ * A client rendering of a ticket email only receives client-safe variables, so a template that
+ * references any other ticket variable renders it empty for clients. A tenant's customized
+ * template can do that without anyone noticing: warn, once per process for each tenant,
+ * template and set of variables.
+ */
+function warnAboutVariablesHiddenFromClients(
+  params: Pick<SendEmailParams, 'tenantId' | 'template' | 'context'>,
+  templateText: string,
+  templateSource: string,
+): void {
+  const recipient = params.context.recipient as { isInternal?: unknown } | undefined;
+  if (recipient?.isInternal !== false) return;
+  const hidden = templateVariablesHiddenFromClients(templateText);
+  if (hidden.length === 0) return;
+  const key = `${params.tenantId}:${params.template}:${hidden.join(',')}`;
+  if (warnedHiddenVariables.has(key)) return;
+  if (warnedHiddenVariables.size >= 1000) warnedHiddenVariables.clear();
+  warnedHiddenVariables.add(key);
+  logger.warn('[SendEventEmail] Template sent to a client references variables clients never receive; they render empty', {
+    tenantId: params.tenantId,
+    template: params.template,
+    templateSource,
+    variables: hidden,
+  });
+}
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
 const DEFAULT_REPLY_TOKEN_LIFETIME_DAYS = 30;
 
@@ -478,6 +508,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     if (!templateContent) {
       throw new Error(`No template content found for: ${params.template}`);
     }
+
+    warnAboutVariablesHiddenFromClients(params, `${emailSubject}\n${templateContent}`, templateSource);
 
     logger.debug('[SendEventEmail] Using template:', {
       template: params.template,

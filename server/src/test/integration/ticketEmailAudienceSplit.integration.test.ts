@@ -115,6 +115,16 @@ describe('ticket email audience split (integration)', () => {
     expect(mails, `one message to ${address}`).toHaveLength(1);
     return mails[0];
   };
+  /**
+   * The client rendering is built from client-safe variables only. Every variable the handlers
+   * send today is client-safe, so a client copy must carry the same ticket variables as a staff
+   * copy: a variable missing here was dropped by the classification and now renders empty.
+   */
+  const expectNoTicketVariableLost = () => {
+    const staff = Object.keys(mailTo(ASSIGNEE_EMAIL).context.ticket).sort();
+    expect(Object.keys(mailTo(CONTACT_EMAIL).context.ticket).sort()).toEqual(staff);
+    expect(Object.keys(mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket).sort()).toEqual(staff);
+  };
   const audienceOf = () => Object.fromEntries(sent.map((mail) => [mail.to.toLowerCase(), {
     template: mail.template, isInternal: mail.context.recipient?.isInternal,
   }]));
@@ -131,6 +141,7 @@ describe('ticket email audience split (integration)', () => {
     });
     expect(mailTo(CONTACT_EMAIL).context.ticket.url).toContain('/client-portal/tickets/');
     expect(mailTo(ASSIGNEE_EMAIL).context.ticket.url).toContain('/msp/tickets/');
+    expectNoTicketVariableLost();
   });
 
   it('ticket updated: the same split, decided once', async () => {
@@ -145,6 +156,7 @@ describe('ticket email audience split (integration)', () => {
       [ASSIGNEE_EMAIL]: { template: 'ticket-updated', isInternal: true },
       [STAFF_WATCHER_EMAIL]: { template: 'ticket-updated', isInternal: true },
     });
+    expectNoTicketVariableLost();
   });
 
   it('a client-facing subtype switched off silences the client side only', async () => {
@@ -201,6 +213,9 @@ describe('ticket email audience split (integration)', () => {
     const assignee = mailTo(ASSIGNEE_EMAIL);
     expect(assignee.context.recipient).toEqual({ isInternal: true });
     expect(assignee.context.comment.authorType).toBe('internal');
+    expectNoTicketVariableLost();
+    // The one comment variable clients lose is the unclassified one.
+    expect(Object.keys(assignee.context.comment).filter((key) => !(key in contact.context.comment))).toEqual(['authorType']);
     expect(assignee.context.ticket.url).toContain('/msp/tickets/');
     expect(mailTo(STAFF_WATCHER_EMAIL).context.recipient).toEqual({ isInternal: true });
   });
@@ -217,5 +232,6 @@ describe('ticket email audience split (integration)', () => {
     expect(audiences[ASSIGNEE_EMAIL].isInternal).toBe(true);
     expect(audiences[STAFF_WATCHER_EMAIL].isInternal).toBe(true);
     expect(mailTo(CONTACT_EMAIL).context.ticket.closedBy).not.toBe('');
+    expectNoTicketVariableLost();
   });
 });

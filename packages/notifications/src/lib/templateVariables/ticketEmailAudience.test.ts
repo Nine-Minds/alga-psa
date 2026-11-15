@@ -7,6 +7,7 @@ import {
   isTicketVariableClassified,
   projectTicketEmailContext,
   resolveTicketEmailTemplate,
+  templateVariablesHiddenFromClients,
   ticketEmailRecipientVariables,
   ticketVariableAudience,
 } from "./ticketEmailAudience";
@@ -69,11 +70,24 @@ describe("projectTicketEmailContext", () => {
   };
 
   it("hands the MSP rendering the context unchanged", () => {
-    expect(projectTicketEmailContext(context, "msp")).toBe(context);
+    const projection = projectTicketEmailContext(context, "msp");
+    expect(projection.context).toBe(context);
+    expect(projection.dropped).toEqual([]);
+  });
+
+  it("names every path it leaves out of the client rendering", () => {
+    expect(projectTicketEmailContext(context, "client").dropped.sort()).toEqual([
+      "comment.authorType",
+      "internalNotes.anything",
+      "ticket.materialsTotal",
+      "ticket.somethingNew",
+      "ticket.timeEntries",
+      "ticket.totalTimeWorked",
+    ]);
   });
 
   it("keeps only client-safe variables for the client rendering", () => {
-    expect(projectTicketEmailContext(context, "client")).toEqual({
+    expect(projectTicketEmailContext(context, "client").context).toEqual({
       ticket: {
         id: "T-1",
         title: "Printer offline",
@@ -99,7 +113,7 @@ describe("ticket email recipient variable", () => {
 
   it("is client-safe, so the client projection keeps it", () => {
     expect(
-      projectTicketEmailContext({ ...ticketEmailRecipientVariables("client") }, "client"),
+      projectTicketEmailContext({ ...ticketEmailRecipientVariables("client") }, "client").context,
     ).toEqual({ recipient: { isInternal: false } });
   });
 
@@ -148,6 +162,35 @@ describe("resolveTicketEmailTemplate", () => {
   it("only names client templates and subtypes that exist", () => {
     for (const variant of Object.values(TICKET_EMAIL_CLIENT_VARIANTS)) {
       expect(templateVariableRegistry[variant.template], variant.template).toBeDefined();
+    }
+  });
+});
+
+describe("templateVariablesHiddenFromClients", () => {
+  it("finds nothing in a template that only uses client-safe variables", () => {
+    expect(
+      templateVariablesHiddenFromClients(
+        "{{ticket.title}} {{{comment.content}}} {{#if recipient.isInternal}}x{{/if}} {{#each ticket.assets}}{{name}}{{/each}}",
+      ),
+    ).toEqual([]);
+  });
+
+  it("names MSP-only and unclassified ticket variables, in any Handlebars form", () => {
+    expect(
+      templateVariablesHiddenFromClients(
+        "{{ticket.totalTimeWorked}} {{{ ticket.internalNote }}} {{#each ticket.timeEntries}}{{technician}}{{/each}} {{#if comment.authorType}}y{{/if}} {{ticket.totalTimeWorked}}",
+      ),
+    ).toEqual(["comment.authorType", "ticket.internalNote", "ticket.timeEntries", "ticket.totalTimeWorked"]);
+  });
+
+  it("ignores names it cannot place: relative names and other roots", () => {
+    expect(templateVariablesHiddenFromClients("{{name}} {{company.name}} {{currentYear}}")).toEqual([]);
+  });
+
+  it("finds nothing in any stock ticket template", () => {
+    for (const [name, entry] of ticketTemplates) {
+      const text = entry.variables.map((variable) => `{{${variable.path}}}`).join(" ");
+      expect(templateVariablesHiddenFromClients(text), name).toEqual([]);
     }
   });
 });
