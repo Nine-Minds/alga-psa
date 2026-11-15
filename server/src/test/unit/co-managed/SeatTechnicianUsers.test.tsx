@@ -41,6 +41,19 @@ describe('seat technicians section of user administration', () => {
     expect(container.textContent ?? '').not.toMatch(UUID);
   });
 
+  it('more technicians than one page holds are paged, never silently dropped', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      ...user, user_id: `11111111-1111-4111-8111-${String(i).padStart(12, '0')}`, first_name: `Tech${i}`, last_name: 'Seat',
+    }));
+    const manyListings = Object.fromEntries(many.map((u) => [u.user_id, { userId: u.user_id, clientName: 'Acme Co', state: 'active' as const }]));
+    const { container } = render(<SeatTechnicianUsers users={many} listings={manyListings} />);
+    expect(screen.getByText('Tech0 Seat')).toBeInTheDocument();
+    expect(screen.queryByText('Tech11 Seat')).toBeNull();
+    // The pager is shown, so the remaining technicians are one page away.
+    expect(await screen.findByText(/Page 1 of 2/)).toBeInTheDocument();
+    expect(container.querySelector('#seat-technician-users-table-pagination-next-btn')).not.toBeNull();
+  });
+
   it('a client outside the administrator\'s scope reads as unavailable, not as a blank', () => {
     render(<SeatTechnicianUsers users={[user]} listings={{ [user.user_id]: { ...listings[user.user_id], clientName: null } }} />);
     expect(screen.getByText('Client not available')).toBeInTheDocument();

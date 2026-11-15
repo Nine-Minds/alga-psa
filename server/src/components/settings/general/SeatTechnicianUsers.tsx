@@ -58,7 +58,9 @@ export default function SeatTechnicianUsers({ users, listings }: {
           {t('users.seatTechnicians.description', { defaultValue: 'People who work in your PSA through a client\'s co-managed seat. They do not count toward your licensed users.' })}
         </p>
       </div>
-      <DataTable id="seat-technician-users-table" data={users} columns={columns} pagination={false} />
+      {/* Paged like the staff list. LEVERAGE: friction datatable-pagination-false — DataTable still pages at
+          pageSize with pagination={false} and only hides the pager, so an unpaged table silently drops rows past 10. */}
+      <DataTable id="seat-technician-users-table" data={users} columns={columns} />
       {explaining && <EffectiveAccessDialog user={explaining} onClose={() => setExplaining(null)} />}
     </section>
   );

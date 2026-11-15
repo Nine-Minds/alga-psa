@@ -84,7 +84,8 @@ test.describe('seat technicians in user administration (T046)', () => {
 
       // 2. Effective access: an out-of-scope ticket is denied, and the board scope is the reason.
       await page.locator(`#seat-technician-effective-access-${technicianId}`).click();
-      const dialog = page.locator('#seat-technician-effective-access-dialog');
+      // The Dialog component suffixes its id with -dialog.
+      const dialog = page.locator('#seat-technician-effective-access-dialog-dialog');
       await expect(dialog).toBeVisible();
       const pick = async (title: string) => {
         await dialog.getByRole('combobox').click();
