@@ -2207,6 +2207,8 @@
       },
       "title": "Informacje o zmiennych szablonów e-mail",
       "panelTitle": "Zmienne szablonu",
+      "mspOnly": "Tylko MSP",
+      "clientSafeHelp": "Wysyłany do klientów. Zmienne tylko dla MSP są niedostępne.",
       "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
       "empty": "Brak pasujących zmiennych.",
       "example": "Przykład:",

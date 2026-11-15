@@ -2207,6 +2207,8 @@
       },
       "title": "Riferimento delle variabili dei modelli email",
       "panelTitle": "Variabili del modello",
+      "mspOnly": "Solo MSP",
+      "clientSafeHelp": "Inviato ai clienti. Le variabili riservate all'MSP non sono disponibili.",
       "inferredContract": "Attualmente non inviato. Questo contratto è dedotto dal modello.",
       "empty": "Nessuna variabile corrispondente.",
       "example": "Esempio:",
