@@ -1359,6 +1359,15 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     return withTransaction(knex, async (trx) => {
       await this.assertClientInScope(trx, clientId, context);
+      // Scope checks answer "may the caller see this client", not "does it exist": an unscoped
+      // caller passes for any id, so an unknown client must be rejected here, not listed as [].
+      const client = await tenantDb(trx, context.tenant)
+        .table('clients')
+        .where({ client_id: clientId })
+        .first('client_id');
+      if (!client) {
+        throw new NotFoundError('Client not found');
+      }
       const rows = await this.billingProfileQuery(trx, context)
         .where({ 'cbp.client_id': clientId })
         .orderBy('cbp.is_default', 'desc')

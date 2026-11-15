@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   permitted: new Set<string>(),
   profiles: [] as any[],
+  clients: [] as any[],
   joins: [] as any[],
   orderBys: [] as Array<[string, string]>,
   wheres: [] as any[],
@@ -47,7 +48,7 @@ vi.mock('@alga-psa/db', async () => {
     BaseService,
     withTransaction: async (_knex: unknown, fn: (trx: unknown) => unknown) => fn({}),
     tenantDb: () => ({
-      table: () => builder(() => state.profiles),
+      table: (name: string) => builder(() => (name === 'clients' ? state.clients : state.profiles)),
       tenantJoin: (_q: unknown, table: string, a: string, b: string, opts: unknown) => {
         state.joins.push({ table, a, b, opts });
       },
@@ -81,6 +82,7 @@ const profile = (over: any) => ({
 beforeEach(() => {
   state.permitted = new Set([A, B]);
   state.joins = []; state.orderBys = []; state.wheres = [];
+  state.clients = [{ client_id: A }, { client_id: B }];
   state.profiles = [
     profile({ billing_profile_id: 'p-z', name: 'Zeta' }),
     profile({ billing_profile_id: 'p-def', name: 'Main', is_default: true, is_system_managed_default: true,
@@ -141,6 +143,19 @@ describe('ClientService.listBillingProfiles', () => {
   it('404s for a missing or out-of-scope client', async () => {
     state.permitted = new Set([B]);
     await expect(new ClientService().listBillingProfiles(A, ctx)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('404s for an unknown client even when the caller is unscoped (not an empty list)', async () => {
+    const unknown = '33333333-3333-4333-8333-333333333333';
+    state.permitted = new Set([A, B, unknown]);
+    await expect(new ClientService().listBillingProfiles(unknown, ctx)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('returns an empty list for an existing client with no profiles', async () => {
+    const empty = '44444444-4444-4444-8444-444444444444';
+    state.permitted.add(empty);
+    state.clients.push({ client_id: empty });
+    await expect(new ClientService().listBillingProfiles(empty, ctx)).resolves.toEqual([]);
   });
 
   it('lists only the client\'s profiles: default first, then by name, inactive included', async () => {

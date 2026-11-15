@@ -144,6 +144,9 @@ describe('client billing profiles read API (real DB)', () => {
       .rejects.toMatchObject({ name: 'NotFoundError' });
     await expect(service.getBillingProfile(clientA, uuidv4(), context))
       .rejects.toMatchObject({ name: 'NotFoundError' });
+    // an unknown client is a 404 for the list, not an empty list
+    await expect(service.listBillingProfiles(uuidv4(), context))
+      .rejects.toMatchObject({ name: 'NotFoundError' });
     // and the owner can still read it
     const own = await service.getBillingProfile(clientB, foreignProfile, context);
     expect(own.name).toBe('Beta Only');
