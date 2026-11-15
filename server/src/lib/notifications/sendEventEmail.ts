@@ -15,6 +15,7 @@ import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
+import { htmlToVisibleText } from '@shared/lib/email/replyParser';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
@@ -186,6 +187,37 @@ function projectSponsorEmailContext(context: Record<string, unknown>, redactions
   return { ticket: safeTicket, comment: safeComment };
 }
 
+const PREHEADER_MAX_CHARS = 140;
+const HIDDEN_STYLE = 'display:none;max-height:0;overflow:hidden;';
+
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Inbox-preview excerpt: the first two non-empty lines of the rendered body,
+ * whitespace-collapsed and cut on a word boundary. Built only from rendered output
+ * (projection/suppression have already run), never from template variables.
+ */
+function buildPreheaderText(html: string, text: string): string {
+  const source = text.trim() ? text : htmlToVisibleText(html);
+  const joined = source
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' ');
+  if (joined.length <= PREHEADER_MAX_CHARS) return joined;
+  const cut = joined.slice(0, PREHEADER_MAX_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd();
+}
+
 function applyReplyMarkers(
   html: string,
   text: string,
@@ -202,13 +234,18 @@ function applyReplyMarkers(
     .join(' ');
 
   const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
-  const tokenString = footerLines[0];
 
-  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">${tokenString}</div>`;
-  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
+  // Token and boundary carry attributes only: any text in them would become the inbox preview.
+  // The token is also in the text part's bottom lines and the outbound Message-ID headers.
+  const hiddenToken = `<div ${attrs} style="${HIDDEN_STYLE}"></div>`;
+  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="${HIDDEN_STYLE}"></div>`;
+  const preheaderText = buildPreheaderText(html, text);
+  const hiddenPreheader = preheaderText
+    ? `<div data-alga-preheader="true" style="${HIDDEN_STYLE}">${escapeHtmlText(preheaderText)}</div>`
+    : '';
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
-  const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
+  const augmentedHtml = `${hiddenPreheader}${hiddenToken}${hiddenBoundary}${html}${visibleBanner}`;
 
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
