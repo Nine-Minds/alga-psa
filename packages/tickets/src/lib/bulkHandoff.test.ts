@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { bulkHandoffOperationId } from './bulkHandoffOperationId';
 import {
   runBulkHandoff,
+  selectBulkHandoffTickets,
   summarizeBulkHandoff,
   type BulkHandoffItem,
 } from './bulkHandoff';
@@ -108,5 +109,37 @@ describe('bulkHandoffOperationId', () => {
     ]);
     expect(seen.size).toBe(4);
     for (const operationId of seen) expect(operationId).toMatch(uuid);
+  });
+});
+
+describe('selectBulkHandoffTickets', () => {
+  const [held, noArrangement, offPage] = ids;
+
+  it('names each selected ticket with the revision its row carried, in selection order', () => {
+    expect(selectBulkHandoffTickets([held], [{ ticket_id: held, ticket_number: 'T-1', title: 'Printer', seat_responsibility_revision: 2 }]))
+      .toEqual([{ ticket_id: held, ticket_number: 'T-1', title: 'Printer', seat_responsibility_revision: 2 }]);
+  });
+
+  it('a list row with no seat state is submitted at revision 0 (the server names the refusal), not reported as unloaded', () => {
+    const [ticket] = selectBulkHandoffTickets([noArrangement], [{ ticket_id: noArrangement, ticket_number: 'T-2', title: 'Scanner' }]);
+    expect(ticket).toEqual({ ticket_id: noArrangement, ticket_number: 'T-2', title: 'Scanner', seat_responsibility_revision: 0 });
+  });
+
+  it('a row only smart search knows has no seat state to name: it stays unloaded', () => {
+    const [ticket] = selectBulkHandoffTickets([offPage], [], [{ ticket_id: offPage, ticket_number: 'T-3', title: 'Switch' }]);
+    expect(ticket).toEqual({ ticket_id: offPage, ticket_number: 'T-3', title: 'Switch' });
+    expect(ticket).not.toHaveProperty('seat_responsibility_revision');
+  });
+
+  it('prefers the list row, and names a ticket no source knows without an id-like label', () => {
+    const tickets = selectBulkHandoffTickets(
+      [held, offPage],
+      [{ ticket_id: held, ticket_number: 'T-1', seat_responsibility_revision: 4 }],
+      [{ ticket_id: held, ticket_number: 'stale', seat_responsibility_revision: 1 }],
+    );
+    expect(tickets).toEqual([
+      { ticket_id: held, ticket_number: 'T-1', title: null, seat_responsibility_revision: 4 },
+      { ticket_id: offPage, ticket_number: null, title: null },
+    ]);
   });
 });

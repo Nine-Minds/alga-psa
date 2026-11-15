@@ -16,7 +16,8 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
-import BulkHandoffDialog, { type BulkHandoffTicket } from './BulkHandoffDialog';
+import BulkHandoffDialog from './BulkHandoffDialog';
+import { selectBulkHandoffTickets, type BulkHandoffTicket } from '../lib/bulkHandoff';
 import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import {
@@ -1568,21 +1569,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
 
 
-  // The selected rows as the handoff dialog needs them: named by number or title, with the revision each row carried.
-  const selectedHandoffTickets = useMemo((): BulkHandoffTicket[] => {
-    if (!seatHandoffDirection) return [];
-    const { rows } = collectSelectedTicketRows(selectedTicketIdsArray, [tickets, smartSearchRows]);
-    const byId = new Map(rows.map((row) => [row.ticket_id as string, row]));
-    return selectedTicketIdsArray.map((ticketId) => {
-      const row = byId.get(ticketId);
-      return {
-        ticket_id: ticketId,
-        ticket_number: row?.ticket_number ?? null,
-        title: row?.title ?? null,
-        ...(typeof row?.seat_responsibility_revision === 'number' ? { seat_responsibility_revision: row.seat_responsibility_revision } : {}),
-      };
-    });
-  }, [seatHandoffDirection, selectedTicketIdsArray, tickets, smartSearchRows]);
+  // The selected rows as the handoff dialog needs them: named by number or title, with the revision each must name.
+  const selectedHandoffTickets = useMemo(
+    (): BulkHandoffTicket[] => (seatHandoffDirection ? selectBulkHandoffTickets(selectedTicketIdsArray, tickets, smartSearchRows) : []),
+    [seatHandoffDirection, selectedTicketIdsArray, tickets, smartSearchRows],
+  );
 
   const handleBulkHandoffDone = useCallback((_handedOver: string[], failedTicketIds: string[]) => {
     // Refresh the list (rows, responsibility column and revisions); what is left selected is what still needs attention.

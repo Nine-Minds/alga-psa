@@ -15,18 +15,11 @@ import {
   bulkHandTicketsToMsp,
   getBulkHandoffTechnicians,
 } from '../actions/ticketResponsibilityActions';
-import type { BulkHandoffFailure } from '../lib/bulkHandoff';
+import type { BulkHandoffFailure, BulkHandoffTicket } from '../lib/bulkHandoff';
 import { summarizeBulkHandoff } from '../lib/bulkHandoff';
 import type { TicketHandoffDirection } from '../lib/ticketResponsibility';
 
-/** One selected ticket as the list showed it: how it is named to the user, and the revision its handoff must name. */
-export interface BulkHandoffTicket {
-  ticket_id: string;
-  ticket_number?: string | null;
-  title?: string | null;
-  /** From the row the user selected. Absent: the row's state was never loaded. */
-  seat_responsibility_revision?: number;
-}
+export type { BulkHandoffTicket };
 
 interface BulkHandoffDialogProps {
   id: string;

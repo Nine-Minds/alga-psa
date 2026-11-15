@@ -9,12 +9,58 @@
  *   (the idempotency key lives in ./bulkHandoffOperationId: it needs node:crypto, and this module is
  *   imported by client components)
  *   - `runBulkHandoff`: the isolating loop and the shape of its result.
+ *   - `selectBulkHandoffTickets`: the selected rows as the dialog submits them, with the revision each must name.
  */
 
 /** One selected ticket, with the revision of the row the user selected it from. */
 export interface BulkHandoffItem {
   ticketId: string;
   expectedRevision: number;
+}
+
+/** One selected ticket as the list showed it: how it is named to the user, and the revision its handoff must name. */
+export interface BulkHandoffTicket {
+  ticket_id: string;
+  ticket_number?: string | null;
+  title?: string | null;
+  /** The revision the handoff names. Absent: the row's seat state was never read, so it is not submitted. */
+  seat_responsibility_revision?: number;
+}
+
+/** A selected row as the list knows it. */
+export interface BulkHandoffSourceRow {
+  ticket_id?: string | null;
+  ticket_number?: string | null;
+  title?: string | null;
+  seat_responsibility_revision?: number;
+}
+
+/**
+ * The selected tickets as the handoff dialog submits them, in selection order. `listRows` are the list page's rows:
+ * their seat state was read with the page, so one without a revision has no responsibility at all (its client has no
+ * seat arrangement). It is submitted at revision 0 and the server names the actual refusal; reporting it as "not
+ * loaded" would send the user to a page they are already on. `otherRows` (smart search results) carry no seat state:
+ * without a revision they stay unloaded and are not submitted.
+ */
+export function selectBulkHandoffTickets(
+  selectedIds: readonly string[],
+  listRows: readonly BulkHandoffSourceRow[],
+  otherRows: readonly BulkHandoffSourceRow[] = [],
+): BulkHandoffTicket[] {
+  const listed = new Map(listRows.flatMap((row) => (row.ticket_id ? [[row.ticket_id, row] as const] : [])));
+  const other = new Map(otherRows.flatMap((row) => (row.ticket_id ? [[row.ticket_id, row] as const] : [])));
+  return selectedIds.map((ticketId) => {
+    const row = listed.get(ticketId) ?? other.get(ticketId);
+    const revision = typeof row?.seat_responsibility_revision === 'number'
+      ? row.seat_responsibility_revision
+      : listed.has(ticketId) ? 0 : undefined;
+    return {
+      ticket_id: ticketId,
+      ticket_number: row?.ticket_number ?? null,
+      title: row?.title ?? null,
+      ...(revision !== undefined ? { seat_responsibility_revision: revision } : {}),
+    };
+  });
 }
 
 /** The most tickets one submission may name. */
@@ -46,12 +92,6 @@ export function summarizeBulkHandoff<State>(results: readonly BulkHandoffTicketR
   return summary;
 }
 
-/**
- * The operation id of one ticket's handoff in one submission: the same on every retry of the submission, different
- * for every ticket and every direction. The submission id is fixed by the caller when the dialog opens, so a retry
- * of the whole submission (a lost response, a double click) finds each ticket's original receipt instead of handing
- * the ticket over twice. Shaped as a version 5 UUID: the commands take UUIDs.
- */
 /**
  * Runs `handOne` for each distinct ticket, one at a time, and returns one result per ticket in selection order.
  * `handOne` returns the ticket's new state or its failure; if it throws, that is that ticket's failure
