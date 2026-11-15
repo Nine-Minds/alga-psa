@@ -6,7 +6,7 @@
  * containers (steps, repeatable groups). Both are new rows in this table, nothing more.
  */
 import type { FieldTypeKey } from '@alga-psa/ui/form-fields';
-import type { BasicFormField } from '../../../../lib/service-requests/basicFormBuilder';
+import type { BasicFormField } from '../../../../lib/service-requests/formSchema';
 
 /** Palette categories, in the order the pane shows them. */
 export const FORM_PALETTE_CATEGORY_ORDER = [

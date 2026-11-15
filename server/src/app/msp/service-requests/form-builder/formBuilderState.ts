@@ -16,7 +16,7 @@ import { getFieldType } from '@alga-psa/ui/form-fields';
 import type {
   BasicFormField,
   BasicFormSettings,
-} from '../../../../lib/service-requests/basicFormBuilder';
+} from '../../../../lib/service-requests/formSchema';
 
 export interface FormBuilderDocument {
   elements: BasicFormField[];

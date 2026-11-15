@@ -12,7 +12,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   BasicFormField,
   BasicFormSettings,
-} from '../../../../lib/service-requests/basicFormBuilder';
+} from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
 import { getFieldVisibilityRules } from '../fieldVisibilityModel';
 import { InlineRenameLabel } from './InlineRenameLabel';

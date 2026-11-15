@@ -7,7 +7,7 @@
  * author's language without the templates knowing about i18n.
  */
 import type { TFunction } from 'i18next';
-import type { BasicFormField } from '../../../../lib/service-requests/basicFormBuilder';
+import type { BasicFormField } from '../../../../lib/service-requests/formSchema';
 import type { FormBuilderDocument } from './formBuilderState';
 
 export type FormBuilderTemplateId =

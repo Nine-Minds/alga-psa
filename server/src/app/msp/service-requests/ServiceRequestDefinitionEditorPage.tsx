@@ -69,7 +69,7 @@ import {
 import {
   normalizeBasicFormSchema,
   type BasicFormField,
-} from '../../../lib/service-requests/basicFormBuilder';
+} from '../../../lib/service-requests/formSchema';
 
 interface EditorData {
   definitionId: string;

@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 import { RequestServiceForm } from "./RequestServiceForm";
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from "./clientSubmissionKey";
+import type { BasicFormField } from "../../../../lib/service-requests/formSchema";
 
 describe("RequestServiceForm long-text fields", () => {
   afterEach(() => cleanup());
@@ -111,7 +112,7 @@ describe("RequestServiceForm live conditional visibility", () => {
     rules: [{ fieldKey: "vpn_reason", source: "needs_vpn", operator: "is-true" as const }],
     context: { requesterUserId: "user-1", clientId: "client-1", contactId: null },
   };
-  const fields = [
+  const fields: BasicFormField[] = [
     { key: "needs_vpn", type: "checkbox", label: "Needs VPN" },
     { key: "vpn_reason", type: "short-text", label: "VPN Reason", required: true },
   ];

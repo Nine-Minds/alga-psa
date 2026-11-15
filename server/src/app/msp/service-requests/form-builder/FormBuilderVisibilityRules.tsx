@@ -21,7 +21,7 @@ import type {
   VisibilityRule,
   VisibilityRuleOperator,
 } from '../../../../lib/service-requests/formVisibility';
-import type { BasicFormField } from '../../../../lib/service-requests/basicFormBuilder';
+import type { BasicFormField } from '../../../../lib/service-requests/formSchema';
 import {
   VISIBILITY_CONTEXT_SOURCES,
   getFieldVisibilityRules,

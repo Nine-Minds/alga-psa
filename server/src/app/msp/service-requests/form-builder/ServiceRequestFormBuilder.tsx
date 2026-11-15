@@ -45,7 +45,7 @@ import {
   parseVisibilityRules,
 } from '../../../../lib/service-requests/formVisibility';
 import { collectFormFieldIssues } from '../../../../lib/service-requests/formValidation';
-import { normalizeBasicFormSchema } from '../../../../lib/service-requests/basicFormBuilder';
+import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestFormRenderer } from '../../../../components/service-requests/ServiceRequestFormRenderer';
 import {
   replaceServiceRequestFormSchemaAction,

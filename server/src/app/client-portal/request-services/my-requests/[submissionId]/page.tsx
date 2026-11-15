@@ -12,7 +12,7 @@ import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
 import {
   groupFormElementsBySection,
   isDisplayElement,
-} from '../../../../../lib/service-requests/basicFormBuilder';
+} from '../../../../../lib/service-requests/formSchema';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');

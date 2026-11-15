@@ -13,7 +13,7 @@ import { getFieldType } from '@alga-psa/ui/form-fields';
 import {
   groupFormElementsBySection,
   type BasicFormField,
-} from '../../../../lib/service-requests/basicFormBuilder';
+} from '../../../../lib/service-requests/formSchema';
 import { getFieldVisibilityRules } from '../fieldVisibilityModel';
 
 export interface FormBuilderOutlineProps {

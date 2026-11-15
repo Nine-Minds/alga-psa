@@ -16,7 +16,7 @@ import {
   groupFormElementsBySection,
   type BasicFormField,
   type BasicFormSettings,
-} from '../../lib/service-requests/basicFormBuilder';
+} from '../../lib/service-requests/formSchema';
 
 export interface ServiceRequestFormRendererLabels {
   selectPlaceholder: string;

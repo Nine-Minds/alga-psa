@@ -6,7 +6,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { ServiceRequestFormRenderer } from './ServiceRequestFormRenderer';
-import type { BasicFormField } from '../../lib/service-requests/basicFormBuilder';
+import type { BasicFormField } from '../../lib/service-requests/formSchema';
 
 const labels = { selectPlaceholder: 'Select an option', datePlaceholder: 'Pick a date' };
 

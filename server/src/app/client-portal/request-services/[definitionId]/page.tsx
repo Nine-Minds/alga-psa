@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 import { parseVisibilityRules } from '../../../../lib/service-requests/formVisibility';
-import { normalizeBasicFormSchema } from '../../../../lib/service-requests/basicFormBuilder';
+import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 

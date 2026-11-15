@@ -18,7 +18,7 @@ import type {
   BasicFormField,
   BasicFormFieldOption,
   BasicFormSettings,
-} from '../../../../lib/service-requests/basicFormBuilder';
+} from '../../../../lib/service-requests/formSchema';
 import { FormBuilderVisibilityRules } from './FormBuilderVisibilityRules';
 import { slugifyElementKey } from './formBuilderState';
 
