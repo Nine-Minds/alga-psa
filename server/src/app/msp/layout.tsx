@@ -7,6 +7,8 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-act
 import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { TimeEntryModeProvider } from "@alga-psa/scheduling/context/TimeEntryModeContext";
+import { timeEntryModeForSurfaceKind } from "@alga-psa/scheduling/lib/timeEntryMode";
 import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
 import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
 import { getCurrentProductPrincipal } from "@/lib/productAccess";
@@ -167,7 +169,10 @@ export default async function MspLayout({
     : { mspWhiteLabel: false, tenantBranding: null };
   const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise, mspWhiteLabel });
 
+  // The time-entry dialog's mode comes from the principal resolved above, exactly as `surfaceKind` does. It wraps
+  // the whole shell so a dialog opened from a drawer, a ticket or the time sheet reads the same server answer.
   return (
+    <TimeEntryModeProvider mode={timeEntryModeForSurfaceKind(principal.surfaceKind)}>
     <MspLayoutClient
       mspBranding={mspBranding}
       session={session}
@@ -189,5 +194,6 @@ export default async function MspLayout({
       {modal}
       {surface}
     </MspLayoutClient>
+    </TimeEntryModeProvider>
   );
 }

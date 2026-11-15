@@ -146,7 +146,7 @@ export const AUTHORIZATION_ENTRY_POINTS: ReadonlySet<string> = new Set([
   // client portal: the caller's own client, derived from the session (see CLIENT_PORTAL_OWN_CLIENT_SCOPE)
   ...CLIENT_PORTAL_OWN_CLIENT_SCOPE,
   // REST and MCP (S18)
-  'authorizeApiResourceAction', 'authorizeApiResource', 'projectApiResourceRead', 'projectApiResourceReads',
+  'authorizeApiResource', 'projectApiResourceRead', 'projectApiResourceReads',
   'readAssetGateForRequest', 'guardAssetReadForRequest',
 ]);
 

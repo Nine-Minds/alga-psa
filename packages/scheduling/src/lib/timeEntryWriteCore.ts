@@ -1,5 +1,6 @@
 import { clientResolvers } from '@alga-psa/authorization/kernel';
 import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
@@ -35,6 +36,7 @@ import { getClientIdForWorkItem } from '../actions/timeEntryHelpers';
 import { assertCanActOnBehalf } from '../actions/timeEntryDelegationAuth';
 import { markTimeEntryChangeRequestsHandled } from '../actions/timeEntryChangeRequestActions';
 import type { SaveTimeEntryParams } from '../actions/timeEntrySchemas';
+import { operationalTimeEntryFields, type CoManagedTimeEntryMode } from './timeEntryMode';
 
 /**
  * Shared time-entry write core (plan D6).
@@ -97,6 +99,15 @@ export interface PersistTimeEntryInput {
    *    400 rather than a correctable one.
    */
   sheetPeriodCheck?: 'span' | 'work_date';
+  /**
+   * Billing mode the SERVER resolved for the acting principal (`resolveTimeEntryMode`); never taken from
+   * the client payload. Omitted means `commercial`: every existing caller keeps today's path. `operational`
+   * writes the row from `operationalTimeEntryFields()` (no service, contract line or tax, zero billable
+   * minutes), and runs neither contract resolution nor billing allocation.
+   */
+  mode?: CoManagedTimeEntryMode;
+  /** Request cache the caller used to resolve `mode`; shared so the tenant authorization probe runs once. */
+  requestCache?: AuthorizationRequestCache;
 }
 
 export interface WorkItemBillingContext {
@@ -252,10 +263,12 @@ export async function assertTimeEntryCreateInScope(
   actor: IUser,
   entryUserId: string,
   entry: Pick<SaveTimeEntryParams, 'work_item_type' | 'work_item_id'>,
+  requestCache?: AuthorizationRequestCache,
 ): Promise<void> {
   await assertRecordCreateAllowed(trx, {
     tenant,
     user: actor,
+    requestCache,
     resourceType: 'time_entry',
     record: async () => {
       const clientId = await clientResolvers.resolveClient(trx, tenant, 'work_item', entry.work_item_type, entry.work_item_id);
@@ -281,6 +294,7 @@ export async function persistTimeEntry(
   );
   if (delegated.handled) return delegated.value;
   const tenantScopedDb = tenantDb(trx, tenant) as any;
+  const isOperational = input.mode === 'operational';
 
   const validatedTimeEntry = input.entry;
   const actorUserId = actor.user_id;
@@ -289,7 +303,7 @@ export async function persistTimeEntry(
   if (validatedTimeEntry.entry_id) {
     const existing = await tenantScopedDb.table('time_entries')
       .where({ entry_id: validatedTimeEntry.entry_id })
-      .select('user_id', 'invoiced', 'time_sheet_id')
+      .select('user_id', 'invoiced', 'time_sheet_id', ...(isOperational ? ['billing_mode'] : []))
       .first();
 
     if (!existing) {
@@ -298,6 +312,11 @@ export async function persistTimeEntry(
 
     if (existing.invoiced) {
       throw new Error('This time entry has already been invoiced and cannot be modified.');
+    }
+
+    // An operational write never converts a commercial row: its bucket draws and allocations would be orphaned.
+    if (isOperational && existing.billing_mode !== 'operational') {
+      throw new Error('A commercial time entry cannot be saved as operational.');
     }
 
     timeEntryUserId = existing.user_id;
@@ -313,7 +332,7 @@ export async function persistTimeEntry(
     } else {
       await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
     }
-    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry);
+    await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry, input.requestCache);
   }
 
   // Extract only the fields that exist in the database schema
@@ -381,7 +400,7 @@ export async function persistTimeEntry(
   const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
   
   // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
-  const finalBillableDuration = billable_duration === 0 ? 0 :
+  const finalBillableDuration = isOperational ? 0 : billable_duration === 0 ? 0 :
                              (typeof billable_duration === 'number' && billable_duration > 0 ? billable_duration : actualDurationMinutes);
 
   console.log('Calculating billable duration:', {
@@ -415,7 +434,10 @@ export async function persistTimeEntry(
     user_id: timeEntryUserId,
     updated_by: actorUserId,
     tenant: tenant as string,
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    // The operational field set overrides every commercial column above and throws
+    // OPERATIONAL_TIME_COMMERCIAL_FIELDS if the entry carries one (policy: reject, never silently drop).
+    ...(isOperational ? operationalTimeEntryFields(validatedTimeEntry) : {}),
   };
 
   // Log the cleaned entry for debugging
@@ -423,7 +445,9 @@ export async function persistTimeEntry(
 
   let resultingEntry: ITimeEntry | null = null;
 
-  if (input.contractLine) {
+  if (isOperational) {
+    // Operational: nothing to resolve. The row is already built from operationalTimeEntryFields().
+  } else if (input.contractLine) {
     // The caller already decided the linkage (see PersistTimeEntryInput.contractLine).
     cleanedEntry.contract_line_id = input.contractLine.id ?? (null as any);
     cleanedEntry.contract_line_source = input.contractLine.source;
@@ -670,12 +694,15 @@ export async function persistTimeEntry(
   }
 
   // Bucket draw + hour-block reconciliation (extracted verbatim; see timeEntryBillingAllocations.ts).
-  const { prepaidBlockUsage } = await reconcileTimeEntryBillingAllocations(trx, tenant, {
-    entry_id,
-    resultingEntry,
-    oldEntrySpan,
-    oldDuration,
-  });
+  // An operational entry draws from nothing, so allocation is skipped for it and only for it.
+  const { prepaidBlockUsage } = isOperational
+    ? { prepaidBlockUsage: undefined }
+    : await reconcileTimeEntryBillingAllocations(trx, tenant, {
+      entry_id,
+      resultingEntry,
+      oldEntrySpan,
+      oldDuration,
+    });
 
   if (!resultingEntry) {
     throw new Error('Time entry save completed without creating or updating a row.');

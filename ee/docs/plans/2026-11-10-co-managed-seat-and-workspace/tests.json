@@ -247,7 +247,7 @@
   {
     "id": "T028",
     "description": "DB integration: a seat technician creates a ticket for their client; a request naming another client or an out-of-scope board is refused; an edit changing the client or moving to an out-of-scope board is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F051"
@@ -315,7 +315,7 @@
   {
     "id": "T035",
     "description": "E2E: a seat technician opens the time-entry dialog and saves an entry; the network log shows no service catalog, tax or contract request, and the stored entry is operational with no service or contract line.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F067"
