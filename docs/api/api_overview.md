@@ -317,13 +317,22 @@ Structured files can be attached to any AlgaPSA entity — tickets, assets, comp
 |--------|------|-------|
 | `POST` | `/api/v1/documents` | Create a document record and attach it to an entity |
 
-Identify the target entity with `entity_type` (e.g. `ticket`, `asset`, `company`) and `entity_id` (UUID). Provide the document content through exactly one of:
+The request body is JSON. Identify the target entity with `entity_type` (`ticket`, `project_task`, `client`, `contact`, or `asset`) and `entity_id` (UUID). Provide the document content in a `source` object of one of two shapes:
 
-- `url` — a publicly reachable URL; AlgaPSA fetches and stores the content
-- `content_base64` — base64-encoded content provided inline
-- `file` — multipart file upload
+- `{ "type": "url", "url": "https://…" }` — AlgaPSA downloads the file and streams it into storage
+- `{ "type": "base64", "content": "…" }` — base64-encoded content provided inline
 
-**Download host allowlist:** when using `url`, the hostname must appear in the tenant's **Allowed download hosts** list under **Settings → MCP Server → Allowed download hosts**. Requests with an unlisted host are rejected with `403 Forbidden`. The allowlist is not checked for `content_base64` or `file` uploads.
+`file_name` and `mime_type` are optional. `POST /api/v1/documents` does not accept multipart; a multipart upload to a ticket goes through `POST /api/v1/tickets/{id}/documents`.
+
+**Size limits:** every file is held to the default storage provider's per-file limit (`maxFileSize`, 500 MiB by default; see [file_storage_system.md](../architecture/file_storage_system.md#upload-size-limit)).
+
+- A `url` source streams, so it can reach the per-file limit. The download is cut off past the limit (`413 PAYLOAD_TOO_LARGE`). Each connection attempt has a 15 s timeout and the whole download a 10 min budget; a timed-out download returns `400`.
+- A `base64` source is buffered, so it is capped at 25 MiB of decoded bytes (`MAX_BASE64_SOURCE_BYTES`, or the per-file limit if lower). The request is bounded on its `Content-Length` before the body is read: no `Content-Length` returns `411 LENGTH_REQUIRED`; a body past the encoded cap (plus a small envelope allowance) returns `413 PAYLOAD_TOO_LARGE`. The decoded bytes are then checked exactly.
+- Ticket multipart uploads (`POST /api/v1/tickets/{id}/documents`) are bounded the same way before the form is parsed: `411` without a numeric `Content-Length`, `413` past the smaller of the 100 MiB proxy body cap and the per-file limit plus a 64 KiB envelope. The file part is then streamed into storage.
+
+Size errors name the limit that applied and point to the `url` source or the upload-session API (`/api/documents/uploads`) for larger files.
+
+**Download host allowlist:** when using a `url` source, the hostname must appear in the tenant's **Allowed download hosts** list under **Settings → MCP Server → Allowed download hosts**. A URL on an unlisted host, including one reached through a redirect, is rejected with `400` and the error code `FETCH_HOST_NOT_ALLOWED`. The allowlist is not checked for `base64` sources.
 
 **Permissions:** requires `document:create` plus the write permission for the entity type being attached to (e.g. `ticket:update` for a ticket attachment).
 
