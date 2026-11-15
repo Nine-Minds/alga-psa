@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { isValidUUID } from '@alga-psa/validation';
 
 export interface ServiceRequestSubmissionHistoryDetail {
   tenant: string;
@@ -345,6 +346,12 @@ export async function getClientServiceRequestSubmissionSummary(
   clientId: string,
   submissionId: string
 ): Promise<ServiceRequestClientSubmissionListRow | null> {
+  // submission_id is a uuid column: a malformed value (e.g. a hand-edited URL)
+  // would make Postgres throw instead of simply matching nothing.
+  if (!isValidUUID(submissionId)) {
+    return null;
+  }
+
   const row = await clientSubmissionSummaryQuery(knex, tenant, clientId)
     .where({ 'submission.submission_id': submissionId })
     .first();

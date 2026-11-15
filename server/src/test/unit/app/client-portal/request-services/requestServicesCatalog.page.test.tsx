@@ -56,8 +56,9 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
   formatDate: (date: Date) => `formatted:${date.toISOString()}`,
 }));
 
+const getDateFormatPreferenceMock = vi.fn();
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({
-  getDateFormatPreference: vi.fn().mockResolvedValue('system'),
+  getDateFormatPreference: (...args: unknown[]) => getDateFormatPreferenceMock(...args),
 }));
 
 vi.mock('@/lib/serverProductRouteGuard', () => ({
@@ -93,6 +94,7 @@ const { default: ServiceRequestsPage } = await import(
 describe('/client-portal/request-services catalog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getDateFormatPreferenceMock.mockResolvedValue('system');
     listMyRecentServiceRequestsActionMock.mockResolvedValue([]);
   });
 
@@ -185,10 +187,23 @@ describe('/client-portal/request-services catalog', () => {
       expect(screen.queryByText(/forged-ticket-id/)).not.toBeInTheDocument();
     });
 
+    it('renders no banner for a malformed submitted value', async () => {
+      // The real action returns null for non-UUID ids; the page must not throw.
+      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(null);
+
+      render(
+        await ServiceRequestsPage({ searchParams: Promise.resolve({ submitted: 'not-a-uuid' }) })
+      );
+
+      expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
+      expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
+    });
+
     it('does not look anything up when submitted is absent', async () => {
       render(await ServiceRequestsPage({}));
 
       expect(getMyServiceRequestSubmissionSummaryActionMock).not.toHaveBeenCalled();
+      expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
       expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
     });
 

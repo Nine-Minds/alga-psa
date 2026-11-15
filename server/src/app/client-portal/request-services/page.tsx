@@ -45,14 +45,20 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
   // paginates client-side, which is fine for the small per-client volume.
   // The banner is resolved server-side from the signed-in client's own
   // submissions; nothing but the submission id is read from the URL.
-  const [groups, allSubmissions, { t }, submittedSummary, locale, dateFormat] = await Promise.all([
+  const [groups, allSubmissions, { t }, submittedSummary] = await Promise.all([
     listRequestServiceCatalogGroupsAction(),
     listMyRecentServiceRequestsAction(1000),
     getServerTranslation(undefined, 'client-portal/service-requests'),
     submittedRequestId ? getMyServiceRequestSubmissionSummaryAction(submittedRequestId) : null,
-    getServerLocale(),
-    getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT),
   ]);
+
+  // Locale and date pattern (a DB lookup) are only needed to render the banner.
+  const [locale, dateFormat] = submittedSummary
+    ? await Promise.all([
+        getServerLocale(),
+        getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT),
+      ])
+    : [null, null];
 
   const rows: MyRequestsTableRow[] = allSubmissions.map((submission) => ({
     submission_id: submission.submission_id,
@@ -71,7 +77,7 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
       {/* Header is provided by the layout topbar via clientPortalRouteTitles */}
 
       {/* Success banner: rendered after a redirect from the form-submit action. */}
-      {submittedSummary && (
+      {submittedSummary && locale && dateFormat && (
         <Alert variant="success">
           <AlertTitle>{t('detail.submitted')}</AlertTitle>
           <AlertDescription>

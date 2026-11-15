@@ -234,6 +234,10 @@ describe('service request portal history', () => {
 
     expect(await getClientServiceRequestSubmissionSummary(db, tenant, clientA, foreignSubmission)).toBeNull();
     expect(await getClientServiceRequestSubmissionSummary(db, tenant, clientA, uuidv4())).toBeNull();
+    // A non-UUID id must resolve to null rather than a Postgres uuid syntax error.
+    await expect(
+      getClientServiceRequestSubmissionSummary(db, tenant, clientA, 'not-a-uuid')
+    ).resolves.toBeNull();
   });
 
   it('T025: submission detail includes attachment references when uploaded files were linked', async () => {
