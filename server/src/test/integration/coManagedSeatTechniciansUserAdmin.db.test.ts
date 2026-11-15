@@ -39,6 +39,7 @@ import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority'
 import { countLicensedInternalUsers } from '@alga-psa/licensing/lib/licensed-internal-users';
 import { getLicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { tenantDb } from '@alga-psa/db';
+import { createAuthorizationBundle, createBundleAssignment, ensurePublishedBundleRule } from '@alga-psa/authorization/bundles/service';
 import { runAuthorizationBundleSimulationAction } from '../../../../ee/server/src/lib/actions/auth/authorizationBundleActions';
 import { createCloseRulesFixture, insertTicket, type CloseRulesFixture } from './helpers/closeRulesFixture';
 
@@ -187,4 +188,44 @@ describe('effective access of a seat technician, from the authorization simulato
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.published.allowed).toBe(true);
   }, HOOK_TIMEOUT);
+  describe('with an assigned narrowing bundle, the answer is the product\'s', () => {
+    /** A published bundle that limits ticket reads to a board the arrangement does not share. */
+    async function narrowingBundle(): Promise<string> {
+      const { bundleId } = await createAuthorizationBundle(db, { tenant: tenant(), name: `S36 narrowing ${randomUUID().slice(0, 8)}`, actorUserId: fixture.userId });
+      await ensurePublishedBundleRule(db, { tenant: tenant(), bundleId, resourceType: 'ticket', action: 'read',
+        templateKey: 'selected_boards', config: { selectedBoardIds: [outOfScopeBoard.boardId] }, actorUserId: fixture.userId });
+      return bundleId;
+    }
+
+    it('a bundle assigned to the technician denies an in-scope ticket the seat resolver alone would allow, and says so', async () => {
+      const userId = await seatUser('bundle-user');
+      const ticketId = await insertTicket(db, fixture);
+      const allowedBefore = await simulate(userId, ticketId);
+      expect(allowedBefore.ok && allowedBefore.data.published.allowed).toBe(true);
+
+      await createBundleAssignment(db, { tenant: tenant(), bundleId: await narrowingBundle(), targetType: 'user', targetId: userId });
+      const result = await simulate(userId, ticketId);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      for (const side of [result.data.draft, result.data.published]) {
+        expect(side.allowed).toBe(false);
+        expect(side.reasonCodes).toContain('bundle:bundle_template_denied');
+        expect(side.explanations).toContainEqual(expect.objectContaining({ code: 'bundle_template_denied' }));
+      }
+    }, HOOK_TIMEOUT);
+
+    it('a bundle assigned through the technician\'s role applies the same way', async () => {
+      const userId = await seatUser('bundle-role');
+      const ticketId = await insertTicket(db, fixture);
+      const ownRole = randomUUID();
+      const ticketRead = await db('permissions').where({ tenant: tenant(), resource: 'ticket', action: 'read', msp: true }).first();
+      await db('roles').insert({ tenant: tenant(), role_id: ownRole, role_name: `S36 own role ${ownRole.slice(0, 8)}`, msp: true, client: false });
+      await db('role_permissions').insert({ tenant: tenant(), role_id: ownRole, permission_id: ticketRead.permission_id });
+      await db('user_roles').insert({ tenant: tenant(), user_id: userId, role_id: ownRole });
+      await createBundleAssignment(db, { tenant: tenant(), bundleId: await narrowingBundle(), targetType: 'role', targetId: ownRole });
+      const result = await simulate(userId, ticketId);
+      expect(result.ok && result.data.published.allowed).toBe(false);
+      expect(result.ok && result.data.published.reasonCodes).toContain('bundle:bundle_template_denied');
+    }, HOOK_TIMEOUT);
+  });
 });

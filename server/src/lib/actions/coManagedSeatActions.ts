@@ -21,9 +21,8 @@ import {
 } from '@alga-psa/co-managed';
 import { admits, serves } from '@alga-psa/core/capability';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
-import {
-  listAuthorizationSimulationRecordsAction, runAuthorizationBundleSimulationAction,
-} from '@enterprise/lib/actions/auth/authorizationBundleActions';
+import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/simulationTickets';
+import { runAuthorizationBundleSimulationAction } from '@enterprise/lib/actions/auth/authorizationBundleActions';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
 
@@ -292,8 +291,10 @@ export const listCoManagedSeatTechniciansAction = withAuth(async (user, { tenant
 /** Recent tickets for the effective-access picker, by number and title. Never the ticket id. */
 export const searchCoManagedSeatAccessTicketsAction = withAuth(async (user, { tenant }, input: { search?: string }) => {
   await requireCapabilityEitherMode(SEAT, tenant);
-  await authorizeUserAdministration(user, tenant);
-  return listAuthorizationSimulationRecordsAction({ resourceType: 'ticket', search: input?.search });
+  const knex = await authorizeUserAdministration(user, tenant);
+  // The shared reader behind the simulator's record list, without the simulator's bundle-tier gate: effective
+  // access is not a bundle feature.
+  return listSimulationTicketOptions(knex, tenant, input?.search);
 });
 
 /**
@@ -309,7 +310,8 @@ export const explainCoManagedSeatTicketAccessAction = withAuth(async (user, { te
   const result = await runAuthorizationBundleSimulationAction({
     principalUserId: input.userId, resourceType: 'ticket', action: 'read', resourceId: input.ticketId,
   });
-  if (!result.ok) return { ok: false as const, message: result.error.message };
+  // A refusal the simulator names (or CE, which has no simulator) comes back as a code; the screen words it.
+  if (!result.ok) return { ok: false as const, code: result.error.code };
   const { allowed, explanations } = result.data.published;
   return { ok: true as const, allowed, explanations };
 });

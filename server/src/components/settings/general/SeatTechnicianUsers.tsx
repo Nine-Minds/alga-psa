@@ -15,7 +15,7 @@ import {
 } from '@/lib/actions/coManagedSeatActions';
 
 type Explanation = { code: string; kind: string; messageKey: string; params: { resource?: string; action?: string; requiredAction?: string } };
-type Outcome = { allowed: boolean; explanations: Explanation[] } | { error: true };
+type Outcome = { allowed: boolean; explanations: Explanation[] } | { error: 'failed' | 'unavailable' };
 
 const fullName = (user: IUser) => [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username || user.email;
 
@@ -95,9 +95,9 @@ function EffectiveAccessDialog({ user, onClose }: { user: IUser; onClose: () => 
     const current = ++generation.current;
     try {
       const result = await explainCoManagedSeatTicketAccessAction({ userId: user.user_id, ticketId: next });
-      if (generation.current === current) setOutcome(result.ok ? { allowed: result.allowed, explanations: result.explanations } : { error: true });
+      if (generation.current === current) setOutcome(result.ok ? { allowed: result.allowed, explanations: result.explanations } : { error: 'unavailable' });
     } catch {
-      if (generation.current === current) setOutcome({ error: true });
+      if (generation.current === current) setOutcome({ error: 'failed' });
     } finally {
       if (generation.current === current) setChecking(false);
     }
@@ -130,7 +130,11 @@ function EffectiveAccessDialog({ user, onClose }: { user: IUser; onClose: () => 
           <div id="seat-technician-effective-access-result" aria-live="polite">
             {checking && <p className="text-sm text-muted-foreground">{t('users.seatTechnicians.dialog.checking', { defaultValue: 'Checking access...' })}</p>}
             {!checking && outcome && 'error' in outcome && (
-              <Alert variant="destructive"><AlertDescription>{t('users.seatTechnicians.dialog.error', { defaultValue: 'Could not check access. Try again.' })}</AlertDescription></Alert>
+              <Alert variant="destructive"><AlertDescription id="seat-technician-effective-access-error">
+                {outcome.error === 'unavailable'
+                  ? t('users.seatTechnicians.dialog.unavailable', { defaultValue: 'Effective access cannot be checked for this ticket in this edition or setup.' })
+                  : t('users.seatTechnicians.dialog.error', { defaultValue: 'Could not check access. Try again.' })}
+              </AlertDescription></Alert>
             )}
             {!checking && outcome && 'allowed' in outcome && outcome.allowed && (
               <Alert variant="success"><AlertDescription id="seat-technician-effective-access-allowed">

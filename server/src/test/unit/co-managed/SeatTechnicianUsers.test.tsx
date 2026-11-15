@@ -59,6 +59,15 @@ describe('seat technicians section of user administration', () => {
     expect(container.textContent ?? '').not.toMatch(UUID);
   });
 
+  it('a refusal (CE has no simulator) reads as a translated not-available message, never an unhandled error', async () => {
+    actions.explain.mockResolvedValue({ ok: false, code: 'simulator_unavailable' });
+    render(<SeatTechnicianUsers users={[user]} listings={listings} />);
+    fireEvent.click(screen.getByText('Effective access'));
+    fireEvent.click(await screen.findByText('T-1001 — Printer is down'));
+    await waitFor(() => expect(screen.getByText(/cannot be checked for this ticket/)).toBeInTheDocument());
+    expect(document.getElementById('seat-technician-effective-access-allowed')).toBeNull();
+  });
+
   it('an allowed ticket says so and lists no reasons', async () => {
     actions.explain.mockResolvedValue({ ok: true, allowed: true, explanations: [] });
     render(<SeatTechnicianUsers users={[user]} listings={listings} />);

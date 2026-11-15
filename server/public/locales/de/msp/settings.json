@@ -335,7 +335,8 @@
         "denied": "{{name}} kann dieses Ticket nicht lesen.",
         "noReasons": "Es wurden keine weiteren Details gemeldet.",
         "error": "Der Zugriff konnte nicht geprüft werden. Versuchen Sie es erneut.",
-        "close": "Schließen"
+        "close": "Schließen",
+        "unavailable": "Der effektive Zugriff kann für dieses Ticket in dieser Edition oder Konfiguration nicht geprüft werden."
       }
     }
   },

@@ -30,7 +30,11 @@ vi.mock('@alga-psa/co-managed', () => ({
 }));
 vi.mock('@enterprise/lib/actions/auth/authorizationBundleActions', () => ({
   runAuthorizationBundleSimulationAction: (...a: any[]) => domain.simulate(...a),
-  listAuthorizationSimulationRecordsAction: (...a: any[]) => domain.tickets(...a),
+  // The simulator's own record list carries the bundle-tier gate; effective access must never reach it.
+  listAuthorizationSimulationRecordsAction: () => { throw new Error('TIER_GATED_RECORD_LIST_REACHED'); },
+}));
+vi.mock('@alga-psa/authorization/bundles/simulationTickets', () => ({
+  listSimulationTicketOptions: (...a: any[]) => domain.tickets(...a),
 }));
 vi.mock('../../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: (...a: any[]) => browserActor(...a) }));
 vi.mock('../../../lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
@@ -100,17 +104,17 @@ describe('seat technicians in user administration', () => {
     expect(domain.simulate).not.toHaveBeenCalled();
   });
 
-  it('a simulator refusal comes back as a message, not an allow', async () => {
+  it('a simulator refusal comes back as a code, not an allow', async () => {
     domain.technicians.mockResolvedValue([technician]);
     domain.simulate.mockResolvedValue({ ok: false, error: { code: 'x', message: 'Not supported.' } });
     const { explainCoManagedSeatTicketAccessAction } = await load();
-    await expect(explainCoManagedSeatTicketAccessAction({ userId: 'tech', ticketId: 'tk' })).resolves.toEqual({ ok: false, message: 'Not supported.' });
+    await expect(explainCoManagedSeatTicketAccessAction({ userId: 'tech', ticketId: 'tk' })).resolves.toEqual({ ok: false, code: 'x' });
   });
 
-  it('the picker reads tickets through the simulator\'s record list with the search term', async () => {
+  it('the picker reads tickets through the shared reader, with no bundle-tier gate, using the tenant and search term', async () => {
     domain.tickets.mockResolvedValue([{ id: 't1', label: 'T-1 — Printer' }]);
     const { searchCoManagedSeatAccessTicketsAction } = await load();
     await expect(searchCoManagedSeatAccessTicketsAction({ search: 'print' })).resolves.toEqual([{ id: 't1', label: 'T-1 — Printer' }]);
-    expect(domain.tickets).toHaveBeenCalledWith({ resourceType: 'ticket', search: 'print' });
+    expect(domain.tickets).toHaveBeenCalledWith('knex', 't', 'print');
   });
 });

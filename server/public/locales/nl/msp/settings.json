@@ -335,7 +335,8 @@
         "denied": "{{name}} kan dit ticket niet lezen.",
         "noReasons": "Er zijn geen verdere details gemeld.",
         "error": "Kon de toegang niet controleren. Probeer het opnieuw.",
-        "close": "Sluiten"
+        "close": "Sluiten",
+        "unavailable": "Effectieve toegang kan voor dit ticket in deze editie of configuratie niet worden gecontroleerd."
       }
     }
   },

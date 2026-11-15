@@ -335,7 +335,8 @@
         "denied": "{{name}} ne peut pas lire ce ticket.",
         "noReasons": "Aucun détail supplémentaire n'a été signalé.",
         "error": "Impossible de vérifier l'accès. Réessayez.",
-        "close": "Fermer"
+        "close": "Fermer",
+        "unavailable": "L'accès effectif ne peut pas être vérifié pour ce ticket dans cette édition ou cette configuration."
       }
     }
   },

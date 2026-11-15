@@ -335,7 +335,8 @@
         "denied": "{{name}} nie może odczytać tego zgłoszenia.",
         "noReasons": "Nie zgłoszono dalszych szczegółów.",
         "error": "Nie udało się sprawdzić dostępu. Spróbuj ponownie.",
-        "close": "Zamknij"
+        "close": "Zamknij",
+        "unavailable": "Nie można sprawdzić efektywnego dostępu do tego zgłoszenia w tej edycji lub konfiguracji."
       }
     }
   },

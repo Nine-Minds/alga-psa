@@ -30,6 +30,7 @@ import {
   listAuthorizationBundles,
   publishBundleRevision,
   readPublishedBundleBaselines,
+  resolveBundleNarrowingRulesForEvaluation,
   setBundleAssignmentStatus,
   setBundleRevisionBaseline,
   normalizeBundleBaseline,
@@ -48,6 +49,7 @@ import {
 } from '@alga-psa/authorization/bundles/closedBundlePreview';
 import { explainDenialReasons, type DenialExplanation } from '@alga-psa/authorization/bundles/denialExplanations';
 import { readUserClientPortfolio } from '@alga-psa/authorization/portfolios/service';
+import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/simulationTickets';
 import { loadSubjectResolverFacts } from '@alga-psa/authorization/subject/resolver';
 
 export interface AuthorizationBundleLibraryEntry {
@@ -794,20 +796,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     const { knex } = await createTenantKnex();
 
     if (input.resourceType === 'ticket') {
-      const query = tenantScopedTable(knex, tenant, 'tickets').orderBy('updated_at', 'desc').limit(50);
-      const term = (input.search ?? '').trim();
-      if (term) {
-        const like = `%${term.replace(/[\\%_]/g, '\\$&')}%`;
-        query.where((builder) => builder.whereILike('title', like).orWhereILike('ticket_number', like));
-      }
-      const rows = await query.select<{ ticket_id: string; title: string | null; ticket_number: string | null }[]>(
-        'ticket_id', 'title', 'ticket_number'
-      );
-      // A ticket is named by its number and title, never by its id.
-      return rows.map((row) => ({
-        id: row.ticket_id,
-        label: [row.ticket_number, row.title].filter(Boolean).join(' — ') || '—',
-      }));
+      return listSimulationTicketOptions(knex, tenant, input.search);
     }
 
     if (input.resourceType === 'document') {
@@ -1040,7 +1029,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     input: {
       /**
        * The bundle to compare draft against published. Omitted, the decision is the product's own for the
-       * principal (roles and built-in resolvers, with no bundle narrowing) and `draft` equals `published`.
+       * principal (roles, built-in resolvers and the principal's assigned published bundles) and `draft` equals `published`.
        */
       bundleId?: string;
       principalUserId: string;
@@ -1252,9 +1241,15 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       });
     };
 
+    // No bundle named: the decision is the product's, so the rules are the principal's own published
+    // assignments (direct, role, team), resolved by the same function the product's evaluations use.
+    const assignedRules = input.bundleId
+      ? null
+      : await resolveBundleNarrowingRulesForEvaluation(knex, evaluationInput as never);
+
     const [draftDecision, publishedDecision] = await Promise.all([
-      evaluateDecision(draftRules),
-      evaluateDecision(publishedRules),
+      evaluateDecision(assignedRules ?? draftRules),
+      evaluateDecision(assignedRules ?? publishedRules),
     ]);
 
     return {

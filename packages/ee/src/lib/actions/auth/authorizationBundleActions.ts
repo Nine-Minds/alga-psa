@@ -13,7 +13,8 @@ type SimulationResult =
 export async function runAuthorizationBundleSimulationAction(_input: {
   bundleId?: string; principalUserId: string; resourceType: string; action: string; resourceId?: string;
 }): Promise<SimulationResult> {
-  throw new Error('The authorization simulator is an Enterprise Edition feature.');
+  // A named refusal, not a throw: effective access shows it as "not available" instead of failing.
+  return { ok: false, error: { code: 'simulator_unavailable', message: 'The authorization simulator is an Enterprise Edition feature.' } };
 }
 
 export async function listAuthorizationSimulationRecordsAction(_input: {
