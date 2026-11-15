@@ -584,7 +584,10 @@
       "loading": "Opening the form builder…",
       "published": "Published. Clients see the new version.",
       "publishBlocked": "Fix what the definition page reports, then publish.",
-      "publishFailed": "Failed to publish this service request."
+      "publishFailed": "Failed to publish this service request.",
+      "restoreBackup": "Unsaved changes from your last visit were kept in this browser.",
+      "restoreBackupApply": "Restore them",
+      "restoreBackupDismiss": "Discard"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Submit request",
         "successMessage": "What to say after it is sent",
         "successMessagePlaceholder": "Thanks — we have your request and will be in touch."
-      }
+      },
+      "startWithThisAnswer": "Start with this answer",
+      "startWithThisAnswerHelp": "The form opens with this filled in. People can change it.",
+      "noDefaultAnswer": "No answer to start with",
+      "clearDefaultAnswer": "Start with nothing",
+      "defaultNotAnOption": "This answer is not one of the choices above.",
+      "defaultFailsRules": "This answer does not pass the checks set below.",
+      "legacyRuleOutsideBuilder": "This element also has a rule set outside the builder, which keeps applying.",
+      "renameBreaksTemplates": "The ticket subject or description still refers to \"{{key}}\". Update it on the request page."
     },
     "tryIt": {
       "banner": "Answers on this screen go nowhere. Rules and checks behave exactly as they will for a client.",

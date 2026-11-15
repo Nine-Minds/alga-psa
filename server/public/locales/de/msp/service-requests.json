@@ -584,7 +584,10 @@
       "loading": "Formular-Editor wird geöffnet…",
       "published": "Veröffentlicht. Kunden sehen die neue Version.",
       "publishBlocked": "Beheben Sie die Hinweise auf der Definitionsseite und veröffentlichen Sie dann.",
-      "publishFailed": "Diese Serviceanfrage konnte nicht veröffentlicht werden."
+      "publishFailed": "Diese Serviceanfrage konnte nicht veröffentlicht werden.",
+      "restoreBackup": "Nicht gespeicherte Änderungen vom letzten Besuch wurden in diesem Browser aufbewahrt.",
+      "restoreBackupApply": "Wiederherstellen",
+      "restoreBackupDismiss": "Verwerfen"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Anfrage senden",
         "successMessage": "Text nach dem Absenden",
         "successMessagePlaceholder": "Danke – Ihre Anfrage ist eingegangen, wir melden uns."
-      }
+      },
+      "startWithThisAnswer": "Mit dieser Antwort beginnen",
+      "startWithThisAnswerHelp": "Das Formular öffnet sich damit ausgefüllt. Es kann geändert werden.",
+      "noDefaultAnswer": "Keine Antwort zum Start",
+      "clearDefaultAnswer": "Leer beginnen",
+      "defaultNotAnOption": "Diese Antwort ist keine der Auswahlmöglichkeiten oben.",
+      "defaultFailsRules": "Diese Antwort besteht die unten festgelegten Prüfungen nicht.",
+      "legacyRuleOutsideBuilder": "Für dieses Element gibt es außerdem eine Regel außerhalb des Builders, die weiterhin gilt.",
+      "renameBreaksTemplates": "Der Ticket-Betreff oder die Beschreibung verweist weiterhin auf „{{key}}“. Bitte auf der Anfrageseite anpassen."
     },
     "tryIt": {
       "banner": "Antworten auf diesem Bildschirm werden nirgends gespeichert. Regeln und Prüfungen verhalten sich genau wie beim Kunden.",

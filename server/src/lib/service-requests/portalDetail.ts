@@ -12,7 +12,10 @@ import {
   parseVisibilityRules,
   type VisibilityRule,
 } from './formVisibility';
-import { normalizeBasicFormSchema } from './formSchema';
+import {
+  normalizeBasicFormSchema,
+  type ServiceRequestInitialValues,
+} from './formSchema';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -48,7 +51,7 @@ export interface ServiceRequestPortalDefinitionDetail {
   description: string | null;
   icon: string | null;
   formSchema: Record<string, unknown>;
-  initialValues: Record<string, string | boolean | null>;
+  initialValues: ServiceRequestInitialValues;
   visibleFieldKeys: string[];
   executionProvider: string;
   executionConfig: Record<string, unknown>;
@@ -66,7 +69,7 @@ export interface ServiceRequestPortalFormView {
   description: string | null;
   icon: string | null;
   formSchema: Record<string, unknown>;
-  initialValues: Record<string, string | boolean | null>;
+  initialValues: ServiceRequestInitialValues;
   /**
    * The complete rule list, assembled server-side: every element's own `visibleWhen`
    * condition plus, for the advanced provider, its configured rules. The browser never
@@ -189,7 +192,7 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
   const resolvedInitialValues = {
     ...staticInitialValues,
     ...dynamicInitialValues,
-  } as Record<string, string | boolean | null>;
+  } as ServiceRequestInitialValues;
 
   // The provider decides when it has its own rule list; otherwise the elements' own
   // `visibleWhen` conditions decide, evaluated against the values the form opens with.

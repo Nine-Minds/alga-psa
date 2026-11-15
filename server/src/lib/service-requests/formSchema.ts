@@ -65,7 +65,8 @@ export interface BasicFormField {
   label: string;
   helpText?: string | null;
   required?: boolean;
-  defaultValue?: string | boolean | null;
+  /** The answer the form opens with. A list for `multi-select`, a boolean for `checkbox`. */
+  defaultValue?: string | boolean | string[] | null;
   options?: BasicFormFieldOption[];
   placeholder?: string | null;
   validation?: BasicFormFieldValidation;
@@ -243,7 +244,10 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
     };
 
     if (!isDisplay && (raw as any).defaultValue !== undefined) {
-      field.defaultValue = (raw as any).defaultValue as string | boolean | null;
+      const rawDefault = (raw as any).defaultValue;
+      field.defaultValue = Array.isArray(rawDefault)
+        ? rawDefault.filter((entry: unknown): entry is string => typeof entry === 'string')
+        : (rawDefault as string | boolean | null);
     }
     if (Array.isArray((raw as any).options)) {
       field.options = (raw as any).options
@@ -414,11 +418,12 @@ export interface BasicFormSchemaValidationResult {
   errors: string[];
 }
 
-export function resolveStaticDefaultValues(
-  schema: unknown
-): Record<string, string | boolean | null> {
+/** The values a form opens with, by the shape each type stores. */
+export type ServiceRequestInitialValues = Record<string, string | boolean | string[] | null>;
+
+export function resolveStaticDefaultValues(schema: unknown): ServiceRequestInitialValues {
   const normalized = normalizeBasicFormSchema(schema);
-  const initialValues: Record<string, string | boolean | null> = {};
+  const initialValues: ServiceRequestInitialValues = {};
 
   for (const field of normalized.fields) {
     if (field.defaultValue === undefined) {
@@ -439,7 +444,16 @@ export function resolveStaticDefaultValues(
     }
 
     if (
+      field.type === 'multi-select' &&
+      (Array.isArray(field.defaultValue) || field.defaultValue === null)
+    ) {
+      initialValues[field.key] = field.defaultValue;
+      continue;
+    }
+
+    if (
       field.type !== 'checkbox' &&
+      field.type !== 'multi-select' &&
       (typeof field.defaultValue === 'string' || field.defaultValue === null)
     ) {
       initialValues[field.key] = field.defaultValue;
@@ -480,7 +494,14 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
       if (field.type === 'checkbox' && typeof defaultValue !== 'boolean') {
         errors.push(`Field "${field.key}" defaultValue must be boolean for checkbox`);
       }
-      if (field.type !== 'checkbox' && typeof defaultValue !== 'string') {
+      if (field.type === 'multi-select' && !Array.isArray(defaultValue)) {
+        errors.push(`Field "${field.key}" defaultValue must be a list for multi-select`);
+      }
+      if (
+        field.type !== 'checkbox' &&
+        field.type !== 'multi-select' &&
+        typeof defaultValue !== 'string'
+      ) {
         errors.push(`Field "${field.key}" defaultValue must be string for ${field.type}`);
       }
       if (field.type === 'file-upload') {
@@ -511,11 +532,13 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
         }
         optionValues.add(option.value);
       }
-      if (
-        typeof defaultValue === 'string' &&
-        defaultValue &&
-        !optionValues.has(defaultValue)
-      ) {
+      // A default answer has to be one the requester could have picked.
+      const defaultChoices = Array.isArray(defaultValue)
+        ? defaultValue
+        : typeof defaultValue === 'string' && defaultValue
+          ? [defaultValue]
+          : [];
+      if (defaultChoices.some((choice) => !optionValues.has(choice))) {
         errors.push(`Field "${field.key}" defaultValue must match an option value`);
       }
     }

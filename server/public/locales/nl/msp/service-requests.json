@@ -584,7 +584,10 @@
       "loading": "Formulierbouwer wordt geopend…",
       "published": "Gepubliceerd. Klanten zien de nieuwe versie.",
       "publishBlocked": "Los op wat de definitiepagina meldt en publiceer daarna.",
-      "publishFailed": "Deze serviceaanvraag kon niet worden gepubliceerd."
+      "publishFailed": "Deze serviceaanvraag kon niet worden gepubliceerd.",
+      "restoreBackup": "Niet-opgeslagen wijzigingen van je vorige bezoek zijn in deze browser bewaard.",
+      "restoreBackupApply": "Herstellen",
+      "restoreBackupDismiss": "Weggooien"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Aanvraag versturen",
         "successMessage": "Wat te tonen na verzending",
         "successMessagePlaceholder": "Bedankt — de aanvraag is ontvangen en wij nemen contact op."
-      }
+      },
+      "startWithThisAnswer": "Begin met dit antwoord",
+      "startWithThisAnswerHelp": "Het formulier opent met dit ingevuld. Het kan worden gewijzigd.",
+      "noDefaultAnswer": "Geen antwoord om mee te beginnen",
+      "clearDefaultAnswer": "Leeg beginnen",
+      "defaultNotAnOption": "Dit antwoord staat niet bij de keuzes hierboven.",
+      "defaultFailsRules": "Dit antwoord komt niet door de controles hieronder.",
+      "legacyRuleOutsideBuilder": "Dit element heeft ook een regel buiten de bouwer, die blijft gelden.",
+      "renameBreaksTemplates": "Het ticketonderwerp of de omschrijving verwijst nog naar ‘{{key}}’. Werk dat bij op de aanvraagpagina."
     },
     "tryIt": {
       "banner": "Antwoorden op dit scherm worden nergens bewaard. Regels en controles werken precies zoals bij een klant.",

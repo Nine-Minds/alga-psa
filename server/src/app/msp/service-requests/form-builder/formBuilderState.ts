@@ -121,9 +121,35 @@ export function updateElement(
   return commit(state, { ...document, elements }, { coalesceId: options?.coalesceId ?? null });
 }
 
+/** A choice value that collides with none of the ones already on the element. */
+export function uniqueOptionValue(existing: ReadonlyArray<{ value?: unknown }>): string {
+  const taken = new Set(
+    existing.map((option) => (typeof option?.value === 'string' ? option.value : ''))
+  );
+  let index = existing.length + 1;
+  while (taken.has(`option_${index}`)) index += 1;
+  return `option_${index}`;
+}
+
+/** Every element whose condition reads `key`, so a rename can say what it is about to touch. */
+export function findElementsReferencingKey(
+  document: FormBuilderDocument,
+  key: string
+): BasicFormField[] {
+  return document.elements.filter((element) =>
+    (element.visibleWhen ?? []).some((rule) => rule.source === key)
+  );
+}
+
 /**
- * Renames an element's storage key, keeping its position. Returns the state unchanged when the
- * new key is empty or already taken — the caller shows why rather than silently renaming.
+ * Renames an element's storage key, keeping its position, and rewrites every reference to it
+ * inside the schema in the same undo step — a condition that read the old key would otherwise
+ * never match again and quietly hide its element for good. References the builder cannot reach
+ * (the ticket subject and description templates, which live on the definition page) are the
+ * caller's to warn about; `findElementsReferencingKey` is the in-schema half.
+ *
+ * Returns the state unchanged when the new key is empty or already taken — the caller shows why
+ * rather than silently renaming.
  */
 export function renameElementKey(
   state: FormBuilderState,
@@ -134,9 +160,18 @@ export function renameElementKey(
   const slug = slugifyElementKey(nextKeyInput);
   if (!slug || slug === key) return state;
   if (document.elements.some((element) => element.key === slug)) return state;
-  const elements = document.elements.map((element) =>
-    element.key === key ? { ...element, key: slug } : element
-  );
+  const elements = document.elements.map((element) => {
+    const renamed = element.key === key ? { ...element, key: slug } : element;
+    if (!renamed.visibleWhen?.some((rule) => rule.source === key)) {
+      return renamed;
+    }
+    return {
+      ...renamed,
+      visibleWhen: renamed.visibleWhen.map((rule) =>
+        rule.source === key ? { ...rule, source: slug } : rule
+      ),
+    };
+  });
   return commit(state, { ...document, elements }, { selectedKey: slug });
 }
 
@@ -247,7 +282,7 @@ export function buildTryItValues(document: FormBuilderDocument): Record<string, 
     if (element.type === 'checkbox') {
       values[element.key] = element.defaultValue === true;
     } else if (element.type === 'multi-select') {
-      values[element.key] = [];
+      values[element.key] = Array.isArray(element.defaultValue) ? [...element.defaultValue] : [];
     } else {
       values[element.key] = typeof element.defaultValue === 'string' ? element.defaultValue : '';
     }

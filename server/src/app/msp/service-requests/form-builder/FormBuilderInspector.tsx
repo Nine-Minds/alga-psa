@@ -13,14 +13,19 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getFieldType, type FieldValidationRuleKey } from '@alga-psa/ui/form-fields';
+import {
+  FieldInputControl,
+  getFieldType,
+  validateFieldValue,
+  type FieldValidationRuleKey,
+} from '@alga-psa/ui/form-fields';
 import type {
   BasicFormField,
   BasicFormFieldOption,
   BasicFormSettings,
 } from '../../../../lib/service-requests/formSchema';
 import { FormBuilderVisibilityRules } from './FormBuilderVisibilityRules';
-import { slugifyElementKey } from './formBuilderState';
+import { slugifyElementKey, uniqueOptionValue } from './formBuilderState';
 
 export interface FormBuilderInspectorProps {
   element: BasicFormField | null;
@@ -34,6 +39,11 @@ export interface FormBuilderInspectorProps {
   onSettingsChange: (patch: Partial<BasicFormSettings>, options?: { coalesceId?: string | null }) => void;
   /** Shows form-level settings instead of the element, from the toolbar's gear. */
   showFormSettings: boolean;
+  /**
+   * The element is also governed by a rule the builder could not adopt, which keeps being
+   * evaluated from the form-behavior config. Shown so the author is not surprised by it.
+   */
+  hasRuleOutsideBuilder?: boolean;
 }
 
 const NUMERIC_RULES: FieldValidationRuleKey[] = [
@@ -44,6 +54,37 @@ const NUMERIC_RULES: FieldValidationRuleKey[] = [
   'minSelected',
   'maxSelected',
 ];
+
+/**
+ * The stored shape of a default answer, by type: a boolean for a checkbox, a list for a
+ * multi-select, a string otherwise. A blank answer clears the default rather than storing an
+ * empty one, so the form simply opens with nothing filled in.
+ */
+function toStoredDefault(
+  element: BasicFormField,
+  next: unknown
+): BasicFormField['defaultValue'] {
+  if (element.type === 'checkbox') {
+    return next === true;
+  }
+  if (element.type === 'multi-select') {
+    const list = Array.isArray(next)
+      ? next.filter((entry): entry is string => typeof entry === 'string')
+      : [];
+    return list.length > 0 ? list : undefined;
+  }
+  const text = typeof next === 'string' ? next : next === null || next === undefined ? '' : String(next);
+  return text.length > 0 ? text : undefined;
+}
+
+/** What the control should show for the element's stored default. */
+function defaultValueForControl(element: BasicFormField): unknown {
+  if (element.type === 'checkbox') return element.defaultValue === true;
+  if (element.type === 'multi-select') {
+    return Array.isArray(element.defaultValue) ? element.defaultValue : [];
+  }
+  return typeof element.defaultValue === 'string' ? element.defaultValue : '';
+}
 
 function InspectorGroup({
   title,
@@ -79,6 +120,7 @@ export function FormBuilderInspector({
   onDelete,
   onSettingsChange,
   showFormSettings,
+  hasRuleOutsideBuilder,
 }: FormBuilderInspectorProps): React.ReactElement {
   const { t } = useTranslation('msp/service-requests');
   const [keyDraft, setKeyDraft] = React.useState(element?.key ?? '');
@@ -154,6 +196,30 @@ export function FormBuilderInspector({
     }
     onChange({ validation: Object.keys(next).length > 0 ? next : undefined }, { coalesceId });
   };
+
+  // A default has to be an answer the requester could have given: it must satisfy this field's
+  // own rules, and for a choice field it must be one of its options.
+  const defaultIssue =
+    element.defaultValue === undefined || element.defaultValue === null
+      ? null
+      : validateFieldValue({
+          type: element.type,
+          value: element.defaultValue,
+          validation: element.validation,
+        });
+  const optionValues = new Set((element.options ?? []).map((option) => option.value));
+  const defaultChoices = Array.isArray(element.defaultValue)
+    ? element.defaultValue
+    : typeof element.defaultValue === 'string' && element.defaultValue
+      ? [element.defaultValue]
+      : [];
+  const defaultIsUnknownChoice =
+    !!definition?.supportsOptions && defaultChoices.some((choice) => !optionValues.has(choice));
+  const defaultIssueMessage = defaultIsUnknownChoice
+    ? t('formBuilder.inspector.defaultNotAnOption')
+    : defaultIssue
+      ? t('formBuilder.inspector.defaultFailsRules')
+      : null;
 
   const updateOption = (index: number, patch: Partial<BasicFormFieldOption>) => {
     const options = (element.options ?? []).map((option, optionIndex) =>
@@ -349,13 +415,15 @@ export function FormBuilderInspector({
             size="sm"
             onClick={() => {
               const existing = element.options ?? [];
-              const nextIndex = existing.length + 1;
+              // Unique against what is there, not derived from the count: after a delete the
+              // count repeats a value that is still in use, and publish then refuses the form.
+              const value = uniqueOptionValue(existing);
               onChange({
                 options: [
                   ...existing,
                   {
-                    label: t('formBuilder.inspector.newChoice', { index: nextIndex }),
-                    value: `option_${nextIndex}`,
+                    label: t('formBuilder.inspector.newChoice', { index: existing.length + 1 }),
+                    value,
                   },
                 ],
               });
@@ -364,6 +432,45 @@ export function FormBuilderInspector({
             <Plus className="h-4 w-4" />
             {t('formBuilder.inspector.addChoice')}
           </Button>
+        </InspectorGroup>
+      ) : null}
+
+      {definition?.supportsDefaultValue ? (
+        <InspectorGroup
+          title={t('formBuilder.inspector.startWithThisAnswer')}
+          description={t('formBuilder.inspector.startWithThisAnswerHelp')}
+        >
+          <FieldInputControl
+            id="service-request-form-builder-default"
+            type={element.type}
+            value={defaultValueForControl(element)}
+            options={element.options}
+            placeholder={element.placeholder}
+            label={element.label}
+            labels={{
+              selectPlaceholder: t('formBuilder.inspector.noDefaultAnswer'),
+              datePlaceholder: t('formBuilder.inspector.noDefaultAnswer'),
+            }}
+            onChange={(next) => onChange({ defaultValue: toStoredDefault(element, next) })}
+          />
+          {defaultIssueMessage ? (
+            <p
+              id="service-request-form-builder-default-warning"
+              className="text-xs text-[rgb(var(--color-status-error))]"
+            >
+              {defaultIssueMessage}
+            </p>
+          ) : null}
+          {element.defaultValue !== undefined && element.defaultValue !== null ? (
+            <Button
+              id="service-request-form-builder-default-clear"
+              variant="outline"
+              size="sm"
+              onClick={() => onChange({ defaultValue: undefined })}
+            >
+              {t('formBuilder.inspector.clearDefaultAnswer')}
+            </Button>
+          ) : null}
         </InspectorGroup>
       ) : null}
 
@@ -438,6 +545,14 @@ export function FormBuilderInspector({
           rules={element.visibleWhen ?? []}
           onChange={(rules) => onChange({ visibleWhen: rules.length > 0 ? rules : undefined })}
         />
+        {hasRuleOutsideBuilder ? (
+          <p
+            id="service-request-form-builder-legacy-rule-note"
+            className="text-xs text-[rgb(var(--color-text-600))]"
+          >
+            {t('formBuilder.inspector.legacyRuleOutsideBuilder')}
+          </p>
+        ) : null}
       </InspectorGroup>
     </div>
   );

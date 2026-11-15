@@ -236,7 +236,13 @@ export function FieldInputControl(props: FieldInputControlProps): React.ReactEle
           label={typeof label === 'string' ? label : undefined}
           required={required}
           disabled={disabled}
-          onChange={() => onChange(undefined)}
+          // The file itself rides the native form post; what is reported here is the picked
+          // names, so a consumer with no form around it (a preview) can still tell a required
+          // upload has been answered. No files picked reads as no answer.
+          onChange={(event) => {
+            const names = Array.from(event.target.files ?? []).map((file) => file.name);
+            onChange(names.length > 0 ? names : undefined);
+          }}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           containerClassName="mb-0"

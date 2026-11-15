@@ -172,7 +172,8 @@ const DEFINITIONS: Record<FieldTypeKey, FieldTypeDefinition> = {
     operators: [...MEMBERSHIP, ...PRESENCE],
     supportsOptions: true,
     supportsPlaceholder: true,
-    supportsDefaultValue: false,
+    // Several choices can be pre-ticked; the stored default is a list, like the value.
+    supportsDefaultValue: true,
     supportsHelpText: true,
     group: 'choice',
     coerce: coerceStringList,

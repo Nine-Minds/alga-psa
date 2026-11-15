@@ -30,16 +30,28 @@ export const VISIBILITY_OPERATOR_AS_PREDICATE: Readonly<
   'is-empty': 'is_empty',
 };
 
-/** The operators a source field's type can be compared with, in the visibility dialect. */
+/**
+ * The operators a source field's type can be compared with, in the visibility dialect.
+ *
+ * `is-true` / `is-false` are asking whether a box is ticked, so they belong to a checkbox and
+ * nowhere else — the predicate adapter alone cannot tell, because it maps them onto `equals` /
+ * `not_equals`, which every type supports. An unknown type keeps the whole dialect: a rule
+ * stored against a type this build does not know must still round-trip.
+ */
+const CHECKBOX_ONLY_OPERATORS: ReadonlySet<VisibilityRuleOperator> = new Set(['is-true', 'is-false']);
+
 export function getVisibilityOperatorsForType(type: unknown): VisibilityRuleOperator[] {
   const definition = getFieldType(type);
   if (!definition) return VISIBILITY_OPERATORS;
   if (definition.key === 'checkbox') {
+    // A box always holds an answer, so "has a value" and "is empty" say nothing about it.
     return ['is-true', 'is-false', 'equals', 'not-equals'];
   }
   const supported = new Set<PredicateOperator>(definition.operators);
-  return VISIBILITY_OPERATORS.filter((operator) =>
-    supported.has(VISIBILITY_OPERATOR_AS_PREDICATE[operator])
+  return VISIBILITY_OPERATORS.filter(
+    (operator) =>
+      !CHECKBOX_ONLY_OPERATORS.has(operator) &&
+      supported.has(VISIBILITY_OPERATOR_AS_PREDICATE[operator])
   );
 }
 

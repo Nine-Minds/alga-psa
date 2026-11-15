@@ -584,7 +584,10 @@
       "loading": "Ouverture de l'éditeur de formulaire…",
       "published": "Publié. Les clients voient la nouvelle version.",
       "publishBlocked": "Corrigez ce que signale la page de définition, puis publiez.",
-      "publishFailed": "Impossible de publier cette demande de service."
+      "publishFailed": "Impossible de publier cette demande de service.",
+      "restoreBackup": "Les modifications non enregistrées de votre dernière visite ont été conservées dans ce navigateur.",
+      "restoreBackupApply": "Les restaurer",
+      "restoreBackupDismiss": "Abandonner"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Envoyer la demande",
         "successMessage": "Message après l'envoi",
         "successMessagePlaceholder": "Merci : votre demande est bien reçue, nous reviendrons vers vous."
-      }
+      },
+      "startWithThisAnswer": "Commencer avec cette réponse",
+      "startWithThisAnswerHelp": "Le formulaire s’ouvre avec ceci prérempli. On peut le modifier.",
+      "noDefaultAnswer": "Aucune réponse au départ",
+      "clearDefaultAnswer": "Commencer à vide",
+      "defaultNotAnOption": "Cette réponse ne fait pas partie des choix ci-dessus.",
+      "defaultFailsRules": "Cette réponse ne passe pas les vérifications définies ci-dessous.",
+      "legacyRuleOutsideBuilder": "Cet élément a aussi une règle définie hors du générateur, qui continue de s’appliquer.",
+      "renameBreaksTemplates": "L’objet ou la description du ticket fait encore référence à « {{key}} ». Mettez-le à jour sur la page de la demande."
     },
     "tryIt": {
       "banner": "Les réponses saisies ici ne sont enregistrées nulle part. Les règles et vérifications se comportent comme pour un client.",

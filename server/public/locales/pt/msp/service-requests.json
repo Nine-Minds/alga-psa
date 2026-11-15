@@ -584,7 +584,10 @@
       "loading": "Abrindo o editor de formulário…",
       "published": "Publicado. Os clientes veem a nova versão.",
       "publishBlocked": "Corrija o que a página da definição indica e publique novamente.",
-      "publishFailed": "Não foi possível publicar esta solicitação de serviço."
+      "publishFailed": "Não foi possível publicar esta solicitação de serviço.",
+      "restoreBackup": "As alterações por guardar da sua última visita foram mantidas neste navegador.",
+      "restoreBackupApply": "Restaurá-las",
+      "restoreBackupDismiss": "Descartar"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Enviar a solicitação",
         "successMessage": "O que dizer depois do envio",
         "successMessagePlaceholder": "Obrigado — recebemos a solicitação e entraremos em contato."
-      }
+      },
+      "startWithThisAnswer": "Começar com esta resposta",
+      "startWithThisAnswerHelp": "O formulário abre com isto preenchido. Pode ser alterado.",
+      "noDefaultAnswer": "Sem resposta inicial",
+      "clearDefaultAnswer": "Começar em branco",
+      "defaultNotAnOption": "Esta resposta não é nenhuma das opções acima.",
+      "defaultFailsRules": "Esta resposta não passa nas verificações definidas abaixo.",
+      "legacyRuleOutsideBuilder": "Este elemento também tem uma regra definida fora do construtor, que continua a aplicar-se.",
+      "renameBreaksTemplates": "O assunto ou a descrição do ticket ainda faz referência a «{{key}}». Atualize-o na página do pedido."
     },
     "tryIt": {
       "banner": "As respostas desta tela não são guardadas. Regras e verificações funcionam como para um cliente.",

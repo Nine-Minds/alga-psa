@@ -1,8 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import {
   getFieldVisibilityRules,
+  getVisibilityOperatorsForType,
   replaceFieldVisibilityRules,
 } from '../../../app/msp/service-requests/fieldVisibilityModel';
+
+describe('operators offered per source type', () => {
+  it('offers is-true / is-false to checkboxes only', () => {
+    expect(getVisibilityOperatorsForType('checkbox')).toEqual([
+      'is-true',
+      'is-false',
+      'equals',
+      'not-equals',
+    ]);
+    for (const type of ['short-text', 'long-text', 'email', 'select', 'radio', 'number', 'date']) {
+      expect(getVisibilityOperatorsForType(type)).not.toContain('is-true');
+      expect(getVisibilityOperatorsForType(type)).not.toContain('is-false');
+    }
+  });
+
+  it('offers emptiness only where a value can be absent', () => {
+    expect(getVisibilityOperatorsForType('short-text')).toEqual([
+      'equals',
+      'not-equals',
+      'has-value',
+      'is-empty',
+    ]);
+    expect(getVisibilityOperatorsForType('multi-select')).toEqual(['has-value', 'is-empty']);
+  });
+
+  it('falls back to the whole dialect for a type the registry does not know', () => {
+    expect(getVisibilityOperatorsForType('something-new')).toEqual([
+      'equals',
+      'not-equals',
+      'is-true',
+      'is-false',
+      'has-value',
+      'is-empty',
+    ]);
+  });
+});
 
 describe('fieldVisibilityModel', () => {
   const config = {

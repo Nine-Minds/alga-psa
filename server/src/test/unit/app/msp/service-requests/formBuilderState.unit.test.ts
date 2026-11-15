@@ -6,6 +6,7 @@ import {
   createFormBuilderState,
   deleteElement,
   duplicateElement,
+  findElementsReferencingKey,
   getDocument,
   insertElement,
   moveElement,
@@ -17,6 +18,7 @@ import {
   slugifyElementKey,
   undo,
   uniqueElementKey,
+  uniqueOptionValue,
   updateElement,
   updateSettings,
   type FormBuilderDocument,
@@ -100,6 +102,80 @@ describe('form builder edits', () => {
     const unchanged = renameElementKey(state, 'employee_name', 'start_date');
     expect(unchanged).toBe(state);
   });
+
+  it('rewrites every condition that reads the renamed key, in one undo step', () => {
+    let state = createFormBuilderState({
+      elements: [
+        { key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' },
+        {
+          key: 'hardware',
+          type: 'section',
+          label: 'Hardware',
+          visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
+        },
+        {
+          key: 'model',
+          type: 'short-text',
+          label: 'Model',
+          visibleWhen: [
+            { source: 'needs_laptop', operator: 'is-true' },
+            { source: 'context.clientId', operator: 'has-value' },
+          ],
+        },
+        { key: 'notes', type: 'long-text', label: 'Notes' },
+      ],
+      settings: {},
+    });
+
+    state = renameElementKey(state, 'needs_laptop', 'wants_laptop');
+    const after = getDocument(state).elements;
+    expect(after[0].key).toBe('wants_laptop');
+    expect(after[1].visibleWhen).toEqual([{ source: 'wants_laptop', operator: 'is-true' }]);
+    expect(after[2].visibleWhen).toEqual([
+      { source: 'wants_laptop', operator: 'is-true' },
+      // A context source is not an answer key and must survive untouched.
+      { source: 'context.clientId', operator: 'has-value' },
+    ]);
+    expect(after[3].visibleWhen).toBeUndefined();
+
+    // One step back restores both the key and every reference.
+    state = undo(state);
+    const before = getDocument(state).elements;
+    expect(before[0].key).toBe('needs_laptop');
+    expect(before[1].visibleWhen).toEqual([{ source: 'needs_laptop', operator: 'is-true' }]);
+    expect(before[2].visibleWhen?.[0]).toEqual({ source: 'needs_laptop', operator: 'is-true' });
+  });
+
+  it('names the elements whose condition would break', () => {
+    const document: FormBuilderDocument = {
+      elements: [
+        { key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' },
+        {
+          key: 'model',
+          type: 'short-text',
+          label: 'Model',
+          visibleWhen: [{ source: 'needs_laptop', operator: 'is-true' }],
+        },
+        { key: 'notes', type: 'long-text', label: 'Notes' },
+      ],
+      settings: {},
+    };
+    expect(findElementsReferencingKey(document, 'needs_laptop').map((e) => e.key)).toEqual(['model']);
+    expect(findElementsReferencingKey(document, 'notes')).toEqual([]);
+  });
+});
+
+describe('choice values', () => {
+  it('mints a value that collides with none of the existing ones', () => {
+    // The author deletes the first choice, then adds one: `length + 1` would re-mint option_3.
+    const afterDelete = [
+      { label: 'Desktop', value: 'option_2' },
+      { label: 'Tablet', value: 'option_3' },
+    ];
+    expect(uniqueOptionValue(afterDelete)).toBe('option_4');
+    expect(uniqueOptionValue([])).toBe('option_1');
+    expect(uniqueOptionValue([{ label: 'Laptop', value: 'laptop' }])).toBe('option_2');
+  });
 });
 
 describe('undo and redo', () => {
@@ -174,5 +250,25 @@ describe('Try it seeding', () => {
     });
 
     expect(values).toEqual({ full_name: 'Maya', agree: true, tags: [] });
+  });
+
+  it('opens with a multi-select default already ticked', () => {
+    const values = buildTryItValues({
+      elements: [
+        {
+          key: 'apps',
+          type: 'multi-select',
+          label: 'Apps',
+          options: [
+            { label: 'CRM', value: 'crm' },
+            { label: 'VPN', value: 'vpn' },
+          ],
+          defaultValue: ['crm', 'vpn'],
+        },
+      ],
+      settings: {},
+    });
+
+    expect(values).toEqual({ apps: ['crm', 'vpn'] });
   });
 });

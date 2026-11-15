@@ -584,7 +584,10 @@
       "loading": "Öppnar formulärbyggaren…",
       "published": "Publicerad. Kunderna ser den nya versionen.",
       "publishBlocked": "Åtgärda det som definitionssidan rapporterar och publicera sedan.",
-      "publishFailed": "Den här serviceförfrågan kunde inte publiceras."
+      "publishFailed": "Den här serviceförfrågan kunde inte publiceras.",
+      "restoreBackup": "Osparade ändringar från ditt förra besök har bevarats i den här webbläsaren.",
+      "restoreBackupApply": "Återställ dem",
+      "restoreBackupDismiss": "Släng"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Skicka förfrågan",
         "successMessage": "Vad som visas efter att det skickats",
         "successMessagePlaceholder": "Tack — förfrågan har kommit fram och vi hör av oss."
-      }
+      },
+      "startWithThisAnswer": "Börja med det här svaret",
+      "startWithThisAnswerHelp": "Formuläret öppnas med detta ifyllt. Det går att ändra.",
+      "noDefaultAnswer": "Inget svar att börja med",
+      "clearDefaultAnswer": "Börja tomt",
+      "defaultNotAnOption": "Det här svaret är inget av valen ovan.",
+      "defaultFailsRules": "Det här svaret klarar inte kontrollerna nedan.",
+      "legacyRuleOutsideBuilder": "Elementet har även en regel som satts utanför byggaren och fortsätter att gälla.",
+      "renameBreaksTemplates": "Ärendets rubrik eller beskrivning hänvisar fortfarande till ”{{key}}”. Uppdatera det på begärandesidan."
     },
     "tryIt": {
       "banner": "Svaren på den här skärmen sparas ingenstans. Regler och kontroller fungerar precis som för en kund.",

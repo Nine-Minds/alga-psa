@@ -584,7 +584,10 @@
       "loading": "Apertura dell'editor del modulo…",
       "published": "Pubblicato. I clienti vedono la nuova versione.",
       "publishBlocked": "Correggi quanto segnalato nella pagina della definizione, poi pubblica.",
-      "publishFailed": "Impossibile pubblicare questa richiesta di servizio."
+      "publishFailed": "Impossibile pubblicare questa richiesta di servizio.",
+      "restoreBackup": "Le modifiche non salvate della visita precedente sono state conservate in questo browser.",
+      "restoreBackupApply": "Ripristinale",
+      "restoreBackupDismiss": "Scarta"
     },
     "types": {
       "short-text": {
@@ -716,7 +719,15 @@
         "submitLabelPlaceholder": "Invia la richiesta",
         "successMessage": "Messaggio dopo l'invio",
         "successMessagePlaceholder": "Grazie: abbiamo ricevuto la richiesta e Le risponderemo."
-      }
+      },
+      "startWithThisAnswer": "Inizia con questa risposta",
+      "startWithThisAnswerHelp": "Il modulo si apre con questo già compilato. Si può cambiare.",
+      "noDefaultAnswer": "Nessuna risposta iniziale",
+      "clearDefaultAnswer": "Inizia vuoto",
+      "defaultNotAnOption": "Questa risposta non è una delle scelte qui sopra.",
+      "defaultFailsRules": "Questa risposta non supera i controlli impostati qui sotto.",
+      "legacyRuleOutsideBuilder": "Questo elemento ha anche una regola impostata fuori dal generatore, che continua a valere.",
+      "renameBreaksTemplates": "L'oggetto o la descrizione del ticket fa ancora riferimento a «{{key}}». Aggiornalo nella pagina della richiesta."
     },
     "tryIt": {
       "banner": "Le risposte su questa schermata non vengono salvate. Regole e controlli si comportano come per un cliente.",

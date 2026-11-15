@@ -10,7 +10,8 @@
  */
 
 import { listTokens } from '@alga-psa/tickets/lib/titleTokens';
-import { describeFormAnswer, isInputElement } from './formSchema';
+import { describeFormAnswer } from './formSchema';
+import { isInputFieldType } from '@alga-psa/ui/form-fields';
 
 export interface ServiceRequestTemplateField {
   key: string;
@@ -64,7 +65,7 @@ function readSchemaFields(formSchema: unknown): SchemaField[] {
  */
 export function getServiceRequestTemplateFields(formSchema: unknown): ServiceRequestTemplateField[] {
   return readSchemaFields(formSchema)
-    .filter((field) => isInputElement(field) && field.type !== 'file-upload')
+    .filter((field) => isInputFieldType(field.type) && field.type !== 'file-upload')
     .map(({ key, label, type }) => ({ key, label, type }));
 }
 

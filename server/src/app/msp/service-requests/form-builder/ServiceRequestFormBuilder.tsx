@@ -32,13 +32,19 @@ import {
   DesignerPaletteTile,
   DesignerSaveStatus,
   DesignerShell,
+  clearDesignerDraftBackup,
   getDesignerSaveState,
   groupDesignerPaletteItemsByCategory,
   matchesDesignerPaletteQuery,
+  readDesignerDraftBackup,
   readStoredDesignerSidebarWidth,
+  shouldOfferDesignerDraftBackup,
   storeDesignerSidebarWidth,
+  writeDesignerDraftBackup,
+  type DesignerDraftBackup,
 } from '@alga-psa/ui/components/designer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { listTokens } from '@alga-psa/tickets/lib/titleTokens';
 import type { FieldTypeKey, FieldValidationIssue } from '@alga-psa/ui/form-fields';
 import {
   collectElementVisibilityRules,
@@ -51,8 +57,10 @@ import { ServiceRequestFormRenderer } from '../../../../components/service-reque
 import {
   publishServiceRequestDefinitionAction,
   replaceServiceRequestFormSchemaAction,
+  updateServiceRequestFormBehaviorConfigAction,
   validateServiceRequestDefinitionForPublishAction,
 } from '../actions';
+import { adoptLegacyVisibilityRules } from './legacyVisibilityRules';
 import { FormBuilderCanvas } from './FormBuilderCanvas';
 import { FormBuilderInspector } from './FormBuilderInspector';
 import { FormBuilderOutline } from './FormBuilderOutline';
@@ -100,6 +108,12 @@ export interface ServiceRequestFormBuilderProps {
    * so a definition carrying legacy rules behaves here exactly as it does in the portal.
    */
   initialFormBehaviorConfig?: Record<string, unknown>;
+  /**
+   * The ticket subject and description-prefix templates. The builder never edits them — they
+   * belong to the definition page — but it reads their placeholders so renaming an answer key
+   * can say which of them will stop resolving.
+   */
+  ticketTextTemplates?: string[];
   /** Where the back link goes; the definition page owns basics, execution, mapping and publish. */
   backHref: string;
 }
@@ -118,17 +132,40 @@ export function ServiceRequestFormBuilder({
   definitionName,
   initialSchema,
   initialFormBehaviorConfig,
+  ticketTextTemplates,
   backHref,
 }: ServiceRequestFormBuilderProps): React.ReactElement {
   const { t } = useTranslation('msp/service-requests');
 
+  const ticketTemplateKeys = useMemo(
+    () => new Set((ticketTextTemplates ?? []).flatMap((template) => listTokens(template ?? ''))),
+    [ticketTextTemplates]
+  );
+
+  // A definition configured before the builder keeps its conditions in the advanced provider's
+  // config. Those are adopted onto their elements here, so the author edits them like any other
+  // condition; what no element can express stays in the config and keeps being evaluated.
+  const adoption = useMemo(
+    () =>
+      adoptLegacyVisibilityRules(
+        normalizeBasicFormSchema(initialSchema).fields,
+        initialFormBehaviorConfig
+      ),
+    [initialSchema, initialFormBehaviorConfig]
+  );
+
   const initialDocument = useMemo<FormBuilderDocument>(() => {
     const normalized = normalizeBasicFormSchema(initialSchema);
-    return { elements: normalized.fields, settings: normalized.settings ?? {} };
-  }, [initialSchema]);
+    return { elements: adoption.elements, settings: normalized.settings ?? {} };
+  }, [initialSchema, adoption]);
 
   const [state, setState] = useState(() => createFormBuilderState(initialDocument));
-  const [savedDocument, setSavedDocument] = useState<FormBuilderDocument>(initialDocument);
+  // The saved baseline is what the server still holds: the adopted conditions are an unsaved
+  // edit, so the builder saves them on the first write rather than silently keeping both copies.
+  const [savedDocument, setSavedDocument] = useState<FormBuilderDocument>(() => ({
+    elements: normalizeBasicFormSchema(initialSchema).fields,
+    settings: normalizeBasicFormSchema(initialSchema).settings ?? {},
+  }));
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [mode, setMode] = useState<'edit' | 'try'>('edit');
@@ -173,6 +210,12 @@ export function ServiceRequestFormBuilder({
   );
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasAdoptedLegacyRules = adoption.remainingConfig !== null;
+  const unadoptedRuleKeys = useMemo(
+    () => new Set(adoption.unadoptedRules.map((rule) => rule.fieldKey)),
+    [adoption.unadoptedRules]
+  );
+  const legacyConfigWritten = useRef(false);
   const save = useCallback(
     async (next: FormBuilderDocument) => {
       setIsSaving(true);
@@ -182,8 +225,18 @@ export function ServiceRequestFormBuilder({
           next.elements,
           Object.keys(next.settings).length > 0 ? next.settings : undefined
         );
+        // The adopted rules now live on the elements, so the config copy must go in the same
+        // save; leaving it would evaluate every adopted rule twice.
+        if (hasAdoptedLegacyRules && !legacyConfigWritten.current) {
+          await updateServiceRequestFormBehaviorConfigAction(
+            definitionId,
+            adoption.remainingConfig ?? {}
+          );
+          legacyConfigWritten.current = true;
+        }
         setSavedDocument(next);
         setLastSavedAt(Date.now());
+        clearDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId);
       } catch (error) {
         console.error('Failed to save service request form schema', error);
         toast.error(t('formBuilder.messages.saveFailed'));
@@ -191,15 +244,22 @@ export function ServiceRequestFormBuilder({
         setIsSaving(false);
       }
     },
-    [definitionId, t]
+    [definitionId, t, hasAdoptedLegacyRules, adoption.remainingConfig]
   );
 
   // The timer is armed by an edit, never by an unrelated re-render: a render that does not
   // change the draft must not push the save further away.
   const saveRef = useRef(save);
   saveRef.current = save;
+  // What a flush would write. Read by the unmount path, which must not depend on the render
+  // that armed the timer still being the current one.
+  const pendingRef = useRef<FormBuilderDocument | null>(null);
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty) {
+      pendingRef.current = null;
+      return;
+    }
+    pendingRef.current = document;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       void saveRef.current(document);
@@ -209,16 +269,58 @@ export function ServiceRequestFormBuilder({
     };
   }, [document, isDirty]);
 
-  // Leaving with edits in flight would lose them; the browser asks first.
+  /** Writes a pending edit immediately instead of waiting out the debounce. */
+  const flushPendingSave = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const pending = pendingRef.current;
+    if (!pending) return;
+    pendingRef.current = null;
+    void saveRef.current(pending);
+  }, []);
+
+  // The back link is a client-side navigation, which unmounts the builder without ever firing
+  // `beforeunload`: without this, the last edit inside the debounce window is simply lost.
+  const flushRef = useRef(flushPendingSave);
+  flushRef.current = flushPendingSave;
+  useEffect(() => () => flushRef.current(), []);
+
+  // A real unload cannot wait for a round trip, so the browser asks first and the edits are
+  // kept in this browser for the next visit to offer back.
   useEffect(() => {
     if (!isDirty) return;
     const handler = (event: BeforeUnloadEvent) => {
+      writeDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId, {
+        definition: pendingRef.current ?? document,
+        baseDefinition: savedDocument,
+        savedAt: new Date().toISOString(),
+      });
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [isDirty]);
+  }, [isDirty, definitionId, document, savedDocument]);
+
+  // An interrupted edit is offered back once, and only when the saved draft has not moved on
+  // since the backup was taken.
+  const [backup, setBackup] = useState<DesignerDraftBackup<FormBuilderDocument> | null>(null);
+  useEffect(() => {
+    const stored = readDesignerDraftBackup<FormBuilderDocument>(SIDEBAR_NAMESPACE, definitionId);
+    if (
+      shouldOfferDesignerDraftBackup(stored, savedDocument, (left, right) =>
+        JSON.stringify(left) === JSON.stringify(right)
+      )
+    ) {
+      setBackup(stored);
+    } else if (stored) {
+      clearDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId);
+    }
+    // Offered once, on open: a later save is what clears it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [definitionId]);
 
   const paletteItems = useMemo(
     () =>
@@ -362,10 +464,23 @@ export function ServiceRequestFormBuilder({
   };
 
   const checkTryIt = () => {
+    // Try it has no form post, so a picked upload is known only by the names the control
+    // reported; without this a required upload could never be satisfied here.
+    const fieldKeysWithFiles = new Set(
+      document.elements
+        .filter(
+          (element) =>
+            element.type === 'file-upload' &&
+            Array.isArray(tryValues[element.key]) &&
+            (tryValues[element.key] as unknown[]).length > 0
+        )
+        .map((element) => element.key)
+    );
     const issues = collectFormFieldIssues({
       fields: document.elements,
       values: tryValues,
       visibleFieldKeys: tryVisibleKeys,
+      fieldKeysWithFiles,
     });
     setTryErrors(
       Object.fromEntries(issues.map((entry) => [entry.fieldKey, describeIssue(entry.issue)]))
@@ -680,8 +795,19 @@ export function ServiceRequestFormBuilder({
         onChange={(patch, options) =>
           selected && setState((previous) => updateElement(previous, selected.key, patch, options))
         }
-        onRenameKey={(nextKey) =>
-          selected && setState((previous) => renameElementKey(previous, selected.key, nextKey))
+        onRenameKey={(nextKey) => {
+          if (!selected) return;
+          const previousKey = selected.key;
+          setState((previous) => renameElementKey(previous, previousKey, nextKey));
+          // Conditions inside the schema are rewritten with the rename. The ticket subject and
+          // description templates live on the definition page, out of the builder's reach, so
+          // the author is told rather than left to find out at publish.
+          if (nextKey !== previousKey && ticketTemplateKeys.has(previousKey)) {
+            toast(t('formBuilder.inspector.renameBreaksTemplates', { key: previousKey }));
+          }
+        }}
+        hasRuleOutsideBuilder={
+          !!selected && unadoptedRuleKeys.has(selected.key)
         }
         onDuplicate={() =>
           selected && setState((previous) => duplicateElement(previous, selected.key))
@@ -712,6 +838,40 @@ export function ServiceRequestFormBuilder({
           storeDesignerSidebarWidth(SIDEBAR_NAMESPACE, width);
         }}
       >
+        {backup ? (
+          <div
+            id="service-request-form-builder-restore"
+            className="mx-6 mt-4 flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2"
+          >
+            <p className="text-xs text-[rgb(var(--color-text-700))]">
+              {t('formBuilder.messages.restoreBackup')}
+            </p>
+            <div className="flex shrink-0 gap-1.5">
+              <Button
+                id="service-request-form-builder-restore-apply"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setState((previous) => replaceDocument(previous, backup.definition));
+                  setBackup(null);
+                }}
+              >
+                {t('formBuilder.messages.restoreBackupApply')}
+              </Button>
+              <Button
+                id="service-request-form-builder-restore-dismiss"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId);
+                  setBackup(null);
+                }}
+              >
+                {t('formBuilder.messages.restoreBackupDismiss')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {canvas}
       </DesignerShell>
     </DndContext>

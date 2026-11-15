@@ -21,6 +21,15 @@ interface BuilderData {
   definitionName: string;
   schema: Record<string, unknown>;
   formBehaviorConfig?: Record<string, unknown>;
+  /** The ticket subject and description-prefix templates, read-only here. */
+  ticketTextTemplates: string[];
+}
+
+/** The execution config values that carry `{{answer_key}}` placeholders. */
+function readTicketTextTemplates(config: Record<string, unknown>): string[] {
+  return ['titleTemplate', 'descriptionPrefix']
+    .map((key) => config[key])
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
 }
 
 export default function ServiceRequestFormBuilderPage(): React.ReactElement {
@@ -48,6 +57,9 @@ export default function ServiceRequestFormBuilderPage(): React.ReactElement {
           formBehaviorConfig: editorData.execution.showAdvancedFormBehaviorConfigPanel
             ? (editorData.execution.formBehaviorConfig ?? {})
             : undefined,
+          ticketTextTemplates: readTicketTextTemplates(
+            editorData.execution.executionConfig ?? {}
+          ),
         });
       } catch (loadError) {
         if (!cancelled) {
@@ -87,6 +99,7 @@ export default function ServiceRequestFormBuilderPage(): React.ReactElement {
         definitionName={data.definitionName}
         initialSchema={data.schema}
         initialFormBehaviorConfig={data.formBehaviorConfig}
+        ticketTextTemplates={data.ticketTextTemplates}
         backHref={`/msp/service-requests/${data.definitionId}`}
       />
     </div>
