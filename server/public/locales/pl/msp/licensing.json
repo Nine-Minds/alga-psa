@@ -430,6 +430,16 @@
         "load": "Nie udało się wczytać opcji. Odśwież i spróbuj ponownie.",
         "submit": "Żądanie mogło się nie zakończyć. Spróbuj ponownie; nie zostanie zastosowane dwa razy."
       },
+      "purchase": {
+        "checking": "Sprawdzanie puli…",
+        "review": "W puli jest za mało miejsc. Sprawdź zakup, aby przydzielić {{count}} miejsc.",
+        "waiting": "Oczekiwanie na zakończenie zakupu. {{count}} miejsc zostanie przydzielonych, gdy tylko pula je otrzyma.",
+        "stalled": "Nowe miejsca jeszcze się nie pojawiły. Sprawdź ponownie za chwilę; nie zostaniesz obciążony dwukrotnie.",
+        "failed": "Płatność nie powiodła się. Ponów ten sam zakup, aby przydzielić {{count}} miejsc.",
+        "check": "Sprawdź ponownie",
+        "cancel": "Anuluj",
+        "error": "Nie udało się sprawdzić puli. Odśwież i spróbuj ponownie; nic nie jest pobierane dwa razy."
+      },
       "saved": "Zapisano.",
       "boards": {
         "title": "Zakres tablic",

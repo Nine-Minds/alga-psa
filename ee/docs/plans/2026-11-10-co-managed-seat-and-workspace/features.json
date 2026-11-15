@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "When available capacity is short, the panel offers the existing pool purchase review for the new pool total and then completes the allocation without a second charge.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]

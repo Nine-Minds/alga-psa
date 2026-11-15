@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCapability } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientCoManagedIntegrationProps, ClientCoManagedSlots } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import { getCoManagedClientManagement } from '@/lib/actions/coManagedActions';
+import { getCoManagedClientManagement, getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
 import CoManagedClientSummary from './CoManagedClientSummary';
 import CoManagedClientView from './CoManagedClientView';
 import { getCoManagedSeatClientState } from '@/lib/actions/coManagedSeatActions';
@@ -102,6 +102,22 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     return () => { seatGeneration.current += 1; };
   }, [seatOpen, loadSeat]);
 
+  // Whether the pool purchase is offered to this administrator. Asked only while the seat chooser is showing, so a
+  // closed seat capability starts no read, and a closed purchase surface leaves the chooser exactly as it was.
+  const choosing = seatOpen && Boolean(seatState?.enable);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  useEffect(() => {
+    if (!choosing) { setPurchaseOpen(false); return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const purchase = await getCoManagedPurchaseState();
+        if (!cancelled) setPurchaseOpen(Boolean(purchase && (purchase.purchase.canPurchase || purchase.purchase.canResume)));
+      } catch { if (!cancelled) setPurchaseOpen(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [choosing, seatState]);
+
   const reloadAll = useCallback(async () => {
     await Promise.all([admitted ? reload() : Promise.resolve(), seatOpen ? loadSeat() : Promise.resolve()]);
   }, [admitted, seatOpen, reload, loadSeat]);
@@ -113,7 +129,7 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
 
   const enable = seat?.enable ?? null;
   const chooser = enable ? (workspace: React.ReactNode) => (
-    <CoManagedShapeChooser clientId={clientId} idPrefix={idPrefix} enable={enable} workspaceSetup={workspace}
+    <CoManagedShapeChooser clientId={clientId} idPrefix={idPrefix} enable={enable} workspaceSetup={workspace} purchaseOpen={purchaseOpen}
       onEnabled={reloadAll} onDirtyChange={(dirty) => { dirtyRef.current = dirty; }} />
   ) : null;
 
