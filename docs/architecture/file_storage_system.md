@@ -140,6 +140,38 @@ Enterprise Edition:
   - Streaming support
   - Metadata management
 
+### Resumable Write Sessions
+Every storage provider (`packages/storage`) implements a resumable multipart write API, and `upload()` is built on top of it, so there is one write path:
+
+- `beginWrite(path, options)` returns a JSON-serialisable handle that carries a provider discriminator. A session can be continued from another pod; passing a handle to the wrong provider fails with `StorageError` `WRITE_HANDLE_PROVIDER_MISMATCH`.
+- `writePart(handle, partNumber, part, size, { final })` writes one part and returns a receipt. Part numbers run 1..10000. Every part except the one marked `final` must be at least 5 MiB (`PART_TOO_SMALL` otherwise).
+- `completeWrite(handle, receipts)` accepts the receipts in any order, requires part numbers 1..N with no gaps, and publishes the object.
+- `abortWrite(handle)` discards the session and is idempotent.
+
+The shared contract is enforced once in `BaseStorageProvider`. `upload()` writes the body as begin + 8 MiB parts + complete (roughly one part in memory) and aborts on failure; a size is no longer required up front.
+
+- **S3** uses native `CreateMultipartUpload` / `UploadPart` / `CompleteMultipartUpload` / `AbortMultipartUpload`. The `packages/storage` `S3StorageProvider` is the single implementation; the EE path `ee/server/src/lib/storage/providers/S3StorageProvider.ts` re-exports it.
+- **Local** writes each part to a sidecar file next to a `<path>.<id>.partial` file (fsynced before the receipt is returned), concatenates the parts on completion, fsyncs, and renames atomically. Handle paths are relative and guarded against traversal.
+
+### Upload Ingestion Pipeline
+`StorageService.uploadFile` streams the request body into a write session instead of buffering it. The stages in `packages/storage/src/ingest/pipeline.ts` are composed by `ingestToWriteSession`:
+
+1. `byteCounter` enforces the provider's maximum file size and fails with `UploadSizeLimitError` (`UPLOAD_SIZE_LIMIT_EXCEEDED`, 413).
+2. `sniffHead` inspects the leading bytes and resolves the stored MIME type (`resolveUploadMime` in `ingest/mime.ts`). It fails with `UploadContentTypeError` (`UPLOAD_CONTENT_TYPE_REJECTED`, 415).
+3. `sha256Stage` hashes the content. The digest is stored in the nullable `external_files.content_sha256` column.
+4. `writeSessionSink` writes parts into a lazily opened write session, so the object's content type matches the stored row.
+
+The `external_files` row and its workflow events are written only after `completeWrite` succeeds. A failed stage aborts the session and leaves no object and no row. Avatar, logo, favicon, and crop uploads still buffer, through the explicit `collect` stage with a 5 MB cap, before image processing.
+
+**MIME rule.** The declared type must first pass the provider allowlist. After that:
+- An empty stream is stored with its declared type.
+- If content detection finds a non-textual type, that type must be allowlisted and is stored. A generic container (zip, CFB) with a declared type from the same family keeps the declared type.
+- If nothing (or only a textual match) is detected, the upload is rejected only when the declared type is one the detector can recognise (for example `image/png`, `video/mp4`, `application/pdf` with non-matching bytes). Otherwise the declared type is kept, so `message/rfc822`, S/MIME, PGP, x509, and vendor types upload as declared.
+- Textual types (`text/*`, `application/xml`, `+xml`, `+json`) are exempt from the mismatch check.
+- `system-artifact` uploads skip sniffing and the allowlist.
+
+In the documents UI, a 415 rejection is shown as the localized `documents:errors.upload.contentMismatch` message. Separately, the document upload component rejects any file larger than `MAX_UPLOAD_BYTES` (99 MiB, `packages/documents/src/lib/uploadLimits.ts`) in the browser before sending it. This is a stopgap that keeps uploads under the 100 MiB Next.js proxy body limit (`experimental.proxyClientMaxBodySize`); other upload entry points do not yet apply this check.
+
 ### Services
 - StorageService: Core business logic
 - File operation coordination
