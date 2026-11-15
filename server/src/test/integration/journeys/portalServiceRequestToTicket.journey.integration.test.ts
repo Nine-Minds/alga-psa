@@ -381,7 +381,23 @@ describe('journey: client portal service request → MSP ticket triage → porta
     const portalDetail = await getRequestServiceDefinitionDetailAction(definitionId);
     expect(portalDetail).not.toBeNull();
     expect(portalDetail?.title).toBe(`Journey Support Request ${suffix}`);
-    expect(portalDetail?.visibleFieldKeys).toContain('request_title');
+    const portalFields = (portalDetail?.formSchema as { fields?: Array<{ key: string }> })?.fields ?? [];
+    expect(portalFields.map((field) => field.key)).toContain('request_title');
+    // The portal receives the form projection only: execution/form-behavior
+    // config and version identifiers stay server-side.
+    expect(portalDetail?.visibilityRules).toEqual([]);
+    for (const internalKey of [
+      'definitionId',
+      'versionId',
+      'versionNumber',
+      'visibleFieldKeys',
+      'executionProvider',
+      'executionConfig',
+      'formBehaviorProvider',
+      'formBehaviorConfig',
+    ]) {
+      expect(portalDetail).not.toHaveProperty(internalKey);
+    }
 
     // --- step 2: portal user A submits the request; the action redirects to
     // the catalog with the submission + created-ticket ids on the URL ---
