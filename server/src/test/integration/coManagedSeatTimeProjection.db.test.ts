@@ -67,18 +67,20 @@ describeDb('a seat technician sees operational time only on the tile and the tim
     await db('users').where({ tenant, user_id: msp }).update({ seat_reader: false });
     const ticketId = randomUUID();
     await db('tickets').insert({ tenant, ticket_id: ticketId, ticket_number: `T-${randomUUID().slice(0, 6)}`, title: 'Time projection ticket', client_id: clientId, board_id: boardId, assigned_to: techA, entered_at: db.fn.now(), updated_at: db.fn.now() });
-    const entry = async (userId: string, mode: 'operational' | 'commercial', hour: number, minutes: number, notes: string) => {
+    const entry = async (userId: string, mode: 'operational' | 'commercial', hour: number, minutes: number, notes: string, billable = mode === 'commercial' ? minutes : 0) => {
       const entryId = randomUUID();
       await db('time_entries').insert({
         tenant, entry_id: entryId, user_id: userId, work_item_type: 'ticket', work_item_id: ticketId,
         start_time: new Date(Date.UTC(2026, 10, 2, hour, 0)), end_time: new Date(Date.UTC(2026, 10, 2, hour, minutes)),
-        billable_duration: mode === 'commercial' ? minutes : 0, billing_mode: mode, approval_status: 'DRAFT', notes,
+        billable_duration: billable, billing_mode: mode, approval_status: 'DRAFT', notes,
         work_date: '2026-11-02', work_timezone: 'UTC', invoiced: false, created_at: db.fn.now(), updated_at: db.fn.now(),
       });
       return entryId;
     };
     // Client IT: A 30 + 15, B 45 (= 90). MSP: 60 + 20 (= 80, distinctive notes).
-    const operational = [await entry(techA, 'operational', 8, 30, 'OP-A one'), await entry(techA, 'operational', 9, 15, 'OP-A two'), await entry(techB, 'operational', 10, 45, 'OP-B one')];
+    // B's entry is adversarial: operational but stored with 45 billable minutes, which the product never writes;
+    // it must still read as non-billable (billing_mode decides, not the stored minutes).
+    const operational = [await entry(techA, 'operational', 8, 30, 'OP-A one'), await entry(techA, 'operational', 9, 15, 'OP-A two'), await entry(techB, 'operational', 10, 45, 'OP-B one', 45)];
     const commercial = [await entry(msp, 'commercial', 11, 60, MSP_NOTE_1), await entry(msp, 'commercial', 13, 20, MSP_NOTE_2)];
     return { tenant, clientId, arrangementId: arrangement.arrangement_id, ticketId, techA, techB, msp, operational, commercial };
   }
@@ -162,6 +164,8 @@ describeDb('a seat technician sees operational time only on the tile and the tim
       expect(entryIds(events).sort()).toEqual([...w.operational, ...w.commercial].sort());
       expect(events.filter((e: any) => w.commercial.includes(e.timeEntry.entry_id)).every((e: any) => e.timeEntry.billable_duration > 0)).toBe(true);
       expect(events.some((e: any) => e.timeEntry.notes === MSP_NOTE_2)).toBe(true);
+      // An operational entry is non-billable for MSP staff too, whatever its stored minutes.
+      expect(events.filter((e: any) => w.operational.includes(e.timeEntry.entry_id)).every((e: any) => e.timeEntry.billable_duration === 0)).toBe(true);
     }
   });
 });

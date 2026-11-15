@@ -64,6 +64,14 @@ export function commercialTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }
 export const isCommercialTimeEntry = (row: { billing_mode?: string | null }): boolean => row.billing_mode !== 'operational';
 
 /**
+ * The billable minutes an entry stands for, by the same rule: an operational entry is never billable, whatever
+ * its stored `billable_duration` says. Display summaries (the ticket's Time logged tile and Timeline) report this
+ * value, so no "Billable" chip is shown for operational time.
+ */
+export const billableMinutesOf = (row: { billing_mode?: string | null; billable_duration?: number | string | null }): number =>
+  isCommercialTimeEntry(row) ? Number(row.billable_duration) || 0 : 0;
+
+/**
  * The operational counterpart of `commercialTimeEntrySql`: only customer-side (seat technician) effort.
  * Used where a reader may see operational time and nothing commercial (S28 / F069: a seat technician's time tile and timeline).
  */

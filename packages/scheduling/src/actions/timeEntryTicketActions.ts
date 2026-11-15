@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
 import { workedMinutes } from '@alga-psa/core';
-import { operationalTimeEntriesOnly } from '@alga-psa/types';
+import { billableMinutesOf, operationalTimeEntriesOnly } from '@alga-psa/types';
 import { resolveSeatViewerOperationalOnly } from '@alga-psa/shared/lib/humanWork/seatTimeScope';
 import type {
   IUser,
@@ -39,6 +39,7 @@ interface RawRow {
   end_time: Date;
   work_date: Date | string | null;
   billable_duration: number | string | null;
+  billing_mode: string | null;
   notes: string | null;
   approval_status: TimeSheetStatus;
   service_id: string | null;
@@ -106,6 +107,7 @@ export async function fetchTimeEntriesForTicketCore(
       'time_entries.end_time',
       'time_entries.work_date',
       'time_entries.billable_duration',
+      'time_entries.billing_mode',
       'time_entries.notes',
       'time_entries.approval_status',
       'time_entries.service_id',
@@ -165,7 +167,7 @@ export async function fetchTimeEntriesForTicketCore(
   for (const row of rows) {
     const isOwn = row.user_id === user.user_id;
     // Billing value stays on the entry; totals below are worked time.
-    const minutes = Number(row.billable_duration) || 0;
+    const minutes = billableMinutesOf(row);
     const worked = workedMinutes(row);
 
     if (isOwn) {

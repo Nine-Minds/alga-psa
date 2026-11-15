@@ -14,7 +14,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { operationalTimeEntriesOnly } from '@alga-psa/types';
+import { isCommercialTimeEntry, operationalTimeEntriesOnly } from '@alga-psa/types';
 import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
 import { admitInternalReaderAudienceSql, type InternalReaderAudienceSql, type InternalReaderIdentity } from '../commentAudience';
 
@@ -332,6 +332,7 @@ export async function buildUnifiedTicketTimeline(
         'te.start_time',
         'te.end_time',
         'te.billable_duration',
+        'te.billing_mode',
         'te.notes',
         'te.work_date',
         knex.raw(
@@ -350,7 +351,10 @@ export async function buildUnifiedTicketTimeline(
         user_display_name: (row.user_display_name as string | null) ?? null,
         start_time: startTime,
         end_time: normalizeNullableIso(row.end_time, 'time_entries.end_time'),
-        billable_duration: normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration'),
+        // An operational entry is never billable (S28): the Timeline chip follows billing_mode, not the stored minutes.
+        billable_duration: isCommercialTimeEntry({ billing_mode: row.billing_mode as string | null })
+          ? normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration')
+          : 0,
         notes: (row.notes as string | null) ?? null,
         work_date: normalizeNullableDate(row.work_date, 'time_entries.work_date'),
       };
