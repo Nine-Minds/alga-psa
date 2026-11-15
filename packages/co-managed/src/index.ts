@@ -140,6 +140,7 @@ export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_
 export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';
 // Seat shape (S5): seat arrangements and their board scope.
 export * from './seatArrangement';
+export * from './seatAdministration';
 // Seat shape (S8): the role a seat technician holds, seeded by the sponsor's first arrangement.
 export * from './seatRole';
 // Seat shape (S14): the people a seat technician can see.

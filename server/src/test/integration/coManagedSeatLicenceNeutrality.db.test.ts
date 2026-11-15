@@ -19,7 +19,7 @@ import {
 } from '../../../../packages/users/src/lib/internalUserLicenseGuard';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser, ensureContactWithEmail } from '../../../test-utils/testDataFactory';
 
 // The EE appliance seat check is handed the licensed count by the seat guard; record what it is given.
 const appliance = vi.hoisted(() => ({ usedSeats: [] as number[] }));
@@ -47,8 +47,12 @@ describeDb('seat technicians do not consume MSP licences', { shuffle: false }, (
     operationId: randomUUID(), seats,
   });
   const address = () => `tech.${randomUUID().slice(0, 12)}@client.example`;
-  const invite = (sponsorTenant: string, arrangementId: string, email = address()) =>
-    inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, email, firstName: 'Dana', lastName: 'Reyes' });
+  /** Invites the client's contact with this email (made when there is none): the technician is always a contact. */
+  const invite = async (sponsorTenant: string, arrangementId: string, email: string = address()) => {
+    const { client_id } = await db('co_managed_seat_arrangements').where({ tenant: sponsorTenant, arrangement_id: arrangementId }).first('client_id');
+    const contactId = await ensureContactWithEmail(db, sponsorTenant, client_id, email, 'Dana Reyes');
+    return inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, contactId });
+  };
   /**
    * The technician accepts through the seat flow: an active internal user holding the assignment,
    * a member of the seat resolver, the invitation spent. Hand-binding the assignment would skip the
