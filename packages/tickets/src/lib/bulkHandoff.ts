@@ -6,11 +6,10 @@
  * never stops the others, and a ticket that does not qualify is never acted on. The pure parts live
  * here, away from the action layer, so they can be pinned without a database:
  *
- *   - `bulkHandoffOperationId`: the idempotency key of one ticket in one submission;
+ *   (the idempotency key lives in ./bulkHandoffOperationId: it needs node:crypto, and this module is
+ *   imported by client components)
  *   - `runBulkHandoff`: the isolating loop and the shape of its result.
  */
-import { createHash } from 'node:crypto';
-import type { TicketHandoffDirection } from './ticketResponsibility';
 
 /** One selected ticket, with the revision of the row the user selected it from. */
 export interface BulkHandoffItem {
@@ -53,13 +52,6 @@ export function summarizeBulkHandoff<State>(results: readonly BulkHandoffTicketR
  * of the whole submission (a lost response, a double click) finds each ticket's original receipt instead of handing
  * the ticket over twice. Shaped as a version 5 UUID: the commands take UUIDs.
  */
-// LEVERAGE: pattern derived-operation-id — same sha256-to-UUIDv5-shape derivation as arrangementReturnOperationId in @alga-psa/co-managed seatTicketHandoff
-export function bulkHandoffOperationId(submissionId: string, direction: TicketHandoffDirection, ticketId: string): string {
-  const hex = createHash('sha256')
-    .update(`ticket-bulk-handoff:${submissionId.toLowerCase()}:${direction}:${ticketId.toLowerCase()}`).digest('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-}
-
 /**
  * Runs `handOne` for each distinct ticket, one at a time, and returns one result per ticket in selection order.
  * `handOne` returns the ticket's new state or its failure; if it throws, that is that ticket's failure

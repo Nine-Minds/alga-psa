@@ -17,8 +17,8 @@ import {
   type TicketResponsibilityProvider,
   type TicketResponsibilityState,
 } from '../lib/ticketResponsibility';
+import { bulkHandoffOperationId } from '../lib/bulkHandoffOperationId';
 import {
-  bulkHandoffOperationId,
   MAX_BULK_HANDOFF_TICKETS,
   runBulkHandoff,
   type BulkHandoffItem,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { bulkHandoffOperationId } from './bulkHandoffOperationId';
 import {
-  bulkHandoffOperationId,
   runBulkHandoff,
   summarizeBulkHandoff,
   type BulkHandoffItem,
