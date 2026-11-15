@@ -1095,7 +1095,20 @@
     "moveConfirm_few": "Move {{count}} Tickets",
     "moveConfirm_many": "Move {{count}} Tickets",
     "moveSuccess_few": "{{count}} tickets moved",
-    "moveSuccess_many": "{{count}} tickets moved"
+    "moveSuccess_many": "{{count}} tickets moved",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "This ticket's current state is not loaded. Open its page of the list and try again.",
+      "partialFailure": "Some tickets could not be handed over",
+      "failure": "Failed to hand over the selected tickets",
+      "failedItemsHeading": "The following tickets could not be handed over:",
+      "success_one": "{{count}} ticket handed over",
+      "success_other": "{{count}} tickets handed over",
+      "promptToClientIt_one": "Client IT becomes responsible for this ticket. The note is shared with the client's technicians. A ticket that cannot be handed over is left as it is.",
+      "promptToClientIt_other": "Client IT becomes responsible for each of these {{count}} tickets. The note is shared with the client's technicians. A ticket that cannot be handed over is left as it is.",
+      "promptToMsp_one": "The MSP becomes responsible for this ticket. The note is shared with the MSP. A ticket that cannot be handed over is left as it is.",
+      "promptToMsp_other": "The MSP becomes responsible for each of these {{count}} tickets. The note is shared with the MSP. A ticket that cannot be handed over is left as it is."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Quick Add Ticket",
@@ -1937,7 +1950,12 @@
       "actorNotAllowed": "You cannot hand this ticket to client IT.",
       "boardOutOfScope": "This ticket's board is not shared with client IT, so it cannot be handed over.",
       "technicianNotAvailable": "The selected technician is no longer available for this client. Choose another or leave it unassigned.",
-      "unavailable": "Handing tickets to client IT is not available."
+      "unavailable": "Handing tickets to client IT is not available.",
+      "invalidHandoffToMsp": "Write a shared note for the MSP before handing this ticket over.",
+      "alreadyResponsibleMsp": "The MSP is already responsible for this ticket. Refresh the ticket to see its current state.",
+      "actorNotAllowedMsp": "You cannot hand this ticket to the MSP.",
+      "unavailableMsp": "Handing tickets to the MSP is not available.",
+      "unexpected": "This ticket could not be handed over. Refresh the list to see where it stands, then try again."
     }
   },
   "ticketSection": {
@@ -3342,6 +3360,8 @@
     "noteLabel": "Shared note for client IT",
     "technicianLabel": "Technician (optional)",
     "technicianPlaceholder": "Any technician of this client",
-    "technicianNone": "Leave the assignee as it is"
+    "technicianNone": "Leave the assignee as it is",
+    "handToMsp": "Hand to MSP",
+    "noteLabelMsp": "Shared note for the MSP"
   }
 }

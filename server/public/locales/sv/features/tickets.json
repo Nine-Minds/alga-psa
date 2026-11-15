@@ -987,6 +987,19 @@
       "partialFailure": "Det gick inte att uppdatera prioritet för vissa ärenden",
       "failure": "Det gick inte att uppdatera prioritet för de markerade ärendena",
       "failedHeading": "Det gick inte att uppdatera prioritet för följande ärenden:"
+    },
+    "handoff": {
+      "unknownTicket": "Ärende",
+      "rowNotLoaded": "Ärendets aktuella status är inte inläst. Öppna dess sida i listan och försök igen.",
+      "partialFailure": "Vissa ärenden kunde inte överlämnas",
+      "failure": "Det gick inte att överlämna de valda ärendena",
+      "failedItemsHeading": "Följande ärenden kunde inte överlämnas:",
+      "success_one": "{{count}} ärende överlämnat",
+      "success_other": "{{count}} ärenden överlämnade",
+      "promptToClientIt_one": "Kundens IT blir ansvarig för det här ärendet. Anteckningen delas med kundens tekniker. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToClientIt_other": "Kundens IT blir ansvarig för vart och ett av de här {{count}} ärendena. Anteckningen delas med kundens tekniker. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToMsp_one": "MSP blir ansvarig för det här ärendet. Anteckningen delas med MSP. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToMsp_other": "MSP blir ansvarig för vart och ett av de här {{count}} ärendena. Anteckningen delas med MSP. Ett ärende som inte kan överlämnas lämnas oförändrat."
     }
   },
   "quickAdd": {
@@ -1799,7 +1812,12 @@
       "actorNotAllowed": "Du kan inte lämna över det här ärendet till kundens IT.",
       "boardOutOfScope": "Ärendets tavla delas inte med kundens IT, så det kan inte lämnas över.",
       "technicianNotAvailable": "Den valda teknikern är inte längre tillgänglig för den här kunden. Välj en annan eller lämna ärendet utan tilldelning.",
-      "unavailable": "Att lämna över ärenden till kundens IT är inte tillgängligt."
+      "unavailable": "Att lämna över ärenden till kundens IT är inte tillgängligt.",
+      "invalidHandoffToMsp": "Skriv en delad anteckning till MSP innan du överlämnar ärendet.",
+      "alreadyResponsibleMsp": "MSP ansvarar redan för det här ärendet. Uppdatera ärendet för att se aktuell status.",
+      "actorNotAllowedMsp": "Du kan inte överlämna det här ärendet till MSP.",
+      "unavailableMsp": "Det går inte att överlämna ärenden till MSP.",
+      "unexpected": "Ärendet kunde inte överlämnas. Uppdatera listan för att se hur det står till och försök igen."
     }
   },
   "ticketSection": {
@@ -3196,6 +3214,8 @@
     "noteLabel": "Delad anteckning till kundens IT",
     "technicianLabel": "Tekniker (valfritt)",
     "technicianPlaceholder": "Valfri tekniker hos den här kunden",
-    "technicianNone": "Lämna tilldelad person oförändrad"
+    "technicianNone": "Lämna tilldelad person oförändrad",
+    "handToMsp": "Överlämna till MSP",
+    "noteLabelMsp": "Delad anteckning till MSP"
   }
 }

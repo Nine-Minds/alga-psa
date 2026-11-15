@@ -987,6 +987,19 @@
       "partialFailure": "Priorität konnte bei einigen Tickets nicht aktualisiert werden",
       "failure": "Fehler beim Aktualisieren der Priorität",
       "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
+    },
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "Der aktuelle Stand dieses Tickets ist nicht geladen. Öffnen Sie die entsprechende Listenseite und versuchen Sie es erneut.",
+      "partialFailure": "Einige Tickets konnten nicht übergeben werden",
+      "failure": "Die ausgewählten Tickets konnten nicht übergeben werden",
+      "failedItemsHeading": "Die folgenden Tickets konnten nicht übergeben werden:",
+      "success_one": "{{count}} Ticket übergeben",
+      "success_other": "{{count}} Tickets übergeben",
+      "promptToClientIt_one": "Die Kunden-IT wird für dieses Ticket verantwortlich. Die Notiz ist für die Techniker des Kunden sichtbar. Ein Ticket, das nicht übergeben werden kann, bleibt unverändert.",
+      "promptToClientIt_other": "Die Kunden-IT wird für jedes dieser {{count}} Tickets verantwortlich. Die Notiz ist für die Techniker des Kunden sichtbar. Ein Ticket, das nicht übergeben werden kann, bleibt unverändert.",
+      "promptToMsp_one": "Der MSP wird für dieses Ticket verantwortlich. Die Notiz ist für den MSP sichtbar. Ein Ticket, das nicht übergeben werden kann, bleibt unverändert.",
+      "promptToMsp_other": "Der MSP wird für jedes dieser {{count}} Tickets verantwortlich. Die Notiz ist für den MSP sichtbar. Ein Ticket, das nicht übergeben werden kann, bleibt unverändert."
     }
   },
   "quickAdd": {
@@ -1799,7 +1812,12 @@
       "actorNotAllowed": "Sie können dieses Ticket nicht an die Kunden-IT übergeben.",
       "boardOutOfScope": "Das Board dieses Tickets ist nicht für die Kunden-IT freigegeben und kann daher nicht übergeben werden.",
       "technicianNotAvailable": "Der gewählte Techniker ist für diesen Kunden nicht mehr verfügbar. Wählen Sie einen anderen oder lassen Sie das Ticket unzugewiesen.",
-      "unavailable": "Das Übergeben von Tickets an die Kunden-IT ist nicht verfügbar."
+      "unavailable": "Das Übergeben von Tickets an die Kunden-IT ist nicht verfügbar.",
+      "invalidHandoffToMsp": "Schreiben Sie eine gemeinsame Notiz für den MSP, bevor Sie dieses Ticket übergeben.",
+      "alreadyResponsibleMsp": "Der MSP ist bereits für dieses Ticket verantwortlich. Aktualisieren Sie das Ticket, um den aktuellen Stand zu sehen.",
+      "actorNotAllowedMsp": "Sie können dieses Ticket nicht an den MSP übergeben.",
+      "unavailableMsp": "Das Übergeben von Tickets an den MSP ist nicht verfügbar.",
+      "unexpected": "Dieses Ticket konnte nicht übergeben werden. Aktualisieren Sie die Liste, um den Stand zu sehen, und versuchen Sie es erneut."
     }
   },
   "ticketSection": {
@@ -3196,6 +3214,8 @@
     "noteLabel": "Gemeinsame Notiz für die Kunden-IT",
     "technicianLabel": "Techniker (optional)",
     "technicianPlaceholder": "Beliebiger Techniker dieses Kunden",
-    "technicianNone": "Zuständigen unverändert lassen"
+    "technicianNone": "Zuständigen unverändert lassen",
+    "handToMsp": "An MSP übergeben",
+    "noteLabelMsp": "Gemeinsame Notiz für den MSP"
   }
 }

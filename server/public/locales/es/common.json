@@ -354,7 +354,8 @@
       "textTooLong": "El texto de la etiqueta es demasiado largo (máximo 50 caracteres)",
       "textInvalidCharacters": "El texto de la etiqueta contiene caracteres no válidos",
       "backgroundColorInvalid": "Formato de color de fondo no válido. Debe ser un código de color hexadecimal válido (p. ej., #FF0000)",
-      "textColorInvalid": "Formato de color de texto no válido. Debe ser un código de color hexadecimal válido (p. ej., #FFFFFF)"
+      "textColorInvalid": "Formato de color de texto no válido. Debe ser un código de color hexadecimal válido (p. ej., #FFFFFF)",
+      "creationRestricted": "Solo puede aplicar etiquetas que ya existen."
     }
   },
   "time": {
@@ -1865,6 +1866,9 @@
       },
       "newTag": {
         "placeholder": "Nueva etiqueta"
+      },
+      "existingTag": {
+        "placeholder": "Etiqueta existente"
       }
     },
     "actions": {

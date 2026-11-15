@@ -1095,7 +1095,20 @@
     "moveConfirm_few": "Déplacer {{count}} Tickets",
     "moveConfirm_many": "Déplacer {{count}} Tickets",
     "moveSuccess_few": "{{count}} tickets déplacés",
-    "moveSuccess_many": "{{count}} tickets déplacés"
+    "moveSuccess_many": "{{count}} tickets déplacés",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "L'état actuel de ce ticket n'est pas chargé. Ouvrez sa page de la liste et réessayez.",
+      "partialFailure": "Certains tickets n'ont pas pu être transmis",
+      "failure": "Échec de la transmission des tickets sélectionnés",
+      "failedItemsHeading": "Les tickets suivants n'ont pas pu être transmis :",
+      "success_one": "{{count}} ticket transmis",
+      "success_other": "{{count}} tickets transmis",
+      "promptToClientIt_one": "L'informatique du client devient responsable de ce ticket. La note est partagée avec les techniciens du client. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToClientIt_other": "L'informatique du client devient responsable de chacun de ces {{count}} tickets. La note est partagée avec les techniciens du client. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToMsp_one": "Le MSP devient responsable de ce ticket. La note est partagée avec le MSP. Un ticket qui ne peut pas être transmis reste inchangé.",
+      "promptToMsp_other": "Le MSP devient responsable de chacun de ces {{count}} tickets. La note est partagée avec le MSP. Un ticket qui ne peut pas être transmis reste inchangé."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ajout rapide d'un ticket",
@@ -1937,7 +1950,12 @@
       "actorNotAllowed": "Vous ne pouvez pas confier ce ticket à l'IT du client.",
       "boardOutOfScope": "Le tableau de ce ticket n'est pas partagé avec l'IT du client ; il ne peut donc pas lui être confié.",
       "technicianNotAvailable": "Le technicien sélectionné n'est plus disponible pour ce client. Choisissez-en un autre ou laissez le ticket non assigné.",
-      "unavailable": "La remise de tickets à l'IT du client n'est pas disponible."
+      "unavailable": "La remise de tickets à l'IT du client n'est pas disponible.",
+      "invalidHandoffToMsp": "Rédigez une note partagée pour le MSP avant de lui transmettre ce ticket.",
+      "alreadyResponsibleMsp": "Le MSP est déjà responsable de ce ticket. Actualisez le ticket pour voir son état actuel.",
+      "actorNotAllowedMsp": "Vous ne pouvez pas transmettre ce ticket au MSP.",
+      "unavailableMsp": "La transmission de tickets au MSP n'est pas disponible.",
+      "unexpected": "Ce ticket n'a pas pu être transmis. Actualisez la liste pour voir où il en est, puis réessayez."
     }
   },
   "ticketSection": {
@@ -3342,6 +3360,8 @@
     "noteLabel": "Note partagée pour l'IT du client",
     "technicianLabel": "Technicien (facultatif)",
     "technicianPlaceholder": "N'importe quel technicien de ce client",
-    "technicianNone": "Laisser l'assigné inchangé"
+    "technicianNone": "Laisser l'assigné inchangé",
+    "handToMsp": "Transmettre au MSP",
+    "noteLabelMsp": "Note partagée pour le MSP"
   }
 }

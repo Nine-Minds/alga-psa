@@ -362,6 +362,7 @@ export interface CoManagedSeatArrangementReturnRequest {
 }
 
 /** The operation id of one ticket's return at arrangement end: the same on every replay. */
+// LEVERAGE: pattern derived-operation-id — same sha256-to-UUIDv5-shape derivation as bulkHandoffOperationId in @alga-psa/tickets
 function arrangementReturnOperationId(arrangementId: string, ticketId: string): string {
   const hex = createHash('sha256').update(`co-managed-seat-arrangement-end:${arrangementId}:${ticketId}`).digest('hex');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;

@@ -1095,7 +1095,20 @@
     "moveConfirm_few": "Verplaats {{count}} tickets",
     "moveConfirm_many": "Verplaats {{count}} tickets",
     "moveSuccess_few": "{{count}} tickets verplaatst",
-    "moveSuccess_many": "{{count}} tickets verplaatst"
+    "moveSuccess_many": "{{count}} tickets verplaatst",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "De huidige status van dit ticket is niet geladen. Open de lijstpagina waarop het staat en probeer het opnieuw.",
+      "partialFailure": "Sommige tickets konden niet worden overgedragen",
+      "failure": "Het overdragen van de geselecteerde tickets is mislukt",
+      "failedItemsHeading": "De volgende tickets konden niet worden overgedragen:",
+      "success_one": "{{count}} ticket overgedragen",
+      "success_other": "{{count}} tickets overgedragen",
+      "promptToClientIt_one": "De IT van de klant wordt verantwoordelijk voor dit ticket. De notitie wordt gedeeld met de technici van de klant. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToClientIt_other": "De IT van de klant wordt verantwoordelijk voor elk van deze {{count}} tickets. De notitie wordt gedeeld met de technici van de klant. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToMsp_one": "De MSP wordt verantwoordelijk voor dit ticket. De notitie wordt gedeeld met de MSP. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToMsp_other": "De MSP wordt verantwoordelijk voor elk van deze {{count}} tickets. De notitie wordt gedeeld met de MSP. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ticket toevoegen",
@@ -1937,7 +1950,12 @@
       "actorNotAllowed": "U kunt dit ticket niet overdragen aan de IT van de klant.",
       "boardOutOfScope": "Het bord van dit ticket wordt niet gedeeld met de IT van de klant, dus het kan niet worden overgedragen.",
       "technicianNotAvailable": "De geselecteerde technicus is niet meer beschikbaar voor deze klant. Kies een andere of laat het ticket niet toegewezen.",
-      "unavailable": "Tickets overdragen aan de IT van de klant is niet beschikbaar."
+      "unavailable": "Tickets overdragen aan de IT van de klant is niet beschikbaar.",
+      "invalidHandoffToMsp": "Schrijf een gedeelde notitie voor de MSP voordat u dit ticket overdraagt.",
+      "alreadyResponsibleMsp": "De MSP is al verantwoordelijk voor dit ticket. Vernieuw het ticket om de huidige status te zien.",
+      "actorNotAllowedMsp": "U kunt dit ticket niet aan de MSP overdragen.",
+      "unavailableMsp": "Tickets overdragen aan de MSP is niet beschikbaar.",
+      "unexpected": "Dit ticket kon niet worden overgedragen. Vernieuw de lijst om te zien hoe het ervoor staat en probeer het opnieuw."
     }
   },
   "ticketSection": {
@@ -3342,6 +3360,8 @@
     "noteLabel": "Gedeelde notitie voor IT van de klant",
     "technicianLabel": "Technicus (optioneel)",
     "technicianPlaceholder": "Elke technicus van deze klant",
-    "technicianNone": "Toegewezene ongewijzigd laten"
+    "technicianNone": "Toegewezene ongewijzigd laten",
+    "handToMsp": "Overdragen aan MSP",
+    "noteLabelMsp": "Gedeelde notitie voor de MSP"
   }
 }

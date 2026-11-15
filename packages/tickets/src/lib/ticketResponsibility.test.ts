@@ -25,7 +25,8 @@ describe('ticket list responsibility provider seam', () => {
     expect(await resolveTicketResponsibility({ tenant: 't', subject: { resolverFacts: {} } as never })).toBeNull();
   });
   it('offers the first provider that offers the reader', async () => {
-    const never = { offered: () => false, read: async () => new Map(), load: async () => null, handToClientIt: async () => state('client_it') };
+    const never = { offered: () => false, read: async () => new Map(), load: async () => null, handToClientIt: async () => state('client_it'),
+      handToMsp: async () => state('msp'), handoffDirection: () => null, readStates: async () => new Map() };
     const yes = { ...never, offered: async () => true };
     registerTicketResponsibilityProvider('never', never);
     registerTicketResponsibilityProvider('yes', yes);

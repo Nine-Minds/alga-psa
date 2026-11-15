@@ -1097,7 +1097,26 @@
     "moveConfirm_few": "Przenieś {{count}} zgłoszenia",
     "moveConfirm_many": "Przenieś {{count}} zgłoszeń",
     "moveSuccess_few": "Przeniesiono {{count}} zgłoszenia",
-    "moveSuccess_many": "Przeniesiono {{count}} zgłoszeń"
+    "moveSuccess_many": "Przeniesiono {{count}} zgłoszeń",
+    "handoff": {
+      "unknownTicket": "Zgłoszenie",
+      "rowNotLoaded": "Aktualny stan tego zgłoszenia nie jest wczytany. Otwórz jego stronę na liście i spróbuj ponownie.",
+      "partialFailure": "Nie udało się przekazać niektórych zgłoszeń",
+      "failure": "Nie udało się przekazać wybranych zgłoszeń",
+      "failedItemsHeading": "Nie udało się przekazać następujących zgłoszeń:",
+      "success_one": "Przekazano {{count}} zgłoszenie",
+      "success_few": "Przekazano {{count}} zgłoszenia",
+      "success_many": "Przekazano {{count}} zgłoszenia",
+      "success_other": "Przekazano {{count}} zgłoszeń",
+      "promptToClientIt_one": "IT klienta staje się odpowiedzialne za to zgłoszenie. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_few": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_many": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToClientIt_other": "IT klienta staje się odpowiedzialne za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla techników klienta. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_one": "MSP staje się odpowiedzialny za to zgłoszenie. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_few": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_many": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian.",
+      "promptToMsp_other": "MSP staje się odpowiedzialny za każde z tych {{count}} zgłoszeń. Notatka jest widoczna dla MSP. Zgłoszenie, którego nie można przekazać, pozostaje bez zmian."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Szybkie dodanie zgłoszenia",
@@ -1939,7 +1958,12 @@
       "actorNotAllowed": "Nie możesz przekazać tego zgłoszenia do IT klienta.",
       "boardOutOfScope": "Tablica tego zgłoszenia nie jest udostępniona IT klienta, więc nie można go przekazać.",
       "technicianNotAvailable": "Wybrany technik nie jest już dostępny dla tego klienta. Wybierz innego lub pozostaw zgłoszenie nieprzypisane.",
-      "unavailable": "Przekazywanie zgłoszeń do IT klienta jest niedostępne."
+      "unavailable": "Przekazywanie zgłoszeń do IT klienta jest niedostępne.",
+      "invalidHandoffToMsp": "Przed przekazaniem tego zgłoszenia napisz wspólną notatkę dla MSP.",
+      "alreadyResponsibleMsp": "MSP jest już odpowiedzialny za to zgłoszenie. Odśwież zgłoszenie, aby zobaczyć jego aktualny stan.",
+      "actorNotAllowedMsp": "Nie możesz przekazać tego zgłoszenia do MSP.",
+      "unavailableMsp": "Przekazywanie zgłoszeń do MSP jest niedostępne.",
+      "unexpected": "Nie udało się przekazać tego zgłoszenia. Odśwież listę, aby zobaczyć jego stan, i spróbuj ponownie."
     }
   },
   "ticketSection": {
@@ -3356,6 +3380,8 @@
     "noteLabel": "Wspólna notatka dla IT klienta",
     "technicianLabel": "Technik (opcjonalnie)",
     "technicianPlaceholder": "Dowolny technik tego klienta",
-    "technicianNone": "Pozostaw przypisaną osobę bez zmian"
+    "technicianNone": "Pozostaw przypisaną osobę bez zmian",
+    "handToMsp": "Przekaż do MSP",
+    "noteLabelMsp": "Wspólna notatka dla MSP"
   }
 }
