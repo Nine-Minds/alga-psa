@@ -22,6 +22,7 @@ import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 import { TicketDataSourceProvider, runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { composeTicketDataSource } from '../../lib/ticketDataSource';
 import { seatConversationConfig } from '../../lib/seatTicketConversation';
@@ -83,6 +84,8 @@ interface TicketDetailsContainerProps {
     categories: any[];
     locations: any[];
     agentSchedules: any[];
+    /** Present only for a ticket of a client in a live seat arrangement, when the seat shape is released. */
+    seatResponsibility?: TicketResponsibilityState;
     /**
      * Seat facts of this ticket, present only when its client has a live seat arrangement (the
      * server's ticket-detail load resolves it behind the `co-managed-seat` capability).
@@ -391,6 +394,7 @@ export default function TicketDetailsContainer({
       initialCategories={ticketData.categories}
       initialLocations={ticketData.locations}
       initialAgentSchedules={ticketData.agentSchedules}
+      initialSeatResponsibility={ticketData.seatResponsibility ?? null}
       onTicketUpdate={handleTicketUpdate}
       onBatchTicketUpdate={handleBatchTicketUpdate}
       onAddComment={handleAddComment}

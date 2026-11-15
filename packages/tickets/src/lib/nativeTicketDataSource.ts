@@ -240,6 +240,10 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getTicketPartyDisplayTags: lazy(optimizedTicketActionsModule, 'getTicketPartyDisplayTags'),
   }),
 
+  responsibility: Object.freeze({
+    handTicketToClientIt: lazy(() => import('../actions/ticketResponsibilityActions'), 'handTicketToClientIt'),
+  }),
+
   avatars: Object.freeze({
     // Session-tenant checked: a ticket from another tenant gets no avatars.
     getUserAvatarUrlsBatchAction: lazy(ticketAvatarActionsModule, 'getTicketUserAvatarUrlsBatch'),

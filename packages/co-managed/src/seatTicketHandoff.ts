@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
+import { dispatchTicketLifecycle } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import {
-  advanceSeatTicketWork, liveSeatArrangement, recordTicketAssigneeChange, seatTicketWork, tenantDb,
+  advanceSeatTicketWork, liveSeatArrangement, recordTicketAssigneeChange, seatTicketWork, tenantDb, withTransaction,
   type SeatArrangementRow, type SeatTicketWorkRow,
 } from '@alga-psa/db';
 import { coManagedSeatBoardAccess, readCoManagedSeatBoardScope } from './seatArrangement';
@@ -255,7 +256,8 @@ function receipt(row: ReceiptRow): CoManagedSeatHandoffReceipt {
  */
 async function handOff(db: Knex, to: CoManagedSeatResponsibility, input: CoManagedSeatHandToClientItRequest): Promise<CoManagedSeatHandoffReceipt> {
   const request = snapshotRequest(input);
-  const outcome = await db.transaction((trx) => recordHandoff(trx, to, DIRECTIONS[to], request));
+  // `withTransaction` owns this commit, so after-commit hooks (the SLA timer backend) run once it lands.
+  const outcome = await withTransaction(db, (trx) => recordHandoff(trx, to, DIRECTIONS[to], request));
   // After commit and once per handoff: a replay returned the original receipt.
   if (outcome.recorded) await announceCoManagedSeatHandoff(request.sponsorTenant, outcome.receipt);
   return outcome.receipt;
@@ -308,7 +310,12 @@ async function recordHandoff(
       arrangement_id: arrangement.arrangement_id, revision, from_responsibility: work.responsibility, to_responsibility: to,
       request_fingerprint: requestFingerprint, note: request.note, actor_user_id: request.actorUserId,
       assigned_to: assignedTo }).returning('*');
-    return { receipt: receipt(row), recorded: true };
+    const recorded = receipt(row);
+    // In this transaction, so the MSP's SLA clock follows responsibility atomically (the handler's `rollback` policy).
+    await dispatchTicketLifecycle(trx, { kind: 'seatResponsibility', tenant: request.sponsorTenant, ticketId: request.ticketId,
+      arrangementId: arrangement.arrangement_id, from: work.responsibility, to, operationId: request.operationId,
+      occurredAt: recorded.occurredAt, actorUserId: request.actorUserId });
+    return { receipt: recorded, recorded: true };
   }
 }
 

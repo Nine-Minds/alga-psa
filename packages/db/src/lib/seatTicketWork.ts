@@ -25,6 +25,38 @@ export interface SeatTicketWork {
   revision: number;
 }
 
+/** A ticket's responsibility changed outside a handoff command. */
+export interface SeatResponsibilityChange {
+  tenant: string;
+  ticketId: string;
+  arrangementId: string;
+  from: SeatTicketResponsibility;
+  to: SeatTicketResponsibility;
+  occurredAt: Date;
+}
+type SeatResponsibilityObserver = (trx: Knex.Transaction, change: SeatResponsibilityChange) => Promise<void>;
+
+// LEVERAGE: friction lifecycle-below-db — the ticket lifecycle registry lives in @alga-psa/tickets, above this layer, so writers down here reach it through a second globalThis-keyed registry that co-managed bridges; a lifecycle dispatch below the feature packages would remove the bridge
+const OBSERVER_KEY = '__algaSeatResponsibilityObservers';
+const observers = (): Map<string, SeatResponsibilityObserver> => {
+  const g = globalThis as Record<string, unknown>;
+  return (g[OBSERVER_KEY] ??= new Map<string, SeatResponsibilityObserver>()) as Map<string, SeatResponsibilityObserver>;
+};
+
+/**
+ * Responsibility changes made by writers below the co-managed package (a move out of the
+ * arrangement's scope returns the ticket to the MSP) are announced to observers in the writer's
+ * transaction. co-managed registers one that raises the ticket-lifecycle `seatResponsibility`
+ * event; with none registered, announcing costs nothing. Idempotent per id.
+ */
+export function registerSeatResponsibilityObserver(id: string, observer: SeatResponsibilityObserver): void {
+  observers().set(id, observer);
+}
+
+async function announceResponsibilityChange(trx: Knex.Transaction, change: SeatResponsibilityChange): Promise<void> {
+  for (const observer of [...observers().values()]) await observer(trx, change);
+}
+
 /** The client's live arrangement. `lock` holds it to commit, so it cannot end under a writer. */
 export async function liveSeatArrangement(sponsor: TenantDb, clientId: string | null, lock = false): Promise<SeatArrangementRow | undefined> {
   if (!clientId) return undefined;
@@ -172,6 +204,8 @@ export async function releaseSeatTicketOnMove(
   if (previous?.responsibility === 'client_it' && previous.arrangement_id !== home) {
     // Written, not left to be read as stale: a ticket that later comes back must not revive client IT's turn.
     await advanceSeatTicketWork(sponsor, key, previous.arrangement_id, 'msp', previous, true);
+    await announceResponsibilityChange(trx, { tenant, ticketId, arrangementId: previous.arrangement_id,
+      from: 'client_it', to: 'msp', occurredAt: new Date() });
   } else if (settled.assigneeCleared && arrangement) {
     // An assignee change like any other: a handoff prepared before it is stale.
     await advanceSeatTicketWork(sponsor, key, arrangement.arrangement_id, seatTicketWork(arrangement, previous).responsibility, previous, false);
