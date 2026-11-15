@@ -24,11 +24,36 @@ import {
 } from '@alga-psa/tickets/lib/ticketResponsibility';
 import { coManagedSeatAuthority } from './seatAuthority';
 import { coManagedSeatReleased } from './seatRelease';
-import { CoManagedSeatHandoffError, handCoManagedSeatTicketToClientIt, readCoManagedSeatTicketWork } from './seatTicketHandoff';
+import {
+  CoManagedSeatHandoffError, handCoManagedSeatTicketToClientIt, handCoManagedSeatTicketToMsp, readCoManagedSeatTicketWork,
+} from './seatTicketHandoff';
 
 export const CO_MANAGED_SEAT_LIST_RESPONSIBILITY_PROVIDER_ID = 'co-managed-seat';
 
 const RESPONSIBILITIES: readonly TicketResponsibility[] = ['client_it', 'msp'];
+
+/**
+ * Responsibility and revision of each ticket that has one, in one statement. The responsibility is the ticket query
+ * schema's `seat_responsibility` predicate, the same definition the filter compiles through; the revision is the work
+ * row's, zero for a ticket with no row (the MSP's until its first handoff).
+ */
+async function readStates(trx: Knex.Transaction, tenant: string, ticketIds: readonly string[]) {
+  const result = new Map<string, { responsibility: TicketResponsibility; revision: number }>();
+  if (ticketIds.length === 0) return result;
+  const schema = createTicketQuerySchema();
+  const [clientIt, msp] = RESPONSIBILITIES.map((value) =>
+    compilePredicateFragment(schema, { join: 'and', clauses: [{ path: 'seat_responsibility', operator: 'equals', value }] }, { rootAlias: 't' }));
+  const rows: Array<{ ticket_id: string; responsibility: TicketResponsibility | null; revision: number | string | null }> = (await trx.raw(
+    `SELECT t.ticket_id,
+            CASE WHEN ${clientIt.sql} THEN 'client_it' WHEN ${msp.sql} THEN 'msp' END AS responsibility,
+            (SELECT w.revision FROM co_managed_seat_ticket_work AS w WHERE w.tenant = t.tenant AND w.ticket_id = t.ticket_id) AS revision
+       FROM tickets AS t
+      WHERE t.tenant = ? AND t.ticket_id IN (${ticketIds.map(() => '?').join(', ')})`,
+    [...clientIt.bindings, ...msp.bindings, tenant, ...ticketIds] as Knex.RawBinding[],
+  )).rows;
+  for (const row of rows) if (row.responsibility) result.set(row.ticket_id, { responsibility: row.responsibility, revision: Number(row.revision ?? 0) });
+  return result;
+}
 
 export const coManagedSeatListResponsibilityProvider: TicketResponsibilityProvider = {
   async offered({ tenant, subject }) {
@@ -36,22 +61,22 @@ export const coManagedSeatListResponsibilityProvider: TicketResponsibilityProvid
     return coManagedSeatReleased(tenant);
   },
 
+  async handoffDirection({ tenant, subject }) {
+    // MSP staff hand to client IT; a seat technician with a live scope hands to the MSP. Everyone else, and every
+    // tenant the seat shape is not released for, is offered nothing.
+    const authority = coManagedSeatAuthority(subject);
+    if (authority && !authority.scope) return null;
+    if (!await coManagedSeatReleased(tenant)) return null;
+    return authority ? 'msp' : 'client_it';
+  },
+
   async read(trx: Knex.Transaction, tenant: string, ticketIds: readonly string[]) {
     const result = new Map<string, TicketResponsibility>();
-    if (ticketIds.length === 0) return result;
-    const schema = createTicketQuerySchema();
-    const [clientIt, msp] = RESPONSIBILITIES.map((value) =>
-      compilePredicateFragment(schema, { join: 'and', clauses: [{ path: 'seat_responsibility', operator: 'equals', value }] }, { rootAlias: 't' }));
-    const rows: Array<{ ticket_id: string; responsibility: TicketResponsibility | null }> = (await trx.raw(
-      `SELECT t.ticket_id,
-              CASE WHEN ${clientIt.sql} THEN 'client_it' WHEN ${msp.sql} THEN 'msp' END AS responsibility
-         FROM tickets AS t
-        WHERE t.tenant = ? AND t.ticket_id IN (${ticketIds.map(() => '?').join(', ')})`,
-      [...clientIt.bindings, ...msp.bindings, tenant, ...ticketIds] as Knex.RawBinding[],
-    )).rows;
-    for (const row of rows) if (row.responsibility) result.set(row.ticket_id, row.responsibility);
+    for (const [ticketId, state] of await readStates(trx, tenant, ticketIds)) result.set(ticketId, state.responsibility);
     return result;
   },
+
+  readStates,
 
   async load(trx, tenant, ticketId) {
     const work = await readCoManagedSeatTicketWork(trx, { sponsorTenant: tenant, ticketId });
@@ -64,6 +89,19 @@ export const coManagedSeatListResponsibilityProvider: TicketResponsibilityProvid
       const receipt = await handCoManagedSeatTicketToClientIt(db, {
         sponsorTenant: input.tenant, ticketId: input.ticketId, actorUserId: input.actorUserId, operationId: input.operationId,
         expectedRevision: input.expectedRevision, note: input.note, technicianUserId: input.technicianUserId ?? null,
+      });
+      return { responsibility: receipt.to, revision: receipt.revision, technicians: [] };
+    } catch (error) {
+      if (error instanceof CoManagedSeatHandoffError) throw new TicketResponsibilityError(error.code);
+      throw error;
+    }
+  },
+
+  async handToMsp(db, input) {
+    try {
+      const receipt = await handCoManagedSeatTicketToMsp(db, {
+        sponsorTenant: input.tenant, ticketId: input.ticketId, actorUserId: input.actorUserId, operationId: input.operationId,
+        expectedRevision: input.expectedRevision, note: input.note,
       });
       return { responsibility: receipt.to, revision: receipt.revision, technicians: [] };
     } catch (error) {

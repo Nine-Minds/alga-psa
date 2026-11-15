@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Bulk Hand to client IT and bulk Hand to MSP validate each selected ticket separately and report each failure without acting on tickets that do not qualify.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "A seat technician applies existing tags and cannot create a tag.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

@@ -1095,7 +1095,20 @@
     "moveConfirm_few": "Mover tickets {{count}}",
     "moveConfirm_many": "Mover tickets {{count}}",
     "moveSuccess_few": "Tickets {{count}} movidos",
-    "moveSuccess_many": "Tickets {{count}} movidos"
+    "moveSuccess_many": "Tickets {{count}} movidos",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "O estado atual deste ticket não está carregado. Abra a sua página da lista e tente novamente.",
+      "partialFailure": "Não foi possível passar alguns tickets",
+      "failure": "Falha ao passar os tickets selecionados",
+      "failedItemsHeading": "Não foi possível passar os seguintes tickets:",
+      "success_one": "{{count}} ticket passado",
+      "success_other": "{{count}} tickets passados",
+      "promptToClientIt_one": "A TI do cliente passa a ser responsável por este ticket. A nota é partilhada com os técnicos do cliente. Um ticket que não possa ser passado fica como está.",
+      "promptToClientIt_other": "A TI do cliente passa a ser responsável por cada um destes {{count}} tickets. A nota é partilhada com os técnicos do cliente. Um ticket que não possa ser passado fica como está.",
+      "promptToMsp_one": "O MSP passa a ser responsável por este ticket. A nota é partilhada com o MSP. Um ticket que não possa ser passado fica como está.",
+      "promptToMsp_other": "O MSP passa a ser responsável por cada um destes {{count}} tickets. A nota é partilhada com o MSP. Um ticket que não possa ser passado fica como está."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ticket de adição rápida",
@@ -1937,7 +1950,12 @@
       "actorNotAllowed": "Não pode passar este ticket para a TI do cliente.",
       "boardOutOfScope": "O quadro deste ticket não está partilhado com a TI do cliente, por isso não pode ser passado.",
       "technicianNotAvailable": "O técnico selecionado já não está disponível para este cliente. Escolha outro ou deixe o ticket por atribuir.",
-      "unavailable": "A passagem de tickets para a TI do cliente não está disponível."
+      "unavailable": "A passagem de tickets para a TI do cliente não está disponível.",
+      "invalidHandoffToMsp": "Escreva uma nota partilhada para o MSP antes de passar este ticket.",
+      "alreadyResponsibleMsp": "O MSP já é responsável por este ticket. Atualize o ticket para ver o estado atual.",
+      "actorNotAllowedMsp": "Não pode passar este ticket ao MSP.",
+      "unavailableMsp": "Passar tickets ao MSP não está disponível.",
+      "unexpected": "Não foi possível passar este ticket. Atualize a lista para ver o estado e tente novamente."
     }
   },
   "ticketSection": {
@@ -3330,6 +3348,8 @@
     "noteLabel": "Nota partilhada para a TI do cliente",
     "technicianLabel": "Técnico (opcional)",
     "technicianPlaceholder": "Qualquer técnico deste cliente",
-    "technicianNone": "Deixar o responsável atribuído como está"
+    "technicianNone": "Deixar o responsável atribuído como está",
+    "handToMsp": "Passar ao MSP",
+    "noteLabelMsp": "Nota partilhada para o MSP"
   }
 }

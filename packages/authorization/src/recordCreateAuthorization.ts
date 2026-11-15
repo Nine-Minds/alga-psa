@@ -89,6 +89,25 @@ export async function authorizeRecordCreate(
   return kernel.authorizeMutation(evaluation);
 }
 
+/**
+ * Whether a subject a built-in rule resolver governs (a co-managed seat technician) may create records of
+ * `resourceType` at all. For a resource that has no owning record to point at (a tag definition: it belongs to the
+ * tenant until something is mapped to it), where the question is whether the resolver's closed baseline grants the
+ * action, not whether this record is in scope.
+ *
+ * Neutral for everyone else: a client principal, a tenant no resolver has a subject in, and a subject no resolver
+ * applies to all return true before any rule is read, so bundles and role permissions decide as they always did.
+ */
+export async function isResolverGovernedCreateAllowed(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; resourceType: string; requestCache?: AuthorizationRequestCache },
+): Promise<boolean> {
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const governed = await resolverGovernedEvaluation(conn, { ...input, action: 'create', record: {}, requestCache });
+  if (!governed) return true;
+  return (await authorizeRecordCreate(conn, { ...input, record: {}, requestCache })).allowed;
+}
+
 /** The subject's rules refuse the candidate record. The message is the permission-denied text callers already surface. */
 export class RecordCreateDeniedError extends Error {
   constructor(readonly resourceType: string, label: string) {

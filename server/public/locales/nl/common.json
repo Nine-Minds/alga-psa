@@ -237,7 +237,8 @@
       "textTooLong": "Labeltekst te lang (maximaal 50 tekens)",
       "textInvalidCharacters": "De labeltekst bevat ongeldige tekens",
       "backgroundColorInvalid": "Ongeldige indeling voor achtergrondkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FF0000)",
-      "textColorInvalid": "Ongeldige indeling voor tekstkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FFFFFF)"
+      "textColorInvalid": "Ongeldige indeling voor tekstkleur. Dit moet een geldige hexadecimale kleurcode zijn (bijv. #FFFFFF)",
+      "creationRestricted": "Je kunt alleen bestaande tags toepassen."
     }
   },
   "time": {
@@ -1865,6 +1866,9 @@
       },
       "newTag": {
         "placeholder": "Nieuw label"
+      },
+      "existingTag": {
+        "placeholder": "Bestaande tag"
       }
     },
     "actions": {

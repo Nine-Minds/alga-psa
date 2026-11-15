@@ -186,6 +186,8 @@ interface TicketingDashboardContainerProps {
     views?: ITicketListViewSummary[];
     /** The reader is offered the responsibility column and filter (the seat shape is released and the reader is MSP staff). */
     seatResponsibilityOffered?: boolean;
+    /** The handoff the reader may start on selected tickets (MSP staff: to client IT; a seat technician: to the MSP). Absent: none. */
+    seatHandoffDirection?: 'client_it' | 'msp';
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
@@ -255,6 +257,7 @@ export default function TicketingDashboardContainer({
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
   const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
   const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
+  const [seatHandoffDirection, setSeatHandoffDirection] = useState<'client_it' | 'msp' | undefined>(consolidatedData.seatHandoffDirection);
   const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -288,6 +291,7 @@ export default function TicketingDashboardContainer({
     setTotalCount(consolidatedData.totalCount);
     setNamedViews(consolidatedData.views);
     setSeatResponsibilityOffered(consolidatedData.seatResponsibilityOffered === true);
+    setSeatHandoffDirection(consolidatedData.seatHandoffDirection);
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
@@ -296,7 +300,7 @@ export default function TicketingDashboardContainer({
     // unsettled (so its finally never runs). The refresh itself delivers fresh
     // data here, so clear the loading spinner — otherwise it hangs forever.
     setIsLoading(false);
-  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered]);
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection]);
 
   const {
     value: storedPageSize,
@@ -540,6 +544,7 @@ export default function TicketingDashboardContainer({
       setTotalCount(result.totalCount);
       setNamedViews(result.views);
       setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);
+      setSeatHandoffDirection(result.seatHandoffDirection);
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
@@ -1162,6 +1167,7 @@ export default function TicketingDashboardContainer({
       totalCount={totalCount}
       namedViews={namedViews}
       seatResponsibilityOffered={seatResponsibilityOffered}
+      seatHandoffDirection={seatHandoffDirection}
       currentPage={currentPage}
       pageSize={pageSize}
       onPageChange={handlePageChange}

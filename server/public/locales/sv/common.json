@@ -291,7 +291,8 @@
       "textTooLong": "Taggtexten är för lång (högst 50 tecken)",
       "textInvalidCharacters": "Taggtexten innehåller ogiltiga tecken",
       "backgroundColorInvalid": "Ogiltigt format för bakgrundsfärg. Ange en giltig hexadecimal färgkod (t.ex. #FF0000)",
-      "textColorInvalid": "Ogiltigt format för textfärg. Ange en giltig hexadecimal färgkod (t.ex. #FFFFFF)"
+      "textColorInvalid": "Ogiltigt format för textfärg. Ange en giltig hexadecimal färgkod (t.ex. #FFFFFF)",
+      "creationRestricted": "Du kan bara använda taggar som redan finns."
     }
   },
   "fields": {
@@ -1865,6 +1866,9 @@
       },
       "newTag": {
         "placeholder": "Ny tagg"
+      },
+      "existingTag": {
+        "placeholder": "Befintlig tagg"
       }
     },
     "actions": {
