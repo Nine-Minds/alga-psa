@@ -77,5 +77,18 @@
     "errorNotFound": "No se encontró este acuerdo.",
     "errorGeneric": "No se pudo procesar la solicitud.",
     "loading": "Cargando…"
+  },
+  "seatProjects": {
+    "errorDenied": "No tiene permiso para compartir proyectos.",
+    "errorProject": "Solo se puede compartir un proyecto de este cliente.",
+    "errorNotFound": "No se encontró este acuerdo.",
+    "errorGeneric": "No se pudo procesar la solicitud.",
+    "columnProject": "Proyecto",
+    "columnShared": "Compartido con técnicos",
+    "inactive": "Inactivo",
+    "shareLabel": "Compartir {{name}} con técnicos",
+    "intro": "Los técnicos solo ven los proyectos que usted comparte. Dejar de compartir surte efecto en su siguiente solicitud.",
+    "loading": "Cargando proyectos…",
+    "empty": "Este cliente no tiene proyectos para compartir."
   }
 }

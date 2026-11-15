@@ -142,6 +142,21 @@ describe('T015: a seat subject against every resource type and action in the ker
     expect((await decide(seat, 'ticket', 'read', { id: 't', clientId: OWN, boardId: 'board-work' })).allowed).toBe(true);
   });
 
+  // Slice S29: a write on a project's task is decided on the project (`shared_project`), and the allowed read carries the
+  // project's closed fields so every project, phase and task projection omits them.
+  it('allows a shared project of the own client for read and update, with its budget, billing and rate columns closed', async () => {
+    for (const action of ['read', 'update']) {
+      const decision = await decide(seat, 'project', action, { id: 'project-shared', clientId: OWN });
+      expect(decision.allowed, action).toBe(true);
+    }
+    const read = await decide(seat, 'project', 'read', { id: 'project-shared', clientId: OWN });
+    expect(read.redactedFields).toEqual(expect.arrayContaining(['budgeted_hours', 'billing_profile_id', 'service_id']));
+    expect(deniedRuleIds(await decide(seat, 'project', 'update', { id: 'project-unshared', clientId: OWN })))
+      .toEqual(['seat:project:update:shared_project']);
+    expect(deniedRuleIds(await decide(seat, 'project', 'update', { id: 'project-shared', clientId: OTHER })))
+      .toEqual(['seat:project:update:own_client']);
+  });
+
   it('a resource type the kernel does not have yet is denied by the closed baseline', async () => {
     const decision = await decide(seat, 'a_future_resource', 'read', goodRecord);
     expect(decision.allowed).toBe(false);

@@ -14,8 +14,14 @@ import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 import { resolveAuthorizationSubject } from './subject/resolver';
 import type { SubjectUserInput } from './subject/assemble';
 import { probeTenantAuthorizationScope } from './subject/tenantScope';
-import { resolveAppliedBuiltinResolvers } from './kernel/builtinRuleResolvers';
+import {
+  builtinClosedFields,
+  builtinClosedOperations,
+  isBuiltinOperationClosed,
+  resolveAppliedBuiltinResolvers,
+} from './kernel/builtinRuleResolvers';
 import { tenantDb } from '@alga-psa/db';
+import { projectPeopleForSubject, type ProjectedPersonKind } from './subject/peopleProjection';
 
 /**
  * Create authorization for server actions: "may this subject create THIS record?", asked before anything is
@@ -212,4 +218,136 @@ export async function isDocumentAssociationCreateAllowed(
     if (!decision.allowed) return false;
   }
   return true;
+}
+
+/** The record a write is made on is governed through a parent resource the subject's rules refuse. */
+export class ParentResourceDeniedError extends Error {
+  constructor(readonly resourceType: string, label: string) {
+    super(`Permission denied: Cannot write ${label}`);
+    this.name = 'ParentResourceDeniedError';
+  }
+}
+
+export function isParentResourceDeniedError(error: unknown): error is ParentResourceDeniedError {
+  return error instanceof Error && error.name === 'ParentResourceDeniedError';
+}
+
+/**
+ * A write on a record of a polymorphic kind (a time entry, a document or tag association on a project task) is
+ * also a write on the parent resource that kind is governed through. This asks the kernel whether the subject may
+ * UPDATE that parent, so the rules that narrow it (a seat technician's shared projects) hold for the child too,
+ * whatever the child's own rules say about its client.
+ *
+ * The parent comes from the same path as the client (`ClientPath.parent`, `clientResolvers.resolveParent`), so a
+ * kind cannot be given a client without its parent being decided. A kind with no parent resource returns before
+ * anything is read. Only a subject a built-in rule resolver governs is held to it: for every other subject this
+ * returns after the cached tenant probe, adding no statement to a tenant with no seat technician. It is a
+ * mutation decision, so the seat write admission gate (lapse) applies as well.
+ */
+export async function assertWorkItemParentAllowed(
+  conn: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    user: SubjectUserInput;
+    resolver: string;
+    discriminator: string | null | undefined;
+    id: string | null | undefined;
+    requestCache?: AuthorizationRequestCache;
+  },
+  label: string,
+): Promise<void> {
+  if (!input.discriminator || !input.id) return;
+  const parentType = clientResolvers.parentResource(input.resolver, input.discriminator);
+  if (!parentType) return;
+  const requestCache = input.requestCache ?? new RequestLocalAuthorizationCache();
+  const governed = await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: parentType, action: 'update', record: { id: input.id }, requestCache,
+  });
+  if (!governed) return;
+  const parent = await clientResolvers.resolveParent(conn, input.tenant, input.resolver, input.discriminator, input.id);
+  // A record whose parent cannot be found is not one a governed subject may write.
+  if (!parent) throw new ParentResourceDeniedError(parentType, label);
+  const evaluation = { ...governed, record: { id: parent.id, clientId: parent.clientId, ownerUserId: null, assignedUserIds: [] } };
+  const rules = await resolveBundleNarrowingRulesForEvaluation(conn, evaluation);
+  const kernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => rules }),
+    rbacEvaluator: async () => true,
+  });
+  if (!(await kernel.authorizeMutation(evaluation)).allowed) throw new ParentResourceDeniedError(parentType, label);
+}
+
+/**
+ * What a built-in rule resolver closes on a resource type to this user: the columns its reads leave out and the
+ * operations no kernel action covers (opening the service catalog from a project form, say). Both empty for every
+ * user no resolver governs, which costs no statement beyond the cached tenant probe, so an ordinary MSP screen asks
+ * freely. A screen takes this as data and omits what is closed; the action layer refuses the same operations with
+ * `assertResourceOperationOpen`.
+ */
+export async function resolveResourceSurface(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; resourceType: string; requestCache?: AuthorizationRequestCache },
+): Promise<{ closedFields: string[]; closedOperations: string[] }> {
+  const governed = await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: input.resourceType, action: 'read', record: {}, requestCache: input.requestCache,
+  });
+  if (!governed) return { closedFields: [], closedOperations: [] };
+  return { closedFields: builtinClosedFields(governed), closedOperations: builtinClosedOperations(governed) };
+}
+
+/** Throws the kernel's standard denial when a built-in resolver closes `operation` on `resourceType` to the user. */
+export async function assertResourceOperationOpen(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; resourceType: string; operation: string; requestCache?: AuthorizationRequestCache },
+  label: string = input.resourceType,
+): Promise<void> {
+  const governed = await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: input.resourceType, action: input.operation, record: {}, requestCache: input.requestCache,
+  });
+  if (!governed) return;
+  if (isBuiltinOperationClosed({ subject: governed.subject, resource: { type: input.resourceType, action: input.operation } })) {
+    throw new Error(`Permission denied: Cannot ${input.operation.replace(/_/g, ' ')} on ${label}`);
+  }
+}
+
+/** Whether a built-in rule resolver governs this user (a co-managed seat technician). Neutral like `resolverGovernedEvaluation`. */
+export async function isResolverGovernedUser(
+  conn: Knex | Knex.Transaction,
+  input: { tenant: string; user: SubjectUserInput; requestCache?: AuthorizationRequestCache },
+): Promise<boolean> {
+  return (await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: 'project', action: 'update', record: {}, requestCache: input.requestCache,
+  })) !== null;
+}
+
+/**
+ * Whether the person an actor assigns work to is one the actor may see. A subject whose people are projected (a seat
+ * technician sees MSP staff on their tickets, their client's technicians and its contacts) may assign only to the
+ * kinds the caller names, and only among the people the projection lists, so an assignee outside it is refused
+ * whatever the request names. A subject nothing projects returns before any people are read.
+ *
+ * This decides who the ACTOR may name. Whether the assignee may be given the work at all (an active licensed user,
+ * a seat technician only on their own client's shared work) is `assertHumanWorkAssignee`, which callers keep.
+ */
+export async function assertAssigneesInActorProjection(
+  conn: Knex | Knex.Transaction,
+  input: {
+    tenant: string;
+    user: SubjectUserInput;
+    assigneeIds: ReadonlyArray<string | null | undefined>;
+    kinds: readonly ProjectedPersonKind[];
+    requestCache?: AuthorizationRequestCache;
+  },
+  label: string,
+): Promise<void> {
+  const ids = [...new Set(input.assigneeIds.filter((id): id is string => typeof id === 'string' && id.length > 0))];
+  if (ids.length === 0) return;
+  const governed = await resolverGovernedEvaluation(conn, {
+    tenant: input.tenant, user: input.user, resourceType: 'project', action: 'update', record: {}, requestCache: input.requestCache,
+  });
+  if (!governed) return;
+  const people = await projectPeopleForSubject(conn, governed.subject, { kinds: input.kinds });
+  if (people === null) return;
+  const visible = new Set(people.flatMap((person) => (person.userId ? [person.userId] : [])));
+  if (ids.some((id) => !visible.has(id))) throw new Error(`Permission denied: Cannot assign ${label}`);
 }

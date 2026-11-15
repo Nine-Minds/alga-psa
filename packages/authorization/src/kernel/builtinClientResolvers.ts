@@ -35,6 +35,8 @@ const ownedBy = {
     idColumn: 'task_id',
     via: [projectPhaseHop, phaseProjectHop],
     clientColumn,
+    // The path ends at the task's project, which is the kernel resource a write on the task is also a write on.
+    parent: { resource: 'project', idColumn: 'project_id' },
   },
   interaction: { table: 'interactions', idColumn: 'interaction_id', clientColumn },
   // appointment_requests.client_id carries no foreign key; the manifest says so (`enforced: false`).

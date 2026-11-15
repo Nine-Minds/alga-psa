@@ -295,7 +295,29 @@ export async function resolveCommentWriteOwner(
   return { tenant, clientId: ticket.client_id, seatArrangement: !!arrangement };
 }
 
-/** Who is writing a native comment, and on which ticket. */
+/**
+ * The owning organization of one project task for a write: the client of its project, and whether that client has a
+ * live seat arrangement. The task twin of `resolveCommentWriteOwner`, so a task thread is judged by the same
+ * predicates as a ticket thread; the kernel's own project decision has already admitted the author to the project.
+ */
+export async function resolveTaskCommentWriteOwner(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  taskId: string | null | undefined,
+): Promise<CommentWriteOwner> {
+  if (!tenant || !taskId) return { tenant };
+  const db = tenantDb(trx, tenant);
+  const query = db.table('project_tasks as pt');
+  db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+  db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id');
+  const project = await query.where('pt.task_id', taskId).first('p.client_id');
+  if (!project?.client_id) return { tenant };
+  const arrangement = await db.table('co_managed_seat_arrangements')
+    .where({ client_id: project.client_id, state: 'active' }).first('arrangement_id');
+  return { tenant, clientId: project.client_id, seatArrangement: !!arrangement };
+}
+
+/** Who is writing a native comment, and on which ticket or task. */
 export interface NativeCommentAuthor {
   /**
    * The author's organization (`resolveCommentAudienceReader`), resolved once per request by an
@@ -304,9 +326,14 @@ export interface NativeCommentAuthor {
    * (owning-tenant staff for `internal`), which costs no SQL.
    */
   author?: CommentAudienceReader | null;
-  /** The ticket written to. Required for a seat author and for `shared_it`. */
+  /** The ticket written to. Required for a seat author and for `shared_it` on a ticket. */
   ticketId?: string | null;
+  /** The project task written to, instead of a ticket. Required for a seat author and for `shared_it` on a task. */
+  taskId?: string | null;
 }
+
+const writeOwnerOf = (trx: Knex | Knex.Transaction, tenant: string, target: NativeCommentAuthor): Promise<CommentWriteOwner> =>
+  target.taskId ? resolveTaskCommentWriteOwner(trx, tenant, target.taskId) : resolveCommentWriteOwner(trx, tenant, target.ticketId);
 
 /**
  * Thread audience column for a native top-level comment.
@@ -336,7 +363,7 @@ export async function nativeThreadAudience(
       : input.authorType === 'internal' ? { kind: 'staff' as const, tenant } : null;
     if (!author) throw new CommentAudienceError();
     const owner = author.kind === 'seat' || named === 'shared_it'
-      ? await resolveCommentWriteOwner(trx, tenant, input.ticketId) : { tenant };
+      ? await writeOwnerOf(trx, tenant, input) : { tenant };
     assertCommentWriteAudience(author, owner, { audience: named as CommentAudience | null | undefined, isInternal: input.isInternal });
     if (named === 'shared_it') return { collaboration_audience: 'shared_it' };
   }
@@ -399,7 +426,7 @@ export async function nativeReplyAudience(
   if (reply.author !== undefined && reply.author?.kind !== 'requester') {
     const author = reply.author;
     if (!author || author.tenant !== tenant) throw new CommentAudienceError();
-    const owner = author.kind === 'seat' ? await resolveCommentWriteOwner(trx, tenant, reply.ticketId) : { tenant };
+    const owner = author.kind === 'seat' ? await writeOwnerOf(trx, tenant, reply) : { tenant };
     if (!isCommentAudienceVisible(resolveCommentAudienceForRead(thread), owner, author)) throw new CommentAudienceError();
   }
   if (thread.collaboration_audience == null) return null;

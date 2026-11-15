@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantClientOwnership } from '@alga-psa/db/tenantTableManifest';
-import type { DiscriminatorClientResolver } from './clientPath';
+import type { DiscriminatorClientResolver, ResourceParentRef } from './clientPath';
 import { BUILTIN_CLIENT_RESOLVERS } from './builtinClientResolvers';
 
 // ---------------------------------------------------------------------------
@@ -39,6 +39,16 @@ export interface ClientResolverRegistry {
     discriminator: string,
     id: string
   ): Promise<string | null>;
+  /** The kernel resource type a (discriminator, id) is governed through (`project` for a project task), or null. No read. */
+  parentResource(resolver: string, discriminator: string): string | null;
+  /** The parent resource record of (discriminator, id), read along the client path. Null when there is none. */
+  resolveParent(
+    db: Knex | Knex.Transaction,
+    tenant: string,
+    resolver: string,
+    discriminator: string,
+    id: string
+  ): Promise<ResourceParentRef | null>;
   /** Bulk row facet. Ids of an unknown resolver or discriminator map to null. */
   resolveClients(
     db: Knex | Knex.Transaction,
@@ -83,6 +93,11 @@ export function createClientResolverRegistry(
     async resolveClient(db, tenant, resolver, discriminator, id) {
       const entry = resolvers.get(resolver)?.get(discriminator);
       return entry ? entry.resolveClient(db, tenant, id) : null;
+    },
+    parentResource: (resolver, discriminator) => resolvers.get(resolver)?.get(discriminator)?.parentResource ?? null,
+    async resolveParent(db, tenant, resolver, discriminator, id) {
+      const entry = resolvers.get(resolver)?.get(discriminator);
+      return entry ? entry.resolveParent(db, tenant, id) : null;
     },
     async resolveClients(db, tenant, resolver, discriminator, ids) {
       const entry = resolvers.get(resolver)?.get(discriminator);

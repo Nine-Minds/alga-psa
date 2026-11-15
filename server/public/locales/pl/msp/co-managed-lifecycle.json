@@ -81,5 +81,18 @@
     "errorNotFound": "Nie znaleziono tej umowy.",
     "errorGeneric": "Nie można przetworzyć żądania.",
     "loading": "Ładowanie…"
+  },
+  "seatProjects": {
+    "errorDenied": "Nie masz uprawnień do udostępniania projektów.",
+    "errorProject": "Można udostępnić tylko projekt tego klienta.",
+    "errorNotFound": "Nie znaleziono tej umowy.",
+    "errorGeneric": "Nie można przetworzyć żądania.",
+    "columnProject": "Projekt",
+    "columnShared": "Udostępniony technikom",
+    "inactive": "Nieaktywny",
+    "shareLabel": "Udostępnij {{name}} technikom",
+    "intro": "Technicy widzą tylko udostępnione przez Ciebie projekty. Cofnięcie udostępnienia działa od ich następnego żądania.",
+    "loading": "Ładowanie projektów…",
+    "empty": "Ten klient nie ma projektów do udostępnienia."
   }
 }

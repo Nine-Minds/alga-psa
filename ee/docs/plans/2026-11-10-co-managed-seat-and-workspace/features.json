@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "An MSP administrator shares individual projects of the client with the arrangement, and a seat technician sees only shared projects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "A seat technician opens a shared project on the native project screen without budget, billing or rate data, and the task form loads without the service catalog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "A seat technician updates a task's status, assigns it to a technician of their client, comments with an audience, and logs operational time on it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]

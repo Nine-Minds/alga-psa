@@ -35,7 +35,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   recordTicketAssigneeChange: vi.fn(),
   recalculateProjectTaskActualHoursForEntryChange: vi.fn(),
 }));
-vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn() }));
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(), assertWorkItemParentAllowed: vi.fn() }));
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(), assertHumanWorkOwner: vi.fn(), timeEntryWorkItem: vi.fn(),
 }));

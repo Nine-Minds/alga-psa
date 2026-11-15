@@ -35,6 +35,19 @@ export interface ClientPath {
   via?: readonly ClientPathHop[];
   /** Column of the LAST table on the path that holds the client id. */
   clientColumn: string;
+  /**
+   * The kernel resource the LAST table on the path is (a task's path ends at its project). A write on a record of
+   * this kind is also a write on that parent, so a subject whose rules narrow the parent (a shared project) is held
+   * to them. Absent for a path whose last table is not a kernel resource of its own (it ends at the client).
+   */
+  parent?: { resource: string; idColumn: string };
+}
+
+/** The record a path's last table holds, as the kernel's resource that governs the record the id points at. */
+export interface ResourceParentRef {
+  resource: string;
+  id: string;
+  clientId: string | null;
 }
 
 /** Where, in the outer (polymorphic) query, the SQL facet finds the row's tenant and id. */
@@ -52,6 +65,13 @@ export interface DiscriminatorClientResolver {
    * exist maps to null. Derived from the same path as `resolveClient`, so the two cannot disagree.
    */
   resolveClients(db: Knex | Knex.Transaction, tenant: string, ids: readonly string[]): Promise<Map<string, string | null>>;
+  /**
+   * The kernel resource that governs record `id` and its identity, read along the same path as the client, or null
+   * when the kind declares no parent resource or the record does not exist.
+   */
+  resolveParent(db: Knex | Knex.Transaction, tenant: string, id: string): Promise<ResourceParentRef | null>;
+  /** The kernel resource type `resolveParent` answers with, known without reading anything. */
+  readonly parentResource: string | null;
   /**
    * SQL facet: fill `subquery` (the body of an `EXISTS`) so that it matches only
    * when the record the outer row points at belongs to one of `clientIds`.
@@ -89,6 +109,20 @@ function pointedAt(subquery: Knex.QueryBuilder, path: ClientPath, refs: Polymorp
 /** Build both facets from one path declaration. */
 export function clientPath(path: ClientPath): DiscriminatorClientResolver {
   return {
+    parentResource: path.parent?.resource ?? null,
+    async resolveParent(db, tenant, id) {
+      if (!id || !path.parent) return null;
+      const query = db.queryBuilder().from(`${path.table} as p0`);
+      const last = joinPath(query, path);
+      const row = await query
+        .where('p0.tenant', tenant)
+        .where(`p0.${path.idColumn}`, id)
+        .first<{ parent_id: string | null; client_id: string | null } | undefined>({
+          parent_id: `${last}.${path.parent.idColumn}`,
+          client_id: `${last}.${path.clientColumn}`,
+        });
+      return row?.parent_id ? { resource: path.parent.resource, id: String(row.parent_id), clientId: row.client_id ?? null } : null;
+    },
     async resolveClient(db, tenant, id) {
       if (!id) return null;
       const query = db.queryBuilder().from(`${path.table} as p0`);

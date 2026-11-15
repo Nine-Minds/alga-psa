@@ -119,6 +119,22 @@ export interface CoManagedSeatResourceProjection {
 // (or `hasPermission` consulting the resolver registry) would close it the same way as every other resource.
 /** Keyed by resource type; each key must be a resource type the policy grants. Read-only devices (S30). */
 export const SEAT_AUTHORITY_PROJECTION: Readonly<Record<string, CoManagedSeatResourceProjection>> = Object.freeze({
+  // Shared projects (S29). The kernel has one `project` resource for the project, its phases and its tasks (a task's
+  // path to its project is `ClientPath.parent`), so these are the commercial columns of all three tables, named once:
+  //   projects:       budgeted_hours (budget), billing_profile_id (billing), service_id (default service, hence rate)
+  //   project_phases: service_id
+  //   project_tasks:  service_id
+  // A read path leaves them out of the record it returns (`projectReadableRecord`, whose resource types `project`,
+  // `phase` and `task` all honour a redaction by column name), so the key is absent rather than null.
+  // Task `estimated_hours` / `actual_hours` are effort the technician plans and logs, not a budget or a rate: open.
+  project: {
+    closedFields: ['budgeted_hours', 'billing_profile_id', 'service_id'],
+    // Not kernel actions: the service catalog the task and phase forms pick a service from, the project's materials
+    // (priced items), project billing (the Billing view, the billed bar, invoice links) and project management (edit,
+    // save as template, export, status update email, staging, creating tasks, moving phases). The action layer refuses
+    // them for a seat subject and the screen omits the controls; a seat technician works the tasks, not the project.
+    closedOperations: ['service_catalog', 'project_materials', 'project_billing', 'project_manage'],
+  },
   asset: {
     // Commercial data: purchase cost and the billing profile (the id and the name its join supplies).
     closedFields: ['purchase_cost', 'purchase_cost_currency', 'billing_profile_id', 'billing_profile_name'],

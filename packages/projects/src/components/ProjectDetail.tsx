@@ -69,6 +69,7 @@ import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
+import { projectScreenOffers } from '../lib/projectSurface';
 import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt, GanttChart } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -639,7 +640,8 @@ export default function ProjectDetail({
       if (stale) return;
       const granted = (resource: string, action: string) =>
         results.some((r) => r.resource === resource && r.action === action && r.granted);
-      setCanViewBilling(granted('billing', 'read'));
+      // A screen that closes project billing (a seat technician's) never shows it, whatever the role holds.
+      setCanViewBilling(granted('billing', 'read') && projectScreenOffers(screen, 'project_billing'));
       setCanManageBilling(granted('invoice', 'create') || granted('invoice', 'generate'));
       setCanCompletePhase(granted('project', 'update'));
     }).catch(() => { if (!stale) { setCanViewBilling(false); setCanManageBilling(false); } });
@@ -1626,12 +1628,13 @@ export default function ProjectDetail({
         ]);
         if (stale) return;
 
-        if (metrics) setProjectMetrics({
+        // A seat technician's metrics carry no budget-derived hours (the keys are absent); there is nothing to show.
+        if (metrics && metrics.budgetedHours !== undefined) setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
-          hoursCompletionPercentage: metrics.hoursCompletionPercentage,
+          hoursCompletionPercentage: metrics.hoursCompletionPercentage ?? 0,
           budgetedHours: metrics.budgetedHours,
-          spentHours: metrics.spentHours,
-          remainingHours: metrics.remainingHours
+          spentHours: metrics.spentHours ?? 0,
+          remainingHours: metrics.remainingHours ?? 0
         });
 
         if (!isActionPermissionError(treeData)) {

@@ -22,6 +22,7 @@ import {
   type AuthorizationRecord,
 } from '@alga-psa/authorization/kernel';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
+import { resolveAppliedBuiltinResolvers } from '@alga-psa/authorization/kernel/builtinRuleResolvers';
 import { createBundleNarrowingProvider } from '@alga-psa/authorization/bundles/narrowingProvider';
 
 export type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
@@ -42,6 +43,11 @@ export interface ProjectReadDecision {
   allowed: boolean;
   /** Fields the reader may not see for this project (co-managed redactions); empty when nothing is hidden. */
   redactedFields: string[];
+  /**
+   * A built-in rule resolver governs the reader (a co-managed seat technician). Read from the subject this decision
+   * already resolved, so it costs nothing; task writes use it to run the checks only a governed subject is held to.
+   */
+  governed: boolean;
 }
 
 export type ProjectAuthorizationAction = 'read' | 'update' | 'delete';
@@ -74,28 +80,46 @@ async function createProjectAuthorizationContext(
 }
 
 /**
- * The record-level project read decision for one user, reusable across many projects in one request
- * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
- * that renders or forwards project data can mask it. A row without a project id is not allowed.
+ * The record-level project decision for one user and action, reusable across many projects in one request (subject
+ * and kernel are resolved once). Carries the kernel's redaction set and whether a built-in resolver governs the user
+ * with the verdict, so a caller that renders or forwards project data can mask it and one that writes can apply the
+ * checks only a governed subject is held to. `read` is decided by the kernel's resource path; `update` and `delete`
+ * by its mutation path (which also runs the seat write admission gate). A row without a project id is not allowed.
  */
-export async function createProjectReadDecider(
+export async function createProjectActionDecider(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  action: ProjectAuthorizationAction = 'read'
 ): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
   const prepare = await createProjectAuthorizationContext(conn, tenant, user);
 
   return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;
     if (!projectId) {
-      return { allowed: false, redactedFields: [] };
+      return { allowed: false, redactedFields: [], governed: false };
     }
 
-    const { authorizationKernel, evaluation } = prepare(projectId, project, 'read');
-    const decision = await authorizationKernel.authorizeResource(evaluation);
+    const { authorizationKernel, evaluation } = prepare(projectId, project, action);
+    const decision = action === 'read'
+      ? await authorizationKernel.authorizeResource(evaluation)
+      : await authorizationKernel.authorizeMutation(evaluation);
 
-    return { allowed: decision.allowed, redactedFields: [...(decision.redactedFields ?? [])] };
+    return {
+      allowed: decision.allowed,
+      redactedFields: [...((('redactedFields' in decision ? decision.redactedFields : undefined) as string[] | undefined) ?? [])],
+      governed: resolveAppliedBuiltinResolvers(evaluation).length > 0,
+    };
   };
+}
+
+/** The read-action form of {@link createProjectActionDecider}. */
+export async function createProjectReadDecider(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles
+): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
+  return createProjectActionDecider(conn, tenant, user, 'read');
 }
 
 /**
