@@ -43,6 +43,36 @@ describe('seat projection', () => {
     expect(builtinClosedFields(input(seat, 'ticket'))).toEqual([]);
   });
 
+  // Slice S29 (T038): shared projects. Budget, billing and rate columns of a project, its phases and its tasks.
+  it('closes the budget, billing and rate columns of a project to a seat subject, and nothing to MSP staff', () => {
+    expect(builtinClosedFields(input(seat, 'project'))).toEqual(['billing_profile_id', 'budgeted_hours', 'service_id']);
+    expect(builtinClosedFields(input(seat, 'project', 'update'))).toEqual(['billing_profile_id', 'budgeted_hours', 'service_id']);
+    expect(builtinClosedFields(input(msp, 'project'))).toEqual([]);
+    expect(SEAT_AUTHORITY_PROJECTION.project.closedFields).not.toContain('estimated_hours');
+  });
+
+  it('closes the service catalog, project materials, project billing and project management to a seat subject only', () => {
+    for (const operation of ['service_catalog', 'project_materials', 'project_billing', 'project_manage']) {
+      expect(isBuiltinOperationClosed(input(seat, 'project', operation)), operation).toBe(true);
+      expect(isBuiltinOperationClosed(input(msp, 'project', operation)), operation).toBe(false);
+    }
+    expect(isBuiltinOperationClosed(input(seat, 'project', 'read'))).toBe(false);
+    expect(builtinClosedOperations(input(msp, 'project'))).toEqual([]);
+  });
+
+  it('adds the project closed fields to the project read decision', async () => {
+    const kernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider({ relationshipRules: [] }),
+      rbacEvaluator: async () => true,
+    });
+    const shared = subject({ [CO_MANAGED_SEAT_RESOLVER_ID]: { ...facts, projects: [{ arrangement_id: 'arr-1', project_id: 'p1' }] } });
+    const read = await kernel.authorizeResource({ ...input(shared, 'project'), record: { id: 'p1', clientId: 'client-own' } });
+    expect(read.allowed).toBe(true);
+    expect(read.redactedFields).toEqual(expect.arrayContaining(['budgeted_hours', 'billing_profile_id', 'service_id']));
+    const unshared = await kernel.authorizeResource({ ...input(shared, 'project'), record: { id: 'p2', clientId: 'client-own' } });
+    expect(unshared.allowed).toBe(false);
+  });
+
   it('closes the remote and RMM operations to a seat subject only', () => {
     for (const operation of ['remote_access', 'rmm_command', 'rmm_refresh', 'rmm_mapping']) {
       expect(isBuiltinOperationClosed(input(seat, 'asset', operation)), operation).toBe(true);

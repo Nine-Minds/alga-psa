@@ -1,5 +1,5 @@
 import { clientResolvers } from '@alga-psa/authorization/kernel';
-import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import { assertRecordCreateAllowed, assertWorkItemParentAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import type { AuthorizationRequestCache } from '@alga-psa/authorization/kernel';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -275,6 +275,11 @@ export async function assertTimeEntryCreateInScope(
       return !clientId && entryUserId === actor.user_id ? null : { clientId, ownerUserId: entryUserId };
     },
   }, 'time entries');
+  // Time on a task is also work on the task's project: a subject narrowed to some projects (a seat technician's
+  // shared projects) may not log it on another. No statement for a subject no resolver governs.
+  await assertWorkItemParentAllowed(trx, {
+    tenant, user: actor, requestCache, resolver: 'work_item', discriminator: entry.work_item_type, id: entry.work_item_id,
+  }, 'time entries');
 }
 
 export async function persistTimeEntry(
@@ -333,6 +338,12 @@ export async function persistTimeEntry(
       await assertHumanWorkOwner(trx, tenant, actorUserId, 'user_id');
     }
     await assertTimeEntryCreateInScope(trx, tenant, actor, timeEntryUserId, validatedTimeEntry, input.requestCache);
+  } else {
+    // An edit keeps the entry on its work item; a project unshared since it was logged closes the task to edits too.
+    await assertWorkItemParentAllowed(trx, {
+      tenant, user: actor, requestCache: input.requestCache, resolver: 'work_item',
+      discriminator: validatedTimeEntry.work_item_type, id: validatedTimeEntry.work_item_id,
+    }, 'time entries');
   }
 
   // Extract only the fields that exist in the database schema

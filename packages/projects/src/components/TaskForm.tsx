@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { loadServiceOptions } from '@alga-psa/projects/lib/serviceOptions';
+import { projectScreenOffers } from '../lib/projectSurface';
 import { timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
@@ -168,6 +169,9 @@ export default function TaskForm({
   const screen = projectSource.screen;
   // Non-native sources never fall through to the native tenant-bound actions below.
   const sharedMode = projectSource.kind !== 'native';
+  // The service catalog is commercial data. A screen that closes it (a seat technician's) neither loads it nor asks
+  // for the service a task inherits; the service field is hidden by the same screen, so nothing renders from it.
+  const offersServiceCatalog = projectScreenOffers(screen, 'service_catalog');
   const frozen = (field: string) => screen.frozenFields.includes(field) || screen.readOnly;
   const hidden = (field: string) => screen.hiddenFields.includes(field);
   // Hidden fields render nothing; frozen ones render but cannot be operated (fieldset disables native controls, pointer-events covers editors/pickers).
@@ -457,7 +461,7 @@ export default function TaskForm({
         }
 
         // Fetch services for time entry prefill
-        setAvailableServices(await loadServiceOptions());
+        if (offersServiceCatalog) setAvailableServices(await loadServiceOptions());
 
         // Fetch all tasks in the project
         if (phase.project_id) {
@@ -476,9 +480,11 @@ export default function TaskForm({
         if (task?.task_id) {
           // Phase/project service default, so the picker can say what a blank
           // task-level service will fall back to.
-          const effectiveService = await getEffectiveTaskService(task.task_id);
-          if (!isReturnedActionError(effectiveService)) {
-            setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+          if (offersServiceCatalog) {
+            const effectiveService = await getEffectiveTaskService(task.task_id);
+            if (!isReturnedActionError(effectiveService)) {
+              setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+            }
           }
 
           // Use checklist items and resources from the task object if they exist
@@ -519,7 +525,7 @@ export default function TaskForm({
       }
     };
     fetchInitialData();
-  }, [task?.task_id, sharedMode, projectSource]);
+  }, [task?.task_id, sharedMode, projectSource, offersServiceCatalog]);
 
   useEffect(() => {
     if (sharedMode) return;
@@ -1561,6 +1567,7 @@ export default function TaskForm({
     serviceName: string | null;
     source: ProjectServiceSource | null;
   }> => {
+    if (!offersServiceCatalog) return { serviceId: null, serviceName: null, source: null };
     const effectiveService = await getEffectiveTaskService(taskId);
     const inherited = isReturnedActionError(effectiveService)
       ? applicableInheritedService

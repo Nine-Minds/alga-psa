@@ -55,6 +55,8 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { projectFamilyRow, projectFamilyRows } from '../lib/projectFamilyProjection';
+import { resolveResourceSurface } from '@alga-psa/authorization/recordCreateAuthorization';
 import type { ProjectAuthorizationAction } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
 import { assertProjectCreateAllowed } from '../lib/projectReadAuthorization';
@@ -436,6 +438,17 @@ async function resolveProjectIdsForStatus(
   return Array.from(new Set(rows.map((row) => row.project_id)));
 }
 
+/**
+ * What the project screen must not offer the signed-in user, decided on the server from the same seat authority that
+ * enforces it: the project columns its reads leave out and the operations (service catalog, materials, billing,
+ * management) it closes. Empty for everyone no resolver governs, so the MSP screen is the native one. The page reads
+ * it once and hands it to the screen as data; a control that is merely disabled is not enough.
+ */
+export const getProjectSurfaceAccess = withAuth(async (user, { tenant }): Promise<{ closedFields: string[]; closedOperations: string[] }> => {
+    const { knex } = await createTenantKnex();
+    return resolveResourceSurface(knex, { tenant, user, resourceType: 'project' });
+});
+
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
@@ -599,7 +612,9 @@ export const loadProjectListItemsByIds = withAuth(async (
         for (const group of groups.values()) {
             authorized.push(...(group.redactedFields.length === 0
                 ? await ProjectModel.getByIds(trx, tenant, group.ids)
-                : await ProjectModel.getMaskedByIds(trx, tenant, group.ids, group.redactedFields)));
+                // The masked read NULLs a hidden column to keep the row shape; the key itself must not leave either.
+                : (await ProjectModel.getMaskedByIds(trx, tenant, group.ids, group.redactedFields))
+                    .flatMap((row) => projectReadableRecord('project', row, group.redactedFields) ?? [])));
         }
         const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
         const ordered = requestedIds
@@ -890,8 +905,9 @@ export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string
             if (!projectId) {
                 return null;
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-            return await ProjectModel.getPhaseById(trx, tenant, phaseId);
+            const redactions = await assertProjectReadableWithRedactions(trx, tenant, user as IUserWithRoles, projectId);
+            const found = await ProjectModel.getPhaseById(trx, tenant, phaseId);
+            return found ? projectFamilyRow('phase', found, redactions) : found;
         });
         return phase;
     } catch (error) {
@@ -2060,7 +2076,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 
         return {
             ...readableProjectDetail(project, contact, assignedUser, projectRedactions),
-            phases,
+            phases: projectFamilyRows('phase', phases, projectRedactions),
             statuses,
             users
         };
@@ -2283,8 +2299,8 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
 
         return {
             ...readableProjectDetail(project, contact, project.assigned_user || null, projectRedactions),
-            phases,
-            tasks,
+            phases: projectFamilyRows('phase', phases, projectRedactions),
+            tasks: projectFamilyRows('task', tasks, projectRedactions),
             ticketLinks: authorizedTicketLinks,
             statuses,
             users

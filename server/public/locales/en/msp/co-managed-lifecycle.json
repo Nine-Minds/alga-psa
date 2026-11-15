@@ -77,5 +77,18 @@
     "errorNotFound": "This arrangement could not be found.",
     "errorGeneric": "The request could not be processed.",
     "loading": "Loading…"
+  },
+  "seatProjects": {
+    "errorDenied": "You do not have permission to share projects.",
+    "errorProject": "Only a project of this client can be shared.",
+    "errorNotFound": "This arrangement could not be found.",
+    "errorGeneric": "The request could not be processed.",
+    "columnProject": "Project",
+    "columnShared": "Shared with technicians",
+    "inactive": "Inactive",
+    "shareLabel": "Share {{name}} with technicians",
+    "intro": "Technicians see only the projects you share. Unsharing takes effect on their next request.",
+    "loading": "Loading projects…",
+    "empty": "This client has no projects to share."
   }
 }

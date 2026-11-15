@@ -18,7 +18,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type ReservationCode = CoManagedReservationError['code'];
 type ArrangementCode = ReservationCode | 'CLIENT_INACTIVE' | 'ARRANGEMENT_NOT_FOUND' | 'ARRANGEMENT_ENDED' |
-  'INVALID_BOARD_SCOPE' | 'BOARD_NOT_FOUND';
+  'INVALID_BOARD_SCOPE' | 'BOARD_NOT_FOUND' | 'INVALID_PROJECT_GRANT' | 'PROJECT_NOT_FOUND';
 
 export class CoManagedSeatArrangementError extends Error {
   /**
@@ -41,6 +41,8 @@ export class CoManagedSeatArrangementError extends Error {
         ARRANGEMENT_ENDED: 'This seat arrangement has ended.',
         INVALID_BOARD_SCOPE: 'List each board once.',
         BOARD_NOT_FOUND: 'A selected board is no longer available.',
+        INVALID_PROJECT_GRANT: 'Choose a project and whether to share it.',
+        PROJECT_NOT_FOUND: 'Only a project of this client can be shared.',
       } satisfies Record<ArrangementCode, string>)[code]);
     this.name = 'CoManagedSeatArrangementError';
   }

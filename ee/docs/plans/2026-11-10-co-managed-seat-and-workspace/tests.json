@@ -341,7 +341,7 @@
   {
     "id": "T038",
     "description": "DB integration: a seat technician sees only shared projects; the project and task reads contain no budget, billing or rate key; task status, assignment, comment and time writes succeed on a shared project and fail on an unshared one.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F072",

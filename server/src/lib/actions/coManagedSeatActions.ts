@@ -8,7 +8,9 @@ import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAut
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import {
   CoManagedSeatArrangementError, endCoManagedSeatArrangement, previewCoManagedSeatArrangementEnd, readCoManagedSeatArrangementClientId,
+  readCoManagedSeatProjectShares, setCoManagedSeatProjectShared,
   type CoManagedSeatArrangementEndPreview, type CoManagedSeatArrangementEndResult,
+  type CoManagedSeatProjectGrantResult, type CoManagedSeatProjectOption,
 } from '@alga-psa/co-managed';
 
 // Every seat surface resolves the `co-managed-seat` capability, never the raw release flag. Ending
@@ -67,6 +69,52 @@ export const endCoManagedSeatArrangementAction = withAuth(async (user, { tenant 
       sponsorTenant: tenant, arrangementId: input.arrangementId, actorUserId: user.user_id }) };
   } catch (error) {
     if (error instanceof CoManagedSeatArrangementError && error.code === 'ARRANGEMENT_NOT_FOUND') return { ok: false, reason: 'not_found' };
+    throw error;
+  }
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Shared projects (S29). The administrator chooses which of the arrangement's client's projects its technicians see.
+// Same gates as ending an arrangement: the `co-managed-seat` capability (flag and eligibility), the `co_management`
+// manage permission, and the arrangement's client inside the administrator's client scope.
+// ---------------------------------------------------------------------------------------------------------------
+
+export type CoManagedSeatSharedProjectsResult =
+  | { ok: true; projects: CoManagedSeatProjectOption[] }
+  | { ok: false; reason: 'denied' | 'not_found' };
+
+export type CoManagedSeatProjectShareResult =
+  | { ok: true; result: CoManagedSeatProjectGrantResult }
+  | { ok: false; reason: 'denied' | 'not_found' | 'project_not_found' };
+
+/** The arrangement's client's projects, each with whether it is shared with the arrangement. Reads only. */
+export const getCoManagedSeatSharedProjects = withAuth(async (user, { tenant },
+  input: { arrangementId: string }): Promise<CoManagedSeatSharedProjectsResult> => {
+  await requireCapabilityForAction('co-managed-seat', tenant, 'admits');
+  if (!await mayManage(user)) return { ok: false, reason: 'denied' };
+  const { knex } = await createTenantKnex(tenant);
+  if (!await arrangementInClientScope(knex, tenant, user, input.arrangementId)) return { ok: false, reason: 'not_found' };
+  return { ok: true, projects: await readCoManagedSeatProjectShares(knex, { sponsorTenant: tenant, arrangementId: input.arrangementId }) };
+});
+
+/**
+ * Shares one project with the arrangement, or stops sharing it. Repeating a request changes nothing and succeeds.
+ * A technician's access follows on their next request; nothing is cached.
+ */
+export const setCoManagedSeatProjectSharedAction = withAuth(async (user, { tenant },
+  input: { arrangementId: string; projectId: string; shared: boolean }): Promise<CoManagedSeatProjectShareResult> => {
+  await requireCapabilityForAction('co-managed-seat', tenant, 'admits');
+  if (!await mayManage(user)) return { ok: false, reason: 'denied' };
+  const { knex } = await createTenantKnex(tenant);
+  if (!await arrangementInClientScope(knex, tenant, user, input.arrangementId)) return { ok: false, reason: 'not_found' };
+  try {
+    return { ok: true, result: await setCoManagedSeatProjectShared(knex, {
+      sponsorTenant: tenant, arrangementId: input.arrangementId, projectId: input.projectId, shared: input.shared }) };
+  } catch (error) {
+    if (error instanceof CoManagedSeatArrangementError) {
+      if (error.code === 'ARRANGEMENT_NOT_FOUND' || error.code === 'ARRANGEMENT_ENDED') return { ok: false, reason: 'not_found' };
+      if (error.code === 'PROJECT_NOT_FOUND' || error.code === 'INVALID_PROJECT_GRANT') return { ok: false, reason: 'project_not_found' };
+    }
     throw error;
   }
 });
