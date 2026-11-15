@@ -62,6 +62,7 @@ function query(row?: Record<string, unknown>, rows: Record<string, unknown>[] = 
     }),
     whereIn: vi.fn(() => builder),
     whereNotNull: vi.fn(() => builder),
+    whereRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     forUpdate: vi.fn(() => builder),
     forShare: vi.fn(() => builder),
