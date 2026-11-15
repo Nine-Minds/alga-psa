@@ -8,6 +8,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import {
   classifyTenantTemplate,
+  copiedFromSystemRowFor,
   decorateBrandedHtml,
   isDarkEmailHeader,
   pickBrandLogoVariant,
@@ -35,6 +36,7 @@ import {
   type EmailBrandingTemplateStatus,
   type TenantSettingsBlob,
 } from '../../lib/emailBranding';
+import { TICKET_EMAIL_TEMPLATES_COPIED_FROM } from '../../lib/templateVariables/ticketEmailAudience';
 
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -121,7 +123,13 @@ async function loadTemplateRowsForName(
   const systemTemplates = await tenantScopedTable(trx, "system_email_templates", tenant).where({ name });
   const tenantTemplates = await tenantScopedTable(trx, "tenant_email_templates", tenant).where({ name });
 
-  return { systemTemplates, tenantTemplates };
+  // The stock rows of the template it was split from: a copied row is classified against them.
+  const copiedFromName = TICKET_EMAIL_TEMPLATES_COPIED_FROM[name];
+  const copiedFromTemplates = copiedFromName
+    ? await tenantScopedTable(trx, "system_email_templates", tenant).where({ name: copiedFromName })
+    : [];
+
+  return { systemTemplates: [...systemTemplates, ...copiedFromTemplates], tenantTemplates };
 }
 
 const rowKey = (name: string, language: string) => `${name}::${language}`;
@@ -162,6 +170,9 @@ export const getEmailBrandingStatusAction = withAuth(async (
         tenantRow,
         systemRow,
         appliedPalette: palette?.appliedPalette ?? null,
+        copiedFromSystemRow: copiedFromSystemRowFor(
+          systemTemplates, TICKET_EMAIL_TEMPLATES_COPIED_FROM, systemRow.name, systemRow.language_code,
+        ),
       });
 
       return {
@@ -289,6 +300,7 @@ export const previewEmailBrandingApplyAction = withAuth(async (
     language,
     overwrite,
     decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   if (!preview) throw new Error(`No ${language} email template named ${name}`);
@@ -328,6 +340,7 @@ export const applyEmailBrandingAction = withAuth(async (
     appliedPalette: context.palette.appliedPalette ?? null,
     scope,
     decorate: buildBrandDecorator(context.palette, context.settings.branding, isEnterprise, target),
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   const written: EmailBrandingApplyResult['written'] = [];
@@ -415,6 +428,7 @@ export const removeEmailBrandingAction = withAuth(async (
     systemRows: context.systemTemplates,
     tenantRows: context.tenantTemplates,
     appliedPalette: context.palette?.appliedPalette ?? null,
+    copiedFrom: TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   });
 
   for (const batch of chunked(deletable, INSERT_BATCH_SIZE)) {
