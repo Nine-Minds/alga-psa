@@ -11,7 +11,7 @@ import {
   parseVisibilityRules,
   type VisibilityContext,
 } from './formVisibility';
-import { collectFormFieldIssues } from './formValidation';
+import { collectFormFieldIssues, type FormFieldIssue } from './formValidation';
 import { describeFieldValidationIssue } from '@alga-psa/ui/form-fields';
 import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
@@ -212,23 +212,30 @@ export function resolveSubmissionVisibility(
   return computeVisibleFieldKeys(fields, rules, { ...detail.initialValues, ...payload }, context);
 }
 
-export function validateSubmissionAgainstPublishedSchema(input: {
+export interface SubmissionValidationInput {
   formSchema: Record<string, unknown>;
   payload: Record<string, unknown>;
   attachments?: ServiceRequestSubmissionAttachmentInput[];
   visibleFieldKeys?: string[];
-}): string[] {
+}
+
+/**
+ * The failures as data, so a caller that can reach a requester renders them in their language.
+ * `validateSubmissionAgainstPublishedSchema` is the English rendering of the same list, kept
+ * for the API and for callers with no locale to hand.
+ */
+export function collectSubmissionValidationIssues(
+  input: SubmissionValidationInput
+): FormFieldIssue[] {
   const fields = Array.isArray((input.formSchema as any)?.fields)
     ? ((input.formSchema as any).fields as any[])
     : [];
   const attachmentList = input.attachments ?? [];
-  const visibleFieldKeySet = input.visibleFieldKeys
-    ? new Set(input.visibleFieldKeys)
-    : null;
+  const visibleFieldKeySet = input.visibleFieldKeys ? new Set(input.visibleFieldKeys) : null;
 
   // The same rules the browser enforced, run again here: required-ness, per-field validation
   // rules, display blocks skipped (no answer), hidden fields skipped (never rendered).
-  const issues = collectFormFieldIssues({
+  return collectFormFieldIssues({
     fields,
     values: input.payload,
     visibleFieldKeys: visibleFieldKeySet,
@@ -238,6 +245,15 @@ export function validateSubmissionAgainstPublishedSchema(input: {
         .filter((fieldKey): fieldKey is string => typeof fieldKey === 'string')
     ),
   });
+}
+
+export function validateSubmissionAgainstPublishedSchema(
+  input: SubmissionValidationInput
+): string[] {
+  const fields = Array.isArray((input.formSchema as any)?.fields)
+    ? ((input.formSchema as any).fields as any[])
+    : [];
+  const issues = collectSubmissionValidationIssues(input);
 
   return issues.map((entry) => {
     // Messages reach the requester, so name the field by its label, not its internal key.

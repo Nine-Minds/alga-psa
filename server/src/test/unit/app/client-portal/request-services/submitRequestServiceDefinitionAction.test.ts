@@ -7,7 +7,7 @@ const {
   redirectMock,
   getVisiblePublishedServiceRequestDefinitionDetailMock,
   submitPortalServiceRequestMock,
-  validateSubmissionAgainstPublishedSchemaMock,
+  collectSubmissionValidationIssuesMock,
   resolveSubmissionVisibilityMock,
 } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
@@ -16,7 +16,7 @@ const {
   redirectMock: vi.fn(),
   getVisiblePublishedServiceRequestDefinitionDetailMock: vi.fn(),
   submitPortalServiceRequestMock: vi.fn(),
-  validateSubmissionAgainstPublishedSchemaMock: vi.fn(),
+  collectSubmissionValidationIssuesMock: vi.fn(),
   resolveSubmissionVisibilityMock: vi.fn(),
 }));
 
@@ -57,7 +57,8 @@ vi.mock('../../../../../lib/service-requests', () => ({
   getVisiblePublishedServiceRequestDefinitionDetail:
     getVisiblePublishedServiceRequestDefinitionDetailMock,
   submitPortalServiceRequest: submitPortalServiceRequestMock,
-  validateSubmissionAgainstPublishedSchema: validateSubmissionAgainstPublishedSchemaMock,
+  collectSubmissionValidationIssues: collectSubmissionValidationIssuesMock,
+  toPortalFormView: vi.fn(),
   resolveSubmissionVisibility: resolveSubmissionVisibilityMock,
 }));
 
@@ -94,7 +95,7 @@ describe('submitRequestServiceDefinitionAction', () => {
       formBehaviorProvider: 'basic',
       formBehaviorConfig: {},
     });
-    validateSubmissionAgainstPublishedSchemaMock.mockReturnValue([]);
+    collectSubmissionValidationIssuesMock.mockReturnValue([]);
     resolveSubmissionVisibilityMock.mockImplementation(
       (detail: { visibleFieldKeys: string[] }) => detail.visibleFieldKeys
     );
@@ -230,8 +231,44 @@ describe('submitRequestServiceDefinitionAction', () => {
       expect.objectContaining({ employee_name: 'Casey', start_date: '2026-04-20' }),
       { requesterUserId: 'client-user-1', clientId: 'client-1', contactId: 'contact-1' }
     );
-    expect(validateSubmissionAgainstPublishedSchemaMock).toHaveBeenCalledWith(
+    expect(collectSubmissionValidationIssuesMock).toHaveBeenCalledWith(
       expect.objectContaining({ visibleFieldKeys: ['employee_name'] })
     );
+  });
+
+  it('answers a rejected submission in the requester language, never in raw English', async () => {
+    getVisiblePublishedServiceRequestDefinitionDetailMock.mockResolvedValue({
+      definitionId: 'definition-1',
+      versionId: 'version-1',
+      formSchema: { fields: [{ key: 'seats', type: 'number', label: 'Seats' }] },
+      initialValues: {},
+      visibleFieldKeys: ['seats'],
+      formBehaviorProvider: 'basic',
+      formBehaviorConfig: {},
+    });
+    resolveSubmissionVisibilityMock.mockReturnValue(['seats']);
+    collectSubmissionValidationIssuesMock.mockReturnValue([
+      { fieldKey: 'seats', label: 'Seats', issue: { rule: 'max', params: { max: 5 } } },
+      { fieldKey: 'seats', label: 'Seats', issue: { rule: 'required' } },
+    ]);
+
+    withTransactionMock.mockImplementation(
+      async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback({ trx: true })
+    );
+
+    const formData = new FormData();
+    formData.set('seats', '9');
+    await submitRequestServiceDefinitionAction('definition-1', formData);
+
+    // The failure is carried back on the redirect; the wording comes from the locale pack keys
+    // the browser already uses, with the rule's own parameters interpolated — not from the
+    // server's English fallback sentences.
+    // The mocked redirect() does not throw the way Next's does, so the first call is the one
+    // the error branch made.
+    const redirectUrl = decodeURIComponent(redirectMock.mock.calls[0]?.[0] ?? '');
+    expect(redirectUrl).toContain('"Seats"');
+    expect(redirectUrl).toContain('5');
+    expect(redirectUrl).not.toContain('must be at most');
+    expect(redirectUrl).not.toContain('Required field missing');
   });
 });
