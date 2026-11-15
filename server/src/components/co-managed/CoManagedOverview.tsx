@@ -30,6 +30,9 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
   const { admitted } = useCapability('co-managed');
   // With the seat capability open the table below is the combined one; closed, this is the workspace overview as it was.
   const seatCapability = useCapability('co-managed-seat');
+  // Open = existing seat state to show (serves) OR a start CTA to offer (admits). Reads of existing state alone use `enabled`;
+  // an action the server admits-gates uses `admitted` (see CoManagedSeatArrangementEnd).
+  // LEVERAGE: pattern seat-open — `enabled || admitted` written twice; a `capabilityOpen(result)` helper if a third site appears.
   const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [capacity, setCapacity] = useState<Capacity | null>(null);
   const [search, setSearch] = useState('');

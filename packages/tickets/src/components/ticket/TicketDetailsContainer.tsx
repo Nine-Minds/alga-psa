@@ -26,8 +26,7 @@ import { TicketLiveProvider } from './TicketLiveProvider';
 import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
 import { TicketDataSourceProvider, runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { composeTicketDataSource } from '../../lib/ticketDataSource';
-import { seatConversationConfig } from '../../lib/seatTicketConversation';
-import { useCapability } from '@alga-psa/ui/hooks/useCapability';
+import { useSeatTicket } from '../../hooks/useSeatTicket';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -161,19 +160,7 @@ export default function TicketDetailsContainer({
   const { updateTicketWithCache, updateTicketWithCacheForCurrentUser } = dataSource.ticket;
   const { addTicketCommentWithCacheForCurrentUser } = dataSource.comments;
   const { t: tSeat } = useTranslation('features/tickets');
-  const seatCapability = useCapability('co-managed-seat');
-  const seatTicket = ticketData.seatTicket?.arrangement && seatCapability.enabled ? ticketData.seatTicket : null;
-  // On a client's live seat arrangement the composer offers audiences in place of the Internal toggle:
-  // MSP staff choose among Requester, Shared IT and Private (default Private); a seat technician
-  // among Requester and Shared IT only, defaulting to Shared IT (the narrower of the two, so an
-  // unattended default never reaches the requester). A source that already names audiences (a shared
-  // ticket, a co-managed workspace) keeps its own.
-  const seatDataSource = useMemo(() => {
-    if (!seatTicket || dataSource.conversation.audiences) return null;
-    return composeTicketDataSource(dataSource, {
-      conversation: seatConversationConfig(seatTicket.viewer, tSeat('conversation.audience.private', 'Private')),
-    });
-  }, [dataSource, seatTicket, tSeat]);
+  const { seatTicket, seatDataSource } = useSeatTicket(ticketData.seatTicket, dataSource, tSeat('conversation.audience.private', 'Private'));
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
   const [isSubmitting, setIsSubmitting] = useState(false);

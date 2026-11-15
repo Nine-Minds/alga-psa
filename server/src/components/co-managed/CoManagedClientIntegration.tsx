@@ -25,6 +25,9 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const { admitted } = useCapability('co-managed');
   // The seat shape is a second capability. With it closed nothing below reads or renders seat state.
   const seatCapability = useCapability('co-managed-seat');
+  // Open = existing seat state to show (serves) OR a start CTA to offer (admits). Reads of existing state alone use `enabled`;
+  // an action the server admits-gates uses `admitted` (see CoManagedSeatArrangementEnd).
+  // LEVERAGE: pattern seat-open — `enabled || admitted` written twice; a `capabilityOpen(result)` helper if a third site appears.
   const seatOpen = seatCapability.enabled || seatCapability.admitted;
   const [seatState, setSeatState] = useState<CoManagedSeatClientState | null>(null);
   const seatGeneration = useRef(0);
