@@ -33,8 +33,9 @@ const kernel = vi.hoisted(() => {
       !(input.recordContext.clientId && deniedClients.has(input.recordContext.clientId))),
   };
 });
+// Mock only names the real kernel exports: a factory mock throws on any other export, so a controller
+// importing a name the kernel no longer has fails here instead of being masked (typecheck regression).
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceAction: kernel.authorize,
   authorizeApiResource: kernel.authorize,
 }));
 const templates = vi.hoisted(() => ({ getTicketTemplate: vi.fn() }));

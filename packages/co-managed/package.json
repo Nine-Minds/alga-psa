@@ -26,6 +26,10 @@
       "types": "./src/seatRole.ts",
       "import": "./src/seatRole.ts"
     },
+    "./timeEntryBillingMode": {
+      "types": "./src/timeEntryBillingMode.ts",
+      "import": "./src/timeEntryBillingMode.ts"
+    },
     "./seatAuthority": {
       "types": "./src/seatAuthority.ts",
       "import": "./src/seatAuthority.ts"

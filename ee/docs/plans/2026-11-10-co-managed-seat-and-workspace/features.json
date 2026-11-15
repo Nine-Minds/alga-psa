@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "The time-entry dialog opens for a seat technician in operational mode without reading the service catalog, tax or contract data, and saves without running billing allocation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "A seat technician's time entry is stored as operational with no service, no contract line and zero billable duration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]

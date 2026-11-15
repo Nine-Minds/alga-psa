@@ -13,12 +13,14 @@ import {
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
 import {
   fetchTimeEntriesParamsSchema,
   FetchTimeEntriesParams,
   saveTimeEntryParamsSchema,
+  saveOperationalTimeEntryParamsSchema,
   SaveTimeEntryParams,
   updateTimeEntryApprovalStatusParamsSchema,
   UpdateTimeEntryApprovalStatusParams,
@@ -30,6 +32,7 @@ import {
 } from './timeEntryChangeRequestActions';
 import { deleteTimeEntryCore, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
 import { logSession } from '../lib/stopwatch/stopwatchCore';
+import { resolveTimeEntryMode, serviceRequiredForTimeEntry } from '../lib/timeEntryMode';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -355,10 +358,20 @@ export const saveTimeEntry = withAuth(async (
     }
   }
 
-  // Validate input
-  const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
+  // The billing mode is decided here from the authenticated principal, never from the payload: a seat
+  // technician always writes operational, everyone else always commercial. A commercial field arriving
+  // on a seat save is rejected by the write core (OPERATIONAL_TIME_COMMERCIAL_FIELDS), not dropped.
+  const requestCache = new RequestLocalAuthorizationCache();
+  const mode = await resolveTimeEntryMode(db, tenant, user.user_id, requestCache);
+  const serviceRequired = serviceRequiredForTimeEntry({ participates: mode === 'operational', mode });
 
-  if (!validatedTimeEntry.service_id?.trim()) {
+  // Validate input
+  const validatedTimeEntry = validateData<SaveTimeEntryParams>(
+    mode === 'operational' ? saveOperationalTimeEntryParamsSchema : saveTimeEntryParamsSchema,
+    timeEntry,
+  );
+
+  if (serviceRequired && !validatedTimeEntry.service_id?.trim()) {
     throw new Error('Service is required for time entries');
   }
 
@@ -371,9 +384,13 @@ export const saveTimeEntry = withAuth(async (
     if (stopwatchSessionId && validatedTimeEntry.entry_id) {
       throw new Error('Validation failed: a stopwatch session can only be logged as a new time entry');
     }
+    // The stopwatch log writes a commercial entry; an operational principal never takes that path.
+    if (stopwatchSessionId && mode === 'operational') {
+      throw new Error('Validation failed: a stopwatch session cannot be logged on the operational surface');
+    }
     const persisted = await db.transaction(async (trx) => {
       if (!stopwatchSessionId) {
-        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry });
+        return persistTimeEntry(trx, { tenant, actor: user, entry: validatedTimeEntry, requestCache, ...(mode === 'operational' ? { mode } : {}) });
       }
       const logged = await logSession(trx, tenant, user, stopwatchSessionId, {
         work_item_id: validatedTimeEntry.work_item_id,
