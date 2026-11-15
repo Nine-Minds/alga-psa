@@ -1982,6 +1982,18 @@
     "loadTicketFailed": "Det gick inte att läsa in ärendet",
     "noUserSession": "Ingen användarsession hittades"
   },
+  "seatEffort": {
+    "title": "Insats",
+    "clientIt": "Kundens IT",
+    "msp": "MSP",
+    "combined": "Kombinerat",
+    "yours": "Din tid",
+    "columns": {
+      "date": "Datum",
+      "duration": "Varaktighet",
+      "notes": "Anteckningar"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",

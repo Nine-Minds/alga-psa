@@ -2126,6 +2126,18 @@
     "loadTicketFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ⟧",
     "noUserSession": "⟦Ƞȯ ŭşḗř şḗşşīȯƞ ƒȯŭƞḓ⟧"
   },
+  "seatEffort": {
+    "title": "⟦Ḗƒƒȯřŧ⟧",
+    "clientIt": "⟦Ƈŀīḗƞŧ ĪŦ⟧",
+    "msp": "⟦ḾŞƤ⟧",
+    "combined": "⟦Ƈȯḿƀīƞḗḓ⟧",
+    "yours": "⟦Ẏȯŭř ŧīḿḗ⟧",
+    "columns": {
+      "date": "⟦Ḓȧŧḗ⟧",
+      "duration": "⟦Ḓŭřȧŧīȯƞ⟧",
+      "notes": "⟦Ƞȯŧḗş⟧"
+    }
+  },
   "bento": {
     "hero": {
       "status": "⟦Şŧȧŧŭş⟧",

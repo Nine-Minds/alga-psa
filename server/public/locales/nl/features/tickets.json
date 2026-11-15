@@ -2126,6 +2126,18 @@
     "loadTicketFailed": "Kan ticket niet laden",
     "noUserSession": "Geen gebruikerssessie gevonden"
   },
+  "seatEffort": {
+    "title": "Inspanning",
+    "clientIt": "IT van de klant",
+    "msp": "MSP",
+    "combined": "Gecombineerd",
+    "yours": "Uw tijd",
+    "columns": {
+      "date": "Datum",
+      "duration": "Duur",
+      "notes": "Notities"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",

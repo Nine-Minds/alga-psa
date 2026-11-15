@@ -2128,6 +2128,18 @@
     "loadTicketFailed": "Nie udało się załadować zgłoszenia",
     "noUserSession": "Nie znaleziono sesji użytkownika"
   },
+  "seatEffort": {
+    "title": "Nakład pracy",
+    "clientIt": "IT klienta",
+    "msp": "MSP",
+    "combined": "Łącznie",
+    "yours": "Twój czas",
+    "columns": {
+      "date": "Data",
+      "duration": "Czas trwania",
+      "notes": "Notatki"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",

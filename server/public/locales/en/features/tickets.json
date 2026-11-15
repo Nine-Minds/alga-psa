@@ -2126,6 +2126,18 @@
     "loadTicketFailed": "Failed to load ticket",
     "noUserSession": "No user session found"
   },
+  "seatEffort": {
+    "title": "Effort",
+    "clientIt": "Client IT",
+    "msp": "MSP",
+    "combined": "Combined",
+    "yours": "Your time",
+    "columns": {
+      "date": "Date",
+      "duration": "Duration",
+      "notes": "Notes"
+    }
+  },
   "bento": {
     "hero": {
       "status": "Status",

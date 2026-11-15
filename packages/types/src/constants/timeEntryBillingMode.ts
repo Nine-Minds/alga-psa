@@ -42,3 +42,42 @@ export function operationalTimeEntryFields(input: { service_id?: unknown; contra
 export function serviceRequiredForTimeEntry(input: { participates: boolean; mode: CoManagedTimeEntryMode }): boolean {
   return !(input.participates && input.mode === 'operational');
 }
+
+/**
+ * The one commercial-read predicate (S28 / F068). Every query that feeds billing runs, invoice previews,
+ * unbilled-time lists or timesheet approval reads `time_entries` through this, so an operational
+ * (seat-technician) entry can never be collected, priced, listed as unbilled or put in front of an approver.
+ *
+ * It is a data-correctness guard, not a feature: it is deliberately NOT gated by any flag. Operational rows
+ * only exist for seat technicians, so on a tenant without seats the predicate removes nothing.
+ * `billing_mode` is NOT NULL (default `commercial`), so `<>` needs no NULL branch.
+ * `src/test/commercialTimeEntryCoverage.static.test.ts` (billing) fails when a commercial read skips it.
+ */
+export const commercialTimeEntrySql = (alias = 'time_entries'): string => `${alias}.billing_mode <> 'operational'`;
+
+/** Knex-shaped (structural, so this package keeps no knex dependency): `query.whereRaw(commercialTimeEntrySql(alias))`. */
+export function commercialTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }>(query: Q, alias = 'time_entries'): Q {
+  return query.whereRaw(commercialTimeEntrySql(alias));
+}
+
+/** The same rule for a row already in memory (a rollup over rows read without the SQL predicate). */
+export const isCommercialTimeEntry = (row: { billing_mode?: string | null }): boolean => row.billing_mode !== 'operational';
+
+/**
+ * The billable minutes an entry stands for, by the same rule: an operational entry is never billable, whatever
+ * its stored `billable_duration` says. Display summaries (the ticket's Time logged tile and Timeline) report this
+ * value, so no "Billable" chip is shown for operational time.
+ */
+export const billableMinutesOf = (row: { billing_mode?: string | null; billable_duration?: number | string | null }): number =>
+  isCommercialTimeEntry(row) ? Number(row.billable_duration) || 0 : 0;
+
+/**
+ * The operational counterpart of `commercialTimeEntrySql`: only customer-side (seat technician) effort.
+ * Used where a reader may see operational time and nothing commercial (S28 / F069: a seat technician's time tile and timeline).
+ */
+export const operationalTimeEntrySql = (alias = 'time_entries'): string => `${alias}.billing_mode = 'operational'`;
+
+/** Knex-shaped: `query.whereRaw(operationalTimeEntrySql(alias))`. */
+export function operationalTimeEntriesOnly<Q extends { whereRaw(sql: string): Q }>(query: Q, alias = 'time_entries'): Q {
+  return query.whereRaw(operationalTimeEntrySql(alias));
+}

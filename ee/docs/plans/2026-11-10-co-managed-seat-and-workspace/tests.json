@@ -324,7 +324,7 @@
   {
     "id": "T036",
     "description": "DB integration: a billing run, invoice preview, unbilled-time list and approval queue for the period do not include seat technician entries; the technician lists, edits and deletes their own.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F070"
@@ -333,7 +333,7 @@
   {
     "id": "T037",
     "description": "DB integration: the effort summary hides the MSP total from a seat technician by default, shows it when the arrangement allows, and shows both totals to MSP staff.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
