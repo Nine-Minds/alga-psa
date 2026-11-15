@@ -247,7 +247,7 @@
   {
     "id": "T028",
     "description": "DB integration: a seat technician creates a ticket for their client; a request naming another client or an out-of-scope board is refused; an edit changing the client or moving to an out-of-scope board is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F051"
