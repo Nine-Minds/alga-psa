@@ -415,7 +415,7 @@
   {
     "id": "T046",
     "description": "E2E: user administration lists a seat technician under their client apart from MSP staff with licence usage unchanged, and the effective access view explains a denial caused by board scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088",
       "F089"

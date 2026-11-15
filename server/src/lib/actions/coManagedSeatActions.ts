@@ -16,10 +16,14 @@ import {
   revokeCoManagedSeatInvitation, setCoManagedSeatBoardScope, setCoManagedSeatHandoffDefaults,
   setCoManagedSeatProjectGrants, type CoManagedOverviewEntry,
   endCoManagedSeatArrangement, previewCoManagedSeatArrangementEnd, readCoManagedSeatArrangementClientId,
+  readCoManagedSeatTechnicianUsers,
   type CoManagedSeatArrangementEndPreview, type CoManagedSeatArrangementEndResult,
 } from '@alga-psa/co-managed';
 import { admits, serves } from '@alga-psa/core/capability';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
+import {
+  listAuthorizationSimulationRecordsAction, runAuthorizationBundleSimulationAction,
+} from '@enterprise/lib/actions/auth/authorizationBundleActions';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
 
@@ -260,6 +264,56 @@ export const getCoManagedCombinedOverviewAction = withAuth(async (user, { tenant
   };
 });
 
+export interface CoManagedSeatTechnicianListing {
+  userId: string;
+  /** The client the seat is for. Null when that client is outside the administrator's client scope: the name is not shown. */
+  clientName: string | null;
+  state: 'invited' | 'active';
+}
+
+/**
+ * The users of this MSP who hold a live seat, each with the name of their client. User administration lists
+ * these apart from MSP staff. Read-only: needs the capability to serve, and the permission to read users.
+ */
+export const listCoManagedSeatTechniciansAction = withAuth(async (user, { tenant }): Promise<CoManagedSeatTechnicianListing[]> => {
+  await requireCapabilityEitherMode(SEAT, tenant);
+  const knex = await authorizeUserAdministration(user, tenant);
+  const [technicians, scope] = await Promise.all([
+    readCoManagedSeatTechnicianUsers(knex, { sponsorTenant: tenant }),
+    createClientScopeContext(knex, tenant, user as never),
+  ]);
+  return Promise.all(technicians.map(async (row): Promise<CoManagedSeatTechnicianListing> => ({
+    userId: row.userId,
+    clientName: row.clientId && await scope.permits('client', row.clientId) ? row.clientName : null,
+    state: row.state,
+  })));
+});
+
+/** Recent tickets for the effective-access picker, by number and title. Never the ticket id. */
+export const searchCoManagedSeatAccessTicketsAction = withAuth(async (user, { tenant }, input: { search?: string }) => {
+  await requireCapabilityEitherMode(SEAT, tenant);
+  await authorizeUserAdministration(user, tenant);
+  return listAuthorizationSimulationRecordsAction({ resourceType: 'ticket', search: input?.search });
+});
+
+/**
+ * Whether a seat technician may read a ticket, and why not. The decision is the authorization simulator's, run
+ * through the real kernel (including the seat resolver), with no bundle: this is what the technician gets today.
+ * The user must hold a live seat; this is not a way to simulate anyone else.
+ */
+export const explainCoManagedSeatTicketAccessAction = withAuth(async (user, { tenant }, input: { userId: string; ticketId: string }) => {
+  await requireCapabilityEitherMode(SEAT, tenant);
+  const knex = await authorizeUserAdministration(user, tenant);
+  const technicians = await readCoManagedSeatTechnicianUsers(knex, { sponsorTenant: tenant });
+  if (!technicians.some((row) => row.userId === input.userId)) throw new Error('Permission denied');
+  const result = await runAuthorizationBundleSimulationAction({
+    principalUserId: input.userId, resourceType: 'ticket', action: 'read', resourceId: input.ticketId,
+  });
+  if (!result.ok) return { ok: false as const, message: result.error.message };
+  const { allowed, explanations } = result.data.published;
+  return { ok: true as const, allowed, explanations };
+});
+
 // Helpers sit below the actions on purpose: each action calls its capability adapter before any of this touches the database.
 
 /**
@@ -285,6 +339,14 @@ async function authorizeSeatAdministration(
   if (clientId && !await (await createClientScopeContext(knex, tenant, user as never)).permits('client', clientId)) {
     throw new Error('Permission denied');
   }
+  return knex;
+}
+
+/** The caller must be an internal user who may read users: the permission user administration itself needs. */
+async function authorizeUserAdministration(user: SeatUser, tenant: string) {
+  if (user.user_type !== 'internal' || !await hasPermission(user as never, 'user', 'read')) throw new Error('Permission denied');
+  await coManagedBrowserActor(user, tenant);
+  const { knex } = await createTenantKnex(tenant);
   return knex;
 }
 

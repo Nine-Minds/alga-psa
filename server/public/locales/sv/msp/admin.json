@@ -599,7 +599,10 @@
         "clientVisibleOnly": "Paketet tillåter {{action}} på {{resource}} bara när posten är synlig för kunden.",
         "notSelfApprover": "Användare kan inte godkänna sina egna poster.",
         "rulesUnavailable": "Paketets regler kunde inte läsas in, så åtkomst nekas.",
-        "rbacDenied": "Användarens roll ger inte {{action}} på {{resource}}."
+        "rbacDenied": "Användarens roll ger inte {{action}} på {{resource}}.",
+        "resolverTemplateDenied": "En inbyggd åtkomstregel begränsar {{action}} på {{resource}} till poster som inte matchar den här användaren.",
+        "resolverBoardScope": "Posten finns på en tavla utanför användarens tavelomfång, så {{action}} på {{resource}} nekas.",
+        "resolverClientScope": "Posten tillhör en annan kund än den användaren har plats för, så {{action}} på {{resource}} nekas."
       }
     },
     "createDialog": {

@@ -308,6 +308,35 @@
       "expiresPrefix": "Expira:",
       "revoke": "Revogar",
       "revoking": "Revogando..."
+    },
+    "seatTechnicians": {
+      "title": "Técnicos de posto",
+      "description": "Pessoas que trabalham no seu PSA através do posto cogerido de um cliente. Não contam para os seus utilizadores licenciados.",
+      "clientUnavailable": "Cliente indisponível",
+      "effectiveAccess": "Acesso efetivo",
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "client": "Cliente",
+        "status": "Estado",
+        "actions": "Ações"
+      },
+      "state": {
+        "active": "Ativo",
+        "invited": "Convite pendente"
+      },
+      "dialog": {
+        "title": "Acesso efetivo de {{name}}",
+        "help": "Escolha um ticket para ver se este técnico de posto o pode ler e porquê.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecionar um ticket...",
+        "checking": "A verificar o acesso...",
+        "allowed": "{{name}} pode ler este ticket.",
+        "denied": "{{name}} não pode ler este ticket.",
+        "noReasons": "Não foram comunicados mais detalhes.",
+        "error": "Não foi possível verificar o acesso. Tente novamente.",
+        "close": "Fechar"
+      }
     }
   },
   "userDetails": {
@@ -4553,7 +4582,7 @@
     "seatNote": "Os principais de serviço não consomem licenças de usuário.",
     "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Exibir nos chips",
     "subtitle": "Tags exibidas ao lado de contatos e clientes em listas de tickets, cabeçalhos de tickets e seletores.",
     "loading": "Carregando…",

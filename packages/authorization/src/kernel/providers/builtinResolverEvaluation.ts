@@ -119,7 +119,11 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
         sourceId: resolver.id,
         code: RESOLVER_TEMPLATE_DENIED_CODE,
         message: 'Built-in resolver relationship template narrowing denied access.',
-        metadata: { resolverId: resolver.id, ruleIds: mismatched.map((rule) => rule.id), resource, action },
+        metadata: {
+          resolverId: resolver.id, ruleIds: mismatched.map((rule) => rule.id), resource, action,
+          // Which relationship templates the record failed, so an explanation can name the scope that denied (boards, clients).
+          templateKeys: [...new Set(mismatched.map((rule) => rule.templateKey).filter((key): key is NonNullable<typeof key> => Boolean(key)))],
+        },
       });
     } else {
       scopes.push({ allowAll: false, denied: false, constraints: matching.flatMap((rule) => rule.constraints ?? []) });

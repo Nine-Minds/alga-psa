@@ -599,7 +599,10 @@
         "clientVisibleOnly": "The bundle allows {{action}} on {{resource}} only when the record is visible to the client.",
         "notSelfApprover": "Users cannot approve their own records.",
         "rulesUnavailable": "The bundle's rules could not be loaded, so access is denied.",
-        "rbacDenied": "The user's role does not grant {{action}} on {{resource}}."
+        "rbacDenied": "The user's role does not grant {{action}} on {{resource}}.",
+        "resolverTemplateDenied": "A built-in access rule limits {{action}} on {{resource}} to records this user does not match.",
+        "resolverBoardScope": "The record is on a board outside this user's board scope, so {{action}} on {{resource}} is denied.",
+        "resolverClientScope": "The record belongs to a client other than the one this user is seated for, so {{action}} on {{resource}} is denied."
       }
     },
     "createDialog": {

@@ -308,6 +308,35 @@
       "expiresPrefix": "Expires:",
       "revoke": "Revoke",
       "revoking": "Revoking..."
+    },
+    "seatTechnicians": {
+      "title": "Seat technicians",
+      "description": "People who work in your PSA through a client's co-managed seat. They do not count toward your licensed users.",
+      "clientUnavailable": "Client not available",
+      "effectiveAccess": "Effective access",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "client": "Client",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "active": "Active",
+        "invited": "Invitation pending"
+      },
+      "dialog": {
+        "title": "Effective access for {{name}}",
+        "help": "Choose a ticket to see whether this seat technician can read it, and why.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Select a ticket...",
+        "checking": "Checking access...",
+        "allowed": "{{name}} can read this ticket.",
+        "denied": "{{name}} cannot read this ticket.",
+        "noReasons": "No further detail was reported.",
+        "error": "Could not check access. Try again.",
+        "close": "Close"
+      }
     }
   },
   "userDetails": {
