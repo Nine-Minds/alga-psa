@@ -27,7 +27,7 @@ import { admitInternalUserSeat } from '../../../../packages/users/src/lib/intern
 import Comment from '../../../../packages/tickets/src/models/comment';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 vi.mock('@enterprise/lib/license/userSeatGuard', () => ({ checkApplianceLicenseSeatLimit: async () => null }));
 
@@ -161,8 +161,8 @@ describeDb('ending a seat arrangement and lapse', { shuffle: false }, () => {
 
   it('an arrangement that does not exist is refused, and unaccepted invitations are withdrawn', async () => {
     const w = await world();
-    const invitation = await inviteCoManagedSeatTechnician(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId,
-      email: `invitee.${randomUUID().slice(0, 8)}@client.example`, firstName: 'Ira' });
+    const contactId = await createContact(db, w.sponsor, w.clientId, { fullName: 'Ira', email: `invitee.${randomUUID().slice(0, 8)}@client.example` });
+    const invitation = await inviteCoManagedSeatTechnician(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId, contactId });
     const preview = () => previewCoManagedSeatArrangementEnd(db, { sponsorTenant: w.sponsor, arrangementId: w.arrangementId });
     expect(await preview()).toMatchObject({ technicians: 2, pendingInvitations: 1 });
     await end(w);
