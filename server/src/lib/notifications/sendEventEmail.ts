@@ -183,7 +183,8 @@ function projectSponsorEmailContext(context: Record<string, unknown>, redactions
     : { content: projected.commentContent, html: projected.commentHtml, text: projected.commentPreview,
       plainText: projected.commentPreview, rawContent: projected.commentRawContent,
       author: projected.authorName ?? 'A team member', isInternal: comment.isInternal };
-  return { ticket: safeTicket, comment: safeComment };
+  // `recipient` is set per recipient by the ticket email subscriber and names nobody.
+  return { ticket: safeTicket, comment: safeComment, ...(context.recipient ? { recipient: context.recipient } : {}) };
 }
 
 function applyReplyMarkers(
