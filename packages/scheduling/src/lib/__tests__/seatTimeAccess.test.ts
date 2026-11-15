@@ -1,3 +1,4 @@
+import knex from 'knex';
 import { describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({ mode: 'commercial' as 'commercial' | 'operational' }));
@@ -37,11 +38,23 @@ describe('approval scope helpers', () => {
     expect(calls).toEqual(["te.billing_mode <> 'operational'"]);
   });
 
-  it('the approval queue skips a sheet whose every entry is operational', () => {
-    const { q, calls } = recorder();
-    excludeOperationalOnlyTimeSheets(q);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatch(/NOT \(EXISTS .*billing_mode.*AND NOT EXISTS/s);
-    expect(calls[0]).toContain('time_sheets.id');
+  it('the approval queue skips a sheet whose every entry is operational, probing operational entries through the read scope', () => {
+    const sql = knex({ client: 'pg' });
+    const applied: string[] = [];
+    const scope: any = {
+      narrowed: true,
+      subject: null,
+      apply: (builder: any) => { applied.push('apply'); builder.whereRaw('op_te.user_id = ?', ['scope-user']); },
+      applyWith: () => { throw new Error('not used'); },
+    };
+    const query = sql('time_sheets').select('time_sheets.id');
+    excludeOperationalOnlyTimeSheets(query, scope);
+    const text = query.toSQL().toNative().sql;
+    expect(applied).toEqual(['apply']);
+    // NOT EXISTS (a readable operational entry) OR EXISTS (a commercial entry): never hides a sheet with commercial work.
+    expect(text).toMatch(/not exists \(select 1 from "time_entries" as "op_te" where op_te\.tenant = time_sheets\.tenant AND op_te\.time_sheet_id = time_sheets\.id and NOT \(op_te\.billing_mode <> 'operational'\) and op_te\.user_id = \$1\) or exists \(select 1 from "time_entries" as "co_te" where co_te\.tenant = time_sheets\.tenant AND co_te\.time_sheet_id = time_sheets\.id and co_te\.billing_mode <> 'operational'\)/);
+    // The read scope narrows the operational probe only.
+    expect(text.slice(text.indexOf('"co_te"'))).not.toContain('scope-user');
+    expect(text.slice(text.indexOf('"co_te"'))).not.toContain('$1');
   });
 });

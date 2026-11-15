@@ -2,7 +2,7 @@
 
 import { delegateToTimeSource } from '../lib/timeSource';
 import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
-import { commercialEntriesOnly, excludeOperationalOnlyTimeSheets } from '../lib/timeApprovalScope';
+import { OPERATIONAL_PROBE_ALIAS, commercialEntriesOnly, excludeOperationalOnlyTimeSheets } from '../lib/timeApprovalScope';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   ITimeEntry,
@@ -151,7 +151,7 @@ export const fetchTimeSheetsForApproval = withAuth(async (
     scopedDb.tenantJoin(query, 'users', 'time_sheets.user_id', 'users.user_id');
     scopedDb.tenantJoin(query, 'time_periods', 'time_sheets.period_id', 'time_periods.period_id');
     // Operational (seat technician) time never reaches an approver: a sheet of only such entries is not queued.
-    excludeOperationalOnlyTimeSheets(query);
+    excludeOperationalOnlyTimeSheets(query, await resolveTimeEntryReadScope(db, tenant, user, OPERATIONAL_PROBE_ALIAS));
 
     if (!canReadAll) {
       const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);

@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 import { resolveTimeEntryMode } from '../lib/timeEntryMode';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import { timeSheetActionErrorFrom, type TimeSheetActionError } from './timeSheetActionErrors';
 
 /**
@@ -47,6 +48,8 @@ export const fetchOwnOperationalTimeEntries = withAuth(async (
     const scoped = tenantDb(db, tenant);
     const query = scoped.table('time_entries as te');
     scoped.tenantJoin(query, 'tickets as t', 'te.work_item_id', 't.ticket_id', { type: 'left' });
+    // Own entries, and of those only what the technician's read scope allows (the same rule the timesheet read holds).
+    (await resolveTimeEntryReadScope(db, tenant, user, 'te')).apply(query);
     query.where({ 'te.user_id': user.user_id, 'te.billing_mode': 'operational' });
     if (filters.ticketId) query.where({ 'te.work_item_type': 'ticket', 'te.work_item_id': filters.ticketId });
     if (filters.from) query.where('te.start_time', '>=', filters.from);
