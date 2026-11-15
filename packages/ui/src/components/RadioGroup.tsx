@@ -115,7 +115,6 @@ export const RadioGroup = ({
           >
             <input
               type="radio"
-              id={optionId}
               name={name}
               value={option.value}
               checked={isSelected}
