@@ -9,7 +9,8 @@
  * they render empty so a submission still creates its ticket. The renderer never throws.
  */
 
-import { formatCalendarDate, listTokens } from '@alga-psa/tickets/lib/titleTokens';
+import { listTokens } from '@alga-psa/tickets/lib/titleTokens';
+import { describeFormAnswer, isInputElement } from './formSchema';
 
 export interface ServiceRequestTemplateField {
   key: string;
@@ -56,10 +57,14 @@ function readSchemaFields(formSchema: unknown): SchemaField[] {
   return result;
 }
 
-/** Fields an author can reference as a placeholder: every field except file-upload, in form order. */
+/**
+ * Fields an author can reference as a placeholder, in form order: every answer-carrying
+ * element except file-upload. A display block (section, text, callout, divider) has a key but
+ * no answer, so it can never stand in for one.
+ */
 export function getServiceRequestTemplateFields(formSchema: unknown): ServiceRequestTemplateField[] {
   return readSchemaFields(formSchema)
-    .filter((field) => field.type !== 'file-upload')
+    .filter((field) => isInputElement(field) && field.type !== 'file-upload')
     .map(({ key, label, type }) => ({ key, label, type }));
 }
 
@@ -71,26 +76,9 @@ export function findUnknownServiceRequestTemplateTokens(template: string, formSc
 
 function formatAnswer(field: SchemaField | undefined, value: unknown, format: ServiceRequestTemplateFormat): string {
   if (value === null || value === undefined) return '';
-  if (!field) return String(value);
-
-  switch (field.type) {
-    case 'checkbox':
-      return value === true || value === 'true' || value === 'on' || value === '1' ? format.yes : format.no;
-    case 'select': {
-      const raw = String(value);
-      return field.options.find((option) => option.value === raw)?.label ?? raw.trim();
-    }
-    case 'date': {
-      const raw = String(value).trim();
-      try {
-        return formatCalendarDate(raw, format.locale, { dateStyle: 'long' });
-      } catch {
-        return raw;
-      }
-    }
-    default:
-      return typeof value === 'object' ? '' : String(value).trim();
-  }
+  // One answer-display function for the subject, the description and the portal detail page,
+  // so every registry type renders the same way in all three.
+  return describeFormAnswer(field, value, format);
 }
 
 export function renderServiceRequestTemplate(

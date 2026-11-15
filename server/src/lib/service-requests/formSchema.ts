@@ -394,7 +394,9 @@ export function describeFormAnswer(
   }
 
   if (definition) {
-    const formatted = definition.format(value, readAnswerOptions(field));
+    // Trimmed: surrounding space in a typed answer is noise in a subject, a table cell or a
+    // detail row, and `format` deliberately preserves what the requester typed.
+    const formatted = definition.format(value, readAnswerOptions(field)).trim();
     if (formatted) {
       return formatted;
     }

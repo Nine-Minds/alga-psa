@@ -1,4 +1,8 @@
-import { formatFieldValue, getFieldElementKind } from '@alga-psa/ui/form-fields';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
+import {
+  describeFormAnswer,
+  isFormAnswerMissing,
+} from '../../../lib/service-requests/formSchema';
 
 interface SubmissionFieldOption {
   label?: string;
@@ -23,22 +27,17 @@ export interface SubmissionFieldDisplay {
   attachments?: SubmissionAttachmentSnapshot[];
 }
 
-function isMissingValue(value: unknown): boolean {
-  if (Array.isArray(value)) return value.length === 0;
-  return value === null || value === undefined || value === '';
-}
-
-function isCheckedValue(value: unknown): boolean {
-  return value === true || value === 'true' || value === 'on' || value === '1';
-}
-
 function getFileUploadFields(fields: SubmissionFieldSnapshot[]): SubmissionFieldSnapshot[] {
   return fields.filter(
     (field) => field?.type === 'file-upload' && typeof field?.key === 'string'
   );
 }
 
-// LEVERAGE: pattern service-request-answer-display — ticketOnlyExecutionProvider.ts describeAnswer resolves the same display values for the ticket description.
+/**
+ * What one answer looks like on the portal's submission detail page. The display value itself
+ * comes from `describeFormAnswer`, the same function the ticket subject and the ticket
+ * description read, so a new field type reads back identically in all three.
+ */
 export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],
@@ -81,41 +80,10 @@ export function getSubmissionFieldDisplay(
   }
 
   const value = payload[key];
-  if (isMissingValue(value)) {
+  // A checkbox always has an answer; every other type is missing when the registry says so.
+  if (field.type !== 'checkbox' && isFormAnswerMissing(field, value)) {
     return { kind: 'missing' };
   }
 
-  if (field.type === 'checkbox') {
-    return {
-      kind: 'text',
-      text: isCheckedValue(value) ? 'Yes' : 'No',
-    };
-  }
-
-  // Every other type reads back through the shared registry, so a new field type needs no
-  // change here: choices resolve to their option label, lists join, the rest stringify.
-  const options = Array.isArray(field.options)
-    ? field.options
-        .map((option) => ({
-          label: typeof option?.label === 'string' ? option.label : String(option?.value ?? ''),
-          value: typeof option?.value === 'string' ? option.value : '',
-        }))
-        .filter((option) => option.value.length > 0)
-    : undefined;
-  const formatted = formatFieldValue(field.type, value, options);
-  if (formatted) {
-    return { kind: 'text', text: formatted };
-  }
-
-  if (typeof value === 'object') {
-    return {
-      kind: 'text',
-      text: JSON.stringify(value),
-    };
-  }
-
-  return {
-    kind: 'text',
-    text: String(value),
-  };
+  return { kind: 'text', text: describeFormAnswer(field, value) };
 }
