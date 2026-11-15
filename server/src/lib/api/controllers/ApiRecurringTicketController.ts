@@ -63,7 +63,7 @@ import type {
   RecurringTemplateSummary,
 } from '@alga-psa/tickets/lib/recurring/types';
 import { getConnection } from '@/lib/db/db';
-import { authorizeApiResourceAction } from './authorizationKernel';
+import { authorizeApiResource } from './authorizationKernel';
 import { buildTicketRecordContext } from './recordContexts';
 import {
   ForbiddenError,
@@ -254,7 +254,7 @@ export class ApiRecurringTicketController extends ApiBaseController {
       : [{ clientId: null, fields: definitionFields }];
 
     for (const { clientId, fields } of targets) {
-      const allowed = await authorizeApiResourceAction({
+      const allowed = await authorizeApiResource({
         knex,
         tenant,
         user,
