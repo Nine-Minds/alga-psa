@@ -45,6 +45,8 @@ function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     andWhere: vi.fn((arg: unknown) => {
       if (typeof arg === 'function') {
@@ -261,6 +263,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             whereNotNull: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue({ threadId: 'thread-789' }),
@@ -489,6 +493,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
               rfcLookups.push(rfcMessageId);
               return builder;
             }),
+            // The lookup matches through rfcMessageIdLookupForms: bare + bracketed forms.
+            whereIn: vi.fn((_column: string, forms: string[]) => {
+              rfcMessageId = forms.find((form) => form.startsWith('<')) ?? '';
+              rfcLookups.push(rfcMessageId);
+              return builder;
+            }),
+            whereRaw: vi.fn().mockReturnThis(),
             whereNotNull: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn(async () =>
@@ -678,6 +689,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn().mockReturnThis(),
             whereNotNull: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             first: vi.fn().mockResolvedValue(undefined),
@@ -779,6 +792,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
               }
               return builder;
             }),
+            whereIn: vi.fn((column: string) => {
+              if (column === 'rfc_message_id') emailLogQueried = true;
+              return builder;
+            }),
+            whereRaw: vi.fn().mockReturnThis(),
             andWhereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             // Lacks from_address/to_addresses, so notificationLoopDetection's
@@ -861,6 +879,12 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
             orderBy: vi.fn().mockReturnThis(),
             where: vi.fn((c: Record<string, any>) => {
               criteria = { ...criteria, ...(typeof c === 'object' ? c : {}) };
+              return builder;
+            }),
+            whereIn: vi.fn((column: string, values: string[]) => {
+              if (column === 'rfc_message_id') {
+                criteria = { ...criteria, rfc_message_id: values.find((v) => opts.sendingLogs?.[v]) ?? values[0] };
+              }
               return builder;
             }),
             // The one-off Cc/Bcc lookup awaits the comments builder for a row list.

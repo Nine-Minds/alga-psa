@@ -97,6 +97,10 @@ vi.mock('@alga-psa/shared/services/email/processInboundEmailArtifacts', () => ({
 
 function makeQueryBuilder(table: string) {
   const whereCriteria: Criteria = {};
+  // resolveReplyTargetFromOutboundMessageId: on-wire match is whereIn(rfc_message_id, forms); the
+  // generated-id fallback is whereRaw("metadata->>'generatedRfcMessageId' = ANY(?)", [forms]).
+  let rfcMessageIdForms: string[] | null = null;
+  let generatedIdForms: string[] | null = null;
   const builder = {
     select: vi.fn(() => builder),
     where: vi.fn((criteria: Criteria | string, value?: unknown) => {
@@ -116,6 +120,14 @@ function makeQueryBuilder(table: string) {
         };
         arg.call(scopedWhere);
       }
+      return builder;
+    }),
+    whereIn: vi.fn((column: string, values: string[]) => {
+      if (column === 'rfc_message_id') rfcMessageIdForms = values;
+      return builder;
+    }),
+    whereRaw: vi.fn((sql: string, bindings?: unknown[]) => {
+      if (sql.includes('generatedRfcMessageId')) generatedIdForms = (bindings?.[0] as string[]) ?? null;
       return builder;
     }),
     whereNotNull: vi.fn(() => builder),
@@ -165,13 +177,21 @@ function makeQueryBuilder(table: string) {
         // against precise canned rows in processInboundEmailInApp.test.ts instead, so no
         // special-case is needed here (it falls through to the generic branch below and
         // correctly finds nothing).
-        const row = dbState.emailLogs.find(
-          (log) =>
-            log.tenant === whereCriteria.tenant &&
-            log.rfc_message_id === whereCriteria.rfc_message_id &&
-            log.comment_thread_id,
-        );
-        return row ? { threadId: row.comment_thread_id, rfc_message_id: row.rfc_message_id } : null;
+        const matches = (log: Record<string, any>) => {
+          if (log.tenant !== whereCriteria.tenant) return false;
+          if (rfcMessageIdForms) return rfcMessageIdForms.includes(log.rfc_message_id);
+          if (generatedIdForms) return generatedIdForms.includes(log.metadata?.generatedRfcMessageId);
+          return log.rfc_message_id === whereCriteria.rfc_message_id;
+        };
+        const row = dbState.emailLogs.find((log) => matches(log) && (log.comment_thread_id || rfcMessageIdForms || generatedIdForms));
+        return row
+          ? {
+              threadId: row.comment_thread_id,
+              entityType: row.entity_type,
+              entityId: row.entity_id,
+              rfc_message_id: row.rfc_message_id,
+            }
+          : null;
       }
 
       return null;
@@ -219,6 +239,7 @@ const capabilities: EmailProviderCapabilities = {
 };
 
 import { BaseEmailService } from '@alga-psa/email/BaseEmailService';
+import { onWireMessageIdFields } from '@alga-psa/email/onWireMessageId';
 
 class TestEmailService extends BaseEmailService {
   constructor(private readonly provider: IEmailProvider) {
@@ -405,6 +426,103 @@ describe('email thread outbound/inbound round trip', () => {
       }),
       tenantId,
     );
+  });
+
+  // --- Resend on-wire Message-ID (alga0002306, T005) ---------------------
+  //
+  // A Resend-sent ticket notification leaves with an amazonses.com Message-ID; the provider reports it
+  // and the log row records it (generated id kept in metadata). A reply with no reply token must land on
+  // the ticket whether it names the on-wire id, the generated id, or a bracket/domain-case variant.
+
+  const WIRE_ID = '<0100019abc-def-000000@email.amazonses.com>';
+
+  async function sendResendTicketNotification(tenantId: string, ticketId: string) {
+    let generated = '';
+    const service = new TestEmailService({
+      providerId: 'resend-provider',
+      providerType: 'resend',
+      capabilities,
+      async initialize() {},
+      async sendEmail(message: EmailMessage, _tenantId: string): Promise<EmailSendResult> {
+        generated = String(message.headers?.['Message-ID']);
+        return {
+          success: true,
+          messageId: 're_t005',
+          providerMessageId: 're_t005',
+          providerId: 'resend-provider',
+          providerType: 'resend',
+          sentAt: new Date('2026-05-13T12:20:00.000Z'),
+          ...onWireMessageIdFields(generated, WIRE_ID),
+        } as EmailSendResult;
+      },
+      async healthCheck() {
+        return { healthy: true };
+      },
+    });
+    const outbound = await service.sendEmail({
+      tenantId,
+      to: 'client@example.com',
+      subject: 'Ticket Created',
+      html: '<p>Ticket created</p>',
+      replyContext: { ticketId },
+    });
+    expect(outbound.success).toBe(true);
+    const log = await waitForOutboundLog();
+    return { log, generated };
+  }
+
+  async function replyNaming(tenantId: string, ticketId: string, inReplyTo: string) {
+    const clientId = 'client-t005';
+    dbState.tickets.set(ticketId, {
+      ticket_id: ticketId, board_id: 'board-t005', status_id: null, is_closed: false, closed_at: null,
+      client_id: clientId, attributes: {},
+    });
+    dbState.boards.set('board-t005', {
+      inbound_reply_reopen_enabled: false, inbound_reply_reopen_cutoff_hours: 168,
+      inbound_reply_reopen_status_id: null, inbound_reply_ai_ack_suppression_enabled: false,
+    });
+    mocks.findContactByEmail.mockResolvedValue({ contact_id: 'contact-t005', user_type: 'client', client_id: clientId });
+    const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+    return processInboundEmailInApp({
+      tenantId,
+      providerId: 'provider-1',
+      // Deliberately no reply token and no provider thread id.
+      emailData: buildEmailData({ tenant: tenantId, inReplyTo, references: undefined }),
+    });
+  }
+
+  it('T005: records the on-wire id and keeps the generated id in metadata', async () => {
+    const { log, generated } = await sendResendTicketNotification('tenant-t005', 'ticket-t005');
+    expect(log.rfc_message_id).toBe(WIRE_ID);
+    expect((log.metadata as any).generatedRfcMessageId).toBe(generated);
+    expect((log.metadata as any).algaDiagnostics.outbound.rfcMessageId).toBe(WIRE_ID);
+    expect(generated).toMatch(/^<[0-9a-f-]+@[^A-Z]+>$/);
+  });
+
+  it.each([
+    ['the on-wire id', () => WIRE_ID],
+    ['the on-wire id without brackets, domain upper-cased', () => '0100019abc-def-000000@EMAIL.AMAZONSES.COM'],
+    ['the generated id', (generated: string) => generated],
+    ['the generated id without brackets', (generated: string) => generated.slice(1, -1)],
+  ])('T005: a token-less reply naming %s lands on the ticket', async (_label, pick) => {
+    const tenantId = 'tenant-t005';
+    const ticketId = 'ticket-t005';
+    const { generated } = await sendResendTicketNotification(tenantId, ticketId);
+
+    const result = await replyNaming(tenantId, ticketId, pick(generated));
+
+    expect(result).toMatchObject({ outcome: 'replied', matchedBy: 'thread_headers', ticketId });
+    expect(mocks.createCommentFromEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ ticket_id: ticketId }),
+      tenantId,
+    );
+  });
+
+  it('T005: a reply naming an unknown id does not match by header', async () => {
+    const tenantId = 'tenant-t005';
+    await sendResendTicketNotification(tenantId, 'ticket-t005');
+    const result = await replyNaming(tenantId, 'ticket-t005', '<unknown@email.amazonses.com>');
+    expect(result).not.toMatchObject({ matchedBy: 'thread_headers' });
   });
 
   // --- Notification-loop suppression (cross-mailbox) ---------------------

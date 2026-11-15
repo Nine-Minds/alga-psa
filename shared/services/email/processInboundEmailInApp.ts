@@ -806,15 +806,36 @@ export async function resolveReplyTargetFromOutboundMessageId(params: {
   tenantId: string;
   rfcMessageId: string;
 }): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
-  const normalizedMessageId = params.rfcMessageId.trim();
-  if (!normalizedMessageId) {
+  // Same lookup forms as every other Message-ID match (bracketing, domain case). email_sending_logs
+  // stores the bracketed header value, so add the bracketed variant of each form too.
+  const baseForms = rfcMessageIdLookupForms(params.rfcMessageId);
+  if (baseForms.length === 0) {
     return null;
   }
+  // LEVERAGE: friction rfc-lookup-forms-bracketed — rfcMessageIdLookupForms yields bare + raw forms, but
+  // email_sending_logs stores the bracketed header value, so callers re-derive the bracketed variant.
+  const forms = Array.from(
+    new Set(baseForms.flatMap((form) => (form.startsWith('<') ? [form] : [form, `<${form}>`])))
+  );
 
+  // A reply names either the on-wire id (rfc_message_id) or the id we generated before the provider
+  // replaced it (metadata.generatedRfcMessageId, kept for References already sent to customers).
+  // Both queries are tenant-scoped by `db.table` (required on Citus). The on-wire match is tried first
+  // and is the hot path; the generated-id fallback only runs on a miss. There is no index on the
+  // metadata key (no schema change in this card), so that fallback is a tenant-scoped scan: acceptable
+  // because stored copies are rewritten to on-wire ids, leaving it to resolve only ids already sent.
   const row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const onWire = await db.table('email_sending_logs')
+      .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
+      .whereIn('rfc_message_id', forms)
+      .orderBy('created_at', 'desc')
+      .first();
+    if (onWire) {
+      return onWire;
+    }
     return db.table('email_sending_logs')
       .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .where({ rfc_message_id: normalizedMessageId })
+      .whereRaw("metadata->>'generatedRfcMessageId' = ANY(?)", [forms])
       .orderBy('created_at', 'desc')
       .first();
   });

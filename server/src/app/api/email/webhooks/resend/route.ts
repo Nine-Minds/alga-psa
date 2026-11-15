@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { reconcileOnWireMessageId } from '@alga-psa/email/reconcileOnWireMessageId';
+import { getConnection } from '@alga-psa/db';
 import {
   type ResendWorkflowEventToPublish,
+  extractResendOnWireMessageIdUpdate,
   logResendWebhookMappingOutcome,
   mapResendWebhookToWorkflowEvents,
   verifyResendWebhookSignature,
@@ -49,6 +52,33 @@ export async function POST(request: NextRequest) {
     webhook = JSON.parse(payload);
   } catch {
     return NextResponse.json({ ok: false, error: 'invalid_json' }, { status: 400 });
+  }
+
+  // Record the on-wire Message-ID (every email.* event carries message_id, email.sent included).
+  // Only reached after the signature verified, so the signed alga_tenant_id tag is trusted; the
+  // operation matches on tenant + provider_message_id together. Failures never affect the response
+  // or the workflow-event publishing below.
+  const onWireUpdate = extractResendOnWireMessageIdUpdate(webhook);
+  if (onWireUpdate) {
+    try {
+      const knex = await getConnection(onWireUpdate.tenantId);
+      const outcome = await reconcileOnWireMessageId(knex, {
+        tenant: onWireUpdate.tenantId,
+        providerMessageId: onWireUpdate.providerMessageId,
+        onWireMessageId: onWireUpdate.onWireMessageId,
+      });
+      logger.debug('[ResendWebhook] on-wire Message-ID reconciliation', {
+        type: webhook?.type,
+        tenantId: onWireUpdate.tenantId,
+        status: outcome.status,
+      });
+    } catch (error) {
+      logger.warn('[ResendWebhook] failed to reconcile on-wire Message-ID', {
+        type: webhook?.type,
+        tenantId: onWireUpdate.tenantId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   const svixId = request.headers.get('svix-id');

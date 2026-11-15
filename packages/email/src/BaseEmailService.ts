@@ -14,6 +14,7 @@ import {
   buildOutboundEmailQueuedPayload,
   buildOutboundEmailSentPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
+import { sameMessageId } from './onWireMessageId';
 import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
@@ -187,7 +188,8 @@ function extractDomainFromAddress(address?: string): string | null {
 }
 
 function buildGeneratedRfcMessageId(domain?: string | null): string {
-  const domainPart = (domain && domain.trim()) || 'alga-psa.local';
+  // Lower-case: domains are case-insensitive and inbound lookup forms lower-case them.
+  const domainPart = ((domain && domain.trim()) || 'alga-psa.local').toLowerCase();
   return `<${randomUUID()}@${domainPart}>`;
 }
 
@@ -1014,6 +1016,19 @@ export abstract class BaseEmailService {
         params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
           ? { ...params.providerResult.metadata }
           : {};
+      // On-wire contract (onWireMessageId.ts): when the provider reported an id that is not the one we
+      // stamped on the message, rfc_message_id holds the on-wire id (above) and the generated id is kept
+      // here, so it stays resolvable for References already sent to customers.
+      const generatedHeaderId = getHeaderValue(params.message.headers, 'Message-ID');
+      if (
+        params.providerResult.success &&
+        rfcMessageId &&
+        generatedHeaderId &&
+        !sameMessageId(rfcMessageId, generatedHeaderId) &&
+        typeof baseMetadata.generatedRfcMessageId !== 'string'
+      ) {
+        baseMetadata.generatedRfcMessageId = generatedHeaderId;
+      }
       const existingDiagnostics =
         baseMetadata.algaDiagnostics && typeof baseMetadata.algaDiagnostics === 'object'
           ? baseMetadata.algaDiagnostics
