@@ -30,6 +30,18 @@ function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
 }
 
+/**
+ * The ticket description is serialized rich-text blocks; the configured prefix,
+ * when present, is the first paragraph. Returns that paragraph's plain text.
+ */
+function descriptionPrefixParagraph(ticket: { attributes?: unknown }): string | undefined {
+  const description = (ticket.attributes as { description?: string } | null)?.description;
+  if (!description) return undefined;
+  const [first] = JSON.parse(description) as Array<{ type?: string; content?: Array<{ text?: string }> }>;
+  if (first?.type !== 'paragraph' || !Array.isArray(first.content)) return undefined;
+  return first.content.map((inline) => inline.text ?? '').join('');
+}
+
 function tenantTable(tenant: string, table: string) {
   return tenantDb(db, tenant).table(table);
 }
@@ -356,8 +368,7 @@ describe('service request ticket-only execution', () => {
       .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, March 2, 2026 (Laptop)');
-    const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
-    expect(ticketDescription?.startsWith('Requested for Jane Doe')).toBe(true);
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('Requested for Jane Doe');
   });
 
   it('formats dates and checkboxes in the tenant default locale', async () => {
@@ -402,8 +413,7 @@ describe('service request ticket-only execution', () => {
       .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket.title).toBe('New Hire for Employee: Jane Doe, 2. März 2026');
-    const ticketDescription = (createdTicket.attributes as { description?: string } | null)?.description;
-    expect(ticketDescription?.startsWith('VPN: Ja')).toBe(true);
+    expect(descriptionPrefixParagraph(createdTicket)).toBe('VPN: Ja');
   });
 
   it('T027: ticket-only execution failure keeps submission persisted with failed status and error summary', async () => {
