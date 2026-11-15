@@ -15870,6 +15870,100 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_clients_id_billingprofiles",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles",
+    "displayName": "List client billing profiles",
+    "summary": "List client billing profiles",
+    "description": "Lists every billing profile of the client, including inactive ones: default profile first, then by name. billing_profile_id is the value used on invoices, contract lines, tickets and assets. Nullable settings mean \"inherit from the client\".",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ClientBillingProfile"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}",
+    "displayName": "Get a client billing profile",
+    "summary": "Get a client billing profile",
+    "description": "Returns one billing profile of the client. billing_profile_id is the value used on invoices, contract lines, tickets and assets. A profile that belongs to another client returns 404, the same as an unknown one.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_contractlines",
     "method": "get",
     "path": "/api/v1/contract-lines",

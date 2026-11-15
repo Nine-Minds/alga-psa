@@ -429,6 +429,47 @@ export class ApiClientController extends ApiBaseController {
     };
   }
 
+  listBillingProfiles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          if (!clientId) {
+            throw new NotFoundError('Client not found');
+          }
+          const profiles = await this.clientService.listBillingProfiles(clientId, apiRequest.context!);
+          return createSuccessResponse(profiles);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  getBillingProfile() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+        const profileId = this.pathSegmentAfter(req, 'billing-profiles');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          if (!clientId || !profileId) {
+            throw new NotFoundError('Billing profile not found for this client');
+          }
+          const profile = await this.clientService.getBillingProfile(clientId, profileId, apiRequest.context!);
+          return createSuccessResponse(profile);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   getBillingProfileContacts() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {

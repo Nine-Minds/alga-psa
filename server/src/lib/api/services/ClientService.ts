@@ -25,6 +25,7 @@ import {
   deleteLocation as deleteClientLocation,
   updateLocation as updateClientLocation,
 } from '@alga-psa/clients/models';
+import type { ClientBillingProfileResponse } from '../schemas/client';
 import { withClientSinceDateString } from '@alga-psa/clients/lib/clientSince';
 import {
   CreateClientData,
@@ -1348,6 +1349,119 @@ export class ClientService extends BaseService<IClient> {
         can_view_profile_tickets: Boolean(row.can_view_profile_tickets),
       }));
     });
+  }
+
+  /**
+   * Billing profiles of a client, default first, then by name. Inactive profiles are included.
+   * 404 for a missing or out-of-scope client.
+   */
+  async listBillingProfiles(clientId: string, context: ServiceContext): Promise<ClientBillingProfileResponse[]> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, clientId, context);
+      const rows = await this.billingProfileQuery(trx, context)
+        .where({ 'cbp.client_id': clientId })
+        .orderBy('cbp.is_default', 'desc')
+        .orderBy('cbp.name', 'asc')
+        .orderBy('cbp.billing_profile_id', 'asc');
+      return rows.map((row: any) => this.mapBillingProfileRow(row));
+    });
+  }
+
+  /**
+   * One billing profile. A profile of another (or out-of-scope) client is a 404, never a 403,
+   * so callers cannot probe which profiles exist under other clients.
+   */
+  async getBillingProfile(
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<ClientBillingProfileResponse> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+      const row = await this.billingProfileQuery(trx, context)
+        .where({ 'cbp.client_id': clientId, 'cbp.billing_profile_id': billingProfileId })
+        .first();
+      if (!row) {
+        throw new NotFoundError('Billing profile not found for this client');
+      }
+      return this.mapBillingProfileRow(row);
+    });
+  }
+
+  /**
+   * Shared select for the billing profile read endpoints. Display names come from tenant-safe
+   * LEFT joins. invoice_template_id only ever names a tenant-owned invoice_templates row (standard
+   * templates are addressed by code in the global standard_invoice_templates table, not by uuid).
+   */
+  private billingProfileQuery(trx: Knex.Transaction, context: ServiceContext) {
+    const db = tenantDb(trx, context.tenant);
+    const query = db.table('client_billing_profiles as cbp');
+    db.tenantJoin(query, 'client_locations as loc', 'cbp.bill_to_location_id', 'loc.location_id', { type: 'left' });
+    db.tenantJoin(query, 'contacts as bc', 'cbp.billing_contact_id', 'bc.contact_name_id', { type: 'left' });
+    db.tenantJoin(query, 'invoice_templates as it', 'cbp.invoice_template_id', 'it.template_id', { type: 'left' });
+    return query.select(
+      'cbp.billing_profile_id',
+      'cbp.client_id',
+      'cbp.name',
+      'cbp.is_default',
+      'cbp.is_system_managed_default',
+      'cbp.is_active',
+      'cbp.bills_separately',
+      'cbp.bill_to_name',
+      'cbp.bill_to_location_id',
+      'loc.location_name as bill_to_location_name',
+      'cbp.billing_contact_id',
+      'bc.full_name as billing_contact_name',
+      'cbp.billing_email',
+      'cbp.is_tax_exempt',
+      'cbp.tax_exemption_certificate',
+      'cbp.tax_id_number',
+      'cbp.po_number',
+      'cbp.po_required',
+      'cbp.invoice_delivery_method',
+      'cbp.invoice_template_id',
+      'it.name as invoice_template_name',
+      'cbp.billing_cycle',
+      'cbp.payment_terms',
+      'cbp.preferred_payment_method',
+      'cbp.created_at',
+      'cbp.updated_at'
+    );
+  }
+
+  private mapBillingProfileRow(row: any): ClientBillingProfileResponse {
+    const iso = (value: unknown): string | null =>
+      value == null ? null : value instanceof Date ? value.toISOString() : String(value);
+    return {
+      billing_profile_id: row.billing_profile_id,
+      client_id: row.client_id,
+      name: row.name,
+      is_default: Boolean(row.is_default),
+      is_system_managed_default: Boolean(row.is_system_managed_default),
+      is_active: Boolean(row.is_active),
+      bills_separately: Boolean(row.bills_separately),
+      bill_to_name: row.bill_to_name ?? null,
+      bill_to_location_id: row.bill_to_location_id ?? null,
+      bill_to_location_name: row.bill_to_location_name ?? null,
+      billing_contact_id: row.billing_contact_id ?? null,
+      billing_contact_name: row.billing_contact_name ?? null,
+      billing_email: row.billing_email ?? null,
+      is_tax_exempt: row.is_tax_exempt ?? null,
+      tax_exemption_certificate: row.tax_exemption_certificate ?? null,
+      tax_id_number: row.tax_id_number ?? null,
+      po_number: row.po_number ?? null,
+      po_required: row.po_required ?? null,
+      invoice_delivery_method: row.invoice_delivery_method ?? null,
+      invoice_template_id: row.invoice_template_id ?? null,
+      invoice_template_name: row.invoice_template_name ?? null,
+      billing_cycle: row.billing_cycle ?? null,
+      payment_terms: row.payment_terms ?? null,
+      preferred_payment_method: row.preferred_payment_method ?? null,
+      created_at: iso(row.created_at),
+      updated_at: iso(row.updated_at),
+    };
   }
 
   /** Replaces the profile's contact list; omitting a contact removes it. */

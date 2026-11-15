@@ -17683,6 +17683,122 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_clients_id_billingprofiles",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles",
+    "displayName": "List client billing profiles",
+    "summary": "List client billing profiles",
+    "description": "Lists every billing profile of the client, including inactive ones: default profile first, then by name. billing_profile_id is the value used on invoices, contract lines, tickets and assets. Nullable settings mean \"inherit from the client\".",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ClientBillingProfile"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}",
+    "displayName": "Get a client billing profile",
+    "summary": "Get a client billing profile",
+    "description": "Returns one billing profile of the client. billing_profile_id is the value used on invoices, contract lines, tickets and assets. A profile that belongs to another client returns 404, the same as an unknown one.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_contractlines",
     "method": "get",
     "path": "/api/v1/contract-lines",

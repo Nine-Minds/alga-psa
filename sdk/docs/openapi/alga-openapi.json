@@ -10954,6 +10954,273 @@
           "data"
         ]
       },
+      "ClientBillingProfilesParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client UUID from clients.client_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ClientBillingProfileParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client UUID from clients.client_id."
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+          }
+        },
+        "required": [
+          "id",
+          "profileId"
+        ]
+      },
+      "ClientBillingProfileApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ClientBillingProfile": {
+        "type": "object",
+        "properties": {
+          "billing_profile_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The billing_profile_id used on invoices, contract lines, tickets and assets."
+          },
+          "client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "is_system_managed_default": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "bills_separately": {
+            "type": "boolean"
+          },
+          "bill_to_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bill_to_location_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "bill_to_location_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of bill_to_location_id; null when unset."
+          },
+          "billing_contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "billing_contact_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full name of billing_contact_id; null when unset."
+          },
+          "billing_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_tax_exempt": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Null means inherit from the client. The same applies to other nullable settings."
+          },
+          "tax_exemption_certificate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tax_id_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "po_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "po_required": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "invoice_delivery_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "invoice_template_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "invoice_template_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Name of the tenant invoice template in invoice_template_id; null when unset."
+          },
+          "billing_cycle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_terms": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preferred_payment_method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "billing_profile_id",
+          "client_id",
+          "name",
+          "is_default",
+          "is_system_managed_default",
+          "is_active",
+          "bills_separately",
+          "bill_to_name",
+          "bill_to_location_id",
+          "bill_to_location_name",
+          "billing_contact_id",
+          "billing_contact_name",
+          "billing_email",
+          "is_tax_exempt",
+          "tax_exemption_certificate",
+          "tax_id_number",
+          "po_number",
+          "po_required",
+          "invoice_delivery_method",
+          "invoice_template_id",
+          "invoice_template_name",
+          "billing_cycle",
+          "payment_terms",
+          "preferred_payment_method",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ClientBillingProfileListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientBillingProfile"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientBillingProfileEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClientBillingProfile"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "ContractLineIdParam": {
         "type": "object",
         "properties": {
@@ -52929,6 +53196,213 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/billing-profiles": {
+      "get": {
+        "summary": "List client billing profiles",
+        "description": "Lists every billing profile of the client, including inactive ones: default profile first, then by name. billing_profile_id is the value used on invoices, contract lines, tickets and assets. Nullable settings mean \"inherit from the client\".",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client UUID from clients.client_id."
+            },
+            "required": true,
+            "description": "Client UUID from clients.client_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing profiles returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client or profile id format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found, or not visible to the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected billing profile failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/billing-profiles/{profileId}": {
+      "get": {
+        "summary": "Get a client billing profile",
+        "description": "Returns one billing profile of the client. billing_profile_id is the value used on invoices, contract lines, tickets and assets. A profile that belongs to another client returns 404, the same as an unknown one.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client UUID from clients.client_id."
+            },
+            "required": true,
+            "description": "Client UUID from clients.client_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+            },
+            "required": true,
+            "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path.",
+            "name": "profileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing profile returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client or profile id format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Billing profile not found for this client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected billing profile failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBillingProfileApiError"
                 }
               }
             }
