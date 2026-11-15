@@ -6,6 +6,8 @@ import {
   resolveSeatAssigneeAudience,
   restrictToSeatAudience,
 } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
+import { keepThisClientsSeatTechnicians, resolveTicketSeatContext } from '@alga-psa/shared/lib/humanWork/ticketSeatContext';
+import { attachThreadAudiences } from './comment-actions/commentAudienceRead';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -22,7 +24,7 @@ import { projectedPeopleForCaller, projectedPeopleForSubject, projectedPersonToU
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
-import { nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import { nativeThreadAudience, resolveCommentWriteAuthor, type CommentAudienceReader, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState } from '@alga-psa/shared/lib/tickets/responseState';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -639,8 +641,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       seatAssignees
         ? seatAssignees.map((person) => projectedPersonToUser(person, tenant))
         : restrictToSeatAudience(
+          // seat_reader is read for the seat context below and never leaves the server (sanitized out).
           tenantScopedTable(trx, 'users', tenant)
-            .select(...USER_RESPONSE_FIELD_NAMES)
+            .select(...USER_RESPONSE_FIELD_NAMES, 'seat_reader')
             .where('user_type', 'internal')
             .where('is_inactive', false),
           seatAssigneeAudience
@@ -692,9 +695,15 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
     ]);
 
+    // Seat surfaces of this ticket (composer audiences, Client IT picker group, audience badges).
+    // Null, at no statement, in a tenant without seat technicians: the users just loaded carry the
+    // seat marker, so a psa tenant never reaches the capability probe or a co-managed table.
+    const loadedUsers = rawUsers as Array<Record<string, unknown> & { user_id: string; seat_reader?: boolean | null }>;
+    const seatTicket = await resolveTicketSeatContext(trx, tenant, user, ticket.client_id, seatAssigneeAudience, loadedUsers);
+
     // Projection is the fix; this is the guarantee that a future edit to the query
     // above cannot silently re-widen what leaves this action.
-    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+    const users: SafeConsolidatedUser[] = keepThisClientsSeatTechnicians(loadedUsers, seatTicket).map(
       (row) => sanitizeUserForResponse(row)
     );
 
@@ -852,7 +861,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // bound by that: client-portal repliers and deactivated agents also write
     // comments, so fetch the missing authors separately for display purposes only.
     // "<human> via <principal>" needs the principal's display name (EE only; a no-op elsewhere).
-    const comments = await attachViaPrincipalNames(trx, tenant, rawComments as any[], 'created_via_principal_id');
+    const comments = await attachViaPrincipalNames(
+      trx,
+      tenant,
+      seatTicket?.arrangement ? await attachThreadAudiences(trx, tenant, rawComments as any[]) : (rawComments as any[]),
+      'created_via_principal_id',
+    );
 
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
@@ -1247,6 +1261,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board: whenTicketFieldVisible('board_name', board),
       additionalAgents: resources,
       availableAgents: users,
+      // Only a ticket of an arrangement client carries it; every other ticket's payload is unchanged.
+      ...(seatTicket?.arrangement ? { seatTicket } : {}),
       userMap,
       contactMap,
       options: {
@@ -3595,7 +3611,6 @@ export async function addTicketCommentInTransaction(
     schedule,
     emailRecipients,
     audienceId,
-    audienceAuthor,
   } = input;
 
   const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
@@ -3702,6 +3717,13 @@ export async function addTicketCommentInTransaction(
 
   // Native: `{}` with zero SQL (psa tenants, internal notes, plain authors). Co-managed: fails closed.
   // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+  // The author is decided here, once, for every caller (addTicketCommentWithCache, addTicketComment,
+  // bulk close resolution, canned responses): a seat technician is refused Private and the legacy
+  // internal note. Staff with `seat_reader === false` cost no SQL; client and service principals
+  // keep the author their authorType implies.
+  const audienceAuthor = input.audienceAuthor !== undefined
+    ? input.audienceAuthor
+    : await resolveCommentWriteAuthor(trx, tenant, user);
   const threadAudience = await nativeThreadAudience(trx, tenant, {
     isInternal: effectiveIsInternal, authorType, audience: audienceId, author: audienceAuthor, ticketId,
   });

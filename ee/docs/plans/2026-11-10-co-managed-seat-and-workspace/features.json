@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "The MSP assignee picker lists the ticket client's seat technicians in a separate Client IT group, only on that client's tickets, and never on other clients' tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "The MSP ticket composer offers Requester, Shared IT and Private in place of the Internal toggle for clients with a live seat arrangement, defaulting to Private.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "The seat technician's composer offers Requester and Shared IT and shows each comment's audience.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]

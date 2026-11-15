@@ -49,6 +49,7 @@ import {
   getAssetRemoteControlTypes, getAssetRemoteControlUrl, getAssetRmmData, refreshAssetRmmData, triggerRmmReboot,
   triggerRmmScript,
 } from '@alga-psa/integrations/actions/integrations/assetRmmActions';
+import { refreshAssetRmmDataForApi } from '@alga-psa/integrations/lib/rmm/assetRmmApi';
 import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
 import { AssetService } from '../../lib/api/services/AssetService';
 import { authorizeApiResource } from '../../lib/api/controllers/authorizationKernel';
@@ -311,6 +312,8 @@ describeDb('co-managed seat devices: read-only own-client assets on real Postgre
       expect(await attempt(() => triggerRmmReboot(ownAsset)), `reboot (${label})`).toMatch(/denied/i);
       expect(await attempt(() => triggerRmmScript(ownAsset, 'script-1')), `script (${label})`).toMatch(/denied/i);
       expect(await attempt(() => refreshAssetRmmData(ownAsset)), `refresh (${label})`).toMatch(/denied/i);
+      // The REST refresh adapter is a separate entry point (it projects under the route's asset gate); it closes the same operation.
+      expect(await attempt(() => refreshAssetRmmDataForApi(ownAsset)), `REST refresh (${label})`).toMatch(/denied/i);
       expect(await attempt(() => mapRmmUserToContact({ integrationId: randomUUID(), provider: 'tacticalrmm', rawUser: 'frontdesk', contactId: null, assignAssetId: ownAsset })), `map user (${label})`).toMatch(/denied|permission/i);
       expect(await attempt(() => suggestAssigneeFromRmmUser(ownAsset)), `suggest user (${label})`).not.toBeNull();
     }
@@ -426,6 +429,9 @@ describeDb('co-managed seat devices: read-only own-client assets on real Postgre
       expect(stats).toMatchObject({ total_assets: 1 });
       expect(stats).not.toHaveProperty('total_asset_value');
       expect(queries.join('\n')).not.toMatch(/purchase_cost/);
+      // GET /api/v1/assets/stats aggregates the caller's projected rows: closed purchase cost omits the value there too.
+      const listed = await service.list({ page: 1, limit: 25 }, ctx(tech));
+      expect(service.getStatisticsFromProjections(listed.data, [])).not.toHaveProperty('total_asset_value');
     });
 
     it('gives MSP staff the commercial fields as before', async () => {
@@ -438,6 +444,7 @@ describeDb('co-managed seat devices: read-only own-client assets on real Postgre
       expect(details.billing_profile_id).toBeTruthy();
       const stats = await service.getStatistics(ctx(msp));
       expect(stats.total_asset_value).toBeGreaterThan(0);
+      expect(service.getStatisticsFromProjections(list.data, []).total_asset_value).toBe(stats.total_asset_value);
     });
 
     it('denies REST asset writes to a seat subject whatever the role holds', async () => {

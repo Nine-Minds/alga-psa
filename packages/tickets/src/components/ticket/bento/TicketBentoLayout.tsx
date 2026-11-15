@@ -76,6 +76,8 @@ export interface TicketBentoLayoutProps {
   priorityOptions: { value: string; label: string }[];
   boardOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
+  /** Seat technicians of the ticket's own client (MSP viewer, live arrangement): the assignee picker's Client IT group. */
+  clientItUserIds?: readonly string[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /** Coalesced multi-field hero save; forwarded to BentoHero. */
   onBatchSelectChange?: (
@@ -1062,6 +1064,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           boardOptions={props.boardOptions}
           agentOptions={props.agentOptions}
           availableAgents={props.availableAgents}
+          clientItUserIds={props.clientItUserIds}
           teams={props.teams}
           additionalAgents={props.additionalAgents}
           onAssignTeam={props.onAssignTeam}
