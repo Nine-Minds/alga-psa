@@ -140,6 +140,7 @@
       "notFound": "Article introuvable",
       "loadError": "Échec du chargement de l'article",
       "saveError": "Échec de l'enregistrement de l'article",
+      "contentSaveError": "Échec de l'enregistrement du contenu de l'article",
       "saveSuccess": "Article enregistré",
       "publishError": "Échec de la publication de l'article",
       "publishSuccess": "Article publié",

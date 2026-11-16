@@ -140,6 +140,7 @@
       "notFound": "Article not found",
       "loadError": "Failed to load article",
       "saveError": "Failed to save article",
+      "contentSaveError": "Failed to save article content",
       "saveSuccess": "Article saved",
       "publishError": "Failed to publish article",
       "publishSuccess": "Article published",

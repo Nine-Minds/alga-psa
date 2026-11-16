@@ -140,6 +140,7 @@
       "notFound": "Artikel niet gevonden",
       "loadError": "Kan artikel niet laden",
       "saveError": "Kan artikel niet opslaan",
+      "contentSaveError": "Kan artikelinhoud niet opslaan",
       "saveSuccess": "Artikel opgeslagen",
       "publishError": "Kan artikel niet publiceren",
       "publishSuccess": "Artikel gepubliceerd",

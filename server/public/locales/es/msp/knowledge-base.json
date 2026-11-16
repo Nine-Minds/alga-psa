@@ -140,6 +140,7 @@
       "notFound": "Artículo no encontrado",
       "loadError": "No se pudo cargar el artículo",
       "saveError": "No se pudo guardar el artículo",
+      "contentSaveError": "No se pudo guardar el contenido del artículo",
       "saveSuccess": "Artículo guardado",
       "publishError": "No se pudo publicar el artículo",
       "publishSuccess": "Artículo publicado",

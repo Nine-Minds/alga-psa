@@ -140,6 +140,7 @@
       "notFound": "Artikeln hittades inte",
       "loadError": "Det gick inte att läsa in artikeln",
       "saveError": "Det gick inte att spara artikeln",
+      "contentSaveError": "Det gick inte att spara artikelns innehåll",
       "saveSuccess": "Artikeln har sparats",
       "publishError": "Det gick inte att publicera artikeln",
       "publishSuccess": "Artikeln har publicerats",
