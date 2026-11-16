@@ -27,6 +27,7 @@ import {
   updateServiceRequestVisibilityProviderAction,
   validateServiceRequestDefinitionForPublishAction,
 } from './actions';
+import { AdvancedFormBehaviorHelp } from './AdvancedFormBehaviorHelp';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Card } from '@alga-psa/ui/components/Card';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -1861,6 +1862,7 @@ export default function ServiceRequestDefinitionEditorPage() {
         {data.execution.showAdvancedFormBehaviorConfigPanel && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <div className="text-sm font-semibold">{t('editor.execution.advanced.title')}</div>
+            <AdvancedFormBehaviorHelp />
             <details id="service-request-form-behavior-config-advanced">
               <summary className="cursor-pointer text-sm">
                 {t('editor.form.visibility.advancedJson')}
@@ -1917,6 +1919,9 @@ export default function ServiceRequestDefinitionEditorPage() {
         )}
         <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
           <div className="text-sm font-semibold">{t('editor.execution.visibility.title')}</div>
+          <p className="text-xs text-[rgb(var(--color-text-600))]">
+            {t('editor.execution.visibility.description')}
+          </p>
           <ServiceRequestAudienceEditor
             definitionId={data.definitionId}
             initialAudience={data.execution.audience}

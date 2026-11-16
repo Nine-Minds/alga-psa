@@ -121,7 +121,7 @@
           "has-value": "ma wartość",
           "is-empty": "jest puste"
         },
-        "advancedJson": "Zaawansowane (JSON)",
+        "advancedJson": "Edytuj jako JSON",
         "advancedJsonHelp": "Pełna zapisana konfiguracja, w tym wartości domyślne kontekstu. Reguły widoczności łatwiej zmieniać w edytorze „Pokaż, gdy…” przy każdym polu. Niezapisane zmiany w tym miejscu zostaną odrzucone, jeśli zmienisz tam regułę."
       }
     },
@@ -172,14 +172,53 @@
         "save": "Zapisz ustawienia workflow"
       },
       "advanced": {
-        "title": "Zaawansowane zachowanie formularza",
+        "title": "Pokazywanie lub ukrywanie pól (zaawansowane)",
         "config": "Konfiguracja zachowania formularza (obiekt JSON)",
-        "save": "Zapisz konfigurację zachowania formularza"
+        "save": "Zapisz konfigurację zachowania formularza",
+        "help": {
+          "whatItIs": "Ten panel zapisuje widoczność pól i wstępnie wypełnione wartości w formacie JSON. „Pokaż, gdy…” przy każdym polu to standardowy sposób konfigurowania widoczności. Użyj tego panelu do zbiorczych zmian oraz do contextDefaults, które nie mają innego edytora.",
+          "ruleShapeTitle": "Reguły widoczności",
+          "ruleShape": "Każdy wpis w visibilityRules ma te właściwości. value jest potrzebne tylko dla equals i does not equal.",
+          "ruleAll": "Wszystkie warunki pola muszą być spełnione. Warunki łączy się wyłącznie operatorem AND.",
+          "ruleNone": "Pole bez warunku jest zawsze widoczne.",
+          "ruleSource": "source to klucz pola albo jedna z wartości context.requesterUserId, context.clientId i context.contactId.",
+          "ruleEarlier": "Pole użyte jako source musi występować w formularzu wcześniej niż pole, którym steruje.",
+          "ruleHidden": "Ukryte pole jest traktowane jak puste, więc ukrycie pola sterującego ukrywa też pola od niego zależne.",
+          "ruleHiddenAnswers": "Odpowiedzi w ukrytych polach, w tym wstępnie wypełnione wartości, nie są wysyłane razem ze zgłoszeniem.",
+          "operatorsTitle": "Operatory",
+          "operatorsIntro": "operator musi być jedną z wartości:",
+          "contextTitle": "Wstępnie wypełnione wartości (contextDefaults)",
+          "contextIntro": "contextDefaults przypisuje kluczowi pola wartość początkową tego pola. Poniższe symbole zastępcze są zamieniane na dane użytkownika klienta, który otwiera formularz:",
+          "placeholders": {
+            "clientId": "klient użytkownika zgłaszającego",
+            "contactId": "kontakt użytkownika zgłaszającego (puste, jeśli go nie ma)",
+            "requesterUserId": "użytkownik zgłaszający"
+          },
+          "timingTitle": "Kiedy to działa",
+          "timing": "Wstępnie wypełnione wartości są ustawiane, gdy klient otwiera formularz. Warunki są sprawdzane w przeglądarce w trakcie wypełniania formularza oraz ponownie przy wysyłaniu.",
+          "editionTitle": "Dostępność",
+          "edition": "Ten panel wymaga dostawcy zaawansowanego zachowania formularza w wersji Enterprise.",
+          "examplesTitle": "Przykłady",
+          "examples": {
+            "showWhen": {
+              "title": "Pokaż „Tell us more” tylko wtedy, gdy „Reason” jest równe „Other”"
+            },
+            "hideWhen": {
+              "title": "Ukryj „Company”, gdy zaznaczono „I am the end user”"
+            },
+            "clientScoped": {
+              "title": "Pokaż „Site code” tylko dla jednego klienta i wstępnie wypełnij „Client reference” identyfikatorem klienta",
+              "note": "Zastąp przykładowy identyfikator klienta identyfikatorem swojego klienta. Wstępnie wypełniona wartość to identyfikator, który klient widzi i może edytować w formularzu."
+            }
+          },
+          "copy": "Kopiuj",
+          "copied": "Skopiowano przykład",
+          "copyFailed": "Nie udało się skopiować przykładu"
+        }
       },
       "visibility": {
-        "title": "Konfiguracja widoczności",
-        "config": "Konfiguracja widoczności (obiekt JSON)",
-        "save": "Zapisz konfigurację widoczności",
+        "title": "Kto może zobaczyć ten formularz",
+        "description": "Określa, którzy użytkownicy klienta mogą otworzyć to zgłoszenie. Nie pokazuje ani nie ukrywa odpowiedzi wewnątrz formularza.",
         "audience": {
           "removedReferences": "Niedostępne pozycje odbiorców zostały usunięte. Sprawdź i zapisz odbiorców.",
           "reference_client_id": "Klient",
@@ -489,8 +528,6 @@
       "workflowConfigurationInvalid": "Nieprawidłowy kod JSON konfiguracji workflow",
       "formBehaviorNotObject": "Konfiguracja zachowania formularza musi być obiektem JSON",
       "formBehaviorInvalid": "Nieprawidłowy JSON zachowania formularza",
-      "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
-      "visibilityInvalid": "Nieprawidłowy JSON widoczności",
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
       "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
     }

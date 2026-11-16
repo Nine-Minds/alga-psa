@@ -121,7 +121,7 @@
           "has-value": "tem um valor",
           "is-empty": "está vazio"
         },
-        "advancedJson": "Avançado (JSON)",
+        "advancedJson": "Editar como JSON",
         "advancedJsonHelp": "A configuração salva completa, incluindo os padrões de contexto. As regras de visibilidade são mais fáceis de alterar com “Mostrar quando…” em cada campo. Edições não salvas aqui são descartadas se uma regra for alterada lá."
       }
     },
@@ -172,14 +172,53 @@
         "save": "Salvar configurações de fluxo de trabalho"
       },
       "advanced": {
-        "title": "Comportamento avançado do formulário",
+        "title": "Mostrar ou ocultar campos (avançado)",
         "config": "Configuração de comportamento do formulário (objeto JSON)",
-        "save": "Salvar configuração de comportamento do formulário"
+        "save": "Salvar configuração de comportamento do formulário",
+        "help": {
+          "whatItIs": "Este painel guarda a visibilidade dos campos e os valores pré-preenchidos como JSON. «Mostrar quando…» em cada campo é a forma habitual de configurar a visibilidade. Use este painel para edições em massa e para contextDefaults, que não têm outro editor.",
+          "ruleShapeTitle": "Regras de visibilidade",
+          "ruleShape": "Cada entrada de visibilityRules tem estas propriedades. value só é necessário para equals e does not equal.",
+          "ruleAll": "Todas as condições de um campo têm de ser cumpridas. As condições são combinadas apenas com AND.",
+          "ruleNone": "Um campo sem condições é sempre mostrado.",
+          "ruleSource": "source é uma chave de campo, ou um de context.requesterUserId, context.clientId e context.contactId.",
+          "ruleEarlier": "Um campo usado como source tem de aparecer no formulário antes do campo que controla.",
+          "ruleHidden": "Um campo oculto conta como vazio, por isso ocultar um campo de controlo também oculta os campos que dependem dele.",
+          "ruleHiddenAnswers": "As respostas dos campos ocultos, incluindo os valores pré-preenchidos, não são enviadas com o pedido.",
+          "operatorsTitle": "Operadores",
+          "operatorsIntro": "operator tem de ser um dos seguintes:",
+          "contextTitle": "Valores pré-preenchidos (contextDefaults)",
+          "contextIntro": "contextDefaults associa uma chave de campo ao valor inicial desse campo. Estes marcadores são substituídos por dados do utilizador do cliente que abre o formulário:",
+          "placeholders": {
+            "clientId": "o cliente do utilizador solicitante",
+            "contactId": "o contacto do utilizador solicitante (vazio se não existir)",
+            "requesterUserId": "o utilizador solicitante"
+          },
+          "timingTitle": "Quando se aplica",
+          "timing": "Os valores pré-preenchidos são preenchidos quando o cliente abre o formulário. As condições são verificadas no navegador enquanto o cliente preenche o formulário e novamente ao submeter.",
+          "editionTitle": "Disponibilidade",
+          "edition": "Este painel requer o fornecedor de comportamento de formulário avançado do Enterprise.",
+          "examplesTitle": "Exemplos",
+          "examples": {
+            "showWhen": {
+              "title": "Mostrar «Tell us more» apenas quando «Reason» for igual a «Other»"
+            },
+            "hideWhen": {
+              "title": "Ocultar «Company» quando «I am the end user» estiver marcado"
+            },
+            "clientScoped": {
+              "title": "Mostrar «Site code» apenas para um cliente e pré-preencher «Client reference» com o ID do cliente",
+              "note": "Substitua o ID de cliente do exemplo pelo ID do seu cliente. O valor pré-preenchido é um ID, e o cliente pode vê-lo e editá-lo no formulário."
+            }
+          },
+          "copy": "Copiar",
+          "copied": "Exemplo copiado",
+          "copyFailed": "Não foi possível copiar o exemplo"
+        }
       },
       "visibility": {
-        "title": "Configuração de visibilidade",
-        "config": "Configuração de visibilidade (objeto JSON)",
-        "save": "Salvar configuração de visibilidade",
+        "title": "Quem pode ver este formulário",
+        "description": "Controla quais utilizadores do cliente podem abrir este pedido. Não mostra nem oculta respostas dentro do formulário.",
         "audience": {
           "removedReferences": "As seleções de público indisponíveis foram removidas. Revise e salve o público.",
           "reference_client_id": "Cliente",
@@ -487,8 +526,6 @@
       "workflowConfigurationInvalid": "JSON de configuração de fluxo de trabalho inválida",
       "formBehaviorNotObject": "A configuração do comportamento do formulário deve ser um objeto JSON",
       "formBehaviorInvalid": "Comportamento de formulário inválido JSON",
-      "visibilityNotObject": "A configuração de visibilidade precisa ser um objeto JSON",
-      "visibilityInvalid": "Visibilidade JSON inválida",
       "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
       "audienceSaveFailed": "Falha ao atualizar o público-alvo"
     }

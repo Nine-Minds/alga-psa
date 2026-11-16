@@ -121,7 +121,7 @@
           "has-value": "heeft een waarde",
           "is-empty": "is leeg"
         },
-        "advancedJson": "Geavanceerd (JSON)",
+        "advancedJson": "Bewerken als JSON",
         "advancedJsonHelp": "De volledige opgeslagen configuratie, inclusief contextstandaarden. Zichtbaarheidsregels wijzigt u makkelijker met „Tonen wanneer…” bij elk veld. Niet-opgeslagen wijzigingen hier worden verworpen als daar een regel wordt gewijzigd."
       }
     },
@@ -172,14 +172,53 @@
         "save": "Workflow-instellingen opslaan"
       },
       "advanced": {
-        "title": "Geavanceerd formuliergedrag",
+        "title": "Velden tonen of verbergen (geavanceerd)",
         "config": "Configuratie formuliergedrag (JSON-object)",
-        "save": "Configuratie formuliergedrag opslaan"
+        "save": "Configuratie formuliergedrag opslaan",
+        "help": {
+          "whatItIs": "Dit paneel slaat de zichtbaarheid van velden en vooraf ingevulde waarden op als JSON. “Tonen als…” bij elk veld is de gebruikelijke manier om zichtbaarheid in te stellen. Gebruik dit paneel voor bulkwijzigingen en voor contextDefaults, waarvoor geen andere editor bestaat.",
+          "ruleShapeTitle": "Zichtbaarheidsregels",
+          "ruleShape": "Elk item in visibilityRules heeft deze eigenschappen. value is alleen nodig voor equals en does not equal.",
+          "ruleAll": "Elke voorwaarde van een veld moet slagen. Voorwaarden worden alleen met AND gecombineerd.",
+          "ruleNone": "Een veld zonder voorwaarde wordt altijd getoond.",
+          "ruleSource": "source is een veldsleutel of een van context.requesterUserId, context.clientId en context.contactId.",
+          "ruleEarlier": "Een veld dat als source wordt gebruikt, moet eerder in het formulier staan dan het veld dat het aanstuurt.",
+          "ruleHidden": "Een verborgen veld telt als leeg. Als je een aansturend veld verbergt, worden dus ook de velden verborgen die ervan afhangen.",
+          "ruleHiddenAnswers": "Antwoorden op verborgen velden, inclusief vooraf ingevulde waarden, worden niet met het verzoek verzonden.",
+          "operatorsTitle": "Operators",
+          "operatorsIntro": "operator moet een van de volgende zijn:",
+          "contextTitle": "Vooraf ingevulde waarden (contextDefaults)",
+          "contextIntro": "contextDefaults koppelt een veldsleutel aan de beginwaarde van dat veld. Deze plaatshouders worden vervangen door gegevens van de klantgebruiker die het formulier opent:",
+          "placeholders": {
+            "clientId": "de klant van de aanvragende gebruiker",
+            "contactId": "het contact van de aanvragende gebruiker (leeg als er geen is)",
+            "requesterUserId": "de aanvragende gebruiker"
+          },
+          "timingTitle": "Wanneer het van toepassing is",
+          "timing": "Vooraf ingevulde waarden worden ingevuld wanneer de klant het formulier opent. Voorwaarden worden in de browser gecontroleerd terwijl de klant het formulier invult, en nogmaals bij het verzenden.",
+          "editionTitle": "Beschikbaarheid",
+          "edition": "Dit paneel vereist de Enterprise-provider voor geavanceerd formuliergedrag.",
+          "examplesTitle": "Voorbeelden",
+          "examples": {
+            "showWhen": {
+              "title": "“Tell us more” alleen tonen als “Reason” gelijk is aan “Other”"
+            },
+            "hideWhen": {
+              "title": "“Company” verbergen als “I am the end user” is aangevinkt"
+            },
+            "clientScoped": {
+              "title": "“Site code” alleen tonen voor één klant en “Client reference” vooraf invullen met het klant-ID",
+              "note": "Vervang het voorbeeld-klant-ID door het ID van jouw klant. De vooraf ingevulde waarde is een ID, en de klant kan die in het formulier zien en aanpassen."
+            }
+          },
+          "copy": "Kopiëren",
+          "copied": "Voorbeeld gekopieerd",
+          "copyFailed": "Het voorbeeld kon niet worden gekopieerd"
+        }
       },
       "visibility": {
-        "title": "Zichtbaarheidsconfiguratie",
-        "config": "Zichtbaarheidsconfiguratie (JSON-object)",
-        "save": "Zichtbaarheidsconfiguratie opslaan",
+        "title": "Wie dit formulier kan zien",
+        "description": "Bepaalt welke klantgebruikers dit verzoek kunnen openen. Antwoorden in het formulier worden hierdoor niet getoond of verborgen.",
         "audience": {
           "removedReferences": "Niet-beschikbare doelgroepselecties zijn verwijderd. Controleer en sla de doelgroep op.",
           "reference_client_id": "Klant",
@@ -487,8 +526,6 @@
       "workflowConfigurationInvalid": "Ongeldige JSON voor workflowconfiguratie",
       "formBehaviorNotObject": "Configuratie formuliergedrag moet een JSON-object zijn",
       "formBehaviorInvalid": "Ongeldige JSON voor formuliergedrag",
-      "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
-      "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
       "audienceSaveFailed": "Doelgroep bijwerken mislukt"
     }

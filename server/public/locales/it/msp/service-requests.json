@@ -121,7 +121,7 @@
           "has-value": "ha un valore",
           "is-empty": "è vuoto"
         },
-        "advancedJson": "Avanzate (JSON)",
+        "advancedJson": "Modifica come JSON",
         "advancedJsonHelp": "La configurazione salvata completa, inclusi i valori predefiniti di contesto. Le regole di visibilità si modificano più facilmente con «Mostra quando…» su ogni campo. Le modifiche non salvate qui vengono scartate se lì si modifica una regola."
       }
     },
@@ -172,14 +172,53 @@
         "save": "Salva impostazioni del workflow"
       },
       "advanced": {
-        "title": "Comportamento avanzato del modulo",
+        "title": "Mostra o nascondi campi (avanzato)",
         "config": "Configurazione del comportamento del modulo (oggetto JSON)",
-        "save": "Salva configurazione del comportamento del modulo"
+        "save": "Salva configurazione del comportamento del modulo",
+        "help": {
+          "whatItIs": "Questo pannello salva la visibilità dei campi e i valori precompilati in formato JSON. «Mostra quando…» su ogni campo è il modo normale per configurare la visibilità. Usa questo pannello per modifiche in blocco e per contextDefaults, che non hanno altri editor.",
+          "ruleShapeTitle": "Regole di visibilità",
+          "ruleShape": "Ogni voce di visibilityRules ha queste proprietà. value serve solo per equals e does not equal.",
+          "ruleAll": "Tutte le condizioni di un campo devono essere soddisfatte. Le condizioni sono combinate solo con AND.",
+          "ruleNone": "Un campo senza condizioni è sempre visibile.",
+          "ruleSource": "source è una chiave di campo, oppure uno tra context.requesterUserId, context.clientId e context.contactId.",
+          "ruleEarlier": "Un campo usato come source deve comparire nel modulo prima del campo che controlla.",
+          "ruleHidden": "Un campo nascosto conta come vuoto, quindi nascondere un campo di controllo nasconde anche i campi che dipendono da esso.",
+          "ruleHiddenAnswers": "Le risposte ai campi nascosti, compresi i valori precompilati, non vengono inviate con la richiesta.",
+          "operatorsTitle": "Operatori",
+          "operatorsIntro": "operator deve essere uno dei seguenti:",
+          "contextTitle": "Valori precompilati (contextDefaults)",
+          "contextIntro": "contextDefaults associa una chiave di campo al valore iniziale di quel campo. Questi segnaposto vengono sostituiti con i dati dell’utente del cliente che apre il modulo:",
+          "placeholders": {
+            "clientId": "il cliente dell’utente richiedente",
+            "contactId": "il contatto dell’utente richiedente (vuoto se non ce n’è)",
+            "requesterUserId": "l’utente richiedente"
+          },
+          "timingTitle": "Quando si applica",
+          "timing": "I valori precompilati vengono inseriti quando il cliente apre il modulo. Le condizioni vengono controllate nel browser mentre il cliente compila il modulo e di nuovo all’invio.",
+          "editionTitle": "Disponibilità",
+          "edition": "Questo pannello richiede il provider di comportamento del modulo avanzato di Enterprise.",
+          "examplesTitle": "Esempi",
+          "examples": {
+            "showWhen": {
+              "title": "Mostra «Tell us more» solo quando «Reason» è uguale a «Other»"
+            },
+            "hideWhen": {
+              "title": "Nascondi «Company» quando «I am the end user» è selezionato"
+            },
+            "clientScoped": {
+              "title": "Mostra «Site code» solo per un cliente e precompila «Client reference» con l’ID del cliente",
+              "note": "Sostituisci l’ID cliente dell’esempio con l’ID del tuo cliente. Il valore precompilato è un ID e il cliente può vederlo e modificarlo nel modulo."
+            }
+          },
+          "copy": "Copia",
+          "copied": "Esempio copiato",
+          "copyFailed": "Impossibile copiare l’esempio"
+        }
       },
       "visibility": {
-        "title": "Configurazione della visibilità",
-        "config": "Configurazione della visibilità (oggetto JSON)",
-        "save": "Salva configurazione della visibilità",
+        "title": "Chi può vedere questo modulo",
+        "description": "Controlla quali utenti del cliente possono aprire questa richiesta. Non mostra né nasconde le risposte all’interno del modulo.",
         "audience": {
           "removedReferences": "Le selezioni del pubblico non disponibili sono state rimosse. Controlla e salva il pubblico.",
           "reference_client_id": "Cliente",
@@ -487,8 +526,6 @@
       "workflowConfigurationInvalid": "JSON di configurazione del workflow non valido",
       "formBehaviorNotObject": "La configurazione del comportamento del modulo deve essere un oggetto JSON",
       "formBehaviorInvalid": "JSON del comportamento del modulo non valido",
-      "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
-      "visibilityInvalid": "JSON della visibilità non valido",
       "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
       "audienceSaveFailed": "Impossibile aggiornare i destinatari"
     }
