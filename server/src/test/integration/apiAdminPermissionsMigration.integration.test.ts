@@ -20,7 +20,7 @@ const { DEFAULT_ROLES } = require(path.join(permissionsDir, 'roleGrants.cjs'));
 const { ACTIVE_PERMISSIONS, getProductPermissions } = require(path.join(permissionsDir, 'catalog.cjs'));
 const { syncPermissionCatalog } = require(path.join(permissionsDir, 'syncPermissionCatalog.cjs'));
 const migration = require(path.join(migrationsDir, '20261115120000_add_api_admin_permissions.cjs'));
-const permissionMigration = require(path.join(migrationsDir, '20261116120000_add_permission_catalog_resource.cjs'));
+const permissionMigration = require(path.join(migrationsDir, '20261115230000_add_permission_catalog_resource.cjs'));
 
 const RESOURCES = ['metadata', 'role', 'webhook', 'permission'];
 const PERMISSION_KEYS = ['permission:create', 'permission:delete', 'permission:read', 'permission:update'];
