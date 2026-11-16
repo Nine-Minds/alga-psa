@@ -2654,6 +2654,32 @@
           },
           "noData": "Aucune donnée de conformité disponible",
           "summaryError": "Échec du chargement du résumé de conformité",
+          "sync": {
+            "details": "Détails",
+            "endedWithoutResult": "La synchronisation s'est terminée sans signaler de résultat.",
+            "failed": {
+              "patches": "Échec de la synchronisation des correctifs : {{reason}}",
+              "software": "Échec de la synchronisation des logiciels : {{reason}}"
+            },
+            "failedCount": "Appareils en échec : {{value}}",
+            "partial": {
+              "patches": "État des correctifs synchronisé avec des erreurs",
+              "software": "Inventaire logiciel synchronisé avec des erreurs"
+            },
+            "progress": "{{done}} / {{total}} appareils",
+            "retry": "Réessayer",
+            "running": {
+              "patches": "Synchronisation de l'état des correctifs…",
+              "software": "Synchronisation de l'inventaire logiciel…"
+            },
+            "startFailed": "Impossible de démarrer la synchronisation.",
+            "succeeded": {
+              "patches": "État des correctifs synchronisé",
+              "software": "Inventaire logiciel synchronisé"
+            },
+            "truncated": "Affichage des {{shown}} premières erreurs sur {{total}}",
+            "updated": "Appareils mis à jour : {{value}}"
+          },
           "title": "Conformité du parc"
         }
       },

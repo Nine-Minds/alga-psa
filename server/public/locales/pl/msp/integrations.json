@@ -2660,6 +2660,32 @@
           },
           "noData": "Brak dostępnych danych zgodności",
           "summaryError": "Nie udało się załadować podsumowania zgodności",
+          "sync": {
+            "details": "Szczegóły",
+            "endedWithoutResult": "Synchronizacja zakończyła się bez zgłoszenia wyniku.",
+            "failed": {
+              "patches": "Synchronizacja poprawek nie powiodła się: {{reason}}",
+              "software": "Synchronizacja oprogramowania nie powiodła się: {{reason}}"
+            },
+            "failedCount": "Urządzenia z błędem: {{value}}",
+            "partial": {
+              "patches": "Zsynchronizowano stan poprawek z błędami",
+              "software": "Zsynchronizowano inwentarz oprogramowania z błędami"
+            },
+            "progress": "{{done}} / {{total}} urządzeń",
+            "retry": "Spróbuj ponownie",
+            "running": {
+              "patches": "Synchronizowanie stanu poprawek…",
+              "software": "Synchronizowanie inwentarza oprogramowania…"
+            },
+            "startFailed": "Nie udało się rozpocząć synchronizacji.",
+            "succeeded": {
+              "patches": "Zsynchronizowano stan poprawek",
+              "software": "Zsynchronizowano inwentarz oprogramowania"
+            },
+            "truncated": "Wyświetlanie pierwszych {{shown}} z {{total}} błędów",
+            "updated": "Zaktualizowane urządzenia: {{value}}"
+          },
           "title": "Zgodność floty"
         }
       },

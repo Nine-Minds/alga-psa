@@ -422,7 +422,8 @@ export async function syncSoftwareInventory(
           } catch (assetError) {
             result.assetsFailed++;
             const errorMsg = assetError instanceof Error ? assetError.message : String(assetError);
-            recordSyncError(result, `Asset ${asset.asset_id} (${asset.name}): ${errorMsg}`);
+            // Device name, not asset_id: these messages are shown to users in the Fleet Compliance panel.
+            recordSyncError(result, `${asset.name}: ${errorMsg}`);
 
             logger.warn('[SoftwareSync] Failed to sync software for asset', {
               assetId: asset.asset_id,

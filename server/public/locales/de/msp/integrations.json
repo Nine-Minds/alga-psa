@@ -2654,6 +2654,32 @@
           },
           "noData": "Keine Compliance-Daten verfügbar",
           "summaryError": "Compliance-Zusammenfassung konnte nicht geladen werden",
+          "sync": {
+            "details": "Details",
+            "endedWithoutResult": "Die Synchronisierung wurde ohne Ergebnis beendet.",
+            "failed": {
+              "patches": "Patch-Synchronisierung fehlgeschlagen: {{reason}}",
+              "software": "Software-Synchronisierung fehlgeschlagen: {{reason}}"
+            },
+            "failedCount": "Geräte fehlgeschlagen: {{value}}",
+            "partial": {
+              "patches": "Patch-Status mit Fehlern synchronisiert",
+              "software": "Software-Inventar mit Fehlern synchronisiert"
+            },
+            "progress": "{{done}} / {{total}} Geräte",
+            "retry": "Erneut versuchen",
+            "running": {
+              "patches": "Patch-Status wird synchronisiert…",
+              "software": "Software-Inventar wird synchronisiert…"
+            },
+            "startFailed": "Die Synchronisierung konnte nicht gestartet werden.",
+            "succeeded": {
+              "patches": "Patch-Status synchronisiert",
+              "software": "Software-Inventar synchronisiert"
+            },
+            "truncated": "Die ersten {{shown}} von {{total}} Fehlern werden angezeigt",
+            "updated": "Geräte aktualisiert: {{value}}"
+          },
           "title": "Flotten-Compliance"
         }
       },
