@@ -56,6 +56,12 @@ const evaluateScalar = (clause: PredicateClause, actual: unknown): boolean => {
     }
     case 'contains':
       return typeof actual === 'string' && typeof expected === 'string' && actual.includes(expected);
+    case 'not_contains':
+      return typeof actual === 'string' && typeof expected === 'string' && !actual.includes(expected);
+    case 'contains_ci':
+      return typeof actual === 'string' && typeof expected === 'string' && actual.toLowerCase().includes(expected.toLowerCase());
+    case 'not_contains_ci':
+      return typeof actual === 'string' && typeof expected === 'string' && !actual.toLowerCase().includes(expected.toLowerCase());
     case 'starts_with':
       return typeof actual === 'string' && typeof expected === 'string' && actual.startsWith(expected);
     case 'ends_with':

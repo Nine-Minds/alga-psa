@@ -2,20 +2,26 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 import type { IDisplayTag, ITag } from '@alga-psa/types';
 
 import { AsyncSearchableSelect, type SelectOption } from './AsyncSearchableSelect';
 import CustomSelect from './CustomSelect';
-import { Button } from './Button';
+import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import type { EntityAvatarProps } from './EntityAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import { useTranslation } from '../lib/i18n/client';
 import type { AutomationProps } from '../ui-reflection/types';
 
 export type ClientPickerStatusFilter = 'all' | 'active' | 'inactive';
 export type ClientPickerTypeFilter = 'all' | 'company' | 'individual';
+
+type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
+type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 
 /** Slim row returned by the server-side picker search. */
 export interface PickerClientOption {
@@ -47,8 +53,11 @@ export type ClientPickerSearchFn = (
 
 export interface AsyncClientPickerProps {
   id?: string;
-  /** Server search; pass `searchClientsForPicker`. */
-  searchClients: ClientPickerSearchFn;
+  /**
+   * Server search (`searchClientsForPicker`). Optional: falls back to the searcher supplied by
+   * `ClientPickerSearchProvider` (mounted in the MSP shells). An explicit prop wins.
+   */
+  searchClients?: ClientPickerSearchFn;
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientPickerStatusFilter;
@@ -63,6 +72,13 @@ export interface AsyncClientPickerProps {
   className?: string;
   placeholder?: string;
   modal?: boolean;
+  /** Trigger sizes itself to its content instead of filling the row. */
+  fitContent?: boolean;
+  /** Avatar size on the trigger. */
+  size?: EntityAvatarProps['size'];
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerButtonClassName?: string;
   onAddNew?: () => void;
   disabled?: boolean;
   pageSize?: number;
@@ -70,6 +86,18 @@ export interface AsyncClientPickerProps {
 }
 
 const DEFAULT_PAGE_SIZE = 25;
+
+const missingSearcher: ClientPickerSearchFn = async () => {
+  throw new Error(
+    'AsyncClientPicker has no searcher: pass `searchClients` or mount ClientPickerSearchProvider'
+  );
+};
+
+// The picker panel is z-[99999]; a select's option list defaults to z-[10001] and would open underneath it.
+const ABOVE_PICKER_PANEL = { content: 'z-[100000]' };
+// Room for the status and type selects plus the tag filter side by side under a narrow trigger:
+// at their natural widths that row needs ~344px, and the panel clips what does not fit.
+const PANEL_MIN_WIDTH = 360;
 
 function PickerFilters({
   id,
@@ -124,39 +152,46 @@ function PickerFilters({
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-[rgb(var(--color-border-200))]">
-      <CustomSelect
-        id={`${id}-state-filter`}
-        value={status}
-        onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
-        options={statusOptions}
-        placeholder="Filter"
-        className="flex-1 min-w-0"
-      />
-      <CustomSelect
-        id={`${id}-type-filter`}
-        value={clientType}
-        onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
-        options={typeOptions}
-        placeholder="Type"
-        className="flex-1 min-w-0"
-      />
-      {tagOptions.length > 0 && (
-        <TagFilter
-          id={`${id}-tag-filter`}
-          tags={tagOptions}
-          selectedTags={selectedTags}
-          onToggleTag={(tagText) =>
-            onSelectedTagsChange(
-              selectedTags.includes(tagText)
-                ? selectedTags.filter((text) => text !== tagText)
-                : [...selectedTags, tagText]
-            )
-          }
-          onClearTags={() => onSelectedTagsChange([])}
-          modal
-          align="start"
-          contentClassName="z-[100000]"
+      {/* The selects truncate so the tag filter is never pushed past the panel edge, which clips it. */}
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-state-filter`}
+          value={status}
+          onValueChange={(value) => onStatusChange(value as ClientPickerStatusFilter)}
+          options={statusOptions}
+          placeholder="Filter"
+          customStyles={ABOVE_PICKER_PANEL}
         />
+      </div>
+      <div className="flex-1 min-w-0">
+        <CustomSelect
+          id={`${id}-type-filter`}
+          value={clientType}
+          onValueChange={(value) => onClientTypeChange(value as ClientPickerTypeFilter)}
+          options={typeOptions}
+          placeholder="Type"
+          customStyles={ABOVE_PICKER_PANEL}
+        />
+      </div>
+      {tagOptions.length > 0 && (
+        <div className="shrink-0">
+          <TagFilter
+            id={`${id}-tag-filter`}
+            tags={tagOptions}
+            selectedTags={selectedTags}
+            onToggleTag={(tagText) =>
+              onSelectedTagsChange(
+                selectedTags.includes(tagText)
+                  ? selectedTags.filter((text) => text !== tagText)
+                  : [...selectedTags, tagText]
+              )
+            }
+            onClearTags={() => onSelectedTagsChange([])}
+            modal
+            align="start"
+            contentClassName="z-[100000]"
+          />
+        </div>
       )}
     </div>
   );
@@ -169,7 +204,7 @@ function PickerFilters({
  */
 export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProps> = ({
   id = 'client-picker',
-  searchClients,
+  searchClients: searchClientsProp,
   onSelect,
   selectedClientId,
   filterState,
@@ -182,12 +217,21 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   className = '',
   placeholder = 'Select Client',
   modal = true,
+  fitContent = false,
+  size = 'sm',
+  triggerVariant = 'outline',
+  triggerSize,
+  triggerButtonClassName = '',
   onAddNew,
   disabled = false,
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs,
+  'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
+  const contextSearch = useClientPickerSearch();
+  const searchClients: ClientPickerSearchFn =
+    searchClientsProp ?? contextSearch.searchClients ?? missingSearcher;
   const [internalStatus, setInternalStatus] = useState<ClientPickerStatusFilter>(filterState ?? 'active');
   const [internalType, setInternalType] = useState<ClientPickerTypeFilter>(clientTypeFilter ?? 'all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -310,7 +354,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
             clientId={selected.client_id}
             clientName={selected.client_name}
             logoUrl={selected.logoUrl ?? null}
-            size="sm"
+            size={size === 'xs' ? 'xs' : 'sm'}
           />
         ) : undefined
       }
@@ -318,7 +362,14 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       emptyMessage="No clients found."
       className={className}
       disabled={disabled}
+      fitContent={fitContent}
+      triggerVariant={triggerVariant}
+      triggerSize={triggerSize}
+      triggerClassName={triggerButtonClassName}
+      triggerDataAutomationType={dataAutomationType}
       dropdownMode={modal ? 'overlay' : 'inline'}
+      overlayMinWidth={PANEL_MIN_WIDTH}
+      overlayFlip
       headerContent={
         <PickerFilters
           id={id}

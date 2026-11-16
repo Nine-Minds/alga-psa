@@ -15,7 +15,11 @@ import {
   type TicketWatcherWriteResult,
 } from '@alga-psa/shared/services/tickets/ticketWatcherService';
 import type { TicketActionError } from './ticketActionErrors';
-import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '../lib/ticketRecordAuthorization';
+import {
+  runAuthorizedTicketWatcherWrite,
+  TicketWatcherPermissionError,
+  TicketWatcherTicketNotFoundError,
+} from '../lib/ticketRecordAuthorization';
 
 /**
  * UI write path for ticket watchers. Every call goes through TicketWatcherService
@@ -66,6 +70,9 @@ async function runWatcherWrite(
   } catch (error) {
     if (error instanceof TicketWatcherPermissionError) {
       throw new Error(error.message);
+    }
+    if (error instanceof TicketWatcherTicketNotFoundError) {
+      return actionError(error.message);
     }
     if (error instanceof TicketWatcherError) {
       return actionError(error.message);

@@ -225,3 +225,45 @@ describe('QuoteLineItemsEditor row dragging', () => {
     expect(next[0].phase).toBe('Discovery');
   });
 });
+
+// alga-2026-0002902: a quote line's tax treatment was not editable anywhere, so
+// a line created taxable against a non-taxable service could not be corrected.
+describe('QuoteLineItemsEditor taxable toggle', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const taxableToggle = (localId: string) =>
+    document.getElementById(`quote-line-taxable-${localId}`) as HTMLInputElement;
+
+  it('renders a per-line Taxable toggle, checked unless the line is non-taxable', () => {
+    render(
+      <QuoteLineItemsEditor
+        items={[
+          { ...draftItem('item-1', 'Managed Endpoint', 'Discovery'), is_taxable: true },
+          { ...draftItem('item-2', 'Project Management', 'Discovery'), is_taxable: false },
+          // A legacy draft with no stored value still reads as taxable.
+          draftItem('item-3', 'Legacy line', 'Discovery'),
+        ]}
+        currencyCode="USD"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(taxableToggle('item-1').checked).toBe(true);
+    expect(taxableToggle('item-2').checked).toBe(false);
+    expect(taxableToggle('item-3').checked).toBe(true);
+  });
+
+  it('propagates a toggle change to the owning form', () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+
+    fireEvent.click(taxableToggle('item-1'));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as DraftQuoteItem[];
+    expect(next.find((item) => item.local_id === 'item-1')?.is_taxable).toBe(false);
+    expect(next.find((item) => item.local_id === 'item-2')?.is_taxable).toBeUndefined();
+  });
+});

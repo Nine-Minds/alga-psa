@@ -5,9 +5,21 @@
 
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
+import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
+import {
+  CONTACT_LOCATION_CLIENT_MISMATCH,
+  isContactLocationClientMismatch,
+  replaceContactLocations,
+} from '@alga-psa/clients/models/contactLocation';
+import type { ContactLocationInput, ContactWorkArrangement } from '@alga-psa/types';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -28,6 +40,28 @@ type ContactListRow = Omit<IContact, 'phone_numbers'> & {
   phone_numbers?: IContact['phone_numbers'];
   client_name?: string | null;
 };
+
+/**
+ * `locations` and the primary on every contact-returning response, in one batched read per page.
+ * The list, the single read, create, update, search and export all go through here so no surface
+ * quietly omits the field.
+ */
+async function attachLocations<T extends IContact>(
+  conn: Knex,
+  tenant: string,
+  contacts: T[],
+): Promise<T[]> {
+  if (contacts.length === 0) return contacts;
+  const byContact = await getContactLocationsForContacts(
+    conn,
+    tenant,
+    contacts.map((contact) => contact.contact_name_id),
+  );
+  return contacts.map((contact) => ({
+    ...contact,
+    locations: byContact.get(contact.contact_name_id) ?? [],
+  }));
+}
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -91,6 +125,14 @@ function throwContactModelApiError(error: unknown): never {
     throw error;
   }
 
+  // A location of another client is a bad request, not a server fault: it carries a code rather
+  // than a message prefix, so it would otherwise fall through to a 500.
+  if (isContactLocationClientMismatch(error)) {
+    throw new ValidationError('Validation failed', [
+      { path: ['locations'], message: error.message, code: CONTACT_LOCATION_CLIENT_MISMATCH },
+    ]);
+  }
+
   const message = error.message;
   const [, prefix, rawDetail] = message.match(/^([A-Z_]+):\s*(.*)$/) ?? [];
   const detail = rawDetail || message;
@@ -125,6 +167,23 @@ export class ContactService extends BaseService<IContact> {
     });
   }
 
+  /**
+   * The contacts the caller may read, as one SQL predicate (the same compiled narrowing the contact actions use, with
+   * the API key's bundles folded into the subject). Free for a caller nothing narrows.
+   */
+  private async contactNarrowing(conn: Knex | Knex.Transaction, context: ServiceContext, alias: string) {
+    return (await createClientScopeContext(conn, context.tenant, subjectFromServiceContext(context))).narrowing('contact', alias);
+  }
+
+  // LEVERAGE: pattern rest-assert-in-scope — twin of ClientService.assertClientInScope.
+  /** 404 for a contact the caller may not read: an out-of-scope contact is indistinguishable from a missing one. */
+  private async assertContactInScope(conn: Knex | Knex.Transaction, contactId: string, context: ServiceContext): Promise<void> {
+    const scope = await createClientScopeContext(conn, context.tenant, subjectFromServiceContext(context));
+    if (!(await scope.permits('contact', contactId))) {
+      throw new NotFoundError('Contact not found');
+    }
+  }
+
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IContact>> {
     const { knex } = await this.getKnex();
     const {
@@ -146,6 +205,11 @@ export class ContactService extends BaseService<IContact> {
 
     dataQuery = this.applyContactFilters(dataQuery, filters, knex, context.tenant);
     countQuery = this.applyContactFilters(countQuery, filters, knex, context.tenant);
+
+    // Narrow both queries before pagination: the page and the total cover the readable set.
+    const narrowing = await this.contactNarrowing(knex, context, 'c');
+    narrowing.apply(dataQuery);
+    narrowing.apply(countQuery);
 
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
@@ -177,15 +241,24 @@ export class ContactService extends BaseService<IContact> {
       ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx)
     );
 
-    const contactsWithAvatars = await Promise.all(
-      contactsWithPhones.map(async (contact: IContact) => ({
-        ...contact,
-        avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
-      }))
-    );
+    const [contactsWithAvatars, displayTags] = await Promise.all([
+      Promise.all(
+        contactsWithPhones.map(async (contact: IContact) => ({
+          ...contact,
+          avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
+        }))
+      ),
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: contactsWithPhones.map((contact: IContact) => contact.contact_name_id) },
+      ]),
+    ]);
 
     return {
-      data: contactsWithAvatars,
+      data: (await attachLocations(knex, context.tenant, contactsWithAvatars as IContact[])).map((contact) => ({
+        ...contact,
+        display_tags: displayTags.get(displayTagKey('contact', contact.contact_name_id)) ?? [],
+      })),
       total: parseInt(count as string, 10),
     };
   }
@@ -210,6 +283,7 @@ export class ContactService extends BaseService<IContact> {
           { column: 'location_id', order: 'desc' },
         ],
       });
+      (await this.contactNarrowing(trx, context, 'c')).apply(contactQuery);
       const baseContact = await applyDefaultPhoneJoins(contactQuery, trx, context.tenant)
         .where('c.contact_name_id', id)
         .select(
@@ -228,16 +302,26 @@ export class ContactService extends BaseService<IContact> {
       }
 
       const [hydrated] = await ContactModel.hydrateContactsWithPhoneNumbers([baseContact as any], context.tenant, trx);
-      return hydrated as IContact;
+      const [withLocations] = await attachLocations(trx, context.tenant, [hydrated as IContact]);
+      return withLocations;
     });
 
     if (!contact) {
       return null;
     }
 
+    const [avatarUrl, displayTags] = await Promise.all([
+      getContactAvatarUrl(id, context.tenant),
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: [id] },
+      ]),
+    ]);
+
     return {
       ...contact,
-      avatarUrl: await getContactAvatarUrl(id, context.tenant),
+      avatarUrl,
+      // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+      display_tags: displayTags.get(displayTagKey('contact', id)) ?? [],
     } as IContact;
   }
 
@@ -245,6 +329,13 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const contact = await withTransaction(knex, async (trx) => {
+      // Same create gate as the contact actions: the candidate contact's client must be in the caller's scope.
+      await assertRecordCreateAllowed(trx, {
+        tenant: context.tenant,
+        user: subjectFromServiceContext(context),
+        resourceType: 'contact',
+        record: { clientId: data.client_id ?? null },
+      }, 'contact');
       const created = await ContactModel.createContact(
         {
           full_name: data.full_name ?? '',
@@ -259,16 +350,28 @@ export class ContactService extends BaseService<IContact> {
           role: data.role ?? undefined,
           notes: data.notes ?? undefined,
           is_inactive: data.is_inactive ?? false,
+          work_arrangement: (data as { work_arrangement?: ContactWorkArrangement | null }).work_arrangement ?? undefined,
         },
         context.tenant,
         trx
       );
 
+      // Same transaction as the contact, so a cross-client location rolls the contact back too.
+      const locations = (data as { locations?: ContactLocationInput[] }).locations;
+      if (locations !== undefined) {
+        await replaceContactLocations(trx, context.tenant, created.contact_name_id, locations, {
+          createdBy: typeof context.userId === 'string' ? context.userId : null,
+        });
+      }
+
       if ((data as any).tags && (data as any).tags.length > 0) {
         await this.handleTags(created.contact_name_id, (data as any).tags, context, trx);
       }
 
-      return ContactModel.getContactById(created.contact_name_id, context.tenant, trx);
+      const hydrated = await ContactModel.getContactById(created.contact_name_id, context.tenant, trx);
+      if (!hydrated) return hydrated;
+      const [withLocations] = await attachLocations(trx, context.tenant, [hydrated]);
+      return withLocations;
     }).catch(throwContactModelApiError);
 
     if (!contact) {
@@ -337,12 +440,22 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const result = await withTransaction(knex, async (trx) => {
+      await this.assertContactInScope(trx, id, context);
       const before = await ContactModel.getContactById(id, context.tenant, trx);
       if (!before) {
         throw new NotFoundError('Contact not found');
       }
 
-      const after = await ContactModel.updateContact(id, data, context.tenant, trx);
+      // ContactModel already dropped the links when the client changed; an explicit `locations`
+      // then writes the new set, and an omitted one leaves whatever survived.
+      const updated = await ContactModel.updateContact(id, data, context.tenant, trx);
+      const locations = (data as { locations?: ContactLocationInput[] }).locations;
+      if (locations !== undefined) {
+        await replaceContactLocations(trx, context.tenant, id, locations, {
+          createdBy: typeof context.userId === 'string' ? context.userId : null,
+        });
+      }
+      const [after] = await attachLocations(trx, context.tenant, [updated]);
 
       if (data.tags) {
         await this.handleTags(id, data.tags, context, trx);
@@ -403,6 +516,7 @@ export class ContactService extends BaseService<IContact> {
       const scopedDb = tenantDb(trx, context.tenant);
       const contactsQuery = scopedDb.table('contacts as c');
       scopedDb.tenantJoin(contactsQuery, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
+      (await this.contactNarrowing(trx, context, 'c')).apply(contactsQuery);
       const rows = await applyDefaultPhoneJoins(contactsQuery, trx, context.tenant)
         .where('c.client_id', clientId)
         .select(
@@ -413,7 +527,8 @@ export class ContactService extends BaseService<IContact> {
         )
         .orderBy('c.full_name', 'asc');
 
-      return ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], context.tenant, trx);
+      const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], context.tenant, trx);
+      return attachLocations(trx, context.tenant, hydrated as IContact[]);
     });
 
     return Promise.all(
@@ -428,6 +543,7 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     const deletedContact = await withTransaction(knex, async (trx) => {
+      await this.assertContactInScope(trx, id, context);
       const before = await ContactModel.getContactById(id, context.tenant, trx);
       if (!before) {
         throw new NotFoundError('Contact not found');
@@ -464,6 +580,8 @@ export class ContactService extends BaseService<IContact> {
     let query = scopedDb.table('contacts as c');
     query = scopedDb.tenantJoin(query, 'clients as comp', 'c.client_id', 'comp.client_id', { type: 'left' });
     query = applyDefaultPhoneJoins(query, knex, context.tenant);
+
+    (await this.contactNarrowing(knex, context, 'c')).apply(query);
 
     if (!searchData.include_inactive) {
       query = query.where('c.is_inactive', false);
@@ -514,9 +632,10 @@ export class ContactService extends BaseService<IContact> {
       .limit(searchData.limit || 25)
       .orderBy('c.full_name', 'asc');
 
-    const hydratedContacts = await withTransaction(knex, async (trx) =>
-      ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx)
-    );
+    const hydratedContacts = await withTransaction(knex, async (trx) => {
+      const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx);
+      return attachLocations(trx, context.tenant, hydrated as IContact[]);
+    });
 
     return Promise.all(
       hydratedContacts.map(async (contact) => ({
@@ -529,8 +648,10 @@ export class ContactService extends BaseService<IContact> {
   async getContactStats(context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
+    // Statistics cover the contacts the caller may read.
+    const narrowing = await this.contactNarrowing(knex, context, 'contacts');
     const [totalStats, roleStats, recentStats] = await Promise.all([
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .select(
           knex.raw('COUNT(*) as total_contacts'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_contacts'),
@@ -539,12 +660,12 @@ export class ContactService extends BaseService<IContact> {
           knex.raw('COUNT(CASE WHEN client_id IS NULL THEN 1 END) as contacts_without_client')
         )
         .first(),
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .whereNotNull('role')
         .where('role', '!=', '')
         .groupBy('role')
         .select('role', knex.raw('COUNT(*) as count')),
-      tenantDb(knex, context.tenant).table('contacts')
+      narrowing.apply(tenantDb(knex, context.tenant).table('contacts'))
         .where('created_at', '>=', knex.raw("now() - interval '30 days'"))
         .count('* as recent_contacts')
         .first(),
@@ -581,13 +702,18 @@ export class ContactService extends BaseService<IContact> {
       ...filters,
     }, knex, context.tenant);
 
-    const contacts = await query
+    // The export reads the contacts the caller may read, through the same narrowing as the contact list:
+    // contacts of clients outside the caller's scope, and contacts with no client, are not exported.
+    (await (await createClientScopeContext(knex, context.tenant, subjectFromServiceContext(context))).narrowing('contact', 'c')).apply(query);
+
+    const baseRows = await query
       .select(
         'c.contact_name_id',
         'c.full_name',
         'c.email',
         'c.role',
         'c.is_inactive',
+        'c.work_arrangement',
         'c.created_at',
         'comp.client_name',
         'cpn_default.phone_number as default_phone_number',
@@ -595,13 +721,15 @@ export class ContactService extends BaseService<IContact> {
       )
       .orderBy('c.full_name', 'asc');
 
+    const contacts = await attachLocations(knex, context.tenant, baseRows as IContact[]);
+
     if (format === 'json') {
       return JSON.stringify(contacts, null, 2);
     }
 
     const headers = [
       'ID', 'Full Name', 'Email', 'Phone', 'Phone Type', 'Role',
-      'Client', 'Inactive', 'Created At',
+      'Client', 'Inactive', 'Work Arrangement', 'Locations', 'Primary Location', 'Created At',
     ];
 
     const rows = contacts.map((contact: any) => [
@@ -613,6 +741,10 @@ export class ContactService extends BaseService<IContact> {
       contact.role || '',
       contact.client_name || '',
       contact.is_inactive ? 'Yes' : 'No',
+      contact.work_arrangement || '',
+      // "Warehouse; Head office" — the same separator CSV import reads back.
+      (contact.locations ?? []).map((location: any) => location.location_name ?? '').filter(Boolean).join('; '),
+      (contact.locations ?? []).find((location: any) => location.is_primary)?.location_name || '',
       contact.created_at,
     ]);
 
@@ -670,6 +802,18 @@ export class ContactService extends BaseService<IContact> {
           break;
         case 'client_name':
           query.whereILike('comp.client_name', `%${value}%`);
+          break;
+        case 'location_id':
+          // Linked in any role, primary or not; tenant carried on both sides of the correlation.
+          query.whereExists(
+            scopedDb.subquery('contact_locations as cl_filter')
+              .select(knex.raw('1'))
+              .whereRaw('cl_filter.contact_name_id = c.contact_name_id')
+              .andWhere('cl_filter.location_id', value)
+          );
+          break;
+        case 'work_arrangement':
+          query.where('c.work_arrangement', value);
           break;
         case 'search': {
           const normalizedDigits = normalizePhoneForSearch(String(value));

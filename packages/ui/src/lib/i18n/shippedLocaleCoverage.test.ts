@@ -82,3 +82,27 @@ describe('ticket time entry billable badge resolves in every translated locale',
     expect(t('timeEntries.nonBillable')).toBe('Icke-debiterbar');
   });
 });
+
+describe('Spanish shared UI messages resolve without falling back to English', () => {
+  it.each([
+    ['licenseBanner.subscriptionEnding', 'Su suscripción Pro se ha cancelado. Pro finaliza el 15/11/2026. Vuelva a suscribirse para conservar Pro.'],
+    ['licenseBanner.paymentFailed', 'Pago fallido — lo reintentaremos el 15/11/2026. Actualice su método de pago para conservar Pro.'],
+    ['pickers.contactRemoteLocation', 'Remoto'],
+    ['pickers.activeBoards', 'Tableros activos'],
+    ['documents.folders.show', 'Mostrar carpetas'],
+    ['documents.selectOrCreate', 'Seleccione un documento o cree uno nuevo.'],
+    ['documents.actions.save', 'Guardar'],
+    ['documents.viewMode.grid', 'Cuadrícula'],
+    ['documents.unsavedChanges.message', '¿Está seguro de que desea cancelar? Se perderán los cambios sin guardar.'],
+    ['labels.dialog.copiesPerAsset', 'Copias por activo'],
+    ['labels.dialog.adjacentCopies', 'Las copias de cada activo se imprimen juntas.'],
+    ['notifications.title', 'Notificaciones'],
+    ['notifications.emptyDescription', '¡Está al día!'],
+  ])('%s', (key, expected) => {
+    const t = i18next.getFixedT('es', 'common');
+    const result = t(key, { date: '15/11/2026', fallbackLng: 'en', returnDetails: true });
+
+    expect(result.usedLng).toBe('es');
+    expect(result.res).toBe(expected);
+  });
+});

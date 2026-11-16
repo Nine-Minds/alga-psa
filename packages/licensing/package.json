@@ -2,6 +2,7 @@
   "name": "@alga-psa/licensing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -25,6 +26,11 @@
       "types": "./src/co-managed-write-admission.ts",
       "import": "./src/co-managed-write-admission.ts",
       "require": "./src/co-managed-write-admission.ts"
+    },
+    "./co-managed-seat-write-admission": {
+      "types": "./src/co-managed-seat-write-admission.ts",
+      "import": "./src/co-managed-seat-write-admission.ts",
+      "require": "./src/co-managed-seat-write-admission.ts"
     },
     "./actions": {
       "types": "./src/actions/index.ts",

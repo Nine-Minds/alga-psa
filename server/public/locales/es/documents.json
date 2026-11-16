@@ -56,6 +56,20 @@
     "product": "Producto",
     "projectPhase": "Fase del proyecto",
     "qty": "Cant.",
+    "quoteAcceptance": {
+      "title": "Cotización aceptada",
+      "signedBy": "Firmado por",
+      "email": "Correo electrónico",
+      "jobTitle": "Cargo",
+      "acceptedOn": "Aceptado el",
+      "method": "Método",
+      "ipAddress": "Dirección IP",
+      "methods": {
+        "emailLink": "Enlace por correo",
+        "portal": "Portal del cliente",
+        "msp": "Registrado por el MSP"
+      }
+    },
     "quoteNumber": "Cotización n.º",
     "quoteTitle": "COTIZACIÓN",
     "rate": "Tarifa",
@@ -69,6 +83,7 @@
     "sku": "SKU",
     "source": "Origen",
     "subtotal": "Subtotal",
+    "subtotalBeforeDiscounts": "Subtotal antes de descuentos",
     "tax": "Impuesto",
     "termsAndConditions": "Términos y condiciones",
     "ticket": "Ticket",
@@ -164,6 +179,7 @@
     "upload": {
       "fileRequired": "Elija un archivo antes de subirlo.",
       "typeNotAllowed": "Este tipo de archivo no está permitido.",
+      "contentMismatch": "El contenido de este archivo no coincide con su tipo de archivo, por lo que no se ha subido. Compruebe que ha elegido el archivo correcto.",
       "sessionRequired": "Se requiere su sesión para subir documentos. Inicie sesión de nuevo."
     }
   },

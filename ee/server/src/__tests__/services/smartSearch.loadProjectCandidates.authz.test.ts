@@ -16,8 +16,8 @@ vi.mock('@alga-psa/projects/actions/projectActions', () => ({
 }));
 vi.mock('@alga-psa/search/acl', () => ({
   aclPredicateSql: () => ({ sql: 'true', bindings: [] }),
-  resolveSearchAclPrincipal: async () => ({}),
 }));
+vi.mock('@alga-psa/search/runAppSearch', () => ({ resolveSearchPrincipal: async () => ({}) }));
 vi.mock('@alga-psa/core/capability', () => ({ serves: mocks.served }));
 vi.mock('@alga-psa/co-managed/coManagedWorkspace', () => ({ isCoManagedWorkspace: mocks.coManagedWorkspace }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } }));

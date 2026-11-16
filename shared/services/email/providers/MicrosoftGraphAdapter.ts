@@ -126,6 +126,9 @@ export type MicrosoftGraphSendMailPayload =
   | { kind: 'json'; message: Record<string, unknown>; fromAddress?: string }
   | { kind: 'mime'; content: string; fromAddress?: string };
 
+/** Marks a request config that already spent its one refresh-and-replay. */
+const TOKEN_RECOVERY_ATTEMPTED = '__algaTokenRecoveryAttempted';
+
 function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
   const status = error?.response?.status ?? error?.status;
   const code = String(error?.response?.data?.error?.code ?? error?.code ?? '');
@@ -184,6 +187,37 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
       return config;
     });
+
+    // Graph can reject a bearer the stored expiry still calls live: the token
+    // was revoked, or another process refreshed first and rotated it. One
+    // refresh and one replay per request recovers that on every call the
+    // adapter makes, connect's /me probe included, instead of only on sendMail.
+    this.httpClient.interceptors.response.use(undefined, async (error: any) => {
+      const request = error?.config;
+      if (error?.response?.status !== 401 || !request || request[TOKEN_RECOVERY_ATTEMPTED]) throw error;
+      request[TOKEN_RECOVERY_ATTEMPTED] = true;
+      await this.refreshAccessTokenOnce();
+      return this.httpClient.request(request);
+    });
+  }
+
+  private tokenRefresh: Promise<void> | null = null;
+
+  /**
+   * Parallel requests that all find the token dead share one refresh. The
+   * token endpoint rotates refresh tokens, so a second concurrent refresh
+   * would replay a refresh token that the first one already consumed.
+   */
+  private refreshAccessTokenOnce(): Promise<void> {
+    this.tokenRefresh ??= this.refreshAccessToken().finally(() => {
+      this.tokenRefresh = null;
+    });
+    return this.tokenRefresh;
+  }
+
+  protected async ensureValidToken(): Promise<void> {
+    if (!this.accessToken) await this.loadCredentials();
+    if (this.isTokenExpired()) await this.refreshAccessTokenOnce();
   }
 
   /**
@@ -656,7 +690,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   /** Proactively load and refresh credentials when they are near expiry. */
   async ensureTokenHealthy(bufferMinutes = 30): Promise<void> {
     if (!this.accessToken) await this.loadCredentials();
-    if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessToken();
+    if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessTokenOnce();
   }
 
   /**
@@ -685,20 +719,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         });
 
     try {
+      // A 401 here is refreshed and replayed once by the client's response
+      // interceptor, like every other Graph call.
       const response = await send();
       return this.extractGraphIds(response.headers);
     } catch (error: any) {
-      if (error?.response?.status === 401) {
-        // A single bounded retry covers tokens revoked/expired between the
-        // request interceptor's expiry check and Graph receiving the request.
-        await this.refreshAccessToken();
-        try {
-          const response = await send();
-          return this.extractGraphIds(response.headers);
-        } catch (retryError) {
-          throw this.toSanitizedGraphError(retryError, 'sendMail');
-        }
-      }
       throw this.toSanitizedGraphError(error, 'sendMail');
     }
   }

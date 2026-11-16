@@ -108,10 +108,13 @@
     "ticketsTemplates": "Ärendemallar",
     "assetsCustody": "Utrustning i förvar",
     "ticketsCannedResponses": "Färdiga svar",
+    "ticketsCustomer": "Kundärenden",
     "profile": "Profil",
     "signOut": "Logga ut",
     "coManaged": "Samförvaltad IT",
-    "coManagedAdministration": "Åtkomst och administration"
+    "coManagedArchive": "Arkiv för samförvaltning",
+    "coManagedAdministration": "Åtkomst och administration",
+    "assetsAudits": "Platsgranskningar"
   },
   "marketing": {
     "dialogs": {

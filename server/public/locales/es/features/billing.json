@@ -203,6 +203,7 @@
       "exclude": "Excluir",
       "excluded": "Excluido",
       "fallbackTitle": "Cotización {{id}}",
+      "unnumberedTitle": "Cotización",
       "include": "Incluir",
       "included": "Incluido",
       "lineItems": "Artículos",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Términos y condiciones",
       "total": "Total",
       "validUntil": "Válido hasta"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Cotización aceptada",
+        "body": "Gracias. Su aceptación ha sido registrada y hemos sido notificados."
+      },
+      "rejected": {
+        "title": "Cotización rechazada",
+        "body": "Su respuesta ha sido registrada y hemos sido notificados."
+      },
+      "already": {
+        "title": "Esta cotización ya ha sido respondida",
+        "accepted": "Esta cotización fue aceptada el {{date}}.",
+        "rejected": "Esta cotización fue rechazada el {{date}}."
+      },
+      "changed": {
+        "title": "Esta cotización ha cambiado",
+        "body": "Esta cotización ha cambiado desde que la abrió. Póngase en contacto con nosotros."
+      },
+      "optionalItems": "Elementos opcionales",
+      "optionalHint": "Elija los elementos opcionales que desea. Su selección se envía al aceptar.",
+      "subtotal": "Subtotal",
+      "tax": "Impuestos",
+      "total": "Total",
+      "fullName": "Nombre completo",
+      "titleOptional": "Cargo (opcional)",
+      "agreementVersion": "Versión del acuerdo {{version}}",
+      "accept": "Aceptar cotización",
+      "reject": "Rechazar cotización",
+      "submitting": "Enviando...",
+      "rejectTitle": "Rechazar cotización",
+      "rejectHint": "Indíquenos qué debe cambiar. Es posible que revisemos y reenviemos la cotización.",
+      "rejectConfirm": "Rechazar",
+      "cancel": "Cancelar",
+      "errors": {
+        "generic": "Algo salió mal. Inténtelo de nuevo.",
+        "nameRequired": "Escriba su nombre completo.",
+        "agreementRequired": "Confirme el acuerdo para aceptar esta cotización.",
+        "agreementOutdated": "El texto del acuerdo se ha actualizado. Recargue la página e inténtelo de nuevo.",
+        "commentRequired": "Añada un breve comentario antes de rechazar esta cotización.",
+        "tooLong": "Una de sus entradas es demasiado larga.",
+        "reload": "Vuelva a cargar esta página e inténtelo de nuevo."
+      }
+    },
+    "public": {
+      "metaTitle": "Revisión de cotización",
+      "notice": {
+        "accepted": "Este cotización ha sido aceptado. Se muestra aquí para su referencia.",
+        "declined": "Este cotización ha sido rechazado. Se muestra aquí para su referencia.",
+        "converted": "Este cotización ha sido aceptado y está en curso. Se muestra aquí para su referencia.",
+        "readOnly": "Esta es una vista de solo lectura de su cotización."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Este enlace no está disponible",
+          "body": "Es posible que el enlace esté mal escrito o que ya no esté activo."
+        },
+        "expired": {
+          "title": "Este enlace ha caducado",
+          "body": "Por seguridad, los enlaces de cotizaciones dejan de funcionar pasado un tiempo."
+        },
+        "superseded": {
+          "title": "Este cotización ha sido reemplazado",
+          "body": "Se ha enviado una versión más reciente. Utilice el enlace del último correo."
+        },
+        "decided": {
+          "title": "Este cotización ya ha sido resuelto",
+          "body": "Ya se registró una respuesta, por lo que no se puede abrir desde este enlace."
+        },
+        "help": "¿Necesita ayuda? Responda al correo en el que recibió este enlace.",
+        "signIn": "Iniciar sesión en el portal de clientes",
+        "signInHint": "¿Ya tiene una cuenta en el portal de clientes?"
+      }
     }
   },
   "enums": {

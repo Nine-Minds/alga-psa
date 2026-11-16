@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAllClients } from '../../actions/clientLookupActions';
+import { searchClientsForPicker } from '../../actions/clientLookupActions';
 import { addClientsToRecurringTicketDefinition } from '../../actions/recurringTicketActions';
 import { recurringErrorMessage } from './recurringUi';
 
@@ -31,8 +30,6 @@ export function AddRecurringClientsDialog({
   isOpen, onClose, definitionId, existingClientIds, onAdded,
 }: AddRecurringClientsDialogProps) {
   const { t } = useTranslation('features/tickets');
-  const [clients, setClients] = useState<IClient[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [typeFilter, setTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -45,16 +42,6 @@ export function AddRecurringClientsDialog({
     setAddedNames([]);
     setAddedIds([]);
     setAddError(null);
-    let cancelled = false;
-    void (async () => {
-      try {
-        const all = await getAllClients(true);
-        if (!cancelled) setClients(all);
-      } catch (error) {
-        if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
-      }
-    })();
-    return () => { cancelled = true; };
   }, [isOpen]);
 
   const add = async (clientId: string | null) => {
@@ -68,7 +55,10 @@ export function AddRecurringClientsDialog({
         setAddError(message);
         return;
       }
-      const client = clients.find((candidate) => candidate.client_id === clientId);
+      // The picker is server-searched, so resolve the display name of the picked client by id.
+      // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
+      const lookup = await searchClientsForPicker({ ids: [clientId], status: 'all' }).catch(() => null);
+      const client = lookup?.clients.find((candidate) => candidate.client_id === clientId);
       setAddedIds((current) => [...current, clientId]);
       setAddedNames((current) => [...current, client?.client_name ?? clientId]);
       onAdded();
@@ -102,11 +92,10 @@ export function AddRecurringClientsDialog({
           <p className="text-sm text-[rgb(var(--color-text-600))]">
             {t('recurring.clients.addHelp', 'Pick a client to add it. The dialog stays open so you can add more.')}
           </p>
-          {loadError && <Alert variant="destructive"><AlertDescription>{loadError}</AlertDescription></Alert>}
           {addError && <Alert variant="destructive"><AlertDescription>{addError}</AlertDescription></Alert>}
           <ClientPicker
             id="recurring-add-clients-picker"
-            clients={clients}
+            searchClients={searchClientsForPicker}
             selectedClientId={null}
             onSelect={(clientId) => void add(clientId)}
             filterState={filterState}

@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 /**
  * Level.io alert ingestion, end to end through the algasim Level emulator.
  *
@@ -224,7 +225,7 @@ beforeAll(async () => {
   // Both scenario devices, synced: the realm is the deepest mapped group (Acme).
   for (const [deviceId, name] of [[WS_01, 'WS-01'], [SRV_01, 'SRV-01']] as const) {
     const assetId = uuidv4();
-    await table('assets').insert({
+    await insertTestAssets(h.db, {
       tenant: tenantId,
       asset_id: assetId,
       asset_type: deviceId === SRV_01 ? 'server' : 'workstation',

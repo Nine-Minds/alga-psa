@@ -10,8 +10,8 @@ interface SubmissionFieldSnapshot {
 }
 
 interface SubmissionAttachmentSnapshot {
+  submission_attachment_id: string;
   field_key?: string | null;
-  file_id: string;
   file_name?: string | null;
 }
 
@@ -35,6 +35,7 @@ function getFileUploadFields(fields: SubmissionFieldSnapshot[]): SubmissionField
   );
 }
 
+// LEVERAGE: pattern service-request-answer-display — ticketOnlyExecutionProvider.ts describeAnswer resolves the same display values for the ticket description.
 export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],

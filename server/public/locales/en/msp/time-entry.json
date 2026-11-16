@@ -290,7 +290,8 @@
   "comments": {
     "placeholder": "Add a comment...",
     "responsePlaceholder": "Respond to the requested changes...",
-    "respondToChanges": "Respond to Changes"
+    "respondToChanges": "Respond to Changes",
+    "loading": "Loading comments..."
   },
   "feedback": {
     "approverFeedback": "Approver feedback",
@@ -367,7 +368,17 @@
       "title": "No work items on your time sheet",
       "description": "Add a new work item to get started tracking your time for this week.",
       "getStarted": "Get Started"
-    }
+    },
+    "reflectionLabel": "Time Sheet Data Table",
+    "deleteWorkItem": {
+      "title": "Delete Work Item",
+      "message": "This will permanently delete all time entries for this work item. This action cannot be undone."
+    },
+    "bundled": "Bundled",
+    "bundledTo": "Bundled → {{ticketNumber}}",
+    "addEntryForCell": "Add time entry for {{workItem}} on {{date}}",
+    "saveTimeEntry": "Save time entry",
+    "weeklyTotal": "Weekly Total"
   },
   "timeSheetList": {
     "delete": {
@@ -436,7 +447,10 @@
     "saveChangesFailed": "Failed to save changes",
     "changesSaved": "Changes saved successfully",
     "workItemDeleted": "Work item deleted successfully",
-    "submitFailed": "Failed to submit time sheet"
+    "submitFailed": "Failed to submit time sheet",
+    "saveEntryFailed": "Failed to save time entry",
+    "updateTaskFailed": "Failed to update task",
+    "deleteWorkItemFailed": "Failed to delete work item"
   },
   "bundleNotice": {
     "withNumber": "This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.",
@@ -576,5 +590,10 @@
     "ticketFallbackName": "Ticket {{number}}",
     "pausedNotice_few": "Tracked {{active}} across {{count}} segments (paused {{paused}})",
     "pausedNotice_many": "Tracked {{active}} across {{count}} segments (paused {{paused}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Time Sheet Management",
+    "delegationDisabledPrefix": "Delegated time entry is currently disabled. Enable the",
+    "delegationDisabledSuffix": "feature flag to edit other users' time sheets."
   }
 }

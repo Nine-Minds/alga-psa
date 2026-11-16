@@ -70,6 +70,7 @@ function createChainableQuery<T>(result: T, whereCalls: Array<unknown[]>): any {
   builder.whereIn = vi.fn(() => builder);
   builder.whereNull = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
+  builder.whereRaw = vi.fn((...args: any[]) => { whereCalls.push(['whereRaw', ...args]); return builder; });
   builder.select = vi.fn(() => builder);
   builder.first = vi.fn(async () => null);
   builder.raw = vi.fn(() => 'RAW');

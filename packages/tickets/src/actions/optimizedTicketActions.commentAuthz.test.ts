@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { addTicketCommentInTransaction, addTicketCommentWithCache } from './optimizedTicketActions';
+import { bulkUpdateTicketStatus } from './ticketActions';
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -11,10 +13,16 @@ let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let visibilityByContact: Record<string, any>;
 let inserts: Array<{ table: string; row: any }>;
+let updates: Array<{ table: string; patch: any }>;
+// Seat-table fixtures and a log of every table the fake transaction was asked about.
+let firstByTable: Record<string, unknown>;
+let tablesTouched: string[];
 
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
+const registerAfterCommitMock = vi.fn();
+const resolveBundleRulesMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -23,6 +31,7 @@ vi.mock('@alga-psa/auth', () => ({
     action(currentUser, { tenant: 'tenant-1' }, ...args),
   hasPermission: vi.fn(async () => true),
   getCurrentUser: vi.fn(async () => null),
+  localizeActionError: async (result: unknown) => result,
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
@@ -31,13 +40,25 @@ vi.mock('@alga-psa/auth/actions', () => ({ getTicketAttributes: vi.fn() }));
 
 /** Permissive chainable query builder: awaiting yields [], `.first()` yields the table's row. */
 function makeBuilder(table: string) {
+  tablesTouched.push(table);
   const builder: any = new Proxy(function () {}, {
     get(_t, prop: string) {
       if (prop === 'then') {
         return (resolve: any) => resolve([]);
       }
       if (prop === 'first') {
-        return async () => (table === 'tickets' ? ticketRow ?? undefined : undefined);
+        return async () => {
+          if (table === 'tickets') return ticketRow ?? undefined;
+          if (table === 'statuses') return { status_id: 'status-closed', is_closed: true };
+          if (table in (firstByTable ?? {})) return firstByTable[table];
+          return undefined;
+        };
+      }
+      if (prop === 'update') {
+        return (patch: any) => {
+          updates.push({ table, patch });
+          return builder;
+        };
       }
       if (prop === 'insert') {
         return (row: any) => {
@@ -62,7 +83,7 @@ function makeTrx() {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
-  registerAfterCommit: vi.fn(),
+  registerAfterCommit: (...args: any[]) => registerAfterCommitMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
@@ -99,7 +120,7 @@ vi.mock('@alga-psa/shared/lib/ticketCommentAttachments', () => ({
   persistCommentPublication: vi.fn(async () => undefined),
   reconcileCommentAttachments: vi.fn(async () => undefined),
 }));
-vi.mock('../lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: async (_trx: unknown, _tenant: string, contactId: string) => {
     const ctx = visibilityByContact[contactId];
     if (!ctx) throw new Error('visibility unresolved');
@@ -107,7 +128,19 @@ vi.mock('../lib/clientPortalVisibility.server', () => ({
   },
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  resolveBundleNarrowingRulesForEvaluation: (...args: any[]) => resolveBundleRulesMock(...args),
+  authorizationEvaluationSnapshotQuery: vi.fn(() => ({ as: () => null })),
+  loadAuthorizationEvaluationSnapshot: vi.fn(async (_trx: any, input: any) => ({
+    roleIds: [], teamIds: [], managedUserIds: [], rules: (await resolveBundleRulesMock(input)).map((rule: any) => ({
+      rule_id: rule.id, resource_type: rule.resource, action: rule.action, template_key: rule.templateKey,
+      constraint_key: rule.constraintKey ?? null, config: { selectedBoardIds: rule.selectedBoardIds },
+    })),
+  })),
+  bundleNarrowingRuleFromRow: (rule: any) => ({
+    id: rule.rule_id, resource: rule.resource_type, action: rule.action, templateKey: rule.template_key,
+    constraintKey: rule.constraint_key ?? null, constraints: rule.config?.constraints ?? [],
+    selectedBoardIds: rule.config?.selectedBoardIds ?? [],
+  }),
 }));
 
 const CONTENT = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'hi' }] }]);
@@ -168,11 +201,17 @@ const writtenTables = () => inserts.map((i) => i.table);
 describe('addTicketCommentInTransaction record-level authorization', () => {
   beforeEach(() => {
     inserts = [];
+    updates = [];
+    firstByTable = {};
+    tablesTouched = [];
+    registerAfterCommitMock.mockClear();
+    vi.mocked(persistCommentPublication).mockClear();
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
     ticketRow = ticket();
     visibilityByContact = { 'contact-1': visibility() };
     currentUser = clientUser();
     hasPermissionMock.mockReset().mockResolvedValue(true);
-    createTenantKnexMock.mockReset().mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: makeTrx(), tenant: 'tenant-1' });
     withTransactionMock.mockReset().mockImplementation(async (_knex: any, cb: any) => cb(makeTrx()));
   });
 
@@ -274,19 +313,130 @@ describe('addTicketCommentInTransaction record-level authorization', () => {
     expect(writtenTables()).toEqual([]);
   });
 
-  it('gates the bulk status path (ticketActions.ts) because it calls the same helper', async () => {
-    const { readFileSync } = await import('node:fs');
-    const { resolve } = await import('node:path');
-    const source = readFileSync(resolve(__dirname, 'ticketActions.ts'), 'utf8');
-    expect(source).toContain("addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {");
-    // And the helper authorizes before its first write.
-    const helper = readFileSync(resolve(__dirname, 'optimizedTicketActions.ts'), 'utf8');
-    const start = helper.indexOf('export async function addTicketCommentInTransaction');
-    const body = helper.slice(start, helper.indexOf('export const addTicketCommentWithCache'));
-    const authz = body.indexOf('authorizeTicketRecordAccess(');
-    expect(authz).toBeGreaterThan(-1);
-    for (const write of ["table('comment_threads').insert", "table<IComment>('comments').insert", 'updateTicketResponseStateFromComment(']) {
-      expect(body.indexOf(write)).toBeGreaterThan(authz);
-    }
+  it('denies a bulk resolution outside the MSP user\'s board grant before any write or event', async () => {
+    currentUser = internalUser;
+    ticketRow = ticket({ response_state: 'awaiting_internal' });
+    resolveBundleRulesMock.mockResolvedValue([{
+      id: 'board-grant',
+      resource: 'ticket',
+      action: 'update',
+      templateKey: 'selected_boards',
+      selectedBoardIds: ['board-other'],
+    }]);
+
+    const result = await bulkUpdateTicketStatus(['ticket-1'], 'status-closed', {
+      resolutionComment: { text: 'Resolved.', isInternal: false },
+    });
+
+    expect(withTransactionMock).toHaveBeenCalledTimes(1);
+    expect(resolveBundleRulesMock).toHaveBeenCalled();
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed).toEqual([expect.objectContaining({
+      ticketId: 'ticket-1',
+      message: 'Permission denied: Cannot access ticket',
+    })]);
+    expect(inserts).toEqual([]);
+    expect(updates).toEqual([]);
+    expect(persistCommentPublication).not.toHaveBeenCalled();
+    expect(registerAfterCommitMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * S25 (F060): the ticket-screen write paths decide the author. A seat technician (a loaded user row
+ * with `seat_reader: true` and a live seat assignment) is refused Private and the legacy internal
+ * note with COMMENT_AUDIENCE_INVALID, writing nothing; MSP staff (`seat_reader: false`) read no seat
+ * table at all.
+ */
+describe('seat technician comment writes (S25, F060)', () => {
+  const seatUser = { user_id: 'seat-1', user_type: 'internal', tenant: 'tenant-1', seat_reader: true, roles: [{ role_id: 'r' }] };
+  const staffUser = { ...internalUser, seat_reader: false };
+  const SEAT_ASSIGNMENT = 'co_managed_seat_assignments as sa';
+  const seatTables = () => tablesTouched.filter((t) => /co_managed_/.test(t));
+
+  beforeEach(() => {
+    inserts = [];
+    updates = [];
+    firstByTable = {
+      [SEAT_ASSIGNMENT]: { assignment_state: 'active', arrangement_state: 'active', client_id: 'client-1' },
+      co_managed_seat_arrangements: { arrangement_id: 'arr-1' },
+    };
+    tablesTouched = [];
+    registerAfterCommitMock.mockClear();
+    resolveBundleRulesMock.mockReset().mockResolvedValue([]);
+    ticketRow = ticket();
+    visibilityByContact = {};
+    currentUser = seatUser;
+    hasPermissionMock.mockReset().mockResolvedValue(true);
+    createTenantKnexMock.mockReset().mockResolvedValue({ knex: makeTrx(), tenant: 'tenant-1' });
+    withTransactionMock.mockReset().mockImplementation(async (_knex: any, cb: any) => cb(makeTrx()));
+  });
+
+  const refused = { code: 'COMMENT_AUDIENCE_INVALID' };
+
+  it('refuses a Private (organization_private) comment and writes nothing', async () => {
+    await expect(addTicketCommentInTransaction(makeTrx(), seatUser as any, 'tenant-1',
+      { ticketId: 'ticket-1', content: CONTENT, isInternal: true, isResolution: false, audienceId: 'organization_private' }))
+      .rejects.toMatchObject(refused);
+    expect(writtenTables()).toEqual([]);
+  });
+
+  it('refuses the legacy internal note (internal, no audience)', async () => {
+    await expect(addTicketCommentInTransaction(makeTrx(), seatUser as any, 'tenant-1', input({ isInternal: true })))
+      .rejects.toMatchObject(refused);
+    expect(writtenTables()).toEqual([]);
+  });
+
+  it('addTicketCommentWithCache returns the expected error, not a throw, and writes nothing', async () => {
+    const result: any = await addTicketCommentWithCache('ticket-1', CONTENT, true, false, false, undefined, null, null, 'organization_private');
+    expect(result).toBeTruthy();
+    expect(result.comment_id).toBeUndefined();
+    expect(result.messageKey).toBe('features/tickets:errors.comment.audienceInvalid');
+    expect(writtenTables()).toEqual([]);
+  });
+
+  it('bulk close with an internal resolution comment is refused for the seat technician, per ticket', async () => {
+    ticketRow = ticket({ response_state: 'awaiting_internal' });
+    const result = await bulkUpdateTicketStatus(['ticket-1'], 'status-closed', {
+      resolutionComment: { text: 'Resolved.', isInternal: true },
+    });
+    expect(result.updatedIds).toEqual([]);
+    expect(result.failed).toHaveLength(1);
+    expect(writtenTables()).not.toContain('comments');
+  });
+
+  it.each([
+    ['requester', false],
+    ['shared_it', false],
+  ])('allows %s on the seat technician\'s own client ticket (live arrangement)', async (audienceId) => {
+    const isInternal = audienceId === 'shared_it';
+    await addTicketCommentInTransaction(makeTrx(), seatUser as any, 'tenant-1',
+      input({ isInternal, audienceId }));
+    expect(writtenTables()).toContain('comments');
+  });
+
+  it('refuses a seat technician on another client\'s ticket', async () => {
+    ticketRow = ticket({ client_id: 'client-2' });
+    await expect(addTicketCommentInTransaction(makeTrx(), seatUser as any, 'tenant-1', input({ audienceId: 'requester' })))
+      .rejects.toMatchObject(refused);
+    expect(writtenTables()).toEqual([]);
+  });
+
+  describe('MSP staff are unchanged', () => {
+    it.each([
+      ['Private', { isInternal: true, audienceId: 'organization_private' }],
+      ['legacy internal', { isInternal: true }],
+      ['requester', { isInternal: false }],
+    ])('%s still succeeds and reads no seat table when seat_reader is false', async (_label, extra) => {
+      await addTicketCommentInTransaction(makeTrx(), staffUser as any, 'tenant-1', input(extra));
+      expect(writtenTables()).toContain('comments');
+      expect(seatTables()).toEqual([]);
+    });
+
+    it('a staff row that does not say (no seat_reader) is resolved from the seat tables and still writes', async () => {
+      firstByTable = {};
+      await addTicketCommentInTransaction(makeTrx(), internalUser as any, 'tenant-1', input({ isInternal: true }));
+      expect(writtenTables()).toContain('comments');
+    });
   });
 });

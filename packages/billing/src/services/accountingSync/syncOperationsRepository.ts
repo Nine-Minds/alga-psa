@@ -262,4 +262,38 @@ export class SyncOperationsRepository {
 
     return Object.fromEntries(rows.map((row) => [row.status, Number(row.count)]));
   }
+
+  /**
+   * Terminal failures ('skipped' + 'failed'), newest first. Scoped exactly like
+   * countByStatus (tenant, adapter type, optional realm) so the list and the
+   * "Errored ops" badge always agree. `limit` follows listPending.
+   */
+  async listErrored(
+    tenant: string,
+    adapterType: string,
+    targetRealm?: string | null,
+    options: { limit?: number } = {}
+  ): Promise<AccountingSyncOperation[]> {
+    const query = this.table<AccountingSyncOperation>(tenant)
+      .where({ adapter_type: adapterType })
+      .whereIn('status', ['skipped', 'failed'])
+      .orderBy('created_at', 'desc');
+
+    if (targetRealm !== undefined) {
+      if (targetRealm === null) {
+        query.whereNull('target_realm');
+      } else {
+        query.andWhere({ target_realm: targetRealm });
+      }
+    }
+    if (options.limit) {
+      query.limit(options.limit);
+    }
+
+    return query;
+  }
+
+  async getById(tenant: string, opId: string): Promise<AccountingSyncOperation | undefined> {
+    return this.table<AccountingSyncOperation>(tenant).where({ op_id: opId }).first();
+  }
 }

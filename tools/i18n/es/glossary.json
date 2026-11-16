@@ -2243,6 +2243,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{count}} ticket(s)",
+      "{{actor}} • {{eventType}}",
+      "Actor",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
@@ -2423,7 +2426,14 @@
       "{{size}} GB",
       "Code 128",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Markdown",
+      "Tickets",
+      "ticket",
+      "tickets",
+      "Firmware",
+      "Natural",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "api",

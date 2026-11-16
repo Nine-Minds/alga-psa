@@ -70,7 +70,9 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 export type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean;
+      /** Run only for tenants the registered capability filter serves (same contract as a JobDescriptor). */
+      capability?: string }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };

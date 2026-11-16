@@ -3,7 +3,11 @@ import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
 import { isLicensedUserType } from '@alga-psa/types';
-import { servicePrincipalKeyGate } from '@product/service-principals/entry';
+import {
+  ApiCredentialsRefusedError,
+  mayHoldApiCredentials,
+  principalMemberColumns,
+} from '@alga-psa/authorization/subject/principalKind';
 
 interface ApiKey {
   api_key_id: string;
@@ -16,7 +20,7 @@ interface ApiKey {
   updated_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
-  purpose: string;
+  purpose: string | null;
   metadata: Record<string, unknown> | null;
   usage_limit: number | null;
   usage_count: number;
@@ -47,16 +51,22 @@ export class ApiKeyService {
     knex: Knex,
     tenant: string,
     userId: string
-  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended' | null> {
+  ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'principal_refused' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive', 'user_type');
+      .first('is_inactive', 'user_type', ...principalMemberColumns(knex, { tenant, userId }));
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
+    // A key that predates the owner's principal kind (a technician who became a seat technician) stops here.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: user.principal_member }))) return 'principal_refused';
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {
+      // Lazy on purpose: a static import makes the auth barrel load the EE
+      // service-principals boundary (-> @alga-psa/users/actions -> withAuth from
+      // a half-loaded @alga-psa/auth), which breaks the production build.
+      const { servicePrincipalKeyGate } = await import('@product/service-principals/entry');
       const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
       if (!approved) return 'owner_type_rejected';
     }
@@ -138,9 +148,14 @@ export class ApiKeyService {
     const owner = await tenantDb(knex, tenant)
       .table('users')
       .where({ user_id: userId })
-      .first('is_inactive', 'user_type');
+      .first('is_inactive', 'user_type', ...principalMemberColumns(knex, { tenant, userId }));
     if (!owner || owner.is_inactive || !isLicensedUserType(owner.user_type)) {
       throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
+    }
+    // Issuance boundary for every purpose and every caller (the profile action, mobile, MCP, temporary AI
+    // keys): a principal kind that may not hold API credentials is refused here, on the server.
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: owner.principal_member }))) {
+      throw new ApiCredentialsRefusedError();
     }
 
     try {
@@ -345,7 +360,7 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null })[]> {
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null; user_type: string | null })[]> {
     const { knex, tenant } = await createTenantKnex(tenantId);
 
     if (!tenant) {
@@ -358,7 +373,12 @@ export class ApiKeyService {
       db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
 
       return await query
-        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
+        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name', 'users.user_type')
+        // MCP session keys are short-lived runtime credentials, not keys an admin can manage.
+        // Keep legacy NULL-purpose rows visible while excluding only the modeled session purpose.
+        .where(function () {
+          this.whereNull('api_keys.purpose').orWhereNot('api_keys.purpose', 'mcp_agent');
+        })
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);

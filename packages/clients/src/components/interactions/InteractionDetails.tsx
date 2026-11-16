@@ -135,36 +135,36 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'interaction-details-edit-button',
     type: 'button',
-    label: 'Edit Interaction',
-    helperText: 'Edit this interaction details'
+    label: t('interactions.details.actions.edit.label', { defaultValue: 'Edit Interaction' }),
+    helperText: t('interactions.details.actions.edit.helper', { defaultValue: 'Edit this interaction details' })
   });
 
   const { automationIdProps: deleteButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'interaction-details-delete-button',
     type: 'button',
-    label: 'Delete Interaction',
-    helperText: 'Delete this interaction permanently'
+    label: t('interactions.details.actions.delete.label', { defaultValue: 'Delete Interaction' }),
+    helperText: t('interactions.details.actions.delete.helper', { defaultValue: 'Delete this interaction permanently' })
   });
 
   const { automationIdProps: backButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'interaction-details-back-button',
     type: 'button',
-    label: 'Back',
-    helperText: 'Go back to previous view'
+    label: t('interactions.details.actions.back.label', { defaultValue: 'Back' }),
+    helperText: t('interactions.details.actions.back.helper', { defaultValue: 'Go back to previous view' })
   });
 
   const { automationIdProps: addTicketButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'interaction-details-add-ticket-button',
     type: 'button',
-    label: 'Add Ticket',
-    helperText: 'Create a new ticket related to this interaction'
+    label: t('interactions.details.actions.addTicket.label', { defaultValue: 'Add Ticket' }),
+    helperText: t('interactions.details.actions.addTicket.helper', { defaultValue: 'Create a new ticket related to this interaction' })
   });
 
   const { automationIdProps: addTimeEntryButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'interaction-details-add-time-entry-button',
     type: 'button',
-    label: 'Add Time Entry',
-    helperText: 'Add time entry for this interaction'
+    label: t('interactions.details.actions.addTimeEntry.label', { defaultValue: 'Add Time Entry' }),
+    helperText: t('interactions.details.actions.addTimeEntry.helper', { defaultValue: 'Add time entry for this interaction' })
   });
 
   useEffect(() => {
@@ -317,7 +317,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         context: buildInteractionTimeEntryContext(interaction),
       });
     } catch (error) {
-      handleError(error, 'Failed to prepare time entry. Please try again.');
+      handleError(error, t('interactions.details.timeEntryFailed', { defaultValue: 'Failed to prepare time entry. Please try again.' }));
     }
   };
 
@@ -349,10 +349,10 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   };
 
   return (
-    <ReflectionContainer id="interaction-details" label="Interaction Details">
+    <ReflectionContainer id="interaction-details" label={t('interactions.details.title', { defaultValue: 'Interaction Details' })}>
       <div className="p-6 relative bg-white shadow rounded-lg">
       <div className="flex justify-between items-center mb-6">
-        <Heading size="6">Interaction Details</Heading>
+        <Heading size="6">{t('interactions.details.title', { defaultValue: 'Interaction Details' })}</Heading>
         <div className="flex gap-2">
           <Button
             {...editButtonProps}
@@ -361,7 +361,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             size="sm"
           >
             <Pen className="mr-2 h-4 w-4" />
-            Edit
+            {t('interactions.details.actions.editShort', { defaultValue: 'Edit' })}
           </Button>
           <Button
             {...deleteButtonProps}
@@ -371,7 +371,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/50"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {t('interactions.details.actions.deleteShort', { defaultValue: 'Delete' })}
           </Button>
           <Button
             {...backButtonProps}
@@ -380,20 +380,20 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             size="sm"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('interactions.details.actions.back.label', { defaultValue: 'Back' })}
           </Button>
         </div>
       </div>
       
       <div className="space-y-6">
         <div className="flex items-center">
-          <span className="font-semibold">Title:</span>
-          <span className="ml-2 text-lg font-medium">{interaction.title || 'No title'}</span>
+          <span className="font-semibold">{t('interactions.details.fields.title', { defaultValue: 'Title:' })}</span>
+          <span className="ml-2 text-lg font-medium">{interaction.title || t('interactions.details.noTitle', { defaultValue: 'No title' })}</span>
         </div>
         
         {interaction.notes && (
           <div className="space-y-2">
-            <Text size="2" weight="bold">Notes</Text>
+            <Text size="2" weight="bold">{t('interactions.details.fields.notes', { defaultValue: 'Notes' })}</Text>
             <div className="prose max-w-none">
               <RichTextViewer content={(() => {
                 const raw = (interaction.notes || '').trim();
@@ -422,7 +422,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <InteractionIcon icon={interaction.icon || 'video'} typeName={interaction.type_name || 'Online Meeting'} />
+                <InteractionIcon icon={interaction.icon || 'video'} typeName={interaction.type_name || t('interactions.onlineMeeting.sectionTitle', { defaultValue: 'Online Meeting' })} />
                 <div className="min-w-0">
                   <Text size="2" weight="bold">
                     {t('interactions.onlineMeeting.sectionTitle', { defaultValue: 'Online Meeting' })}
@@ -590,14 +590,14 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
         {interaction.status_name && (
           <div className="flex items-center">
-            <span className="font-semibold">Status:</span>
+            <span className="font-semibold">{t('interactions.details.fields.status', { defaultValue: 'Status:' })}</span>
             <span className="ml-2">{interaction.status_name}</span>
           </div>
         )}
         
         {interaction.start_time && (
           <div className="flex items-center">
-            <span className="font-semibold">Start Time:</span>
+            <span className="font-semibold">{t('interactions.details.fields.startTime', { defaultValue: 'Start Time:' })}</span>
             <span className="ml-2">
               {formatDate(interaction.start_time)}
             </span>
@@ -606,7 +606,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         
         {interaction.end_time && (
           <div className="flex items-center">
-            <span className="font-semibold">End Time:</span>
+            <span className="font-semibold">{t('interactions.details.fields.endTime', { defaultValue: 'End Time:' })}</span>
             <span className="ml-2">
               {formatDate(interaction.end_time)}
             </span>
@@ -615,7 +615,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         
         {interaction.duration && (
           <div className="flex items-center">
-            <span className="font-semibold">Duration:</span>
+            <span className="font-semibold">{t('interactions.details.fields.duration', { defaultValue: 'Duration:' })}</span>
             <span className="ml-2">
               {formatDuration(interaction.duration)}
             </span>
@@ -623,17 +623,17 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         )}
         
         <div className="flex items-center">
-          <span className="font-semibold">User:</span>
+          <span className="font-semibold">{t('interactions.details.fields.user', { defaultValue: 'User:' })}</span>
           <button
             onClick={handleUserClick}
             className="ml-2 text-blue-500 hover:underline"
           >
-            {userFullName || interaction.user_name || 'Unknown'}
+            {userFullName || interaction.user_name || t('interactions.details.unknownUser', { defaultValue: 'Unknown' })}
           </button>
         </div>
         
         <div className="flex items-center">
-          <span className="font-semibold">Contact:</span>
+          <span className="font-semibold">{t('interactions.details.fields.contact', { defaultValue: 'Contact:' })}</span>
           {interaction.contact_name ? (
             <button
               onClick={handleContactClick}
@@ -642,12 +642,12 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
               {interaction.contact_name}
             </button>
           ) : (
-            <span className="ml-2">No contact associated</span>
+            <span className="ml-2">{t('interactions.details.noContact', { defaultValue: 'No contact associated' })}</span>
           )}
         </div>
         
         <div className="flex items-center">
-          <span className="font-semibold">Client:</span>
+          <span className="font-semibold">{t('interactions.details.fields.client', { defaultValue: 'Client:' })}</span>
           {interaction.client_name ? (
             <button
               onClick={handleClientClick}
@@ -656,7 +656,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
               {interaction.client_name}
             </button>
           ) : (
-            <span className="ml-2">No client associated</span>
+            <span className="ml-2">{t('interactions.details.noClient', { defaultValue: 'No client associated' })}</span>
           )}
         </div>
       </div>
@@ -669,7 +669,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             variant="default"
           >
             <Clock className="mr-2 h-4 w-4" />
-            Add Time Entry
+            {t('interactions.details.actions.addTimeEntry.label', { defaultValue: 'Add Time Entry' })}
           </Button>
         )}
         <Button
@@ -678,7 +678,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
           variant="default"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Ticket
+          {t('interactions.details.actions.addTicket.label', { defaultValue: 'Add Ticket' })}
         </Button>
       </Flex>
 
@@ -728,10 +728,10 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDeleteInteraction}
-        title="Delete Interaction"
-        message="Are you sure you want to delete this interaction? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('interactions.details.actions.delete.label', { defaultValue: 'Delete Interaction' })}
+        message={t('interactions.details.deleteConfirm', { defaultValue: 'Are you sure you want to delete this interaction? This action cannot be undone.' })}
+        confirmLabel={t('interactions.details.actions.deleteShort', { defaultValue: 'Delete' })}
+        cancelLabel={t('interactions.details.actions.cancel', { defaultValue: 'Cancel' })}
       />
       </div>
     </ReflectionContainer>

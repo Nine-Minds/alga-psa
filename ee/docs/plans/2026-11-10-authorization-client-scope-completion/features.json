@@ -1,0 +1,338 @@
+[
+  {
+    "id": "F001",
+    "description": "One function in the authorization package resolves the subject for a user (user type, teams, managed users, client portfolio), and the ticket, project, asset, document and credential paths all use it; no caller passes a hard-coded empty portfolio.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "A per-user client portfolio is stored in a tenant table (one row per user and client), registered in the tenant table manifest, with commands to set and clear it; a user with no rows has no portfolio.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "The `client_portfolio` template matches a record whose client is in the subject's stored portfolio, in both the record matcher and the SQL compiler, and denies when the portfolio is empty.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "The table manifest declares how each client-owned table reaches a client: a named column, or a parent chain of up to three hops, or a set of alternative parents; a contract test fails when a table with a foreign key to clients has no declaration or stated exemption.",
+    "implemented": false,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Client ownership for polymorphic tables (time entries, schedule entries, document associations, tag mappings) is resolved by a registered resolver per discriminator value, and an unknown discriminator resolves to no client.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "A tenant with no published bundle assignments and no portfolio rows runs zero additional queries on ticket list, ticket detail, client list, search and time-entry paths, recorded as query-budget entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment A — Subject, portfolio and ownership foundations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "A failure to load bundle rules or resolve the subject denies access on the project, asset and document read paths, as it already does on the ticket path.",
+    "implemented": false,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "A bundle revision can be published as closed: for every subject it is assigned to, a resource and action with no matching rule in that bundle is denied; an open bundle keeps today's behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "When a subject holds a closed bundle and an open bundle, a resource and action the closed bundle does not name is denied.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Creating a ticket, project, asset, contact, interaction, time entry or document association is evaluated by the kernel against the record to be created, so a client-restricted subject cannot create a record for a client outside their scope.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Update and delete of a record are allowed only when the subject's read rules also allow that record.",
+    "implemented": false,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "A package can register a built-in rule resolver for a class of subjects; rules from a registered resolver apply before bundle rules, can declare a closed baseline, and are not editable in policy administration; with no resolver registered behavior is unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "A denial names its cause in the decision reasons: the rule, the closed baseline, the portfolio, or a registered resolver.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment B — Kernel semantics"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Client lists, client detail and client pickers return only in-scope clients for a client-restricted subject, with the restriction applied in SQL so counts and pagination match.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Contact lists, contact detail and contact pickers return only contacts of in-scope clients for a client-restricted subject, and contacts with no client are hidden from them.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Interaction lists and detail return only interactions of in-scope clients for a client-restricted subject.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Time-entry lists, ticket time summaries and timesheet entry reads return only entries whose work item belongs to an in-scope client for a client-restricted subject; entries with no client are visible to their own user.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "On schedule and dispatch views a client-restricted subject sees an entry for an out-of-scope work item as busy time with no title or work item detail, and work item search returns only in-scope items.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Document lists, folder trees, folder statistics and the distinct entity types offered as filters are computed over documents the subject may read.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Tag lists and tag suggestions for a client-restricted subject are derived only from entities that subject may read.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "The ticket lookup and work-item lookup actions used by scheduling apply ticket read permission and narrowing.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Project task comment reads and writes apply the project's authorization on both the server actions and the REST controller.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "For a client-restricted subject a ticket bundle shows only in-scope child tickets and their mirrored comments.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment C — Coverage of operational resources"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Ticket form options and new-ticket data list internal users only as assignees, never portal users, and list tag text only from tickets the subject may read.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment D — Aggregates, options and exports"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Counts and statistics shown on ticket, client, project and dashboard screens are computed over the records the subject may read.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment D — Aggregates, options and exports"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "A report run by a client-restricted subject applies their narrowing to client-owned tables in the report definition, and a report that cannot be narrowed is refused with a stated reason.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment D — Aggregates, options and exports"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Client, contact, time-entry and ticket exports contain only records the subject may read.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment D — Aggregates, options and exports"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Search resolves the client-restricted access mode for an internal subject whose rules restrict clients, instead of unrestricted access for every non-client user.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment E — Search"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "The client, contact, interaction, document and time-entry indexers set the record's client scope, and a repeatable per-tenant re-index fills existing rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment E — Search"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Ticket search for a subject restricted to selected boards returns only tickets on those boards.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment E — Search"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Records of strict types with no client scope are hidden from client-restricted subjects in search.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment E — Search"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "The REST controllers for clients, contacts, interactions, time entries, time sheets, document lists, project task comments and search apply the same permission, narrowing and create checks as the corresponding actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment F — REST and MCP parity"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "A bundle assigned to an API key narrows that key's requests on those controllers, and MCP search and endpoint calls made with the key return only in-scope records.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment F — REST and MCP parity"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "List totals and pagination on REST endpoints reflect the narrowed set, including when a rule redacts fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment F — REST and MCP parity"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "The MSP ticket, project and asset screens omit fields named in `redactedFields` the same way REST responses do.",
+    "implemented": false,
+    "prdRefs": [
+      "Segment G — Field redaction parity"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "A contract test fails when an exported server action or REST handler reads a table whose ownership declaration maps to a covered resource without calling an authorization entry point; exceptions are pinned with a reason and the list cannot grow.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment H — Coverage contracts"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "A contract test pins every exported server action that touches tenant data without a permission check; the list cannot grow, and no pinned action may read a commercial table.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment H — Coverage contracts"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Policy administration offers every resource type in the kernel catalog instead of a fixed list of six.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment I — Policy administration"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "An administrator edits a user's client portfolio on the user's record with the standard client picker; client names are shown, not identifiers.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment I — Policy administration"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "The bundle editor publishes a bundle as closed, marks closed bundles in the library, and previews the resource types a closed bundle will deny.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment I — Policy administration"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "The simulator explains a denial caused by a closed baseline, a portfolio, a create check or a read requirement on update.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment I — Policy administration"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "A starter bundle \"Single-client technician\" is available: closed, with `client_portfolio` rules for the operational resource types; and the duplicate starter-bundle definition on the server is removed so there is one source.",
+    "implemented": true,
+    "prdRefs": [
+      "Segment I — Policy administration"
+    ]
+  }
+]

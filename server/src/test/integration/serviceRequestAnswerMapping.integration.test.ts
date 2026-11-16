@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -144,7 +145,7 @@ describe('service request answer mapping', () => {
     fields: { name: string; asset_tag: string; serial_number?: string | null; asset_type?: string; attributes?: unknown }
   ): Promise<string> {
     const assetId = uuidv4();
-    await table(tenant, 'assets').insert({
+    await insertTestAssets(db, {
       tenant,
       asset_id: assetId,
       client_id: clientId,

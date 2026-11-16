@@ -108,10 +108,13 @@
     "ticketsTemplates": "Modelli di ticket",
     "assetsCustody": "Apparecchiature in custodia",
     "ticketsCannedResponses": "Risposte predefinite",
+    "ticketsCustomer": "Ticket dei clienti",
     "profile": "Profilo",
     "signOut": "Esci",
     "coManaged": "IT in co-gestione",
-    "coManagedAdministration": "Accesso e amministrazione"
+    "coManagedArchive": "Archivio IT in co-gestione",
+    "coManagedAdministration": "Accesso e amministrazione",
+    "assetsAudits": "Audit delle sedi"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

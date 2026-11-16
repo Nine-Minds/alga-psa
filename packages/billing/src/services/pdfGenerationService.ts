@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { Page } from 'puppeteer';
+import type { BrowserContext, Page } from 'puppeteer';
 import type { Knex } from 'knex';
 
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
@@ -22,6 +22,8 @@ import {
   getUserInfoForEmail,
   resolveEmailLocale,
 } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/core/rendering/isolatedRendering';
+import { sanitizeEmailHtml } from '@alga-psa/shared/lib/email/sanitizeEmailHtml';
 
 import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
@@ -30,9 +32,17 @@ import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel 
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { templateUsesComponentPricing } from '../lib/invoice-template-ast/componentPricing';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, loadDocumentLabelTranslator, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
 import { cadenceI18nKey } from '../lib/quoteItemCadence';
+import {
+  appendAcceptanceBlockToHtmlDocument,
+  renderQuoteAcceptanceBlockHtml,
+  type QuoteAcceptanceDetails,
+  type QuoteAcceptanceRenderOptions,
+} from '../lib/quoteAcceptance';
+import { PDF_FONT_FACE_CSS } from '../lib/pdf-fonts';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -163,7 +173,20 @@ interface PDFGenerationOptions {
   userId: string;
   /** Force a fresh render even when a stored document already exists. */
   regenerate?: boolean;
+  /**
+   * Which copy of a quote is being filed. `sent` (default) is the copy that goes
+   * out with the quote; `signed` is the copy stamped with the acceptance block,
+   * filed beside it as its own `-signed` document and never in place of it.
+   */
+  quoteVariant?: QuoteVariant;
+  /** Required for the `signed` variant: who accepted, and how. */
+  acceptance?: QuoteRenderAcceptance;
 }
+
+export type QuoteVariant = 'sent' | 'signed';
+
+/** Acceptance details plus how to write them (tenant time zone). */
+export type QuoteRenderAcceptance = QuoteAcceptanceDetails & QuoteAcceptanceRenderOptions;
 
 /** The stored file, plus the `documents` row it was filed as (absent for the export branch). */
 export type StoredPdfResult = FileStore & {
@@ -206,6 +229,9 @@ interface RenderedPdf {
   renderedLocale: string;
 }
 
+/** Appended to the sent copy's file name to name the signed copy. */
+export const SIGNED_QUOTE_FILE_SUFFIX = '-signed';
+
 const SALES_ORDER_DOCUMENT_PREFIX: Record<SalesOrderDocumentKind, string> = {
   'sales-order': 'SalesOrder',
   'packing-slip': 'PackingSlip',
@@ -216,6 +242,8 @@ export interface QuotePDFOptions {
   quoteId: string;
   templateCode?: string;
   templateAst?: TemplateAst;
+  /** When present the render carries the acceptance block (signed copy). */
+  acceptance?: QuoteRenderAcceptance;
 }
 
 export interface SalesOrderPDFOptions {
@@ -250,11 +278,11 @@ export class PDFGenerationService {
 
   // ---- Generic entry points ------------------------------------------------
 
-  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
+  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string; acceptance?: QuoteRenderAcceptance }): Promise<Buffer> {
     return (await this.renderPdf(options)).buffer;
   }
 
-  private async renderPdf(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<RenderedPdf> {
+  private async renderPdf(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string; acceptance?: QuoteRenderAcceptance }): Promise<RenderedPdf> {
     let htmlContent: string;
     let templateAst: TemplateAst | null = null;
     let templateId: string | null = null;
@@ -274,7 +302,7 @@ export class PDFGenerationService {
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.quoteId) {
-      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
+      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst, acceptance: options.acceptance }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
@@ -308,6 +336,10 @@ export class PDFGenerationService {
    * Pass `regenerate` to render again anyway.
    */
   async generateAndStore(options: PDFGenerationOptions): Promise<StoredPdfResult> {
+    if (options.quoteVariant === 'signed' && !options.acceptance) {
+      throw new Error('A signed quote copy needs the acceptance details to stamp on it');
+    }
+
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
       const target = await this.resolveFilingTarget(knex, options);
@@ -345,6 +377,7 @@ export class PDFGenerationService {
         documentId: options.documentId,
         templateId: options.templateId,
         userId: options.userId,
+        acceptance: options.quoteVariant === 'signed' ? options.acceptance : undefined,
       });
 
       const fileId = uuidv4();
@@ -473,7 +506,28 @@ export class PDFGenerationService {
         .where({ quote_id: options.quoteId })
         .first<{ title?: string | null; quote_number?: string | null } | undefined>('title', 'quote_number');
       const quoteNumber = options.quoteNumber || quote?.quote_number || options.quoteId;
-      const fileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
+      const sentFileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
+
+      if (options.quoteVariant === 'signed') {
+        // The signed copy is its own client-visible document beside the sent one
+        // (different name, so neither lookup nor filing can touch the sent copy).
+        // `refresh` is what makes it idempotent: once a signed copy has been
+        // issued to the client it is frozen and handed back, and the filing
+        // transaction serializes concurrent finalizations on the same name.
+        const signedBase = `${sentFileName.replace(/\.pdf$/i, '')}${SIGNED_QUOTE_FILE_SUFFIX}`;
+        return {
+          sourceType: 'quote',
+          entityId: options.quoteId,
+          clientId: null,
+          folderPath: '/Quotes/Generated',
+          isClientVisible: true,
+          documentName: `${signedBase}.pdf`,
+          fileBaseName: signedBase,
+          mode: 'refresh',
+        };
+      }
+
+      const fileName = sentFileName;
       return {
         sourceType: 'quote',
         entityId: options.quoteId,
@@ -868,7 +922,8 @@ export class PDFGenerationService {
       }
 
       const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, options.invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // The service-period label is built here, in named months, so the mapper
       // needs the recipient's language too.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
@@ -992,7 +1047,8 @@ export class PDFGenerationService {
         throw new Error(`Template ${templateId} does not have a templateAst payload.`);
       }
 
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // Named-month service periods follow the recipient's language.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
@@ -1067,9 +1123,32 @@ export class PDFGenerationService {
     }
   }
 
-  private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+  /**
+   * Bundle component names/quantities always load; component prices load only
+   * when the resolved template binds one (see templateUsesComponentPricing), so
+   * a template that shows quantities only never has prices in its view model.
+   */
+  private async getInvoiceForRendering(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    templateAst?: TemplateAst | null,
+  ): Promise<any> {
+    const invoice = await Invoice.getFullInvoiceById(knex, this.tenant, invoiceId, {
+      includeBundlePresentation: true,
+      includeBundleComponentAmounts: templateAst ? templateUsesComponentPricing(templateAst) : false,
+    });
     return invoice ? enrichContractChangeDescriptions(knex, this.tenant, invoiceId, invoice) : invoice;
+  }
+
+  private async withTemplatePricing(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    loaded: any,
+    templateAst: TemplateAst,
+  ): Promise<any> {
+    return templateUsesComponentPricing(templateAst)
+      ? this.getInvoiceForRendering(knex, invoiceId, templateAst)
+      : loaded;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {
@@ -1090,7 +1169,9 @@ export class PDFGenerationService {
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
-      const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId);
+      const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId, {
+        acceptance: options.acceptance,
+      });
 
       if (!quoteViewModel) {
         throw new Error(`Quote ${options.quoteId} not found`);
@@ -1119,12 +1200,28 @@ export class PDFGenerationService {
         quoteViewModel as unknown as Record<string, unknown>
       );
 
-      const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
+      const renderedHtml = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
         knex,
         locale,
         dateFormat,
       });
+
+      // One stamp for every template: the acceptance block is appended to the
+      // finished document rather than authored into each template, so a signed
+      // copy shows who accepted whichever layout the quote uses. The view model
+      // carries the same fields for templates that want to bind them.
+      const htmlContent = quoteViewModel.acceptance
+        ? appendAcceptanceBlockToHtmlDocument(
+            renderedHtml,
+            renderQuoteAcceptanceBlockHtml(quoteViewModel.acceptance, {
+              locale,
+              dateFormat,
+              timeZone: options.acceptance?.timeZone,
+              t: await loadDocumentLabelTranslator(locale),
+            })
+          )
+        : renderedHtml;
 
       return { htmlContent, templateAst, templateId, templateVersion: null };
     });
@@ -1224,6 +1321,11 @@ export class PDFGenerationService {
         }
       }
 
+      // Stored document content can contain raw HTML even when its MIME type is
+      // Markdown. Sanitize only that untrusted fragment so generated invoice
+      // templates can retain their trusted inline SVG barcodes and QR codes.
+      htmlContent = (await sanitizeEmailHtml(htmlContent)) ?? '';
+
       const escapedTitle = (document.document_name || 'Document')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -1234,9 +1336,10 @@ export class PDFGenerationService {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${document.document_name || 'Document'}</title>
+    <title>${escapedTitle}</title>
     <style>
-      body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
+${PDF_FONT_FACE_CSS}
+      body { font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; padding: 5mm; }
       pre { white-space: pre-wrap; word-wrap: break-word; }
       h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.5em; }
       .document-title { margin-top: 0; padding-bottom: 0.4em; border-bottom: 1px solid #e2e8f0; font-size: 1.8em; }
@@ -1247,6 +1350,7 @@ export class PDFGenerationService {
       blockquote { border-left: 3px solid #ddd; margin: 0 0 1em; padding: 0.5em 1em; color: #555; }
       img { max-width: 100%; height: auto; }
       a { color: #1e40af; text-decoration: underline; }
+      code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
       code { background-color: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
       pre code { background: none; padding: 0; }
       pre { background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
@@ -1271,12 +1375,18 @@ export class PDFGenerationService {
   // ---- Puppeteer -----------------------------------------------------------
 
   private async generatePDFBuffer(htmlContent: string, templateAst?: TemplateAst | null): Promise<Buffer> {
+    const isolatedHtml = await prepareHtmlForIsolatedRendering(htmlContent);
     const browser = await browserPoolService.getBrowser();
+    let context: BrowserContext | null = null;
     let page: Page | null = null;
 
     try {
-      page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'load' });
+      // Browser instances are pooled, but document state must never be. A fresh
+      // context keeps cookies, cache, storage, and service workers export-local.
+      context = await browser.createBrowserContext();
+      page = await context.newPage();
+      await configureIsolatedPage(page);
+      await page.setContent(isolatedHtml, { waitUntil: 'load' });
       const pdfBuffer = await page.pdf(
         templateAst ? resolvePdfPrintOptionsFromAst(templateAst) : DEFAULT_DOCUMENT_PDF_OPTIONS
       );
@@ -1284,6 +1394,9 @@ export class PDFGenerationService {
     } finally {
       if (page) {
         await page.close().catch(() => undefined);
+      }
+      if (context) {
+        await context.close().catch(() => undefined);
       }
       await browserPoolService.releaseBrowser(browser).catch(() => undefined);
     }

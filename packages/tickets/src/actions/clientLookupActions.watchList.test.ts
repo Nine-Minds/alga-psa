@@ -16,6 +16,14 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 
+// Scope resolution has its own coverage (T011); here the tenant has no bundles, so nothing narrows.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
+  createClientScopeContext: async () => ({
+    narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }),
+    permits: async () => true,
+  }),
+}));
+
 vi.mock('@alga-psa/shared/ticketClients/clients', () => ({
   getAllClients: vi.fn(),
   getClientById: vi.fn(),
@@ -52,7 +60,7 @@ describe('clientLookupActions watch-list contact lookup', () => {
     const { getAllActiveContacts } = await import('./clientLookupActions');
     const result = await getAllActiveContacts();
 
-    expect(getAllActiveContactsModelMock).toHaveBeenCalledWith(trx, 'tenant-1', 'asc');
+    expect(getAllActiveContactsModelMock).toHaveBeenCalledWith(trx, 'tenant-1', 'asc', { narrowQuery: expect.any(Function) });
     expect(result).toEqual(contacts);
   });
 
@@ -66,6 +74,6 @@ describe('clientLookupActions watch-list contact lookup', () => {
     const { getAllActiveContacts } = await import('./clientLookupActions');
     await getAllActiveContacts('desc');
 
-    expect(getAllActiveContactsModelMock).toHaveBeenCalledWith(trx, 'tenant-1', 'desc');
+    expect(getAllActiveContactsModelMock).toHaveBeenCalledWith(trx, 'tenant-1', 'desc', { narrowQuery: expect.any(Function) });
   });
 });

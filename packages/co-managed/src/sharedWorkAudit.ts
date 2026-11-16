@@ -4,6 +4,7 @@ import type { CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 import { coManagedDisplayName, ensureCoManagedActorReference } from './actorReferences';
 import { retainCoManagedParticipationEvidence } from './participationEvidence';
+import { withAuditOwnerTenant } from './auditOwnerTenant';
 
 /** Called only inside an admitted work writer (the context already passed the
  * access matrix); retains qualified immutable attribution with the canonical
@@ -23,9 +24,9 @@ export async function recordCoManagedWorkAudit(context: CoManagedSharedWorkConte
   const organization = foreign ? null : await actorHome.table('tenants').forShare().first('client_name');
   const name = reference?.display_name ?? coManagedDisplayName(user, user?.email || context.actor.userId);
   const auditId = randomUUID();
-  await owner.table('audit_logs').insert({ audit_id: auditId, tenant: context.resource.tenant, table_name: context.resource.kind === 'ticket' ? 'tickets' : 'project_tasks', record_id: context.resource.id,
+  await withAuditOwnerTenant(context.trx, context.resource.tenant, () => owner.table('audit_logs').insert({ audit_id: auditId, tenant: context.resource.tenant, table_name: context.resource.kind === 'ticket' ? 'tickets' : 'project_tasks', record_id: context.resource.id,
     operation: input.operation, changed_data: input.changes, user_id: foreign ? null : context.actor.userId, timestamp: context.trx.raw('clock_timestamp()'),
     details: { ...input.details, actor_reference_id: referenceId, actor_display_name: name, actor_organization_name: reference?.organization_name ?? organization?.client_name,
-      actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId, relationship_id: context.resource.relationshipId, operation_id: input.operationId } });
+      actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId, relationship_id: context.resource.relationshipId, operation_id: input.operationId } }));
   await retainCoManagedParticipationEvidence(context, 'work_audit', auditId);
 }

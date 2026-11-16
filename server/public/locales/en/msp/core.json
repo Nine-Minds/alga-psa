@@ -108,10 +108,13 @@
     "ticketsTemplates": "Ticket Templates",
     "assetsCustody": "Equipment in custody",
     "ticketsCannedResponses": "Canned Responses",
+    "ticketsCustomer": "Customer Tickets",
     "profile": "Profile",
     "signOut": "Sign out",
     "coManaged": "Co-managed IT",
-    "coManagedAdministration": "Access & administration"
+    "coManagedArchive": "Co-managed archive",
+    "coManagedAdministration": "Access & administration",
+    "assetsAudits": "Site audits"
   },
   "marketing": {
     "dialogs": {

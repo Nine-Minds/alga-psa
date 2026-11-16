@@ -930,7 +930,7 @@ export const getQboItems = withAuth(async (
   }
 
   const result = await fetchQboCatalog(tenant, 'items', targetRealm, async (qboClient) => {
-    const qboItems = await qboClient.query<QboItemRow>('SELECT Id, Name FROM Item');
+    const qboItems = await queryAllPages<QboItemRow>(qboClient, 'SELECT Id, Name FROM Item');
     return qboItems.map(normalizeItemRow);
   });
   if (!('rows' in result)) return result;

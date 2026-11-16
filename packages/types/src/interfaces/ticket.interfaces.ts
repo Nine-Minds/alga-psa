@@ -111,6 +111,16 @@ export interface ITicketLatestActivityActor {
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
+  /**
+   * Who is responsible for the ticket: set only on lists whose reader is offered responsibility
+   * (`seatResponsibilityOffered`), and only for a ticket of a client in a live seat arrangement.
+   */
+  seat_responsibility?: 'client_it' | 'msp' | null;
+  /**
+   * The revision a handoff of this ticket must name (`seatHandoffDirection` lists): set with `seat_responsibility`, for a
+   * ticket of a client in a live seat arrangement. Zero until the ticket's first handoff.
+   */
+  seat_responsibility_revision?: number;
   status_id: string | null;
   priority_id: string | null;
   board_id: string | null;
@@ -126,6 +136,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** The ticket's own location, for the optional Location column (off by default). */
+  ticket_location_name?: string | null;
   /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
   contact_tags?: IDisplayTag[];
   /** Chip tags for the client, already filtered to the caller's audience by the display rules. */
@@ -143,6 +155,15 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   latest_activity_at?: string | null;
   // Who produced the activity shown in latest_activity_at; null when nobody can be named.
   latest_activity_actor?: ITicketLatestActivityActor | null;
+}
+
+/** One named view of the ticket list, with the number of rows its filter returns under the current filters. */
+export interface ITicketListViewSummary {
+  key: string;
+  /** i18n key (features/tickets namespace) and its English default. */
+  labelKey: string;
+  defaultLabel: string;
+  count: number;
 }
 
 export interface ITicketListFilters {
@@ -173,6 +194,11 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Key of a named view the caller's list offers (see `ITicketListViewSummary`). The server resolves it against
+   * the views the caller is entitled to; a key it does not offer is ignored.
+   */
+  listView?: string;
   /**
    * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
    * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.

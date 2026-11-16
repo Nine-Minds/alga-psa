@@ -318,6 +318,7 @@ export function ClientDetailsSettings() {
               key={locationsRefreshKey}
               clientId={clientDetails.client_id}
               isEditing={false}
+              showContacts={false}
             />
           </div>
         </div>
@@ -346,6 +347,7 @@ export function ClientDetailsSettings() {
           <ClientLocations
             clientId={clientDetails.client_id}
             isEditing={true}
+            showContacts={false}
           />
         </DialogContent>
       </Dialog>

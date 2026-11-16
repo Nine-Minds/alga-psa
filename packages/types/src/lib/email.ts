@@ -79,7 +79,10 @@ export interface DomainVerificationResult {
 
 export interface DnsRecord {
   type: 'TXT' | 'MX' | 'CNAME' | 'A';
+  /** Fully qualified record name. */
   name: string;
+  /** Name relative to the zone the customer edits, as the provider reports it (`@` for the zone apex). */
+  host?: string;
   value: string;
   ttl?: number;
   priority?: number;

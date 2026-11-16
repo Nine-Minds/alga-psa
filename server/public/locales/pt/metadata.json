@@ -389,6 +389,10 @@
       "title": "Ativos",
       "custody": {
         "title": "Equipamento sob custódia"
+      },
+      "audits": {
+        "title": "Auditorias de locais",
+        "detailTitle": "Auditoria de local"
       }
     },
     "createContact": {
@@ -521,7 +525,10 @@
       "defaultTitle": "Painel | AlgaPSA"
     },
     "coManaged": {
-      "title": "TI cogerida"
+      "title": "TI cogerida",
+      "archive": {
+        "title": "Arquivo de TI co-gerenciada"
+      }
     },
     "coManagement": {
       "title": "Acesso cogerido",
@@ -541,6 +548,18 @@
         "title": "Tarefas compartilhadas",
         "taskTitle": "Tarefa compartilhada",
         "projectTitle": "Projeto compartilhado"
+      },
+      "departure": {
+        "title": "Encerrar TI co-gerenciada"
+      },
+      "sla": {
+        "title": "Prioridades de SLA cogerido"
+      },
+      "export": {
+        "title": "Exportar espaço de trabalho"
+      },
+      "upgrade": {
+        "title": "Mudar para AlgaPSA"
       }
     }
   },

@@ -18,12 +18,22 @@ import {
 } from '../../schemas/timeSheet';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
+  recurringSchedulePreviewInputSchema,
+  recurringTicketClientUpdateSchema,
+  recurringTicketDefinitionInputSchema,
+} from '@alga-psa/tickets/lib/recurring/definitionInput';
+import {
   activeStopwatchQuerySchema,
   logStopwatchSchema,
   startStopwatchSchema,
   stopwatchSessionResponseSchema,
   updateStopwatchSchema,
 } from '../../schemas/stopwatch';
+import {
+  createTimePeriodSettingsSchema,
+  timePeriodSettingsResponseSchema,
+  updateTimePeriodSettingsSchema,
+} from '../../schemas/timeSheet';
 
 export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Work Management v1';
@@ -203,10 +213,23 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         external_parent_id: zOpenApi.string().nullable().optional(),
         realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
         url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
+        title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
         relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
         actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. ISO 8601 datetime with an offset, not in the future. Supplying it stores the ticket with this open date and marks it a historical record: created silently with source=api_import, no SLA clock, no TICKET_CREATED, and no notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission.',
+      ),
+      closed_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import only (requires entered_at). Required for a closed status, rejected for an open status, and must satisfy entered_at <= closed_at <= now. The ticket is stored closed without firing TICKET_CLOSED.',
+      ),
+      closed_by: zOpenApi.string().guid().optional().describe(
+        'Historical import only (requires closed_at). User recorded as the closer; defaults to the API user.',
+      ),
+      asset_ids: zOpenApi.array(zOpenApi.string().uuid()).max(50).optional().describe(
+        'Assets the ticket is raised against, linked in the same transaction as the ticket; an unknown asset rejects the whole create. The first asset also makes the ticket inherit that asset\'s billing profile when billing_profile_id is omitted, as POST /tickets/from-asset and the web create do.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
   );
@@ -215,14 +238,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketUpdateBody',
     zOpenApi.object({
       title: zOpenApi.string().min(1).max(255).optional(),
+      entered_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Correct the ticket open date. Requires an internal MSP user with ticket:update permission. Must not be in the future or after the ticket closure or earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers.',
+      ),
       url: zOpenApi.string().url().optional(),
       board_id: zOpenApi.string().guid().optional(),
       client_id: zOpenApi.string().guid().optional(),
       location_id: zOpenApi.string().guid().optional(),
       contact_name_id: zOpenApi.string().guid().nullable().optional(),
       status_id: zOpenApi.string().guid().optional(),
-      category_id: zOpenApi.string().guid().optional(),
-      subcategory_id: zOpenApi.string().guid().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional().describe('Parent category, or null to clear the classification.'),
+      subcategory_id: zOpenApi.string().guid().nullable().optional().describe('Child of category_id, or null when the selected category has no subcategory.'),
       assigned_to: zOpenApi.string().guid().nullable().optional(),
       priority_id: zOpenApi.string().guid().optional(),
       attributes: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
@@ -240,8 +266,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusUpdateBody',
     zOpenApi.object({
       status_id: zOpenApi.string().guid(),
-      closed_at: zOpenApi.string().datetime().optional(),
-      closed_by: zOpenApi.string().guid().optional(),
+      closed_at: zOpenApi.string().datetime().optional().describe('Honored when this update closes the ticket (open to closed): stored as the close time instead of now. Must not be in the future or before entered_at. TICKET_CLOSED still fires; use suppression flags to silence notifications. Use historical create fields to import an already-closed ticket silently.'),
+      closed_by: zOpenApi.string().guid().optional().describe('Honored with closed_at when this update closes the ticket; defaults to the API user.'),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
       propagateToChildren: zOpenApi.boolean().optional().describe(
@@ -272,6 +298,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
       bcc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Bcc recipients for this comment\'s email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined.'),
+      created_at: zOpenApi.string().datetime({ offset: true }).optional().describe(
+        'Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future and not before the ticket\'s entered_at (a reply: not before its parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment\'s email without touching the watch list.'),
   );
@@ -465,8 +494,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT ("A time sheet already exists for this user and period") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports every time sheet matching the filters (not one page) using ApiTimeSheetController.export(). Array filters approval_statuses, user_ids, period_ids and fields accept repeated keys or comma-separated values.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched against the owner name and time_sheet_notes text. Array filters accept repeated keys or comma-separated values.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/time-sheets/{id}', summary: 'Delete time sheet', description: 'Deletes time sheet UUID via ApiBase delete path.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/{id}', summary: 'Get time sheet', description: 'Gets time sheet UUID with details via getWithDetails().', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/time-sheets/{id}', summary: 'Update time sheet', description: 'Updates time sheet UUID.', family: 'time_sheet' },
@@ -1000,6 +1029,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketStatusesQuery',
     zOpenApi.object({ board_id: zOpenApi.string().guid().optional().describe('Filter statuses to this board.') }),
   );
+  const TicketCategoriesQuery = registry.registerSchema(
+    'WorkV1TicketCategoriesQuery',
+    zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter categories to this board.') }),
+  );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
     zOpenApi.object({ comment_text: zOpenApi.string().min(1).max(5000).describe('Updated comment text (1–5000 visible chars).') }),
@@ -1063,6 +1096,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       external_parent_id: zOpenApi.string().nullable().optional(),
       realm: zOpenApi.string().nullable().optional(),
       url: zOpenApi.string().url().nullable().optional().describe('Optional explicit link-out; must be http(s).'),
+      title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
       relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
       actor: ExternalLinkActor.nullable().optional(),
       external_status: zOpenApi.string().nullable().optional(),
@@ -1075,6 +1109,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
       url: zOpenApi.string().url().nullable().optional(),
+      title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown instead of the raw external id, e.g. a knowledge-base article name.'),
       actor: ExternalLinkActor.nullable().optional(),
       external_status: zOpenApi.string().nullable().optional(),
       external_updated_at: zOpenApi.string().nullable().optional(),
@@ -1130,6 +1165,16 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { query: TicketStatusesQuery },
     responses: ticketStdResponses({ code: 200, description: 'Ticket statuses.' }, false),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/categories',
+    summary: 'List ticket categories',
+    description: 'Returns the tenant ticket categories (parents and children via parent_category), optionally filtered by board_id, sorted by display_order then name. Read surface for classifying a ticket; configuring categories stays on /api/v1/categories/ticket.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketCategoriesQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Ticket categories.' }, false),
     extensions: ticketExt('read'), edition: 'both',
   });
 
@@ -1203,6 +1248,411 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     extensions: ticketExt('update'), edition: 'both',
   });
 
+  // ==========================================================================
+  // Ticket templates (reusable ticket + checklist starting points)
+  // ==========================================================================
+  const TicketTemplateParams = registry.registerSchema(
+    'WorkV1TicketTemplateParams',
+    zOpenApi.object({
+      templateId: zOpenApi.string().guid().describe('Ticket template UUID from ticket_templates.template_id.'),
+    }),
+  );
+  const TicketTemplateListQuery = registry.registerSchema(
+    'WorkV1TicketTemplateListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-100. Default 25.'),
+      client_id: zOpenApi.string().guid().optional().describe('Templates this client can use: the ones bound to it plus every tenant-wide template. Resolve the UUID with GET /api/v1/clients first.'),
+      is_active: zOpenApi.enum(['true', 'false']).optional().describe("Omitted or 'true': active templates only (the default). 'false': the inactive ones."),
+      search: zOpenApi.string().optional().describe('Case-insensitive substring of the template name or of the ticket title it produces.'),
+    }),
+  );
+  const TicketTemplateChecklistItem = zOpenApi.object({
+    item_name: zOpenApi.string().min(1).max(500).describe('Checklist item text.'),
+    description: zOpenApi.string().nullable().optional(),
+    is_required: zOpenApi.boolean().describe('Whether the item gates ticket closure.'),
+    checklist_template_id: zOpenApi.string().guid().nullable().optional().describe('Checklist template the item came from; leave null for a plain item.'),
+  });
+  // LEVERAGE: friction openapi-mirrored-schemas — this shape hand-mirrors ticketTemplateInputSchema (and server/src/lib/api/schemas/ticketTemplate.ts mirrors it again); the recurring ticket routes below register the real package schemas instead. Templates should move to the same approach.
+  const TicketTemplateLink = zOpenApi.object({
+    system: zOpenApi.string().min(1).describe("Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."),
+    external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system, e.g. the Hudu article id.'),
+    realm: zOpenApi.string().nullable().optional().describe('Repository, server or workspace, for systems whose URL template needs one.'),
+    url: zOpenApi.string().url().nullable().optional().describe('Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created.'),
+    title: zOpenApi.string().max(500).nullable().optional().describe('Human title shown on the ticket, e.g. the article name.'),
+    metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional().describe('Free-form details, e.g. { hudu: { article_id, company_id } }.'),
+  });
+  const ticketTemplateBodyShape = {
+    name: zOpenApi.string().min(1).max(200).describe('Template name, unique among active templates in the tenant.'),
+    notes: zOpenApi.string().max(2000).nullable().optional().describe('Note for your team; never copied onto tickets.'),
+    title: zOpenApi.string().min(1).max(500).describe('Title the created ticket gets. May contain {{client}}, {{contact}}, {{due_date}}, {{month}} and {{year}}, which are filled in per ticket; any other {{token}} is rejected.'),
+    description: zOpenApi.string().nullable().optional().describe('Ticket description (plain text or serialized BlockNote JSON).'),
+    client_id: zOpenApi.string().guid().nullable().optional().describe('Client the template belongs to. Omit or null to offer it for every client; set it to offer the template only on that client\u2019s tickets. Resolve the UUID with GET /api/v1/clients first.'),
+    board_id: zOpenApi.string().guid().nullable().optional().describe('Board the created ticket lands on. Resolve with GET /api/v1/boards first.'),
+    category_id: zOpenApi.string().guid().nullable().optional().describe('Category on that board; a subcategory requires its parent category.'),
+    subcategory_id: zOpenApi.string().guid().nullable().optional(),
+    priority_id: zOpenApi.string().guid().nullable().optional().describe('Priority. Resolve with GET /api/v1/tickets/priorities first.'),
+    itil_impact: zOpenApi.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: zOpenApi.number().int().min(1).max(5).nullable().optional(),
+    tags: zOpenApi.array(zOpenApi.string().min(1).max(100)).max(50).optional().describe('Tag text applied to the created ticket (tag definitions are created as needed).'),
+    custom_fields: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional().describe('Custom field values copied onto the ticket.'),
+    offer_for_manual_use: zOpenApi.boolean().optional().describe('Whether the template is offered for manual ticket creation. Defaults to true; turn it off for templates only recurring schedules use.'),
+    checklist: zOpenApi.array(TicketTemplateChecklistItem).max(200).optional().describe('The whole checklist, in order. On update this list replaces the stored items.'),
+    links: zOpenApi.array(TicketTemplateLink).max(50).optional().describe('Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links.'),
+  };
+  const TicketTemplateCreateBody = registry.registerSchema(
+    'WorkV1TicketTemplateCreateBody',
+    zOpenApi.object(ticketTemplateBodyShape),
+  );
+  const TicketTemplateUpdateBody = registry.registerSchema(
+    'WorkV1TicketTemplateUpdateBody',
+    zOpenApi.object({
+      ...ticketTemplateBodyShape,
+      is_active: zOpenApi.boolean().optional().describe('Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running.'),
+    }),
+  );
+  const TicketTemplateInstantiateBody = registry.registerSchema(
+    'WorkV1TicketTemplateInstantiateBody',
+    zOpenApi.object({
+      client_id: zOpenApi.string().guid().describe('Client the ticket is for. A template bound to another client is refused with 400.'),
+      contact_name_id: zOpenApi.string().guid().nullable().optional().describe('Requester contact; must belong to client_id. Also fills the {{contact}} title token.'),
+      location_id: zOpenApi.string().guid().nullable().optional().describe('Client location; must belong to client_id.'),
+      asset_ids: zOpenApi.array(zOpenApi.string().guid()).max(50).optional().describe('Assets to link to the ticket; each must belong to client_id.'),
+      assigned_to: zOpenApi.string().guid().nullable().optional().describe('Primary assignee. Defaults to unassigned.'),
+      status_id: zOpenApi.string().guid().nullable().optional().describe("Status for the new ticket; must belong to the template's board. Defaults to that board's default status."),
+      due_date: zOpenApi.string().nullable().optional().describe('Due date, ISO date (YYYY-MM-DD) or date-time. Also fills the {{due_date}}, {{month}} and {{year}} title tokens.'),
+      suppressContactNotifications: zOpenApi.boolean().optional().describe('Create the ticket without notifying the customer.'),
+      suppressInternalNotifications: zOpenApi.boolean().optional().describe('Also skip internal notifications. Requires suppressContactNotifications=true.'),
+    }),
+  );
+
+  const templateExt = (action: string) => ({ 'x-tenant-scoped': true, 'x-rbac-resource': 'ticket_template', 'x-rbac-action': action });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/templates',
+    summary: 'List ticket templates',
+    description: 'Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item. To create tickets on a schedule (for example a yearly renewal), schedule a template with POST /api/v1/tickets/recurring.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: TicketTemplateListQuery },
+    responses: {
+      200: { description: 'Ticket templates.', schema: ApiPaginated },
+      400: { description: 'Query validation failure.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template read.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/templates',
+    summary: 'Create a ticket template',
+    description: 'Creates a reusable ticket template with its whole checklist in one request. Resolve client_id, board_id, category_id and priority_id to UUIDs first (GET /api/v1/clients, /api/v1/boards, /api/v1/categories, /api/v1/tickets/priorities); a reference that does not exist is refused with 400. Leave client_id out for a template every client can use. A second active template with the same name returns 409.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TicketTemplateCreateBody } },
+    responses: {
+      201: { description: 'Ticket template created, with its checklist.', schema: ApiSuccess },
+      400: { description: 'Validation failure or a field that points at something that does not exist.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template create.', schema: ApiError },
+      409: { description: 'Another active template already has this name.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('create'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Get a ticket template',
+    description: 'Returns one ticket template with its checklist items and documentation links in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams },
+    responses: {
+      200: { description: 'The ticket template.', schema: ApiSuccess },
+      400: { description: 'Invalid template id.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template read.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: templateExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Update a ticket template',
+    description: 'Replaces the template wholesale: omitted fields are reset and the checklist you send replaces the stored items, so GET the template first and send it back edited. `is_active` activates or deactivates it (deactivating only hides it from manual use; recurring schedules keep running). Changes apply to every schedule that uses the template, from the next ticket each one creates.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams, body: { schema: TicketTemplateUpdateBody } },
+    responses: {
+      200: { description: 'The updated ticket template.', schema: ApiSuccess },
+      400: { description: 'Validation failure or a field that points at something that does not exist.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template update.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      409: { description: 'Another active template already has this name.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('update'), 'x-chat-approval-required': true }, edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/templates/{templateId}',
+    summary: 'Delete a ticket template',
+    description: 'Deletes the template and its checklist items. Tickets already created from it are not changed. Refused with 409 while any non-archived recurring schedule still uses it; point those schedules at another template or archive them first, or deactivate the template instead (PUT with is_active=false).',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams },
+    responses: {
+      204: { description: 'Ticket template deleted; no content.', emptyBody: true },
+      400: { description: 'Invalid template id.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket_template delete.', schema: ApiError },
+      404: { description: 'Ticket template not found.', schema: ApiError },
+      409: { description: 'Recurring schedules still use the template.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('delete'), 'x-chat-approval-required': true }, edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/templates/{templateId}/instantiate',
+    summary: 'Create a ticket from a ticket template',
+    description: 'Creates one ticket from the template and returns it, exactly as POST /api/v1/tickets does. The template supplies the title (with its {{client}}/{{contact}}/{{due_date}} tokens filled in), description, board, category, priority, ITIL values, tags, custom fields and every checklist item, and the ticket records created_from_template_id. Prefer this over POST /api/v1/tickets followed by one POST /api/v1/tickets/{id}/checklist per item whenever a template exists. Requires ticket:create as well as ticket_template:read. Resolve client_id (and contact_name_id, location_id, assigned_to) to UUIDs first; a contact, location or asset that does not belong to client_id, a status that is not on the template\u2019s board, or a template bound to a different client are all refused with 400.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: TicketTemplateParams, body: { schema: TicketTemplateInstantiateBody } },
+    responses: {
+      201: { description: 'The created ticket.', schema: ApiSuccess },
+      400: { description: 'Validation failure, a reference that does not belong to the client, or a template bound to another client.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'RBAC denied for ticket create or ticket_template read.', schema: ApiError },
+      404: { description: 'Ticket template or client not found.', schema: ApiError },
+      500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+    },
+    extensions: { ...templateExt('read'), 'x-rbac-additional-required': 'ticket:create', 'x-chat-approval-required': true },
+    edition: 'both',
+  });
+
+  // ==========================================================================
+  // Recurring ticket definitions (schedules that create tickets from a ticket template)
+  // ==========================================================================
+  // The request bodies are the real package schemas the server actions parse, registered as-is:
+  // nothing is mirrored here, and the field descriptions live next to the schemas.
+  const RecurringDefinitionParams = registry.registerSchema(
+    'WorkV1RecurringTicketParams',
+    zOpenApi.object({
+      definitionId: zOpenApi.string().guid().describe('Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).'),
+    }),
+  );
+  const RecurringDefinitionClientParams = registry.registerSchema(
+    'WorkV1RecurringTicketClientParams',
+    zOpenApi.object({
+      definitionId: zOpenApi.string().guid().describe('Recurring ticket definition UUID.'),
+      clientId: zOpenApi.string().guid().describe('The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.'),
+    }),
+  );
+  const RecurringListQuery = registry.registerSchema(
+    'WorkV1RecurringTicketListQuery',
+    zOpenApi.object({
+      status: zOpenApi.enum(['active', 'paused', 'archived', 'all']).optional().describe("Filter by state. Default 'all', which includes archived definitions."),
+      search: zOpenApi.string().optional().describe('Case-insensitive substring of the definition name.'),
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-100. Default 25.'),
+    }),
+  );
+  const RecurringOccurrencesQuery = registry.registerSchema(
+    'WorkV1RecurringTicketOccurrencesQuery',
+    zOpenApi.object({
+      status: zOpenApi.enum(['created', 'skipped', 'missed', 'failed']).optional().describe('Filter by what happened to the occurrence.'),
+      client_id: zOpenApi.string().guid().optional().describe('Only occurrences for this client (client_id).'),
+      page: zOpenApi.string().optional().describe('1-based page number. Default 1.'),
+      limit: zOpenApi.string().optional().describe('Page size, 1-200. Default 25.'),
+    }),
+  );
+  const RecurringDefinitionBody = registry.registerSchema('WorkV1RecurringTicketDefinitionBody', recurringTicketDefinitionInputSchema);
+  const RecurringPreviewBody = registry.registerSchema('WorkV1RecurringTicketPreviewBody', recurringSchedulePreviewInputSchema);
+  const RecurringClientUpdateBody = registry.registerSchema('WorkV1RecurringTicketClientUpdateBody', recurringTicketClientUpdateSchema);
+  const RecurringAddClientsBody = registry.registerSchema(
+    'WorkV1RecurringTicketAddClientsBody',
+    zOpenApi.object({
+      client_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(100).describe('client_id values (from GET /api/v1/clients) to add. Clients already on the definition are ignored. Adding a client is what starts ticket generation for it.'),
+    }),
+  );
+
+  const recurringExt = (action: string, opts: { approval?: boolean; template?: boolean } = {}) => ({
+    'x-tenant-scoped': true,
+    'x-rbac-resource': 'recurring_ticket',
+    'x-rbac-action': action,
+    ...(opts.template ? { 'x-rbac-additional-required': 'ticket_template:read' } : {}),
+    ...(opts.approval ? { 'x-chat-approval-required': true } : {}),
+  });
+  const recurringResponses = (
+    success: { code: number; description: string; emptyBody?: boolean; paginated?: boolean },
+    action: string,
+    extra: Record<number, string> = {},
+  ) => ({
+    [success.code]: success.emptyBody
+      ? { description: success.description, emptyBody: true as const }
+      : { description: success.description, schema: success.paginated ? ApiPaginated : ApiSuccess },
+    400: { description: 'Validation failure, an invalid id, or a reference that does not exist.', schema: ApiError },
+    401: { description: 'API key missing/invalid.', schema: ApiError },
+    403: { description: `RBAC denied for recurring_ticket ${action}.`, schema: ApiError },
+    ...Object.fromEntries(Object.entries(extra).map(([code, description]) => [code, { description, schema: ApiError }])),
+    500: { description: 'Unexpected controller/service failure.', schema: ApiError },
+  });
+  const NOT_FOUND_DEFINITION = 'Recurring ticket definition not found.';
+  const ARCHIVED_409 = 'The definition is archived and read-only.';
+  const DETAIL_SHAPE = 'definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields';
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring',
+    summary: 'List recurring ticket definitions',
+    description: 'Lists the schedules that create tickets automatically (for example a yearly certificate renewal): name, status (active, paused or archived), recurrence rule, client_count, next_due_at, time_zone and has_failure. Use it to find a schedule by name (search), to see what is paused (status=paused), or to see which one is failing: has_failure means the latest occurrence for some client failed, and GET /api/v1/tickets/recurring/{definitionId}/occurrences?status=failed gives the reason. status defaults to all, which includes archived definitions. Due and create times are wall-clock in time_zone, the tenant time zone.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { query: RecurringListQuery },
+    responses: recurringResponses({ code: 200, description: 'Recurring ticket definitions.', paginated: true }, 'read'),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring',
+    summary: 'Create a recurring ticket definition',
+    description: `Creates a schedule that creates a ticket every time it falls due, for example "every year on 1 March, created 30 days early". What the ticket looks like (title, description, checklist, tags, board, priority) comes from a ticket template: create one first with POST /api/v1/tickets/templates and pass its template_id as ticket_template_id; ticket content fields such as title are rejected here with 400. recurrence.frequency is daily, weekly, monthly or yearly; a yearly rule is { frequency: "yearly", month, day, end } and means every year (it has no interval). A new definition generates nothing until clients are added with POST /api/v1/tickets/recurring/{definitionId}/clients. Use POST /api/v1/tickets/recurring/preview to check the dates first. Requires recurring_ticket:create and ticket_template:read. Returns 201 with ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: RecurringDefinitionBody } },
+    responses: recurringResponses({ code: 201, description: 'The created definition (no clients yet).' }, 'create'),
+    extensions: recurringExt('create', { template: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/preview',
+    summary: 'Preview the next due dates of an unsaved recurring schedule',
+    description: 'Computes the next 5 occurrences (nominal date, due date, create_at and due_at instants) of a draft schedule without saving anything, in the tenant time zone and with the business-day calendar the non_business_day_policy uses. Pass ticket_template_id to also get sample_title, the template title rendered for the first occurrence. Use it to check a rule before POST /api/v1/tickets/recurring. For a saved definition use GET /api/v1/tickets/recurring/{definitionId}/upcoming.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: RecurringPreviewBody } },
+    responses: recurringResponses({ code: 200, description: 'The next 5 occurrences, time_zone, calendar and sample_title.' }, 'read'),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Get a recurring ticket definition',
+    description: `Returns one definition with ${DETAIL_SHAPE}. clients lists every client the schedule runs for; effective_fields is what a client without its own overrides gets (template, then dispatch, then schedule overrides). An archived definition stays readable: definition.archived_at is set.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The recurring ticket definition.' }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Replace a recurring ticket definition',
+    description: `Replaces the whole definition: every field you omit goes back to its default (create_time 08:00, due_time 17:00, lead_days 0, overrides {}, no assignee), it does not keep its current value. GET the definition first and send it back edited. Clients attached to the definition are not touched. Archived definitions are read-only (409). Requires recurring_ticket:update, and ticket_template:read when the template changes. Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, body: { schema: RecurringDefinitionBody } },
+    responses: recurringResponses({ code: 200, description: 'The updated definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true, template: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/recurring/{definitionId}',
+    summary: 'Archive a recurring ticket definition',
+    description: 'Archives the definition: it stops creating tickets and becomes read-only. Occurrence history and the tickets already created are kept, and the definition stays readable with status archived. There is no unarchive, so to pause temporarily use POST /api/v1/tickets/recurring/{definitionId}/pause instead. Returns 204.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 204, description: 'Archived; no content.', emptyBody: true }, 'delete', { 404: NOT_FOUND_DEFINITION, 409: 'Already archived.' }),
+    extensions: recurringExt('delete', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/pause',
+    summary: 'Pause a recurring ticket definition',
+    description: `Stops the whole definition from creating tickets until it is resumed. Reversible with POST /api/v1/tickets/recurring/{definitionId}/resume. To stop only one client use the client pause endpoint. Returns ${DETAIL_SHAPE}, with definition.is_active false.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The paused definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/resume',
+    summary: 'Resume a recurring ticket definition',
+    description: `Restarts ticket creation for a paused definition. Occurrences that fell due while it was paused are not backfilled: generation continues from now. Returns ${DETAIL_SHAPE}, with definition.is_active true.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The resumed definition.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}/upcoming',
+    summary: 'Get the next due dates of a recurring ticket definition',
+    description: 'Returns the next 5 due dates of the saved definition: each with nominal date, due date, create_at and due_at instants, plus time_zone, the business-day calendar used and sample_title. The dates are computed from the schedule rule only: they ignore whether the definition or a client is paused and ignore occurrences already generated, so read definition_status (active, paused or archived) before telling someone a ticket will be created. For the per-client next_due_at use GET /api/v1/tickets/recurring/{definitionId}.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams },
+    responses: recurringResponses({ code: 200, description: 'The next 5 occurrences with definition_status.' }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/recurring/{definitionId}/occurrences',
+    summary: 'List the occurrence history of a recurring ticket definition',
+    description: 'The history of what the schedule did, newest first: for each client and due date the status (created, skipped, missed or failed), the ticket_id and ticket_number it created, the reason a skip or failure happened, and the number of attempts. History survives removing a client. Filter with status=failed to see why a schedule is failing, or with client_id for one client.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, query: RecurringOccurrencesQuery },
+    responses: recurringResponses({ code: 200, description: 'Occurrence history.', paginated: true }, 'read', { 404: NOT_FOUND_DEFINITION }),
+    extensions: recurringExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients',
+    summary: 'Add clients to a recurring ticket definition',
+    description: `Adds clients to the definition; this is what starts ticket generation for them, one ticket per client per occurrence. Resolve client_ids with GET /api/v1/clients first. Clients already on the definition are ignored, so the call is safe to repeat. A new client is not backfilled: tickets start from the next occurrence. Returns ${DETAIL_SHAPE}, plus added (how many were new). A client_id that does not exist is 400.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionParams, body: { schema: RecurringAddClientsBody } },
+    responses: recurringResponses({ code: 200, description: 'The definition with the added count.' }, 'update', { 404: NOT_FOUND_DEFINITION, 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}',
+    summary: 'Replace a client’s settings on a recurring ticket definition',
+    description: `Replaces the per-client settings (overrides, contact_id, location_id, asset_ids): all four are required, send {}, null or [] to clear one. {clientId} is the client_id, and the client must already be on this definition (404 otherwise). Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams, body: { schema: RecurringClientUpdateBody } },
+    responses: recurringResponses({ code: 200, description: 'The updated definition.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause',
+    summary: 'Pause one client on a recurring ticket definition',
+    description: `Stops ticket creation for this client only; the other clients keep running. {clientId} is the client_id and must already be on the definition (404 otherwise). Reversible with the client resume endpoint. Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 200, description: 'The definition with the client paused.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/resume',
+    summary: 'Resume one client on a recurring ticket definition',
+    description: `Restarts ticket creation for a paused client; occurrences missed while it was paused are not backfilled. {clientId} is the client_id and must already be on the definition (404 otherwise). Returns ${DETAIL_SHAPE}.`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 200, description: 'The definition with the client resumed.' }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/recurring/{definitionId}/clients/{clientId}',
+    summary: 'Remove a client from a recurring ticket definition',
+    description: 'Removes the client from the schedule so it no longer gets tickets. Its occurrence history and the tickets already created are kept. To stop a client temporarily use the client pause endpoint instead. {clientId} is the client_id and must be on the definition (404 otherwise). Returns 204.',
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: RecurringDefinitionClientParams },
+    responses: recurringResponses({ code: 204, description: 'Client removed; no content.', emptyBody: true }, 'update', { 404: 'Definition not found, or the client is not on it.', 409: ARCHIVED_409 }),
+    extensions: recurringExt('update', { approval: true }), edition: 'both',
+  });
+
   registry.registerRoute({
     method: 'get', path: '/api/v1/tickets/{id}/external-links',
     summary: 'List ticket external links',
@@ -1216,7 +1666,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/external-links',
     summary: 'Add a ticket external link',
-    description: 'Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. URL must be http(s).',
+    description: 'Adds a ticket-level external-system reference. Only one origin link is allowed per ticket. A mirror or origin record can be linked to one ticket only, but a reference may cite the same external record on many tickets (once per ticket). Optional title is shown instead of the raw external id. URL must be http(s).',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: ExternalLinkCreateBody } },
     responses: ticketStdResponses({ code: 201, description: 'External link created.' }),
@@ -1501,5 +1951,124 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     request: { params: IdParam, body: { schema: TicketMaterialBody } },
     responses: ticketStdResponses({ code: 201, description: 'Material added.' }),
     extensions: ticketExt('update'), edition: 'both',
+  });
+
+  // ==========================================================================
+  // Time period settings - /api/v1/time-period-settings
+  // ==========================================================================
+  const TimePeriodSettingsSchema = registry.registerSchema('WorkV1TimePeriodSettings', timePeriodSettingsResponseSchema);
+  const TimePeriodSettingsResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsResponse',
+    zOpenApi.object({ data: TimePeriodSettingsSchema }),
+  );
+  const TimePeriodSettingsListResponse = registry.registerSchema(
+    'WorkV1TimePeriodSettingsListResponse',
+    zOpenApi.object({ data: zOpenApi.array(TimePeriodSettingsSchema) }),
+  );
+  const TimePeriodSettingsCreateBody = registry.registerSchema('WorkV1TimePeriodSettingsCreateBody', createTimePeriodSettingsSchema);
+  const TimePeriodSettingsUpdateBody = registry.registerSchema('WorkV1TimePeriodSettingsUpdateBody', updateTimePeriodSettingsSchema);
+
+  const timePeriodSettingsExtensions = (action: 'read' | 'manage') => ({
+    'x-tenant-scoped': true,
+    'x-auth-mechanism': 'x-api-key validated in ApiTimeSheetController',
+    'x-tenant-header': 'x-tenant-id (optional; inferred from API key when omitted)',
+    'x-rbac-resource': 'time_period',
+    'x-rbac-action': action,
+  });
+  const timePeriodSettingsCommonErrors = {
+    401: { description: 'API key missing/invalid or associated user missing.', schema: ApiError },
+    403: { description: 'Permission denied (time_period:manage for writes, time_period:read for reads).', schema: ApiError },
+    500: { description: 'Unexpected failure.', schema: ApiError },
+  };
+  const timePeriodSettingsNotFound = { description: 'Time period settings not found.', schema: ApiError };
+  const timePeriodSettingsOverlap = {
+    description: 'The setting overlaps an active setting (same or conflicting period cells over intersecting effective dates). Nothing is written; explicit dates are never adjusted.',
+    schema: ApiError,
+  };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings',
+    summary: 'List time period settings',
+    description: 'Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Time period settings.', schema: TimePeriodSettingsListResponse },
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/time-period-settings',
+    summary: 'Create time period settings',
+    description: 'Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller\'s timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: TimePeriodSettingsCreateBody } },
+    responses: {
+      201: { description: 'Setting created.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure (field ranges, effective_to before effective_from).', schema: ApiError },
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Get time period settings',
+    description: 'Gets one time period setting by time_period_settings_id.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      200: { description: 'Time period setting.', schema: TimePeriodSettingsResponse },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('read'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Update time period settings',
+    description: 'Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TimePeriodSettingsUpdateBody } },
+    responses: {
+      200: { description: 'Updated setting.', schema: TimePeriodSettingsResponse },
+      400: { description: 'Validation failure.', schema: ApiError },
+      404: timePeriodSettingsNotFound,
+      409: timePeriodSettingsOverlap,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/time-period-settings/{id}',
+    summary: 'Delete time period settings',
+    description: 'Deletes a time period setting. Time periods it already generated are kept.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: {
+      204: { description: 'Deleted.', emptyBody: true },
+      404: timePeriodSettingsNotFound,
+      ...timePeriodSettingsCommonErrors,
+    },
+    extensions: timePeriodSettingsExtensions('manage'),
+    edition: 'both',
   });
 }

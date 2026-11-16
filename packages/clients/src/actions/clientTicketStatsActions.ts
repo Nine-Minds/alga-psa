@@ -3,6 +3,8 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 
 export interface ClientTicketStats {
   openTicketCount: number;
@@ -21,6 +23,9 @@ export interface ClientTicketStats {
  * `tickets.is_closed` column: as of 2026-08 that column is stale on ~24% of
  * production tickets (545/2261, all in the same direction — ticket says open,
  * status says closed), so filtering on it roughly doubles the count.
+ *
+ * Counted over the tickets the caller may read (the ticket list's own read narrowing, applied to this
+ * query), so a client-restricted user's card number equals the rows their ticket list returns for it.
  *
  * Only clients with at least one open ticket get an entry. The card hides the
  * row when there is no count, so absent and zero mean the same thing here and
@@ -41,7 +46,8 @@ export const getClientOpenTicketCounts = withAuth(
     const { knex: db } = await createTenantKnex();
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = await trx('tickets as t')
+      const readable = await createTicketReadScope(trx, tenant, user as IUserWithRoles);
+      const query = trx('tickets as t')
         .leftJoin('statuses as s', function joinStatuses() {
           this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
         })
@@ -51,6 +57,7 @@ export const getClientOpenTicketCounts = withAuth(
         .groupBy('t.client_id')
         .select('t.client_id')
         .select(trx.raw('COUNT(*)::int as open_count'));
+      const rows = await readable.apply(query, 't');
 
       const counts: Record<string, number> = {};
       for (const row of rows as Array<{ client_id: string; open_count: number }>) {

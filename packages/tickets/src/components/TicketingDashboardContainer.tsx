@@ -10,7 +10,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
+import { ITicketListItem, ITicketListFilters, ITicketListViewSummary, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
@@ -115,6 +115,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
     where: decodedWhere.where,
+    listView: params.get('listView') || undefined,
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
@@ -182,6 +183,12 @@ interface TicketingDashboardContainerProps {
     totalCount: number;
     loadedAt?: number;
     metadata?: TicketListMetadata;
+    /** Named views the caller's list offers, with their counts. Present only for a principal that has views. */
+    views?: ITicketListViewSummary[];
+    /** The reader is offered the responsibility column and filter (the seat shape is released and the reader is MSP staff). */
+    seatResponsibilityOffered?: boolean;
+    /** The handoff the reader may start on selected tickets (MSP staff: to client IT; a seat technician: to the MSP). Absent: none. */
+    seatHandoffDirection?: 'client_it' | 'msp';
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
@@ -191,6 +198,8 @@ interface TicketingDashboardContainerProps {
   initialTeams?: ITeam[];
   initialFormOptions?: TicketFormOptions | null;
   canUpdateTickets?: boolean;
+  /** Ended or lapsed co-managed workspace: withdraw create/duplicate/template/delete controls. */
+  workspaceReadOnly?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   renderContactDetails?: React.ComponentProps<typeof TicketingDashboard>['renderContactDetails'];
   allowSlaStatusFilter?: boolean;
@@ -211,6 +220,7 @@ export default function TicketingDashboardContainer({
   initialTeams,
   initialFormOptions,
   canUpdateTickets,
+  workspaceReadOnly,
   renderClientDetails,
   renderContactDetails,
   allowSlaStatusFilter = true,
@@ -248,6 +258,9 @@ export default function TicketingDashboardContainer({
   const [loadedAt, setLoadedAt] = useState(() => consolidatedData.loadedAt ?? Date.now());
   const [loadedFilters, setLoadedFilters] = useState<Partial<ITicketListFilters>>(initialFilters ?? {});
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
+  const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
+  const [seatHandoffDirection, setSeatHandoffDirection] = useState<'client_it' | 'msp' | undefined>(consolidatedData.seatHandoffDirection);
   const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -280,6 +293,9 @@ export default function TicketingDashboardContainer({
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
     setLoadedAt(consolidatedData.loadedAt ?? Date.now());
+    setNamedViews(consolidatedData.views);
+    setSeatResponsibilityOffered(consolidatedData.seatResponsibilityOffered === true);
+    setSeatHandoffDirection(consolidatedData.seatHandoffDirection);
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
@@ -288,7 +304,7 @@ export default function TicketingDashboardContainer({
     // unsettled (so its finally never runs). The refresh itself delivers fresh
     // data here, so clear the loading spinner — otherwise it hangs forever.
     setIsLoading(false);
-  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection]);
 
   const {
     value: storedPageSize,
@@ -401,6 +417,7 @@ export default function TicketingDashboardContainer({
     }
     const whereParam = encodeTicketWhere(filters.where);
     if (whereParam) params.set('where', whereParam);
+    if (filters.listView) params.set('listView', filters.listView);
     if (filters.sortBy && filters.sortBy !== 'entered_at') {
       params.set('sortBy', filters.sortBy);
     }
@@ -502,6 +519,7 @@ export default function TicketingDashboardContainer({
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled',
+        listView: filters.listView || undefined,
         where: filters.where && filters.where.clauses.length > 0 ? filters.where : undefined,
       };
 
@@ -529,6 +547,9 @@ export default function TicketingDashboardContainer({
       setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
       setLoadedFilters(currentFiltersWithDefaults);
       setTotalCount(result.totalCount);
+      setNamedViews(result.views);
+      setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);
+      setSeatHandoffDirection(result.seatHandoffDirection);
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
@@ -620,7 +641,8 @@ export default function TicketingDashboardContainer({
     statusIds: effectiveOptions.statusOptions.map(option => option.value),
     priorityIds: effectiveOptions.priorityOptions.map(option => option.value),
     categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
-    clientIds: effectiveOptions.clients.map(client => client.client_id),
+    // No clientIds universe: the client filter is a server-searched picker, so a saved client id
+    // cannot be validated without loading every client. An absent universe means "cannot validate".
     userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
     // Contact / client tag universes for `where`. An older cached options payload has no such list:
     // leave the universe absent ("cannot validate") rather than empty ("everything is deleted").
@@ -629,7 +651,6 @@ export default function TicketingDashboardContainer({
     effectiveOptions.statusOptions,
     effectiveOptions.priorityOptions,
     effectiveOptions.categories,
-    effectiveOptions.clients,
     effectiveOptions.users,
     effectiveOptions.contactTagDefinitions,
     effectiveOptions.clientTagDefinitions,
@@ -1049,7 +1070,6 @@ export default function TicketingDashboardContainer({
     statusIds: new Set<string>(knownFilterIds.statusIds as string[]),
     priorityIds: new Set<string>(knownFilterIds.priorityIds as string[]),
     categoryIds: new Set<string>(knownFilterIds.categoryIds as string[]),
-    clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
     userIds: new Set<string>(knownFilterIds.userIds as string[]),
     teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
     whereTagIds: knownFilterIds.whereTagIds,
@@ -1153,12 +1173,14 @@ export default function TicketingDashboardContainer({
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}
       initialCategories={effectiveOptions.categories}
-      initialClients={effectiveOptions.clients}
       initialTags={effectiveOptions.tags || []}
       contactTagDefinitions={effectiveOptions.contactTagDefinitions}
       clientTagDefinitions={effectiveOptions.clientTagDefinitions}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}
+      namedViews={namedViews}
+      seatResponsibilityOffered={seatResponsibilityOffered}
+      seatHandoffDirection={seatHandoffDirection}
       currentPage={currentPage}
       pageSize={pageSize}
       onPageChange={handlePageChange}
@@ -1178,6 +1200,7 @@ export default function TicketingDashboardContainer({
       initialTicketTags={ticketMetadata.ticketTags}
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
+      workspaceReadOnly={workspaceReadOnly}
       onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
         smartSearchAvailable={smartSearchAvailable}

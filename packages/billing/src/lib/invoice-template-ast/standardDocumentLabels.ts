@@ -69,6 +69,7 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.sku', defaultValue: 'SKU' },
   { i18nKey: 'labels.source', defaultValue: 'Source' },
   { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' },
+  { i18nKey: 'labels.subtotalBeforeDiscounts', defaultValue: 'Subtotal Before Discounts' },
   { i18nKey: 'labels.tax', defaultValue: 'Tax' },
   { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
   { i18nKey: 'labels.ticket', defaultValue: 'Ticket' },

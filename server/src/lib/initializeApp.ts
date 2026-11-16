@@ -48,7 +48,7 @@ export async function initializeApp() {
     // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
     // feature flags via @alga-psa/core without importing from server.
     const { featureFlags } = await import('./feature-flags/featureFlags');
-    registerFeatureFlagChecker((flag, ctx) => featureFlags.isEnabled(flag, ctx));
+    registerFeatureFlagChecker((flag, ctx) => featureFlags.evaluate(flag, ctx));
 
     await bootstrapInboundWebhookActions();
     logger.info('Inbound webhook actions bootstrapped');
@@ -443,6 +443,7 @@ function logConfiguration() {
   logger.info('Storage Configuration:', {
     STORAGE_LOCAL_BASE_PATH: process.env.STORAGE_LOCAL_BASE_PATH,
     STORAGE_LOCAL_MAX_FILE_SIZE: process.env.STORAGE_LOCAL_MAX_FILE_SIZE,
+    STORAGE_S3_MAX_FILE_SIZE: process.env.STORAGE_S3_MAX_FILE_SIZE,
     STORAGE_LOCAL_ALLOWED_MIME_TYPES: process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES,
     STORAGE_LOCAL_RETENTION_DAYS: process.env.STORAGE_LOCAL_RETENTION_DAYS
   });

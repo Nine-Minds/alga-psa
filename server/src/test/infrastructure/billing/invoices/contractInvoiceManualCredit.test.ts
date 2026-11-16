@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable, materializeRecurringServicePeriods } from '../../../../../test-utils/billingTestHelpers';
+import { createFixedPlanAssignment, createTestService, setupClientTaxConfiguration, assignServiceTaxRate, ensureClientPlanBundlesTable, materializeRecurringServicePeriods, generateInvoiceForCycle } from '../../../../../test-utils/billingTestHelpers';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { addManualItemsToInvoice, updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -224,7 +223,7 @@ describe('Contract Invoice Manual Credit', () => {
 
     await ensureClientBillingSettings(context.clientId);
 
-    // generateInvoice refuses a window with no recurring service period, and
+    // generateInvoiceForCycle refuses a window with no recurring service period, and
     // the fixture only materializes on request. Run it after the line is
     // attached to its contract, so the schedule is anchored where it will be
     // read from.
@@ -241,7 +240,7 @@ describe('Contract Invoice Manual Credit', () => {
       effective_date: periodStart
     }, 'billing_cycle_id');
 
-    const generatedInvoice = await generateInvoice(billingCycleId);
+    const generatedInvoice = await generateInvoiceForCycle(billingCycleId);
     expect(generatedInvoice).not.toBeNull();
     const invoiceId = generatedInvoice!.invoice_id;
 
@@ -274,7 +273,8 @@ describe('Contract Invoice Manual Credit', () => {
     const baseTax = Number(generatedInvoice!.tax);
     expect(baseSubtotal).toBeGreaterThan(0);
 
-    const expectedTax = baseTax;
+    // The manual credit reduces the taxable base before tax (10% rate here).
+    const expectedTax = baseTax - 1000;
     const expectedSubtotal = baseSubtotal - 10000;
     const expectedTotal = expectedSubtotal + expectedTax;
 
@@ -977,7 +977,7 @@ describe('Contract Invoice Manual Credit', () => {
     await ensureClientBillingSettings(clonedClientId);
 
     for (const line of [preservedBase, preservedAddOn, clonedBase, clonedAddOn]) {
-      // Every active line needs a period for the window, or generateInvoice
+      // Every active line needs a period for the window, or generateInvoiceForCycle
       // fails the whole run.
       await materializeRecurringServicePeriods(context, line.contractLineId);
     }
@@ -997,8 +997,8 @@ describe('Contract Invoice Manual Credit', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    const preservedInvoice = await generateInvoice(preservedBillingCycleId);
-    const clonedInvoice = await generateInvoice(clonedBillingCycleId);
+    const preservedInvoice = await generateInvoiceForCycle(preservedBillingCycleId);
+    const clonedInvoice = await generateInvoiceForCycle(clonedBillingCycleId);
 
     expect(preservedInvoice).not.toBeNull();
     expect(clonedInvoice).not.toBeNull();

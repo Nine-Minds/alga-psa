@@ -1,13 +1,13 @@
 import { allowedOperators, resolvePath, unicodeLowerV1 } from '@alga-psa/predicates';
 import type { PredicateClause, PredicateGroup, PredicateOperator } from '@alga-psa/predicates';
 import { ticketQuerySchema } from './ticketQuerySchema';
-import { WHERE_TAG_FILTERS } from './ticketWhereFilters';
+import { WHERE_LOCATION_FILTERS, WHERE_TAG_FILTERS } from './ticketWhereFilters';
 
 export interface TicketPredicateField {
   path: string;
   labelKey: string;
   defaultLabel: string;
-  control: 'select' | 'multiselect' | 'tags' | 'text' | 'boolean' | 'client';
+  control: 'select' | 'multiselect' | 'tags' | 'text' | 'boolean' | 'client' | 'locations';
   operators: readonly PredicateOperator[];
   options?:
     | 'boards'
@@ -16,7 +16,8 @@ export interface TicketPredicateField {
     | 'priorities'
     | 'origins'
     | 'definitions'
-    | { tags: 'client' | 'contact' };
+    | { tags: 'client' | 'contact' }
+    | { locations: 'ticket' | 'contact' };
   fold?: 'lower';
   ownerSensitive?: boolean;
 }
@@ -45,6 +46,14 @@ export const TICKET_PREDICATE_FIELDS: readonly TicketPredicateField[] = [
   ...WHERE_TAG_FILTERS.map(
     (tag): TicketPredicateField => ({
       ...field(tag.path, tag.defaultLabel, 'tags', { tags: tag.taggedType }),
+      operators: ['in', 'not_in'],
+    })
+  ),
+  // Both location paths, from the same descriptor table the ticket-list toolbar reads, so the
+  // checklist editor and the toolbar can never offer different sets.
+  ...WHERE_LOCATION_FILTERS.map(
+    (location): TicketPredicateField => ({
+      ...field(location.path, location.defaultLabel, 'locations', { locations: location.locationOf }),
       operators: ['in', 'not_in'],
     })
   ),
