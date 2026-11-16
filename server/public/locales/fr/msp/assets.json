@@ -1994,6 +1994,8 @@
     "asset": {
       "tagAlreadyExists": "Cette étiquette d’actif est déjà utilisée ou réservée. Scannez-la pour retrouver l’actif existant ou saisissez une autre étiquette.",
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "ticketNotFound": "Ticket introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "alreadyLinkedToTicket": "Cet actif est déjà lié au ticket.",
       "clientNotFound": "Client introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "maintenanceNotFound": "Planning de maintenance introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
       "maintenanceMismatch": "Cet enregistrement de maintenance ne correspond pas à l’actif sélectionné. Veuillez actualiser la page et réessayer.",

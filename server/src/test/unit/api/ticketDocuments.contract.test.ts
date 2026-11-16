@@ -72,7 +72,7 @@ describe('Ticket documents API contract', () => {
     const source = readTicketServiceSource();
 
     // Preview persistence moved onto the shared upload core, which the service calls.
-    expect(source).toContain('attachDocumentFromBytes');
+    expect(source).toContain('attachDocument');
     const coreSource = fs.readFileSync(path.resolve(__dirname, '../../../lib/api/services/documents/attachDocument.ts'), 'utf8');
     expect(coreSource).toContain('await scheduleDocumentPreviews(tenant, documentId, actorUserId);');
     expect(source).toContain('async downloadTicketDocumentVariant(');

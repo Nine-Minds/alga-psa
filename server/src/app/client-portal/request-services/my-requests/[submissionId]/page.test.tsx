@@ -49,17 +49,13 @@ describe('MyRequestDetailPage', () => {
   it('renders snapshot-aware answers and linked ticket references for submission history detail', async () => {
     getMyServiceRequestSubmissionDetailAction.mockResolvedValue({
       submission_id: 'submission-1',
-      definition_id: 'definition-1',
-      definition_version_id: 'version-1',
       request_name: 'Access Request',
       submitted_payload: {
         access_level: 'standard',
         needs_manager_approval: true,
       },
       execution_status: 'succeeded',
-      execution_error_summary: null,
       created_ticket_id: 'ticket-123',
-      workflow_execution_id: 'workflow-456',
       submitted_at: '2026-03-29T14:30:00.000Z',
       form_schema_snapshot: {
         fields: [
@@ -89,11 +85,8 @@ describe('MyRequestDetailPage', () => {
         {
           submission_attachment_id: 'attachment-1',
           field_key: 'supporting_quote',
-          file_id: 'file-1',
           file_name: 'quote.pdf',
           mime_type: 'application/pdf',
-          file_size: '1024',
-          created_at: '2026-03-29T14:30:00.000Z',
         },
       ],
     });

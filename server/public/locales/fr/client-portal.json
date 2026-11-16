@@ -165,6 +165,11 @@
           "cancelled": "Rendez-vous annulé : {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Cette demande n'a pas pu être traitée. Contactez votre prestataire de services pour obtenir de l'aide."
+        }
+      },
       "algadeskEmptyHint": "Lorsque des tickets sont mis à jour, vous les verrez ici."
     },
     "devices": {

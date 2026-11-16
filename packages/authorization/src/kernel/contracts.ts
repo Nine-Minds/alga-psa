@@ -29,6 +29,12 @@ export interface AuthorizationSubject {
   // enforced via the agent's backing internal user (so userId/roleIds still apply).
   agentId?: string | null;
   subjectType?: 'user' | 'agent';
+  /**
+   * Facts loaded for this request by registered built-in rule resolvers, keyed by resolver id (see
+   * `BuiltinResolverFactSource`). Absent when no resolver's fact source applies to the tenant. Loaded with the
+   * subject on every request and never cached across requests.
+   */
+  resolverFacts?: Record<string, unknown>;
 }
 
 export interface AuthorizationResourceRef {
@@ -100,6 +106,8 @@ export interface AuthorizationEvaluationInput {
   record?: AuthorizationRecord;
   selectedClientIds?: string[];
   selectedBoardIds?: string[];
+  /** Record ids the `selected_records` template admits; set per rule by the provider, like the two above. */
+  selectedRecordIds?: string[];
   selectedTeamIds?: string[];
   mutation?: AuthorizationMutationInput;
   requestCache?: AuthorizationRequestCache;
@@ -137,6 +145,7 @@ export type RelationshipTemplateKey =
   | 'selected_clients'
   | 'same_team'
   | 'selected_boards'
+  | 'selected_records'
   | 'contact_visibility';
 
 export interface RelationshipRule {

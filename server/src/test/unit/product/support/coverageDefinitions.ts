@@ -112,7 +112,7 @@ export const CLIENT_PORTAL_OWN_CLIENT_SCOPE: ReadonlySet<string> = new Set([
 
 /**
  * Every name below was checked against the tree: each is defined only in the authorization package, the
- * slice's own read-authorization module, or the S18 REST kernel adapter, so a bare-name match cannot hit an
+ * slice's own read-authorization module, the S18 REST kernel adapter, or the REST asset read guard, so a bare-name match cannot hit an
  * unrelated function. The method names `authorizeResource` and `authorizeMutation` are defined only on the
  * kernel (`packages/authorization/src/kernel/{contracts,engine,providers/builtinProvider}.ts`).
  */
@@ -146,7 +146,8 @@ export const AUTHORIZATION_ENTRY_POINTS: ReadonlySet<string> = new Set([
   // client portal: the caller's own client, derived from the session (see CLIENT_PORTAL_OWN_CLIENT_SCOPE)
   ...CLIENT_PORTAL_OWN_CLIENT_SCOPE,
   // REST and MCP (S18)
-  'authorizeApiResourceAction', 'authorizeApiResource', 'authorizeApiResourceRead',
+  'authorizeApiResource', 'projectApiResourceRead', 'projectApiResourceReads',
+  'readAssetGateForRequest', 'guardAssetReadForRequest',
 ]);
 
 // ---------------------------------------------------------------------------------------------
@@ -231,6 +232,24 @@ export interface AnalyzedEntry { entry: Entry; summary: Summary }
 /** Authentication and authorization infrastructure: its own session/role table reads are not what the caller does with tenant data. */
 export const OPAQUE_PATH = /(^|\/)(packages\/(auth|authorization|db)|shared\/(db|core)|server\/src\/lib\/(auth|db)|server\/src\/lib\/api\/middleware)\//;
 
+/**
+ * Recipient-authorization modules: they decide what a notification's RECIPIENT may be told and return
+ * only that decision (a recipient classification, an audience, an admission), never a covered row. Their
+ * own reads (the S33 boundary reads `tickets.client_id`/`board_id`, `comments`, `comment_threads` to
+ * place a seat technician) are therefore not what the caller does with tenant data, exactly as for
+ * `OPAQUE_PATH`. Opaque, NOT an authorization entry point: reaching one gates nothing for the caller,
+ * so an action's own covered reads stay visible and still need a real entry point.
+ * Each file listed here must export no function that returns a covered table's rows.
+ */
+export const OPAQUE_FILES: ReadonlySet<string> = new Set([
+  'shared/lib/notificationAudience.ts',
+]);
+
+export const isOpaqueFile = (file: string): boolean => {
+  const normalized = file.split(path.sep).join('/');
+  return OPAQUE_PATH.test(normalized) || [...OPAQUE_FILES].some((opaque) => normalized === opaque || normalized.endsWith(`/${opaque}`));
+};
+
 export interface Analysis { analyzed: AnalyzedEntry[]; analyzer: Analyzer }
 
 /** Entries sorted by file, then export, so every list and message is in one stable order. */
@@ -238,7 +257,7 @@ export function analyzeFiles(program: Program, files: string[]): Analysis {
   const analyzer = createAnalyzer({
     program,
     isTable: isTenantTable,
-    opaqueFile: (file) => OPAQUE_PATH.test(file.split(path.sep).join('/')),
+    opaqueFile: isOpaqueFile,
   });
   const entries: Entry[] = [];
   for (const file of files) entries.push(...findEntries(program.source(file), relativeToRepository(file)));

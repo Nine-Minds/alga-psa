@@ -13,6 +13,8 @@ exports.up = async function up(knex) {
     // The board memberships reference the groups, so the groups go first.
     tables: ['client_portal_visibility_groups', 'client_portal_visibility_group_boards'],
     colocateWith: 'clients',
+    // A group's link to a board that no longer exists grants nothing.
+    removeOrphans: { client_portal_visibility_group_boards: ['board_id'] },
   });
 };
 

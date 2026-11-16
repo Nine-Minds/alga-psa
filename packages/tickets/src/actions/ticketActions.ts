@@ -1,7 +1,12 @@
 'use server';
 
-import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
+import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '../lib/ticketCreateAuthorization';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import {
+  assertActorMayAssign,
+  resolveSeatAssigneeAudience,
+  restrictToSeatAudience,
+} from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import {
   isClientUserType,
   isMspPrincipalUserType,
@@ -38,7 +43,7 @@ import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { recordTicketAssigneeChange } from '@alga-psa/db';
+import { recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -100,6 +105,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { projectReadableRecord } from '@alga-psa/authorization/recordProjection';
+import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
   buildTicketAssignedPayload,
@@ -504,6 +510,17 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
               entered_by: user.user_id,
             });
 
+            // The asset the ticket is created from must be one the creator may read: for a seat technician that is
+            // their own client's, and anything else answers as missing. Without a restricting rule this allows.
+            const sourceAsset = await tenantScopedTable(trx, 'assets', tenant)
+              .where({ asset_id: data.asset_id })
+              .first('asset_id', 'client_id');
+            if (!sourceAsset || !await isAssetReadAllowed(
+              trx, tenant, await createAssetReadContext(trx, tenant, user as AssetAuthUser), sourceAsset,
+            )) {
+              throw new Error(`Invalid asset: ${data.asset_id} was not found`);
+            }
+
             // Use shared TicketModel for asset ticket creation
             const ticketResult = await TicketModel.createTicketFromAsset(
                 data,
@@ -795,6 +812,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         entered_by: user.user_id,
       });
 
+      await assertActorMayAssign(trx, tenant, user, [createTicketInput.assigned_to]);
+
       // Use shared TicketModel with retry logic
       // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
@@ -913,6 +932,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
                 checklist_template_id: item.checklist_template_id,
               }))
             : [],
+          // Links are always copied (no form toggle): a technician who does not want a citation removes it.
+          links: sourceTemplate.links,
           fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
@@ -1527,6 +1548,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         throw new Error('Ticket not found');
       }
 
+      // A subject scoped to a client and boards (a co-managed seat technician) may only edit a ticket they can work,
+      // and only so that it stays where they can work it.
+      await assertTicketUpdateAllowed(trx, tenant, user, currentTicket, validatedData);
+
       // Clean up the data before update
       const updateData = { ...validatedData };
 
@@ -1701,9 +1726,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       }
 
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      // The placement the write leaves behind is what scope is judged against, not the stored one.
+      const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
       if (isChangingAssignment && updateData.assigned_to) {
-        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+        await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
@@ -1731,6 +1761,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, id, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
       // Get the new status if it was updated
@@ -3119,14 +3154,19 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       const includeAgentDirectory = !isClientUserType(user.user_type);
 
       // Fetch additional resources and available agents in parallel
+      const seatAssigneeAudience = includeAgentDirectory
+        ? await resolveSeatAssigneeAudience(trx, tenant, user)
+        : null;
       const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
         includeAgentDirectory
-          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
-              .where({ is_inactive: false })
+          ? restrictToSeatAudience(
+              projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).where({ is_inactive: false }),
+              seatAssigneeAudience
+            )
               .orderBy('first_name', 'asc')
               .then(sanitizeResponseUsers)
           : Promise.resolve(undefined)

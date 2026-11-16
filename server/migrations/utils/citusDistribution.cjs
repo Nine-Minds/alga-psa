@@ -120,6 +120,76 @@ async function localReferrers(knex, tableName) {
   return (r.rows ?? []).map((row) => row.tbl);
 }
 
+const ORPHAN_BATCH = 1000;
+
+// A local table's foreign key to a distributed parent is not enforced, so its
+// rows outlive the parent they point at. On the shards the key is real and one
+// such row fails create_distributed_table(). Each orphan gets what its key
+// would have done at the parent's delete: a cascading key removes the row, any
+// other key on a nullable column clears the reference. A required column under
+// a non-cascading key has no such answer — the migration names it in
+// `removeOrphans` or fails here, before anything is distributed.
+//
+// Covers (tenant, <uuid column>) keys. Local and distributed tables cannot be
+// joined, so the referenced ids are read per tenant and looked up in the parent.
+async function repairOrphanedReferences(knex, table, removable = []) {
+  const fks = await knex.raw(
+    `SELECT child.attname AS col, con.confrelid::regclass::text AS parent, parent.attname AS parent_col,
+            con.confdeltype = 'c' AS cascades, NOT child.attnotnull AS nullable
+       FROM pg_constraint con
+       JOIN pg_attribute child ON child.attrelid = con.conrelid
+        AND child.attnum = ANY (con.conkey) AND child.attname <> 'tenant'
+       JOIN pg_attribute parent ON parent.attrelid = con.confrelid
+        AND parent.attnum = con.confkey[array_position(con.conkey, child.attnum)]
+      WHERE con.contype = 'f'
+        AND con.conrelid = ?::regclass
+        AND cardinality(con.conkey) = 2
+        AND child.atttypid = 'uuid'::regtype
+        AND EXISTS (SELECT 1 FROM pg_attribute t WHERE t.attrelid = con.conrelid
+                     AND t.attnum = ANY (con.conkey) AND t.attname = 'tenant')
+        AND EXISTS (SELECT 1 FROM pg_dist_partition p WHERE p.logicalrelid = con.confrelid)
+      ORDER BY con.conname`,
+    [table],
+  );
+
+  for (const { col, parent, parent_col: parentCol, cascades, nullable } of fks.rows) {
+    const nullify = !cascades && nullable;
+    const referenced = await knex.raw(
+      'SELECT tenant, array_agg(DISTINCT ??) AS ids FROM ?? WHERE ?? IS NOT NULL GROUP BY tenant',
+      [col, table, col],
+    );
+    let repaired = 0;
+    for (const { tenant, ids } of referenced.rows) {
+      const found = await knex.raw('SELECT ?? AS id FROM ?? WHERE tenant = ? AND ?? = ANY(?::uuid[])', [
+        parentCol, parent, tenant, parentCol, ids,
+      ]);
+      const live = new Set(found.rows.map((row) => row.id));
+      const missing = ids.filter((id) => !live.has(id));
+      if (missing.length === 0) continue;
+      if (!nullify && !cascades && !removable.includes(col)) {
+        throw new Error(
+          `${table}.${col} references ${missing.length} missing ${parent} row(s) for tenant ${tenant}, and its key has no delete action`,
+        );
+      }
+
+      // Each batch commits on its own: the caller runs outside a transaction.
+      const orphans = 'SELECT ctid FROM ?? WHERE tenant = ? AND ?? = ANY(?::uuid[]) LIMIT ?';
+      const statement = nullify
+        ? `UPDATE ?? SET ?? = NULL WHERE ctid = ANY (ARRAY(${orphans}))`
+        : `DELETE FROM ?? WHERE ctid = ANY (ARRAY(${orphans}))`;
+      const bindings = [...(nullify ? [table, col] : [table]), table, tenant, col, missing, ORPHAN_BATCH];
+      for (;;) {
+        const { rowCount } = await knex.raw(statement, bindings);
+        repaired += rowCount;
+        if (rowCount < ORPHAN_BATCH) break;
+      }
+    }
+    if (repaired > 0) {
+      console.log(`${table}.${col}: ${repaired} row(s) referenced a missing ${parent} row; ${nullify ? 'reference cleared' : 'removed'}`);
+    }
+  }
+}
+
 // Move tenant tables that were left coordinator-local onto the shards, next to
 // an already-distributed table they join. A local table joined to distributed
 // ones is recursively planned into a subplan shipped over a loopback
@@ -130,11 +200,12 @@ async function localReferrers(knex, tableName) {
 // - `dropTriggers`: { table: [trigger, ...] }. Citus refuses to distribute a
 //   table that has triggers; whatever a trigger did becomes the application's
 //   job once the table is distributed, so audit the writers first.
+// - `removeOrphans`: { table: [column, ...] }, see repairOrphanedReferences.
 //
 // All pending tables move in one transaction, so a failed attempt leaves every
 // table local with its triggers in place. No-op on plain Postgres, when
 // `colocateWith` is not distributed, and for tables already distributed.
-async function distributeLocalTenantTables(knex, { tables, colocateWith, dropTriggers = {} }) {
+async function distributeLocalTenantTables(knex, { tables, colocateWith, dropTriggers = {}, removeOrphans = {} }) {
   if (!(await hasCitus(knex))) return;
   if (!(await isDistributed(knex, colocateWith))) return;
 
@@ -146,6 +217,8 @@ async function distributeLocalTenantTables(knex, { tables, colocateWith, dropTri
   for (const table of present) {
     if (!(await isDistributed(knex, table))) pending.push(table);
   }
+
+  for (const table of pending) await repairOrphanedReferences(knex, table, removeOrphans[table]);
 
   if (pending.length > 0) {
     await inLockBoundedTransaction(knex, async (trx) => {

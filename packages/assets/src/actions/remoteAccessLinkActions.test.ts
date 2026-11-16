@@ -67,6 +67,9 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('../lib/assetReadAuthorization', () => ({
   createAssetReadContext: vi.fn(async () => mocks.context),
+  // No seat authority applies to the users these tests act as.
+  isAssetOperationClosed: vi.fn(() => false),
+  isAssetOperationClosedForUser: vi.fn(async () => false),
   isAssetReadAllowed: vi.fn(async (_trx: unknown, _tenant: string, context: typeof mocks.context, record: { client_id: string }) =>
     context.allowedClientIds.has(record.client_id)),
 }));

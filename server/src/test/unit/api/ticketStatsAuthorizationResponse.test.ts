@@ -10,7 +10,15 @@ vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: vi.fn(async () =
 vi.mock('@/lib/db', () => ({ runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<any>) => callback()) }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
-vi.mock('@/lib/api/controllers/authorizationKernel', async (original) => ({ ...(await original<any>()), authorizeApiResourceRead: vi.fn(async ({ recordContext }: any) => state.decision(recordContext.id)) }));
+// The kernel decision boundary: each row's decision (allow/deny + redactions) comes from state.decision, and the real
+// projector applies it, so responses carry genuine branded projections with their retained policy.
+vi.mock('server/src/lib/authorization/kernel', async (original) => ({
+  ...(await original<any>()),
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: vi.fn(async (input: any) => state.decision(String(input.record?.id ?? ''))),
+    resolveFieldRedactions: vi.fn(async () => []),
+  })),
+}));
 vi.mock('@alga-psa/authorization/subject', async (original) => ({
   ...(await original<any>()),
   resolveAuthorizationSubject: vi.fn(async (_knex: unknown, input: any) => ({
@@ -49,11 +57,14 @@ describe('ticket statistics authorization response', () => {
     const controllerInstance = controller();
     const response = await controllerInstance.getById()(request());
     const body = await response.json();
+    // The hidden source field is omitted; display values derived from it are blanked (null), never disclosed.
     expect(body.data).not.toHaveProperty('status_id');
-    expect(body.data).not.toHaveProperty('status_name');
-    expect(body.data).not.toHaveProperty('status_is_closed');
+    expect(body.data.status_name).toBeNull();
+    expect(body.data.status_is_closed).toBeNull();
+    expect(body.data.priority_name).toBe('High');
     state.decision = () => ({ allowed: false, redactedFields: [] });
-    expect((await controller().getById()(request())).status).toBe(403);
+    // A row-dependent denial is indistinguishable from a missing ticket.
+    expect((await controller().getById()(request())).status).toBe(404);
   });
 
   it('projects list responses through per-row redactions applied over the SQL-narrowed page', async () => {
@@ -65,8 +76,9 @@ describe('ticket statistics authorization response', () => {
     expect(body.data).toHaveLength(2);
     for (const row of body.data) {
       expect(row).not.toHaveProperty('status_id');
-      expect(row).not.toHaveProperty('status_name');
-      expect(row).not.toHaveProperty('status_is_closed');
+      expect(row.status_name).toBeNull();
+      expect(row.status_is_closed).toBeNull();
+      expect(row.board_name).toBe('Helpdesk');
     }
   });
 
@@ -74,6 +86,18 @@ describe('ticket statistics authorization response', () => {
     const response = await controller().stats()(request());
     const body = await response.json();
     expect(body.data).toMatchObject({ total_tickets: 2, open_tickets: 2, tickets_by_status: { s1: 2 }, tickets_by_priority: { High: 2 }, tickets_by_category: { Support: 2 }, tickets_by_board: { Helpdesk: 2 } });
+  });
+
+  it('omits unassigned_tickets instead of counting hidden assignees as unassigned', async () => {
+    state.tickets = [{ ...ticket('t1'), assigned_to: 'u9', assigned_to_name: 'Pat' }, ticket('t2')];
+    state.decision = () => ({ allowed: true, redactedFields: ['tickets.assigned_to'] });
+    const body = await (await controller().stats()(request())).json();
+    expect(body.data).toHaveProperty('total_tickets', 2);
+    expect(body.data).not.toHaveProperty('unassigned_tickets');
+    expect(body.data).toMatchObject({ open_tickets: 2, tickets_by_priority: { High: 2 } });
+    state.decision = () => ({ allowed: true, redactedFields: [] });
+    const visible = await (await controller().stats()(request())).json();
+    expect(visible.data).toHaveProperty('unassigned_tickets', 1);
   });
 
   it('omits each aggregate when any row hides one of its source dependencies', async () => {

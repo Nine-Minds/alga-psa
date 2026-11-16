@@ -106,6 +106,13 @@ export interface ProjectScreenBehavior {
   /** Where back/exit goes (the Shared Tasks queue in shared mode). */
   backHref: string | null;
   slots: ProjectScreenSlots;
+  /**
+   * Operations the server closes to this viewer that no field or action flag covers (`service_catalog`,
+   * `project_materials`, `project_billing`, `project_manage`; see `SEAT_AUTHORITY_PROJECTION.project`). A form that
+   * would call a closed lookup does not call it, and a control for one is not rendered. Absent on a screen whose
+   * source closes nothing, which is every native and shared screen today.
+   */
+  closedOperations?: readonly string[];
 }
 
 export const NATIVE_PROJECT_SCREEN: ProjectScreenBehavior = Object.freeze({

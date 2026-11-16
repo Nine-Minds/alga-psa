@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import {
   CoManagedReservationError, reserveAndActivateCoManagedSeatAllocation, type CoManagedAllocationKind,
 } from '@alga-psa/licensing';
+import { admitCoManagedSeatRole } from './seatRole';
 
 /**
  * Seat arrangements: one of the sponsor's own clients, bound to the seat allocation that pays for
@@ -17,7 +18,8 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type ReservationCode = CoManagedReservationError['code'];
 type ArrangementCode = ReservationCode | 'CLIENT_INACTIVE' | 'ARRANGEMENT_NOT_FOUND' | 'ARRANGEMENT_ENDED' |
-  'INVALID_BOARD_SCOPE' | 'BOARD_NOT_FOUND';
+  'INVALID_BOARD_SCOPE' | 'BOARD_NOT_FOUND' | 'INVALID_PROJECT_GRANTS' | 'INVALID_PROJECT_GRANT' | 'PROJECT_NOT_FOUND' |
+  'INVALID_HANDOFF_DEFAULTS' | 'USER_NOT_FOUND';
 
 export class CoManagedSeatArrangementError extends Error {
   /**
@@ -40,6 +42,11 @@ export class CoManagedSeatArrangementError extends Error {
         ARRANGEMENT_ENDED: 'This seat arrangement has ended.',
         INVALID_BOARD_SCOPE: 'List each board once.',
         BOARD_NOT_FOUND: 'A selected board is no longer available.',
+        INVALID_PROJECT_GRANTS: 'List each project once.',
+        INVALID_PROJECT_GRANT: 'Choose a project and whether to share it.',
+        PROJECT_NOT_FOUND: 'A selected project is no longer available.',
+        INVALID_HANDOFF_DEFAULTS: 'Choose a valid person to receive handed-over tickets.',
+        USER_NOT_FOUND: 'The selected person is no longer available.',
       } satisfies Record<ArrangementCode, string>)[code]);
     this.name = 'CoManagedSeatArrangementError';
   }
@@ -74,6 +81,9 @@ export interface CreateCoManagedSeatArrangementInput {
  * Refuses with `CLIENT_INACTIVE`, with `CLIENT_HAS_ARRANGEMENT` naming the live `workspace`
  * relationship or `seat` arrangement the client already has, and with every reason the seat
  * reservation refuses for (sponsor eligibility, lapse, capacity, unknown client).
+ *
+ * The sponsor's first arrangement also seeds the seat role (`admitCoManagedSeatRole`); a sponsor
+ * with no seat arrangement never has it.
  *
  * Locks: the sponsor's entitlement row first, as every allocation writer does, then the client row.
  */
@@ -119,6 +129,9 @@ export async function createCoManagedSeatArrangement(
       allocation_id: allocation.allocation_id,
       state: 'active',
     }).returning('*');
+    // The role this arrangement's technicians will hold. Written by the sponsor's first
+    // arrangement and found by every later one; the pool lock above makes that exactly one.
+    await admitCoManagedSeatRole(trx, input.sponsorTenant);
     return arrangementResult(arrangement, allocation.seats);
   });
 }

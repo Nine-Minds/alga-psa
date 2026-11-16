@@ -1,6 +1,7 @@
 import { InboundRetryLaterError, isInboundRetryLaterError } from './inboundRetryLaterError';
 import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, parseCm2Metadata } from '../../lib/coManagedDelivery';
-import { resolveCommentAudienceForRead } from '../../lib/commentAudience';
+import { resolveCommentAudienceForRead, type CommentAudience } from '../../lib/commentAudience';
+import { readNotificationAudience, resolveInboundReplyAudience } from '../../lib/notificationAudience';
 import type { TenantDb } from '@alga-psa/db';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
@@ -208,7 +209,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated' | 'reply_outside_sender_audience';
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -658,6 +659,19 @@ function normalizeStoredMessageId(value: string | null | undefined): string | nu
     return value ?? null;
   }
   return normalizeRfc822MessageId(value) ?? value;
+}
+
+/**
+ * Whether the comment an inbound email became is readable in the client
+ * portal. Asked only when that email carried an embedded image; a failure is
+ * reported by the caller, which keeps the images staff-only.
+ */
+async function isClientVisibleComment(tenantId: string, commentId: unknown): Promise<boolean> {
+  if (typeof commentId !== 'string' || !commentId) return false;
+  return withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
+    const comment = await db.table('comments').where({ comment_id: commentId }).first('is_internal');
+    return Boolean(comment) && comment.is_internal === false;
+  });
 }
 
 async function findExistingEmailComment(params: {
@@ -1316,6 +1330,8 @@ export async function processInboundEmailInApp(
     threadId?: string | null;
     authorizedRequesterContactId?: string;
     authorizedRequesterClientId?: string;
+    /** The audience the answered notification was sent with, when its reply token recorded one. */
+    notificationAudience?: CommentAudience | null;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
     let matchedSenderContact: Awaited<ReturnType<typeof resolveSenderContact>> | undefined;
     if (params.authorizedRequesterContactId) {
@@ -1373,6 +1389,39 @@ export async function processInboundEmailInApp(
     const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
     const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
+
+    // Reply audience (S33). A seat technician's reply keeps the audience of the notification it
+    // answers; out of scope they are an external party, so it is stored as `requester`. A token that recorded a narrower
+    // audience than `requester` was sent to a seat technician, so a reply to it from a sender
+    // not attributed to an internal user is refused rather than retargeted to a public thread.
+    const refuseReplyOutsideAudience = () => {
+      console.warn('security_event: inbound_reply_outside_sender_audience', {
+        tenantId,
+        providerId,
+        ticketId: params.ticketId,
+        emailId: emailData.id,
+        matchedBy: params.matchedBy,
+      });
+      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+      return withDiagnostics({
+        outcome: 'quarantined' as const,
+        reason: 'reply_outside_sender_audience' as const,
+        ticketId: params.ticketId,
+        matchedBy: params.matchedBy,
+      }, diagnostics);
+    };
+    const replyAudience = matchedSenderIsInternalUser && senderContact?.user_id
+      ? await withTenantAdminTransaction(tenantId, async (trx: any) => resolveInboundReplyAudience(trx, tenantId, {
+          ticketId: params.ticketId,
+          userId: senderContact.user_id as string,
+          threadId: params.parentCommentId ? params.threadId : null,
+          notificationAudience: params.notificationAudience,
+        }))
+      : null;
+    if (!matchedSenderIsInternalUser && params.notificationAudience && params.notificationAudience !== 'requester') {
+      return refuseReplyOutsideAudience();
+    }
+    const seatReply = replyAudience?.seat ? replyAudience : null;
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
     try {
@@ -1661,7 +1710,8 @@ export async function processInboundEmailInApp(
       {
         ticket_id: params.ticketId,
         content: serializedBlocks,
-        parent_comment_id: replyParentCommentId ?? undefined,
+        parent_comment_id: seatReply && !seatReply.joinThread ? undefined : replyParentCommentId ?? undefined,
+        ...(seatReply ? { audience: { author: seatReply.author, audience: seatReply.audience } } : {}),
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: senderContact?.user_id,
@@ -1716,6 +1766,7 @@ export async function processInboundEmailInApp(
           && policyContext?.clientId
           && senderContact?.client_id === policyContext.clientId
         ),
+        clientVisibleEmbeddedImages: () => isClientVisibleComment(tenantId, commentId),
       });
       await applyEmbeddedImageUrlMappingsToStoredBodies({
         tenantId,
@@ -1902,6 +1953,7 @@ export async function processInboundEmailInApp(
           threadId: replyTarget?.threadId ?? null,
           authorizedRequesterContactId,
           authorizedRequesterClientId,
+          notificationAudience: readNotificationAudience(match.metadata),
         });
         if (handled) {
           return handled;
@@ -2406,6 +2458,8 @@ export async function processInboundEmailInApp(
         !matchedSenderIsInternalUser
         && ((matchedSenderContact?.client_id && matchedSenderContact.client_id === targetClientId) || Boolean(autoCreatedContactId))
       ),
+      // The description of a ticket is always readable by the client.
+      clientVisibleEmbeddedImages: true,
     });
     await applyEmbeddedImageUrlMappingsToStoredBodies({
       tenantId,

@@ -71,6 +71,13 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
+// The sender-organization lookup is a database read of its own (covered against the real schema by
+// the seat technician journey test). Here every internal sender is ordinary MSP staff.
+vi.mock('@alga-psa/shared/lib/notificationAudience', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/shared/lib/notificationAudience')>()),
+  resolveInboundReplyAudience: vi.fn(async () => ({ seat: false })),
+}));
+
 vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   parseEmailReplyBody: (...args: any[]) => parseEmailReplyBodyMock(...args),
   findTicketByReplyToken: (...args: any[]) => findTicketByReplyTokenMock(...args),
@@ -223,7 +230,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup.
+    // Two reply-target queries plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
     expect(commentsQueryCount).toBe(3);
   });
 
@@ -326,7 +334,8 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       }),
       'tenant-1'
     );
-    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup.
+    // One reply-target query plus the per-ticket one-off Cc/Bcc lookup. The
+    // new comment's visibility is read only for a body that embeds an image.
     expect(commentsQueryCount).toBe(2);
   });
 

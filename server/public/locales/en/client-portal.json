@@ -165,6 +165,11 @@
           "cancelled": "Appointment cancelled: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "This request couldn't be processed. Contact your service provider for help."
+        }
+      },
       "algadeskEmptyHint": "When tickets are updated, you will see them here."
     },
     "devices": {

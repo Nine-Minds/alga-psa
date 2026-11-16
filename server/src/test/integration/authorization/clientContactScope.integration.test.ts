@@ -27,7 +27,8 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<any>()),
   withAuth: (action: any) => (...args: any[]) => action(ref.user, { tenant: ref.tenant }, ...args),
-  hasPermission: vi.fn(async () => true),
+  // The coarse grant, also for actions that answer several permissions from one roles load.
+  ...(await import('../../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({

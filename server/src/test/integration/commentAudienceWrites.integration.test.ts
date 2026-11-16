@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { retainBuiltinResolverSubject } from '@alga-psa/authorization/subject';
+import { CO_MANAGED_SEAT_RESOLVER_ID } from '@alga-psa/co-managed/seatAuthority';
 import { randomUUID } from 'node:crypto';
 import {
-  changeThreadAudience, commentAudienceSql, resolveCommentAudienceReader, type CommentAudienceReader,
+  changeThreadAudience, commentAudienceSql, resolveCommentAudienceReader, resolveCommentWriteAuthor, type CommentAudienceReader,
 } from '@alga-psa/shared/lib/commentAudience';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -101,7 +103,10 @@ describe('comment audiences on native writes (integration)', () => {
 
     arrangementId = randomUUID();
     await t('co_managed_seat_arrangements').insert({ tenant, arrangement_id: arrangementId, client_id: tickets[0].client_id, allocation_id: randomUUID(), state: 'active' });
-    await t('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUser, state: 'active' });
+    await knex.transaction(async trx => {
+      await retainBuiltinResolverSubject(trx, { tenant, userId: seatUser }, CO_MANAGED_SEAT_RESOLVER_ID);
+      await tenantDb(trx, tenant).table('co_managed_seat_assignments').insert({ tenant, assignment_id: randomUUID(), arrangement_id: arrangementId, user_id: seatUser, state: 'active' });
+    });
 
     // Organizations come from the real resolver, exactly as an entry point would obtain them.
     staff = (await resolveCommentAudienceReader(knex, tenant, { userId: mspUser, userType: 'internal' }))!;
@@ -124,6 +129,7 @@ describe('comment audiences on native writes (integration)', () => {
       }
       if (arrangementId) {
         await t('co_managed_seat_assignments').where({ arrangement_id: arrangementId }).delete();
+        await t('authorization_resolver_subjects').where({ resolver_id: CO_MANAGED_SEAT_RESOLVER_ID, user_id: seatUser }).delete();
         await t('co_managed_seat_arrangements').where({ arrangement_id: arrangementId }).delete();
       }
     }
@@ -171,6 +177,22 @@ describe('comment audiences on native writes (integration)', () => {
       expect(await t('comments').where({ user_id: seatUser }).whereIn('ticket_id', [ticketA, ticketB]).count('* as n').first()).toEqual(before);
     });
 
+    it('an ended arrangement refuses the next resolved seat author despite retained resolver membership', async () => {
+      const before = await t('comments').where({ ticket_id: ticketA, user_id: seatUser }).count('* as n').first();
+      await t('co_managed_seat_arrangements').where({ arrangement_id: arrangementId }).update({ state: 'ended', ended_at: new Date() });
+      try {
+        expect(await t('authorization_resolver_subjects')
+          .where({ resolver_id: CO_MANAGED_SEAT_RESOLVER_ID, user_id: seatUser }).first()).toBeDefined();
+        const author = await resolveCommentAudienceReader(knex, tenant, { userId: seatUser, userType: 'internal' });
+        expect(author).toBeNull();
+        await expect(write({ ticket: ticketA, user: seatUser, author, is_internal: false })).rejects.toMatchObject(INVALID);
+        await expect(write({ ticket: ticketA, user: seatUser, author, is_internal: true, collaboration_audience: 'shared_it' })).rejects.toMatchObject(INVALID);
+        expect(await t('comments').where({ ticket_id: ticketA, user_id: seatUser }).count('* as n').first()).toEqual(before);
+      } finally {
+        await t('co_managed_seat_arrangements').where({ arrangement_id: arrangementId }).update({ state: 'active', ended_at: null });
+      }
+    });
+
     it('MSP writes that name no seat audience store what they always stored', async () => {
       for (const ticket of [ticketA, ticketB]) {
         const pub = await write({ ticket, is_internal: false });
@@ -206,6 +228,30 @@ describe('comment audiences on native writes (integration)', () => {
       const legacyNote = await write({ ticket: ticketA, is_internal: true });
       await expect(write({ ticket: ticketA, user: seatUser, author: seat, parent_comment_id: legacyNote })).rejects.toMatchObject(INVALID);
       expect((await threadOf(legacyNote)).reply_count).toBe(0);
+    });
+  });
+
+  describe('S25 F060: the ticket-screen entry points resolve the author from the loaded user row', () => {
+    it('a seat technician row resolves to a seat author and is refused Private and the legacy note', async () => {
+      const author = await resolveCommentWriteAuthor(knex, tenant, { user_id: seatUser, user_type: 'internal', seat_reader: true });
+      expect(author).toEqual(seat);
+      await expect(viaModel({ ticket: ticketA, user: seatUser, author, is_internal: true, collaboration_audience: 'organization_private' })).rejects.toMatchObject(INVALID);
+      await expect(viaModel({ ticket: ticketA, user: seatUser, author, is_internal: true })).rejects.toMatchObject(INVALID);
+      expect(await audienceOf(await viaModel({ ticket: ticketA, user: seatUser, author, is_internal: false }))).toBe('requester');
+    });
+
+    it('a staff row (seat_reader false) resolves to staff with no SQL; client and service principals keep the implied author', async () => {
+      const queries: string[] = [];
+      const onQuery = (q: { sql: string }) => queries.push(q.sql);
+      knex.on('query', onQuery);
+      try {
+        expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'internal', seat_reader: false })).toEqual(staff);
+      } finally {
+        knex.removeListener('query', onQuery);
+      }
+      expect(queries).toEqual([]);
+      expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'client' })).toBeUndefined();
+      expect(await resolveCommentWriteAuthor(knex, tenant, { user_id: mspUser, user_type: 'service' })).toBeUndefined();
     });
   });
 

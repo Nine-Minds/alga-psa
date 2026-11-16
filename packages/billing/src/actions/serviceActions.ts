@@ -10,6 +10,7 @@ import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeM
 import { withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { hasCommercialReadPermission, COMMERCIAL_READ_DENIED_MESSAGE } from '@alga-psa/auth/lib/commercialAccess';
 import {
   actionError,
   getActionErrorMessageKey,
@@ -409,6 +410,9 @@ export const getServices = withAuth(async (
   pageSize: number = 999,
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse | ServiceActionError> => {
+    if (!await hasCommercialReadPermission(user)) {
+        return permissionError(COMMERCIAL_READ_DENIED_MESSAGE);
+    }
     try {
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {

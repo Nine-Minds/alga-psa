@@ -1410,7 +1410,15 @@ export async function propagateBundleMasterStatus(
 
   // Human-work guard (R5.3): propagating assigned_to to children must not assign a non-internal user.
   if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
-    await assertHumanWorkAssignee(trx, ctx.tenant, [updateData.assigned_to as string | null | undefined]);
+    const assignee = updateData.assigned_to as string | null | undefined;
+    // The master and every child receive the assignee; a seat technician must be covered by each.
+    const childRows = assignee
+      ? await tenantScopedTable(trx, 'tickets', ctx.tenant).where({ master_ticket_id: masterId }).select('ticket_id')
+      : [];
+    await assertHumanWorkAssignee(trx, ctx.tenant, [assignee], [
+      { kind: 'ticket', ticketId: masterId },
+      ...childRows.map((row: { ticket_id: string }) => ({ kind: 'ticket' as const, ticketId: row.ticket_id })),
+    ]);
   }
 
   if (crossesBoundary === null) {

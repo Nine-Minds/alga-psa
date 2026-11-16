@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (_k: string, o?: { defaultValue?: boolean }) => o?.defaultValue ?? false,
+  useServedCapabilities: () => new Set(state.served ? ['co-managed'] : []),
   useCapability: (cap: string) => ({ enabled: cap === 'co-managed' && state.served, admitted: state.served && state.admitted, resolved: true }),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));

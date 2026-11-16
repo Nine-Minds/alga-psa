@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { BUNDLE_RULE_RESOURCE_TYPE_CATALOG } from '@alga-psa/authorization/bundles/catalog';
@@ -8,9 +11,11 @@ import {
   COMMERCIAL_TABLES,
   COVERED_RESOURCE_TYPES,
   COVERED_TABLES,
+  OPAQUE_FILES,
   analyzeRepository,
   checkPinned,
   describeProblems,
+  isOpaqueFile,
   readCoverageViolations,
 } from './support/coverageDefinitions';
 import { READ_COVERAGE_PINNED } from './support/readCoveragePinned';
@@ -57,6 +62,21 @@ describe('read-authorization coverage (S20, F036)', () => {
     expect([...COMMERCIAL_TABLES].filter((table) => !manifest.has(table)), 'commercial tables exist in the manifest').toEqual([]);
     expect(AUTHORIZATION_ENTRY_POINTS.size).toBeGreaterThan(30);
     for (const name of AUTHORIZATION_ENTRY_POINTS) expect(name).toMatch(/^[A-Za-z]+$/);
+  });
+
+  it('treats recipient-authorization modules as opaque, never as a gate', () => {
+    const root = path.resolve(__dirname, '../../../../..');
+    for (const file of OPAQUE_FILES) {
+      expect(fs.existsSync(path.join(root, file)), `${file} exists`).toBe(true);
+      expect(isOpaqueFile(path.join(root, file)), file).toBe(true);
+      // Opacity hides the module's own reads; it must never stand in for an authorization entry point.
+      for (const name of AUTHORIZATION_ENTRY_POINTS) {
+        expect(fs.readFileSync(path.join(root, file), 'utf8')).not.toMatch(new RegExp(`export (?:async )?function ${name}\\b`));
+      }
+    }
+    // Only the named recipient boundary: comment audience reads stay visible to the analysis.
+    expect(isOpaqueFile(path.join(root, 'shared/lib/commentAudience.ts'))).toBe(false);
+    expect(isOpaqueFile(path.join(root, 'shared/lib/notificationAudienceExtras.ts'))).toBe(false);
   });
 
   it('has a sorted, duplicate-free pinned list with a reason on every entry', () => {

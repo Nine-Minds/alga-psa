@@ -599,7 +599,10 @@
         "clientVisibleOnly": "Il bundle consente {{action}} su {{resource}} solo quando il record è visibile al cliente.",
         "notSelfApprover": "Gli utenti non possono approvare i propri record.",
         "rulesUnavailable": "Non è stato possibile caricare le regole del bundle, quindi l’accesso è negato.",
-        "rbacDenied": "Il ruolo dell’utente non concede {{action}} su {{resource}}."
+        "rbacDenied": "Il ruolo dell’utente non concede {{action}} su {{resource}}.",
+        "resolverTemplateDenied": "Una regola di accesso integrata limita {{action}} su {{resource}} ai record che non corrispondono a questo utente.",
+        "resolverBoardScope": "Il record si trova su una bacheca fuori dall'ambito delle bacheche di questo utente, quindi {{action}} su {{resource}} è negato.",
+        "resolverClientScope": "Il record appartiene a un cliente diverso da quello per cui questo utente ha la postazione, quindi {{action}} su {{resource}} è negato."
       }
     },
     "createDialog": {

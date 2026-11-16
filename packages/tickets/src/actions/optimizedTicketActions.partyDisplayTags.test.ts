@@ -74,6 +74,11 @@ vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(),
   assertHumanWorkOwner: vi.fn(),
 }));
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
   publishTicketTransitionsAfterCommit: vi.fn(),
   captureTicketTransitionSnapshot: vi.fn(),

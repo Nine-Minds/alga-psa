@@ -308,6 +308,36 @@
       "expiresPrefix": "Expira:",
       "revoke": "Revogar",
       "revoking": "Revogando..."
+    },
+    "seatTechnicians": {
+      "title": "Técnicos de assento",
+      "description": "Pessoas que trabalham no seu PSA por meio do assento cogerenciado de um cliente. Elas não contam para os seus usuários licenciados.",
+      "clientUnavailable": "Cliente indisponível",
+      "effectiveAccess": "Acesso efetivo",
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "client": "Cliente",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "state": {
+        "active": "Ativo",
+        "invited": "Convite pendente"
+      },
+      "dialog": {
+        "title": "Acesso efetivo de {{name}}",
+        "help": "Escolha um ticket para ver se este técnico de assento pode lê-lo e por quê.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecionar um ticket...",
+        "checking": "Verificando o acesso...",
+        "allowed": "{{name}} pode ler este ticket.",
+        "denied": "{{name}} não pode ler este ticket.",
+        "noReasons": "Nenhum detalhe adicional foi informado.",
+        "error": "Não foi possível verificar o acesso. Tente novamente.",
+        "close": "Fechar",
+        "unavailable": "O acesso efetivo não pode ser verificado para este ticket nesta edição ou configuração."
+      }
     }
   },
   "userDetails": {
@@ -3033,7 +3063,8 @@
         "preparingPreview": "Preparando visualização…",
         "linking": "Vinculando contas…",
         "unlinking": "Desvinculando contas…",
-        "bulkLabel": "Ações de SSO em massa {{location}}"
+        "bulkLabel": "Ações de SSO em massa {{location}}",
+        "disabledSelectUsers": "Selecione primeiro pelo menos um usuário."
       },
       "table": {
         "email": "E-mail",
@@ -4552,7 +4583,7 @@
     "seatNote": "Os principais de serviço não consomem licenças de usuário.",
     "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Exibir nos chips",
     "subtitle": "Tags exibidas ao lado de contatos e clientes em listas de tickets, cabeçalhos de tickets e seletores.",
     "loading": "Carregando…",

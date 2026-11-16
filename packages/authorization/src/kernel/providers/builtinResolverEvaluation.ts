@@ -10,10 +10,13 @@ import { clientScopeReadRulesForCreate } from '../candidateRecord';
 import { resolveAppliedBuiltinResolvers } from '../builtinRuleResolvers';
 import { DENY_ALL_SCOPE, intersectAuthorizationScopes } from '../scope';
 import { evaluateTemplateForRule } from './bundleProvider';
+import { evaluateRecordGuard, isRecordGuardKey } from '../recordGuards';
 
 export const RESOLVER_NARROWING_APPLIED_CODE = 'resolver_narrowing_applied';
 export const RESOLVER_TEMPLATE_DENIED_CODE = 'resolver_template_denied';
 export const RESOLVER_CLOSED_BASELINE_DENIED_CODE = 'resolver_closed_baseline_denied';
+export const RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE = 'resolver_client_visible_only_denied';
+export const RESOLVER_RECORD_GUARD_DENIED_CODE = 'resolver_record_guard_denied';
 
 /**
  * Evaluates every registered resolver that applies to the subject. Returns null when none contributes, so the
@@ -74,6 +77,39 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
       message: 'Built-in resolver narrowing rules were applied as intersections.',
       metadata: { resolverId: resolver.id, ruleIds: matching.map((rule) => rule.id) },
     });
+    // The bundle provider's `client_visible_only` guard on the same record field. Like a template, it judges a
+    // record; a record-less check is narrowed in SQL through the adapter's `clientVisibleColumn`.
+    const notClientVisible = matching.filter(
+      (rule) => rule.constraintKey === 'client_visible_only' && input.record !== undefined && input.record.is_client_visible !== true
+    );
+    if (notClientVisible.length > 0) {
+      allowed = false;
+      scopes.push(DENY_ALL_SCOPE);
+      reasons.push({
+        stage: 'builtin',
+        sourceType: 'resolver',
+        sourceId: resolver.id,
+        code: RESOLVER_CLIENT_VISIBLE_ONLY_DENIED_CODE,
+        message: 'Built-in resolver client-visible-only guard denied access.',
+        metadata: { resolverId: resolver.id, ruleIds: notClientVisible.map((rule) => rule.id), resource, action },
+      });
+    }
+    // The record guards of ./recordGuards: the same predicate the SQL compiler pushes into list queries.
+    const guardViolations = matching.filter(
+      (rule) => isRecordGuardKey(rule.constraintKey) && input.record !== undefined && !evaluateRecordGuard(rule.constraintKey, rule, input)
+    );
+    if (guardViolations.length > 0) {
+      allowed = false;
+      scopes.push(DENY_ALL_SCOPE);
+      reasons.push({
+        stage: 'builtin',
+        sourceType: 'resolver',
+        sourceId: resolver.id,
+        code: RESOLVER_RECORD_GUARD_DENIED_CODE,
+        message: 'Built-in resolver record guard denied access.',
+        metadata: { resolverId: resolver.id, ruleIds: guardViolations.map((rule) => rule.id), resource, action },
+      });
+    }
     if (mismatched.length > 0) {
       allowed = false;
       scopes.push(DENY_ALL_SCOPE);
@@ -83,7 +119,11 @@ export function evaluateBuiltinRuleResolvers(input: AuthorizationEvaluationInput
         sourceId: resolver.id,
         code: RESOLVER_TEMPLATE_DENIED_CODE,
         message: 'Built-in resolver relationship template narrowing denied access.',
-        metadata: { resolverId: resolver.id, ruleIds: mismatched.map((rule) => rule.id), resource, action },
+        metadata: {
+          resolverId: resolver.id, ruleIds: mismatched.map((rule) => rule.id), resource, action,
+          // Which relationship templates the record failed, so an explanation can name the scope that denied (boards, clients).
+          templateKeys: [...new Set(mismatched.map((rule) => rule.templateKey).filter((key): key is NonNullable<typeof key> => Boolean(key)))],
+        },
       });
     } else {
       scopes.push({ allowAll: false, denied: false, constraints: matching.flatMap((rule) => rule.constraints ?? []) });

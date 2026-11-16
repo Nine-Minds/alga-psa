@@ -2,11 +2,17 @@ import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { IDocument, IUser, IUserWithRoles } from '@alga-psa/types';
+import { authorizeAndRedactDocuments } from '@alga-psa/shared/lib/documentAuthorization';
 import type { Knex } from 'knex';
-import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import {
+  audiencesVisibleTo, commentAudienceSql, isCommentAudience, isCommentAudienceVisible, admitCommentAudienceReader,
+  type CommentAudienceReader,
+} from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
+import { EXTERNAL_AUDIENCES } from '@alga-psa/authorization/kernel';
+import { canReadKnowledgeBaseArticle } from '@alga-psa/authorization/knowledgeBaseReadAuthorization';
 
 import { resolveClientScopes, type ClientScopedObjectType } from './clientScope';
 
@@ -68,6 +74,13 @@ export interface SearchAclPrincipal {
   roles?: string[];
   isInternal?: boolean;
   clientAccess: ClientAccess;
+  /**
+   * The organization an internal principal reads comments as (`admitCommentAudienceReader`).
+   * `staff` sees every audience stored in its tenant; a `seat` technician sees the audiences the
+   * shared predicate admits on its own client's tickets; `null` is a seat user with no live
+   * assignment and sees no comment. Unset means owning-tenant staff, as before the seat shape.
+   */
+  audienceReader?: CommentAudienceReader | null;
 }
 
 export interface SqlFragment {
@@ -166,9 +179,46 @@ function clientScopeSql(access: ClientAccess): SqlFragment {
   return clauses.length === 0 ? { sql: 'TRUE', bindings: [] } : { sql: clauses.join(' AND '), bindings };
 }
 
+/** The internal principal's organization when it is not owning-tenant staff; undefined when no audience restriction applies. */
+function restrictedAudienceReader(user: SearchAclPrincipal): CommentAudienceReader | null | undefined {
+  if (!user.isInternal || user.audienceReader === undefined || user.audienceReader?.kind === 'staff') return undefined;
+  return user.audienceReader;
+}
+
+/**
+ * Comment-audience predicate over the index. The indexer stores each comment's audience
+ * (`metadata.audience`) and its ticket's client (`client_scope_id`); a seat technician reads the
+ * audiences the shared predicate admits, on their own client only. A row with no stored audience
+ * fails closed. Non-staff client readers are already bounded by `is_internal_only`.
+ */
+function commentAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
+  const reader = restrictedAudienceReader(user);
+  if (reader === undefined) return { sql: 'TRUE', bindings: [] };
+  if (reader?.kind !== 'seat') return { sql: `(object_type <> 'ticket_comment')`, bindings: [] };
+  return {
+    sql: `(object_type <> 'ticket_comment' OR (metadata->>'audience' = ANY(?::text[]) AND client_scope_id = ?::uuid))`,
+    bindings: [audiencesVisibleTo('seat'), reader.clientId],
+  };
+}
+
+/**
+ * Knowledge base audience predicate over the index. An internal principal the kernel narrows (a seat technician)
+ * reads `client` and `public` articles only, the audiences of the kernel's `external_audience_only` guard. The
+ * indexer stores each article's audience in `metadata.audience`; a row with none fails closed.
+ */
+function kbAudienceIndexSql(user: SearchAclPrincipal): SqlFragment {
+  if (restrictedAudienceReader(user) === undefined) return { sql: 'TRUE', bindings: [] };
+  return {
+    sql: `(object_type <> 'kb_article' OR metadata->>'audience' = ANY(?::text[]))`,
+    bindings: [[...EXTERNAL_AUDIENCES]],
+  };
+}
+
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
   const clientAccess = user.clientAccess ?? { mode: 'all' };
   const clientScope = clientScopeSql(clientAccess);
+  const commentAudience = commentAudienceIndexSql(user);
+  const kbAudience = kbAudienceIndexSql(user);
 
   const boardIds = clientAccess.boardIds;
   // `s` is the search index alias every query in query.ts uses. The correlated reads are tenant-joined.
@@ -207,6 +257,8 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (is_internal_only = false OR ?::boolean = true)
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
         AND ${clientScope.sql}
+        AND ${commentAudience.sql}
+        AND ${kbAudience.sql}
         AND ${boardClause}
       )
     `,
@@ -217,6 +269,8 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.isInternal ?? false,
       user.userId,
       ...clientScope.bindings,
+      ...commentAudience.bindings,
+      ...kbAudience.bindings,
       ...boardBindings,
     ],
   };
@@ -224,7 +278,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 
 export async function resolveSearchAclPrincipal(
   knex: Knex,
-  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
+  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'> & { seat_reader?: boolean | null },
   clientAccess: ClientAccess,
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
@@ -253,6 +307,11 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
+    // A client user is the requester and an internal user whose loaded row says no seat
+    // assignment binds them is staff, both with no SQL; otherwise one read of the seat tables.
+    audienceReader: user.tenant
+      ? await admitCommentAudienceReader(knex, user.tenant, { userId: user.user_id, userType: isClientPortal ? 'client' : 'internal', seatReader: user.seat_reader })
+      : undefined,
   };
 }
 
@@ -326,16 +385,20 @@ function tenantScopedRoot<Row extends object>(
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
 }
 
-async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, commentId: string): Promise<boolean> {
-  const query = tenantScopedRoot<{ audience: string | null }>(knex, user, 'comments as c');
-  const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
+/** The live audience check: the shared predicate for `reader`, over the comment as stored now. */
+async function commentVisibleToReader(knex: Knex, user: SearchAclPrincipal, commentId: string, reader: CommentAudienceReader | null): Promise<boolean> {
+  if (!reader || !user.tenant) return false;
+  const query = tenantScopedRoot<{ audience: string | null; client_id: string | null }>(knex, user, 'comments as c');
+  const scoped = tenantDb(knex, user.tenant);
   scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
   scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+  scoped.tenantJoin(query, 'tickets as t', 't.ticket_id', 'c.ticket_id', { type: 'left' });
   const found = await query
-    .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
+    .select('t.client_id', knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
     .where('c.comment_id', commentId)
     .first();
-  return found?.audience === 'requester';
+  return isCommentAudience(found?.audience)
+    && isCommentAudienceVisible(found.audience, { tenant: user.tenant, clientId: found.client_id }, reader);
 }
 
 /**
@@ -404,7 +467,10 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   // Audience is an additional restriction on non-staff readers (staff of the owning tenant see
   // every audience stored there). It uses the same predicate as the indexer and portal reads, so
   // a public-flagged comment on a private thread cannot be reached through search.
-  if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
+  // A seat technician is an internal user and still not that staff: the same predicate, read as
+  // their organization, keeps private notes (legacy internal notes included) out of their search.
+  const reader = user.isInternal ? restrictedAudienceReader(user) : user.tenant ? { kind: 'requester' as const, tenant: user.tenant } : null;
+  if (reader !== undefined && !(await commentVisibleToReader(knex, user, row.id, reader))) return false;
   return ticketVisibleToPrincipal(knex, user, 'ticket_comment', comment.ticket_id);
 });
 
@@ -481,12 +547,36 @@ for (const objectType of ['client', 'contact', 'interaction', 'time_entry'] as c
 }
 
 registerSearchVisibilityVerifier('document', async (knex, user, row) => {
-  const document = await tenantScopedRoot<{ document_id: string }>(knex, user, 'documents')
-    .select('document_id')
+  const document = await tenantScopedRoot<{ document_id: string; created_by: string | null; is_client_visible: boolean | null }>(knex, user, 'documents')
+    .select('document_id', 'created_by', 'is_client_visible')
     .where('document_id', row.id)
     .first();
   if (!document) return false;
-  return clientOwnedRecordVisible(knex, user, 'document', row.id);
+  if (!(await clientOwnedRecordVisible(knex, user, 'document', row.id))) return false;
+  // A principal the kernel narrows beyond its clients (a seat technician: client-visible documents, and only
+  // those attached to tickets in scope) gets the document read decision itself. Everyone else is done above.
+  if (restrictedAudienceReader(user) === undefined || !user.tenant) return true;
+  const tenant = user.tenant;
+  const principal = { user_id: user.userId, user_type: 'internal', tenant } as unknown as IUser;
+  return knex.transaction(async (trx) =>
+    (await authorizeAndRedactDocuments(trx, tenant, principal, [document as unknown as IDocument])).length === 1);
+});
+
+// An article the kernel does not let this principal read is dropped even if its index row is stale or has no audience.
+// A principal no rule narrows (staff, the common case) is answered with no statement.
+registerSearchVisibilityVerifier('kb_article', async (knex, user, row) => {
+  if (!user.tenant || restrictedAudienceReader(user) === undefined) return true;
+  const article = await tenantScopedRoot<{ audience: string | null }>(knex, user, 'kb_articles')
+    .select('audience')
+    .where('article_id', row.id)
+    .first();
+  if (!article) return false;
+  return canReadKnowledgeBaseArticle(
+    knex,
+    user.tenant,
+    { user_id: user.userId, user_type: user.isInternal ? 'internal' : 'client' },
+    { article_id: row.id, audience: article.audience },
+  );
 });
 
 registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {

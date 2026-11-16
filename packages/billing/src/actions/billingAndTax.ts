@@ -5,6 +5,7 @@ import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/c
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String, type ILateHourlyTimeNotice } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
@@ -1011,6 +1012,7 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
         potentialTimeEntriesQuery
             .where('time_entries.tenant', tenant)
             .where('time_entries.invoiced', false)
+            .whereRaw(commercialTimeEntrySql('time_entries'))
             .whereNull('time_entries.contract_line_id')
             .whereNotNull('time_entries.service_id')
             .where('time_entries.approval_status', 'APPROVED')

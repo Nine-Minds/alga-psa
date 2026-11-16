@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationRequestCache, AuthorizationSubject } from '../kernel/contracts';
 import { RequestLocalAuthorizationCache } from '../kernel/requestCache';
 import { readUserClientPortfolio } from '../portfolios/service';
+import { loadBuiltinResolverFacts } from '../kernel/builtinRuleResolvers';
 import {
   assembleAuthorizationSubject,
   roleIdsCarriedByUser,
@@ -27,6 +28,18 @@ export interface LoadAuthorizationSubjectFactsInput {
 
 export interface ResolveAuthorizationSubjectInput extends LoadAuthorizationSubjectFactsInput {
   apiKeyId?: string | null;
+}
+
+/**
+ * The facts of every registered built-in rule resolver for one user, or undefined when none is registered.
+ * A caller that assembles its own subject (the policy simulator) loads them here, so a resolver's principals
+ * are decided in the simulator exactly as they are in the product.
+ */
+export function loadSubjectResolverFacts(
+  knex: Knex | Knex.Transaction,
+  subject: { tenant: string; userId: string }
+): Promise<Record<string, unknown> | undefined> {
+  return loadBuiltinResolverFacts(knex, subject);
 }
 
 export async function loadAuthorizationSubjectFacts(
@@ -60,11 +73,15 @@ export async function loadAuthorizationSubjectFacts(
     ? await readUserClientPortfolio(knex, { tenant, userId })
     : [];
 
+  // Fast path: no registered resolver's fact source has a subject in this tenant, so nothing is read.
+  const resolverFacts = scope.resolverSubjects !== false ? await loadBuiltinResolverFacts(knex, { tenant, userId }) : undefined;
+
   return {
     roleIds,
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
     storedPortfolioClientIds,
+    ...(resolverFacts ? { resolverFacts } : {}),
   };
 }
 

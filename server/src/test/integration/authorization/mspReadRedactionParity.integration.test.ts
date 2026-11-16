@@ -26,8 +26,8 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   hasPermission: vi.fn(async () => true),
   checkPermission: vi.fn(async () => null),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(async () => true),
+vi.mock('@alga-psa/auth/rbac', async () => ({
+  ...(await import('../../../../test-utils/rbacStandIn')).rbacStandIn(vi.fn(async () => true)),
   checkPermission: vi.fn(async () => null),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }));

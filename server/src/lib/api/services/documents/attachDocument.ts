@@ -1,14 +1,14 @@
 /**
  * The single upload core for REST/MCP document attachments.
  *
- * Takes bytes that are already in memory (multipart read, base64 decode or URL
- * fetch -- not this module's concern) and owns everything after that:
- * validation, storage, document type, the transaction, rollback cleanup,
- * previews, and events. `StorageService.validateFileUpload` runs here and
- * nowhere else for these paths.
+ * Takes the file as a stream (multipart part, URL response) or, for base64 only, a Buffer, and
+ * owns everything after that: storage through the streaming ingest (size, content type and hash
+ * checks happen in `StorageService.uploadFile`, nowhere else for these paths), document type,
+ * the transaction, rollback cleanup, previews, and events.
  */
-// LEVERAGE: pattern document-upload-core — packages/documents uploadDocument (web UI action) keeps its own copy of this pipeline; migrate it onto attachDocumentFromBytes later
+// LEVERAGE: pattern document-upload-core — packages/documents uploadDocument (web UI action) keeps its own copy of this pipeline; migrate it onto attachDocument later
 import type { Knex } from 'knex';
+import { Readable } from 'node:stream';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -16,7 +16,8 @@ import { scheduleDocumentPreviews } from '@alga-psa/documents/lib/documentPrevie
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildDocumentAssociatedPayload } from '@alga-psa/workflow-streams';
 import type { IDocument } from 'server/src/interfaces/document.interface';
-import { ConflictError, ValidationError } from '../../middleware/apiMiddleware';
+import { isUploadContentTypeError, isUploadSizeLimitError } from '@alga-psa/storage/ingest/errors';
+import { ConflictError, PayloadTooLargeError, ValidationError } from '../../middleware/apiMiddleware';
 import { ENTITY_ADAPTERS, type AttachHookOptions, type AttachableEntityType } from './entityAdapters';
 
 export interface AttachDocumentInput {
@@ -25,7 +26,15 @@ export interface AttachDocumentInput {
   actorUserId: string;
   viaPrincipalUserId?: string | null;
   target: { entityType: AttachableEntityType; entityId: string };
-  file: { fileName: string; mimeType: string; bytes: Buffer };
+  file: {
+    fileName: string;
+    /** The declared type; the ingest sniffs the bytes and the stored type may differ. */
+    mimeType: string;
+    /** A Buffer is only for sources that inherently buffer (base64). */
+    body: Buffer | Readable;
+    /** Maps an error raised by the source stream mid-transfer (e.g. a URL timeout) to the API error. */
+    mapSourceError?: (error: unknown) => unknown;
+  };
   /** Where the bytes came from; used only in log lines. */
   source: 'multipart' | 'url' | 'base64';
   options?: AttachHookOptions;
@@ -33,13 +42,15 @@ export interface AttachDocumentInput {
   loadDocument?: (documentId: string) => Promise<IDocument | null>;
 }
 
-/** Map storage-validator failures to a 400 on path `file`; anything else is unexpected. */
-function uploadValidationMessage(error: unknown): string | null {
-  if (!(error instanceof Error)) return null;
-  if (error.message.startsWith('File size exceeds limit') || error.message === 'File type not allowed') {
-    return error.message;
+/** Map the ingest pipeline's refusals: size is a 413, a refused type a 400 on path `file`. */
+function translateUploadError(error: unknown): unknown {
+  if (isUploadSizeLimitError(error)) {
+    return new PayloadTooLargeError(error.message, [{ path: ['file'], message: error.message }]);
   }
-  return null;
+  if (isUploadContentTypeError(error)) {
+    return new ValidationError('Validation failed', [{ path: ['file'], message: error.message }]);
+  }
+  return error;
 }
 
 export async function resolveDocumentTypeId(
@@ -133,25 +144,48 @@ async function publishAfterCommit(
   }
 }
 
-export async function attachDocumentFromBytes(input: AttachDocumentInput): Promise<IDocument> {
+/**
+ * Attach one file to one entity. Owns the source stream from the moment it is handed in: on every
+ * outcome (including a failure before the upload starts) the stream is destroyed, so a URL
+ * download never stays open past the request.
+ */
+export async function attachDocument(input: AttachDocumentInput): Promise<IDocument> {
+  try {
+    return await attachDocumentOwningStream(input);
+  } finally {
+    if (input.file.body instanceof Readable && !input.file.body.destroyed) input.file.body.destroy();
+  }
+}
+
+async function attachDocumentOwningStream(input: AttachDocumentInput): Promise<IDocument> {
   const { knex, tenant, actorUserId, target, file } = input;
   const options = input.options ?? {};
   const adapter = ENTITY_ADAPTERS[target.entityType];
-
-  try {
-    await StorageService.validateFileUpload(tenant, file.mimeType, file.bytes.length);
-  } catch (error) {
-    const message = uploadValidationMessage(error);
-    if (message) {
-      throw new ValidationError('Validation failed', [{ path: ['file'], message }]);
-    }
-    throw error;
+  if (!adapter) {
+    throw new ValidationError('Validation failed', [
+      { path: ['entity_type'], message: `Unsupported entity type: ${String(target.entityType)}` },
+    ]);
   }
 
-  const uploadResult = await StorageService.uploadFile(tenant, file.bytes, file.fileName, {
-    mime_type: file.mimeType,
-    uploaded_by_id: actorUserId,
-  });
+  // An error inside the source stream (a URL timeout) reaches us wrapped by uploadFile; keep the original.
+  let sourceError: unknown;
+  if (file.body instanceof Readable) file.body.once('error', (error) => { sourceError ??= error; });
+
+  let uploadResult: Awaited<ReturnType<typeof StorageService.uploadFile>>;
+  try {
+    uploadResult = await StorageService.uploadFile(tenant, file.body, file.fileName, {
+      mime_type: file.mimeType,
+      uploaded_by_id: actorUserId,
+    });
+  } catch (error) {
+    // A refusal before the first byte leaves the source unread: stop the transfer.
+    if (file.body instanceof Readable) file.body.destroy();
+    // Without a mapper an ingest refusal still surfaces as its API error (413/400), never raw.
+    if (sourceError !== undefined) throw translateUploadError(file.mapSourceError ? file.mapSourceError(sourceError) : sourceError);
+    throw translateUploadError(error);
+  }
+  // The ingest may have stored a sniffed type rather than the declared one.
+  const mimeType = uploadResult.mime_type;
 
   const documentId = uuidv4();
   const associationId = uuidv4();
@@ -159,7 +193,7 @@ export async function attachDocumentFromBytes(input: AttachDocumentInput): Promi
 
   try {
     const folderPath = await adapter.resolveFolder(knex, tenant, target.entityId);
-    const typeResult = await resolveDocumentTypeId(knex, tenant, file.mimeType);
+    const typeResult = await resolveDocumentTypeId(knex, tenant, mimeType);
     document = {
       document_id: documentId,
       document_name: file.fileName,
@@ -171,8 +205,8 @@ export async function attachDocumentFromBytes(input: AttachDocumentInput): Promi
       tenant,
       file_id: uploadResult.file_id,
       storage_path: uploadResult.storage_path,
-      mime_type: file.mimeType,
-      file_size: file.bytes.length,
+      mime_type: mimeType,
+      file_size: uploadResult.file_size,
       folder_path: folderPath,
       ...(adapter.documentOverrides?.(options) ?? {}),
     };

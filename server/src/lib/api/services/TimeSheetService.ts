@@ -3,6 +3,7 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { resolveTimeEntryReadScope } from '@alga-psa/scheduling/lib/timeEntryAuthorizationSql';
@@ -412,7 +413,7 @@ export class TimeSheetService extends BaseService<any> {
             throw error;
           }
         }
-        if (data.user_id) await assertHumanWorkAssignee(trx, context.tenant, [data.user_id]);
+        if (data.user_id) await assertHumanWorkAssignee(trx, context.tenant, [data.user_id], { kind: 'unscoped', surface: 'time_sheet' });
         else await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
 
         const ownerId = data.user_id ?? context.userId;
@@ -741,6 +742,7 @@ export class TimeSheetService extends BaseService<any> {
         // Revert time entries to changes requested status (time_entries has no approved_at/approved_by)
         await tenantDb(trx, context.tenant).table('time_entries')
           .where({ time_sheet_id: id })
+          .whereRaw(commercialTimeEntrySql('time_entries'))
           .update({
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()
@@ -1261,7 +1263,7 @@ export class TimeSheetService extends BaseService<any> {
       if (assignedUserIds.length === 0) {
         await assertHumanWorkOwner(knex, context.tenant, context.userId, 'assigned_user_ids');
       } else {
-        await assertHumanWorkAssignee(knex, context.tenant, assignedUserIds);
+        await assertHumanWorkAssignee(knex, context.tenant, assignedUserIds, { kind: 'unscoped', surface: 'schedule_entry' });
       }
       if (calendarId) {
         const access = await this.assertWritableGroupCalendar(knex, calendarId, context);
@@ -1390,7 +1392,7 @@ export class TimeSheetService extends BaseService<any> {
         // Update assignees if provided
         if (data.assigned_user_ids !== undefined) {
           // Human-work guard: validate only assignees this write adds (legacy ones are kept).
-          await assertHumanWorkAssignee(trx, context.tenant, addedToEntry);
+          await assertHumanWorkAssignee(trx, context.tenant, addedToEntry, { kind: 'unscoped', surface: 'schedule_entry' });
 
           await tenantDb(trx, context.tenant).table('schedule_entry_assignees')
             .where({ entry_id: id })

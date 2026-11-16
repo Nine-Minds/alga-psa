@@ -6,10 +6,10 @@ import { ITicket } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
-import { assertUserRoleFloor, createTenantKnex, isUserRoleFloorRejected, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, tenantDb, withTransaction, type UserRoleFloorViolation } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
-import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabilities';
+import { filterPermissionsByServedCapabilities, filterRolesByServedCapabilities } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -358,10 +358,12 @@ export const deleteRole = withAuth(async (
 
 export const getRoles = withAuth(async (_user, { tenant }): Promise<IRole[]> => {
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+    const roles = await withTransaction(db, async (trx: Knex.Transaction) => {
         return await tenantScopedTable(trx, 'roles', tenant)
             .select('role_id', 'role_name', 'description', 'tenant', 'msp', 'client');
     });
+    // A role that exists only for a capability is never listed for a tenant not served for it.
+    return filterRolesByServedCapabilities(tenant, roles);
 });
 
 // Role-Permission actions
@@ -475,6 +477,14 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
 
         if (roleViolation === 'msp_role_on_portal_user') {
             return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
+        }
+
+        // A live seat technician holds the seat role and no other. No message key: the refusal has no locale string yet.
+        try {
+            await assertSeatTechnicianWrite(trx, tenant, [userId], { roleIds: [roleId] });
+        } catch (error) {
+            if (isSeatTechnicianGuardError(error)) return actionError(error.message);
+            throw error;
         }
 
         const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)

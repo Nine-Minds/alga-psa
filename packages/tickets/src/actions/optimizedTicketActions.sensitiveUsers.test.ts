@@ -101,6 +101,8 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+  checkMultiplePermissions: async (user: any, checks: Array<{ resource: string; action: string }>, conn?: unknown) =>
+    Promise.all(checks.map(async (check) => ({ ...check, granted: Boolean(await hasPermissionMock(user, check.resource, check.action, conn)) }))),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -169,6 +171,11 @@ vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(),
   assertHumanWorkOwner: vi.fn(),
 }));
+vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
+  resolveSeatAssigneeAudience: vi.fn(async () => null),
+  restrictToSeatAudience: vi.fn((query: unknown) => query),
+  assertActorMayAssign: vi.fn(async () => undefined),
+}));
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
   publishTicketTransitionsAfterCommit: vi.fn(),
   captureTicketTransitionSnapshot: vi.fn(),
@@ -194,6 +201,9 @@ import { getConsolidatedTicketData } from './optimizedTicketActions';
 const TICKET_ID = 'ticket-1';
 const sensitiveKeys = new Set<string>(SENSITIVE_USER_FIELDS);
 const allowedKeys = new Set<string>(USER_RESPONSE_FIELD_NAMES);
+// Read by the availableAgents query for the ticket's seat context and stripped by the response
+// sanitizer before anything leaves; test (b) proves no response row carries it.
+const serverOnlyKeys = new Set<string>(['seat_reader']);
 
 function findSensitiveKeyPaths(value: unknown, path = '$', seen = new WeakSet<object>()): string[] {
   if (value === null || typeof value !== 'object') return [];
@@ -310,7 +320,7 @@ describe('getConsolidatedTicketData user credential exposure', () => {
     for (const query of wide) {
       for (const column of query.selected as string[]) {
         expect(sensitiveKeys.has(column)).toBe(false);
-        expect(allowedKeys.has(column)).toBe(true);
+        expect(allowedKeys.has(column) || serverOnlyKeys.has(column), column).toBe(true);
       }
     }
   });

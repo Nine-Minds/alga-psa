@@ -138,11 +138,11 @@ describe('one subject resolver: every authorization path receives the same subje
 
     // Nothing configured: fast path.
     await scoped.table('user_client_portfolios').del();
-    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: false });
+    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: false, resolverSubjects: false });
 
     // A portfolio row alone.
     await setUserClientPortfolio(ctx.db, { tenant: ctx.tenantId, userId: ctx.user.user_id, clientIds: [clientA] });
-    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: true });
+    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: true, resolverSubjects: false });
     const withPortfolio = await resolveAuthorizationSubject(ctx.db, { tenant: ctx.tenantId, user: user() });
     expect(withPortfolio.portfolioClientIds).toEqual([clientA]);
 
@@ -155,14 +155,14 @@ describe('one subject resolver: every authorization path receives the same subje
     await scoped.table('authorization_bundle_assignments').insert({
       tenant: ctx.tenantId, assignment_id: uuidv4(), bundle_id: bundleId, target_type: 'user', target_id: ctx.user.user_id, status: 'active',
     });
-    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: false });
+    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: false, portfolios: false, resolverSubjects: false });
 
     const revisionId = uuidv4();
     await scoped.table('authorization_bundle_revisions').insert({
       tenant: ctx.tenantId, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published',
     });
     await scoped.table('authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: revisionId });
-    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: true, portfolios: false });
+    expect(await probeTenantAuthorizationScope(ctx.db, ctx.tenantId)).toEqual({ publishedAssignments: true, portfolios: false, resolverSubjects: false });
 
     // The probe is cached per request: the same cache keeps its first answer.
     const cache = new RequestLocalAuthorizationCache();

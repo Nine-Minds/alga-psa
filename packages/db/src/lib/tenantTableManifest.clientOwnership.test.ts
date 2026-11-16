@@ -105,6 +105,19 @@ describe('client ownership declarations are structurally sound', () => {
 });
 
 describe('client ownership in the manifest', () => {
+  it('requires the ticket template client foreign key while preserving client merge discovery', () => {
+    expect(tenantClientColumns()).toContainEqual({ table: 'ticket_templates', column: 'client_id', owned: true });
+    expect(tenantClientKeyedTables()).toContain('ticket_templates');
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
+
+    const withoutTemplateClientKey = TENANT_TABLE_FOREIGN_KEYS.filter(
+      key => !(key.child === 'ticket_templates' && key.parent === 'clients'),
+    );
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, withoutTemplateClientKey)).toEqual([
+      'ticket_templates.clientKeyed: no foreign key ticket_templates.client_id -> clients; fix the declaration or mark it enforced: false',
+    ]);
+  });
+
   it('discovers seat arrangements as client-owned without requiring a database foreign key', () => {
     expect(tenantClientOwnership('co_managed_seat_arrangements')).toEqual({
       by: 'column', column: 'client_id', enforced: false,
@@ -113,6 +126,28 @@ describe('client ownership in the manifest', () => {
       table: 'co_managed_seat_arrangements', column: 'client_id', owned: true,
     });
     expect(tenantClientKeyedTables()).toContain('co_managed_seat_arrangements');
+    expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
+  });
+
+  // Co-managed seat and workspace shapes, slice S39 (F093 / T050). The list comes from the
+  // manifest, so a seat table added later fails here until it says how its rows reach a client.
+  it('classifies every seat arrangement table as client-owned', () => {
+    const seatTables = TENANT_TABLE_MANIFEST.map(entry => entry.table).filter(name => name.startsWith('co_managed_seat_'));
+    expect(seatTables).toEqual(expect.arrayContaining([
+      'co_managed_seat_arrangements', 'co_managed_seat_board_scopes', 'co_managed_seat_assignments',
+      'co_managed_seat_project_grants', 'co_managed_seat_ticket_work', 'co_managed_seat_ticket_handoffs',
+    ]));
+    for (const name of seatTables) {
+      const ownership = tenantClientOwnership(name);
+      expect(ownership, `${name} has no client ownership declaration`).toBeTruthy();
+      expect(ownership?.by, `${name} is exempted from client ownership`).not.toBe('exempt');
+    }
+    const throughArrangement = { column: 'arrangement_id', table: 'co_managed_seat_arrangements', enforced: false };
+    expect(tenantClientOwnership('co_managed_seat_assignments')).toEqual({ by: 'parent', chain: [throughArrangement] });
+    // A ticket's seat work reaches a client through its ticket and through the arrangement it ran under.
+    expect(tenantClientOwnership('co_managed_seat_ticket_work')).toEqual({ by: 'alternatives', parents: [
+      [{ column: 'ticket_id', table: 'tickets', enforced: false }], [throughArrangement],
+    ] });
     expect(clientOwnershipViolations(TENANT_TABLE_MANIFEST, TENANT_TABLE_FOREIGN_KEYS)).toEqual([]);
   });
 

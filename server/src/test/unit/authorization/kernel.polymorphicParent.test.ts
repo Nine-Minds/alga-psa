@@ -150,13 +150,24 @@ describe('S2 fast path', () => {
   it('a tenant with no published assignment adds no clause and issues no statement', async () => {
     const conn = new Proxy({}, { get: () => { throw new Error('the fast path must not touch the database'); } }) as any;
     const cache = new RequestLocalAuthorizationCache();
-    cache.set('authorization:tenant-scope:tenant-1', { publishedAssignments: false, portfolios: false });
+    cache.set('authorization:tenant-scope:tenant-1', { publishedAssignments: false, portfolios: false, resolverSubjects: false });
     await expect(
       resolveNarrowedReadScope(conn, { tenant: 'tenant-1', user: { user_id: 'u', user_type: 'internal' } as any, resourceType: 'document', requestCache: cache })
     ).resolves.toBeNull();
     await expect(
       resolveNarrowedReadScope(conn, { tenant: 'tenant-1', user: { user_id: 'u', user_type: 'internal' } as any, resourceType: 'tag', requestCache: cache })
     ).resolves.toBeNull();
+  });
+});
+
+describe('S2 fast path: built-in resolver subjects', () => {
+  it('a tenant with no published assignment but a resolver subject (a co-managed seat) leaves the fast path', async () => {
+    const conn = new Proxy({}, { get: () => { throw new Error('subject resolution reached the database'); } }) as any;
+    const cache = new RequestLocalAuthorizationCache();
+    cache.set('authorization:tenant-scope:tenant-1', { publishedAssignments: false, portfolios: false, resolverSubjects: true });
+    await expect(
+      resolveNarrowedReadScope(conn, { tenant: 'tenant-1', user: { user_id: 'u', user_type: 'internal' } as any, resourceType: 'document', requestCache: cache })
+    ).rejects.toThrow();
   });
 });
 

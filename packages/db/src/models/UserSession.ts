@@ -194,8 +194,13 @@ export class UserSession {
     return Number(count);
   }
 
-  static async revokeAllForUser(tenant: string, userId: string): Promise<number> {
-    const knex = await getConnection(tenant);
+  /**
+   * Revokes every live session of the user. Pass `trx` to commit the revocation with the caller's
+   * work: a command that deactivates or re-authorizes a user then cannot leave a session that
+   * outlives the change.
+   */
+  static async revokeAllForUser(tenant: string, userId: string, trx?: Knex.Transaction): Promise<number> {
+    const knex = trx ?? await getConnection(tenant);
 
     const count = await sessions(knex, tenant)
       .where({ user_id: userId })

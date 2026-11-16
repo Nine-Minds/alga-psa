@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
+import { bodySizeGuardResponse } from './middleware/bodySizeGuard';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
@@ -446,6 +447,10 @@ function maybeWarnForwardedHostRewrite(
 }
 
 const _middleware = auth(async (request) => {
+  // Next truncates (silently) a body past proxyClientMaxBodySize; refuse it loudly instead.
+  const tooLarge = bodySizeGuardResponse(request);
+  if (tooLarge) return tooLarge;
+
   const pathname = request.nextUrl.pathname;
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);

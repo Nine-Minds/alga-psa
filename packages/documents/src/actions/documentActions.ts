@@ -1,5 +1,6 @@
 'use server'
 
+import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
 import { resolveDocumentTypeForMime } from '../lib/documentTypeLookup';
@@ -170,11 +171,11 @@ export const getDocumentAssociationClientsForPicker = withAuth(async (
       tenant
     );
 
-    return clients.map((client: any) => ({
+    return projectClientsForSubject(user, clients.map((client: any) => ({
       ...client,
       properties: client.properties || {},
       logoUrl: logoUrls.get(client.client_id) ?? null,
-    })) as IClient[];
+    })) as IClient[]);
   });
 });
 

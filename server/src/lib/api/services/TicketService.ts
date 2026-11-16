@@ -1,8 +1,10 @@
-import { assertTicketCreateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
+import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '@alga-psa/tickets/lib/ticketCreateAuthorization';
 import { subjectFromServiceContext } from './serviceContextSubject';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { createPredicateGuard, type PredicateGuard } from '../controllers/authorizationKernel';
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertActorMayAssign } from '@alga-psa/shared/lib/humanWork/seatAssigneeAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { publishTicketTransitionsAfterCommit, silentTicketCreation, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -16,7 +18,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
-import { nativeReplyAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { admitInternalReaderAudienceSql, nativeReplyAudience, nativeThreadAudience, resolveCommentWriteAuthor } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -26,7 +28,7 @@ import { applyCommentResponseState, publishResponseStateChange, resolveCommentAu
 import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canWriteAttachmentTicket, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
-  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange } from '@alga-psa/db';
+  BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit, withViaPrincipal, stampViaPrincipalRow, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 import {
   runAuthorizedTicketWatcherWrite,
@@ -155,7 +157,9 @@ import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-p
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { generatePreviewsForDocument } from '@alga-psa/documents/lib/documentPreviewGenerator';
-import { attachDocumentFromBytes } from './documents/attachDocument';
+import { attachDocument } from './documents/attachDocument';
+import { Readable } from 'node:stream';
+import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -457,6 +461,27 @@ function isBareServicePrincipal(context: ServiceContext): boolean {
   return (context.user as { user_type?: string } | undefined)?.user_type === 'service' && !context.viaPrincipalUserId;
 }
 
+const TICKET_FILTER_RESPONSE_FIELD: Readonly<Record<string, string>> = {
+  title: 'title', ticket_number: 'ticket_number', board_id: 'board_id', client_id: 'client_id', location_id: 'location_id',
+  contact_name_id: 'contact_name_id', status_id: 'status_id', status_ids: 'status_id', category_id: 'category_id',
+  subcategory_id: 'subcategory_id', entered_by: 'entered_by', assigned_to: 'assigned_to', priority_id: 'priority_id',
+  is_open: 'status_is_closed', is_closed: 'status_is_closed', response_state: 'response_state',
+  has_assignment: 'assigned_to', client_name: 'client_name', contact_name: 'contact_name', board_name: 'board_name',
+  category_name: 'category_name', priority_name: 'priority_name', status_name: 'status_name',
+  entered_from: 'entered_at', entered_to: 'entered_at', created_from: 'entered_at', created_to: 'entered_at',
+  closed_from: 'closed_at', closed_to: 'closed_at', updated_from: 'updated_at', updated_to: 'updated_at',
+  master_ticket_id: 'master_ticket_id', bundle_view: 'master_ticket_id',
+};
+
+/**
+ * The reader a comment-audience check is made for: the verified user row when the transport
+ * loaded it for this user, otherwise the bare id (which is always checked against the seat tables).
+ */
+function audienceReader(context: ServiceContext): string | TicketServiceUser {
+  const user = context.user as TicketServiceUser | undefined;
+  return user && user.user_id === context.userId ? user : context.userId;
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -655,9 +680,10 @@ export class TicketService extends BaseService<ITicket> {
     let dataQuery = dataScopedQuery.builder;
     let countQuery = countScopedQuery.builder;
 
-    // Apply filters
-    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant);
-    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant);
+    // A hidden response field cannot be probed through the matching set or total.
+    const predicateGuard = await createPredicateGuard(knex, context, 'ticket');
+    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant, predicateGuard);
+    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant, predicateGuard);
 
     // Client-portal scope: same-client AND visibility-board predicates on both
     // the data and count builders, before limit/offset. Kept separate from the
@@ -1059,7 +1085,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
+    return filterReadableCommentAttachments(knex, context.tenant, audienceReader(context), documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1547,7 +1573,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Validation, storage, the transaction, rollback cleanup, previews and events all
     // live in the shared upload core; the draft branch is a ticket-adapter option.
-    return attachDocumentFromBytes({
+    return attachDocument({
       knex,
       tenant: context.tenant,
       actorUserId: context.userId,
@@ -1556,7 +1582,8 @@ export class TicketService extends BaseService<ITicket> {
       file: {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
-        bytes: Buffer.from(await file.arrayBuffer()),
+        // The part is streamed into the ingest; no whole-file copy of it.
+        body: Readable.fromWeb(file.stream() as unknown as NodeReadableStream<Uint8Array>),
       },
       source: 'multipart',
       options: { commentAttachmentDraft },
@@ -1592,7 +1619,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1636,7 +1663,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.*')
       .first() as IDocument | undefined;
 
-    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, audienceReader(context), documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -1994,6 +2021,8 @@ export class TicketService extends BaseService<ITicket> {
         // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
+        await assertActorMayAssign(trx, context.tenant, context.userId, [createTicketInput.assigned_to]);
+
         // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
@@ -2040,7 +2069,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           ticketResult.ticket_id,
           data.external_links ?? null,
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
 
         await stampViaPrincipalRow(trx, context, 'tickets', { ticket_id: ticketResult.ticket_id }, 'entered_via_principal_id');
@@ -2123,6 +2152,8 @@ export class TicketService extends BaseService<ITicket> {
           boardId: fullTicket.board_id,
           priorityId: fullTicket.priority_id,
           clientId: fullTicket.client_id,
+          dueDate: fullTicket.due_date ?? null,
+          ticketOrigin: fullTicket.ticket_origin,
           externalLinks,
           suppressContactNotifications,
           suppressInternalNotifications,
@@ -2173,6 +2204,9 @@ export class TicketService extends BaseService<ITicket> {
       if (options.authorize) {
         await options.authorize(currentTicket as Record<string, any>, trx);
       }
+      // A subject scoped to a client and boards (a co-managed seat technician) must also be allowed where this
+      // write would leave the ticket; the hook above judges the stored row only.
+      await assertTicketUpdateAllowed(trx, context.tenant, subjectFromServiceContext(context), currentTicket as any, data as any);
 
       if (enteredAt !== undefined) {
         // Preserve the chronology enforced when historical comments and closes are created.
@@ -2439,8 +2473,15 @@ export class TicketService extends BaseService<ITicket> {
         cleanedData.assigned_to !== currentTicket.assigned_to;
       // Human-work guard: only when this write changes assigned_to (legacy references untouched).
       if (isChangingAssignment && (cleanedData as { assigned_to?: string | null }).assigned_to) {
-        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertActorMayAssign(trx, context.tenant, context.userId, [(cleanedData as { assigned_to?: string | null }).assigned_to]);
+        await assertHumanWorkAssignee(trx, context.tenant, [(cleanedData as { assigned_to?: string | null }).assigned_to], {
+          kind: 'ticket',
+          ticketId: id,
+          pending: { clientId: (cleanedData as { client_id?: string }).client_id, boardId: (cleanedData as { board_id?: string }).board_id },
+        });
       }
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,
@@ -2462,6 +2503,11 @@ export class TicketService extends BaseService<ITicket> {
         await finalizeResourceReassignment();
         // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
         await recordTicketAssigneeChange(trx, context.tenant, id);
+      }
+
+      // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+      if (ticket && (await releaseSeatTicketOnMove(trx, context.tenant, id, currentTicket, ticket)).assigneeCleared) {
+        ticket.assigned_to = null;
       }
 
       if (clearsResponseStateOnClose) {
@@ -2789,6 +2835,10 @@ export class TicketService extends BaseService<ITicket> {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         });
+    } else if (context.userId) {
+      // An internal reader sees only the audiences their organization may: MSP staff all of them, a seat technician never a private note.
+      const audience = admitInternalReaderAudienceSql(knex, context.tenant, audienceReader(context));
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('tc.comment_id')]);
     }
 
     const comments = await commentsQuery
@@ -2953,6 +3003,15 @@ export class TicketService extends BaseService<ITicket> {
       // author_type comes from the authenticated key's user, via the same
       // resolver the UI action uses; a client user also records its contact.
       const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
+      // A seat technician can hold an API key: decide the write for their organization. The verified
+      // user row (when the transport loaded it) lets staff skip the seat tables; other principals
+      // (service, client) keep the author their authorType implies.
+      const apiAudienceUser = context.user as TicketServiceUser | undefined;
+      const apiAudienceAuthor = apiAudienceUser && apiAudienceUser.user_id === context.userId
+        ? await resolveCommentWriteAuthor(trx, context.tenant, apiAudienceUser)
+        : apiAuthor.authorType === 'internal' && context.userId
+          ? await resolveCommentWriteAuthor(trx, context.tenant, { user_id: context.userId, user_type: 'internal' })
+          : undefined;
 
       if (apiIsReply) {
         // Reply: attach to the parent's existing thread and inherit its
@@ -3002,7 +3061,7 @@ export class TicketService extends BaseService<ITicket> {
         // Labelled thread: serialise against an audience change; the reply inherits it.
         const apiReplyAudience = await nativeReplyAudience(trx, context.tenant,
           { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId });
+          { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null, ticketId, author: apiAudienceAuthor });
         if (apiReplyAudience) apiThreadAudience = { collaboration_audience: apiReplyAudience };
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
@@ -3027,6 +3086,7 @@ export class TicketService extends BaseService<ITicket> {
           authorType: apiAuthor.authorType,
           audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
           ticketId,
+          author: apiAudienceAuthor,
         });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
@@ -3118,7 +3178,7 @@ export class TicketService extends BaseService<ITicket> {
             entity_type: 'comment' as const,
             comment_id: comment.comment_id,
           })),
-          context.userId,
+          context.userId ? { type: 'user', userId: context.userId } : { type: 'system' },
         );
       }
 
@@ -3390,52 +3450,36 @@ export class TicketService extends BaseService<ITicket> {
     query = scopedDb.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
     query = scopedDb.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
 
-    // Apply search filters
-    if (!searchData.include_closed) {
+    // Apply search filters only to fields the caller may read. A hidden default
+    // status filter is skipped; explicit hidden filters/search fields match nothing.
+    const guard = await createPredicateGuard(knex, context, 'ticket');
+    if (!searchData.include_closed && guard.readable('status_is_closed')) {
       query = query.where('stat.is_closed', false);
     }
 
     if (searchData.status_ids && searchData.status_ids.length > 0) {
-      query = query.whereIn('t.status_id', searchData.status_ids);
+      guard.filter(query, 't.status_id', (q, column) => { q.whereIn(column, searchData.status_ids!); });
     }
 
     if (searchData.priority_ids && searchData.priority_ids.length > 0) {
-      query = query.whereIn('t.priority_id', searchData.priority_ids);
+      guard.filter(query, 't.priority_id', (q, column) => { q.whereIn(column, searchData.priority_ids!); });
     }
 
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      query = query.whereIn('t.client_id', searchData.client_ids);
+      guard.filter(query, 't.client_id', (q, column) => { q.whereIn(column, searchData.client_ids!); });
     }
 
     if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
-      query = query.whereIn('t.assigned_to', searchData.assigned_to_ids);
+      guard.filter(query, 't.assigned_to', (q, column) => { q.whereIn(column, searchData.assigned_to_ids!); });
     }
 
     // Apply search query
     const searchFields = searchData.fields || ['title', 'ticket_number'];
-    query = query.where(subQuery => {
-      searchFields.forEach((field, index) => {
-        if (field === 'client_name') {
-          if (index === 0) {
-            subQuery.whereILike('comp.client_name', `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike('comp.client_name', `%${searchData.query}%`);
-          }
-        } else if (field === 'contact_name') {
-          if (index === 0) {
-            subQuery.whereILike('cont.full_name', `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike('cont.full_name', `%${searchData.query}%`);
-          }
-        } else {
-          if (index === 0) {
-            subQuery.whereILike(`t.${field}`, `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike(`t.${field}`, `%${searchData.query}%`);
-          }
-        }
-      });
-    });
+    guard.search(query, searchFields.map((field) => field === 'client_name'
+      ? { column: 'comp.client_name', field }
+      : field === 'contact_name'
+        ? { column: 'cont.full_name', field }
+        : { column: `t.${field}`, field }), searchData.query);
 
     // Execute query
     const tickets = await query
@@ -3588,7 +3632,7 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Apply ticket-specific filters
    */
-  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
+  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string, guard: PredicateGuard): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
 
     // external_system + external_id must match the SAME external-link row when
@@ -3615,6 +3659,12 @@ export class TicketService extends BaseService<ITicket> {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
       if (handledExternalFilters.has(key)) return;
+
+      const responseField = TICKET_FILTER_RESPONSE_FIELD[key];
+      if (responseField && !guard.readable(responseField)) {
+        query.whereRaw('1 = 0');
+        return;
+      }
 
       switch (key) {
         case 'title':
@@ -3674,6 +3724,27 @@ export class TicketService extends BaseService<ITicket> {
             query.whereNull('t.assigned_to');
           }
           break;
+        case 'search': {
+          const searchColumns = guard.columns(this.searchableFields.map((field) => ({ column: `t.${field}`, field })));
+          const searchClient = guard.readable('client_name');
+          if (searchColumns.length === 0 && !searchClient) {
+            query.whereRaw('1 = 0');
+            break;
+          }
+          query.where((subQuery) => {
+            searchColumns.forEach((column) => subQuery.orWhereILike(column, `%${value}%`));
+            if (searchClient) {
+              subQuery.orWhereExists(
+                scopedDb.subquery('clients as c')
+                  .select('*')
+                  .whereRaw('c.tenant = t.tenant')
+                  .whereRaw('c.client_id = t.client_id')
+                  .andWhereILike('c.client_name', `%${value}%`)
+              );
+            }
+          });
+          break;
+        }
         case 'client_name':
           query.whereExists(
             scopedDb.subquery('clients as c')
@@ -3724,28 +3795,6 @@ export class TicketService extends BaseService<ITicket> {
               );
             scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
             query.whereExists(tagSubquery);
-          }
-          break;
-        case 'search':
-          if (this.searchableFields.length > 0) {
-            query.where(subQuery => {
-              this.searchableFields.forEach((field, index) => {
-                if (index === 0) {
-                  subQuery.whereILike(`t.${field}`, `%${value}%`);
-                } else {
-                  subQuery.orWhereILike(`t.${field}`, `%${value}%`);
-                }
-              });
-              
-              // Also search in client name
-              subQuery.orWhereExists(
-                scopedDb.subquery('clients as c')
-                  .select('*')
-                  .whereRaw('c.tenant = t.tenant')
-                  .whereRaw('c.client_id = t.client_id')
-                  .andWhereILike('c.client_name', `%${value}%`)
-              );
-            });
           }
           break;
         case 'updated_from':

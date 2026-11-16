@@ -16,11 +16,11 @@
  */
 
 import { Knex } from 'knex';
-import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
 import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
-import { unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
+import { unservedPermissionResources, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -412,6 +412,15 @@ export class PermissionRoleService extends BaseService<IRole> {
     dataQuery = scopedDb.tenantJoin(dataQuery, 'user_roles as ur', 'r.role_id', 'ur.role_id', { type: 'left' });
 
     let countQuery = scopedDb.table('roles as r');
+
+    // A role that exists only for a capability is listed only for tenants served for it
+    // (an ended arrangement or a kill switch leaves the row in place).
+    for (const hidden of await unservedRoles(context.tenant)) {
+      const visible = (query: Knex.QueryBuilder) => query.whereNot((role) =>
+        role.where({ 'r.role_name': hidden.role_name, 'r.msp': hidden.msp, 'r.client': hidden.client }));
+      dataQuery = visible(dataQuery);
+      countQuery = visible(countQuery);
+    }
 
     // Common created_*/updated_* range filters (qualified to the roles alias).
     this.applyRangeFilters(dataQuery, filters);
@@ -1089,6 +1098,9 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
       }
 
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
+
       // Get current roles to avoid duplicates
       const currentRoles = await tenantDb(trx, context.tenant).table('user_roles')
         .where('user_id', userId)
@@ -1217,6 +1229,8 @@ export class PermissionRoleService extends BaseService<IRole> {
 
       // The final set decides, which is also what rejects an empty roleIds.
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
       // Remove all current roles
       await tenantDb(trx, context.tenant).table('user_roles')

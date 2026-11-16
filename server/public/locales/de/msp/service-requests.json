@@ -150,7 +150,12 @@
         "priorityCalculated": "Priorität (berechnet)",
         "selectImpactAndUrgency": "Auswirkung und Dringlichkeit auswählen",
         "priorityFormula": "{{label}} (Auswirkung {{impact}} x Dringlichkeit {{urgency}})",
-        "titleFieldKey": "Titel-Feldschlüssel",
+        "ticketSubject": "Ticketbetreff",
+        "ticketSubjectHelp": "Antworten werden beim Absenden der Anfrage eingesetzt. Leer lassen, um die erste Antwort zu verwenden.",
+        "insertField": "Feld einfügen",
+        "noInsertableFields": "Dieses Formular enthält noch keine Felder zum Einfügen.",
+        "unknownFields": "Unbekanntes Feld: {{fields}}",
+        "unknownFieldsBlocked": "Korrigieren Sie die unbekannten Felder im Ticketbetreff oder im Beschreibungspräfix, bevor Sie speichern.",
         "descriptionPrefix": "Beschreibungspräfix",
         "save": "Ticket-Routing speichern"
       },

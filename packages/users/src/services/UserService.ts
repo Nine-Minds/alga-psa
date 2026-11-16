@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -394,7 +394,7 @@ export class UserService extends BaseService<IUser> {
 
       // Tripwire: roll back if the insert left the tenant over its seat limits.
       if (isLicensedUserType(targetUserType) && !userData.is_inactive) {
-        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant, admission);
       }
 
       // Assign roles
@@ -501,8 +501,9 @@ export class UserService extends BaseService<IUser> {
       if (occupiesSeatNow && !occupiesSeatAfter) {
         await enforceUserRoleFloor(trx, context.tenant, { kind: 'deactivate_user', userId: id });
       }
+      let licenseCheck: InternalUserLicenseLimitResult | null = null;
       if (takesNewSeat) {
-        const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
+        licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
           throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
         }
@@ -515,7 +516,7 @@ export class UserService extends BaseService<IUser> {
         .returning(USER_RESPONSE_FIELD_NAMES);
 
       if (takesNewSeat) {
-        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
       }
 
       // Log user update activity
@@ -814,6 +815,8 @@ export class UserService extends BaseService<IUser> {
       // final set: Admin -> Admin+other passes, Admin -> other on the last
       // admin does not, and an empty list never does.
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
       // Remove existing roles
       await tenantDb(trx, context.tenant).table('user_roles')
@@ -1211,7 +1214,7 @@ export class UserService extends BaseService<IUser> {
           await this.buildTenantScopedQuery(trx, context)
             .where({ user_id: candidate.user_id })
             .update({ is_inactive: false, updated_at: knex.raw('now()') });
-          await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+          await assertInternalUserSeatsWithinLimit(trx, context.tenant, licenseCheck);
         }
       }
 

@@ -5,7 +5,7 @@
 
 import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
-import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertHumanWorkAssignee, assertHumanWorkOwner, timeEntryWorkItem } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
@@ -472,7 +472,10 @@ export class TimeEntryService extends BaseService<any> {
     // Human-work guard: only when this write changes the owner.
     const requestedOwner = (data as { user_id?: string | null }).user_id;
     if (requestedOwner && requestedOwner !== existing.user_id) {
-      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner]);
+      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner], timeEntryWorkItem(
+        (data as { work_item_type?: string | null }).work_item_type ?? existing.work_item_type,
+        (data as { work_item_id?: string | null }).work_item_id ?? existing.work_item_id
+      ));
     }
 
     // Extract is_billable from data as it's not a database column
@@ -943,6 +946,12 @@ export class TimeEntryService extends BaseService<any> {
           continue;
         }
         
+        // Operational (seat technician) time is never approved.
+        if (entry.billing_mode === 'operational') {
+          results.push({ success: false, error: 'Operational time entries are not part of approval', entry_id: entryId });
+          continue;
+        }
+
         // Check if it's in a valid status for approval
         if (!['SUBMITTED', 'CHANGES_REQUESTED'].includes(entry.approval_status)) {
           results.push({ success: false, error: `Time entry is in ${entry.approval_status} status and cannot be approved`, entry_id: entryId });
@@ -1247,7 +1256,7 @@ export class TimeEntryService extends BaseService<any> {
     if (!timeSheet) {
       // Create new time sheet
       // Human-work guard (R5.3): never create a time sheet for a non-internal user.
-      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
+      await assertHumanWorkAssignee(knex, context.tenant, [userId], { kind: 'unscoped', surface: 'time_sheet' });
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,

@@ -8,6 +8,7 @@ import {
   CreateInternalNotificationRequest,
 } from '../../types/internalNotification';
 import { pickNotificationPriority } from './priorityResolution';
+import { resolveTicketNotificationRecipient, selectAudienceContent } from '@alga-psa/shared/lib/notificationAudience';
 
 /**
  * The transactional heart of template-based notification creation: locale ->
@@ -250,6 +251,18 @@ export async function createNotificationRowFromTemplate(
   userId: string,
   request: CreateInternalNotificationRequest
 ): Promise<InternalNotification | null> {
+  // Recipient boundary (S33). Everyone but a seat technician is untouched. A seat technician is
+  // told only about an in-scope ticket and only what their audience admits; a notification that
+  // does not declare `ticketAudience` is never created for them.
+  const recipient = await resolveTicketNotificationRecipient(
+    trx, tenant, { ticketId: request.ticketAudience?.ticketId }, { userId });
+  const admission = await selectAudienceContent(
+    recipient, request.ticketAudience ? [{ audience: request.ticketAudience.audience }] : undefined);
+  if (!admission.admitted) {
+    console.log(`Internal notification '${request.template_name}' is outside the audience of user ${userId}`);
+    return null;
+  }
+
   // Get user's locale
   const userLocale = await getUserLocale(trx, tenant, userId);
 
