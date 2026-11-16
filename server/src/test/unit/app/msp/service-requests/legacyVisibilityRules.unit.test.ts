@@ -51,6 +51,33 @@ describe('adoptLegacyVisibilityRules', () => {
     expect(result.elements.every((element) => element.visibleWhen === undefined)).toBe(true);
   });
 
+  it('keeps a rule whose operator the source type does not offer, and names its element', () => {
+    // "is true" asks whether a box is ticked; against a text source the sentence cannot be said.
+    const result = adoptLegacyVisibilityRules(elements(), {
+      visibilityRules: [{ fieldKey: 'hardware', source: 'vpn_reason', operator: 'is-true' }],
+    });
+
+    expect(result.elements[2].visibleWhen).toBeUndefined();
+    // The target element exists, so the inspector can mark it.
+    expect(result.unadoptedRules.map((rule) => rule.fieldKey)).toEqual(['hardware']);
+  });
+
+  it('keeps a rule whose source is no answer on this form, and names its element', () => {
+    const result = adoptLegacyVisibilityRules(elements(), {
+      visibilityRules: [
+        { fieldKey: 'vpn_reason', source: 'deleted_question', operator: 'equals', value: 'yes' },
+        // A section holds no answer, so it is never a source either.
+        { fieldKey: 'vpn_reason', source: 'hardware', operator: 'has-value' },
+      ],
+    });
+
+    expect(result.elements[1].visibleWhen).toBeUndefined();
+    expect(result.unadoptedRules.map((rule) => rule.source)).toEqual([
+      'deleted_question',
+      'hardware',
+    ]);
+  });
+
   it('handles a definition that mixes both kinds', () => {
     const withOwnRule = elements();
     withOwnRule[1] = {
