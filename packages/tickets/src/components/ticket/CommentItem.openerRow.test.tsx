@@ -137,4 +137,15 @@ describe('CommentItem opener row', () => {
     expect(screen.queryByText(/jane@example\.com/)).not.toBeInTheDocument();
     expect(screen.getByText(/1 attachment/)).toBeInTheDocument();
   });
+
+  it('expands the opener when the URL hash targets its comment', () => {
+    window.location.hash = '#comment-c1';
+    try {
+      renderItem(comment(opener));
+      expect(screen.getByTestId('rich-text-viewer')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hide original email' })).toBeInTheDocument();
+    } finally {
+      window.location.hash = '';
+    }
+  });
 });

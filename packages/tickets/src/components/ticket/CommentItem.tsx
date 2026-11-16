@@ -491,6 +491,19 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
   }, [canEdit, isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
+  // A #comment-<id> deep link (search, notification) to a collapsed opener opens it, so the
+  // linked comment is readable rather than a one-line stand-in.
+  useEffect(() => {
+    if (
+      conversation.comment_id &&
+      typeof window !== 'undefined' &&
+      window.location.hash === `#comment-${conversation.comment_id}` &&
+      isTicketOpenerComment(conversation)
+    ) {
+      setOpenerExpanded(true);
+    }
+  }, [conversation]);
+
   useEffect(() => {
     if (!conversation.comment_id || typeof window === 'undefined') {
       return;
