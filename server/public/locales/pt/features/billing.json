@@ -34,6 +34,8 @@
     "partial": "Parcial",
     "draft": "Rascunho",
     "finalized": "Finalizado",
+    "voided": "Anulada",
+    "voidedNotPayable": "Anulada – não pagável",
     "sendEmail": "Enviar como e-mail",
     "sendEmailFailed": "Falha ao enviar e-mail de fatura. Por favor, tente novamente.",
     "loadFailed": "Falha ao carregar detalhes da fatura. Por favor, tente novamente.",

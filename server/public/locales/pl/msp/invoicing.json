@@ -636,7 +636,8 @@
       "unfinalize": "Cofnij finalizację"
     },
     "status": {
-      "finalized": "Sfinalizowana"
+      "finalized": "Sfinalizowana",
+      "voided": "Anulowana"
     },
     "empty": {
       "title": "Brak sfinalizowanych faktur",

@@ -19,6 +19,7 @@ import {
   type BundleRowRole,
   type ResolvedBundleCell,
 } from '@alga-psa/billing/lib/invoiceBundleComponents/layoutCells';
+import { invoiceDisplayStatus, isVoidedInvoice } from '@alga-psa/shared/billingClients/invoiceDisplayStatus';
 import { triggerInvoicePdfDownload } from './invoicePdfDownload';
 import {
   LocationAddress,
@@ -434,9 +435,24 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.status', 'Status')}</p>
-              <Badge variant={invoice.finalized_at ? 'success' : 'warning'} className="mt-1">
-                {invoice.finalized_at ? t('invoice.finalized', 'Finalized') : t('invoice.draft', 'Draft')}
-              </Badge>
+              {(() => {
+                const displayStatus = invoiceDisplayStatus(invoice);
+                return (
+                  <Badge
+                    variant={displayStatus === 'voided' ? 'secondary' : displayStatus === 'finalized' ? 'success' : 'warning'}
+                    className="mt-1"
+                  >
+                    {displayStatus === 'voided'
+                      ? t('invoice.voided', 'Voided')
+                      : displayStatus === 'finalized'
+                        ? t('invoice.finalized', 'Finalized')
+                        : t('invoice.draft', 'Draft')}
+                  </Badge>
+                );
+              })()}
+              {isVoidedInvoice(invoice) && (
+                <p className="mt-1 text-sm text-muted-foreground">{t('invoice.voidedNotPayable', 'Voided – not payable')}</p>
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.manualInvoice', 'Manual Invoice')}</p>

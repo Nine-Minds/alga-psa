@@ -608,7 +608,8 @@
       "unfinalize": "Desfinalizar"
     },
     "status": {
-      "finalized": "Finalizado"
+      "finalized": "Finalizado",
+      "voided": "Anulada"
     },
     "empty": {
       "title": "Sem faturas finalizadas",

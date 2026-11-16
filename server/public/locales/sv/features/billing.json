@@ -34,6 +34,8 @@
     "partial": "Delbetald",
     "draft": "Utkast",
     "finalized": "Fastställd",
+    "voided": "Makulerad",
+    "voidedNotPayable": "Makulerad – kan inte betalas",
     "sendEmail": "Skicka via e-post",
     "sendEmailFailed": "Det gick inte att skicka fakturan via e-post. Försök igen.",
     "loadFailed": "Det gick inte att läsa in fakturadetaljerna. Försök igen.",

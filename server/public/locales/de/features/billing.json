@@ -47,6 +47,8 @@
     "partial": "Teilweise",
     "draft": "Entwurf",
     "finalized": "Finalisiert",
+    "voided": "Storniert",
+    "voidedNotPayable": "Storniert – nicht zahlbar",
     "sendEmail": "Als E-Mail senden",
     "sendEmailFailed": "Rechnung konnte nicht per E-Mail gesendet werden. Bitte versuche es erneut.",
     "loadFailed": "Rechnungsdetails konnten nicht geladen werden. Bitte versuche es erneut.",

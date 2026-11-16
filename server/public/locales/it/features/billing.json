@@ -47,6 +47,8 @@
     "partial": "Parziale",
     "draft": "Bozza",
     "finalized": "Finalizzata",
+    "voided": "Annullata",
+    "voidedNotPayable": "Annullata – non pagabile",
     "sendEmail": "Invia tramite email",
     "sendEmailFailed": "Impossibile inviare la fattura via email. Riprova.",
     "loadFailed": "Impossibile caricare i dettagli della fattura. Riprova.",

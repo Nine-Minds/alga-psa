@@ -608,7 +608,8 @@
       "unfinalize": "⟦Ŭƞƒīƞȧŀīẑḗ⟧"
     },
     "status": {
-      "finalized": "⟦Ƒīƞȧŀīẑḗḓ⟧"
+      "finalized": "⟦Ƒīƞȧŀīẑḗḓ⟧",
+      "voided": "Voided"
     },
     "empty": {
       "title": "⟦Ƞȯ Ƒīƞȧŀīẑḗḓ Īƞṽȯīƈḗş⟧",

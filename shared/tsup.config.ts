@@ -119,6 +119,7 @@ export default defineConfig({
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
     'billingClients/serviceTaxTreatment': 'billingClients/serviceTaxTreatment.ts',
+    'billingClients/invoiceDisplayStatus': 'billingClients/invoiceDisplayStatus.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way

@@ -34,6 +34,8 @@
     "partial": "Partial",
     "draft": "Draft",
     "finalized": "Finalized",
+    "voided": "Voided",
+    "voidedNotPayable": "Voided – not payable",
     "sendEmail": "Send as Email",
     "sendEmailFailed": "Failed to send invoice email. Please try again.",
     "loadFailed": "Failed to load invoice details. Please try again.",

@@ -16,6 +16,7 @@
     "./billingClients/quoteDiscountAllocation": "./dist/billingClients/quoteDiscountAllocation.js",
     "./billingClients/quoteConversionDiscounts": "./dist/billingClients/quoteConversionDiscounts.js",
     "./billingClients/serviceTaxTreatment": "./dist/billingClients/serviceTaxTreatment.js",
+    "./billingClients/invoiceDisplayStatus": "./dist/billingClients/invoiceDisplayStatus.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",

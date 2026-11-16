@@ -1,5 +1,6 @@
 'use client'
 
+import { invoiceDisplayStatus } from '@alga-psa/shared/billingClients/invoiceDisplayStatus';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -423,10 +424,16 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       id: 'finalized_status',
       dataIndex: 'finalized_at',
       sortable: false,
-      render: () => (
-        <Badge variant="success">
-          {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
-        </Badge>
+      render: (_value, record) => (
+        invoiceDisplayStatus(record) === 'voided' ? (
+          <Badge variant="secondary">
+            {t('finalizedTab.status.voided', { defaultValue: 'Voided' })}
+          </Badge>
+        ) : (
+          <Badge variant="success">
+            {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
+          </Badge>
+        )
       ),
     },
     {

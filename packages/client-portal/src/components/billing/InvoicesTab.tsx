@@ -7,6 +7,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { invoiceDisplayStatus, isVoidedInvoice } from '@alga-psa/shared/billingClients/invoiceDisplayStatus';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -202,6 +203,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   // Check if invoice can be paid online (finalized, not a credit note, not
   // fully covered, and not issued for payment by check or bank transfer)
   const canPayInvoice = (invoice: InvoiceViewModel): boolean => {
+    // Voided invoices (stored as 'cancelled') are never payable
+    if (isVoidedInvoice(invoice)) return false;
     // Must be finalized
     if (!invoice.finalized_at) return false;
     if (isCreditNote(invoice)) return false;
@@ -218,7 +221,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       dataIndex: 'invoice_number',
       render: (value, record) => (
         <span className="inline-flex items-center gap-2">
-          <span>{value}{autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{tPortal('invoice.autopayWillCharge', { date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? tPortal('account.billing.autopay.cardFallback'), last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
+          <span>{value}{!isVoidedInvoice(record) && autopayContexts[record.invoice_id] && <span className="block text-xs text-muted-foreground">{tPortal('invoice.autopayWillCharge', { date: formatDate(autopayContexts[record.invoice_id].scheduledFor), brand: autopayContexts[record.invoice_id].brand ?? tPortal('account.billing.autopay.cardFallback'), last4: autopayContexts[record.invoice_id].last4 })}</span>}</span>
           {isCreditNote(record) && (
             <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
           )}
@@ -245,11 +248,18 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     {
       title: t('invoice.status'),
       dataIndex: 'finalized_at',
-      render: (value) => (
-        <Badge variant={value ? 'success' : 'warning'}>
-          {value ? t('invoice.finalized') : t('invoice.draft')}
-        </Badge>
-      )
+      render: (_value, record) => {
+        const displayStatus = invoiceDisplayStatus(record);
+        return (
+          <Badge variant={displayStatus === 'voided' ? 'secondary' : displayStatus === 'finalized' ? 'success' : 'warning'}>
+            {displayStatus === 'voided'
+              ? t('invoice.voided', 'Voided')
+              : displayStatus === 'finalized'
+                ? t('invoice.finalized')
+                : t('invoice.draft')}
+          </Badge>
+        );
+      }
     },
     {
       title: tCommon('common.actions'),
@@ -268,7 +278,14 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {!isOfflinePaymentMethod(record.payment_method) && (
+            {isVoidedInvoice(record) ? (
+              <div
+                id={`voided-invoice-${record.invoice_number}-note`}
+                className="px-2 py-1.5 text-sm text-muted-foreground"
+              >
+                {t('invoice.voidedNotPayable', 'Voided – not payable')}
+              </div>
+            ) : !isOfflinePaymentMethod(record.payment_method) && (
               <DropdownMenuItem
                 id={`pay-invoice-${record.invoice_number}-menu-item`}
                 disabled={!canPayInvoice(record)}
@@ -426,7 +443,11 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                 <Download className="mr-2 h-4 w-4" />
                 {downloadingInvoices.has(selectedInvoice.invoice_id) ? 'Preparing...' : 'Download PDF'}
               </Button>
-              {!isOfflinePaymentMethod(selectedInvoice.payment_method) && (
+              {isVoidedInvoice(selectedInvoice) ? (
+                <Badge variant="secondary" id={`voided-invoice-${selectedInvoice.invoice_number}-badge`}>
+                  {t('invoice.voidedNotPayable', 'Voided – not payable')}
+                </Badge>
+              ) : !isOfflinePaymentMethod(selectedInvoice.payment_method) && (
                 <Button
                   id={`pay-invoice-${selectedInvoice.invoice_number}`}
                   disabled={!canPayInvoice(selectedInvoice)}
