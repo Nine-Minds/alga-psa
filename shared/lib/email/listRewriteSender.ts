@@ -43,12 +43,6 @@ export interface ListRewriteResolution {
   via: 'x-original-from' | 'x-original-sender' | 'reply-to' | 'preserved-from';
 }
 
-const ENV_FLAG = 'INBOUND_RESOLVE_LIST_ORIGINAL_SENDER';
-
-function isFeatureEnabled(): boolean {
-  return (process.env[ENV_FLAG] || 'true').toLowerCase() !== 'false';
-}
-
 /**
  * Two domains are considered aligned when they are equal or one is a subdomain
  * of the other (relaxed DMARC-style alignment).
@@ -198,63 +192,4 @@ export function computeListRewriteSender(
   }
 
   return null;
-}
-
-/**
- * Build a lowercased header bag from a mailparser `ParsedMail`. Prefers
- * `headerLines` (raw, order-preserving) so the *topmost* Authentication-Results
- * (added by our own MX) wins; falls back to the parsed `headers` Map.
- */
-function extractHeaderBag(parsed: any): HeaderBag {
-  const bag: HeaderBag = {};
-
-  const lines: Array<{ key?: string; line?: string }> | undefined = parsed?.headerLines;
-  if (Array.isArray(lines)) {
-    for (const entry of lines) {
-      const key = typeof entry?.key === 'string' ? entry.key.toLowerCase() : '';
-      const line = typeof entry?.line === 'string' ? entry.line : '';
-      if (!key || key in bag) {
-        // Keep the first occurrence (topmost header) — matters for
-        // Authentication-Results, which is prepended by the final MTA.
-        continue;
-      }
-      const colon = line.indexOf(':');
-      bag[key] = colon >= 0 ? line.slice(colon + 1).trim() : '';
-    }
-    return bag;
-  }
-
-  const map: Map<string, unknown> | undefined = parsed?.headers;
-  if (map && typeof map.forEach === 'function') {
-    map.forEach((value: unknown, key: string) => {
-      const lower = key.toLowerCase();
-      if (typeof value === 'string') {
-        bag[lower] = value;
-      } else if (value && typeof value === 'object' && 'text' in (value as any)) {
-        bag[lower] = String((value as any).text ?? '');
-      } else if (value != null) {
-        bag[lower] = String(value);
-      }
-    });
-  }
-
-  return bag;
-}
-
-/**
- * Resolve the original sender from a mailparser `ParsedMail`, honouring the
- * feature flag. Returns null when disabled, when the message is not a list
- * rewrite, or when the recovered sender cannot be trusted.
- */
-export function resolveListRewriteSender(parsed: any): ListRewriteResolution | null {
-  if (!isFeatureEnabled()) {
-    return null;
-  }
-
-  const fromValue = parsed?.from?.value?.[0];
-  const from: ParsedEmailAddress | null = fromValue?.address
-    ? { email: String(fromValue.address).toLowerCase(), name: fromValue.name || undefined }
-    : parseEmailAddress(parsed?.from?.text);
-
-  return computeListRewriteSender(extractHeaderBag(parsed), from);
 }
