@@ -2677,6 +2677,32 @@
           },
           "noData": "No compliance data available",
           "summaryError": "Failed to load compliance summary",
+          "sync": {
+            "details": "Details",
+            "endedWithoutResult": "The sync ended without reporting a result.",
+            "failed": {
+              "patches": "Patch sync failed: {{reason}}",
+              "software": "Software sync failed: {{reason}}"
+            },
+            "failedCount": "Devices failed: {{value}}",
+            "partial": {
+              "patches": "Patch status synced with errors",
+              "software": "Software inventory synced with errors"
+            },
+            "progress": "{{done}} / {{total}} devices",
+            "retry": "Retry",
+            "running": {
+              "patches": "Syncing patch status…",
+              "software": "Syncing software inventory…"
+            },
+            "startFailed": "The sync could not be started.",
+            "succeeded": {
+              "patches": "Patch status synced",
+              "software": "Software inventory synced"
+            },
+            "truncated": "Showing the first {{shown}} of {{total}} errors",
+            "updated": "Devices updated: {{value}}"
+          },
           "title": "Fleet Compliance"
         }
       },

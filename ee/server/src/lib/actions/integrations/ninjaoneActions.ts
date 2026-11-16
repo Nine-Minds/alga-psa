@@ -44,6 +44,16 @@ import {
   NinjaOneOAuthCredentials,
 } from '../../../interfaces/ninjaone.interfaces';
 import { buildIntegrationDisconnectedPayload } from '@alga-psa/workflow-streams';
+import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
+import {
+  RMM_INVENTORY_SYNC_JOB,
+  annotateInventorySyncLiveness,
+  isInventorySyncRunningFresh,
+  inventorySyncSettingsPatch,
+  readInventorySyncSettings,
+  type RmmInventorySyncKind,
+  type RmmInventorySyncSettings,
+} from '@alga-psa/shared/rmm/inventorySync';
 
 // Secret names for NinjaOne credentials
 const NINJAONE_CREDENTIALS_SECRET = 'ninjaone_credentials';
@@ -1250,31 +1260,42 @@ export const getNinjaOneDeviceDetails = withAdvancedAssetsAccess(async (user, { 
   }
 });
 
+/** jobs.status values that mean the job can still make progress. */
+const NON_TERMINAL_JOB_STATUSES = new Set(['pending', 'queued', 'active', 'processing']);
+
 /**
- * Trigger patch status sync for all RMM-managed assets
+ * Schedules the 'rmm-inventory-sync' background job and returns at once.
+ *
+ * The whole-fleet walk (one provider call per device plus pauses between
+ * batches) used to run inside this request and timed out on large fleets; it now
+ * runs in the job, and this function must never import or call the sync modules.
+ *
+ * Duplicate guard: `settings.inventorySync[kind]` is the primary guard because it
+ * does not depend on the job backend's dedupe. The singletonKey passed to the
+ * runner is secondary — pg-boss only applies it to recurring jobs, and
+ * Temporal's dedupe is not something to bet a UI on.
+ *
+ * Known race: the guard is read-then-schedule with no lock, so two clicks landing
+ * in the same instant can both see "not running" and both schedule a job. The
+ * walks are idempotent upserts and the later `running` record simply wins, so this
+ * costs duplicate provider traffic, not wrong data. Not worth a lock here.
  */
-export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { tenant }, options?: {
-  assetIds?: string[];
-}): Promise<{
-  success: boolean;
-  result?: {
-    assetsProcessed: number;
-    assetsUpdated: number;
-    assetsFailed: number;
-  };
-  error?: string;
-}> => {
+async function scheduleInventorySync(
+  user: { user_id: string },
+  tenant: string,
+  kind: RmmInventorySyncKind,
+  options: { assetIds?: string[]; trackChanges?: boolean } | undefined,
+  messages: { permission: string; fallback: string },
+): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
-    // Check permission
-    const canUpdate = await hasPermission(user, 'asset', 'update');
+    const canUpdate = await hasPermission(user as any, 'asset', 'update');
     if (!canUpdate) {
-      throw new Error('Insufficient permissions to sync patch status');
+      throw new Error(messages.permission);
     }
 
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
 
-    // Get integration
     const integration = await db.table('rmm_integrations')
       .where('provider', 'ninjaone')
       .first() as RmmIntegration | undefined;
@@ -1283,92 +1304,98 @@ export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { te
       throw new Error('NinjaOne integration not configured');
     }
 
-    // Import patch sync dynamically
-    const { syncPatchStatus } = await import('../../integrations/ninjaone/sync/patchSync');
+    const integrationId = integration.integration_id;
 
-    const result = await syncPatchStatus(tenant, integration.integration_id, {
-      assetIds: options?.assetIds,
-      performedBy: user.user_id,
-    });
+    // Already running? Attach the caller to the in-flight job instead of starting another.
+    // Liveness comes from the stored record's heartbeat, NOT jobs.status: on Temporal
+    // the job is forwarded fire-and-forget, so its row reads terminal the moment the
+    // event is published, long before the fleet walk ends.
+    const existing = readInventorySyncSettings(integration.settings)[kind];
+    if (existing?.status === 'running' && existing.jobId) {
+      const job = await db.table('jobs')
+        .where({ job_id: existing.jobId })
+        .first('status', 'runner_type') as { status?: string; runner_type?: string } | undefined;
+      // Extra stale signal, pg-boss only: there the job row is terminal exactly when
+      // the handler returned, so a still-`running` record means it died or no-op'd.
+      // A terminal job alone is never proof for any other runner.
+      const pgBossFinished = job?.runner_type === 'pgboss'
+        && !!job.status && !NON_TERMINAL_JOB_STATUSES.has(String(job.status));
+      if (isInventorySyncRunningFresh(existing) && !pgBossFinished) {
+        return { success: true, jobId: existing.jobId };
+      }
+      // Heartbeat expired (or pg-boss finished without an outcome): it died without
+      // writing one. Stale — fall through and overwrite it.
+      logger.warn('[NinjaOneActions] Overwriting stale running inventory sync record', {
+        tenant, integrationId, kind, jobId: existing.jobId, jobStatus: job?.status ?? 'missing',
+        heartbeatAt: existing.heartbeatAt, startedAt: existing.startedAt,
+      });
+    }
 
-    revalidatePath('/msp/assets');
-
-    return {
-      success: result.success,
-      result: {
-        assetsProcessed: result.assetsProcessed,
-        assetsUpdated: result.assetsUpdated,
-        assetsFailed: result.assetsFailed,
+    const runner = getJobRunnerInstance() ?? (await initializeJobRunner());
+    const { jobId } = await runner.scheduleJob(
+      RMM_INVENTORY_SYNC_JOB,
+      {
+        tenantId: tenant,
+        integrationId,
+        provider: 'ninjaone',
+        kind,
+        assetIds: options?.assetIds,
+        trackChanges: options?.trackChanges,
+        performedBy: user.user_id,
       },
-    };
+      {
+        singletonKey: `${RMM_INVENTORY_SYNC_JOB}:${tenant}:${integrationId}:${kind}`,
+        userId: user.user_id,
+      },
+    );
+
+    // `running` is a stored-record state only (the outcome status type has none).
+    // The job may already have finished and written its outcome before we get
+    // here; never overwrite an outcome that belongs to this very job.
+    await db.table('rmm_integrations')
+      .where({ integration_id: integrationId })
+      .whereRaw(`COALESCE(settings->'inventorySync'->?->>'jobId', '') <> ?`, [kind, jobId])
+      .update({
+        settings: inventorySyncSettingsPatch(knex, kind, {
+          status: 'running',
+          jobId,
+          startedAt: new Date().toISOString(),
+        }) as never,
+        updated_at: new Date().toISOString(),
+      });
+
+    return { success: true, jobId };
   } catch (error) {
-    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne patch status.');
-    logger.error('[NinjaOneActions] Error triggering patch sync:', extractErrorInfo(error));
+    const errorMessage = ninjaOneActionErrorMessage(error, messages.fallback);
+    logger.error(`[NinjaOneActions] Error scheduling ${kind} inventory sync:`, extractErrorInfo(error));
     return { success: false, error: errorMessage };
   }
-});
+}
 
 /**
- * Trigger software inventory sync for all RMM-managed assets
+ * Schedule a patch status sync for all RMM-managed assets (runs as a background job).
+ */
+export const triggerPatchStatusSync = withAdvancedAssetsAccess(async (user, { tenant }, options?: {
+  assetIds?: string[];
+}): Promise<{ success: boolean; jobId?: string; error?: string }> =>
+  // LEVERAGE: pattern inventory-kind-trigger — per-kind trigger actions differ only by kind + messages; the kind registry could generate them
+  scheduleInventorySync(user, tenant, 'patches', options, {
+    permission: 'Insufficient permissions to sync patch status',
+    fallback: 'Unable to sync NinjaOne patch status.',
+  }));
+
+/**
+ * Schedule a software inventory sync for all RMM-managed assets (runs as a background job).
  */
 export const triggerSoftwareInventorySync = withAdvancedAssetsAccess(async (user, { tenant }, options?: {
   assetIds?: string[];
   trackChanges?: boolean;
-}): Promise<{
-  success: boolean;
-  result?: {
-    assetsProcessed: number;
-    assetsUpdated: number;
-    assetsFailed: number;
-    totalSoftwareItems: number;
-  };
-  error?: string;
-}> => {
-  try {
-    // Check permission
-    const canUpdate = await hasPermission(user, 'asset', 'update');
-    if (!canUpdate) {
-      throw new Error('Insufficient permissions to sync software inventory');
-    }
-
-    const { knex } = await createTenantKnex();
-    const db = tenantDb(knex, tenant);
-
-    // Get integration
-    const integration = await db.table('rmm_integrations')
-      .where('provider', 'ninjaone')
-      .first() as RmmIntegration | undefined;
-
-    if (!integration) {
-      throw new Error('NinjaOne integration not configured');
-    }
-
-    // Import software sync dynamically
-    const { syncSoftwareInventory } = await import('../../integrations/ninjaone/sync/softwareSync');
-
-    const result = await syncSoftwareInventory(tenant, integration.integration_id, {
-      assetIds: options?.assetIds,
-      trackChanges: options?.trackChanges ?? true,
-      performedBy: user.user_id,
-    });
-
-    revalidatePath('/msp/assets');
-
-    return {
-      success: result.success,
-      result: {
-        assetsProcessed: result.assetsProcessed,
-        assetsUpdated: result.assetsUpdated,
-        assetsFailed: result.assetsFailed,
-        totalSoftwareItems: result.totalSoftwareItems,
-      },
-    };
-  } catch (error) {
-    const errorMessage = ninjaOneActionErrorMessage(error, 'Unable to sync NinjaOne software inventory.');
-    logger.error('[NinjaOneActions] Error triggering software sync:', extractErrorInfo(error));
-    return { success: false, error: errorMessage };
-  }
-});
+}): Promise<{ success: boolean; jobId?: string; error?: string }> =>
+  // LEVERAGE: pattern inventory-kind-trigger — see triggerPatchStatusSync
+  scheduleInventorySync(user, tenant, 'software', { ...options, trackChanges: options?.trackChanges ?? true }, {
+    permission: 'Insufficient permissions to sync software inventory',
+    fallback: 'Unable to sync NinjaOne software inventory.',
+  }));
 
 /**
  * Search for software across all assets
@@ -1423,6 +1450,35 @@ export const searchSoftware = withAdvancedAssetsAccess(async (
 });
 
 /**
+ * Lightweight read of just `settings.inventorySync`, for the panel's 2s poll while
+ * a sync runs (the full summary runs several aggregate queries). Running records
+ * carry a server-computed `stale` flag so the client never compares clocks.
+ */
+export const getRmmInventorySyncStatus = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
+  success: boolean;
+  inventorySync?: RmmInventorySyncSettings;
+  error?: string;
+}> => {
+  try {
+    const canView = await hasPermission(user, 'asset', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view sync status');
+    }
+    const { knex } = await createTenantKnex();
+    const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where('provider', 'ninjaone')
+      .first('settings') as { settings?: unknown } | undefined;
+    return {
+      success: true,
+      inventorySync: annotateInventorySyncLiveness(readInventorySyncSettings(integration?.settings)),
+    };
+  } catch (error) {
+    logger.error('[NinjaOneActions] Error getting inventory sync status:', extractErrorInfo(error));
+    return { success: false, error: ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne sync status.') };
+  }
+});
+
+/**
  * Get compliance summary for RMM-managed assets
  */
 export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
@@ -1436,6 +1492,8 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     patchesPending: number;
     patchesFailed: number;
     lastSyncAt?: string;
+    /** Last (or in-flight) whole-fleet sync per kind, from rmm_integrations.settings.inventorySync. */
+    inventorySync: RmmInventorySyncSettings;
   };
   error?: string;
 }> => {
@@ -1502,7 +1560,7 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
     // Get last sync time
     const integration = await db.table('rmm_integrations')
       .where('provider', 'ninjaone')
-      .select('last_sync_at')
+      .select('last_sync_at', 'settings')
       .first();
 
     const totalPending = Number(workstationPatches?.pending || 0) + Number(serverPatches?.pending || 0);
@@ -1520,6 +1578,7 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
         patchesPending: totalPending,
         patchesFailed: totalFailed,
         lastSyncAt: integration?.last_sync_at,
+        inventorySync: annotateInventorySyncLiveness(readInventorySyncSettings(integration?.settings)),
       },
     };
   } catch (error) {

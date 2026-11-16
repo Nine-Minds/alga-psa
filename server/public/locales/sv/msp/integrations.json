@@ -2677,6 +2677,32 @@
           },
           "noData": "Inga efterlevnadsdata tillgängliga",
           "summaryError": "Det gick inte att läsa in efterlevnadssammanfattningen",
+          "sync": {
+            "details": "Detaljer",
+            "endedWithoutResult": "Synkroniseringen avslutades utan att rapportera ett resultat.",
+            "failed": {
+              "patches": "Patchsynkroniseringen misslyckades: {{reason}}",
+              "software": "Programvarusynkroniseringen misslyckades: {{reason}}"
+            },
+            "failedCount": "Enheter med fel: {{value}}",
+            "partial": {
+              "patches": "Patchstatus synkroniserad med fel",
+              "software": "Programvaruinventering synkroniserad med fel"
+            },
+            "progress": "{{done}} / {{total}} enheter",
+            "retry": "Försök igen",
+            "running": {
+              "patches": "Synkroniserar patchstatus…",
+              "software": "Synkroniserar programvaruinventering…"
+            },
+            "startFailed": "Synkroniseringen kunde inte startas.",
+            "succeeded": {
+              "patches": "Patchstatus synkroniserad",
+              "software": "Programvaruinventering synkroniserad"
+            },
+            "truncated": "Visar de första {{shown}} av {{total}} felen",
+            "updated": "Enheter uppdaterade: {{value}}"
+          },
           "title": "Enhetsparkens efterlevnad"
         }
       },

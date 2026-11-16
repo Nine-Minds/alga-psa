@@ -2654,6 +2654,32 @@
           },
           "noData": "No hay datos de cumplimiento disponibles",
           "summaryError": "No se pudo cargar el resumen de cumplimiento",
+          "sync": {
+            "details": "Detalles",
+            "endedWithoutResult": "La sincronización terminó sin informar un resultado.",
+            "failed": {
+              "patches": "Error al sincronizar los parches: {{reason}}",
+              "software": "Error al sincronizar el software: {{reason}}"
+            },
+            "failedCount": "Dispositivos con error: {{value}}",
+            "partial": {
+              "patches": "Estado de parches sincronizado con errores",
+              "software": "Inventario de software sincronizado con errores"
+            },
+            "progress": "{{done}} / {{total}} dispositivos",
+            "retry": "Reintentar",
+            "running": {
+              "patches": "Sincronizando estado de parches…",
+              "software": "Sincronizando inventario de software…"
+            },
+            "startFailed": "No se pudo iniciar la sincronización.",
+            "succeeded": {
+              "patches": "Estado de parches sincronizado",
+              "software": "Inventario de software sincronizado"
+            },
+            "truncated": "Mostrando los primeros {{shown}} de {{total}} errores",
+            "updated": "Dispositivos actualizados: {{value}}"
+          },
           "title": "Cumplimiento de la flota"
         }
       },

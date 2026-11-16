@@ -2654,6 +2654,32 @@
           },
           "noData": "Geen nalevingsgegevens beschikbaar",
           "summaryError": "Kan nalevingsoverzicht niet laden",
+          "sync": {
+            "details": "Details",
+            "endedWithoutResult": "De synchronisatie is beëindigd zonder een resultaat te melden.",
+            "failed": {
+              "patches": "Patch-synchronisatie mislukt: {{reason}}",
+              "software": "Software-synchronisatie mislukt: {{reason}}"
+            },
+            "failedCount": "Apparaten mislukt: {{value}}",
+            "partial": {
+              "patches": "Patchstatus gesynchroniseerd met fouten",
+              "software": "Software-inventaris gesynchroniseerd met fouten"
+            },
+            "progress": "{{done}} / {{total}} apparaten",
+            "retry": "Opnieuw proberen",
+            "running": {
+              "patches": "Patchstatus synchroniseren…",
+              "software": "Software-inventaris synchroniseren…"
+            },
+            "startFailed": "De synchronisatie kon niet worden gestart.",
+            "succeeded": {
+              "patches": "Patchstatus gesynchroniseerd",
+              "software": "Software-inventaris gesynchroniseerd"
+            },
+            "truncated": "De eerste {{shown}} van {{total}} fouten worden getoond",
+            "updated": "Apparaten bijgewerkt: {{value}}"
+          },
           "title": "Fleet-naleving"
         }
       },

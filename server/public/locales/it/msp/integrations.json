@@ -2654,6 +2654,32 @@
           },
           "noData": "Nessun dato di conformità disponibile",
           "summaryError": "Impossibile caricare il riepilogo della conformità",
+          "sync": {
+            "details": "Dettagli",
+            "endedWithoutResult": "La sincronizzazione è terminata senza riportare un risultato.",
+            "failed": {
+              "patches": "Sincronizzazione delle patch non riuscita: {{reason}}",
+              "software": "Sincronizzazione del software non riuscita: {{reason}}"
+            },
+            "failedCount": "Dispositivi non riusciti: {{value}}",
+            "partial": {
+              "patches": "Stato delle patch sincronizzato con errori",
+              "software": "Inventario software sincronizzato con errori"
+            },
+            "progress": "{{done}} / {{total}} dispositivi",
+            "retry": "Riprova",
+            "running": {
+              "patches": "Sincronizzazione dello stato delle patch…",
+              "software": "Sincronizzazione dell'inventario software…"
+            },
+            "startFailed": "Impossibile avviare la sincronizzazione.",
+            "succeeded": {
+              "patches": "Stato delle patch sincronizzato",
+              "software": "Inventario software sincronizzato"
+            },
+            "truncated": "Visualizzazione dei primi {{shown}} errori su {{total}}",
+            "updated": "Dispositivi aggiornati: {{value}}"
+          },
           "title": "Conformità della flotta"
         }
       },

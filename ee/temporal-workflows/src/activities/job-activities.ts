@@ -31,6 +31,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 const RMM_ALERT_RECONCILIATION_JOB = 'rmm-alert-reconciliation';
 const HUNTRESS_INCIDENT_POLL_JOB = 'huntress-incident-poll';
 const RMM_DEVICE_SYNC_JOB = 'rmm-device-sync';
+const RMM_INVENTORY_SYNC_JOB = 'rmm-inventory-sync';
 const ACCOUNTING_SYNC_CYCLE_JOB = 'accounting-sync-cycle';
 const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const MIGRATION_APPLY_JOB = 'migration_apply';
@@ -172,6 +173,10 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // Device sync reaches provider clients under ee/server, so it forwards to the
   // server like the other RMM jobs rather than running in the worker.
   registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
+  // On-demand whole-fleet software/patch inventory sync (Fleet Compliance panel).
+  // Same constraint as device sync: forwarded to the server's registered handler.
+  // LEVERAGE: friction forwarded-job-status — forwardJobToServer is fire-and-forget, so on Temporal the `jobs` row reads completed as soon as the event is published, not when the server-side walk ends; progress/stale-running logic cannot trust job status for forwarded jobs.
+  registerJobHandlerForActivities(RMM_INVENTORY_SYNC_JOB, forwardJobToServer(RMM_INVENTORY_SYNC_JOB));
   registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
   registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
   // AMP apply uses server-bound migration appliers and the tenant database

@@ -10,6 +10,12 @@ import axios from 'axios';
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
+import {
+  recordSyncError,
+  reportProgress,
+  statusForCompletedRun,
+  type SyncRunStatus,
+} from './syncOutcome';
 import type { NinjaOneDevicePatchStatus } from '../../../../interfaces/ninjaone.interfaces';
 
 /**
@@ -37,14 +43,25 @@ export interface PatchSyncOptions {
   batchSize?: number;
   /** User ID who triggered the sync */
   performedBy?: string;
+  /** Called once per completed batch with devices done so far and the total to process. */
+  onProgress?: (done: number, total: number) => void;
 }
 
 export interface PatchSyncResult {
+  /**
+   * Legacy boolean, kept exactly as before (`assetsFailed === 0`). A run that
+   * updated 830 of 831 devices reads `false` here, so user-facing code must NOT
+   * branch on it — read `status` instead.
+   */
   success: boolean;
+  /** User-facing outcome: `partial` = ran to completion with at least one device failing; `failed` = threw. */
+  status: SyncRunStatus;
   assetsProcessed: number;
   assetsUpdated: number;
   assetsFailed: number;
+  /** First 20 messages only (MAX_SYNC_ERRORS); `errorCount` is the real total. */
   errors: string[];
+  errorCount: number;
   startedAt: string;
   completedAt: string;
 }
@@ -52,6 +69,7 @@ export interface PatchSyncResult {
 /**
  * Sync patch status for all RMM-managed devices or a specific set
  */
+// LEVERAGE: pattern fleet-batch-walk — same loop as syncSoftwareInventory; see there
 export async function syncPatchStatus(
   tenantId: string,
   integrationId: string,
@@ -60,15 +78,17 @@ export async function syncPatchStatus(
   const startTime = new Date().toISOString();
   const result: PatchSyncResult = {
     success: true,
+    status: 'succeeded',
     assetsProcessed: 0,
     assetsUpdated: 0,
     assetsFailed: 0,
     errors: [],
+    errorCount: 0,
     startedAt: startTime,
     completedAt: '',
   };
 
-  const { batchSize = 50, assetIds, performedBy } = options;
+  const { batchSize = 50, assetIds, performedBy, onProgress } = options;
 
   try {
     logger.info('[PatchSync] Starting patch status sync', {
@@ -153,7 +173,8 @@ export async function syncPatchStatus(
           } catch (assetError) {
             result.assetsFailed++;
             const errorMsg = assetError instanceof Error ? assetError.message : String(assetError);
-            result.errors.push(`Asset ${asset.asset_id} (${asset.name}): ${errorMsg}`);
+            // Device name, not asset_id: these messages are shown to users in the Fleet Compliance panel.
+            recordSyncError(result, `${asset.name}: ${errorMsg}`);
 
             logger.warn('[PatchSync] Failed to sync patch status for asset', {
               assetId: asset.asset_id,
@@ -163,6 +184,8 @@ export async function syncPatchStatus(
         })
       );
 
+      reportProgress(onProgress, Math.min(i + batchSize, assets.length), assets.length);
+
       // Small delay between batches to avoid rate limiting
       if (i + batchSize < assets.length) {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -171,6 +194,7 @@ export async function syncPatchStatus(
 
     result.completedAt = new Date().toISOString();
     result.success = result.assetsFailed === 0;
+    result.status = statusForCompletedRun(result.assetsFailed);
 
     logger.info('[PatchSync] Patch status sync completed', {
       tenantId,
@@ -184,7 +208,8 @@ export async function syncPatchStatus(
   } catch (error) {
     result.completedAt = new Date().toISOString();
     result.success = false;
-    result.errors.push(error instanceof Error ? error.message : String(error));
+    result.status = 'failed';
+    recordSyncError(result, error instanceof Error ? error.message : String(error));
 
     logger.error('[PatchSync] Patch status sync failed', { tenantId, error: extractErrorInfo(error) });
 
