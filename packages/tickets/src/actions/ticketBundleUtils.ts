@@ -1096,7 +1096,8 @@ export async function promoteBundleMaster(
  * result `masterTicketId` is the master of the bundle that contains every listed ticket.
  *
  * - No listed ticket is an existing master, or the requested master is the existing master:
- *   plain attach (`params.mode` upserts the settings, as before).
+ *   plain attach (`params.mode` upserts the settings, as before). Listed tickets that are
+ *   already children of the requested master are skipped rather than rejected.
  * - Exactly one listed ticket is an existing master and it is not the requested master: the other
  *   tickets are attached to the existing bundle and the requested master is then promoted, in the
  *   caller's transaction (a throw in the promote step rolls the attach back). The existing
@@ -1116,12 +1117,31 @@ export async function bundleTicketsUnderRequestedMaster(
   const requestedMasterId = params.masterTicketId;
   const listedIds = Array.from(new Set([requestedMasterId, ...params.childTicketIds]));
 
+  // Listed tickets that are already children of `masterId` need no attaching. Anything bundled
+  // elsewhere is still rejected by the attach step.
+  const listedChildrenOf = async (masterId: string): Promise<Set<string>> => {
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
+      .select('ticket_id')
+      .whereIn('ticket_id', listedIds)
+      .where({ master_ticket_id: masterId });
+    return new Set<string>(rows.map((row: any) => row.ticket_id));
+  };
+
   const existingMasterIds = await findBundleMasterIds(trx, tenant, listedIds);
   const existingMasterId =
     existingMasterIds.length === 1 && existingMasterIds[0] !== requestedMasterId
       ? existingMasterIds[0]
       : null;
   if (!existingMasterId) {
+    if (existingMasterIds.length === 1) {
+      // The requested master is the existing master: the selection may include its current
+      // children (the dialog lists the whole bundle), so attach only the new tickets.
+      const alreadyChildren = await listedChildrenOf(requestedMasterId);
+      const newChildIds = params.childTicketIds.filter((id) => !alreadyChildren.has(id));
+      if (alreadyChildren.size > 0 && newChildIds.length > 0) {
+        return attachChildrenToBundle(trx, tenant, { ...attachParams, childTicketIds: newChildIds });
+      }
+    }
     return attachChildrenToBundle(trx, tenant, attachParams);
   }
 
@@ -1136,13 +1156,8 @@ export async function bundleTicketsUnderRequestedMaster(
     return { ok: false, code: 'master_closed_state_mismatch' };
   }
 
-  // Listed tickets already in the existing bundle (e.g. the requested master itself) need no
-  // attaching. Anything bundled elsewhere is still rejected by the attach step.
-  const alreadyInBundle = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('ticket_id')
-    .whereIn('ticket_id', listedIds)
-    .where({ master_ticket_id: existingMasterId });
-  const alreadyInBundleIds = new Set<string>(alreadyInBundle.map((row: any) => row.ticket_id));
+  // The requested master itself may already be in the existing bundle.
+  const alreadyInBundleIds = await listedChildrenOf(existingMasterId);
   const toAttach = listedIds.filter((id) => id !== existingMasterId && !alreadyInBundleIds.has(id));
 
   const publications: BundleAfterCommitPublication[] = [];

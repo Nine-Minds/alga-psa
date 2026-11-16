@@ -596,6 +596,31 @@ describe('Ticket bundling integration', () => {
       expect(await masterOf(e)).toBe(c);
     });
 
+    it('T002: keeping the existing master with its current children in the selection adds only the new tickets', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+
+      // The dialog lists the whole bundle (A, its child B) plus the new ticket C.
+      const result = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b, c], mode: 'sync_updates' }, internalUser as any));
+      expect(result).toMatchObject({ masterTicketId: a, childTicketIds: [c] });
+      expect(await masterOf(a)).toBeNull();
+      expect(await masterOf(b)).toBe(a);
+      expect(await masterOf(c)).toBe(a);
+
+      // A ticket bundled under a different master is still rejected.
+      const x = await make('X'); const y = await make('Y'); const z = await make('Z');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: x, childTicketIds: [y], mode: 'sync_updates' }, internalUser as any));
+      await scoped().table('tickets').where({ ticket_id: x }).update({ master_ticket_id: null });
+      const elsewhere = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [y, z], mode: 'sync_updates' }, internalUser as any));
+      expect(elsewhere).toMatchObject({ actionError: expect.stringMatching(/already bundled/i) });
+      expect(await masterOf(z)).toBeNull();
+    });
+
     it('T002: choosing a member that is already a child as the master promotes it', async () => {
       const { make } = await setup();
       const a = await make('A'); const b = await make('B');
