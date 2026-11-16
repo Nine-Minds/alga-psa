@@ -14,7 +14,7 @@ import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
-import { normalizeTicketSubject } from './ticketSubject';
+import { buildUniformTicketSubject, normalizeTicketSubject } from './ticketSubject';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
@@ -325,8 +325,6 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       params = { ...params, to: current.email, recipientUserId: current.principalId };
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
-      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
     }
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
@@ -375,6 +373,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     let templateContent;
     let emailSubject = params.subject;
     let templateSource = 'system';
+    let tenantCustomSubject = false;
 
     logger.debug('[SendEventEmail] Looking up tenant template:', {
       tenant: params.tenantId,
@@ -437,6 +436,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         templateContent = template.html_content;
         emailSubject = template.subject || params.subject;
         templateSource = 'tenant';
+        tenantCustomSubject = Boolean(template.subject);
       } else {
         logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
 
@@ -595,8 +595,6 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       params = { ...params, to: current.email, recipientUserId: current.principalId };
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
-      const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
       if (projectCoManagedNotificationSnapshot(sponsorRedactions, { commentContent: '', commentPreview: '' }).conversationSuppressed) {
         params = { ...params, attachments: [], context: { ...params.context, comment: { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' } } };
         attachmentDownloadText = '';
@@ -605,16 +603,23 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
-    if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
-      const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
-      subject = `New Comment on Ticket: ${typeof title === 'string' ? title : 'Shared ticket'}`;
-    }
 
-    // For ticket emails, prepend a stable [Ticket #N] token (idempotent) so all
-    // event types present consistently and clients have a subject grouping signal.
+    // Ticket emails: a tenant-customised subject is kept and only tagged with
+    // [Ticket #N]. Default subjects (system template / subscriber default) become
+    // the uniform `[Ticket #N] <title>` so every event type shares one subject and
+    // mail clients group them into one conversation. The title is read after
+    // sponsor projection so a redacted title stays redacted.
     if (params.replyContext?.ticketId) {
-      const ticketNumber = (params.context as { ticket?: { id?: unknown } } | undefined)?.ticket?.id;
-      subject = normalizeTicketSubject(subject, ticketNumber);
+      const ticket = (params.context as { ticket?: { id?: unknown; ticket_number?: unknown; title?: unknown } } | undefined)?.ticket;
+      const ticketNumber = ticket?.ticket_number ?? ticket?.id;
+      if (tenantCustomSubject) {
+        subject = normalizeTicketSubject(subject, ticketNumber);
+      } else {
+        const title = typeof ticket?.title === 'string' && ticket.title.trim()
+          ? ticket.title
+          : (params.coManagedRecipient ? 'Shared ticket' : '');
+        subject = buildUniformTicketSubject(subject, ticketNumber, title);
+      }
     }
 
     logger.debug('[SendEventEmail] Template rendered with Handlebars:', {
