@@ -1,4 +1,5 @@
 import { registerTicketEmailSubscriber, unregisterTicketEmailSubscriber } from './ticketEmailSubscriber';
+import { registerTicketListChangeSubscriber, unregisterTicketListChangeSubscriber } from './ticketListChangeSubscriber';
 import { registerProjectEmailSubscriber, unregisterProjectEmailSubscriber } from './projectEmailSubscriber';
 import { registerSurveySubscriber, unregisterSurveySubscriber } from './surveySubscriber';
 import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from './calendarSyncSubscriber';
@@ -43,6 +44,7 @@ type SubscriberRegistration = {
 
 const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'ticketEmail', register: registerTicketEmailSubscriber },
+  { name: 'ticketListChange', register: registerTicketListChangeSubscriber },
   { name: 'projectEmail', register: registerProjectEmailSubscriber },
   { name: 'survey', register: registerSurveySubscriber },
   { name: 'calendarSync', register: registerCalendarSyncSubscriber },
@@ -73,6 +75,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'ticketEmail', register: unregisterTicketEmailSubscriber },
+  { name: 'ticketListChange', register: unregisterTicketListChangeSubscriber },
   { name: 'projectEmail', register: unregisterProjectEmailSubscriber },
   { name: 'survey', register: unregisterSurveySubscriber },
   { name: 'calendarSync', register: unregisterCalendarSyncSubscriber },

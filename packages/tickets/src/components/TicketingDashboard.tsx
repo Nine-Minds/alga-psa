@@ -1,8 +1,8 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import BulkBundleDialog from './BulkBundleDialog';
@@ -95,7 +95,7 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, getTicketChangeCounts, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -127,6 +127,10 @@ import {
 } from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ChangedSinceLoad } from '../lib/changedSinceLoad';
+import { handleTicketListChangeForDashboard } from '../lib/liveTicketChangeWiring';
+import { useTicketListChanges } from '../hooks/useTicketListChanges';
+import type { TicketListChange } from '../lib/listChangeFilters';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -180,6 +184,9 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
+  loadedAt: number;
+  loadedFilters: Partial<ITicketListFilters>;
+  onRefreshListForChanges: () => Promise<boolean>;
   initialBoards: IBoard[];
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
@@ -343,6 +350,9 @@ function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets,
+  loadedAt,
+  loadedFilters,
+  onRefreshListForChanges,
   initialBoards,
   initialStatuses,
   initialPriorities,
@@ -392,6 +402,65 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  const changeStateRef = useRef(new ChangedSinceLoad());
+  const boardTrackingSinceRef = useRef(loadedAt);
+  const recoveryRunningRef = useRef(false);
+  const recoveryRequestedRef = useRef(false);
+  const recoverChangesRef = useRef<(() => void) | null>(null);
+  const [, setChangeRevision] = useState(0);
+  useLayoutEffect(() => {
+    changeStateRef.current.load(initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []), loadedFilters, user?.user_id ?? '', loadedAt);
+    setChangeRevision(value => value + 1);
+  }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
+  const receiveTicketChange = useCallback((event: TicketListChange) => {
+    handleTicketListChangeForDashboard(event, changeStateRef.current, loadedFilters.searchQuery ?? '',
+      () => setChangeRevision(value => value + 1), () => recoverChangesRef.current?.());
+  }, [loadedFilters.searchQuery]);
+  const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
+    if (recoveryRunningRef.current) {
+      recoveryRequestedRef.current = true;
+      return;
+    }
+    recoveryRunningRef.current = true;
+    const requestedSnapshot = changeStateRef.current.getSnapshot();
+    try {
+      const result = await getTicketChangeCounts(
+        loadedFilters as ITicketListFilters,
+        initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
+        loadedAt,
+        boardTrackingSinceRef.current,
+      );
+      if (isActionMessageError(result) || isActionPermissionError(result)) return;
+      changeStateRef.current.setFallbackSnapshot({
+        since: loadedAt, asOf: result.asOf,
+        newCount: result.newCount, updatedCount: result.updatedCount, boards: result.boards,
+        boardLatestAt: result.boardLatestAt,
+        updatedTicketIds: initialTickets.flatMap((ticket, index) => result.loadedChanged[index] && ticket.ticket_id ? [ticket.ticket_id] : []),
+      }, requestedSnapshot.generation);
+      setChangeRevision(value => value + 1);
+    } catch (error) {
+      console.warn('Ticket change counts recovery failed:', error);
+    } finally {
+      recoveryRunningRef.current = false;
+      if (recoveryRequestedRef.current) {
+        recoveryRequestedRef.current = false;
+        recoverChangesRef.current?.();
+      }
+    }
+  }, [loadedAt, loadedFilters, initialTickets]);
+  recoverChangesRef.current = () => { void recoverTicketChanges(loadedAt); };
+  useTicketListChanges(user?.tenant, receiveTicketChange, {
+    onUnavailable: recoverTicketChanges,
+    onRecovered: recoverTicketChanges,
+  });
+  useEffect(() => {
+    if (changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
+  }, [loadedAt, loadedFilters, recoverTicketChanges]);
+  const changeCounts = changeStateRef.current.getCounts();
+  const changedBoardIds = changeStateRef.current.boards();
+  const refreshChangedTickets = useCallback(async () => {
+    await onRefreshListForChanges();
+  }, [onRefreshListForChanges]);
   // The server offers the responsibility column, filter and seat views; the capability is the client's own kill
   // switch over them, so a closed capability shows none of the seat list UI whatever the payload carries.
   const { enabled: seatServed } = useCapability('co-managed-seat');
@@ -470,6 +539,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
     ? selectedBoards[0]
     : null;
+  useLayoutEffect(() => {
+    if (!selectedBoard) return;
+    changeStateRef.current.acknowledgeBoard(selectedBoard, Date.now());
+    setChangeRevision(value => value + 1);
+  }, [selectedBoard]);
   const selectedClient = filterValues.clientId ?? null;
   // The client filter is a server-searched picker, so the chip label is resolved by id on demand.
   // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
@@ -1704,6 +1778,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         : displaySettings || undefined,
       columnOrder: viewPresentation?.columnOrder,
       onTicketClick: handleTicketClick,
+      isTicketChanged: (ticketId) => changeStateRef.current.has(ticketId),
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       tagsReadOnly: !canUpdateTickets,
@@ -2543,6 +2618,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
+        changedBoardIds={changedBoardIds}
       />
       {listViewTabs.length > 0 && (
         <>
@@ -2567,6 +2643,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       )}
       {listCallout}
       <ListCard>
+        {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
+          <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
+            className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900 disabled:opacity-60"
+            aria-live="polite">
+            {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
+              ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,
+                  changeCounts.newCount === 1
+                    ? changeCounts.updatedCount === 1 ? '1 new ticket and 1 updated ticket' : '1 new ticket and {{updatedCount}} updated tickets'
+                    : changeCounts.updatedCount === 1 ? '{{newCount}} new tickets and 1 updated ticket' : '{{newCount}} new tickets and {{updatedCount}} updated tickets', changeCounts)
+              : changeCounts.newCount > 0
+                ? t(changeCounts.newCount === 1 ? 'live.newOne' : 'live.newMany',
+                    changeCounts.newCount === 1 ? '1 new ticket' : '{{count}} new tickets', { count: changeCounts.newCount })
+                : t(changeCounts.updatedCount === 1 ? 'live.updatedOne' : 'live.updatedMany',
+                    changeCounts.updatedCount === 1 ? '1 ticket updated' : '{{count}} tickets updated', { count: changeCounts.updatedCount })}
+          </button>
+        )}
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by
