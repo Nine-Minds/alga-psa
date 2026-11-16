@@ -259,6 +259,8 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         tenant,
         definitionId,
         requesterUserId: currentUser.user_id,
+        // The requester filed this themselves: no separate submitter.
+        submittedByUserId: null,
         clientId,
         contactId: currentUser.contact_id ?? null,
         payload,

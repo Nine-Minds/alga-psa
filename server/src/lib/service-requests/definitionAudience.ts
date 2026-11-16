@@ -16,7 +16,7 @@ export type RequesterRecord = {
 export async function loadRequesterRecord(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  requester: { requesterUserId: string; clientId: string; contactId?: string | null },
+  requester: { requesterUserId: string | null; clientId: string; contactId?: string | null },
 ): Promise<RequesterRecord> {
   const db = tenantDb(knex, tenant);
   const [client, contact, user] = await Promise.all([
@@ -25,7 +25,9 @@ export async function loadRequesterRecord(
       ? db.table('contacts').where({ contact_name_id: requester.contactId, client_id: requester.clientId })
           .first('contact_name_id', 'portal_visibility_group_id') as Promise<{ contact_name_id: string; portal_visibility_group_id: string | null } | undefined>
       : Promise.resolve(undefined),
-    db.table('users').where({ user_id: requester.requesterUserId, user_type: 'client' }).first('user_id') as Promise<{ user_id: string } | undefined>,
+    requester.requesterUserId
+      ? db.table('users').where({ user_id: requester.requesterUserId, user_type: 'client' }).first('user_id') as Promise<{ user_id: string } | undefined>
+      : Promise.resolve(undefined),
   ]);
   const group = contact?.portal_visibility_group_id ? await db.table('client_portal_visibility_groups').where({ group_id: contact.portal_visibility_group_id, client_id: requester.clientId }).first('group_id') as { group_id: string } | undefined : undefined;
   const tags = await db.table('tag_mappings').where((query) => {

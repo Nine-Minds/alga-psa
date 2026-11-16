@@ -39,7 +39,7 @@ export interface ServiceRequestPortalCatalogGroup {
 
 export interface ServiceRequestPortalCatalogContext {
   tenant: string;
-  requesterUserId: string;
+  requesterUserId: string | null;
   clientId: string;
   contactId?: string | null;
 }
