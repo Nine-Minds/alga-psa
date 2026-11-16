@@ -41,6 +41,8 @@ import {
 } from '../../../../lib/timeEntryPeriodSelection';
 import { sheetStatusLabel } from '../../../../lib/timeEntrySaveAdapter';
 
+type EntryFieldErrors = TimeEntryValidationErrors & { date?: string; service?: string };
+
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
 }
@@ -207,10 +209,24 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     }
   }, [date, defaultEndTime, defaultEntries, defaultStartTime, defaultTaxRegion, existingEntries, initializeEntries, isOpen, workItem]);
 
-  /** Field errors per entry: the span rules, plus (multi-day) the sheet the entry's real day lands on. */
-  const entryErrors = useMemo((): Array<TimeEntryValidationErrors & { date?: string }> =>
+  /**
+   * Field errors per entry, rendered inline in that entry's form (never a toast): the service, the
+   * span rules, and (multi-day) the sheet the entry's real day lands on.
+   */
+  const entryErrors = useMemo((): EntryFieldErrors[] =>
     entries.map((entry) => {
-      const errors: TimeEntryValidationErrors & { date?: string } = getTimeEntryValidationErrors(entry, workTimeZone);
+      const errors: EntryFieldErrors = getTimeEntryValidationErrors(entry, workTimeZone);
+      // No service is only allowed when the time source said so; the entry is then operational and carries no billable minutes.
+      const isOperational = operationalMode || (serviceOptional && !entry.service_id?.trim());
+      if (!isOperational && !entry.service_id?.trim()) {
+        errors.service = t('timeEntryForm.validation.serviceRequired', {
+          defaultValue: 'Service is required for time entries',
+        });
+      } else if (workItem.type !== 'ad_hoc' && !isOperational && !services.some(s => s.id === entry.service_id)) {
+        // Tax region is no longer collected at time entry. Billing derives it from the service's
+        // tax_rate_id (falling back to the client default), so only the service itself is checked.
+        errors.service = t('messages.invalidService');
+      }
       if (isMultiDay && periodCatalog && workTimeZone && entry.start_time) {
         const workDate = workDateInTimeZone(entry.start_time, workTimeZone);
         const formatted = formatDate(dateOnlyToLocalDate(workDate), { dateStyle: 'medium' });
@@ -231,7 +247,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       }
       return errors;
     }),
-    [entries, formatDate, isMultiDay, periodCatalog, t, workTimeZone],
+    [entries, formatDate, isMultiDay, operationalMode, periodCatalog, serviceOptional, services, t, workItem.type, workTimeZone],
   );
 
   /** Shows the errors of every invalid entry and scrolls to the first. Returns true when any exist. */
@@ -245,30 +261,6 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     return true;
   }, [entryErrors, id]);
-
-  /** Same checks, in the same order, for one entry; toasts are only for what has no field to sit in. */
-  const passesServiceChecks = useCallback((entry: (typeof entries)[number]): boolean => {
-    const isAdHoc = workItem.type === 'ad_hoc';
-    // No service is only allowed when the time source said so; the entry is then operational and carries no billable minutes.
-    const isOperational = operationalMode || (serviceOptional && !entry.service_id?.trim());
-
-    if (!isOperational && !entry.service_id?.trim()) {
-      toast.error(t('messages.serviceRequired'));
-      return false;
-    }
-
-    if (!isAdHoc && !isOperational) {
-      const selectedService = services.find(s => s.id === entry.service_id);
-      if (!selectedService) {
-        toast.error(t('messages.invalidService'));
-        return false;
-      }
-      // Tax region is no longer collected at time entry. Billing derives it from
-      // the service's tax_rate_id (falling back to the client default), so there
-      // is nothing to validate here. See billingEngine.getTaxInfoFromService.
-    }
-    return true;
-  }, [operationalMode, serviceOptional, services, t, workItem.type]);
 
   const buildSavePayload = useCallback((entry: (typeof entries)[number]) => {
     const isAdHoc = workItem.type === 'ad_hoc';
@@ -345,23 +337,19 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
 
     console.log('Entry to save:', entry);
 
-    if (!passesServiceChecks(entry)) return;
     if (rejectInvalidEntries([index])) return;
 
     await runSave(() => onSave(buildSavePayload(entry)));
-  }, [buildSavePayload, entries, isEditable, isSaving, onSave, passesServiceChecks, rejectInvalidEntries, runSave]);
+  }, [buildSavePayload, entries, isEditable, isSaving, onSave, rejectInvalidEntries, runSave]);
 
   /** Multi-day: validate every day first; nothing is sent unless all of them are valid. */
   const handleSaveAll = useCallback(async () => {
     if (!isEditable || isSaving || !onSaveAll || entries.length === 0) return;
 
-    for (const entry of entries) {
-      if (!passesServiceChecks(entry)) return;
-    }
     if (rejectInvalidEntries(entries.map((_, index) => index))) return;
 
     await runSave(() => onSaveAll(entries.map(buildSavePayload)));
-  }, [buildSavePayload, entries, isEditable, isSaving, onSaveAll, passesServiceChecks, rejectInvalidEntries, runSave]);
+  }, [buildSavePayload, entries, isEditable, isSaving, onSaveAll, rejectInvalidEntries, runSave]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {

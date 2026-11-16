@@ -72,7 +72,7 @@ export interface TimeEntryFormProps {
    */
   serviceOptional?: boolean;
   /** Field errors computed by a parent that validates outside the form (see TimeEntryDialog's Save). */
-  errors?: { startTime?: string; endTime?: string; duration?: string; date?: string };
+  errors?: { startTime?: string; endTime?: string; duration?: string; date?: string; service?: string };
   /** Show `errors` (and the form's own) without waiting for the form's own Save. */
   showErrors?: boolean;
 }

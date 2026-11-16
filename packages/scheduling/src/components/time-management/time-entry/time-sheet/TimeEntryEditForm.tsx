@@ -676,7 +676,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           dropdownMode="overlay"
         />
         {showErrors && validationErrors.service && (
-          <span className="text-sm text-red-500">{validationErrors.service}</span>
+          <span id={`${id}-service-error`} className="text-sm text-red-500">{validationErrors.service}</span>
         )}
       </div>
 

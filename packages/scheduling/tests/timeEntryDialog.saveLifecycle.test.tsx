@@ -97,6 +97,9 @@ vi.mock('../src/components/time-management/time-entry/time-sheet/SingleTimeEntry
         value={props.entry.notes ?? ''}
         onChange={(event) => props.onUpdateEntry(0, { ...props.entry, notes: event.target.value, isDirty: true })}
       />
+      {props.showErrors && props.errors?.service && (
+        <span data-testid="dialog-service-error">{props.errors.service}</span>
+      )}
     </div>
   ),
 }));
@@ -355,8 +358,9 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     expect(screen.getByTestId('dialog-service-select')).toHaveValue('');
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith('messages.serviceRequired'));
-    expect(mocks.toast.error).not.toHaveBeenCalledWith('messages.invalidService');
+    // Field errors render inline in the service slot; no toast.
+    expect(await screen.findByTestId('dialog-service-error')).toHaveTextContent('Service is required for time entries');
+    expect(mocks.toast.error).not.toHaveBeenCalled();
     expect(onSave).not.toHaveBeenCalled();
   });
 
