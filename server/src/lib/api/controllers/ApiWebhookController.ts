@@ -59,11 +59,8 @@ export class ApiWebhookController {
   private webhookService: WebhookService;
 
   constructor() {
-    this.webhookService = new WebhookService(
-      undefined as any, // DatabaseService - would be injected
-      undefined as any, // EventBusService - would be injected  
-      undefined as any  // AuditLogService - would be injected
-    );
+    // Persistence is webhookModel; the event bus and audit log are optional and not wired for the REST API.
+    this.webhookService = new WebhookService();
   }
 
   /**

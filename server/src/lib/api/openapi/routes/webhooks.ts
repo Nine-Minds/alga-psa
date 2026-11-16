@@ -847,6 +847,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       responses[404] = { description: 'Webhook, delivery, template, or signing secret not found.', schema: ApiError };
     }
 
+    if (handler === 'createTemplate' || handler === 'useTemplate') {
+      responses[501] = {
+        description: 'Webhook templates are not supported: there is no template storage.',
+        schema: ApiError,
+      };
+    }
+
     if (handler === 'create') {
       responses[409] = { description: 'Webhook already exists.', schema: ApiError };
     }
@@ -928,7 +935,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'listTemplates',
       action: 'read',
       summary: 'List webhook templates',
-      description: 'Returns webhook templates visible to the tenant (own + system templates).',
+      description:
+        'Webhook templates are not persisted, so this always returns 200 with an empty list. There is no template storage to read from.',
       success: { description: 'Template list.', schema: WebhookTemplateListEnvelope },
     },
     {
@@ -937,7 +945,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'createTemplate',
       action: 'system_settings',
       summary: 'Create webhook template',
-      description: 'Creates a reusable webhook template. Requires system_settings RBAC.',
+      description:
+        'Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and body validation.',
       success: { description: 'Template created.', schema: WebhookTemplateEnvelope },
     },
     {
@@ -947,7 +956,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'read',
       summary: 'Get webhook template detail (webhook getById wiring)',
       description:
-        'Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.',
+        'Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Templates are not persisted, so a template_id never resolves and the route returns 404.',
       success: { description: 'Webhook detail returned.', schema: WebhookEnvelope },
       extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.getById()' },
     },
@@ -979,7 +988,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'useTemplate',
       action: 'create',
       summary: 'Create webhook from template',
-      description: 'Instantiates a webhook configuration from a template, merging caller-supplied overrides.',
+      description:
+        'Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the RBAC check and body validation.',
       success: { description: 'Webhook created from template.', schema: WebhookEnvelope },
     },
     {
