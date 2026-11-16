@@ -150,6 +150,11 @@ import {
   HUNTRESS_INCIDENT_POLL_JOB,
   RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
+import {
+  RMM_INVENTORY_SYNC_JOB,
+  rmmInventorySyncHandler,
+  RmmInventorySyncJobData,
+} from '@alga-psa/jobs/handlers/rmmInventorySyncHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { MAINTENANCE_FANOUT_JOB } from './serverMaintenanceJobNames';
 import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from './runMaintenanceJobExclusive';
@@ -973,6 +978,21 @@ export async function registerAllJobHandlers(
       retry: { maxAttempts: 3 },
       // A device sync walks the provider's whole device list; give it more
       // room than an alert poll, which only reads recent alerts.
+      timeoutMs: 1800000,
+    },
+    registerOpts
+  );
+
+  // One job for every whole-fleet inventory sync kind (software, patches),
+  // scheduled on demand by the Fleet Compliance trigger actions.
+  JobHandlerRegistry.register<RmmInventorySyncJobData & BaseJobData>(
+    {
+      name: RMM_INVENTORY_SYNC_JOB,
+      handler: async (jobId, data) => {
+        await rmmInventorySyncHandler(jobId, data);
+      },
+      // The walk is idempotent (upserts), so one retry is worth the lost provider traffic.
+      retry: { maxAttempts: 2 },
       timeoutMs: 1800000,
     },
     registerOpts
