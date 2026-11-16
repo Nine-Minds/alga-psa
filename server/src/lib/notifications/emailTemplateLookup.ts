@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import type { TenantDb } from '@alga-psa/db';
 
 export interface EmailTemplateRow {
@@ -13,7 +14,7 @@ export type EmailTemplateSource = 'tenant' | 'system';
 
 /** One template name in one table: the recipient's language, then English, then a legacy row with no language. */
 async function findTemplateRow(
-  templates: () => ReturnType<TenantDb['table']>,
+  templates: () => Knex.QueryBuilder<any, any>,
   name: string,
   locale: string,
 ): Promise<EmailTemplateRow | undefined> {
