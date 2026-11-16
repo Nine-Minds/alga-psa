@@ -1,5 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import type { ITimePeriodView, TimeEntryWorkItemContext } from '@alga-psa/types';
+import type { WorkDayCalendar } from './stopwatch/stopwatchMath';
 
 /**
  * Only these sheet statuses accept new or changed time. Anything else
@@ -34,6 +35,23 @@ function toInstant(value: string | Date): Temporal.Instant {
 /** The calendar date an instant falls on in the subject user's timezone. */
 export function workDateInTimeZone(value: string | Date, timeZone: string | null | undefined): string {
   return toInstant(value).toZonedDateTimeISO(normalizeTimeZone(timeZone)).toPlainDate().toString();
+}
+
+/**
+ * Work-day calendar for the stopwatch planner. Day boundaries come from `startOfDay`, so zones
+ * that skip local midnight on a DST day still get a correct boundary.
+ */
+export function zonedWorkDayCalendar(timeZone: string | null | undefined): WorkDayCalendar {
+  const zone = normalizeTimeZone(timeZone);
+  return {
+    dayOf: (ms) => workDateInTimeZone(new Date(ms), zone),
+    nextDayStart: (ms) =>
+      Temporal.Instant.fromEpochMilliseconds(ms)
+        .toZonedDateTimeISO(zone)
+        .add({ days: 1 })
+        .startOfDay()
+        .epochMilliseconds,
+  };
 }
 
 /** The instant for a plain wall-clock time (HH:mm) on a date in a timezone. */

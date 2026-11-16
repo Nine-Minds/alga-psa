@@ -229,9 +229,10 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
       expect(mocks.toast.success).toHaveBeenCalledTimes(1);
       expect(alertMock).not.toHaveBeenCalled();
     } else {
-      await waitFor(() => expect(mocks.toast.error).toHaveBeenCalled());
-      expect(alertMock).toHaveBeenCalledWith('Time entry must end on the same day');
-      expect(mocks.saveTimeEntry).not.toHaveBeenCalled();
+      // Refused inline (the form shows the field errors): no alert, no toast, nothing sent.
+      await waitFor(() => expect(mocks.saveTimeEntry).not.toHaveBeenCalled());
+      expect(alertMock).not.toHaveBeenCalled();
+      expect(mocks.toast.error).not.toHaveBeenCalled();
       expect(onComplete).not.toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
       expect(mocks.toast.success).not.toHaveBeenCalled();

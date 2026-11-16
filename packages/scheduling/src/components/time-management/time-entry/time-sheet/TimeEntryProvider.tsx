@@ -31,6 +31,7 @@ type TimeEntryAction =
   | { type: 'SET_EDITING_INDEX'; payload: number | null }
   | { type: 'UPDATE_TIME_INPUTS'; payload: { [key: string]: string } }
   | { type: 'UPDATE_ENTRY'; payload: { index: number; entry: ITimeEntryWithNew } }
+  | { type: 'REMOVE_ENTRY'; payload: number }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'UPDATE_DURATIONS'; payload: number[] };
@@ -80,6 +81,20 @@ function timeEntryReducer(state: TimeEntryState, action: TimeEntryAction): TimeE
         ...state,
         entries: newEntries,
       };
+    case 'REMOVE_ENTRY': {
+      const remaining = state.entries.filter((_, index) => index !== action.payload);
+      return {
+        ...state,
+        entries: remaining,
+        // Time inputs are keyed by entry index; after a removal they would belong to the wrong entry.
+        // An absent key makes the form read the entry's own times.
+        timeInputs: {},
+        totalDurations: remaining.map(entry =>
+          calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time))
+        ),
+        editingIndex: remaining.length === 1 ? 0 : state.editingIndex,
+      };
+    }
     case 'SET_LOADING':
       return {
         ...state,
@@ -104,6 +119,11 @@ interface InitializeEntriesParams {
   existingEntries?: ITimeEntryWithWorkItem[];
   defaultStartTime?: Date;
   defaultEndTime?: Date;
+  /**
+   * One new entry per item (a stopwatch session split into work days). Takes precedence over
+   * defaultStartTime/defaultEndTime, which describe the single-entry case.
+   */
+  defaults?: Array<{ start: Date; end: Date }>;
   defaultTaxRegion?: string;
   workItem: Omit<IExtendedWorkItem, 'tenant'>;
   date: Date;
@@ -112,6 +132,7 @@ interface InitializeEntriesParams {
 interface TimeEntryContextType extends TimeEntryState {
   initializeEntries: (params: InitializeEntriesParams) => Promise<void>;
   updateEntry: (index: number, entry: ITimeEntryWithNew) => void;
+  removeEntry: (index: number) => void;
   setEditingIndex: (index: number | null) => void;
   updateTimeInputs: (inputs: { [key: string]: string }) => void;
 }
@@ -127,6 +148,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     existingEntries,
     defaultStartTime,
     defaultEndTime,
+    defaults,
     defaultTaxRegion,
     workItem,
     date,
@@ -173,7 +195,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           try {
             const resolved = await resolveDefaultTicketTimeEntryService({
               clientId,
-              effectiveDate: defaultStartTime ?? date,
+              effectiveDate: defaults?.[0]?.start ?? defaultStartTime ?? date,
             });
             if (
               resolved &&
@@ -215,39 +237,44 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           isDirty: false,
           client_id: clientId || undefined,
         }));
-      } else if (defaultStartTime && defaultEndTime) {
-        const duration = calculateDuration(defaultStartTime, defaultEndTime);
+      } else if (defaults?.length || (defaultStartTime && defaultEndTime)) {
+        const spans = defaults?.length
+          ? defaults
+          : [{ start: defaultStartTime as Date, end: defaultEndTime as Date }];
         const isBillable = workItem.is_billable === false ? false : true;
 
-        console.log('Creating new time entry with defaults:', {
-          isBillable,
-          duration,
-          billableDuration: isBillable ? duration : 0,
-          prefilledServiceId: prefilledServiceId || null
-        });
+        newEntries = spans.map(({ start, end }): ITimeEntryWithNew => {
+          const duration = calculateDuration(start, end);
+          console.log('Creating new time entry with defaults:', {
+            isBillable,
+            duration,
+            billableDuration: isBillable ? duration : 0,
+            prefilledServiceId: prefilledServiceId || null
+          });
 
-        newEntries = [{
-          work_item_id: workItem.work_item_id,
-          start_time: formatISO(defaultStartTime),
-          end_time: formatISO(defaultEndTime),
-          billable_duration: isBillable ? duration : 0,
-          work_item_type: workItem.type,
-          notes: workItem.description ?? '',
-          entry_id: '',
-          user_id: '',
-          created_at: formatISO(new Date()),
-          updated_at: formatISO(new Date()),
-          approval_status: 'DRAFT',
-          service_id: prefilledServiceId,
-          tax_region: defaultTaxRegion || client?.region_code || '',
-          isNew: true,
-          tempId: generateUUID(),
-          client_id: clientId || undefined,
-          _isServicePrefilled: !!prefilledServiceId,
-          _originalServiceId: prefilledServiceId || null,
-          _serviceOverridden: false,
-          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
-        }];
+          return {
+            work_item_id: workItem.work_item_id,
+            start_time: formatISO(start),
+            end_time: formatISO(end),
+            billable_duration: isBillable ? duration : 0,
+            work_item_type: workItem.type,
+            notes: workItem.description ?? '',
+            entry_id: '',
+            user_id: '',
+            created_at: formatISO(new Date()),
+            updated_at: formatISO(new Date()),
+            approval_status: 'DRAFT',
+            service_id: prefilledServiceId,
+            tax_region: defaultTaxRegion || client?.region_code || '',
+            isNew: true,
+            tempId: generateUUID(),
+            client_id: clientId || undefined,
+            _isServicePrefilled: !!prefilledServiceId,
+            _originalServiceId: prefilledServiceId || null,
+            _serviceOverridden: false,
+            _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
+          };
+        });
       } else {
         let startTime: Date, endTime: Date;
         let scheduleEntry: { scheduled_start: string; scheduled_end: string } | null = null;
@@ -331,6 +358,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     dispatch({ type: 'UPDATE_ENTRY', payload: { index, entry } });
   }, []);
 
+  const removeEntry = useCallback((index: number) => {
+    dispatch({ type: 'REMOVE_ENTRY', payload: index });
+  }, []);
+
   const setEditingIndex = useCallback((index: number | null) => {
     dispatch({ type: 'SET_EDITING_INDEX', payload: index });
   }, []);
@@ -343,9 +374,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     ...state,
     initializeEntries,
     updateEntry,
+    removeEntry,
     setEditingIndex,
     updateTimeInputs,
-  }), [state, initializeEntries, updateEntry, setEditingIndex, updateTimeInputs]);
+  }), [state, initializeEntries, updateEntry, removeEntry, setEditingIndex, updateTimeInputs]);
 
   return (
     <TimeEntryContext.Provider

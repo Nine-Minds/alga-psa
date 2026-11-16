@@ -11,6 +11,7 @@ import {
   periodLastInclusiveDay,
   resolveEntryDefaults,
   workDateInTimeZone,
+  zonedWorkDayCalendar,
 } from '../src/lib/timeEntryPeriodSelection';
 
 const weeklyPeriod = { start_date: '2026-09-07', end_date: '2026-09-14' };
@@ -213,5 +214,44 @@ describe('timeEntryPeriodSelection', () => {
       expect(date.getMonth()).toBe(8);
       expect(date.getDate()).toBe(7);
     });
+  });
+});
+
+describe('zonedWorkDayCalendar', () => {
+  const at = (iso: string) => Date.parse(iso);
+
+  it('UTC: days split at 00:00Z', () => {
+    const cal = zonedWorkDayCalendar('UTC');
+    expect(cal.dayOf(at('2026-10-28T23:59:59Z'))).toBe('2026-10-28');
+    expect(cal.nextDayStart(at('2026-10-28T23:59:59Z'))).toBe(at('2026-10-29T00:00:00Z'));
+  });
+
+  it('falls back to UTC for a missing or invalid zone', () => {
+    expect(zonedWorkDayCalendar(null).nextDayStart(at('2026-10-28T10:00:00Z'))).toBe(at('2026-10-29T00:00:00Z'));
+    expect(zonedWorkDayCalendar('Not/AZone').dayOf(at('2026-10-28T10:00:00Z'))).toBe('2026-10-28');
+  });
+
+  it('America/New_York: midnight is local, DST days are 23h and 25h', () => {
+    const cal = zonedWorkDayCalendar('America/New_York');
+    expect(cal.dayOf(at('2026-10-29T03:59:00Z'))).toBe('2026-10-28');
+    expect(cal.nextDayStart(at('2026-10-29T03:59:00Z'))).toBe(at('2026-10-29T04:00:00Z'));
+    expect(cal.nextDayStart(at('2026-03-08T06:00:00Z')) - at('2026-03-08T05:00:00Z')).toBe(23 * 3600_000);
+    expect(cal.nextDayStart(at('2026-11-01T05:00:00Z')) - at('2026-11-01T04:00:00Z')).toBe(25 * 3600_000);
+  });
+
+  it('+13 zone (Pacific/Auckland)', () => {
+    const cal = zonedWorkDayCalendar('Pacific/Auckland');
+    // 2026-01-15T10:30Z is 23:30 NZDT on the 15th
+    expect(cal.dayOf(at('2026-01-15T10:30:00Z'))).toBe('2026-01-15');
+    expect(cal.nextDayStart(at('2026-01-15T10:30:00Z'))).toBe(at('2026-01-15T11:00:00Z'));
+  });
+
+  it('a zone with no midnight on a DST day (America/Sao_Paulo 2018-11-04)', () => {
+    const cal = zonedWorkDayCalendar('America/Sao_Paulo');
+    // Midnight 2018-11-04 was skipped: clocks jumped 00:00 -> 01:00 (UTC-3 -> UTC-2).
+    const next = cal.nextDayStart(at('2018-11-03T12:00:00Z'));
+    expect(next).toBe(at('2018-11-04T03:00:00Z')); // 01:00 -02, the day's first instant
+    expect(cal.dayOf(next)).toBe('2018-11-04');
+    expect(cal.dayOf(next - 1)).toBe('2018-11-03');
   });
 });
