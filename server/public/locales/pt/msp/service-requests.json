@@ -128,8 +128,8 @@
       "lookup": {
         "entity": "Pesquisar",
         "entities": {
-          "contact": "Contacto",
-          "user": "Utilizador MSP"
+          "contact": "Contato",
+          "user": "Usuário MSP"
         },
         "scope": "As opções vêm de",
         "scopes": {

@@ -62,7 +62,7 @@
       "service_request_submission_execution_failed": "Falha no processamento"
     },
     "unnamedAttachment": "Anexo",
-    "lookupUnavailable": "(já não está disponível)"
+    "lookupUnavailable": "(não está mais disponível)"
   },
   "recent": {
     "title": "Suas solicitações recentes",

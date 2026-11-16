@@ -28,6 +28,7 @@ describe("RequestServiceForm long-text fields", () => {
           datePlaceholder: "Date",
           submit: "Submit request",
           requiredField: "This field is required.",
+          unsupportedField: "This question is not available.",
         }}
         clientSubmissionKey="attempt-1"
       />,
@@ -78,6 +79,7 @@ describe("RequestServiceForm long-text fields", () => {
           datePlaceholder: "Date",
           submit: "Submit request",
           requiredField: "This field is required.",
+          unsupportedField: "This question is not available.",
         }}
         clientSubmissionKey="attempt-2"
       />,
@@ -105,6 +107,7 @@ describe("RequestServiceForm live conditional visibility", () => {
     datePlaceholder: "Date",
     submit: "Submit request",
     requiredField: "This field is required.",
+    unsupportedField: "This question is not available.",
   };
   const visibility = {
     enabled: true,
@@ -233,6 +236,7 @@ describe("RequestServiceForm lookup fields", () => {
     datePlaceholder: "Date",
     submit: "Submit request",
     requiredField: "This field is required.",
+    unsupportedField: "This question is not available.",
   };
   const lookupOptions = {
     manager: [

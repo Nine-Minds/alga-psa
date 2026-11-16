@@ -93,7 +93,7 @@ interface RequestServiceFormLabels {
   /** Shown under a visible required field that is still empty when the client submits. */
   requiredField: string;
   /** Shown instead of an input for a field whose type this form does not know. */
-  unsupportedField?: string;
+  unsupportedField: string;
 }
 
 const KNOWN_FIELD_TYPES = new Set(['short-text', 'long-text', 'select', 'checkbox', 'date', 'file-upload', 'lookup']);
@@ -248,7 +248,7 @@ export function RequestServiceForm({
             <div key={key} className="space-y-1">
               <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">{label}</p>
               <p id={automationId} role="note" className="text-sm text-destructive">
-                {labels.unsupportedField ?? 'This question is not available.'}
+                {labels.unsupportedField}
               </p>
             </div>
           );
