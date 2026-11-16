@@ -24,7 +24,9 @@ export function WorkflowDesignerPalette<TItem extends WorkflowDesignerPaletteIte
       {...props}
       i18nNamespace="msp/workflows"
       idPrefix="workflow-designer"
-      scrollContainerProps={props.scrollContainerProps as Record<string, unknown> | undefined}
+      scrollContainerProps={
+        props.scrollContainerProps as unknown as Record<string, unknown> | undefined
+      }
     />
   );
 }
