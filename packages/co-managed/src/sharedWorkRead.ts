@@ -3,6 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { evaluateCoManagedAccess, type CoManagedVisibilityMode } from './policy';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
 import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFacts, loadCoManagedLifecycleFacts,
   loadCoManagedStaffRoles, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
@@ -150,6 +151,9 @@ export async function readCoManagedSummaryCandidates(trx: Knex.Transaction, reso
 
 async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManagedSharedWorkSummary> {
   const { trx, resource, revision, redactedFields } = context;
+  // A whole-task redaction (`*`, `tasks`, `project_tasks`) denies the task outright, as the task editor and history do;
+  // the task candidates borrow project/phase/status sources, so per-field projection alone would still leak those.
+  if (resource.kind === 'project_task' && isCoManagedTaskResourceHidden(redactedFields)) throw new CoManagedSharedWorkError();
   return { resource, revision, fields: visibleCoManagedFields(await readCoManagedSummaryCandidates(trx, resource), redactedFields) };
 }
 
