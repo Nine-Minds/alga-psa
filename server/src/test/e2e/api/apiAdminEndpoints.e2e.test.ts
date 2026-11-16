@@ -99,11 +99,11 @@ describe('Admin-only API endpoints (catalog-provisioned roles)', () => {
       permissionId = row.permission_id;
     });
 
-    it('Admin API key gets a non-403 response', async () => {
+    it('Admin API key gets 200 on every permission endpoint', async () => {
+      // Not merely "not 403": a 500 would pass that, and a 500 is exactly what a
+      // half-provisioned resource looks like from the outside.
       for (const [method, endpoint] of permissionEndpoints()) {
-        const response = await call(adminClient, method, endpoint);
-        expect(response.status, `${method} ${endpoint}`).not.toBe(403);
-        expect(response.status, `${method} ${endpoint}`).not.toBe(401);
+        assertSuccess(await call(adminClient, method, endpoint), 200);
       }
     });
 
