@@ -13,18 +13,17 @@ export type EmailTemplateSource = 'tenant' | 'system';
 
 /** One template name in one table: the recipient's language, then English, then a legacy row with no language. */
 async function findTemplateRow(
-  db: TenantDb,
-  table: 'tenant_email_templates' | 'system_email_templates',
+  templates: () => ReturnType<TenantDb['table']>,
   name: string,
   locale: string,
 ): Promise<EmailTemplateRow | undefined> {
-  const localized = await db.table(table).where({ name, language_code: locale }).first();
+  const localized = await templates().where({ name, language_code: locale }).first();
   if (localized) return localized;
   if (locale !== 'en') {
-    const english = await db.table(table).where({ name, language_code: 'en' }).first();
+    const english = await templates().where({ name, language_code: 'en' }).first();
     if (english) return english;
   }
-  return db.table(table).where({ name }).whereNull('language_code').first();
+  return templates().where({ name }).whereNull('language_code').first();
 }
 
 /**
@@ -38,9 +37,10 @@ export async function lookupEmailTemplate(
   name: string,
   locale: string,
 ): Promise<{ source: EmailTemplateSource; template: EmailTemplateRow } | null> {
-  const own = await findTemplateRow(db, 'tenant_email_templates', name, locale);
+  // Both tables are read through the tenant facade the caller built with tenantDb().
+  const own = await findTemplateRow(() => db.table('tenant_email_templates'), name, locale);
   if (own) return { source: 'tenant', template: own };
 
-  const stock = await findTemplateRow(db, 'system_email_templates', name, locale);
+  const stock = await findTemplateRow(() => db.table('system_email_templates'), name, locale);
   return stock ? { source: 'system', template: stock } : null;
 }
