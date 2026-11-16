@@ -375,6 +375,10 @@
       "title": "Asset",
       "custody": {
         "title": "Apparecchiature in custodia"
+      },
+      "audits": {
+        "title": "Audit delle sedi",
+        "detailTitle": "Audit della sede"
       }
     },
     "chat": {
@@ -553,6 +557,9 @@
       },
       "export": {
         "title": "Esporta area di lavoro"
+      },
+      "upgrade": {
+        "title": "Passa ad AlgaPSA"
       }
     }
   },

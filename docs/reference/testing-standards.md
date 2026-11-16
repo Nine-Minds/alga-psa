@@ -684,7 +684,7 @@ describe('MyService Integration Tests', () => {
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { TestContext } from '../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { generateInvoiceForCycle } from '../../test-utils/billingTestHelpers';
 
 describe('Invoice Generation Infrastructure Tests', () => {
   const testHelpers = TestContext.createHelpers();
@@ -714,9 +714,12 @@ describe('Invoice Generation Infrastructure Tests', () => {
       const company = await context.createEntity('companies', {
         company_name: 'Test Company'
       });
+      // ...seed the contract, materialize its recurring service periods and
+      // create a client_billing_cycles row; billingCycleId is that row's id.
 
-      // Act - Execute business workflow
-      const invoice = await generateInvoice(company.company_id);
+      // Act - Execute business workflow (the helper selects due recurring work
+      // for the billing cycle, as Automatic Invoices does, then generates)
+      const invoice = await generateInvoiceForCycle(billingCycleId);
 
       // Assert - Verify complete workflow results
       expect(invoice.total).toBeGreaterThan(0);

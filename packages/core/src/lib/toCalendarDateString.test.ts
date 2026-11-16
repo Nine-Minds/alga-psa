@@ -26,47 +26,49 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
-// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
-// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
-// fails whenever the suite runs outside summer time.
-const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
 
-function assertTz(zone: string, expectedOffsetMinutes: number, probe: Date = TZ_PROBE_INSTANT) {
+function assertTz(zone: string, expectedOffsetMinutes: number, at?: string | Date) {
   process.env.TZ = zone;
+  // DST offsets belong to the fixture date, not the date the suite runs.
+  const probe = at instanceof Date ? at : new Date(at ?? '2026-08-31T12:00:00.000Z');
   expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+
 }
 
 describe('toCalendarDateString — DatePicker Date → YYYY-MM-DD', () => {
-  it('keeps the picked calendar day in Europe/Berlin (UTC+2 summer) — the reported failure', () => {
-    assertTz('Europe/Berlin', -120);
-    const picked = pickerLocalMidnightFor('2026-08-31');
-    expect(picked.toISOString()).toBe('2026-08-30T22:00:00.000Z');
-    expect(toCalendarDateString(picked)).toBe('2026-08-31');
+  it.each([
+    { day: '2026-08-31', offset: -120, midnightUtc: '2026-08-30T22:00:00.000Z' },
+    { day: '2026-01-31', offset: -60, midnightUtc: '2026-01-30T23:00:00.000Z' },
+  ])('keeps the picked calendar day $day in Europe/Berlin', ({ day, offset, midnightUtc }) => {
+    assertTz('Europe/Berlin', offset, midnightUtc);
+    const picked = pickerLocalMidnightFor(day);
+    expect(picked.toISOString()).toBe(midnightUtc);
+    expect(toCalendarDateString(picked)).toBe(day);
   });
 
   it('keeps the picked calendar day in Pacific/Kiritimati (UTC+14) — opposite-direction drift', () => {
-    assertTz('Pacific/Kiritimati', -840);
+    assertTz('Pacific/Kiritimati', -840, '2026-08-30T10:00:00.000Z');
     const picked = pickerLocalMidnightFor('2026-08-31');
     expect(picked.toISOString()).toBe('2026-08-30T10:00:00.000Z');
     expect(toCalendarDateString(picked)).toBe('2026-08-31');
   });
 
   it('keeps the picked calendar day in UTC and in a negative-offset zone', () => {
-    assertTz('UTC', 0);
+    assertTz('UTC', 0, '2026-08-31T00:00:00.000Z');
     expect(toCalendarDateString(pickerLocalMidnightFor('2026-08-31'))).toBe('2026-08-31');
-    assertTz('America/New_York', 240);
+    assertTz('America/New_York', 240, '2026-08-31T04:00:00.000Z');
     expect(toCalendarDateString(pickerLocalMidnightFor('2026-08-31'))).toBe('2026-08-31');
   });
 
   it('survives a month boundary and a leap-ish edge in Berlin', () => {
-    assertTz('Europe/Berlin', -120);
+    assertTz('Europe/Berlin', -120, '2026-08-31T22:00:00.000Z');
     expect(toCalendarDateString(pickerLocalMidnightFor('2026-09-01'))).toBe('2026-09-01');
     expect(toCalendarDateString(pickerLocalMidnightFor('2026-12-31'))).toBe('2026-12-31');
     expect(toCalendarDateString(pickerLocalMidnightFor('2027-01-01'))).toBe('2027-01-01');
   });
 
   it('reads a non-midnight local Date (e.g. the noon-anchored display Date) as its local day', () => {
-    assertTz('Europe/Berlin', -120);
+    assertTz('Europe/Berlin', -120, '2026-08-31T10:00:00.000Z');
     expect(toCalendarDateString(new Date(2026, 7, 31, 12, 0, 0))).toBe('2026-08-31');
   });
 });

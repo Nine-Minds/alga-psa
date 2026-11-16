@@ -82,6 +82,23 @@ interface ContractSimulatorProps {
 
 // Dynamic import for the contract simulator (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
+// A component, not inline JSX, so the dynamic() loading copy can reach
+// useTranslation from module scope.
+function ContractSimulatorSkeleton() {
+  const { t } = useTranslation('msp/contracts');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <LoadingIndicator
+          layout="stacked"
+          text={t('contractDetail.simulatorLoading', { defaultValue: 'Loading simulator...' })}
+          spinnerProps={{ size: 'sm' }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 const ContractSimulator = dynamic(
   () =>
     import('@product/billing/entry').then(
@@ -90,17 +107,7 @@ const ContractSimulator = dynamic(
           .ContractSimulator
     ),
   {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <LoadingIndicator
-            layout="stacked"
-            text="Loading simulator..."
-            spinnerProps={{ size: 'sm' }}
-          />
-        </CardContent>
-      </Card>
-    ),
+    loading: () => <ContractSimulatorSkeleton />,
     ssr: false,
   }
 );
@@ -465,7 +472,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         setRenewalTicketBoards(
           boards.map((board) => ({
             value: board.board_id ?? '',
-            label: board.board_name ?? 'Unnamed board',
+            label: board.board_name ?? t('contractDetail.unnamedBoard', { defaultValue: 'Unnamed board' }),
           }))
         );
       } catch (loadError) {
@@ -672,7 +679,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       const detailContractId = selectedClientContract?.contract_id ?? contractId;
 
       if (!detailContractId) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -707,7 +714,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       }
 
       if (!contractData) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -721,7 +728,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setDocuments(documentsData);
     } catch (err) {
       console.error('Error loading contract details:', err);
-      setError('Failed to load contract');
+      setError(t('contractDetail.loadFailed', { defaultValue: 'Failed to load contract' }));
     } finally {
       setIsLoading(false);
     }
@@ -760,7 +767,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setInvoiceTemplates(templates);
     } catch (err) {
       console.error('Error loading contract invoices:', err);
-      setInvoiceError('Failed to load invoices for this contract assignment.');
+      setInvoiceError(t('contractDetail.invoicesLoadFailed', { defaultValue: 'Failed to load invoices for this contract assignment.' }));
     } finally {
       setIsLoadingInvoices(false);
     }
@@ -785,7 +792,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       router.push('/msp/billing?tab=client-contracts');
     } catch (err) {
       console.error('Error deleting contract:', err);
-      setError('Failed to delete contract');
+      setError(t('contractDetail.deleteFailed', { defaultValue: 'Failed to delete contract' }));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -827,7 +834,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const handleOpenClientDrawer = async (clientId: string) => {
     openDrawer(
-      <div className="p-4 text-sm text-gray-600">Loading…</div>,
+      <div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.loading', { defaultValue: 'Loading…' })}</div>,
       undefined,
       undefined,
       '900px'
@@ -839,7 +846,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         return;
       }
       if (!clientData) {
-        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.notFound', { defaultValue: 'Client not found.' })}</div>);
         return;
       }
       replaceDrawer(
@@ -854,7 +861,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   variant="outline"
                   onClick={() => window.open(`/msp/clients/${clientData.client_id}`, '_blank', 'noopener,noreferrer')}
                 >
-                  Open Client
+                  {t('contractDetail.clientDrawer.openClient', { defaultValue: 'Open Client' })}
                 </Button>
               </div>
             ),
@@ -863,7 +870,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       );
     } catch (error) {
       console.error('Error fetching client details:', error);
-      replaceDrawer(<div className="p-4 text-sm text-red-600">Failed to load client details.</div>);
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{t('contractDetail.clientDrawer.loadFailed', { defaultValue: 'Failed to load client details.' })}</div>);
     }
   };
 
@@ -1398,7 +1405,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || 'Contract not found'}
+            {error || t('contractDetail.notFound', { defaultValue: 'Contract not found' })}
           </AlertDescription>
         </Alert>
       </div>
@@ -1416,7 +1423,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
+          {t('contractDetail.backToContracts', { defaultValue: 'Back to Contracts' })}
         </Button>
         <ContractHeader contract={contract} summary={summary} liveStatus={primaryAssignmentStatus} />
         {sourceQuote ? (
@@ -1427,7 +1434,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               size="sm"
               onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
             >
-              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+              {t('contractDetail.viewSourceQuote', { defaultValue: 'View Source Quote' })} {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
         ) : null}

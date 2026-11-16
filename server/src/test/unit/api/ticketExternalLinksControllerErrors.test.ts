@@ -10,7 +10,7 @@ import { ExternalLinkValidationError } from '@alga-psa/tickets/actions/externalL
 
 const throwState = vi.hoisted(() => ({ error: null as unknown }));
 
-const authorizeReadMock = vi.hoisted(() => vi.fn(async () => true));
+const authorizeReadMock = vi.hoisted(() => vi.fn(async (input?: { record?: object }): Promise<object | null> => input?.record ?? {}));
 
 const linkActionState = vi.hoisted(() => ({
   findResult: null as unknown,
@@ -74,11 +74,17 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
   resolveProductApiBehavior: vi.fn(() => 'allowed'),
 }));
 
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: authorizeReadMock,
-  authorizeApiResource: authorizeReadMock,
-  buildAuthorizationPrincipalSubject: vi.fn(() => ({})),
-}));
+vi.mock('@/lib/api/controllers/authorizationKernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/controllers/authorizationKernel')>();
+  return {
+    ...actual,
+    projectApiResourceRead: vi.fn(async (input) => {
+      if (!(await authorizeReadMock(input))) return null;
+      return actual.projectApiResourceRead({ ...input, user: undefined, apiKeyId: undefined });
+    }),
+    authorizeApiResource: authorizeReadMock,
+  };
+});
 
 // The service is the seam that raises the inline-link validation failure.
 vi.mock('../../../lib/api/services/TicketService', () => ({
@@ -122,7 +128,7 @@ describe('external-link validation failures map to structured API errors', () =>
   beforeEach(() => {
     throwState.error = null;
     authorizeReadMock.mockReset();
-    authorizeReadMock.mockResolvedValue(true);
+    authorizeReadMock.mockResolvedValue({});
     linkActionState.findResult = null;
   });
 
@@ -252,12 +258,12 @@ describe('external-link validation failures map to structured API errors', () =>
     expect((await response.json()).error.code).toBe('system_not_found');
   });
 
-  it('returns 403 for a restricted principal on the by-external-link lookup', async () => {
+  it('returns 404 (not 403, which would confirm the ticket) for a restricted principal on the by-external-link lookup', async () => {
     linkActionState.findResult = {
       ticket_id: TICKET,
       link: { link_id: 'link-1', system: 'github', external_id: '1' },
     };
-    authorizeReadMock.mockResolvedValue(false);
+    authorizeReadMock.mockResolvedValue(null);
 
     const request = new NextRequest(
       'http://localhost/api/v1/tickets/by-external-link?system=github&external_id=1',
@@ -265,7 +271,7 @@ describe('external-link validation failures map to structured API errors', () =>
     );
 
     const response = await byExternalLinkGET(request);
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(404);
   });
 
   it('returns the ticket and link on the by-external-link lookup when the principal may read it', async () => {
@@ -273,7 +279,7 @@ describe('external-link validation failures map to structured API errors', () =>
       ticket_id: TICKET,
       link: { link_id: 'link-1', system: 'github', external_id: '1' },
     };
-    authorizeReadMock.mockResolvedValue(true);
+    authorizeReadMock.mockResolvedValue({});
 
     const request = new NextRequest(
       'http://localhost/api/v1/tickets/by-external-link?system=github&external_id=1',

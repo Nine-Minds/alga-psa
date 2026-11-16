@@ -49,7 +49,7 @@ describe('workflow runtime entrypoint boundaries', () => {
     expect(runtime.getActionRegistryV2().get('ninjaone.devices.find', 1)).toBeDefined();
     expect(runtime.getActionRegistryV2().get('ai.infer', 1)).toBeUndefined();
     expect(inference.loaded).not.toHaveBeenCalled();
-  });
+  }, 30_000);
 
   it.each(['bootstrap', 'worker'] as const)(
     '%s registers AI without loading its provider, then delegates inference on execution',

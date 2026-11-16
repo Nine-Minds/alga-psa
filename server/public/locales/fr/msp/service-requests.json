@@ -150,7 +150,12 @@
         "priorityCalculated": "Priorité (calculée)",
         "selectImpactAndUrgency": "Sélectionner l'impact et l'urgence",
         "priorityFormula": "{{label}} (Impact {{impact}} x Urgence {{urgency}})",
-        "titleFieldKey": "Clé du champ de titre",
+        "ticketSubject": "Objet du ticket",
+        "ticketSubjectHelp": "Les réponses sont insérées lors de l'envoi de la demande. Laissez vide pour utiliser la première réponse.",
+        "insertField": "Insérer un champ",
+        "noInsertableFields": "Ce formulaire n'a pas encore de champ à insérer.",
+        "unknownFields": "Champ inconnu : {{fields}}",
+        "unknownFieldsBlocked": "Corrigez les champs inconnus dans l'objet du ticket ou le préfixe de description avant d'enregistrer.",
         "descriptionPrefix": "Préfixe de description",
         "save": "Enregistrer le routage des tickets"
       },

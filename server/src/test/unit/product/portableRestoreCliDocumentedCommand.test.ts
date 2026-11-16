@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -39,5 +39,41 @@ describe('documented restore command (tsx with the EE tsconfig)', () => {
     expect(rejected.code).not.toBe(0); expect(rejected.out + rejected.err).not.toContain('hunter2');
     const off = await documented(['--inspect', '--archive', '/tmp/x.alga'], { FORCE_CAPABILITIES: 'co-managed:off', ALGA_PORTABLE_RESTORE_PASSPHRASE: 'never-read-this-passphrase' });
     expect(off.code).not.toBe(0); expect(off.err).toContain('failed during environment'); expect(off.out + off.err).not.toContain('never-read');
+  }, 180_000);
+
+  it('accepts each restore and activation mode shape and rejects conflicts before secret input', async () => {
+    const validModes = [
+      { args: ['--inspect', '--archive', '/tmp/missing.alga'], phase: 'archive inspection' },
+      { args: ['--apply', '--archive', '/tmp/missing.alga', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--administrator-user-id', '00000000-0000-4000-8000-000000000002'], phase: 'database connection|workspace restore' },
+      { args: ['--resume', '--archive', '/tmp/missing.alga', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--administrator-user-id', '00000000-0000-4000-8000-000000000002'], phase: 'database connection|workspace restore' },
+      { args: ['--activate-hosted', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--operation-id', '00000000-0000-4000-8000-000000000002'], phase: 'password input' },
+      { args: ['--activate', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--operation-id', '00000000-0000-4000-8000-000000000002', '--license-file', '/tmp/missing.jwt'], phase: 'password input' },
+    ];
+    for (const mode of validModes) {
+      const result = await documented(mode.args, { ALGA_PORTABLE_RESTORE_PASSPHRASE: PASSPHRASE });
+      expect(result.err).toMatch(new RegExp(`failed during (${mode.phase})`));
+      expect(result.out + result.err).not.toContain(PASSPHRASE);
+    }
+    const password = 'New-Administrator-Password-42!';
+    const activation = spawnSync('npm', ['exec', '--', 'tsx', '--tsconfig', '../ee/server/tsconfig.json', 'scripts/restore-portable-workspace.ts',
+      '--activate-hosted', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--operation-id', '00000000-0000-4000-8000-000000000002', '--password-stdin'],
+    { cwd: serverDir, env: { ...process.env, FORCE_CAPABILITIES: '' }, input: password, encoding: 'utf8', timeout: 60_000 });
+    expect(activation.status).not.toBe(0);
+    expect(activation.stdout + activation.stderr).not.toContain(password);
+    // The EE activation module must load before this credential-free fixture reaches the database boundary.
+    expect(activation.stderr).toMatch(/failed during (database connection|workspace activation)/);
+    const invalid = [
+      ['--inspect', '--apply', '--archive', '/tmp/x.alga'],
+      ['--apply', '--archive', '/tmp/x.alga'],
+      ['--resume', '--archive', '/tmp/x.alga', '--destination-tenant', '00000000-0000-4000-8000-000000000001'],
+      ['--activate-hosted', '--destination-tenant', '00000000-0000-4000-8000-000000000001'],
+      ['--activate', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--operation-id', '00000000-0000-4000-8000-000000000002'],
+      ['--apply', '--activate-hosted', '--archive', '/tmp/x.alga', '--destination-tenant', '00000000-0000-4000-8000-000000000001', '--administrator-user-id', '00000000-0000-4000-8000-000000000002', '--operation-id', '00000000-0000-4000-8000-000000000003'],
+    ];
+    for (const mode of invalid) {
+      const result = await documented(mode, {});
+      expect(result.code).not.toBe(0);
+      expect(result.err).toMatch(/failed during options/);
+    }
   }, 180_000);
 });

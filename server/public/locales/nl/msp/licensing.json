@@ -266,7 +266,11 @@
         "title": "{{tier}} is actief",
         "description": "Uw betaalde licentie is actief op deze appliance.",
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
-        "badge": "Gelicentieerd"
+        "badge": "Gelicentieerd",
+        "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt.",
+        "descriptionPaymentFailed": "Pro is actief, maar de laatste verlengingsbetaling is mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+        "descriptionPaymentFailedEnded": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -291,6 +295,12 @@
         "title": "U gebruikt Essentials",
         "description": "Essentials is actief op deze appliance. Blijf de belangrijkste functies gebruiken of start een eenmalige Pro-proefperiode van 15 dagen.",
         "badge": "Essentials actief"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abonnement beëindigd",
+        "title": "U gebruikt nu de gratis editie",
+        "description": "Uw Pro-abonnement is beëindigd. Uw gegevens blijven behouden en de Pro-functies worden weer ingeschakeld zodra u opnieuw abonneert.",
+        "badge": "Gratis editie"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Kan de licentiesleutel niet activeren.",
       "activateClaimCode": "Kan de activeringscode niet activeren.",
       "startTrial": "Kan de proefperiode niet starten.",
-      "refreshLicense": "Kan de licentie niet vernieuwen."
+      "refreshLicense": "Kan de licentie niet vernieuwen.",
+      "credentialRevoked": "De licentiegegevens van deze appliance zijn ingetrokken. Verbind de appliance opnieuw met een nieuwe activeringscode uit het licentieportaal.",
+      "subscriptionEnding": "Uw Pro-abonnement is opgezegd. Pro eindigt op {{date}}.",
+      "subscriptionEndingNoDate": "Uw Pro-abonnement is opgezegd.",
+      "subscriptionEnded": "Uw Pro-abonnement is beëindigd. Deze appliance gebruikt de gratis editie.",
+      "subscriptionEndingPaymentFailed": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro eindigt op {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "subscriptionEndedPaymentFailed": "Pro is beëindigd — betaling mislukt. Uw appliance gebruikt Essentials.",
+      "resubscribeAt": "Abonneer opnieuw via {{url}}.",
+      "resubscribeToRestore": "Abonneer opnieuw om Pro te herstellen."
+    },
+    "lapse": {
+      "lapsedTitle": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
+      "endingTitle": "Uw Pro-abonnement is opgezegd.",
+      "endedOn": "Pro eindigde op {{date}}.",
+      "endsOn": "Pro eindigt op {{date}}.",
+      "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
+      "resubscribe": "Opnieuw abonneren",
+      "termEndsTitle": "Uw Pro-periode loopt af.",
+      "paymentFailedTitle": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedTitleNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedEndedTitle": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+      "paymentFailedEndingTitle": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+      "updatePaymentMethod": "Betaalmethode bijwerken"
     }
   },
   "errors": {
@@ -364,6 +398,129 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Deze werkruimte heeft geen co-managed pool. Voeg co-managed plekken toe om dit te gebruiken.",
+        "lapsed": "De co-managed pool is verlopen. Herstel de pool voordat u plekken toevoegt.",
+        "capacity": "In de pool zijn geen plekken meer over. Voeg plekken toe aan de pool of maak er een aantal vrij bij een andere klant.",
+        "clientInactive": "Activeer deze klant opnieuw voordat u gezamenlijk beheerde IT inschakelt.",
+        "clientNotFound": "Deze klant is niet meer beschikbaar.",
+        "hasArrangement": "Deze klant heeft al gezamenlijk beheerde IT. Vernieuw de pagina om dit te zien."
+      },
+      "error": {
+        "operationConflict": "Dit verzoek is al met andere gegevens verzonden. Vernieuw de pagina en begin opnieuw.",
+        "invalidSeats": "Voer een geheel aantal plekken in, minimaal 1.",
+        "invalidInvitation": "Kies een contactpersoon om uit te nodigen.",
+        "contactNotFound": "Deze contactpersoon is niet meer beschikbaar. Kies een andere.",
+        "contactWrongClient": "Deze contactpersoon hoort bij een andere klant. Kies een contactpersoon van deze klant.",
+        "contactInactive": "Deze contactpersoon is inactief. Activeer de contactpersoon eerst opnieuw.",
+        "contactNoEmail": "Deze contactpersoon heeft geen e-mailadres. Voeg eerst een e-mailadres toe.",
+        "contactHasSeat": "Deze contactpersoon heeft al een plek of een openstaande uitnodiging.",
+        "emailInUse": "Dit e-mailadres hoort al bij een gebruikersaccount. Gebruik een ander adres.",
+        "emailInvited": "Voor dit e-mailadres staat al een uitnodiging open.",
+        "seatLimit": "Alle plekken zijn in gebruik. Voeg eerst plekken toe of trek een uitnodiging in.",
+        "poolLimit": "De pool heeft niet zoveel plekken beschikbaar.",
+        "allocationConflict": "De plekken zijn gewijzigd terwijl u bezig was. Vernieuw de pagina en probeer het opnieuw.",
+        "board": "Een geselecteerd bord is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "project": "Een geselecteerd project is niet meer beschikbaar. Vernieuw de pagina en kies opnieuw.",
+        "handoffUser": "De geselecteerde persoon is niet meer beschikbaar. Kies iemand anders.",
+        "notPending": "Deze technicus heeft al geaccepteerd, dus de uitnodiging kan niet meer worden gewijzigd.",
+        "arrangementGone": "Deze plekkenregeling is niet meer actief. Vernieuw de pagina om de status te zien.",
+        "generic": "Dat is niet gelukt. Vernieuw de pagina en probeer het opnieuw.",
+        "load": "De keuzes konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+        "submit": "Het verzoek is mogelijk niet voltooid. Probeer het opnieuw; het wordt niet dubbel toegepast."
+      },
+      "purchase": {
+        "checking": "Pool controleren…",
+        "review": "De pool heeft te weinig plaatsen. Controleer de aankoop om {{count}} plaatsen toe te wijzen.",
+        "waiting": "Wachten tot de aankoop is voltooid. {{count}} plaatsen worden toegewezen zodra de pool ze heeft.",
+        "stalled": "De nieuwe plaatsen zijn er nog niet. Controleer binnenkort opnieuw; u betaalt niet dubbel.",
+        "failed": "De betaling is niet gelukt. Probeer dezelfde aankoop opnieuw om {{count}} plaatsen toe te wijzen.",
+        "check": "Opnieuw controleren",
+        "cancel": "Annuleren",
+        "error": "De pool kon niet worden gecontroleerd. Vernieuw en probeer het opnieuw; er wordt niets dubbel in rekening gebracht."
+      },
+      "saved": "Opgeslagen.",
+      "boards": {
+        "title": "Bordbereik",
+        "hint": "Technici werken de tickets van deze klant af op de hier aangevinkte borden. Als er geen is aangevinkt, zien ze geen tickets.",
+        "save": "Bordbereik opslaan",
+        "none": "Er zijn geen borden om uit te kiezen.",
+        "canCreate": "Kan tickets aanmaken"
+      },
+      "projects": {
+        "title": "Gedeelde projecten",
+        "hint": "Projecten van deze klant die de technici kunnen openen.",
+        "none": "Deze klant heeft geen projecten om te delen.",
+        "save": "Gedeelde projecten opslaan"
+      },
+      "handoff": {
+        "title": "Standaardwaarden voor overdracht",
+        "assignee": "Aan u overgedragen tickets toewijzen aan",
+        "nobody": "Niet toegewezen laten",
+        "save": "Standaardwaarden voor overdracht opslaan"
+      },
+      "client": {
+        "seatArrangement": "Plekkenregeling",
+        "summary": "Plekkenregeling: {{used}} van {{count}} plekken in gebruik"
+      },
+      "technicians": {
+        "sent": "Uitnodiging verzonden.",
+        "notSent": "De plek is vastgehouden, maar de e-mail is niet verzonden. Verzend de uitnodiging opnieuw.",
+        "name": "Naam",
+        "email": "E-mail",
+        "status": "Status",
+        "active": "Actief",
+        "expired": "Uitnodiging verlopen",
+        "invited": "Uitgenodigd",
+        "resend": "Opnieuw verzenden",
+        "withdraw": "Intrekken",
+        "title": "Technici",
+        "none": "Nog geen technici.",
+        "invite": "Technicus uitnodigen",
+        "withdrawTitle": "Uitnodiging intrekken",
+        "withdrawMessage": "De uitnodiging voor {{email}} intrekken? De plek gaat terug naar deze regeling.",
+        "withdrawn": "Uitnodiging ingetrokken."
+      },
+      "panel": {
+        "title": "Plekkenregeling",
+        "usage": "{{used}} van {{count}} plekken in gebruik",
+        "allocation": "Toegewezen plekken",
+        "changeSeats": "Plekken wijzigen"
+      },
+      "access": {
+        "title": "Toegang en overdracht"
+      },
+      "setup": {
+        "seats": "Aantal plekken",
+        "boards": "Borden in bereik",
+        "boardsHint": "Technici zien de tickets van hun bedrijf alleen op deze borden.",
+        "technician": "Eerste technicus",
+        "technicianHint": "Kies een contactpersoon van deze klant. Die wordt per e-mail uitgenodigd.",
+        "submit": "Plekken inschakelen",
+        "title": "Plekkenregeling"
+      },
+      "contact": {
+        "label": "Technicus",
+        "placeholder": "Kies een contactpersoon",
+        "addedNoEmail": "{{name}} is toegevoegd maar heeft geen e-mailadres en kan nog niet worden uitgenodigd.",
+        "addedUnavailable": "{{name}} is toegevoegd maar kan niet worden uitgenodigd.",
+        "unavailable": "Niet getoond omdat ze inactief zijn, geen e-mailadres hebben of al een plek of uitnodiging hebben: {{count}}."
+      },
+      "chooser": {
+        "seat": "Plek",
+        "seatHint": "De technici van de klant werken in uw PSA, beperkt tot hun eigen bedrijf.",
+        "workspace": "Werkruimte",
+        "workspaceHint": "Het IT-team van de klant krijgt een eigen servicedesk en escaleert naar u.",
+        "description": "Kies hoe het IT-team van deze klant met u samenwerkt.",
+        "shape": "Co-managed vorm",
+        "pool": "{{available}} van {{purchased}} plekken beschikbaar. {{allocated}} toegewezen."
+      },
+      "states": {
+        "active": "Actief",
+        "ended": "Beëindigd"
+      }
+    },
     "portableExport": {
       "title": "Werkruimte exporteren",
       "description": "Download een versleuteld, draagbaar archief van de records en bestanden in uw werkruimte.",
@@ -440,6 +597,10 @@
     },
     "loading": "Capaciteit aan klantplaatsen laden…",
     "overview": {
+      "shape": "Vorm",
+      "state": "Status",
+      "seatsUsed": "Plekken in gebruik",
+      "seatsAllocated": "Toegewezen plekken",
       "actions": "Acties",
       "client": "Klant",
       "empty": "Geen gezamenlijk beheerde klanten komen overeen met deze zoekopdracht.",
@@ -1017,6 +1178,45 @@
       "invalid": "Deze opmerking kon niet worden opgeslagen.",
       "send": "Verzenden",
       "cancel": "Annuleren"
+    },
+    "upgrade": {
+      "title": "Overstappen naar AlgaPSA",
+      "description": "Gebruik deze werkruimte zelfstandig met uw eigen betaalde AlgaPSA-licentie.",
+      "preserved": "Uw tickets, projecten, documenten en geschiedenis blijven in deze werkruimte.",
+      "trustEnds": "De overstap beëindigt de actieve toegang van uw MSP en geeft uw co-managed seats vrij. Uw MSP behoudt het toegestane participatiearchief.",
+      "alreadyDeparted": "Uw MSP-relatie is al beëindigd. Het bestaande archief blijft ongewijzigd.",
+      "seats": "Vereiste betaalde technische seats: {{count}}",
+      "hosting": "Bij deze overstap blijft uw huidige hosting behouden. Deze installatie verlaten vereist een aparte export en herstelactie.",
+      "licenseRequired": "Activeer vóór de overstap een tenantgebonden Pro-licentie met voldoende seats.",
+      "subscriptionRequired": "Voor de overstap is een actief, betaald AlgaPSA-abonnement nodig dat bij deze werkruimte hoort.",
+      "manageLicense": "Licentie van werkruimte beheren",
+      "running": "De overstap wordt uitgevoerd. Deze pagina wordt bijgewerkt zodra deze klaar is.",
+      "failed": "De overstap is niet voltooid. Controleer uw entitlement en probeer het opnieuw.",
+      "unavailable": "De voortgang van de overstap is tijdelijk niet beschikbaar. Vernieuw de pagina om opnieuw te controleren.",
+      "start": "Werkruimte overstappen",
+      "refresh": "Status vernieuwen",
+      "completed": "Deze werkruimte is nu een zelfstandige AlgaPSA-werkruimte.",
+      "openPsa": "AlgaPSA openen",
+      "loadError": "De overstapstatus kan niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
+      "startError": "De overstap kan niet worden gestart. U kunt het verzoek opnieuw indienen.",
+      "confirmTitle": "Deze werkruimte overstappen?",
+      "confirmMessage": "Uw werkruimte wordt omgezet naar AlgaPSA en elke actieve MSP-relatie wordt beëindigd. Uw eigen betaalde entitlement geldt voor deze werkruimte. De hosting van uw gegevens verandert niet.",
+      "cancel": "Annuleren",
+      "billingInterval": "Factureringsfrequentie",
+      "month": "Maandelijks",
+      "year": "Jaarlijks",
+      "paymentProcessing": "Uw betaling wordt verwerkt. Vernieuw de status of hervat de aankoop om opnieuw te controleren.",
+      "purchaseScope": "Deze aankoop betaalt voor deze werkruimte. MSP-toegang eindigt pas wanneer u de overstap na betaling bevestigt.",
+      "paymentFailed": "De eerste betaling is mislukt. U kunt een nieuwe checkout starten nadat u deze onbetaalde poging hebt gesloten.",
+      "retryPayment": "Betaling opnieuw proberen",
+      "retryTitle": "Deze betaling opnieuw proberen?",
+      "retryMessage": "Sluit deze mislukte betaalpoging en open een nieuwe checkout. MSP-toegang en co-managed seats blijven behouden.",
+      "billingTitle": "Uw AlgaPSA-facturering",
+      "paymentMethod": "Betaalmethode bijwerken",
+      "paidSeats": "Betaalde technische seats",
+      "reviewSeatChange": "Seatwijziging bekijken",
+      "billingError": "Facturering kan niet worden geopend. Vernieuw de status en probeer het opnieuw.",
+      "purchaseUnconfigured": "Aankopen zijn niet geconfigureerd voor deze implementatie."
     }
   },
   "common": {

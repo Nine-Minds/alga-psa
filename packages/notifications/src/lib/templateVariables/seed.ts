@@ -1019,6 +1019,14 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
           },
           {
+            "path": "quoteReviewLink",
+            "type": "url",
+            "description": "Per-recipient link to review and approve the quote without signing in; empty when the tenant has turned email-link review off.",
+            "example": "https://app.example.com/quote/Qm9n0xv3kP2s5Yh8TqLw1AaBcDeFgHiJkLmNoPqRsTu",
+            "availability": "used",
+            "notes": "Unique to each recipient. When present it is the primary call-to-action and portalLink becomes a secondary link shown only to recipients with client-portal access; wrapped in {{#if quoteReviewLink}}."
+          },
+          {
             "path": "customMessage",
             "type": "string",
             "description": "Optional free-text note from the MSP shown in a highlighted box; the box is hidden when empty.",
@@ -1070,6 +1078,14 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "example": "https://app.example.com/client-portal/billing?tab=quotes",
             "availability": "used",
             "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
+          },
+          {
+            "path": "quoteReviewLink",
+            "type": "url",
+            "description": "Per-recipient link to review and approve the quote without signing in; empty when the tenant has turned email-link review off.",
+            "example": "https://app.example.com/quote/Qm9n0xv3kP2s5Yh8TqLw1AaBcDeFgHiJkLmNoPqRsTu",
+            "availability": "used",
+            "notes": "Unique to each recipient. When present it is the primary call-to-action and portalLink becomes a secondary link shown only to recipients with client-portal access; wrapped in {{#if quoteReviewLink}}."
           },
           {
             "path": "customMessage",
@@ -4513,6 +4529,401 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "type": "string",
             "description": "Client site/address; assembled but hidden from clients.",
             "example": "Acme HQ • 100 Main St, Springfield, IL 62701 US",
+            "availability": "available-unused"
+          }
+        ]
+      },
+      {
+        "templateName": "ticket-comment-added-client",
+        "variables": [
+          {
+            "path": "ticket.title",
+            "type": "string",
+            "description": "The ticket's subject/title line.",
+            "example": "Printer not working on 3rd floor",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.metaLine",
+            "type": "string",
+            "description": "One-line ticket#/priority/status summary.",
+            "example": "Ticket #TCK-1234 · High Priority · In Progress",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.id",
+            "type": "string",
+            "description": "Human-readable ticket number on the 'Ticket #' badge.",
+            "example": "TCK-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.clientName",
+            "type": "string",
+            "description": "Client/company the ticket belongs to; shown in the intro.",
+            "example": "Acme Corporation",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priority",
+            "type": "string",
+            "description": "Priority level name, shown in the priority badge.",
+            "example": "High",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priorityColor",
+            "type": "string",
+            "description": "Hex color for the priority badge (defaults to #8A4DEA).",
+            "example": "#dc2626",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.status",
+            "type": "string",
+            "description": "Current workflow status name.",
+            "example": "In Progress",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToName",
+            "type": "string",
+            "description": "Full name of the assigned agent.",
+            "example": "Jane Smith",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToEmail",
+            "type": "string",
+            "description": "Email of the assigned agent (or 'Not assigned').",
+            "example": "jane.smith@example.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assignedDetails",
+            "type": "string",
+            "description": "Assigned agent name with email, for plain text.",
+            "example": "Jane Smith (jane.smith@example.com)",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterName",
+            "type": "string",
+            "description": "Name of the requesting contact (also used in the pl layout).",
+            "example": "John Doe",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterContact",
+            "type": "string",
+            "description": "Requester email and phone joined for the HTML contact block.",
+            "example": "john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterDetails",
+            "type": "string",
+            "description": "Requester name/email/phone joined for plain text.",
+            "example": "John Doe · john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.board",
+            "type": "string",
+            "description": "Board/queue the ticket lives on.",
+            "example": "Help Desk",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.categoryDetails",
+            "type": "string",
+            "description": "Category / subcategory combined.",
+            "example": "Hardware / Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.locationSummary",
+            "type": "string",
+            "description": "Client site name and address.",
+            "example": "Acme HQ • 100 Main St, Springfield, IL 62701 US",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.url",
+            "type": "string",
+            "description": "Client-portal link to the ticket.",
+            "example": "https://portal.example.com/client-portal/tickets/sample-ticket-id",
+            "availability": "used"
+          },
+          {
+            "path": "comment.author",
+            "type": "string",
+            "description": "Display of who wrote the comment (from payload.comment.author; often an email).",
+            "example": "jane.smith@example.com",
+            "availability": "used"
+          },
+          {
+            "path": "comment.content",
+            "type": "string",
+            "description": "Rendered HTML of the comment body with inline images rewritten to CID references (rendered via {{{ }}}).",
+            "example": "<p>Toner cartridge has been ordered, ETA tomorrow.</p>",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.description",
+            "type": "string",
+            "description": "Ticket description body; assembled into the comment context but not referenced by this template.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterEmail",
+            "type": "string",
+            "description": "Requester email in isolation; assembled but unused.",
+            "example": "john.doe@acme.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterPhone",
+            "type": "string",
+            "description": "Requester phone in isolation; assembled but unused.",
+            "example": "+1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.category",
+            "type": "string",
+            "description": "Top-level category; template uses categoryDetails instead.",
+            "example": "Hardware",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.subcategory",
+            "type": "string",
+            "description": "Subcategory; template uses categoryDetails instead.",
+            "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.html",
+            "type": "string",
+            "description": "Same as comment.content (rewritten HTML); duplicate field on the comment context, unused.",
+            "example": "<p>Toner cartridge has been ordered.</p>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.text",
+            "type": "string",
+            "description": "Plain-text extraction of the comment body; assembled but not referenced.",
+            "example": "Toner cartridge has been ordered, ETA tomorrow.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.plainText",
+            "type": "string",
+            "description": "Duplicate plain-text of the comment body; assembled but unused.",
+            "example": "Toner cartridge has been ordered, ETA tomorrow.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.rawContent",
+            "type": "string",
+            "description": "Original unprocessed comment content (BlockNote/raw) from the payload; assembled but unused.",
+            "example": "[{\"type\":\"paragraph\"}]",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.id",
+            "type": "string",
+            "description": "Comment identifier from the payload; assembled onto the context via spread but unused in the template.",
+            "example": "cmt-98765",
+            "availability": "available-unused"
+          },
+          {
+            "path": "comment.isInternal",
+            "type": "boolean",
+            "description": "Whether the comment is internal-only; from the payload, used in JS gating (not the template).",
+            "example": "false",
+            "availability": "available-unused"
+          }
+        ]
+      },
+      {
+        "templateName": "ticket-closed-client",
+        "variables": [
+          {
+            "path": "ticket.title",
+            "type": "string",
+            "description": "The ticket's subject/title line.",
+            "example": "Printer not working on 3rd floor",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.metaLine",
+            "type": "string",
+            "description": "One-line ticket#/priority/status summary shown under the header and in text.",
+            "example": "Ticket #TCK-1234 · High Priority · Closed",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.id",
+            "type": "string",
+            "description": "Human-readable ticket number on the 'Ticket #' badge.",
+            "example": "TCK-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.clientName",
+            "type": "string",
+            "description": "Client/company the ticket belongs to; shown in the intro.",
+            "example": "Acme Corporation",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.closedBy",
+            "type": "string",
+            "description": "Full name of the user who closed the ticket (or 'System').",
+            "example": "John Doe",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.status",
+            "type": "string",
+            "description": "Current status name; used in the pl plain-text 'Closed status' line (other locales show a static 'Closed' label).",
+            "example": "Closed",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.priority",
+            "type": "string",
+            "description": "Priority level name; rendered only in the pl priority row.",
+            "example": "High",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.priorityColor",
+            "type": "string",
+            "description": "Hex color for the priority badge; rendered only in the pl priority row.",
+            "example": "#dc2626",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assignedToName",
+            "type": "string",
+            "description": "Full name of the assigned agent.",
+            "example": "Jane Smith",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToEmail",
+            "type": "string",
+            "description": "Email of the assigned agent (or 'Not assigned'/'Not provided').",
+            "example": "jane.smith@example.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assignedDetails",
+            "type": "string",
+            "description": "Assigned agent name with email, for plain text.",
+            "example": "Jane Smith (jane.smith@example.com)",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterName",
+            "type": "string",
+            "description": "Name of the requesting contact.",
+            "example": "John Doe",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterContact",
+            "type": "string",
+            "description": "Requester email and phone joined for the HTML contact block.",
+            "example": "john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterDetails",
+            "type": "string",
+            "description": "Requester name/email/phone joined for plain text.",
+            "example": "John Doe · john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.board",
+            "type": "string",
+            "description": "Board/queue the ticket lives on.",
+            "example": "Help Desk",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.categoryDetails",
+            "type": "string",
+            "description": "Category / subcategory combined.",
+            "example": "Hardware / Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.locationSummary",
+            "type": "string",
+            "description": "Client site name and address.",
+            "example": "Acme HQ • 100 Main St, Springfield, IL 62701 US",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.resolution",
+            "type": "string",
+            "description": "The latest client-visible resolution as HTML (rendered via {{{ }}}); empty when there is none, which hides the Resolution box.",
+            "example": "<p>Replaced printer toner cartridge.</p>",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.url",
+            "type": "string",
+            "description": "Client-portal link to the ticket.",
+            "example": "https://portal.example.com/client-portal/tickets/sample-ticket-id",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.description",
+            "type": "string",
+            "description": "Ticket description body; assembled into the closed context but not referenced by this template.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.changes",
+            "type": "string",
+            "description": "Rendered HTML change list; assembled (from payload.changes) but not referenced by ticket-closed.",
+            "example": "<ul>…</ul>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterEmail",
+            "type": "string",
+            "description": "Requester email in isolation; assembled but unused.",
+            "example": "john.doe@acme.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterPhone",
+            "type": "string",
+            "description": "Requester phone in isolation; assembled but unused.",
+            "example": "+1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.category",
+            "type": "string",
+            "description": "Top-level category; template uses categoryDetails instead.",
+            "example": "Hardware",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.subcategory",
+            "type": "string",
+            "description": "Subcategory; template uses categoryDetails instead.",
+            "example": "Printer",
             "availability": "available-unused"
           }
         ]

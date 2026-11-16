@@ -13,17 +13,22 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 type DbState = {
+  tenants?: Array<any>;
   assets: Array<any>;
   workstation_assets: Array<any>;
   server_assets: Array<any>;
+  network_device_assets?: Array<any>;
   tenant_external_entity_mappings: Array<any>;
   rmm_organization_mappings: Array<any>;
+  asset_tag_claims?: Array<any>;
+  next_number?: Array<any>;
 };
 
 let assetCounter = 0;
 let mappingCounter = 0;
 
 function createFakeKnex(state: DbState) {
+  state.tenants ??= [{ tenant: 'tenant_1', asset_tag_claims_required: false }];
   function rowsFor(table: string): any[] {
     // Tables the assignment helper and the group lookup touch are created on
     // demand so each test only has to seed what it cares about.
@@ -36,6 +41,7 @@ function createFakeKnex(state: DbState) {
     return Object.entries(where).every(([k, v]) => row[k] === v);
   }
 
+  // LEVERAGE: pattern asset-action-query-fake — Asset scenarios duplicate an in-memory SQL adapter.
   class QueryBuilder {
     private wheres: Array<Record<string, any>> = [];
 
@@ -45,8 +51,24 @@ function createFakeKnex(state: DbState) {
 
     private readonly table: string;
 
-    where(where: Record<string, any>) {
-      this.wheres.push(where);
+    where(where: Record<string, any> | string, value?: unknown) {
+      this.wheres.push(typeof where === 'string' ? { [where]: value } : where);
+      return this;
+    }
+
+    whereNot(col: string, value: unknown) {
+      this.wheres.push({ __not: { col, value } });
+      return this;
+    }
+
+    forUpdate() {
+      return this;
+    }
+
+    forKeyShare() { return this; }
+
+    whereRaw(_sql: string, values: unknown[]) {
+      this.wheres.push({ __physical_tag: values[0] });
       return this;
     }
 
@@ -91,6 +113,16 @@ function createFakeKnex(state: DbState) {
     private filtered() {
       let rows = [...rowsFor(this.table)];
       for (const where of this.wheres) {
+        if ('__physical_tag' in where) {
+          rows = rows.filter((row) => (row.asset_tag_managed ? row.asset_tag_normalized
+            : String(row.asset_tag ?? '').replace(/^ +| +$/g, '').replace(/[a-z]/g, (letter) => letter.toUpperCase())) === where.__physical_tag);
+          continue;
+        }
+        if ('__not' in where) {
+          const { col, value } = where.__not;
+          rows = rows.filter(row => row[col] !== value);
+          continue;
+        }
         if ('__not_null' in where) {
           const col = (where as any).__not_null;
           rows = rows.filter((row) => row[col] !== null && typeof row[col] !== 'undefined');
@@ -146,15 +178,20 @@ function createFakeKnex(state: DbState) {
 
       const response = {
         returning: async (_cols: string[]) => [row],
-        onConflict: (_cols: string[]) => ({
+        onConflict: (cols: string[]) => ({
+          ignore: async () => {
+            if (rows.some(candidate => candidate !== row && cols.every(col => candidate[col] === row[col]))) {
+              rows.splice(rows.indexOf(row), 1);
+            }
+          },
           merge: async (patch: Record<string, unknown>) => {
             const existing = rows.find(
               (candidate) =>
-                candidate.tenant === row.tenant &&
-                String(candidate.asset_id) === String(row.asset_id)
+                candidate !== row && cols.every(col => candidate[col] === row[col])
             );
             if (existing) {
               Object.assign(existing, patch);
+              rows.splice(rows.indexOf(row), 1);
             }
           },
         }),
@@ -166,7 +203,14 @@ function createFakeKnex(state: DbState) {
 
   const knex: any = (table: string) => new QueryBuilder(table);
   knex.fn = { now: () => new Date('2026-04-06T12:00:00.000Z') };
-  knex.raw = (_sql: string, bindings: any[]) => ({ bindings });
+  knex.raw = (sql: string, bindings: any) => {
+    if (sql.includes('generate_next_number')) {
+      const counter = rowsFor('next_number').find(row => row.tenant === bindings.tenant && row.entity_type === bindings.type);
+      counter.last_number += 1;
+      return { rows: [{ number: `${counter.prefix}${String(counter.last_number).padStart(counter.padding_length, '0')}` }] };
+    }
+    return { bindings };
+  };
   knex.transaction = async (cb: (trx: any) => Promise<any>) => cb(knex);
   return knex;
 }
@@ -223,6 +267,13 @@ describe('sharedAssetIngestionService', () => {
 
     expect(result.action).toBe('created');
     expect(state.assets).toHaveLength(1);
+    const created = state.assets[0];
+    expect(created.asset_tag).toBe('00001');
+    expect(created.asset_tag).not.toBe(buildSnapshot().assetTag);
+    expect(created.asset_tag_normalized).toBe('00001');
+    expect(state.asset_tag_claims).toEqual([expect.objectContaining({
+      tenant: 'tenant_1', normalized_tag: '00001', owner_kind: 'asset', owner_id: created.asset_id,
+    })]);
     expect(state.workstation_assets).toHaveLength(1);
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0]).toMatchObject({
@@ -490,6 +541,113 @@ describe('sharedAssetIngestionService', () => {
       disk_usage: JSON.stringify([{ name: '/', total_gb: 995, free_gb: 20, utilization_percent: 39 }]),
       installed_software: JSON.stringify([{ name: 'Docker Desktop', version: '4.40.0' }]),
       system_info: JSON.stringify({ manufacturer: 'Apple', model: 'Mac16,5' }),
+    });
+  });
+
+  describe('network_device extension', () => {
+    function networkState(): DbState {
+      return {
+        assets: [],
+        workstation_assets: [],
+        server_assets: [],
+        network_device_assets: [],
+        tenant_external_entity_mappings: [],
+        rmm_organization_mappings: [
+          { tenant: 'tenant_1', integration_id: 'integration_1', external_organization_id: 'scope_1', client_id: 'client_1' },
+        ],
+      };
+    }
+
+    it('upserts network_device_assets for a network_device snapshot', async () => {
+      const state = networkState();
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex: createFakeKnex(state),
+        snapshot: buildSnapshot({
+          provider: 'unifi',
+          assetType: 'network_device',
+          extension: {
+            networkDevice: {
+              deviceType: 'access_point',
+              managementIp: '10.0.0.9',
+              firmwareVersion: '7.0.1',
+              portCount: 2,
+              supportsPoe: false,
+            },
+          },
+        }),
+      });
+
+      expect(result.action).toBe('created');
+      expect(state.network_device_assets).toHaveLength(1);
+      expect(state.network_device_assets![0]).toMatchObject({
+        tenant: 'tenant_1',
+        device_type: 'access_point',
+        management_ip: '10.0.0.9',
+        firmware_version: '7.0.1',
+        port_count: 2,
+        supports_poe: false,
+      });
+      // Workstation/server tables are untouched.
+      expect(state.workstation_assets).toHaveLength(0);
+      expect(state.server_assets).toHaveLength(0);
+    });
+
+    it('does not clobber optional columns the snapshot leaves undefined on re-sync', async () => {
+      const state = networkState();
+      const knex = createFakeKnex(state);
+      const base = { provider: 'unifi' as const, assetType: 'network_device' as const };
+      await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex,
+        snapshot: buildSnapshot({
+          ...base,
+          extension: { networkDevice: { deviceType: 'switch', managementIp: '10.0.0.2', portCount: 24 } },
+        }),
+      });
+      const second = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex,
+        snapshot: buildSnapshot({
+          ...base,
+          extension: { networkDevice: { deviceType: 'switch', firmwareVersion: '9.9' } },
+        }),
+      });
+
+      expect(second.action).toBe('updated');
+      expect(state.network_device_assets![0]).toMatchObject({
+        device_type: 'switch',
+        management_ip: '10.0.0.2',
+        port_count: 24,
+        firmware_version: '9.9',
+      });
+    });
+
+    it('throws when a networkDevice block has no deviceType instead of defaulting', async () => {
+      const state = networkState();
+      await expect(
+        ingestNormalizedRmmDeviceSnapshot({
+          tenant: 'tenant_1',
+          knex: createFakeKnex(state),
+          snapshot: buildSnapshot({
+            provider: 'unifi',
+            assetType: 'network_device',
+            extension: { networkDevice: { managementIp: '10.0.0.2' } as any },
+          }),
+        })
+      ).rejects.toThrow(/missing a valid deviceType/);
+      expect(state.network_device_assets).toHaveLength(0);
+    });
+
+    it('keeps writing no extension row for network_device snapshots without a networkDevice block', async () => {
+      const state = networkState();
+      const result = await ingestNormalizedRmmDeviceSnapshot({
+        tenant: 'tenant_1',
+        knex: createFakeKnex(state),
+        snapshot: buildSnapshot({ provider: 'ninjaone', assetType: 'network_device', extension: { lanIp: '10.0.0.1' } }),
+      });
+      expect(result.action).toBe('created');
+      expect(state.network_device_assets).toHaveLength(0);
     });
   });
 

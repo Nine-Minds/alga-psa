@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -16,7 +16,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureClientPlanBundlesTable,
-  unwrapInvoiceResult
+  unwrapInvoiceResult,
+  generateInvoiceForCycle
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -260,7 +261,7 @@ describe('Saved invoice tax for mixed-taxability fixed bundles (preview == saved
 
   async function generateSaved(billingCycleId: string) {
     return unwrapInvoiceResult<{ invoice_id: string; tax: number; subtotal: number }>(
-      await generateInvoice(billingCycleId)
+      await generateInvoiceForCycle(billingCycleId)
     );
   }
 

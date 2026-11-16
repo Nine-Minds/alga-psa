@@ -6,6 +6,7 @@ import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
+import { parseVisibilityRules, type VisibilityRule } from './formVisibility';
 
 interface PublishedDefinitionRow {
   tenant: string;
@@ -47,6 +48,37 @@ export interface ServiceRequestPortalDefinitionDetail {
   executionConfig: Record<string, unknown>;
   formBehaviorProvider: string;
   formBehaviorConfig: Record<string, unknown>;
+}
+
+/**
+ * Client portal projection of a definition detail: only what the request form
+ * page renders. Execution/form-behavior config and version identifiers stay
+ * server-side.
+ */
+export interface ServiceRequestPortalFormView {
+  title: string;
+  description: string | null;
+  icon: string | null;
+  formSchema: Record<string, unknown>;
+  initialValues: Record<string, string | boolean | null>;
+  /** Parsed server-side; only the advanced provider carries rules. */
+  visibilityRules: VisibilityRule[];
+}
+
+export function toPortalFormView(
+  detail: ServiceRequestPortalDefinitionDetail
+): ServiceRequestPortalFormView {
+  return {
+    title: detail.title,
+    description: detail.description,
+    icon: detail.icon,
+    formSchema: detail.formSchema,
+    initialValues: detail.initialValues,
+    visibilityRules:
+      detail.formBehaviorProvider === 'advanced'
+        ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
+        : [],
+  };
 }
 
 export async function getVisiblePublishedServiceRequestDefinitionDetail(

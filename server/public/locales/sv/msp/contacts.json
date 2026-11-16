@@ -418,7 +418,10 @@
       "refreshing": "Uppdaterar…",
       "resend": "Skicka igen",
       "resending": "Skickar igen…",
-      "revoke": "Återkalla"
+      "revoke": "Återkalla",
+      "cancel": "Avbryt",
+      "edit": "Redigera",
+      "delete": "Radera"
     },
     "toast": {
       "successTitle": "Lyckades",
@@ -460,7 +463,8 @@
         "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
         "invitationNotFound": "Inbjudan hittades inte eller har redan använts."
       },
-      "userNotFound": "Kundanvändaren hittades inte"
+      "userNotFound": "Kundanvändaren hittades inte",
+      "validationErrorTitle": "Valideringsfel"
     },
     "boardCount_few": "{{count}} tavlor",
     "boardCount_many": "{{count}} tavlor"
@@ -723,6 +727,118 @@
       "saved": "Kontakten har uppdaterats",
       "saveFailed": "Det gick inte att uppdatera kontakten",
       "saveFailedDescription": "Kontakten kunde inte uppdateras. Försök igen."
+    },
+    "relative": {
+      "today": "idag",
+      "yesterday": "igår",
+      "daysAgo": "för {{count}} d sedan"
+    },
+    "emailType": {
+      "primary": "Primär",
+      "other": "annat"
+    },
+    "phoneType": {
+      "other": "Annat"
+    },
+    "ticketPill": {
+      "closed": "Stängt",
+      "urgent": "Brådskande",
+      "open": "Öppet"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "role": {
+      "add": "Lägg till roll",
+      "editTitle": "Klicka för att redigera rollen"
+    },
+    "atClient": "hos",
+    "noClient": "Ingen kund",
+    "noPrimaryEmail": "Ingen primär e-postadress",
+    "noPhoneNumber": "Inget telefonnummer",
+    "contactSince": "Kontakt sedan {{date}}",
+    "lastTouch": "Senaste kontakt",
+    "editContact": "Redigera kontakt",
+    "openFullPage": "Öppna hela sidan",
+    "viewAll": "Visa alla",
+    "viewAllCount": "Visa alla {{count}}",
+    "reach": {
+      "title": "Kontaktuppgifter",
+      "add": "Lägg till e-postadress eller telefonnummer",
+      "email": "E-post",
+      "phone": "Telefon",
+      "primaryMeta": "primär",
+      "noEmails": "Inga e-postadresser",
+      "addEmail": "Lägg till en e-postadress",
+      "noPhones": "Inga telefonnummer",
+      "addPhone": "Lägg till ett telefonnummer"
+    },
+    "portalChip": {
+      "deactivated": "Portal · inaktiverad",
+      "signedIn": "Portal · inloggad {{when}}",
+      "neverSignedIn": "Portal · aldrig inloggad",
+      "invited": "Portal · inbjuden",
+      "noAccess": "Ingen portalåtkomst"
+    },
+    "portal": {
+      "title": "Portalåtkomst",
+      "manage": "Hantera",
+      "status": "Status",
+      "role": "Roll",
+      "clientAdmin": "Kundadministratör",
+      "standard": "Standard",
+      "lastSignIn": "Senaste inloggning",
+      "invited": "Inbjuden",
+      "noClientAssigned": "Ingen kund tilldelad",
+      "deactivated": "Inaktiverad",
+      "activeAccount": "Aktivt konto",
+      "invitationSent": "Inbjudan skickad",
+      "noAccess": "Ingen åtkomst"
+    },
+    "tickets": {
+      "title": "Ärenden",
+      "create": "Skapa ärende",
+      "createFirst": "Skapa ett ärende",
+      "empty": "Inga ärenden ännu",
+      "fallbackTitle": "Ärende {{number}}"
+    },
+    "interactions": {
+      "title": "Interaktioner",
+      "log": "Logga interaktion",
+      "logFirst": "Logga en interaktion",
+      "empty": "Inga loggade interaktioner",
+      "fallbackTitle": "Interaktion",
+      "loadError": "Det gick inte att läsa in interaktioner. Försök igen."
+    },
+    "documents": {
+      "title": "Dokument",
+      "add": "Lägg till dokument",
+      "addFirst": "Lägg till ett dokument",
+      "empty": "Inga dokument ännu",
+      "fallbackTitle": "Dokument",
+      "dialogTitle": "Kontaktens dokument"
+    },
+    "relatedWork": {
+      "title": "Relaterat arbete",
+      "projects": "Projekt",
+      "quotes": "Offerter",
+      "noProjects": "Inga projekt",
+      "noQuotes": "Inga offerter",
+      "noStatus": "Ingen status",
+      "noStatusLower": "ingen status",
+      "projectFallback": "Projekt {{number}}",
+      "quoteFallback": "Offert",
+      "empty": "Inga relaterade projekt eller offerter"
+    },
+    "notes": {
+      "title": "Anteckningar",
+      "edit": "Redigera",
+      "openDocument": "Öppna anteckningsdokument",
+      "save": "Spara anteckningar",
+      "cancel": "Avbryt",
+      "empty": "Inga anteckningar ännu",
+      "add": "Lägg till anteckningar"
     }
   },
   "errors": {
@@ -835,7 +951,30 @@
       "managerScopeNote_one": "Deras vy omfattar även poster för {{count}} person som rapporterar till dem.",
       "managerScopeNote_other": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem.",
       "managerScopeNote_few": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem.",
-      "managerScopeNote_many": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem."
+      "managerScopeNote_many": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem.",
+      "assignmentLabel": "Synlighetsgrupp för ärenden",
+      "assignmentPlaceholder": "Välj synlighetstilldelning",
+      "assignmentUpdated": "Kontaktens synlighetstilldelning har uppdaterats",
+      "assignFailed": "Det gick inte att tilldela synlighetsgruppen",
+      "manageLabel": "Synlighetsgrupper för kunden",
+      "manageHelp": "Skapa eller redigera grupper av tavlor och tilldela dem till kontakter.",
+      "nameLabel": "Gruppnamn",
+      "nameRequired": "Synlighetsgruppens namn krävs",
+      "descriptionLabel": "Beskrivning",
+      "descriptionPlaceholder": "Valfri beskrivning",
+      "boardsLabel": "Tavlor",
+      "noBoards": "Inga tillgängliga tavlor",
+      "createGroup": "Skapa grupp",
+      "updateGroup": "Uppdatera grupp",
+      "created": "Synlighetsgruppen har skapats",
+      "updated": "Synlighetsgruppen har uppdaterats",
+      "deleted": "Synlighetsgruppen har raderats",
+      "deleteConfirm": "Vill du radera den här synlighetsgruppen?",
+      "deleteFailed": "Det gick inte att radera synlighetsgruppen",
+      "saveFailed": "Det gick inte att spara synlighetsgruppen",
+      "loadFailed": "Det gick inte att läsa in synlighetsgruppen för redigering",
+      "empty": "Inga synlighetsgrupper ännu",
+      "fullAccess": "Full åtkomst"
     }
   },
   "messages": {

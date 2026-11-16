@@ -1,3 +1,4 @@
+import { generateInvoiceForCycle } from '../../../test-utils/billingTestHelpers';
 import { it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -50,16 +51,16 @@ it('generates immutable ticket presentation from approved source records', async
     state.tenant = state.user.tenant;
     const { tenant, userId, clientId, lineId, serviceId, cycleId, profileId, usageServiceId } = await createSourceFixture(db);
     fs.writeFileSync(`${evidenceDir}/source.json`, JSON.stringify({ tenant, clientId, lineId, cycleId, userId }, null, 2));
-    const { generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const { previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const preview = await previewInvoice(cycleId) as any;
     expect(preview.success, JSON.stringify(preview)).toBe(true);
     expect(preview.data.ticketPresentationRows.filter((r: any) => r.id.startsWith('ticket:'))).toHaveLength(2);
     expect(preview.data.ticketPresentationRows.reduce((sum: number, r: any) => sum + r.amount, 0)).toBe(preview.data.subtotal);
     fs.writeFileSync(`${evidenceDir}/recurring-preview.json`, JSON.stringify(preview.data, null, 2));
-    const result = await generateInvoice(cycleId) as any;
+    const result = await generateInvoiceForCycle(cycleId) as any;
     if (result?.actionError || result?.permissionError) throw new Error(JSON.stringify(result));
     expect(result?.invoice_id).toBeTruthy();
-    const links = await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id });
+    const links = await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id');
     // The 120-minute overtime entry bills as two lines (regular + overtime),
     // each linking the entry with its own segment snapshot.
     expect(links).toHaveLength(5);
@@ -209,7 +210,7 @@ it('generates immutable ticket presentation from approved source records', async
     await db('time_entries').where({ tenant, contract_line_id: lineId }).update({ notes: 'EDITED PRIVATE NOTE', work_date: '2026-08-20', start_time: '2026-08-20T13:00:00Z', end_time: '2026-08-20T14:00:00Z' });
     const fresh = mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenant, result.invoice_id))!;
     expect(JSON.stringify(fresh)).toBe(frozen);
-    expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id })).toEqual(links);
+    expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(links);
     const afterPdf = new PDFGenerationService(tenant);
     expect((await afterPdf.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: template.template_id })).html).toBe(beforeHtml.html);
     fs.writeFileSync(`${evidenceDir}/after-source-edit.pdf`, await afterPdf.generatePDF({ invoiceId: result.invoice_id, userId, templateId: template.template_id }));
@@ -220,7 +221,7 @@ it('generates immutable ticket presentation from approved source records', async
     expect(await exportPayload()).toEqual(exportBefore);
     expect(await db('invoice_charges').where({ tenant, invoice_id: result.invoice_id })).toEqual(canonicalCharges);
     fs.writeFileSync(`${evidenceDir}/accounting-export.json`, JSON.stringify(exportBefore, null, 2));
-    const duplicate = await generateInvoice(cycleId) as any;
+    const duplicate = await generateInvoiceForCycle(cycleId) as any;
     expect(duplicate?.invoice_id).toBeUndefined();
     expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).count('* as count').first().then((r) => Number(r!.count))).toBe(5);
     expect(JSON.stringify(links)).not.toContain('PRIVATE');

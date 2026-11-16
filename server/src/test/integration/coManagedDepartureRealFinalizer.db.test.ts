@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closeCoManagedRelationship, departCoManagedRelationship, finalizeCoManagedArchive } from '@alga-psa/co-managed';
+import { closeCoManagedRelationship, coManagedUpgradeClosure, departCoManagedRelationship, finalizeCoManagedArchive } from '@alga-psa/co-managed';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
@@ -18,7 +18,10 @@ describeDb('co-managed departure with the real archive finalizer', { shuffle: fa
 
   beforeAll(async () => {
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
-    db = await createTestDbConnection({ databaseName: 'l7a_real_finalizer_test' });
+    const fixtureDatabase = process.env.CM_L8B_RESTORE_FIXTURE_DB;
+    db = await createTestDbConnection(fixtureDatabase
+      ? { databaseName: fixtureDatabase, recreate: false, runSeeds: false }
+      : { databaseName: 'l7a_real_finalizer_test' });
     f = await seedBoundaryFixture(db); // disposable sponsor/customer pair
   }, 300_000);
   afterAll(async () => { delete process.env.FORCE_CAPABILITIES; await db?.destroy(); });
@@ -58,5 +61,21 @@ describeDb('co-managed departure with the real archive finalizer', { shuffle: fa
     expect(second).toEqual(first);
     expect(first.releasedSeats).toBe(g.seats);
     expect(await db('co_managed_archive_manifests').where({ tenant: g.msp, relationship_id: g.relationshipId }).count('* as n').first()).toMatchObject({ n: '1' });
+  });
+
+  it('the L8b adapter uses L7a finalization in the caller transaction and rolls all closure writes back', async () => {
+    expect(coManagedUpgradeClosure.available).toBe(true);
+    const g = await seedBoundaryFixture(db);
+    const target = { customerTenant: g.customer, relationshipId: g.relationshipId };
+    const request = { operationId: randomUUID(), expectedRevision: 1, reason: 'independent_upgrade' as const };
+    await expect(db.transaction(async trx => {
+      await coManagedUpgradeClosure.closeAndArchive(trx, g.mspAdmin, target, request);
+      throw new Error('force upgrade rollback');
+    })).rejects.toThrow('force upgrade rollback');
+    expect(await db('co_management_relationships').where({ tenant: g.customer, relationship_id: g.relationshipId }).first())
+      .toMatchObject({ state: 'active', ended_at: null, revision: 1 });
+    expect(await db('co_managed_relationship_closures').where({ tenant: g.msp, relationship_id: g.relationshipId })).toHaveLength(0);
+    expect(await db('co_managed_archive_manifests').where({ tenant: g.msp, relationship_id: g.relationshipId })).toHaveLength(0);
+    expect(await db('co_managed_allocations').where({ tenant: g.msp, relationship_id: g.relationshipId }).whereNull('released_at')).toHaveLength(1);
   });
 });

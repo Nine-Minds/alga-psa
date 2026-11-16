@@ -288,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Cargando comentarios...",
     "placeholder": "Añada un comentario...",
     "responsePlaceholder": "Responder a los cambios solicitados...",
     "respondToChanges": "Responder a los cambios"
@@ -363,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabla de datos de la hoja de horas",
+    "deleteWorkItem": {
+      "title": "Eliminar elemento de trabajo",
+      "message": "Esto eliminará permanentemente todas las entradas de tiempo para este elemento de trabajo. Esta acción no se puede deshacer."
+    },
+    "bundled": "Agrupado",
+    "bundledTo": "Agrupado → {{ticketNumber}}",
+    "addEntryForCell": "Agregar entrada de tiempo para {{workItem}} el {{date}}",
+    "saveTimeEntry": "Guardar entrada de tiempo",
+    "weeklyTotal": "Total semanal",
     "empty": {
       "title": "No hay elementos de trabajo en su hoja de horas",
       "description": "Agregue un nuevo elemento de trabajo para comenzar a registrar su tiempo esta semana.",
@@ -425,6 +436,9 @@
     "viewEntryDetails": "Ver detalles de la entrada"
   },
   "messages": {
+    "saveEntryFailed": "No se pudo guardar la entrada de tiempo",
+    "updateTaskFailed": "No se pudo actualizar la tarea",
+    "deleteWorkItemFailed": "No se pudo eliminar el elemento de trabajo",
     "serviceRequired": "Seleccione un servicio antes de guardar las entradas de tiempo",
     "invalidService": "Servicio seleccionado no válido",
     "taxRegionRequired": "Seleccione una región fiscal para los servicios imponibles",
@@ -555,6 +569,11 @@
     },
     "activitySummary_few": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})",
     "activitySummary_many": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Gestión de hojas de horas",
+    "delegationDisabledPrefix": "El registro de tiempo delegado está deshabilitado actualmente. Active el indicador de función",
+    "delegationDisabledSuffix": "para editar las hojas de horas de otros usuarios."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado en {{count}} segmento (en pausa {{paused}})",

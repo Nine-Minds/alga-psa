@@ -57,7 +57,8 @@ export interface DraftQuoteTotals {
   optional_total: number;
 }
 
-function buildLocalId(): string {
+/** Stable client-side row key for a draft line item. */
+export function buildDraftLocalId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
@@ -107,7 +108,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
   const needsPrice = Boolean(quoteCurrencyCode) && !hasCurrencyRate && Boolean(item.has_currency_prices);
 
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: item.service_id,
     service_item_kind: item.item_kind,
     service_name: item.service_name,
@@ -132,7 +133,10 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     discount_percentage: null,
     applies_to_item_id: null,
     applies_to_service_id: null,
-    is_taxable: true,
+    // A catalog service with no tax rate is non-taxable, matching how the
+    // invoice side reads the same catalog field. The server re-derives this on
+    // persistence; the draft value keeps the editor's preview honest.
+    is_taxable: item.tax_rate_id != null,
     tax_region: null,
     tax_rate: null,
     location_id: null,
@@ -146,7 +150,7 @@ export function createCustomDraftQuoteItem(input: {
   unit_of_measure?: string | null;
 }): DraftQuoteItem {
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: null,
     service_item_kind: null,
     service_name: null,
@@ -183,7 +187,7 @@ export function createDraftDiscountQuoteItem(input: {
   applies_to_service_id?: string | null;
 }): DraftQuoteItem {
   return {
-    local_id: buildLocalId(),
+    local_id: buildDraftLocalId(),
     service_id: null,
     service_item_kind: null,
     service_name: null,

@@ -60,6 +60,21 @@ const h = vi.hoisted(() => {
     orWhereILike(col: string, pattern: string) {
       return this.where(col, 'ilike', pattern);
     }
+    orWhere(arg: any, op?: any, value?: any) {
+      return this.where(arg, op, value);
+    }
+    clone() {
+      const copy = new QB(this.table);
+      copy.predicates = [...this.predicates];
+      copy.orLegs = this.orLegs ? [...this.orLegs] : null;
+      return copy;
+    }
+    clearSelect() {
+      return this;
+    }
+    clearOrder() {
+      return this;
+    }
     whereNull(col: string) {
       const key = col.split('.').pop()!;
       return this.add((row) => row[key] === null || row[key] === undefined);
@@ -67,6 +82,10 @@ const h = vi.hoisted(() => {
     whereNotNull(col: string) {
       const key = col.split('.').pop()!;
       return this.add((row) => row[key] !== null && row[key] !== undefined);
+    }
+    whereRaw(sql: string) {
+      if (sql !== '1 = 0') throw new Error(`Unsupported test predicate: ${sql}`);
+      return this.add(() => false);
     }
     join() {
       return this;
@@ -113,6 +132,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     ...actual,
     tenantDb: (conn: any, tenant: string) => ({
       table: (table: string) => conn(table.split(' as ')[0]).where({ tenant }),
+      scoped: (table: string) => actual.tenantDb(conn, tenant).scoped(table),
       tenantJoin: (query: any) => query,
     }),
   };
@@ -123,11 +143,26 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => undefined),
 }));
 
+vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
+  // No resolver closes anything for the users these tests act as.
+  assetClosedFields: () => [],
+  assetColumnsOpenTo: async () => null,
+  resolveAuthorizationSubjectForUser: vi.fn(async (_knex, tenant, user) => ({
+    tenant, userId: user.user_id, userType: 'internal',
+  })),
+}));
+
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+}));
+
 import { AssetService } from '../../../lib/api/services/AssetService';
 
 const TENANT = 'tenant-1';
 const OTHER_TENANT = 'tenant-2';
-const context = { tenant: TENANT, userId: 'user-1', db: h.knex } as any;
+const context = {
+  tenant: TENANT, userId: 'user-1', user: { user_id: 'user-1', user_type: 'internal' }, db: h.knex,
+} as any;
 
 let service: AssetService;
 
@@ -158,6 +193,12 @@ beforeEach(() => {
 });
 
 describe('AssetService.list search (T137)', () => {
+  it('returns no rows or total without an authenticated principal', async () => {
+    const result = await service.list({ page: 1, limit: 25 }, { ...context, user: undefined });
+    expect(result.data).toEqual([]);
+    expect(result.total).toBe(0);
+  });
+
   it('narrows on the asset tag and reports the narrowed total', async () => {
     const result = await service.list({ page: 1, limit: 25 }, context, { search: 'WS-00' } as any);
     expect(result.data.map((row: Row) => row.asset_id)).toEqual(['a-1']);

@@ -150,11 +150,10 @@ export type ComputeQuoteTotalsItem = QuoteTotalsRowInput & {
    */
   taxAmountIfIncluded?: number | string | null;
   /**
-   * Exact tax percentage behind `taxAmountIfIncluded` (not the whole-percent
-   * `quote_items.tax_rate`). Discounts apply before tax and the share a row
-   * absorbs depends on the selection, so this is what lets a preview re-derive
-   * the row's tax for a selection the server has not seen. See
-   * `discountedRowTax`.
+   * Exact tax percentage behind `taxAmountIfIncluded`. Discounts apply before
+   * tax and the share a row absorbs depends on the selection, so this is what
+   * lets a preview re-derive the row's tax for a selection the server has not
+   * seen. See `discountedRowTax`.
    */
   taxRateIfIncluded?: number | string | null;
 };

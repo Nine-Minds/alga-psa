@@ -111,7 +111,7 @@ const NEXT_START = '2025-02-01';
 type Currency = 'USD' | 'EUR';
 
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions')['createClientContractFromWizard'];
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
+let generateInvoiceForCycle: typeof import('../../../../../test-utils/billingTestHelpers')['generateInvoiceForCycle'];
 let previewInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['previewInvoice'];
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -216,7 +216,8 @@ describe('consolidated fixed bundle mixing taxable and exempt services, with a c
     tenantId = await ensureTenant(db);
     authRef.tenantId = tenantId;
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
-    ({ generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+    ({ generateInvoiceForCycle } = await import('../../../../../test-utils/billingTestHelpers'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -271,7 +272,7 @@ describe('consolidated fixed bundle mixing taxable and exempt services, with a c
     expect(preview.success).not.toBe(false);
     const previewTax = Number((preview.data ?? preview).tax);
 
-    const generated = unwrap(await generateInvoice(cycleId));
+    const generated = unwrap(await generateInvoiceForCycle(cycleId));
     const invoice = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
     const charges = await table('invoice_charges').where({ invoice_id: generated.invoice_id });
     const parent = charges.find((c: any) => !c.is_discount)!;

@@ -3,6 +3,7 @@
 import React from 'react';
 import CustomTabs, { type TabContent } from '@alga-psa/ui/components/CustomTabs';
 import type { BoardTabDescriptor } from '../lib/boardTabs';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface BoardTabStripProps {
   id?: string;
@@ -10,6 +11,7 @@ interface BoardTabStripProps {
   /** Active tab id (see boardTabId()). */
   value: string;
   onChange: (tabId: string) => void;
+  changedBoardIds?: ReadonlySet<string>;
 }
 
 /**
@@ -25,7 +27,9 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
   tabs,
   value,
   onChange,
+  changedBoardIds = new Set(),
 }) => {
+  const { t } = useTranslation('features/tickets');
   const customTabs = React.useMemo<TabContent[]>(
     () =>
       tabs.map(tab => ({
@@ -38,11 +42,15 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
                 {tab.openTicketCount}
               </span>
             )}
+            {tab.boardId && changedBoardIds.has(tab.boardId) && <>
+              <span className="h-2 w-2 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true" />
+              <span className="sr-only">{t('live.boardActivity', 'New activity on this board')}</span>
+            </>}
           </span>
         ),
         content: null,
       })),
-    [tabs]
+    [tabs, changedBoardIds, t]
   );
 
   return (

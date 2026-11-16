@@ -22,16 +22,40 @@ import type { IAggregatedReaction, IProjectTaskComment, IProjectTaskCommentWithU
 import type { Knex } from 'knex';
 import { assertNativeTaskNote, collaborationFieldPolicy, type TaskCommentCollaboration } from './taskCommentCollaboration';
 import { projectTaskAudience } from '@alga-psa/co-managed/projectTaskAudience';
+import {
+  CommentAudienceError,
+  audienceIsInternal,
+  isCommentAudienceVisible,
+  nativeReplyAudience,
+  nativeThreadAudience,
+  resolveCommentAudienceForRead,
+  resolveCommentAudienceReader,
+  resolveTaskCommentWriteOwner,
+  type CommentAudience,
+} from '@alga-psa/shared/lib/commentAudience';
 
 export type TaskCommentActor = { user_id: string; user_type: 'internal' | 'client' | 'service' };
 
 /** Present only for an active co-managed workspace (resolved by withTaskCommentAccess); absent = native path. */
-export type TaskCommentCollaborationOptions = { collaboration?: TaskCommentCollaboration };
+export type TaskCommentCollaborationOptions = {
+  collaboration?: TaskCommentCollaboration;
+  /**
+   * A built-in rule resolver governs the author (a seat technician), established by the project decision
+   * (`withTaskCommentAccess`). Such an author must name an audience and is held to the comment audience predicates;
+   * for everyone else nothing here changes and no audience statement is issued.
+   */
+  governed?: boolean;
+};
 
 export type CreateTaskCommentInput = {
   taskId: string;
   note: string;
   parentCommentId?: string | null;
+  /**
+   * Who may read the comment (`shared_it`: MSP staff and the client's technicians; `requester`: everyone admitted).
+   * A seat technician must name it. Ordinary MSP callers leave it out and write the comment they always wrote.
+   */
+  audience?: CommentAudience | null;
 };
 
 /** A stored comment row as the database returns it. */
@@ -115,7 +139,7 @@ export async function createTaskCommentWithDb(
   comment: CreateTaskCommentInput,
   options: TaskCommentCollaborationOptions = {},
 ): Promise<string> {
-  const { collaboration } = options;
+  const { collaboration, governed } = options;
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const userId = user.user_id;
 
@@ -140,6 +164,19 @@ export async function createTaskCommentWithDb(
     let taskCommentId: string | undefined;
     let threadId: string | undefined;
 
+    // Audience: decided by the same predicates as a ticket comment (shared/lib/commentAudience), by the author's
+    // organization. Only a governed author (a seat technician) or a caller naming an audience reaches them; a seat
+    // technician that names none is refused, never defaulted. Everyone else is exactly the legacy path.
+    const namedAudience = comment.audience ?? null;
+    const audienceDecided = Boolean(governed) || namedAudience !== null;
+    if (namedAudience !== null && collaboration) throw new CommentAudienceError();
+    if (governed && namedAudience === null && !isReply) throw new CommentAudienceError();
+    const isInternal = namedAudience !== null ? audienceIsInternal(namedAudience) : false;
+    const author = audienceDecided
+      ? await resolveCommentAudienceReader(trx, tenant, { userId, userType: userRecord.user_type })
+      : undefined;
+    let threadAudienceColumns: { collaboration_audience?: CommentAudience } = {};
+
     if (isReply) {
       const parent = await tenantScopedTable(trx, 'project_task_comments', tenant)
         .select(...(collaboration ? ['*'] : ['task_comment_id', 'task_id', 'thread_id', 'deleted_at']))
@@ -160,6 +197,16 @@ export async function createTaskCommentWithDb(
 
       // Co-managed: a native reply may only continue an organization-private thread.
       await assertNativeTaskNote(trx, tenant, parent, collaboration, { reply: true });
+      if (audienceDecided) {
+        // A reply inherits its thread's audience; the author must be able to read the thread they reply into.
+        const thread = await tenantScopedTable(trx, 'comment_threads', tenant)
+          .where({ thread_id: parent.thread_id, project_task_id: comment.taskId }).whereNull('ticket_id')
+          .first('thread_id', 'collaboration_audience', 'is_internal');
+        if (!thread) throw new CommentAudienceError();
+        // A reply that names no audience takes its thread's.
+        const replyAudience = namedAudience ?? resolveCommentAudienceForRead(thread);
+        await nativeReplyAudience(trx, tenant, thread, { isInternal: audienceIsInternal(replyAudience), audience: replyAudience, author, taskId: comment.taskId });
+      }
 
       const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id');
       taskCommentId = idsResult.rows?.[0]?.task_comment_id;
@@ -170,6 +217,11 @@ export async function createTaskCommentWithDb(
       taskCommentId = generatedIds?.task_comment_id;
       threadId = generatedIds?.thread_id;
 
+      if (audienceDecided) {
+        threadAudienceColumns = await nativeThreadAudience(trx, tenant, {
+          isInternal, authorType: 'internal', audience: namedAudience, author, taskId: comment.taskId,
+        });
+      }
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: threadId,
@@ -177,7 +229,7 @@ export async function createTaskCommentWithDb(
         project_task_id: comment.taskId,
         root_comment_id: taskCommentId,
         // Native task comments are organization-private in a co-managed workspace; legacy rows stay NULL.
-        ...(collaboration ? { is_internal: true, collaboration_audience: 'organization_private' } : { is_internal: false }),
+        ...(collaboration ? { is_internal: true, collaboration_audience: 'organization_private' } : { is_internal: isInternal, ...threadAudienceColumns }),
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -266,7 +318,7 @@ export async function listTaskCommentsWithDb(
   db: Knex,
   tenant: string,
   taskId: string,
-  options: TaskCommentCollaborationOptions & { viewerUserId?: string } = {},
+  options: TaskCommentCollaborationOptions & { viewerUserId?: string; viewerUserType?: string } = {},
 ): Promise<IProjectTaskCommentWithUser[]> {
   const { collaboration } = options;
   const commentsQuery = tenantScopedTable(db, 'project_task_comments', tenant);
@@ -290,6 +342,24 @@ export async function listTaskCommentsWithDb(
     for (const thread of threads) threadAudience.set(thread.thread_id, projectTaskAudience(thread));
   }
   const rootDeleted = new Set<string>(comments.filter((c: any) => !c.parent_comment_id && c.deleted_at).map((c: any) => c.thread_id));
+
+  // A governed reader (a seat technician) reads a thread only when its audience is visible to their organization,
+  // by the same predicate every other reader uses. Nobody else pays for it: `governed` comes from the project decision.
+  const audienceOf = new Map<string, CommentAudience>();
+  if (options.governed && !collaboration) {
+    const reader = await resolveCommentAudienceReader(db, tenant, { userId: options.viewerUserId ?? '', userType: options.viewerUserType ?? 'internal' });
+    const owner = await resolveTaskCommentWriteOwner(db, tenant, taskId);
+    const threads = await tenantScopedTable(db, 'comment_threads', tenant)
+      .where({ project_task_id: taskId }).whereNull('ticket_id')
+      .select('thread_id', 'collaboration_audience', 'is_internal') as any[];
+    for (const thread of threads) {
+      const audience = resolveCommentAudienceForRead(thread);
+      if (isCommentAudienceVisible(audience, owner, reader)) audienceOf.set(thread.thread_id, audience);
+    }
+    for (let i = comments.length - 1; i >= 0; i--) {
+      if (!audienceOf.has(comments[i].thread_id)) comments.splice(i, 1);
+    }
+  }
 
   // Get avatar URLs for all users
   const userIds: string[] = [
@@ -322,7 +392,7 @@ export async function listTaskCommentsWithDb(
       email: comment.email,
       avatarUrl: avatarUrls.get(comment.user_id) || null,
     };
-    if (!collaboration) return base;
+    if (!collaboration) return audienceOf.size > 0 ? { ...base, audience: audienceOf.get(comment.thread_id) } : base;
 
     // A missing author kind is a row written before contact authorship existed: a user.
     const authorKind: 'user' | 'contact' = comment.author_kind === 'contact' ? 'contact' : 'user';

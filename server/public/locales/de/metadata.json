@@ -374,6 +374,10 @@
       "title": "Asset-Inventar",
       "custody": {
         "title": "Equipment in Verwahrung"
+      },
+      "audits": {
+        "title": "Standort-Audits",
+        "detailTitle": "Standort-Audit"
       }
     },
     "chat": {
@@ -553,6 +557,9 @@
       },
       "export": {
         "title": "Arbeitsbereich exportieren"
+      },
+      "upgrade": {
+        "title": "Zu AlgaPSA wechseln"
       }
     }
   },

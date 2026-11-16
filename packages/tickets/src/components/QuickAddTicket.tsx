@@ -13,7 +13,6 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
-import { addTicketResource } from '../actions/ticketResourceActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
@@ -255,6 +254,7 @@ export function QuickAddTicket({
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // True once a "Create + View" navigation has been handed to onViewCreatedTicket. The
   // navigation is a slow RSC fetch during which this modal is still mounted; keep the actions
@@ -713,14 +713,15 @@ export function QuickAddTicket({
     if (!updateMetadata) return;
 
     updateMetadata({
-      helperText: error || undefined,
+      helperText: error || validationErrors.join('\n') || undefined,
       open: open,
     });
-  }, [error, open]);
+  }, [error, validationErrors, open]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError(null);
+      setValidationErrors([]);
     }
   };
 
@@ -1093,6 +1094,7 @@ export function QuickAddTicket({
       setDueDate(undefined);
     }
     setError(null);
+    setValidationErrors([]);
     setHasAttemptedSubmit(false);
     ticketCreatedRef.current = false;
     setTicketCreated(false);
@@ -1286,11 +1288,13 @@ export function QuickAddTicket({
     }
     setHasAttemptedSubmit(true);
 
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join('\n'));
+    const missingFields = validateForm();
+    setValidationErrors(missingFields);
+    if (missingFields.length > 0) {
+      setError(null);
       return;
     }
+    setError(null);
 
     createInFlightRef.current = true;
     setIsSubmitting(true);
@@ -1352,6 +1356,9 @@ export function QuickAddTicket({
       }
       if (watcherIds.length > 0) {
         formData.append('watcher_ids', JSON.stringify(watcherIds));
+      }
+      if (tempAdditionalAgents.length > 0) {
+        formData.append('additional_agent_ids', JSON.stringify(tempAdditionalAgents.map((agent) => agent.user_id)));
       }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
@@ -1427,20 +1434,6 @@ export function QuickAddTicket({
           toast.error(teamError instanceof Error
             ? teamError.message
             : t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
-        }
-      }
-
-      // Add additional agents as ticket resources
-      if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
-        for (const agent of tempAdditionalAgents) {
-          try {
-            const resourceResult = await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
-            if (isReturnedActionError(resourceResult)) {
-              throw new Error(getErrorMessage(resourceResult));
-            }
-          } catch (agentError) {
-            console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
-          }
         }
       }
 
@@ -1622,16 +1615,22 @@ export function QuickAddTicket({
             </div>
           ) : (
             <>
-                  {hasAttemptedSubmit && error && (
+              {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
                     <p className="font-medium mb-2">{t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      {error.split('\n').map((err, index) => (
+                      {validationErrors.map((err, index) => (
                         <li key={index}>{err}</li>
                       ))}
                     </ul>
                   </AlertDescription>
+                </Alert>
+              )}
+
+              {hasAttemptedSubmit && error && (
+                <Alert variant="destructive" className="mb-4" data-testid="quick-add-ticket-error">
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 

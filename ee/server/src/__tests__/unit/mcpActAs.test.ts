@@ -97,4 +97,24 @@ describe('MCP act_as_user_id (T024)', () => {
     expect(init.headers['x-alga-act-as']).toBeUndefined();
     expect(mocks.writeAgentAudit).toHaveBeenCalledWith(expect.objectContaining({ actAsUserId: null }));
   });
+
+  it.each([{}, { act_as_user_id: HUMAN }])('reports a downgrade as forbidden before dispatch (%j)', async (args) => {
+    mocks.mintAgentSessionKey.mockRejectedValueOnce(Object.assign(
+      new Error('This feature requires the Pro plan or higher.'),
+      { code: 'TIER_ACCESS_DENIED', statusCode: 403 },
+    ));
+
+    const response = await handleMcpJsonRpc(rpc(args));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'This feature requires the Pro plan or higher.' });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.writeAgentAudit).not.toHaveBeenCalled();
+  });
+
+  it('does not misreport an unexpected session-key failure as a tier denial', async () => {
+    mocks.mintAgentSessionKey.mockRejectedValueOnce(new Error('database unavailable'));
+    await expect(handleMcpJsonRpc(rpc({}))).rejects.toThrow('database unavailable');
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
 });

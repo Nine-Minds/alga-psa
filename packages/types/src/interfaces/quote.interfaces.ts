@@ -90,6 +90,18 @@ export interface IQuoteActivity extends TenantEntity {
  */
 export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
 
+/** Display projection of a quote_decisions row. */
+export interface IQuoteDecisionSummary {
+  decision_id: string;
+  decision: 'accepted' | 'rejected';
+  method: 'portal' | 'email_link' | 'msp_marked';
+  signer_name?: string | null;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  comment?: string | null;
+  decided_at: ISO8601String;
+}
+
 export interface IQuote extends TenantEntity {
   quote_id: string;
   quote_number?: string | null;
@@ -124,6 +136,8 @@ export interface IQuote extends TenantEntity {
   accepted_at?: ISO8601String | null;
   accepted_by?: string | null;
   accepted_by_name?: string | null;
+  /** Decision audit rows, newest first (from quote_decisions). Populated by getQuote. */
+  decisions?: IQuoteDecisionSummary[];
   rejected_at?: ISO8601String | null;
   rejection_reason?: string | null;
   cancelled_at?: ISO8601String | null;
@@ -404,6 +418,22 @@ export interface QuoteViewModel {
   has_multiple_locations?: boolean;
   accepted_by_name?: string | null;
   accepted_at?: ISO8601String | null;
+  /**
+   * Who accepted the quote and how. Populated only when the renderer is handed
+   * acceptance details (the signed copy of a quote accepted through an emailed
+   * link); null/absent for every other render, so a sent quote is unchanged.
+   */
+  acceptance?: QuoteViewModelAcceptance | null;
+}
+
+/** The acceptance record shown on a signed quote copy. */
+export interface QuoteViewModelAcceptance {
+  signer_name: string;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  accepted_at: ISO8601String;
+  method: string;
+  ip_address?: string | null;
 }
 
 export type QuoteDocumentTemplateSource = 'standard' | 'custom';

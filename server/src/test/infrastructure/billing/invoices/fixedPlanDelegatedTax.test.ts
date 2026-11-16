@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import { updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -15,7 +14,8 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate,
   ensureClientPlanBundlesTable,
-  unwrapInvoiceResult
+  unwrapInvoiceResult,
+  generateInvoiceForCycle
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -244,7 +244,7 @@ describe('Fixed-plan invoice tax when tax is delegated to the accounting system'
     const { billingCycleId } = await setupPlan();
     await delegateTaxForClient();
     const invoice = unwrapInvoiceResult<{ invoice_id: string; tax: number; subtotal: number }>(
-      await generateInvoice(billingCycleId)
+      await generateInvoiceForCycle(billingCycleId)
     );
     const row = await context.db('invoices')
       .where({ tenant: context.tenantId, invoice_id: invoice.invoice_id })
@@ -300,7 +300,7 @@ describe('Fixed-plan invoice tax when tax is delegated to the accounting system'
   it('keeps the invariant across an internal -> pending_external -> internal round trip', async () => {
     const { billingCycleId } = await setupPlan();
     const invoice = unwrapInvoiceResult<{ invoice_id: string; tax: number }>(
-      await generateInvoice(billingCycleId)
+      await generateInvoiceForCycle(billingCycleId)
     );
 
     const internal = await planRows(invoice.invoice_id);

@@ -150,7 +150,12 @@
         "priorityCalculated": "Prioriteit (berekend)",
         "selectImpactAndUrgency": "Selecteer impact en urgentie",
         "priorityFormula": "{{label}} (Impact {{impact}} x Urgentie {{urgency}})",
-        "titleFieldKey": "Sleutel titelveld",
+        "ticketSubject": "Onderwerp van het ticket",
+        "ticketSubjectHelp": "Antwoorden worden ingevuld wanneer het verzoek wordt ingediend. Laat leeg om het eerste antwoord te gebruiken.",
+        "insertField": "Veld invoegen",
+        "noInsertableFields": "Dit formulier heeft nog geen velden om in te voegen.",
+        "unknownFields": "Onbekend veld: {{fields}}",
+        "unknownFieldsBlocked": "Los de onbekende velden in het ticketonderwerp of het beschrijvingsvoorvoegsel op voordat u opslaat.",
         "descriptionPrefix": "Beschrijvingsprefix",
         "save": "Ticketrouting opslaan"
       },

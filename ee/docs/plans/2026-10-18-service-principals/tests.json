@@ -290,7 +290,7 @@
   {
     "id": "T030",
     "description": "Component: Service principals tab lists principals with kind badges and display names, shows 'x of y', disables New at the limit; create dialog saves roles and act-as",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F079",
@@ -301,7 +301,7 @@
   {
     "id": "T031",
     "description": "Component: Manage keys dialog shows the new key once, revokes and rotates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080",
       "F028"
@@ -310,7 +310,7 @@
   {
     "id": "T032",
     "description": "Component: AccountManagement and LicenseManagementPage render the service-principal usage row; MCP settings shows the shared limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F077",
@@ -320,7 +320,7 @@
   {
     "id": "T033",
     "description": "Component: ticket activity and time-entry detail render '<human> via <principal>'; service-authored comment renders Service badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -328,15 +328,15 @@
   {
     "id": "T034",
     "description": "Component: API keys admin list shows principal name + Service badge for principal-owned keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
   },
   {
     "id": "T035",
-    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused",
-    "implemented": true,
+    "description": "DB integration (EE): below Pro, createServicePrincipal/createAgent, reactivation and key issuance are refused; pre-existing and newly migrated API/MCP principals cannot authenticate, mint session keys or dispatch. Exercise Pro to Essentials downgrade with previously valid API keys, IdP tokens and minted MCP session keys (including act-as): the next authentication/dispatch is denied without a grace period, records/attribution remain, tier lookup errors deny access, and returning to Pro permits otherwise valid credentials but never revives revoked/expired keys or inactive/archived principals. Verify hosted/appliance parity and unaffected human-owned API/MCP access",
+    "implemented": false,
     "featureIds": [
       "F092",
       "F093",
@@ -345,8 +345,8 @@
   },
   {
     "id": "T036",
-    "description": "Component: below Pro the Service principals tab and MCP agent create show the upgrade notice, grandfathered principals list with deactivate/delete only, and the license page row reads 'Available on Pro'",
-    "implemented": false,
+    "description": "Component: below Pro the Service principals tab and MCP agent create show the standard upgrade notice; existing principals/agents remain visible for deactivate/delete cleanup with explicit API/MCP access-blocked copy and no grandfathering/continued-use claim; account and license rows read 'Available on Pro', retain seat-use copy/settings link, and any existing count is labeled blocked by plan; Pro usage/capacity behavior is unchanged",
+    "implemented": true,
     "featureIds": [
       "F095"
     ]

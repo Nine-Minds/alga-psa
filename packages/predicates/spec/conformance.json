@@ -1155,6 +1155,187 @@
       }
     },
     {
+      "id": "scalar-not-contains",
+      "description": "not_contains is exactly NOT contains: a missing, empty or non-string value satisfies it, a present string that matches does not, matching is case-sensitive",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "ell"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "s": "HELLO"
+          },
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "boolean",
+          "record": {
+            "s": true
+          },
+          "expected": true
+        },
+        {
+          "id": "object",
+          "record": {
+            "s": {
+              "a": 1
+            }
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-contains-ci",
+      "description": "contains_ci follows the shared text matching contract",
+      "covers": {
+        "operators": [
+          "contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains_ci",
+        "value": "ELL"
+      },
+      "rows": [
+        {
+          "id": "present-match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": true
+        },
+        {
+          "id": "present-miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-ci",
+      "description": "not_contains_ci follows the shared text matching contract",
+      "covers": {
+        "operators": [
+          "not_contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains_ci",
+        "value": "ELL"
+      },
+      "rows": [
+        {
+          "id": "present-match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "present-miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-contains-ci-like-metacharacters",
+      "description": "contains_ci treats SQL LIKE metacharacters as literal text",
+      "covers": {
+        "operators": [
+          "contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains_ci",
+        "value": "%_\\"
+      },
+      "rows": [
+        {
+          "id": "literal-match",
+          "record": {
+            "s": "prefix %_\\ suffix"
+          },
+          "expected": true
+        },
+        {
+          "id": "wildcard-only-miss",
+          "record": {
+            "s": "prefix xx suffix"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
       "id": "location-equals",
       "description": "equals on an id column: the ticket at that location, and nothing for a ticket with no location",
       "covers": {
@@ -1558,79 +1739,6 @@
       "skip": {
         "jsonata": "set-valued paths are not representable in the workflow condition adapter"
       }
-    },
-    {
-      "id": "scalar-not-contains",
-      "description": "not_contains is exactly NOT contains: a missing, empty or non-string value satisfies it, a present string that matches does not, matching is case-sensitive",
-      "covers": {
-        "operators": [
-          "not_contains"
-        ],
-        "pathKind": "scalar"
-      },
-      "predicate": {
-        "path": "s",
-        "operator": "not_contains",
-        "value": "ell"
-      },
-      "rows": [
-        {
-          "id": "match",
-          "record": {
-            "s": "hello"
-          },
-          "expected": false
-        },
-        {
-          "id": "non-match",
-          "record": {
-            "s": "world"
-          },
-          "expected": true
-        },
-        {
-          "id": "missing",
-          "record": {},
-          "expected": true
-        },
-        {
-          "id": "empty-string",
-          "record": {
-            "s": ""
-          },
-          "expected": true
-        },
-        {
-          "id": "case-differs",
-          "record": {
-            "s": "HELLO"
-          },
-          "expected": true
-        },
-        {
-          "id": "number",
-          "record": {
-            "s": 5
-          },
-          "expected": true
-        },
-        {
-          "id": "boolean",
-          "record": {
-            "s": true
-          },
-          "expected": true
-        },
-        {
-          "id": "object",
-          "record": {
-            "s": {
-              "a": 1
-            }
-          },
-          "expected": true
-        }
-      ]
     },
     {
       "id": "scalar-not-contains-empty-needle",

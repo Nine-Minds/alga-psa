@@ -1279,6 +1279,39 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     expect(rendered.html).toContain('-$5.00');
   });
 
+  it('drops a stacked line that repeats text the cell already shows', async () => {
+    const columns = [
+      {
+        id: 'description',
+        header: 'Description',
+        value: { type: 'path', path: 'description' },
+        lines: [
+          {
+            id: 'item-description',
+            value: { type: 'path', path: 'description' },
+            style: { inline: { fontWeight: 600 } },
+          },
+          {
+            id: 'catalog-description',
+            value: { type: 'path', path: 'catalog_description' },
+            style: { inline: { color: '#4b5563' } },
+          },
+        ],
+      },
+    ];
+
+    const repeated = await renderAst(columns, [
+      { description: ' Managed Support ', catalog_description: 'Managed Support' },
+    ]);
+    expect((repeated.html.match(/Managed Support/g) ?? []).length).toBe(1);
+
+    const distinct = await renderAst(columns, [
+      { description: 'Managed Support', catalog_description: 'Full-service support' },
+    ]);
+    expect(distinct.html).toContain('<div class="ast-table-cell-line" style="font-weight:600">Managed Support</div>');
+    expect(distinct.html).toContain('<div class="ast-table-cell-line" style="color:#4b5563">Full-service support</div>');
+  });
+
   it('renders the plain value exactly as before when a column has no lines', async () => {
     const rendered = await renderAst(
       [

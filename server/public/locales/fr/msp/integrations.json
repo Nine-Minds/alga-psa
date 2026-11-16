@@ -43,6 +43,40 @@
           "body": "{{client}} cesse d’être exporté vers le client QuickBooks {{customer}}. Rien ne change dans QuickBooks et vous pouvez l’associer de nouveau depuis cette liste à tout moment.",
           "confirm": "Dissocier",
           "cancel": "Conserver l’association"
+        },
+        "linkFailed": "Échec de l’association.",
+        "unlinkFailed": "Échec de la dissociation.",
+        "createFailed": "Échec de la création.",
+        "createFailedInQbo": "Échec de la création dans QuickBooks.",
+        "loadFailed": "Échec du chargement des associations de clients.",
+        "relink": "Réassocier",
+        "exact": "Correspondance exacte : {{name}}",
+        "suggestion": "Suggestion : {{name}}",
+        "linking": "Association en cours…",
+        "accept": "Accepter",
+        "confirm": "Confirmer",
+        "search": "Rechercher",
+        "searchPlaceholder": "Rechercher des clients QBO…",
+        "linkToCustomer": "Associer à un client QBO",
+        "creating": "Création en cours…",
+        "createInQbo": "Créer dans QuickBooks",
+        "leave": "Laisser tel quel",
+        "noCustomers": "Aucun client QBO trouvé.",
+        "noClients": "Aucun client trouvé.",
+        "notMapped": "Non associé",
+        "subCustomer": "sous-client",
+        "bulkLinked_one": "{{count}} correspondance exacte associée.",
+        "bulkLinked_other": "{{count}} correspondances exactes associées.",
+        "bulkFailed": "Échec de l’acceptation en masse.",
+        "exactReady_one": "{{count}} correspondance exacte de nom prête à être acceptée",
+        "exactReady_other": "{{count}} correspondances exactes de nom prêtes à être acceptées",
+        "accepting": "Acceptation en cours…",
+        "acceptExact_one": "Accepter {{count}} correspondance exacte",
+        "acceptExact_other": "Accepter {{count}} correspondances exactes",
+        "columns": {
+          "client": "Client",
+          "customer": "Client QBO",
+          "action": "Action"
         }
       },
       "dialog": {
@@ -2223,7 +2257,41 @@
         "outstandingItemsReconnect": "Pour toutes les organisations liées. Ces éléments sont conservés jusqu’à la reconnexion de Xero.",
         "refreshTokenValidUntilProvider": "Autorisation {{provider}} valide jusqu’au {{date}}. Les jetons sont renouvelés automatiquement.",
         "syncSucceeded": "Synchronisation terminée",
-        "syncStopped": "Synchronisation arrêtée"
+        "syncStopped": "Synchronisation arrêtée",
+        "erroredOpsDialogTitle": "Opérations de synchronisation {{provider}} en erreur",
+        "erroredOpsDialogDescription": "Opérations qui ont échoué ou ont été ignorées après plusieurs tentatives.",
+        "erroredOpsOpen": "Afficher les opérations en erreur",
+        "erroredOpsColItem": "Élément",
+        "erroredOpsColOperation": "Opération",
+        "erroredOpsColError": "Erreur",
+        "erroredOpsColWhen": "Date",
+        "erroredOpsColBatch": "Lot d’export",
+        "erroredOpsLoading": "Chargement des opérations en erreur…",
+        "erroredOpsEmpty": "Aucune opération en erreur.",
+        "erroredOpsLoadError": "Impossible de charger les opérations en erreur.",
+        "erroredOpsNoError": "Aucun détail d’erreur n’a été enregistré.",
+        "erroredOpsBatchLink": "Afficher le lot {{batch}}",
+        "erroredOpsClose": "Fermer",
+        "erroredOpsDeleted": {
+          "invoice": "Facture supprimée",
+          "credit_memo": "Avoir supprimé",
+          "vendor_bill": "Facture fournisseur supprimée",
+          "payment": "Paiement supprimé",
+          "credit_application": "Imputation de crédit supprimée",
+          "other": "Élément indisponible"
+        },
+        "erroredOpsItem": {
+          "payment": "Paiement de {{invoice}}",
+          "creditApplication": "Crédit imputé à {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Exporter la facture",
+          "export_credit_memo": "Exporter l’avoir",
+          "export_vendor_bill": "Exporter la facture fournisseur",
+          "apply_credit": "Imputer le crédit",
+          "record_payment": "Enregistrer le paiement",
+          "void_invoice": "Annuler la facture"
+        }
       },
       "itemImport": {
         "description": "Importez vos produits et services QuickBooks dans le catalogue de services Alga pour l’entreprise QuickBooks connectée. QuickBooks reste la source de référence pour les noms, tarifs, SKU, descriptions et coûts ; le mode de facturation, l’unité de mesure et le type de service sont définis ici, puis gérés par Alga. Cette étape est facultative : cliquez sur Suivant pour l’ignorer.",
@@ -2435,6 +2503,42 @@
           "title": "Fenêtres de maintenance",
           "description": "Les alertes reçues pendant une fenêtre active sont supprimées et ne créent pas de tickets.",
           "empty": "Aucune fenêtre de maintenance configurée."
+        },
+        "predicate": {
+          "matchAll": "Correspondance",
+          "all": "Toutes les conditions",
+          "any": "N’importe quelle condition",
+          "add": "Ajouter une condition",
+          "remove": "Supprimer",
+          "value": "Valeur",
+          "nestedGroup": "Groupe imbriqué",
+          "legacyRegex": "Expression régulière héritée du message",
+          "and": "et",
+          "or": "ou",
+          "fields": {
+            "severity": "Gravité",
+            "alertClass": "Classe d’alerte",
+            "activityType": "Type d’activité",
+            "sourceType": "Type de source",
+            "organizationId": "ID de l’organisation",
+            "text": "Message et détails",
+            "deviceName": "Nom de l’appareil",
+            "externalDeviceId": "ID externe de l’appareil",
+            "message": "Message",
+            "details": "Détails"
+          },
+          "operators": {
+            "equals": "est",
+            "not_equals": "n’est pas",
+            "in": "est une valeur parmi",
+            "not_in": "n’est aucune des valeurs",
+            "contains": "contient",
+            "not_contains": "ne contient pas",
+            "contains_ci": "contient, sans tenir compte de la casse",
+            "not_contains_ci": "ne contient pas, sans tenir compte de la casse"
+          },
+          "addGroup": "Ajouter un groupe",
+          "removeGroup": "Supprimer le groupe"
         }
       },
       "ninjaOne": {
@@ -3084,6 +3188,138 @@
           "showSecret": "Afficher le secret",
           "title": "Webhook d'alertes",
           "url": "URL du webhook"
+        }
+      },
+      "unifi": {
+        "proFeature": {
+          "description": "L’intégration UniFi est disponible dans AlgaPSA Pro."
+        },
+        "actions": {
+          "saveConfiguration": "Enregistrer la configuration",
+          "testConnection": "Revérifier toutes les clés",
+          "disconnect": "Déconnecter",
+          "discoverSites": "Découvrir les sites",
+          "runDeviceSync": "Lancer la synchronisation des appareils",
+          "checkOfflineNow": "Vérifier les appareils hors ligne maintenant",
+          "saveAlerting": "Enregistrer les paramètres d'alerte"
+        },
+        "alerting": {
+          "title": "Alertes hors ligne",
+          "description": "Un appareil qui reste hors ligne plus longtemps que le délai de grâce déclenche une alerte et, si vos règles d'alerte le prévoient, un ticket. L'alerte est résolue lorsque l'appareil revient en ligne.",
+          "graceMinutes": "Délai de grâce hors ligne (minutes)",
+          "graceHelp": "Durée pendant laquelle un appareil doit rester hors ligne en continu avant qu'une alerte ne soit déclenchée. Utilisez 0 pour alerter immédiatement.",
+          "rulesNote": "La création de tickets, les priorités et la résolution automatique se configurent dans les règles d'alerte ci-dessous."
+        },
+        "connection": {
+          "title": "Connexion UniFi",
+          "description": "Connectez-vous avec une ou plusieurs clés d’API UniFi. Une clé Site Manager créée sous Independent atteint vos consoles indépendantes ; une clé créée sous une fabric n’atteint que cette fabric, ajoutez donc une clé par fabric. Les clés de contrôleur local fonctionnent pour un contrôleur que vous joignez directement. Les passerelles, commutateurs et points d’accès adoptés sont synchronisés.",
+          "syncLabel": "Synchronisation : {{status}}",
+          "syncLabelWithError": "Synchronisation : {{status}} ({{error}})",
+          "connectedAt": "Connecté : {{time}}",
+          "never": "jamais"
+        },
+        "errors": {
+          "loadSettings": "Échec du chargement des paramètres UniFi",
+          "loadMappings": "Échec du chargement des correspondances de sites UniFi",
+          "loadSummary": "Échec du chargement du résumé de connexion UniFi",
+          "loadState": "Échec du chargement de l'état de l'intégration UniFi",
+          "saveConfiguration": "Échec de l'enregistrement de la configuration UniFi",
+          "testConnectionFailed": "Échec du test de connexion",
+          "disconnectFailed": "Échec de la déconnexion de l'intégration UniFi",
+          "siteSyncFailed": "Échec de la découverte des sites",
+          "deviceSyncFailed": "Échec de la synchronisation des appareils",
+          "updateMappingFailed": "Échec de la mise à jour de la correspondance",
+          "reconnectRequired": "UniFi a refusé toutes les clés d’API enregistrées. Remplacez une clé ci-dessous pour reprendre la synchronisation.",
+          "alertCheckFailed": "Échec de la vérification hors ligne",
+          "saveAlertingFailed": "Échec de l'enregistrement des paramètres d'alerte",
+          "invalidGraceMinutes": "Saisissez un nombre entier de minutes compris entre 0 et 1440."
+        },
+        "fields": {
+          "apiKey": "Clé d'API ({{state}})",
+          "apiKeyStateSaved": "enregistrée",
+          "apiKeyStateRequired": "obligatoire",
+          "apiKeyPlaceholderExisting": "Clé enregistrée. Saisissez une nouvelle clé pour la remplacer",
+          "apiKeyPlaceholderNew": "Collez votre clé d'API UniFi",
+          "connectionMode": "Mode de connexion",
+          "modeSiteManager": "Site Manager (dans le cloud)",
+          "modeLocal": "Contrôleur local",
+          "localBaseUrl": "URL du contrôleur",
+          "localBaseUrlPlaceholder": "https://unifi.example.com"
+        },
+        "mappings": {
+          "site": "Site UniFi",
+          "reachedBy": "Accessible via",
+          "mappedClient": "Client associé",
+          "defaultContact": "Contact par défaut",
+          "selectContact": "Sélectionner un contact",
+          "autoSync": "Synchronisation automatique",
+          "autoSyncEnabled": "Activée",
+          "autoSyncDisabled": "Désactivée"
+        },
+        "status": {
+          "label": "Statut : ",
+          "connected": "Connecté",
+          "disconnected": "Non connecté",
+          "reconnectRequired": "Reconnexion requise"
+        },
+        "success": {
+          "configurationSaved": "Configuration UniFi enregistrée",
+          "connectionTestSucceeded": "Connexion à UniFi réussie",
+          "disconnected": "Intégration UniFi déconnectée",
+          "siteSyncCompleted": "Découverte des sites terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "deviceSyncCompleted": "Synchronisation des appareils terminée : {{processed}} traités, {{created}} créés, {{updated}} mis à jour",
+          "alertCheckCompleted": "Vérification hors ligne terminée",
+          "alertingSaved": "Paramètres d'alerte enregistrés"
+        },
+        "sync": {
+          "title": "Synchronisation et correspondances de sites",
+          "description": "Découvrez les sites UniFi et associez chacun à un client. Les appareils des sites non associés sont ignorés.",
+          "summary": "{{mappedSites}} sites associés · {{devices}} appareils · {{activeAlerts}} alertes actives"
+        },
+        "credentials": {
+          "columns": {
+            "label": "Clé",
+            "type": "Type",
+            "status": "Statut",
+            "consoles": "Consoles accessibles",
+            "lastError": "Dernière erreur",
+            "lastChecked": "Dernière vérification",
+            "actions": "Actions"
+          },
+          "statusActive": "Active",
+          "statusReconnect": "Clé refusée",
+          "statusDisabled": "Désactivée",
+          "noConsoles": "Aucune pour l’instant",
+          "unreachableTitle": "Certaines consoles sont visibles, mais aucune de vos clés ne peut y accéder.",
+          "unreachableAction": "Si une console appartient à une fabric, ajoutez une clé créée sous cette fabric. Créez-la dans UniFi Site Manager avec cette fabric sélectionnée.",
+          "firstKeyHelp": "Collez une clé d’API UniFi pour vous connecter. Vous pourrez ajouter d’autres clés plus tard, par exemple une par fabric.",
+          "addHelp": "Une clé créée sous Independent atteint vos consoles indépendantes. Une clé créée sous une fabric n’atteint que cette fabric : ajoutez-en une par fabric.",
+          "labelField": "Libellé",
+          "labelPlaceholderFirst": "Par défaut",
+          "labelPlaceholder": "Par exemple : fabric Acme",
+          "keyField": "Clé d’API",
+          "addKey": "Ajouter la clé",
+          "addAnother": "Ajouter une autre clé",
+          "cancel": "Annuler",
+          "replaceKey": "Remplacer la clé",
+          "replaceTitle": "Remplacer la clé : {{label}}",
+          "replaceHelp": "La nouvelle clé est vérifiée avant de remplacer celle enregistrée. L’ancienne clé est supprimée.",
+          "replaceUrlField": "URL du contrôleur (laissez vide pour conserver celle enregistrée)",
+          "newKeyField": "Nouvelle clé d’API",
+          "rename": "Renommer",
+          "renameTitle": "Renommer la clé",
+          "remove": "Supprimer",
+          "actionsMenu": "Actions pour {{label}}",
+          "removeTitle": "Supprimer la clé : {{label}}",
+          "removeWarning": "Ces sites associés utilisent cette clé. Ils conservent leur association client et leurs actifs, mais cessent de se synchroniser tant qu’une autre clé n’atteint pas leur console.",
+          "added": "Clé d’API ajoutée",
+          "replaced": "Clé d’API remplacée",
+          "renamed": "Libellé mis à jour",
+          "removed": "Clé d’API supprimée",
+          "addFailed": "Échec de l’ajout de la clé d’API",
+          "replaceFailed": "Échec du remplacement de la clé d’API",
+          "renameFailed": "Échec de la mise à jour du libellé",
+          "removeFailed": "Échec de la suppression de la clé d’API"
         }
       },
       "huntress": {

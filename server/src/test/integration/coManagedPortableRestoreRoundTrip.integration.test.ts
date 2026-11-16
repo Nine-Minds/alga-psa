@@ -1,5 +1,5 @@
 /**
- * CM L7b2 A6 — portable restore round trip against a real migrated PostgreSQL.
+ * CM L8b — shipped-CLI restore and hosted activation against a complete CE+EE migrated PostgreSQL fixture.
  *
  * Source tenant (ticket + file) -> L7b1 contributors, collect, manifest and sealed archive (built in-test, nothing
  * checked in) -> restorePortableWorkspaceForInstallation into a fresh destination UUID. A third, unrelated tenant is
@@ -14,13 +14,19 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { copyFile, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { Knex } from 'knex';
+import Stripe from 'stripe';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { buildMergedEeMigrationsDir } from '../../../test-utils/eeMigrations';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { EmulatorHost } from '../../../../packages/emulators/host/src/index';
+import stripeEmulator from '../../../../packages/emulators/stripe/src/index';
+import { verifyPassword } from '../../../../packages/core/src/lib/encryption';
 
 vi.mock('../../../../packages/co-managed/src/portableExport', async importOriginal => ({
   ...(await importOriginal<any>()),
@@ -44,13 +50,42 @@ import { beginPortableRestoreUpload, cleanupPortableRestoreUploadsForInstallatio
 const require = createRequire(import.meta.url);
 const migrations = ['20261102120200_create_portable_workspace_restore_uploads.cjs', '20261102120100_create_portable_workspace_restores.cjs',
   '20261102120000_create_portable_restore_suspensions.cjs'].map(file => require(`../../../migrations/${file}`));
+// L8b's activation receipt has a foreign key to the L7b2 restore receipt. Keep the
+// test's L7b2 down/up cycle valid against the complete current migration sequence.
+const activationMigration = require('../../../migrations/20261106000200_create_portable_workspace_activations.cjs');
 
 const PASSPHRASE = 'round trip passphrase 2026 correct horse';
 const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64));
 const FILE_SHA = createHash('sha256').update(FILE_BYTES).digest('hex');
+let migrationsDir: string;
 let db: Knex, root: string, archivePath: string, storageRoot: string;
 let source: string, third: string, thirdClientId: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string, sourceFileId: string;
 const destination = randomUUID();
+
+function cliResult(stdout: string): Record<string, unknown> {
+  for (let start = stdout.indexOf('{'); start >= 0; start = stdout.indexOf('{', start + 1)) {
+    let depth = 0; let quoted = false; let escaped = false;
+    for (let end = start; end < stdout.length; end++) {
+      const char = stdout[end];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+        continue;
+      }
+      if (char === '"') quoted = true;
+      else if (char === '{') depth++;
+      else if (char === '}' && --depth === 0) {
+        try {
+          const parsed = JSON.parse(stdout.slice(start, end + 1));
+          if (parsed && typeof parsed === 'object' && 'status' in parsed && ('outcome' in parsed || 'entitlement_source' in parsed)) return parsed;
+        } catch { /* CLI logs may contain object-like fragments before its result. */ }
+        break;
+      }
+    }
+  }
+  throw new Error('CLI did not emit a restore result');
+}
 
 const testRegistry = (): PortableContributorRegistry => createCorePortableRegistry();
 
@@ -86,7 +121,10 @@ async function counts(tenant: string, tables: string[]) {
 }
 
 beforeAll(async () => {
-  db = await createTestDbConnection();
+  const fixtureDatabase = process.env.CM_L8B_RESTORE_FIXTURE_DB;
+  db = await createTestDbConnection(fixtureDatabase
+    ? { databaseName: fixtureDatabase, recreate: false, runSeeds: false }
+    : { migrationsDir: migrationsDir = buildMergedEeMigrationsDir() });
   root = await mkdtemp(join(tmpdir(), 'alga-l7b2-roundtrip-'));
   storageRoot = join(root, 'storage');
   process.env.STORAGE_DEFAULT_PROVIDER = 'local'; process.env.STORAGE_LOCAL_BASE_PATH = storageRoot;
@@ -167,7 +205,7 @@ beforeAll(async () => {
   await sealed.dispose(); await capture.collected.dispose();
 }, 600_000);
 
-afterAll(async () => { await db?.destroy(); if (root) await rm(root, { recursive: true, force: true }); });
+afterAll(async () => { await db?.destroy(); if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true }); if (root) await rm(root, { recursive: true, force: true }); });
 
 // vitest.config.ts shuffles test order. The restore is one stateful scenario (receipt state machine, idempotency and
 // freshness all depend on what ran before), so it is a single ordered test made of named steps.
@@ -179,9 +217,11 @@ describe('portable restore round trip (A6)', () => {
   it('migrates, restores, resumes, is idempotent and isolated, and refuses non-fresh installations', async () => {
     const request = () => ({ archivePath, passphrase: PASSPHRASE, destinationTenant: destination, sourceAdministratorUserId: sourceAdmin });
     await step('L7b2 migrations run down, up and up again', async () => {
+      await activationMigration.down(db);
       for (const migration of migrations) await migration.down(db);
       for (const table of ['portable_restore_suspensions', 'portable_workspace_restores', 'portable_workspace_restore_uploads']) expect(await db.schema.hasTable(table)).toBe(false);
       for (const migration of [...migrations].reverse()) await migration.up(db);
+      await activationMigration.up(db);
       for (const migration of [...migrations].reverse()) await migration.up(db); // expand-only and idempotent
       for (const table of ['portable_restore_suspensions', 'portable_workspace_restores', 'portable_workspace_restore_uploads']) expect(await db.schema.hasTable(table)).toBe(true);
     });
@@ -262,11 +302,21 @@ describe('portable restore round trip (A6)', () => {
       expect((await journal()).every(row => row.status !== 'committed')).toBe(true);
     });
 
-    await step('the same destination then restores in a single --apply', async () => {
+    await step('the shipped CLI restores the same destination in a single --apply', async () => {
       const provider = await localProvider();
-      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never });
+      const cli = spawnSync('npm', ['exec', '--', 'tsx', '--tsconfig', '../ee/server/tsconfig.json', 'scripts/restore-portable-workspace.ts',
+        '--apply', '--archive', archivePath, '--destination-tenant', destination, '--administrator-user-id', sourceAdmin], {
+        cwd: resolve(__dirname, '../../..'), encoding: 'utf8', timeout: 180_000,
+        env: { ...process.env, DB_NAME_SERVER: process.env.CM_L8B_RESTORE_FIXTURE_DB ?? process.env.TEST_DB_NAME ?? 'test_database',
+          FORCE_CAPABILITIES: '', ALGA_PORTABLE_RESTORE_PASSPHRASE: PASSPHRASE },
+      });
+      expect(cli.status, cli.stderr).toBe(0);
+      const result = cliResult(cli.stdout);
+      expect(result.status).toMatch(/remains suspended pending activation/);
+      const restoredReceipt = await db('portable_workspace_restores').where({ tenant: destination }).first();
+      expect(restoredReceipt).toMatchObject({ state: 'verified' });
       expect(result.outcome).toBe('restored');
-      expect(result.receipt.state).toBe('verified');
+      expect(result.receipt.administrator_user_id).toBe(restoredReceipt.administrator_user_id);
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(1);
       expect(await db('tickets').where({ tenant: destination })).toHaveLength(1);
       expect(await db('portable_restore_suspensions').where({ tenant: destination }).first()).toMatchObject({ reason: 'portable_restore_pending_activation' });
@@ -279,7 +329,7 @@ describe('portable restore round trip (A6)', () => {
       const files = await db('external_files').where({ tenant: destination });
       expect(files).toHaveLength(1);
       expect(files[0]).toMatchObject({ file_name: files[0].file_id, original_name: 'report.txt', mime_type: 'text/plain',
-        uploaded_by_id: result.receipt.administrator_user_id, is_deleted: false,
+        uploaded_by_id: restoredReceipt.administrator_user_id, is_deleted: false,
         metadata: { portable_restore: { version: 2, source_blob_id: expect.stringMatching(/^file:/), sha256: FILE_SHA } } });
       expect(files[0].file_id).not.toBe(sourceFileId);
       const stored = await provider.download(files[0].storage_path);
@@ -287,7 +337,7 @@ describe('portable restore round trip (A6)', () => {
       expect(Number(files[0].file_size)).toBe(FILE_BYTES.length);
       expect((await storedObjects()).filter(path => path.endsWith(files[0].storage_path.split('/').pop()))).toHaveLength(1); // the bytes landed once
       expect(await storedObjects()).toHaveLength(4); // source, promoted destination, and the live/referenced recovery objects
-      expect(await db('users').where({ tenant: destination, user_id: result.receipt.administrator_user_id }).first()).toBeTruthy();
+      expect(await db('users').where({ tenant: destination, user_id: restoredReceipt.administrator_user_id }).first()).toBeTruthy();
     });
 
     await step('rewrites every row: the written table set equals the archive manifest, and no row carries the source tenant', async () => {
@@ -369,12 +419,116 @@ describe('portable restore round trip (A6)', () => {
     });
 
     await step('refuses even an otherwise-empty destination when this installation already has a relationship', async () => {
-      await db('co_management_relationships').insert({ tenant: source, relationship_id: randomUUID(), sponsor_tenant: third,
+      const relationshipId = randomUUID();
+      await db('co_management_relationships').insert({ tenant: source, relationship_id: relationshipId, sponsor_tenant: third,
         sponsor_client_id: thirdClientId, state: 'active', accepted_by: sourceAdmin, accepted_at: db.fn.now() });
       const other = randomUUID();
       await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => localProvider() as never }))
         .rejects.toThrow(/already holds a co-managed relationship/);
       expect(await counts(other, tables)).toEqual({});
+      await db('co_management_relationships').where({ tenant: source, relationship_id: relationshipId }).delete();
+    });
+
+    await step('the shipped CLI activates this restored workspace with its own hosted subscription; replay keeps credentials and dispatch state', async () => {
+      const host = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
+      const priorStripeBase = process.env.STRIPE_API_BASE_URL;
+      try {
+        const started = await host.start();
+        const stripeBase = `http://127.0.0.1:${started.ports.stripe}`;
+        const control = `http://127.0.0.1:${started.controlPort}`;
+        const control$ = async (path: string, body: unknown = {}) => (await (await fetch(`${control}${path}`, {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+        })).json()) as any;
+        const secret = 'sk_test_l8b_restore_activation';
+        const productId = 'prod_l8b_restore_activation', priceId = 'price_l8b_restore_activation';
+        await control$('/control/stripe/seed/config', { secretKey: secret, publishableKey: 'pk_test_l8b_restore_activation' });
+        await control$('/control/stripe/seed/product', { id: productId, name: 'Independent PSA seats' });
+        await control$('/control/stripe/seed/price', { id: priceId, unitAmount: 2900, currency: 'eur', interval: 'month', product: productId });
+        const stripe = new Stripe(secret, { apiVersion: '2024-12-18.acacia' as any, host: '127.0.0.1', port: started.ports.stripe,
+          protocol: 'http', typescript: true });
+        const customer = await stripe.customers.create({ email: 'restored-owner@example.test', name: 'Restored owner', metadata: { tenant_id: destination } });
+        const core = (host.instance('stripe') as any).core;
+        const product = core.getProduct(productId);
+        const price = core.getPrice(priceId);
+        const subscription = core.createSubscription({ customer: customer.id, priceId, quantity: 2,
+          metadata: { tenant_id: destination, subscription_kind: 'independent_psa' }, status: 'active' });
+        const localCustomerId = randomUUID(), localProductId = randomUUID(), localPriceId = randomUUID();
+        await db('stripe_customers').insert({ tenant: destination, stripe_customer_id: localCustomerId,
+          stripe_customer_external_id: customer.id, email: customer.email, name: customer.name, metadata: customer.metadata });
+        await db('stripe_products').insert({ tenant: destination, stripe_product_id: localProductId,
+          stripe_product_external_id: product.id, name: product.name, product_type: 'license', metadata: product.metadata ?? {} });
+        await db('stripe_prices').insert({ tenant: destination, stripe_price_id: localPriceId,
+          stripe_price_external_id: price.id, stripe_product_id: localProductId, unit_amount: price.unit_amount,
+          currency: price.currency, billing_interval: price.recurring.interval, interval_count: price.recurring.interval_count,
+          metadata: price.metadata ?? {} });
+        await db('stripe_subscriptions').insert({ tenant: destination, stripe_subscription_external_id: subscription.id,
+          stripe_customer_id: localCustomerId, stripe_price_id: localPriceId, stripe_subscription_item_id: subscription.items.data[0].id,
+          quantity: 2, status: 'active', current_period_end: new Date(subscription.current_period_end * 1000),
+          metadata: subscription.metadata });
+
+        const password = 'Restored-Admin-Password-42!';
+        const operationId = randomUUID();
+        const runActivation = (inputPassword: string) => new Promise<{ status: number | null; stdout: string; stderr: string }>((resolveRun, rejectRun) => {
+          const child = spawn('npm', ['exec', '--', 'tsx', '--tsconfig', '../ee/server/tsconfig.json',
+            'scripts/restore-portable-workspace.ts', '--activate-hosted', '--destination-tenant', destination,
+            '--operation-id', operationId, '--password-stdin'], {
+            cwd: resolve(__dirname, '../../..'),
+            env: { ...process.env, DB_NAME_SERVER: process.env.CM_L8B_RESTORE_FIXTURE_DB ?? process.env.TEST_DB_NAME ?? 'test_database',
+              STRIPE_SECRET_KEY: secret, STRIPE_API_BASE_URL: stripeBase, STRIPE_ALGAPSA_USER_PRICE_ID: priceId, FORCE_CAPABILITIES: '' },
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+          let stdout = '', stderr = '';
+          const timer = setTimeout(() => child.kill('SIGTERM'), 240_000);
+          child.stdout.setEncoding('utf8').on('data', chunk => { stdout += chunk; });
+          child.stderr.setEncoding('utf8').on('data', chunk => { stderr += chunk; });
+          child.once('error', error => { clearTimeout(timer); rejectRun(error); });
+          child.once('close', status => { clearTimeout(timer); resolveRun({ status, stdout, stderr }); });
+          child.stdin.end(inputPassword);
+        });
+        const activated = await runActivation(password);
+        expect(activated.status, activated.stderr).toBe(0);
+        expect(activated.stderr).not.toMatch(/failed during (activation module loading|database connection)/);
+        expect(activated.stdout + activated.stderr).not.toContain(password);
+        const activationResult = cliResult(activated.stdout);
+        expect(activationResult).toMatchObject({ status: expect.stringMatching(/activation recorded/), tenant: destination,
+          entitlement_source: 'hosted_subscription', entitlement_reference: subscription.id, operation_id: operationId });
+        const retained = await db('portable_workspace_activations').where({ tenant: destination }).first();
+        const restoredReceipt = await db('portable_workspace_restores').where({ tenant: destination }).first();
+        expect(retained).toMatchObject({ operation_id: operationId, administrator_user_id: restoredReceipt.administrator_user_id,
+          entitlement_source: 'hosted_subscription', entitlement_reference: subscription.id, seats: 2 });
+        const users = await db('users').where({ tenant: destination }).select('user_id', 'is_inactive', 'hashed_password');
+        const admin = users.find(user => user.user_id === restoredReceipt.administrator_user_id)!;
+        expect(admin.is_inactive).toBe(false);
+        expect(await verifyPassword(password, admin.hashed_password)).toBe(true);
+        expect(users.filter(user => user.user_id !== admin.user_id).length).toBeGreaterThan(0);
+        expect(users.filter(user => user.user_id !== admin.user_id).every(user => user.is_inactive === true)).toBe(true);
+        const workflows = await db('workflow_definitions').where({ tenant: destination }).select('workflow_id', 'is_paused');
+        expect(workflows.length).toBeGreaterThan(0);
+        expect(workflows.every(workflow => workflow.is_paused === true)).toBe(true);
+        expect(await db('asset_maintenance_schedules').where({ tenant: destination, is_active: true })).toHaveLength(0);
+        expect(await db('comments').where({ tenant: destination, publish_state: 'scheduled' })).toHaveLength(0);
+        expect(await db('online_meetings').where({ tenant: destination }).whereIn('status', ['scheduled', 'ended', 'recording_pending', 'cancel_pending'])).toHaveLength(0);
+        expect(await db('availability_settings').whereRaw("tenant = ? AND config_json->>'auto_approval_enabled' = 'true'", [destination])).toHaveLength(0);
+        expect(await db('portable_restore_suspensions').where({ tenant: destination }).whereNull('released_at')).toHaveLength(0);
+
+        const replayPassword = 'Replay-Must-Not-Replace-42!';
+        const replay = await runActivation(replayPassword);
+        expect(replay.status, replay.stderr).toBe(0);
+        expect(replay.stdout + replay.stderr).not.toContain(replayPassword);
+        expect(cliResult(replay.stdout)).toMatchObject({ tenant: destination, operation_id: operationId,
+          entitlement_reference: subscription.id });
+        const replayAdmin = await db('users').where({ tenant: destination, user_id: admin.user_id }).first('hashed_password', 'is_inactive');
+        expect(replayAdmin.hashed_password).toBe(admin.hashed_password);
+        expect(await verifyPassword(password, replayAdmin.hashed_password)).toBe(true);
+        expect(await verifyPassword(replayPassword, replayAdmin.hashed_password)).toBe(false);
+        expect(await db('portable_workspace_activations').where({ tenant: destination })).toHaveLength(1);
+        expect(await db('portable_restore_suspensions').where({ tenant: destination }).whereNull('released_at')).toHaveLength(0);
+        expect((await db('workflow_definitions').where({ tenant: destination }).where('is_paused', false)).length).toBe(0);
+      } finally {
+        process.env.STRIPE_API_BASE_URL = priorStripeBase;
+        if (priorStripeBase === undefined) delete process.env.STRIPE_API_BASE_URL;
+        await host.stop();
+      }
     });
 
   }, 1_200_000);

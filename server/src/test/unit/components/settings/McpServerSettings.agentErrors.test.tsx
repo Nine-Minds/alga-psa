@@ -7,6 +7,10 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
 
+vi.mock('@/context/TierContext', () => ({
+  useTier: () => ({ hasFeature: () => true, isLoading: false }),
+}));
+
 const LIMIT_MSG =
   "You've reached your service principal limit (10). Delete or deactivate a service principal to free a slot.";
 
