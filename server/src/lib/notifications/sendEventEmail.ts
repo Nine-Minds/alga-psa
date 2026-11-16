@@ -295,6 +295,48 @@ export async function appendOutboundMessageIdReference(
 }
 
 /**
+ * The conversation title pinned for a ticket's customer-facing email subject.
+ *
+ * Mail clients thread on the subject of the *first* message (RFC 2822), so a rename must not change the subject
+ * once the customer has seen it. The first customer-facing send for a ticket records its title in
+ * `tickets.email_metadata.threadSubjectTitle`; every later send reuses it. The write is first-writer-wins
+ * (`WHERE ... IS NULL`) so two concurrent sends cannot clobber the pin, and it deliberately touches neither
+ * `updated_at` nor `updated_by` for the same reason as appendOutboundMessageIdReference: this is email bookkeeping,
+ * not ticket activity. Any failure falls back to the current title — the subject path must never block or fail a send.
+ */
+export async function resolveThreadSubjectTitle(
+  db: TenantDb,
+  knex: { raw: (sql: string, bindings?: any[]) => any },
+  ticketId: string,
+  currentTitle: string
+): Promise<string> {
+  try {
+    const row = await db.table('tickets').where({ ticket_id: ticketId }).first();
+    const metadata = (row?.email_metadata ?? null) as Record<string, unknown> | null;
+    const pinned = metadata?.['threadSubjectTitle'];
+    if (typeof pinned === 'string' && pinned.trim() !== '') {
+      return pinned;
+    }
+    await db.table('tickets')
+      .where({ ticket_id: ticketId })
+      .whereRaw(`COALESCE(email_metadata->>'threadSubjectTitle', '') = ''`)
+      .update({
+        email_metadata: knex.raw(
+          `jsonb_set(COALESCE(email_metadata, '{}'::jsonb), '{threadSubjectTitle}', to_jsonb(?::text))`,
+          [currentTitle]
+        ),
+      });
+    return currentTitle;
+  } catch (error) {
+    logger.warn('[SendEventEmail] Could not pin the ticket thread subject; using the current title', {
+      ticketId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return currentTitle;
+  }
+}
+
+/**
  * Which delivery-ledger row (if any) a single send claims. A co-managed caller names its own
  * ledger via `params.delivery`; otherwise a managed comment-attachment send claims the comment's
  * row keyed on the `To` recipient alone — Cc/Bcc addresses never claim a comment's delivery.
@@ -623,23 +665,33 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
-    // Ticket emails: a tenant-customised subject is kept and only tagged with
-    // [Ticket #N]. Default subjects (system template / subscriber default) become
-    // the uniform `[Ticket #N] <title>` so every event type shares one subject and
-    // mail clients group them into one conversation. The title is read after
-    // sponsor projection so a redacted title stays redacted.
+    // Customer-facing ticket mail carries ONE subject per ticket:
+    // `<Re:/Fwd:>[Ticket #N] <thread title>`, whatever the event type rendered.
+    // Mail clients thread on matching subjects as well as RFC headers, so a subject
+    // that changes per event splits one ticket into a conversation per notification.
+    // The event type stays in the body heading; the rendered subject contributes only
+    // its reply/forward prefix. A tenant-customised ticket subject is superseded on
+    // purpose (a per-event custom subject re-forks the thread), and the thread title
+    // is pinned at the first send so a rename cannot fork it later. The title is read
+    // after sponsor projection so a redacted title stays redacted, and a projected
+    // title is never pinned for other recipients.
     if (params.replyContext?.ticketId) {
       const ticket = (params.context as { ticket?: { id?: unknown; ticket_number?: unknown; title?: unknown } } | undefined)?.ticket;
       const ticketNumber = ticket?.ticket_number ?? ticket?.id;
+      const renderedTitle = typeof ticket?.title === 'string' ? ticket.title.trim() : '';
       if (tenantCustomSubject) {
-        subject = normalizeTicketSubject(subject, ticketNumber);
+        logger.debug('[SendEventEmail] Tenant-customised ticket subject superseded by the uniform thread subject', {
+          template: params.template,
+          ticketId: params.replyContext.ticketId,
+        });
+      }
+      if (params.coManagedRecipient) {
+        subject = buildUniformTicketSubject(subject, ticketNumber, renderedTitle || 'Shared ticket');
+      } else if (renderedTitle) {
+        const threadTitle = await resolveThreadSubjectTitle(db, knex, params.replyContext.ticketId, renderedTitle);
+        subject = buildUniformTicketSubject(subject, ticketNumber, threadTitle);
       } else {
-        const hasTitle = typeof ticket?.title === 'string' && ticket.title.trim() !== '';
-        if (hasTitle || params.coManagedRecipient) {
-          subject = buildUniformTicketSubject(subject, ticketNumber, hasTitle ? ticket?.title : 'Shared ticket');
-        } else {
-          subject = normalizeTicketSubject(subject, ticketNumber);
-        }
+        subject = normalizeTicketSubject(subject, ticketNumber);
       }
     }
 

@@ -41,7 +41,7 @@ vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   resolveEmailLocale: async () => 'en',
 }));
 
-import { sendEventEmail } from '../../../lib/notifications/sendEventEmail';
+import { sendEventEmail, resolveThreadSubjectTitle } from '../../../lib/notifications/sendEventEmail';
 
 const EVENT_SUBJECTS: Array<[string, string]> = [
   ['ticket-created', 'Your Ticket Has Been Created • {{ticket.title}}'],
@@ -88,10 +88,10 @@ describe('sendEventEmail uniform customer-facing ticket subject', () => {
     expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Printer down');
   });
 
-  it('keeps a tenant-customised subject and only tags it', async () => {
+  it('supersedes a tenant-customised subject so every event still threads as one conversation', async () => {
     tenantRow = { id: 't', name: 'ticket-updated', html_content: '<p>x</p>', subject: 'Acme update: {{ticket.title}}' };
     await send('ticket-updated');
-    expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Acme update: Printer down');
+    expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Printer down');
   });
 
   it('treats a tenant row with an empty subject as a default subject', async () => {
@@ -111,5 +111,68 @@ describe('sendEventEmail uniform customer-facing ticket subject', () => {
     systemRow = { id: 's', name: 'ticket-updated', html_content: '<p>x</p>', subject: 'Ticket Updated: {{ticket.title}}' };
     await send('ticket-updated', 'x', { id: '1042', ticket_number: '1042', title: '   ' });
     expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Ticket Updated:');
+  });
+});
+
+describe('resolveThreadSubjectTitle', () => {
+  const fakeKnex = { raw: (sql: string, bindings?: unknown[]) => ({ sql, bindings }) };
+
+  const makeDb = (
+    row: Record<string, unknown> | undefined,
+    updates: Array<Record<string, unknown>>,
+    fail = false,
+  ) => {
+    const chain: any = {
+      where: () => chain,
+      whereRaw: () => chain,
+      first: async () => {
+        if (fail) throw new Error('db down');
+        return row;
+      },
+      update: async (payload: Record<string, unknown>) => {
+        updates.push(payload);
+        return 1;
+      },
+    };
+    return { table: () => chain } as any;
+  };
+
+  it('pins the current title on the first customer-facing send', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const title = await resolveThreadSubjectTitle(makeDb({ email_metadata: null }, updates), fakeKnex, 'ticket-uuid', 'Printer down');
+    expect(title).toBe('Printer down');
+    expect(updates).toHaveLength(1);
+    expect(String((updates[0].email_metadata as { sql: string }).sql)).toContain('threadSubjectTitle');
+  });
+
+  it('reuses the pinned title after the ticket is renamed', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const title = await resolveThreadSubjectTitle(
+      makeDb({ email_metadata: { threadSubjectTitle: 'Printer down' } }, updates),
+      fakeKnex,
+      'ticket-uuid',
+      'Printer down (urgent, floor 3)',
+    );
+    expect(title).toBe('Printer down');
+    expect(updates).toHaveLength(0);
+  });
+
+  it('treats a blank pinned title as unpinned', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const title = await resolveThreadSubjectTitle(
+      makeDb({ email_metadata: { threadSubjectTitle: '   ' } }, updates),
+      fakeKnex,
+      'ticket-uuid',
+      'Printer down',
+    );
+    expect(title).toBe('Printer down');
+    expect(updates).toHaveLength(1);
+  });
+
+  it('falls back to the current title when the lookup fails, and never throws', async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const title = await resolveThreadSubjectTitle(makeDb(undefined, updates, true), fakeKnex, 'ticket-uuid', 'Printer down');
+    expect(title).toBe('Printer down');
+    expect(updates).toHaveLength(0);
   });
 });
