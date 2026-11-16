@@ -24,8 +24,9 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import * as Icons from 'lucide-react';
-import { ArrowLeft, Monitor, Redo2, Settings, Smartphone, Undo2 } from 'lucide-react';
+import { ArrowLeft, Monitor, Redo2, Settings, Smartphone, Undo2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
   DesignerPalette,
@@ -97,6 +98,8 @@ import {
 const SAVE_DEBOUNCE_MS = 900;
 const SIDEBAR_NAMESPACE = 'serviceRequestFormBuilder';
 const LEFT_TAB_STORAGE_KEY = 'alga.serviceRequestFormBuilder.leftTab';
+/** How long a success notice stays before it clears itself. Errors wait for the author. */
+const NOTICE_DISMISS_MS = 6000;
 
 export interface ServiceRequestFormBuilderProps {
   definitionId: string;
@@ -181,6 +184,16 @@ export function ServiceRequestFormBuilder({
   const [tryValues, setTryValues] = useState<Record<string, unknown>>({});
   const [tryErrors, setTryErrors] = useState<Record<string, string>>({});
   const [isPublishing, setIsPublishing] = useState(false);
+  // The builder answers in a banner under its own toolbar, not in a floating toast: a toast
+  // pinned to the top right of the window lands on Edit / Try it and Publish at 1280 px and
+  // swallows the clicks meant for them.
+  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (notice?.tone !== 'success') return;
+    const timer = setTimeout(() => setNotice(null), NOTICE_DISMISS_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   const document = getDocument(state);
   const selected = findElement(document, state.selectedKey);
@@ -239,7 +252,7 @@ export function ServiceRequestFormBuilder({
         clearDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId);
       } catch (error) {
         console.error('Failed to save service request form schema', error);
-        toast.error(t('formBuilder.messages.saveFailed'));
+        setNotice({ tone: 'error', message: t('formBuilder.messages.saveFailed') });
       } finally {
         setIsSaving(false);
       }
@@ -412,18 +425,23 @@ export function ServiceRequestFormBuilder({
       const validation = await validateServiceRequestDefinitionForPublishAction(definitionId);
       const errors = validation.errors ?? [];
       if (errors.length > 0) {
-        toast.error(errors[0] ?? t('formBuilder.messages.publishBlocked'));
+        setNotice({
+          tone: 'error',
+          message: errors[0] ?? t('formBuilder.messages.publishBlocked'),
+        });
         return;
       }
       await publishServiceRequestDefinitionAction(definitionId);
-      toast.success(t('formBuilder.messages.published'));
+      setNotice({ tone: 'success', message: t('formBuilder.messages.published') });
     } catch (error) {
       console.error('Failed to publish service request definition', error);
-      toast.error(
-        error instanceof Error && error.message
-          ? error.message
-          : t('formBuilder.messages.publishFailed')
-      );
+      setNotice({
+        tone: 'error',
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : t('formBuilder.messages.publishFailed'),
+      });
     } finally {
       setIsPublishing(false);
     }
@@ -486,7 +504,7 @@ export function ServiceRequestFormBuilder({
       Object.fromEntries(issues.map((entry) => [entry.fieldKey, describeIssue(entry.issue)]))
     );
     if (issues.length === 0) {
-      toast.success(t('formBuilder.tryIt.allGood'));
+      setNotice({ tone: 'success', message: t('formBuilder.tryIt.allGood') });
     }
   };
 
@@ -837,6 +855,28 @@ export function ServiceRequestFormBuilder({
           setInspectorWidth(width);
           storeDesignerSidebarWidth(SIDEBAR_NAMESPACE, width);
         }}
+        banner={
+          notice ? (
+            <Alert
+              id="service-request-form-builder-notice"
+              variant={notice.tone === 'success' ? 'success' : 'destructive'}
+              className="shrink-0 rounded-none border-x-0 border-t-0 py-2 pr-2 shadow-none"
+            >
+              <AlertDescription className="flex items-center gap-2 pl-7">
+                <span className="min-w-0 flex-1">{notice.message}</span>
+                <Button
+                  id="service-request-form-builder-notice-dismiss"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('common:actions.close', { defaultValue: 'Close' })}
+                  onClick={() => setNotice(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null
+        }
       >
         {backup ? (
           <div

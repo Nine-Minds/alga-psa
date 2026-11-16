@@ -368,4 +368,42 @@ describe('Form Studio publish', () => {
     await waitFor(() => expect(actions.validateForPublish).toHaveBeenCalled());
     expect(actions.publish).not.toHaveBeenCalled();
   });
+
+  // A toast pinned to the top right of the window covers Edit / Try it and Publish at
+  // 1280 px and eats their clicks, so the builder answers in its own banner instead.
+  it('answers in a banner under the toolbar, not over the toolbar', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(document.getElementById('service-request-form-builder-publish')!);
+
+    const notice = await waitFor(() => {
+      const element = document.getElementById('service-request-form-builder-notice');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(notice).toHaveTextContent('Published.');
+    // The banner sits inside the builder, above the panes — never over the toolbar.
+    expect(document.getElementById('service-request-form-builder')).toContainElement(notice);
+    expect(
+      document.getElementById('service-request-form-builder-toolbar')
+    ).not.toContainElement(notice);
+
+    await user.click(document.getElementById('service-request-form-builder-notice-dismiss')!);
+    expect(document.getElementById('service-request-form-builder-notice')).toBeNull();
+  });
+
+  it('keeps a blocked publish on screen with the reason', async () => {
+    actions.validateForPublish.mockResolvedValueOnce({ errors: ['Pick a category first'] });
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(document.getElementById('service-request-form-builder-publish')!);
+
+    await waitFor(() =>
+      expect(document.getElementById('service-request-form-builder-notice')).toHaveTextContent(
+        'Pick a category first'
+      )
+    );
+  });
 });

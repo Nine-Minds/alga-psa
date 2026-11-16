@@ -48,9 +48,10 @@ function formatDateTime(
 
 export default async function MyRequestDetailPage(props: MyRequestDetailPageProps) {
   const { submissionId } = await props.params;
-  const [submission, { t }, locale, dateFormat] = await Promise.all([
+  const [submission, { t }, { t: tCommon }, locale, dateFormat] = await Promise.all([
     getMyServiceRequestSubmissionDetailAction(submissionId),
     getServerTranslation(undefined, 'client-portal/service-requests'),
+    getServerTranslation(undefined, 'common'),
     getServerLocale(),
     getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT),
   ]);
@@ -80,6 +81,13 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
     failed: t('myRequests.statuses.failed'),
   });
   const unnamedAttachmentLabel = t('submissionDetail.unnamedAttachment');
+  // Answers read back in the client's own language, the way the ticket this request created
+  // already renders them: a checked box is "Ja" in German, not "Yes".
+  const answerFormat = {
+    locale,
+    yes: tCommon('yes', { defaultValue: 'Yes' }),
+    no: tCommon('no', { defaultValue: 'No' }),
+  };
 
   return (
     <div className="space-y-4">
@@ -136,7 +144,8 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
                   field,
                   displayFields,
                   payload as Record<string, unknown>,
-                  submission.attachments
+                  submission.attachments,
+                  answerFormat
                 );
                 return (
                   <div

@@ -54,9 +54,19 @@ vi.mock('@alga-psa/ui/components/BackNav', () => ({
   default: ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>,
 }));
 
+// The page reads two namespaces: its own copy, and `common` for the words an answer is read
+// back with (a checked box). The second one is what the reader's language reaches.
+const common = vi.hoisted(() => ({ catalog: { yes: 'Yes', no: 'No' } as Record<string, string> }));
+
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
   getServerLocale: vi.fn().mockResolvedValue('en'),
-  getServerTranslation: vi.fn().mockResolvedValue({ t }),
+  getServerTranslation: vi.fn(async (_locale: unknown, namespace: string) => ({
+    t:
+      namespace === 'common'
+        ? (key: string, options: TranslationOptions = {}) =>
+            common.catalog[key] ?? options.defaultValue ?? key
+        : t,
+  })),
   formatDate: (date: Date) => date.toISOString(),
 }));
 
@@ -102,6 +112,7 @@ async function renderDetailPage() {
 describe('/client-portal/request-services/my-requests/[submissionId]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    common.catalog = { yes: 'Yes', no: 'No' };
   });
 
   afterEach(() => {
@@ -167,6 +178,23 @@ describe('/client-portal/request-services/my-requests/[submissionId]', () => {
     expect(text).not.toMatch(/File ID/i);
     expect(text).not.toContain(namedId);
     expect(text).not.toContain('22222222-2222-4222-8222-222222222222');
+  });
+
+  it('reads a checkbox answer back in the reader’s language', async () => {
+    common.catalog = { yes: 'Ja', no: 'Nein' };
+    getMyServiceRequestSubmissionDetailActionMock.mockResolvedValue(
+      buildDetail({
+        form_schema_snapshot: {
+          fields: [{ key: 'needs_laptop', type: 'checkbox', label: 'Needs a laptop?' }],
+        },
+        submitted_payload: { needs_laptop: true },
+      })
+    );
+
+    await renderDetailPage();
+
+    const answers = Array.from(document.querySelectorAll('dd')).map((el) => el.textContent);
+    expect(answers).toEqual(['Ja']);
   });
 
   it('renders the payload as label/value rows when the snapshot has no fields', async () => {

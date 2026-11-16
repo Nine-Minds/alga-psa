@@ -2,6 +2,7 @@ import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import {
   describeFormAnswer,
   isFormAnswerMissing,
+  type FormAnswerDisplayFormat,
 } from '../../../lib/service-requests/formSchema';
 
 interface SubmissionFieldOption {
@@ -37,12 +38,16 @@ function getFileUploadFields(fields: SubmissionFieldSnapshot[]): SubmissionField
  * What one answer looks like on the portal's submission detail page. The display value itself
  * comes from `describeFormAnswer`, the same function the ticket subject and the ticket
  * description read, so a new field type reads back identically in all three.
+ *
+ * `format` carries the reader's language — a checkbox reads "Ja" for a German client, as it
+ * already does on the ticket the request created — and is required for that reason.
  */
 export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],
   payload: Record<string, unknown>,
-  attachments: SubmissionAttachmentSnapshot[]
+  attachments: SubmissionAttachmentSnapshot[],
+  format: FormAnswerDisplayFormat
 ): SubmissionFieldDisplay {
   const key = typeof field?.key === 'string' ? field.key : null;
   if (!key) {
@@ -85,5 +90,5 @@ export function getSubmissionFieldDisplay(
     return { kind: 'missing' };
   }
 
-  return { kind: 'text', text: describeFormAnswer(field, value) };
+  return { kind: 'text', text: describeFormAnswer(field, value, format) };
 }
