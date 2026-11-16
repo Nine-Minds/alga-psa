@@ -333,6 +333,16 @@
       "addLocation": "+ Aggiungi sede",
       "fromTemplate": "+ Da modello"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Rimuovere questa sede?",
+        "message": "Questa sede contiene ancora {{count}} voce/voci. Scegli cosa farne.",
+        "moveOption": "Sposta queste voci in {{location}}",
+        "ungroupOption": "Mantieni questi articoli e interrompi il raggruppamento per sede",
+        "deleteOption": "Elimina queste voci",
+        "confirm": "Rimuovi sede"
+      }
+    },
     "clientFacing": {
       "title": "Testo visibile al cliente",
       "subtitle": "Appare nel PDF, sotto i totali.",
@@ -588,10 +598,13 @@
       "groupHeading": "Sede {{index}}",
       "pickerPlaceholder": "Seleziona una sede",
       "unassigned": "Le voci senza sede vengono elencate qui finché non ne viene scelta una.",
+      "quoteWide": "Intero preventivo",
+      "quoteWideHint": "Gli sconti si applicano all’intero preventivo, quindi non sono legati a una sede.",
       "removeGroup": "Rimuovi sede",
       "subtotal": "Subtotale sede",
       "addLocationButton": "+ Aggiungi sede",
       "needMoreLocations": "Questo cliente ha una sola sede attiva. Aggiungi una seconda sede nelle impostazioni cliente per abilitare i preventivi multi-sede.",
+      "allLocationsInUse": "Ogni sede attiva di questo cliente ha già un gruppo in questo preventivo.",
       "emptyGroup": "Ancora nessuna voce per questa sede."
     }
   },
