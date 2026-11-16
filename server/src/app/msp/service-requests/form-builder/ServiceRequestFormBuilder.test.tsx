@@ -10,12 +10,14 @@ const actions = vi.hoisted(() => ({
   replaceSchema: vi.fn().mockResolvedValue({}),
   validateForPublish: vi.fn().mockResolvedValue({ errors: [] }),
   publish: vi.fn().mockResolvedValue({}),
+  updateFormBehaviorConfig: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('../actions', () => ({
   replaceServiceRequestFormSchemaAction: actions.replaceSchema,
   validateServiceRequestDefinitionForPublishAction: actions.validateForPublish,
   publishServiceRequestDefinitionAction: actions.publish,
+  updateServiceRequestFormBehaviorConfigAction: actions.updateFormBehaviorConfig,
 }));
 
 vi.mock('next/link', () => ({
@@ -91,6 +93,11 @@ function renderBuilder(overrides: Partial<React.ComponentProps<typeof ServiceReq
 
 const canvasElement = (key: string) =>
   document.getElementById(`service-request-form-canvas-element-${key}`)!;
+
+/** Where the builder keeps its browser-local copy of an unsaved draft. */
+const BACKUP_KEY = 'alga.serviceRequestFormBuilder.draftBackup.definition-1';
+/** Long enough for the backup (500 ms) and the save (900 ms) debounces to have fired. */
+const SAVE_SETTLE_MS = 1300;
 
 afterEach(() => {
   cleanup();
@@ -274,6 +281,50 @@ describe('Form Studio adding and saving', () => {
   });
 });
 
+describe('Form Studio opening a definition', () => {
+  it('adopts a legacy rule onto its element without counting that as an edit', async () => {
+    const user = userEvent.setup();
+    renderBuilder({
+      initialFormBehaviorConfig: {
+        visibilityRules: [
+          { fieldKey: 'laptop_model', source: 'needs_laptop', operator: 'is-true' },
+        ],
+      },
+    });
+
+    // The rule reads as the element's own condition, editable like any other…
+    await user.click(canvasElement('laptop_model'));
+    expect(document.getElementById('service-request-form-builder-visibility-0-source')).toHaveTextContent(
+      'Needs a laptop?'
+    );
+
+    // …but merely opening the definition is not an edit: nothing is saved or backed up, and
+    // the author is not warned about leaving.
+    await new Promise((resolve) => setTimeout(resolve, SAVE_SETTLE_MS));
+    expect(actions.replaceSchema).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(BACKUP_KEY)).toBeNull();
+  });
+
+  it('keeps a browser-local backup of an edit that the save has not landed yet', async () => {
+    const user = userEvent.setup();
+    // A save that never answers stands in for the tab dying mid-flight; the backup is what the
+    // next visit offers back.
+    actions.replaceSchema.mockImplementationOnce(() => new Promise(() => {}));
+    renderBuilder();
+
+    await user.click(canvasElement('full_name'));
+    await user.click(document.getElementById('service-request-form-builder-add-email')!);
+
+    await waitFor(() => expect(window.localStorage.getItem(BACKUP_KEY)).not.toBeNull(), {
+      timeout: 3000,
+    });
+    const backup = JSON.parse(window.localStorage.getItem(BACKUP_KEY)!);
+    expect(
+      (backup.definition.elements as Array<{ key: string }>).map((element) => element.key)
+    ).toContain('email_address');
+  });
+});
+
 describe('Form Studio Try it', () => {
   it('runs the form live and reveals a field when its rule is satisfied', async () => {
     const user = userEvent.setup();
@@ -335,6 +386,38 @@ describe('Form Studio template gallery', () => {
 
     expect(screen.queryByText('Start from a template')).toBeNull();
     expect(canvasElement('requested_for')).toBeInTheDocument();
+  });
+
+  it('puts the gallery away for a blank start, and costs no undo step doing it', async () => {
+    const user = userEvent.setup();
+    renderBuilder({ initialSchema: { fields: [] } });
+
+    await user.click(document.getElementById('service-request-form-template-blank')!);
+
+    expect(screen.queryByText('Start from a template')).toBeNull();
+    expect(document.getElementById('service-request-form-canvas')).not.toBeNull();
+    // Nothing was added, so there is nothing to take back.
+    expect(document.getElementById('service-request-form-builder-undo')).toBeDisabled();
+
+    // And the way back, for an author who would rather start from a template after all.
+    await user.click(document.getElementById('service-request-form-canvas-show-templates')!);
+    expect(screen.getByText('Start from a template')).toBeInTheDocument();
+  });
+});
+
+describe('Form Studio defaults', () => {
+  it('takes back a typed default answer in one undo step', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(canvasElement('full_name'));
+    const defaultInput = document.getElementById('service-request-form-builder-default')!;
+    await user.type(defaultInput, 'Ada');
+    expect(defaultInput).toHaveValue('Ada');
+
+    await user.click(document.getElementById('service-request-form-builder-undo')!);
+    expect(document.getElementById('service-request-form-builder-default')).toHaveValue('');
+    expect(document.getElementById('service-request-form-builder-undo')).toBeDisabled();
   });
 });
 

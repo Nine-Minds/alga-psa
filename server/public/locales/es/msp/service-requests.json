@@ -565,7 +565,9 @@
       "dragHandle": "Arrastre para reordenar",
       "ruleChip": "{{count}} regla(s) de visibilidad",
       "validationChip": "La respuesta se comprueba",
-      "datePlaceholder": "Elija una fecha"
+      "datePlaceholder": "Elija una fecha",
+      "emptyHint": "Aquí todavía no hay nada. Añada la primera pregunta desde la pestaña Añadir, a la izquierda.",
+      "showTemplates": "Mostrar plantillas"
     },
     "outline": {
       "empty": "Todavía no hay nada en el formulario.",

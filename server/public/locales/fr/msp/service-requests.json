@@ -565,7 +565,9 @@
       "dragHandle": "Glisser pour réorganiser",
       "ruleChip": "{{count}} règle(s) d'affichage",
       "validationChip": "La réponse est vérifiée",
-      "datePlaceholder": "Choisir une date"
+      "datePlaceholder": "Choisir une date",
+      "emptyHint": "Il n'y a encore rien ici. Ajoutez la première question depuis l'onglet Ajouter, à gauche.",
+      "showTemplates": "Afficher les modèles"
     },
     "outline": {
       "empty": "Le formulaire est encore vide.",

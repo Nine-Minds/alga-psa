@@ -565,7 +565,9 @@
       "dragHandle": "Sleep om te herschikken",
       "ruleChip": "{{count}} zichtbaarheidsregel(s)",
       "validationChip": "Het antwoord wordt gecontroleerd",
-      "datePlaceholder": "Kies een datum"
+      "datePlaceholder": "Kies een datum",
+      "emptyHint": "Hier staat nog niets. Voeg de eerste vraag toe via het tabblad Toevoegen links.",
+      "showTemplates": "Sjablonen tonen"
     },
     "outline": {
       "empty": "Nog niets op het formulier.",

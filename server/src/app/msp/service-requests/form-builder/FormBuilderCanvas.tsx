@@ -8,6 +8,7 @@
 import React from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { Eye, GripVertical, Plus, ShieldCheck } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   BasicFormField,
@@ -30,6 +31,8 @@ export interface FormBuilderCanvasProps {
   renamingKey: string | null;
   onRenamingKeyChange: (key: string | null) => void;
   labels: { selectPlaceholder: string; datePlaceholder: string };
+  /** Brings the template gallery back, for a form the author started blank. */
+  onShowTemplates: () => void;
 }
 
 function InsertLine({
@@ -88,6 +91,7 @@ export function FormBuilderCanvas({
   renamingKey,
   onRenamingKeyChange,
   labels,
+  onShowTemplates,
 }: FormBuilderCanvasProps): React.ReactElement {
   const { t } = useTranslation('msp/service-requests');
 
@@ -157,6 +161,24 @@ export function FormBuilderCanvas({
         renderElement={renderElement}
         renderLabelText={renderLabelText}
       >
+        {elements.length === 0 ? (
+          <div className="space-y-2 rounded-md border border-dashed border-[rgb(var(--color-border-300))] p-6 text-center">
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('formBuilder.canvas.emptyHint')}
+            </p>
+            <Button
+              id="service-request-form-canvas-show-templates"
+              variant="outline"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation();
+                onShowTemplates();
+              }}
+            >
+              {t('formBuilder.canvas.showTemplates')}
+            </Button>
+          </div>
+        ) : null}
         <InsertLine
           index={elements.length}
           isActive={insertIndex === elements.length}

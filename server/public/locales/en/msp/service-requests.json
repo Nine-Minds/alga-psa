@@ -565,7 +565,9 @@
       "dragHandle": "Drag to reorder",
       "ruleChip": "{{count}} visibility rule(s)",
       "validationChip": "The answer is checked",
-      "datePlaceholder": "Pick a date"
+      "datePlaceholder": "Pick a date",
+      "emptyHint": "Nothing here yet. Add your first question from the Add tab on the left.",
+      "showTemplates": "Show templates"
     },
     "outline": {
       "empty": "Nothing on the form yet.",

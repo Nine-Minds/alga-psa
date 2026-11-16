@@ -565,7 +565,9 @@
       "dragHandle": "Zum Umsortieren ziehen",
       "ruleChip": "{{count}} Sichtbarkeitsregel(n)",
       "validationChip": "Die Antwort wird geprüft",
-      "datePlaceholder": "Datum auswählen"
+      "datePlaceholder": "Datum auswählen",
+      "emptyHint": "Hier ist noch nichts. Fügen Sie die erste Frage über den Tab „Hinzufügen“ links hinzu.",
+      "showTemplates": "Vorlagen anzeigen"
     },
     "outline": {
       "empty": "Noch nichts im Formular.",

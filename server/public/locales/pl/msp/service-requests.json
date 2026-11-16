@@ -567,7 +567,9 @@
       "dragHandle": "Przeciągnij, aby zmienić kolejność",
       "ruleChip": "Reguły widoczności: {{count}}",
       "validationChip": "Odpowiedź jest sprawdzana",
-      "datePlaceholder": "Wybierz datę"
+      "datePlaceholder": "Wybierz datę",
+      "emptyHint": "Jeszcze nic tu nie ma. Dodaj pierwsze pytanie z karty Dodaj po lewej stronie.",
+      "showTemplates": "Pokaż szablony"
     },
     "outline": {
       "empty": "Formularz jest jeszcze pusty.",

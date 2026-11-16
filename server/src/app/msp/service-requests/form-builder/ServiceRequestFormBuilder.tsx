@@ -98,6 +98,8 @@ import {
 } from './formBuilderState';
 
 const SAVE_DEBOUNCE_MS = 900;
+/** Shorter than the save, so an interrupted edit is on disk before the save would clear it. */
+const BACKUP_DEBOUNCE_MS = 500;
 const SIDEBAR_NAMESPACE = 'serviceRequestFormBuilder';
 const LEFT_TAB_STORAGE_KEY = 'alga.serviceRequestFormBuilder.leftTab';
 /** How long a success notice stays before it clears itself. Errors wait for the author. */
@@ -165,12 +167,11 @@ export function ServiceRequestFormBuilder({
   }, [initialSchema, adoption]);
 
   const [state, setState] = useState(() => createFormBuilderState(initialDocument));
-  // The saved baseline is what the server still holds: the adopted conditions are an unsaved
-  // edit, so the builder saves them on the first write rather than silently keeping both copies.
-  const [savedDocument, setSavedDocument] = useState<FormBuilderDocument>(() => ({
-    elements: normalizeBasicFormSchema(initialSchema).fields,
-    settings: normalizeBasicFormSchema(initialSchema).settings ?? {},
-  }));
+  // The baseline is the document as opened, adopted conditions and all: merely opening a
+  // definition is not an edit, and must not autosave or arm the unload prompt on its own. The
+  // config copy of an adopted rule goes with the first real save, so until then the one rule
+  // still lives in exactly one place and the form behaves as it always did.
+  const [savedDocument, setSavedDocument] = useState<FormBuilderDocument>(initialDocument);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [mode, setMode] = useState<'edit' | 'try'>('edit');
@@ -180,6 +181,9 @@ export function ServiceRequestFormBuilder({
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
   const [renamingKey, setRenamingKey] = useState<string | null>(null);
   const [showFormSettings, setShowFormSettings] = useState(false);
+  // "Start blank" is a template that adds nothing, so it has to put the gallery away itself;
+  // otherwise the canvas is still empty and the gallery simply draws itself again.
+  const [isGalleryDismissed, setIsGalleryDismissed] = useState(false);
   const [inspectorWidth, setInspectorWidth] = useState(420);
   const [isLeftPaneCollapsed, setIsLeftPaneCollapsed] = useState(false);
   const [draggingPaletteType, setDraggingPaletteType] = useState<FieldTypeKey | null>(null);
@@ -302,8 +306,23 @@ export function ServiceRequestFormBuilder({
   flushRef.current = flushPendingSave;
   useEffect(() => () => flushRef.current(), []);
 
-  // A real unload cannot wait for a round trip, so the browser asks first and the edits are
-  // kept in this browser for the next visit to offer back.
+  // A browser-local copy of the unsaved draft, kept shortly after every edit the way the
+  // workflow designer keeps one: a crash, a lost session or a closed tab then has something to
+  // offer back. It is written ahead of the server save, and the save is what clears it.
+  useEffect(() => {
+    if (!isDirty) return;
+    const timer = setTimeout(() => {
+      writeDesignerDraftBackup(SIDEBAR_NAMESPACE, definitionId, {
+        definition: document,
+        baseDefinition: savedDocument,
+        savedAt: new Date().toISOString(),
+      });
+    }, BACKUP_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [document, savedDocument, isDirty, definitionId]);
+
+  // A real unload cannot wait for a round trip, so the browser asks first and the edits made
+  // inside the backup debounce are written straight away.
   useEffect(() => {
     if (!isDirty) return;
     const handler = (event: BeforeUnloadEvent) => {
@@ -779,10 +798,18 @@ export function ServiceRequestFormBuilder({
           previewWidth={previewWidth}
         />
       </div>
-    ) : document.elements.length === 0 ? (
+    ) : document.elements.length === 0 && !isGalleryDismissed ? (
       <FormBuilderTemplateGallery
         templates={templates}
-        onChoose={(template) => setState((previous) => replaceDocument(previous, template.build()))}
+        onChoose={(template) => {
+          const chosen = template.build();
+          setIsGalleryDismissed(true);
+          // A template that brings no elements leaves the draft exactly as it is: putting an
+          // empty document through the history would only cost the author an undo step.
+          if (chosen.elements.length > 0) {
+            setState((previous) => replaceDocument(previous, chosen));
+          }
+        }}
       />
     ) : (
       <FormBuilderCanvas
@@ -802,6 +829,7 @@ export function ServiceRequestFormBuilder({
         renamingKey={renamingKey}
         onRenamingKeyChange={setRenamingKey}
         labels={rendererLabels}
+        onShowTemplates={() => setIsGalleryDismissed(false)}
       />
     );
 

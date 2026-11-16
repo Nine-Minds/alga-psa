@@ -6,7 +6,7 @@
  * pane, and the reason today's forms stay thin.
  */
 import React from 'react';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -407,10 +407,6 @@ export function FormBuilderInspector({
           <ul className="space-y-1.5">
             {(element.options ?? []).map((option, index) => (
               <li key={`${option.value}-${index}`} className="flex items-center gap-1.5">
-                <GripVertical
-                  aria-hidden="true"
-                  className="h-4 w-4 shrink-0 text-[rgb(var(--color-text-400))]"
-                />
                 <Input
                   id={`service-request-form-builder-option-label-${index}`}
                   containerClassName="mb-0 flex-1"
@@ -478,7 +474,14 @@ export function FormBuilderInspector({
               selectPlaceholder: t('formBuilder.inspector.noDefaultAnswer'),
               datePlaceholder: t('formBuilder.inspector.noDefaultAnswer'),
             }}
-            onChange={(next) => onChange({ defaultValue: toStoredDefault(element, next) })}
+            // Typing a default is one edit, not one per keystroke, exactly as the label and
+            // the validation rules behave.
+            onChange={(next) =>
+              onChange(
+                { defaultValue: toStoredDefault(element, next) },
+                { coalesceId: `default.${element.key}` }
+              )
+            }
           />
           {defaultIssueMessage ? (
             <p

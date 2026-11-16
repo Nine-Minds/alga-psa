@@ -565,7 +565,9 @@
       "dragHandle": "Dra för att ändra ordning",
       "ruleChip": "{{count}} synlighetsregler",
       "validationChip": "Svaret kontrolleras",
-      "datePlaceholder": "Välj ett datum"
+      "datePlaceholder": "Välj ett datum",
+      "emptyHint": "Här finns inget ännu. Använd fliken Lägg till i vänsterpanelen för den första frågan.",
+      "showTemplates": "Visa mallar"
     },
     "outline": {
       "empty": "Inget på formuläret än.",

@@ -565,7 +565,9 @@
       "dragHandle": "Trascina per riordinare",
       "ruleChip": "{{count}} regola/e di visibilità",
       "validationChip": "La risposta viene verificata",
-      "datePlaceholder": "Scegli una data"
+      "datePlaceholder": "Scegli una data",
+      "emptyHint": "Qui non c'è ancora niente. Aggiungi la prima domanda dalla scheda Aggiungi, a sinistra.",
+      "showTemplates": "Mostra i modelli"
     },
     "outline": {
       "empty": "Il modulo è ancora vuoto.",
