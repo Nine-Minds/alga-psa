@@ -122,7 +122,7 @@ import {
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { pickCloseRulePendingFields } from '../../lib/closeRuleConstants';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
-import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
+import { hasTicketUpdateAccess, hasWorkflowManageAccess, type TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
 import { persistResolutionComment } from './resolutionCommentPersistence';
@@ -411,9 +411,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [canManageWorkflows, setCanManageWorkflows] = useState(
         bootstrap?.canManageWorkflows ?? false,
     );
+    // Gates the child bundle notice's Make master; promoteBundleMasterAction re-checks ticket:update.
+    const [canUpdateTickets, setCanUpdateTickets] = useState(
+        bootstrap?.canUpdateTickets ?? false,
+    );
     const [createWorkflowOpen, setCreateWorkflowOpen] = useState(false);
     const bootstrapSkips = useRef({
-        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null,
+        permissions: bootstrap?.canViewCommentMetadataDebug != null && bootstrap?.canManageWorkflows != null && bootstrap?.canUpdateTickets != null,
         checklist: bootstrap?.checklistItems != null || bootstrap?.autoCloseState != null,
         layout: bootstrap?.layoutPreference != null,
         teams: bootstrap?.teams != null,
@@ -459,6 +463,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (!cancelled) {
                 setCanViewCommentMetadataDebug(hasAdminSettingsViewAccess(perms));
                 setCanManageWorkflows(hasWorkflowManageAccess(perms));
+                setCanUpdateTickets(hasTicketUpdateAccess(perms));
             }
         });
         return () => {
@@ -3569,22 +3574,64 @@ const handleClose = () => {
         };
     }, []);
 
-    const handlePromoteChildToMaster = useCallback(async (childTicketId: string) => {
+    // One confirmation for both entry points: Promote (on the master) and Make master (on a child).
+    const [pendingPromotion, setPendingPromotion] = useState<{
+        oldMasterTicketId: string;
+        oldMasterTicketNumber: string;
+        newMasterTicketId: string;
+        newMasterTicketNumber: string;
+        /** Promote leaves the master's page for the new master's; Make master refreshes in place. */
+        navigateToNewMaster: boolean;
+    } | null>(null);
+    const [isPromotingMaster, setIsPromotingMaster] = useState(false);
+
+    const handlePromoteChildToMaster = useCallback((child: { ticket_id: string; ticket_number?: string }) => {
         if (!ticket.ticket_id) return;
+        setPendingPromotion({
+            oldMasterTicketId: ticket.ticket_id,
+            oldMasterTicketNumber: ticket.ticket_number ?? '',
+            newMasterTicketId: child.ticket_id,
+            newMasterTicketNumber: child.ticket_number ?? '',
+            navigateToNewMaster: true,
+        });
+    }, [ticket.ticket_id, ticket.ticket_number]);
+
+    const handleMakeThisTicketMaster = useCallback(() => {
+        if (!ticket.ticket_id || !bundle?.masterTicket?.ticket_id) return;
+        setPendingPromotion({
+            oldMasterTicketId: bundle.masterTicket.ticket_id,
+            oldMasterTicketNumber: bundle.masterTicket.ticket_number ?? '',
+            newMasterTicketId: ticket.ticket_id,
+            newMasterTicketNumber: ticket.ticket_number ?? '',
+            navigateToNewMaster: false,
+        });
+    }, [ticket.ticket_id, ticket.ticket_number, bundle?.masterTicket]);
+
+    const confirmPromotion = useCallback(async () => {
+        if (!pendingPromotion) return;
         try {
-            const result = await promoteBundleMasterAction({ oldMasterTicketId: ticket.ticket_id, newMasterTicketId: childTicketId });
+            setIsPromotingMaster(true);
+            const result = await promoteBundleMasterAction({
+                oldMasterTicketId: pendingPromotion.oldMasterTicketId,
+                newMasterTicketId: pendingPromotion.newMasterTicketId,
+            });
             if (isReturnedActionError(result)) {
                 handleTicketActionError(result, t('messages.promoteMasterFailed'));
                 return;
             }
             toast.success(t('messages.promotedMaster'));
             onSaved?.();
-            router.push(`/msp/tickets/${childTicketId}`);
+            if (pendingPromotion.navigateToNewMaster) {
+                router.push(`/msp/tickets/${pendingPromotion.newMasterTicketId}`);
+            }
             refreshScreen();
         } catch (error) {
             handleTicketActionError(error, t('messages.promoteMasterFailed'));
+        } finally {
+            setIsPromotingMaster(false);
+            setPendingPromotion(null);
         }
-    }, [ticket.ticket_id, router, refreshScreen, onSaved, t]);
+    }, [pendingPromotion, router, refreshScreen, onSaved, t]);
 
     const performBundleModeChange = useCallback(async (
         nextMode: 'link_only' | 'sync_updates',
@@ -3689,6 +3736,17 @@ const handleClose = () => {
                                         {bundleWorkflowLocked
                                             ? t('details.bundle.childLockedNotice', 'Workflow fields are locked; work from the master ticket.')
                                             : t('details.bundle.childLinkedNotice', 'It is linked to the master and managed on its own.')}
+                                        {canUpdateTickets ? (
+                                            <Button
+                                                id="ticket-bundle-make-master"
+                                                className="ml-3 align-middle"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleMakeThisTicketMaster}
+                                            >
+                                                {t('details.bundle.makeMaster', 'Make master')}
+                                            </Button>
+                                        ) : null}
                                     </div>
                                 ) : null}
 
@@ -3826,7 +3884,7 @@ const handleClose = () => {
                                                                     id={`ticket-bundle-promote-child-${child.ticket_id}`}
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    onClick={() => handlePromoteChildToMaster(child.ticket_id)}
+                                                                    onClick={() => handlePromoteChildToMaster(child)}
                                                                 >
                                                                     {t('details.bundle.promote', 'Promote')}
                                                                 </Button>
@@ -4189,6 +4247,22 @@ const handleClose = () => {
                     isDeleting={isTicketDeleteProcessing}
                 />
                 ) : null}
+
+                <ConfirmationDialog
+                    id="ticket-bundle-promote-confirm"
+                    isOpen={pendingPromotion !== null}
+                    onClose={() => setPendingPromotion(null)}
+                    onConfirm={confirmPromotion}
+                    title={t('details.bundle.promoteConfirmTitle', 'Change bundle master?')}
+                    message={t('details.bundle.promoteConfirmMessage', {
+                        newMaster: pendingPromotion?.newMasterTicketNumber ?? '',
+                        oldMaster: pendingPromotion?.oldMasterTicketNumber ?? '',
+                        defaultValue: 'Make {{newMaster}} the master of this bundle? The bundle\'s settings (mode, reopen on child reply) move to {{newMaster}}, and the current master {{oldMaster}} becomes a child.',
+                    })}
+                    confirmLabel={t('details.bundle.promoteConfirmLabel', 'Make master')}
+                    cancelLabel={t('actions.cancel', 'Cancel')}
+                    isConfirming={isPromotingMaster}
+                />
 
                 {/* Confirmation Dialog for Comment Deletion */}
                 <ConfirmationDialog

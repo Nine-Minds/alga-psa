@@ -960,7 +960,10 @@
       "childrenDescription": "Os tickets filhos mantêm seu status atual. Os campos de fluxo de trabalho ficam bloqueados somente no modo Sync Updates. As respostas recebidas dos filhos são exibidas abaixo como somente leitura.",
       "checkingMasters": "Verificando pacotes existentes...",
       "existingMasterSuffix": "(mestre existente)",
-      "existingMasterLocked": "Um ticket selecionado já é um pacote master. Ele será usado como mestre; os outros serão adicionados como filhos.",
+      "existingMasterChangeable": "Um dos tickets selecionados já é o principal de um pacote. Escolher outro ticket como principal torna esse ticket o principal, move as configurações do pacote (modo, reabrir na resposta de um filho) para ele e faz do principal atual um filho.",
+      "changeMasterSummary": "{{newMaster}} passará a ser o principal do pacote e {{oldMaster}} passará a ser um filho. As configurações do pacote passam para {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} e {{newMaster}} devem estar ambos abertos ou ambos fechados para que {{newMaster}} possa se tornar o principal. Reabra ou feche um deles primeiro.",
+      "syncUpdatesKeptHelp": "O modo do pacote existente é mantido e passa para o novo principal.",
       "multipleExistingMasters": "Vários tickets selecionados já são pacotes master ({{count}}). Desempacote todos, exceto um, antes de agrupar.",
       "propagationSummary": "{{masters}} ticket(s) selecionado(s) são mestres de pacote em modo de sincronização; esta alteração fechará/reabrirá {{children}} ticket(s) filho(s).",
       "masterSummary": "{{children}} ticket(s) filho(s)",
@@ -1845,7 +1848,8 @@
       "closedMasterChoiceNotAllowed": "Essa opção não é permitida para este ticket principal. Escolha uma destas: {{choices}}.",
       "choiceOnOpenMaster": "Essa opção só se aplica quando o ticket principal do pacote está fechado.",
       "closeRuleFailed": "Este ticket ainda não pode ser fechado: {{reason}}",
-      "reopenUnavailable": "Não é possível reabrir o ticket principal porque nenhum status de ticket aberto está configurado."
+      "reopenUnavailable": "Não é possível reabrir o ticket principal porque nenhum status de ticket aberto está configurado.",
+      "masterClosedStateMismatch": "O principal atual do pacote e o ticket escolhido como novo principal devem estar ambos abertos ou ambos fechados. Reabra ou feche um deles primeiro."
     },
     "ticket": {
       "validationDetails": "Corrija os dados do ticket: {{details}}",
@@ -1989,6 +1993,10 @@
       "masterBanner": "Este ticket é o mestre de um pacote ({{count}} filhos). Modo: {{mode}}.",
       "childLockedNotice": "Os campos de fluxo de trabalho estão bloqueados; trabalhe a partir do ticket mestre.",
       "childLinkedNotice": "Ele está vinculado ao mestre e é gerenciado de forma independente.",
+      "makeMaster": "Tornar principal",
+      "promoteConfirmTitle": "Alterar o principal do pacote?",
+      "promoteConfirmMessage": "Tornar {{newMaster}} o principal deste pacote? As configurações do pacote (modo, reabrir na resposta de um filho) passam para {{newMaster}} e o principal atual {{oldMaster}} passa a ser um filho.",
+      "promoteConfirmLabel": "Tornar principal",
       "multipleClients": "Vários clientes",
       "mode": "Modo: {{mode}}",
       "unbundle": "Desagrupar",

@@ -886,7 +886,10 @@
       "childrenDescription": "Untergeordnete Tickets behalten ihren aktuellen Status. Workflow-Felder sind nur im Modus Sync Updates gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten schreibgeschützt angezeigt.",
       "checkingMasters": "Vorhandene Bündel werden geprüft...",
       "existingMasterSuffix": "(vorhandenes Hauptticket)",
-      "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
+      "existingMasterChangeable": "Ein ausgewähltes Ticket ist bereits ein Bündel-Master. Wenn Sie ein anderes Ticket als Master wählen, wird dieses Ticket der Master, die Einstellungen des Bündels (Modus, Wiedereröffnung bei Antwort eines Untertickets) wechseln zu ihm, und der bisherige Master wird zum Unterticket.",
+      "changeMasterSummary": "{{newMaster}} wird der Master des Bündels und {{oldMaster}} wird zum Unterticket. Die Einstellungen des Bündels wechseln zu {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} und {{newMaster}} müssen beide offen oder beide geschlossen sein, bevor {{newMaster}} der Master werden kann. Öffnen oder schließen Sie zuerst eines der beiden Tickets.",
+      "syncUpdatesKeptHelp": "Der Modus des bestehenden Bündels bleibt erhalten und wechselt zum neuen Master.",
       "multipleExistingMasters": "Mehrere ausgewählte Tickets sind bereits Haupttickets ({{count}}). Heben Sie die Bündelung aller bis auf eines auf, bevor Sie die Tickets bündeln.",
       "propagationSummary": "{{masters}} ausgewählte(s) Ticket(s) sind Master im Synchronmodus; diese Änderung schließt/öffnet {{children}} untergeordnete(s) Ticket(s).",
       "masterSummary": "{{children}} untergeordnete(s) Ticket(s)",
@@ -1707,7 +1710,8 @@
       "closedMasterChoiceNotAllowed": "Diese Auswahl ist für dieses Haupt-Ticket nicht zulässig. Wählen Sie eine der folgenden Optionen: {{choices}}.",
       "choiceOnOpenMaster": "Diese Auswahl gilt nur, wenn das Haupt-Ticket des Bündels geschlossen ist.",
       "closeRuleFailed": "Dieses Ticket kann noch nicht geschlossen werden: {{reason}}",
-      "reopenUnavailable": "Das Haupt-Ticket kann nicht wieder geöffnet werden, da kein offener Ticketstatus konfiguriert ist."
+      "reopenUnavailable": "Das Haupt-Ticket kann nicht wieder geöffnet werden, da kein offener Ticketstatus konfiguriert ist.",
+      "masterClosedStateMismatch": "Der bestehende Bündel-Master und das als neuer Master gewählte Ticket müssen beide offen oder beide geschlossen sein. Öffnen oder schließen Sie zuerst eines der beiden Tickets."
     },
     "ticket": {
       "validationDetails": "Bitte korrigieren Sie die Ticketangaben: {{details}}",
@@ -1851,6 +1855,10 @@
       "masterBanner": "Dieses Ticket ist das Hauptticket eines Bündels ({{count}} Untertickets). Modus: {{mode}}.",
       "childLockedNotice": "Workflow-Felder sind gesperrt; arbeiten Sie am Master-Ticket.",
       "childLinkedNotice": "Es ist mit dem Master verknüpft und wird eigenständig verwaltet.",
+      "makeMaster": "Zum Master machen",
+      "promoteConfirmTitle": "Bündel-Master ändern?",
+      "promoteConfirmMessage": "{{newMaster}} zum Master dieses Bündels machen? Die Einstellungen des Bündels (Modus, Wiedereröffnung bei Antwort eines Untertickets) wechseln zu {{newMaster}}, und der bisherige Master {{oldMaster}} wird zum Unterticket.",
+      "promoteConfirmLabel": "Zum Master machen",
       "multipleClients": "Mehrere Kunden",
       "mode": "Modus: {{mode}}",
       "unbundle": "Bündel auflösen",

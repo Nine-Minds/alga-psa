@@ -22,6 +22,8 @@ import {
   revertBundlePropagationForChild,
   revertBundlePropagationsForMaster,
   attachChildrenToBundle,
+  bundleTicketsUnderRequestedMaster,
+  promoteBundleMaster,
   changeBundleSettings,
   getBundleMasterClosedContext,
   type BundleAfterCommitPublication,
@@ -166,6 +168,11 @@ function bundleAttachFailureToActionError(
         'The master cannot be reopened because no open ticket status is configured.',
         'features/tickets:errors.bundle.reopenUnavailable',
       );
+    case 'master_closed_state_mismatch':
+      return actionError(
+        'The existing bundle master and the ticket chosen as the new master must both be open or both be closed. Reopen or close one of them first.',
+        'features/tickets:errors.bundle.masterClosedStateMismatch',
+      );
   }
 }
 
@@ -260,7 +267,7 @@ export const bundleTicketsAction = withAuth(async (
       throw new Error('Permission denied: Cannot bundle tickets');
     }
 
-    const result = await attachChildrenToBundle(trx, tenant, {
+    const result = await bundleTicketsUnderRequestedMaster(trx, tenant, {
       masterTicketId: data.masterTicketId,
       childTicketIds: uniqueChildIds,
       mode: data.mode,
@@ -269,6 +276,7 @@ export const bundleTicketsAction = withAuth(async (
       source: TICKET_ACTIVITY_SOURCE.UI,
       occurredAt,
       mergedReason: `bundle:${data.mode}`,
+      actorUserId: user.user_id,
     });
     if (result.ok) {
       registerBundlePublications(trx, workflowCtx, result.value.publications);
@@ -291,7 +299,7 @@ export const bundleTicketsAction = withAuth(async (
   // loading state when the refreshed data arrives).
   revalidatePath('/msp/tickets');
 
-  return { masterTicketId: result.masterTicketId, childTicketIds: result.childTicketIds, mode: data.mode };
+  return { masterTicketId: result.masterTicketId, childTicketIds: result.childTicketIds, mode: result.mode ?? data.mode };
   } catch (error) {
     if (error instanceof BundleConcurrentModificationError) {
       return actionError(error.message, 'features/tickets:errors.bundle.concurrent');
@@ -441,79 +449,11 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const oldMaster = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_id', 'master_ticket_id')
-      .where({ ticket_id: data.oldMasterTicketId })
-      .first();
-    if (!oldMaster) throw new Error('Old master ticket not found');
-    if (oldMaster.master_ticket_id) throw new Error('Old master ticket is not a master');
-
-    const newMaster = await tenantScopedTable(trx, 'tickets', tenant)
-      .select('ticket_id', 'master_ticket_id')
-      .where({ ticket_id: data.newMasterTicketId })
-      .first();
-    if (!newMaster) throw new Error('New master ticket not found');
-    if (newMaster.master_ticket_id !== data.oldMasterTicketId) {
-      throw new Error('New master ticket must be a child of the current master');
-    }
-
-    const now = nowIso();
-
-    // Prevent nesting bundles: the promoted ticket cannot itself have children
-    const promotedMasterConflicts = await findBundleMasterIds(trx, tenant, [data.newMasterTicketId]);
-    if (promotedMasterConflicts.length > 0) {
-      throw new Error('Promoted ticket already has children of its own.');
-    }
-
-    // Move bundle settings to new master
-    const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: data.oldMasterTicketId })
-      .first();
-    if (settings) {
-      await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-        .where({ master_ticket_id: data.oldMasterTicketId })
-        .delete();
-      await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-        .insert({
-          ...settings,
-          master_ticket_id: data.newMasterTicketId,
-        })
-        .onConflict(['tenant', 'master_ticket_id'])
-        .merge({
-          mode: settings.mode,
-          reopen_on_child_reply: settings.reopen_on_child_reply,
-        });
-    }
-
-    // Re-point children to new master (including old master)
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ master_ticket_id: data.oldMasterTicketId })
-      .andWhereNot({ ticket_id: data.newMasterTicketId })
-      .update({
-        master_ticket_id: data.newMasterTicketId,
-        updated_by: user.user_id,
-        updated_at: now,
-      });
-
-    // New master becomes root
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: data.newMasterTicketId })
-      .update({
-        master_ticket_id: null,
-        updated_by: user.user_id,
-        updated_at: now,
-      });
-
-    // Old master becomes child
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: data.oldMasterTicketId })
-      .update({
-        master_ticket_id: data.newMasterTicketId,
-        updated_by: user.user_id,
-        updated_at: now,
-      });
-
-    return { oldMasterTicketId: data.oldMasterTicketId, newMasterTicketId: data.newMasterTicketId };
+    return promoteBundleMaster(trx, tenant, {
+      oldMasterTicketId: data.oldMasterTicketId,
+      newMasterTicketId: data.newMasterTicketId,
+      actorUserId: user.user_id,
+    });
   });
 
   await publishWorkflowEvent({

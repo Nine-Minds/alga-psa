@@ -68,6 +68,25 @@ vi.mock('@alga-psa/ui/components/AsyncSearchableSelect', async () => {
   };
 });
 
+vi.mock('@alga-psa/ui/components/CustomSelect', async () => {
+  const React = await import('react');
+  function CustomSelectMock({ id, value, options, onValueChange, disabled }: {
+    id: string;
+    value: string;
+    options: Array<{ value: string; label: string }>;
+    onValueChange: (value: string) => void;
+    disabled?: boolean;
+  }) {
+    return React.createElement('select', {
+      id,
+      value,
+      disabled,
+      onChange: (event: React.ChangeEvent<HTMLSelectElement>) => onValueChange(event.target.value),
+    }, options.map(option => React.createElement('option', { key: option.value, value: option.value, label: option.label })));
+  }
+  return { default: CustomSelectMock };
+});
+
 if (!('ResizeObserver' in globalThis)) {
   (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
     observe() {}
@@ -221,7 +240,7 @@ describe('BulkBundleDialog', () => {
     expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('adds a bundle master result and locks it as the master', async () => {
+  it('adds a bundle master result and defaults the enabled master dropdown to it', async () => {
     mocks.fetch.mockResolvedValue({ tickets: [ticket('two', 'client-a', { bundle_child_count: 2 })], totalCount: 1 });
     mocks.status.mockImplementation(async ({ ticketIds }: { ticketIds: string[] }) => ({
       masterTicketIds: ticketIds.includes('two') ? ['two'] : [],
@@ -232,9 +251,69 @@ describe('BulkBundleDialog', () => {
     expect(masterOption).toHaveAttribute('aria-disabled', 'false');
     await chooseSearchResult(/TWO – Ticket two/);
     await waitFor(() => expect(mocks.status).toHaveBeenLastCalledWith({ ticketIds: ['one', 'two'] }));
-    await waitFor(() => expect(document.getElementById('bundle-test-bundle-master-select')).toBeDisabled());
-    expect(document.getElementById('bundle-test-bundle-master-select')).toBeDisabled();
+    const select = getElement('bundle-test-bundle-master-select') as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe('two'));
+    expect(select).not.toBeDisabled();
+    expect(Array.from(select.options).map(option => option.label)).toContain('TWO (existing master)');
     expect(screen.getByText('Master')).toBeTruthy();
+  });
+
+  describe('changing the master of an existing bundle', () => {
+    const existingMaster = (ids: string[]) => mocks.status.mockImplementation(async ({ ticketIds }: { ticketIds: string[] }) => ({
+      masterTicketIds: ticketIds.filter(ticketId => ids.includes(ticketId)),
+    }));
+
+    it('T004: enables the dropdown on the existing master, shows the change notice, and submits the chosen master', async () => {
+      existingMaster(['one']);
+      renderDialog({ initialTicketIds: ['one', 'two', 'three'], knownRows: [[ticket('one'), ticket('two'), ticket('three')]] });
+      const select = getElement('bundle-test-bundle-master-select') as HTMLSelectElement;
+      await waitFor(() => expect(select.value).toBe('one'));
+      await waitFor(() => expect(select).not.toBeDisabled());
+      expect(await screen.findByText(/Choosing another ticket as the master makes that ticket the master, moves the bundle's settings \(mode, reopen on child reply\) to it, and makes the current master a child/)).toBeTruthy();
+      expect(screen.queryByText(/will become the master of the bundle/)).toBeNull();
+
+      fireEvent.change(select, { target: { value: 'three' } });
+      expect(await screen.findByText('THREE will become the master of the bundle and ONE will become a child. The bundle\'s settings move to THREE.')).toBeTruthy();
+      expect(getElement('bundle-test-bundle-sync-updates')).toBeDisabled();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Bundle Tickets' }));
+      await waitFor(() => expect(mocks.bundle).toHaveBeenCalledTimes(1));
+      const submitted = mocks.bundle.mock.calls[0][0];
+      expect(submitted.masterTicketId).toBe('three');
+      expect([...submitted.childTicketIds].sort()).toEqual(['one', 'two']);
+    });
+
+    it('leaving the dropdown on the existing master submits it as the master', async () => {
+      existingMaster(['one']);
+      renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Bundle Tickets' }));
+      await waitFor(() => expect(mocks.bundle).toHaveBeenCalledWith(expect.objectContaining({ masterTicketId: 'one', childTicketIds: ['two'] })));
+    });
+
+    it('asks the closed-master question about the chosen master and blocks a closed/open mismatch', async () => {
+      existingMaster(['one']);
+      mocks.closedContext.mockImplementation(async ({ masterTicketId }: { masterTicketId: string }) => ({
+        isClosed: masterTicketId === 'two',
+        allowedChoices: masterTicketId === 'two' ? ['keep_closed'] : [],
+        hasResolutionComment: false,
+        masterStatusName: masterTicketId === 'two' ? 'Closed' : 'Open',
+      }));
+      renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
+      const select = getElement('bundle-test-bundle-master-select') as HTMLSelectElement;
+      await waitFor(() => expect(select.value).toBe('one'));
+      expect(screen.queryByText("This bundle's master is closed")).toBeNull();
+      fireEvent.change(select, { target: { value: 'two' } });
+      expect(await screen.findByText(/must both be open or both be closed/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeDisabled();
+    });
+
+    it('keeps the dropdown disabled with two existing masters', async () => {
+      existingMaster(['one', 'two']);
+      renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
+      expect(await screen.findByText(/Multiple selected tickets are already bundle masters/)).toBeTruthy();
+      expect(getElement('bundle-test-bundle-master-select')).toBeDisabled();
+    });
   });
 
   it('shows closed status for a selectable closed result', async () => {
@@ -274,7 +353,7 @@ describe('BulkBundleDialog', () => {
     renderDialog({ initialTicketIds: ['one', 'two', 'three'], knownRows: [[ticket('one'), ticket('two'), ticket('three')]] });
     expect(await screen.findByText(/Multiple selected tickets are already bundle masters/)).toBeTruthy();
     fireEvent.click(getElement('bundle-test-bundle-member-remove-two'));
-    expect(await screen.findByText(/It will be used as the master/)).toBeTruthy();
+    expect(await screen.findByText(/Choosing another ticket as the master/)).toBeTruthy();
     expect(screen.queryByText(/Multiple selected tickets are already bundle masters/)).toBeNull();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Bundle Tickets' })).toBeEnabled());
   });
@@ -288,14 +367,14 @@ describe('BulkBundleDialog', () => {
     expect(within(members).getByText('TWO').closest('li')).toHaveTextContent('Master');
   });
 
-  it('clears an existing-master lock when that member is removed', async () => {
+  it('clears the existing-master notice when that member is removed', async () => {
     mocks.status.mockImplementation(async ({ ticketIds }: { ticketIds: string[] }) => ({
       masterTicketIds: ticketIds.includes('one') ? ['one'] : [],
     }));
     renderDialog({ initialTicketIds: ['one', 'two'], knownRows: [[ticket('one'), ticket('two')]] });
-    await waitFor(() => expect(document.getElementById('bundle-test-bundle-master-select')).toBeDisabled());
+    expect(await screen.findByText(/Choosing another ticket as the master/)).toBeTruthy();
     fireEvent.click(getElement('bundle-test-bundle-member-remove-one'));
-    await waitFor(() => expect(document.getElementById('bundle-test-bundle-master-select')).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByText(/Choosing another ticket as the master/)).toBeNull());
     expect(within(getElement('bundle-test-bundle-members')).getAllByRole('listitem')).toHaveLength(1);
   });
 

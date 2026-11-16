@@ -47,6 +47,8 @@ export interface TicketScreenBootstrap {
   canViewCommentMetadataDebug: boolean | null;
   /** `workflow:manage`/`workflow:admin`: shows More -> Create workflow from ticket. Absent/null falls back to a client fetch. */
   canManageWorkflows?: boolean | null;
+  /** `ticket:update`: shows the bundle Make master action. Absent/null falls back to a client fetch. */
+  canUpdateTickets?: boolean | null;
   teams: ITeam[] | null;
   displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean; defaultReplyInternal?: boolean } | null;
   tags: ITag[] | null;
@@ -66,6 +68,11 @@ export interface TicketScreenBootstrap {
     /** Prev/next pager data, computed server-side with the request's returnFilters. */
     adjacentTickets: Promise<AdjacentTicketData | null>;
   } | null;
+}
+
+/** `ticket:update` right; the server action re-checks. */
+export function hasTicketUpdateAccess(permissions: readonly string[]): boolean {
+  return permissions.includes('ticket:update');
 }
 
 /** Workflow authoring rights (`workflow:manage` or `workflow:admin`); the server action re-checks. */

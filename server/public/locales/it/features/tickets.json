@@ -960,7 +960,10 @@
       "childrenDescription": "I ticket figli mantengono lo stato attuale. I campi del flusso di lavoro sono bloccati solo in modalità Sync Updates. Le risposte in entrata dei figli sono mostrate sotto in sola lettura.",
       "checkingMasters": "Verifica dei raggruppamenti esistenti...",
       "existingMasterSuffix": "(master esistente)",
-      "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
+      "existingMasterChangeable": "Uno dei ticket selezionati è già il principale di un gruppo. Scegliendo un altro ticket come principale, quel ticket diventa il principale, le impostazioni del gruppo (modalità, riapertura alla risposta di un figlio) passano a esso e il principale attuale diventa un figlio.",
+      "changeMasterSummary": "{{newMaster}} diventerà il principale del gruppo e {{oldMaster}} diventerà un figlio. Le impostazioni del gruppo passano a {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} e {{newMaster}} devono essere entrambi aperti o entrambi chiusi prima che {{newMaster}} possa diventare il principale. Riapri o chiudi prima uno dei due.",
+      "syncUpdatesKeptHelp": "La modalità del gruppo esistente viene mantenuta e passa al nuovo principale.",
       "multipleExistingMasters": "Più ticket selezionati sono già master di raggruppamento ({{count}}). Annulla il raggruppamento di tutti tranne uno prima di raggruppare.",
       "propagationSummary": "{{masters}} ticket selezionati sono master in modalità sincronizzazione; questa modifica chiuderà/riaprirà {{children}} ticket figli.",
       "masterSummary": "{{children}} ticket figli",
@@ -1845,7 +1848,8 @@
       "closedMasterChoiceNotAllowed": "Questa scelta non è consentita per questo ticket principale. Scegliere una delle seguenti opzioni: {{choices}}.",
       "choiceOnOpenMaster": "Questa scelta si applica solo quando il ticket principale del gruppo è chiuso.",
       "closeRuleFailed": "Questo ticket non può ancora essere chiuso: {{reason}}",
-      "reopenUnavailable": "Non è possibile riaprire il ticket principale perché non è configurato alcuno stato ticket aperto."
+      "reopenUnavailable": "Non è possibile riaprire il ticket principale perché non è configurato alcuno stato ticket aperto.",
+      "masterClosedStateMismatch": "Il principale attuale del gruppo e il ticket scelto come nuovo principale devono essere entrambi aperti o entrambi chiusi. Riapri o chiudi prima uno dei due."
     },
     "ticket": {
       "validationDetails": "Correggere i dati del ticket: {{details}}",
@@ -1989,6 +1993,10 @@
       "masterBanner": "Questo ticket è il principale di un gruppo ({{count}} figli). Modalità: {{mode}}.",
       "childLockedNotice": "I campi del flusso di lavoro sono bloccati; lavora dal ticket master.",
       "childLinkedNotice": "È collegato al master e viene gestito in modo autonomo.",
+      "makeMaster": "Rendi principale",
+      "promoteConfirmTitle": "Cambiare il principale del gruppo?",
+      "promoteConfirmMessage": "Rendere {{newMaster}} il principale di questo gruppo? Le impostazioni del gruppo (modalità, riapertura alla risposta di un figlio) passano a {{newMaster}} e il principale attuale {{oldMaster}} diventa un figlio.",
+      "promoteConfirmLabel": "Rendi principale",
       "multipleClients": "Più clienti",
       "mode": "Modalità: {{mode}}",
       "unbundle": "Separa",

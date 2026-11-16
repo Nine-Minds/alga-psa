@@ -960,7 +960,10 @@
       "childrenDescription": "Les tickets enfants conservent leur statut actuel. Les champs de workflow ne sont verrouillés qu’en mode Sync Updates. Les réponses entrantes des enfants sont affichées ci-dessous en lecture seule.",
       "checkingMasters": "Vérification des regroupements existants...",
       "existingMasterSuffix": "(maître existant)",
-      "existingMasterLocked": "Un ticket sélectionné est déjà un ticket principal. Il sera utilisé comme maître ; les autres seront ajoutés comme enfants.",
+      "existingMasterChangeable": "Un des tickets sélectionnés est déjà le maître d'un lot. Choisir un autre ticket comme maître en fait le maître, lui transfère les paramètres du lot (mode, réouverture à la réponse d'un enfant) et fait du maître actuel un enfant.",
+      "changeMasterSummary": "{{newMaster}} deviendra le maître du lot et {{oldMaster}} deviendra un enfant. Les paramètres du lot sont transférés à {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} et {{newMaster}} doivent être tous deux ouverts ou tous deux fermés pour que {{newMaster}} puisse devenir le maître. Rouvrez ou fermez d'abord l'un d'eux.",
+      "syncUpdatesKeptHelp": "Le mode du lot existant est conservé et transféré au nouveau maître.",
       "multipleExistingMasters": "Plusieurs tickets sélectionnés sont déjà des tickets principaux ({{count}}). Dégroupez tous sauf un avant de regrouper.",
       "propagationSummary": "{{masters}} ticket(s) sélectionné(s) sont des maîtres en mode synchronisation ; cette modification fermera/rouvrira {{children}} ticket(s) enfants.",
       "masterSummary": "{{children}} ticket(s) enfants",
@@ -1845,7 +1848,8 @@
       "closedMasterChoiceNotAllowed": "Ce choix n’est pas autorisé pour ce ticket principal. Choisissez l’une des options suivantes : {{choices}}.",
       "choiceOnOpenMaster": "Ce choix s’applique uniquement lorsque le ticket principal du groupe est clôturé.",
       "closeRuleFailed": "Ce ticket ne peut pas encore être clôturé : {{reason}}",
-      "reopenUnavailable": "Le ticket principal ne peut pas être rouvert car aucun statut de ticket ouvert n’est configuré."
+      "reopenUnavailable": "Le ticket principal ne peut pas être rouvert car aucun statut de ticket ouvert n’est configuré.",
+      "masterClosedStateMismatch": "Le maître actuel du lot et le ticket choisi comme nouveau maître doivent être tous deux ouverts ou tous deux fermés. Rouvrez ou fermez d'abord l'un d'eux."
     },
     "ticket": {
       "validationDetails": "Veuillez corriger les informations du ticket : {{details}}",
@@ -1989,6 +1993,10 @@
       "masterBanner": "Ce ticket est le maître d'un groupe ({{count}} enfants). Mode : {{mode}}.",
       "childLockedNotice": "Les champs de workflow sont verrouillés ; travaillez depuis le ticket maître.",
       "childLinkedNotice": "Il est lié au maître et géré indépendamment.",
+      "makeMaster": "Définir comme maître",
+      "promoteConfirmTitle": "Changer le maître du lot ?",
+      "promoteConfirmMessage": "Définir {{newMaster}} comme maître de ce lot ? Les paramètres du lot (mode, réouverture à la réponse d'un enfant) sont transférés à {{newMaster}} et le maître actuel {{oldMaster}} devient un enfant.",
+      "promoteConfirmLabel": "Définir comme maître",
       "multipleClients": "Plusieurs clients",
       "mode": "Mode : {{mode}}",
       "unbundle": "Dégrouper",
