@@ -47,6 +47,8 @@
     "partial": "Parcial",
     "draft": "Borrador",
     "finalized": "Finalizada",
+    "voided": "Anulada",
+    "voidedNotPayable": "Anulada – no se puede pagar",
     "sendEmail": "Enviar por correo",
     "sendEmailFailed": "No se pudo enviar la factura por correo. Inténtelo de nuevo.",
     "loadFailed": "No se pudieron cargar los detalles de la factura. Inténtelo de nuevo.",

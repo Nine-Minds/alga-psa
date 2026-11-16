@@ -47,6 +47,8 @@
     "partial": "Gedeeltelijk",
     "draft": "Voorlopig",
     "finalized": "Afgerond",
+    "voided": "Geannuleerd",
+    "voidedNotPayable": "Geannuleerd – niet betaalbaar",
     "sendEmail": "Als e-mail verzenden",
     "sendEmailFailed": "Het verzenden van de factuur per e-mail is mislukt. Probeer het opnieuw.",
     "loadFailed": "Kan factuurdetails niet laden. Probeer het opnieuw.",

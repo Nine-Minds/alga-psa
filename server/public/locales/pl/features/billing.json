@@ -47,6 +47,8 @@
     "partial": "Częściowa",
     "draft": "Wersja robocza",
     "finalized": "Sfinalizowana",
+    "voided": "Anulowana",
+    "voidedNotPayable": "Anulowana – nie podlega płatności",
     "sendEmail": "Wyślij e-mailem",
     "sendEmailFailed": "Nie udało się wysłać faktury e-mailem. Spróbuj ponownie.",
     "loadFailed": "Nie udało się wczytać szczegółów faktury. Spróbuj ponownie.",

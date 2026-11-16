@@ -608,7 +608,8 @@
       "unfinalize": "Återställ till utkast"
     },
     "status": {
-      "finalized": "Fastställd"
+      "finalized": "Fastställd",
+      "voided": "Makulerad"
     },
     "empty": {
       "title": "Inga fastställda fakturor",

@@ -608,7 +608,8 @@
       "unfinalize": "Definalizza"
     },
     "status": {
-      "finalized": "Finalizzata"
+      "finalized": "Finalizzata",
+      "voided": "Annullata"
     },
     "empty": {
       "title": "Nessuna fattura definitiva",

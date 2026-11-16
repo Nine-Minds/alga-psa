@@ -608,7 +608,8 @@
       "unfinalize": "Abschließen aufheben"
     },
     "status": {
-      "finalized": "Finalisiert"
+      "finalized": "Finalisiert",
+      "voided": "Storniert"
     },
     "empty": {
       "title": "Keine abgeschlossenen Rechnungen",

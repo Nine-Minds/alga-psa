@@ -608,7 +608,8 @@
       "unfinalize": "Unfinalize"
     },
     "status": {
-      "finalized": "Finalized"
+      "finalized": "Finalized",
+      "voided": "Voided"
     },
     "empty": {
       "title": "No Finalized Invoices",
