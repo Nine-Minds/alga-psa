@@ -130,6 +130,27 @@ function makeQueryBuilder(table: string) {
       if (sql.includes('generatedRfcMessageId')) generatedIdForms = (bindings?.[0] as string[]) ?? null;
       return builder;
     }),
+    // Batched outbound-id lookups await the builder for rows (newest first).
+    then: (resolve: any, reject: any) => {
+      const rows =
+        table === 'email_sending_logs' && (rfcMessageIdForms || generatedIdForms)
+          ? dbState.emailLogs
+              .filter((log) => log.tenant === whereCriteria.tenant)
+              .filter((log) =>
+                rfcMessageIdForms
+                  ? rfcMessageIdForms.includes(log.rfc_message_id as string)
+                  : generatedIdForms!.includes((log.metadata as any)?.generatedRfcMessageId)
+              )
+              .map((log) => ({
+                rfc_message_id: log.rfc_message_id,
+                metadata: log.metadata,
+                threadId: log.comment_thread_id,
+                entityType: log.entity_type,
+                entityId: log.entity_id,
+              }))
+          : [];
+      return Promise.resolve(rows).then(resolve, reject);
+    },
     whereNotNull: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     first: vi.fn(async () => {

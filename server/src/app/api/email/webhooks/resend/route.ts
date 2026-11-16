@@ -33,6 +33,14 @@ async function publishResendWorkflowEvent(event: ResendWorkflowEventToPublish): 
   }
 }
 
+/** email.sent redelivery window: Resend/Svix retries at ~5s and ~5min, both inside this. */
+const EMAIL_SENT_RETRY_WINDOW_MS = 10 * 60 * 1000;
+
+function isYoungWebhook(createdAt: unknown): boolean {
+  const at = typeof createdAt === 'string' ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(at) && Date.now() - at < EMAIL_SENT_RETRY_WINDOW_MS;
+}
+
 export async function POST(request: NextRequest) {
   const payload = await request.text();
 
@@ -56,10 +64,18 @@ export async function POST(request: NextRequest) {
 
   // Record the on-wire Message-ID (every email.* event carries message_id, email.sent included).
   // Only reached after the signature verified, so the signed alga_tenant_id tag is trusted; the
-  // operation matches on tenant + provider_message_id together. Failures never affect the response
-  // or the workflow-event publishing below.
+  // operation matches on tenant + provider_message_id together. Failures never affect the workflow-event
+  // publishing below.
+  //
+  // Race: the send path inserts the email_sending_logs row only after the provider call (and its
+  // GET /emails/:id) returns, so email.sent can arrive first and find no row. For email.sent only, ask
+  // Resend to redeliver (non-2xx) while the event is young; the later email.delivered carries the same
+  // message_id and the backfill is the final safety net. The age bound keeps a permanently missing row
+  // (no log written) from failing deliveries for days and getting the endpoint disabled.
+  let retryEmailSent = false;
   const onWireUpdate = extractResendOnWireMessageIdUpdate(webhook);
   if (onWireUpdate) {
+    const retryable = webhook?.type === 'email.sent' && isYoungWebhook(webhook?.created_at);
     try {
       const knex = await getConnection(onWireUpdate.tenantId);
       const outcome = await reconcileOnWireMessageId(knex, {
@@ -72,12 +88,14 @@ export async function POST(request: NextRequest) {
         tenantId: onWireUpdate.tenantId,
         status: outcome.status,
       });
+      if (outcome.status === 'not_found' && retryable) retryEmailSent = true;
     } catch (error) {
       logger.warn('[ResendWebhook] failed to reconcile on-wire Message-ID', {
         type: webhook?.type,
         tenantId: onWireUpdate.tenantId,
         error: error instanceof Error ? error.message : String(error),
       });
+      if (retryable) retryEmailSent = true;
     }
   }
 
@@ -95,6 +113,10 @@ export async function POST(request: NextRequest) {
         error,
       });
     }
+  }
+
+  if (retryEmailSent) {
+    return NextResponse.json({ ok: false, error: 'log_row_pending' }, { status: 503 });
   }
 
   return NextResponse.json({ ok: true });

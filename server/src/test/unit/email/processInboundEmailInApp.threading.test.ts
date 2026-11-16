@@ -65,6 +65,37 @@ function makeQueryBuilder(firstResult: unknown) {
   return builder;
 }
 
+/**
+ * email_sending_logs stub for the batched outbound-id lookup: records the forms passed to
+ * whereIn('rfc_message_id') and resolves (as an array) to rows built by `rowFor(forms)`.
+ * `queries` counts every query issued against the table.
+ */
+const logQueries = { count: 0 };
+function makeLogsBuilder(rowFor: (forms: string[]) => Record<string, unknown> | undefined) {
+  logQueries.count += 1;
+  let forms: string[] = [];
+  const builder: any = {
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhereRaw: vi.fn().mockReturnThis(),
+    whereNotNull: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    whereIn: vi.fn((_column: string, values: string[]) => {
+      forms = values;
+      return builder;
+    }),
+    // notificationLoopDetection awaits `.first()`; header lookups await the builder for rows.
+    first: vi.fn().mockResolvedValue(undefined),
+    then: (resolve: any, reject: any) => {
+      const row = rowFor(forms);
+      const bracketed = forms.find((f) => f.startsWith('<'));
+      return Promise.resolve(row ? [{ rfc_message_id: bracketed, ...row }] : []).then(resolve, reject);
+    },
+  };
+  return builder;
+}
+
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
@@ -260,16 +291,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs') {
-          const builder: any = {
-            select: vi.fn().mockReturnThis(),
-            where: vi.fn().mockReturnThis(),
-            whereIn: vi.fn().mockReturnThis(),
-            whereRaw: vi.fn().mockReturnThis(),
-            whereNotNull: vi.fn().mockReturnThis(),
-            orderBy: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue({ threadId: 'thread-789' }),
-          };
-          return builder;
+          return makeLogsBuilder(() => ({ threadId: 'thread-789' }));
         }
 
         if (table === 'comment_threads') {
@@ -352,7 +374,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
         if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
-        if (table === 'email_sending_logs') return makeQueryBuilder({ threadId: 'thread-forged' });
+        if (table === 'email_sending_logs') return makeLogsBuilder(() => ({ threadId: 'thread-forged' }));
         if (table === 'comment_threads') return makeQueryBuilder({ ticketId: 'ticket-target', threadId: 'thread-forged' });
         if (table === 'comments') return makeQueryBuilder({ parentCommentId: 'parent-comment-target' });
         if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-target', board_id: 'board-1', client_id: 'client-1', attributes: {} });
@@ -401,7 +423,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
         if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
-        if (table === 'email_sending_logs') return makeQueryBuilder({ threadId: 'thread-intraorg' });
+        if (table === 'email_sending_logs') return makeLogsBuilder(() => ({ threadId: 'thread-intraorg' }));
         if (table === 'comment_threads') return makeQueryBuilder({ ticketId: 'ticket-intraorg', threadId: 'thread-intraorg' });
         if (table === 'comments') {
           const builder: any = {
@@ -482,33 +504,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs') {
-          let rfcMessageId = '';
-          const builder: any = {
-            select: vi.fn().mockReturnThis(),
-            where: vi.fn((criteria: Record<string, unknown>) => {
-              if (!('rfc_message_id' in criteria)) {
-                return builder;
-              }
-              rfcMessageId = String(criteria.rfc_message_id ?? '');
-              rfcLookups.push(rfcMessageId);
-              return builder;
-            }),
-            // The lookup matches through rfcMessageIdLookupForms: bare + bracketed forms.
-            whereIn: vi.fn((_column: string, forms: string[]) => {
-              rfcMessageId = forms.find((form) => form.startsWith('<')) ?? '';
-              rfcLookups.push(rfcMessageId);
-              return builder;
-            }),
-            whereRaw: vi.fn().mockReturnThis(),
-            whereNotNull: vi.fn().mockReturnThis(),
-            orderBy: vi.fn().mockReturnThis(),
-            first: vi.fn(async () =>
-              rfcMessageId === '<target-reference@example.test>'
-                ? { threadId: 'thread-ref-123' }
-                : undefined
-            ),
-          };
-          return builder;
+          // Batched lookup: ONE whereIn over every reference's forms. Only the older reference matches.
+          return makeLogsBuilder((forms) => {
+            if (forms.length > 0) rfcLookups.push(forms.join('|'));
+            return forms.includes('<target-reference@example.test>')
+              ? { rfc_message_id: '<target-reference@example.test>', threadId: 'thread-ref-123' }
+              : undefined;
+          });
         }
 
         if (table === 'comment_threads') {
@@ -562,10 +564,10 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       ticketId: 'ticket-ref-123',
       commentId: 'comment-1',
     });
-    expect(rfcLookups).toEqual([
-      '<newer-unmatched-reference@example.test>',
-      '<target-reference@example.test>',
-    ]);
+    // One on-wire query covered the whole chain (not one per reference).
+    expect(rfcLookups).toHaveLength(1);
+    expect(rfcLookups[0]).toContain('<newer-unmatched-reference@example.test>');
+    expect(rfcLookups[0]).toContain('<target-reference@example.test>');
     expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -734,6 +736,66 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
   });
 
+  it('a miss across a long References chain makes a bounded number of outbound-id queries', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Forwarded thread body', sanitizedHtml: undefined, confidence: 0.95,
+      strategy: 'plain', appliedHeuristics: [], warnings: [], tokens: {},
+    });
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-legacy-fallback-123' });
+
+    const onWireQueries: string[][] = [];
+    const generatedQueries: unknown[][] = [];
+    const generatedSql: string[] = [];
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+        if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-legacy-fallback-123', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+        if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+        if (table === 'boards') return makeQueryBuilder({});
+        if (table === 'email_sending_logs') {
+          const builder = makeLogsBuilder(() => undefined);
+          const whereIn = builder.whereIn;
+          builder.whereIn = vi.fn((column: string, values: string[]) => {
+            if (column === 'rfc_message_id') onWireQueries.push(values);
+            return whereIn(column, values);
+          });
+          builder.whereRaw = vi.fn((sql: string, bindings?: unknown[]) => {
+            if (sql.includes('generatedRfcMessageId')) {
+              generatedQueries.push(bindings ?? []);
+              generatedSql.push(sql);
+            }
+            return builder;
+          });
+          return builder;
+        }
+        if (table === 'comment_threads') return makeQueryBuilder(undefined);
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+      return callback(trx);
+    });
+
+    const references = Array.from({ length: 12 }, (_, i) => `<outside-${i}@elsewhere.example>`);
+    const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({ id: 'email-forward-1', inReplyTo: references[11], references }),
+    });
+
+    // In-Reply-To: 1 on-wire + <=1 generated; References: 1 on-wire + <=1 generated — not 2 per entry.
+    expect(onWireQueries.length).toBeLessThanOrEqual(2);
+    expect(generatedQueries.length).toBeLessThanOrEqual(2);
+    // Must stay the exact expression + predicate of idx_email_sending_logs_tenant_generated_rfc_message.
+    for (const sql of generatedSql) {
+      expect(sql).toContain("(metadata->>'generatedRfcMessageId') IS NOT NULL");
+      expect(sql).toContain("(metadata->>'generatedRfcMessageId') = ANY(?)");
+    }
+    expect(generatedSql.length).toBeGreaterThan(0);
+    const referenceQuery = onWireQueries.find((forms) => forms.length >= references.length);
+    expect(referenceQuery).toBeDefined();
+    expect(referenceQuery).toEqual(expect.arrayContaining(references));
+  });
+
   it('T038: reply token wins over In-Reply-To when both are present', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'Precedence reply body',
@@ -883,7 +945,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
             }),
             whereIn: vi.fn((column: string, values: string[]) => {
               if (column === 'rfc_message_id') {
-                criteria = { ...criteria, rfc_message_id: values.find((v) => opts.sendingLogs?.[v]) ?? values[0] };
+                criteria = { ...criteria, rfc_message_id: values.find((v) => opts.sendingLogs?.[v]) ?? values[0], forms: values };
               }
               return builder;
             }),
@@ -896,6 +958,13 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
               const threadId = opts.sendingLogs?.[criteria.rfc_message_id];
               return threadId ? { threadId } : undefined;
             });
+            // Batched header lookup resolves to the rows whose rfc_message_id is among the forms.
+            builder.then = (resolve: any, reject: any) => {
+              const rows = ((criteria.forms as string[] | undefined) ?? [])
+                .filter((form) => opts.sendingLogs?.[form])
+                .map((form) => ({ rfc_message_id: form, threadId: opts.sendingLogs![form] }));
+              return Promise.resolve(rows).then(resolve, reject);
+            };
             return builder;
           }
 

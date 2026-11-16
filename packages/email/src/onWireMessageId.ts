@@ -34,6 +34,14 @@
  *                                                    equals the generated id (normally a synthetic
  *                                                    `<ticket-{id}@domain>` that is never a Message-ID).
  *
+ * Known gaps:
+ *  - Race: the send path inserts the log row only after the provider call returns, so an `email.sent`
+ *    webhook can beat it (reconcile => not_found). The route answers 503 for young `email.sent` events so
+ *    Resend redelivers; the later `email.delivered` carries the same message_id; the backfill
+ *    (server/scripts/backfill-resend-on-wire-message-ids.ts) is the final safety net.
+ *  - Generated ids stored with an upper-case domain (before generation lower-cased it) are not matched by
+ *    the inbound generated-id lookup, which lower-cases the domain.
+ *
  * Deliberately NOT rewritten:
  *  - tickets.email_metadata.messageId / inReplyTo and comments.metadata.email.*: these hold the
  *    customer's inbound ids, not ids we generated.

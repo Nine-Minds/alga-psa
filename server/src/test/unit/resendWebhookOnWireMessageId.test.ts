@@ -126,6 +126,42 @@ describe('Resend webhook on-wire Message-ID (T004, F004)', () => {
     expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'EMAIL_DELIVERED' }));
   });
 
+  describe('email.sent arriving before the log row exists', () => {
+    const fresh = () => new Date().toISOString();
+
+    it('asks Resend to redeliver (503) for a young email.sent whose row is not found', async () => {
+      mocks.reconcile.mockResolvedValue({ status: 'not_found', rowsMatched: 0, rowsRecorded: 0 });
+      const res = await POST(request({ ...event('email.sent'), created_at: fresh() }));
+      expect(res.status).toBe(503);
+    });
+
+    it('also retries a young email.sent when reconciliation throws', async () => {
+      mocks.reconcile.mockRejectedValue(new Error('db down'));
+      const res = await POST(request({ ...event('email.sent'), created_at: fresh() }));
+      expect(res.status).toBe(503);
+    });
+
+    it('returns 200 once the row is found (the redelivery succeeds)', async () => {
+      mocks.reconcile.mockResolvedValue({ status: 'recorded', rowsMatched: 1, rowsRecorded: 1 });
+      const res = await POST(request({ ...event('email.sent'), created_at: fresh() }));
+      expect(res.status).toBe(200);
+    });
+
+    it('stops asking for redelivery after the age window (a row that never appears)', async () => {
+      mocks.reconcile.mockResolvedValue({ status: 'not_found', rowsMatched: 0, rowsRecorded: 0 });
+      const old = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const res = await POST(request({ ...event('email.sent'), created_at: old }));
+      expect(res.status).toBe(200);
+    });
+
+    it('never changes the status for other events, which still publish', async () => {
+      mocks.reconcile.mockResolvedValue({ status: 'not_found', rowsMatched: 0, rowsRecorded: 0 });
+      const res = await POST(request({ ...event('email.delivered'), created_at: fresh() }));
+      expect(res.status).toBe(200);
+      expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'EMAIL_DELIVERED' }));
+    });
+  });
+
   it('extractResendOnWireMessageIdUpdate ignores non-email events', () => {
     expect(extractResendOnWireMessageIdUpdate({ type: 'contact.updated', data: { message_id: WIRE, email_id: 'x', tags: { alga_tenant_id: 't' } } })).toBeNull();
   });
