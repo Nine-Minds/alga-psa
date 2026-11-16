@@ -255,7 +255,9 @@ describe("RequestServiceForm lookup fields", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Select/ }));
+    // The question is labelled like every other field (the shared picker draws no label of its own).
+    // ...and the label names the picker for assistive tech.
+    await user.click(screen.getByRole("button", { name: "Manager *" }));
     // Only the scoped options are offered; there is no other source of contacts in the form.
     expect(screen.getByText("Sam Supervisor")).toBeInTheDocument();
     await user.click(screen.getByText("Jane Manager"));
@@ -298,7 +300,9 @@ describe("RequestServiceForm lookup fields", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Select/ }));
+    // One label for the question, not the picker's own heading on top of it.
+    expect(screen.getAllByText("Owner")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Owner" }));
     expect(screen.getByText("Jane Manager")).toBeInTheDocument();
   });
 });

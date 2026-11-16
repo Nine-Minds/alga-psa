@@ -307,10 +307,19 @@ export function RequestServiceForm({
           const selectedId = typeof currentValue === 'string' ? currentValue : '';
           return (
             <div key={key} className="space-y-1">
+              {/* The shared pickers do not render a form label (ContactPicker ignores `label` visually,
+                  UserPicker draws its own heading), so the question label is drawn here like select/date. */}
+              <label
+                htmlFor={automationId}
+                className="block text-sm font-medium text-[rgb(var(--color-text-700))]"
+              >
+                {labelWithRequired}
+              </label>
               {field.lookup?.entity === 'user' ? (
                 <UserPicker
                   id={automationId}
-                  label={labelWithRequired}
+                  label={label}
+                  labelStyle="none"
                   value={selectedId}
                   onValueChange={(value) => setValue(key, value)}
                   users={options.map(toPickerUser)}
@@ -322,7 +331,7 @@ export function RequestServiceForm({
               ) : (
                 <ContactPicker
                   id={automationId}
-                  label={labelWithRequired}
+                  label={label}
                   contacts={options.map(toPickerContact)}
                   value={selectedId}
                   onValueChange={(value) => setValue(key, value)}
