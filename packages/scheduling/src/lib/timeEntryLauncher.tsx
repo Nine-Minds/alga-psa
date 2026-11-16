@@ -13,6 +13,7 @@ import {
   dateOnlyToLocalDate,
   periodLastInclusiveDay,
   resolveEntryDefaults,
+  resolveSingleDayPlanDefaults,
   zonedWorkDayCalendar,
   type ResolvedEntryDefaults,
 } from './timeEntryPeriodSelection';
@@ -238,7 +239,9 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
           source: 'context',
           moved: { kind: 'none' },
         }
-      : resolveEntryDefaults({ context, periods, timeZone });
+      : plan?.length === 1
+        ? resolveSingleDayPlanDefaults({ context, planItem: plan[0], periods, timeZone })
+        : resolveEntryDefaults({ context, periods, timeZone });
     if (!defaults) {
       launchBlockedToast(
         launchMessage(

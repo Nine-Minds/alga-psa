@@ -214,6 +214,26 @@ export function resolveEntryDefaults(params: {
   return { defaultStartTime, defaultEndTime, date: defaultStartTime, source, moved };
 }
 
+/**
+ * Defaults for a stopwatch session whose plan has exactly one item. The context's startTime/endTime
+ * come from toEntrySpan (first start + total active minutes) and can cross midnight when the planner
+ * dropped a day or capped the end at 23:59, so the planned span replaces them. Everything else,
+ * including the move-to-editable-day fallback, is resolveEntryDefaults as usual.
+ */
+export function resolveSingleDayPlanDefaults(params: {
+  context: TimeEntryWorkItemContext;
+  planItem: { start: Date; end: Date };
+  periods: readonly CatalogPeriod[];
+  timeZone: string | null | undefined;
+  now?: Date;
+}): ResolvedEntryDefaults | null {
+  const { context, planItem, ...rest } = params;
+  return resolveEntryDefaults({
+    ...rest,
+    context: { ...context, startTime: planItem.start, endTime: planItem.end },
+  });
+}
+
 /** The last day a period covers, derived from the exclusive `end_date`. */
 export function periodLastInclusiveDay(endDateExclusive: string): string {
   return Temporal.PlainDate.from(endDateExclusive.slice(0, 10)).subtract({ days: 1 }).toString();
