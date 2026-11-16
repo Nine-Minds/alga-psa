@@ -169,6 +169,30 @@ describe('backfill email opener comment marker migration', () => {
     expect(await db!('comments').orderBy('comment_id').select('comment_id', 'metadata')).toEqual(afterFirst);
   });
 
+  it('applies both rules across keyset batch boundaries and tenants', async (ctx) => {
+    if (!reachable) return ctx.skip();
+    const expected = new Set<string>();
+    const unexpected = new Set<string>();
+    for (const tenant of [TENANT, OTHER_TENANT]) {
+      for (let i = 0; i < 3; i += 1) {
+        // Primary: an earlier non-matching comment must lose to the Message-ID match.
+        const p = await ticket({ tenant, email_metadata: { messageId: `p-${i}` } });
+        unexpected.add(await comment(p, { tenant, created_at: at(1), metadata: { responseSource: 'inbound_email', email: { messageId: 'nope' } } }));
+        expected.add(await comment(p, { tenant, created_at: at(40), metadata: { responseSource: 'inbound_email', email: { messageId: `p-${i}` } } }));
+        // Fallback: no Message-ID anywhere, earliest root inbound comment within 120s.
+        const f = await ticket({ tenant, email_metadata: null });
+        expected.add(await comment(f, { tenant, created_at: at(3), metadata: { responseSource: 'inbound_email' } }));
+        unexpected.add(await comment(f, { tenant, created_at: at(9), metadata: { responseSource: 'inbound_email' } }));
+      }
+    }
+    const result = await MIGRATION.backfillEmailOpenerCommentMarker(db, 2); // 12 tickets in 6+ batches
+    const set = await marked();
+    expect(result.marked).toBe(expected.size);
+    for (const id of expected) expect(set.has(id)).toBe(true);
+    for (const id of unexpected) expect(set.has(id)).toBe(false);
+    expect(set.size).toBe(expected.size);
+  });
+
   it('down removes the marker and nothing else', async (ctx) => {
     if (!reachable) return ctx.skip();
     const t = await ticket();
