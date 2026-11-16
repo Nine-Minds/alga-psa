@@ -147,6 +147,25 @@ describe('ServiceRequestFormRenderer layout', () => {
     expect(container.firstElementChild!.className).not.toContain('max-w-2xl');
   });
 
+  it('renders each authored measure', () => {
+    const field = [{ key: 'a', type: 'short-text' as const, label: 'A' }];
+    const { container, rerender } = renderForm(field, {
+      settings: { layout: { width: 'narrow' } },
+    });
+    expect(container.firstElementChild!.className).toContain('max-w-md');
+
+    rerender(
+      <ServiceRequestFormRenderer
+        fields={field}
+        settings={{ layout: { width: 'wide' } }}
+        values={{}}
+        onValueChange={() => {}}
+        labels={labels}
+      />
+    );
+    expect(container.firstElementChild!.className).toContain('max-w-4xl');
+  });
+
   it('shows an inline error and points the control at it', () => {
     renderForm([{ key: 'full_name', type: 'short-text', label: 'Full name', required: true }], {
       errors: { full_name: 'This question needs an answer.' },

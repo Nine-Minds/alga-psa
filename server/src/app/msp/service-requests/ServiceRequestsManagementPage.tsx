@@ -253,9 +253,12 @@ export default function ServiceRequestsManagementPage() {
             onClick={() =>
               startTransition(async () => {
                 try {
-                  await createBlankServiceRequestDefinitionAction();
-                  await reload();
+                  // Straight into the new draft, the way starting from an example already
+                  // works: the author came here to write a request, not to find the row
+                  // that appeared at the bottom of a table.
+                  const created = await createBlankServiceRequestDefinitionAction();
                   toast.success(t('messages.success.draftCreated'));
+                  router.push(`/msp/service-requests/${created.definition_id}`);
                 } catch (error) {
                   console.error('Failed to create draft definition', error);
                   toast.error(t('messages.error.createDraftFailed'));

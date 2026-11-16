@@ -56,14 +56,11 @@
       "formSubheading": "Request Form"
     },
     "linkage": {
-      "title": "Linkage",
       "linkedService": "Linked Service",
-      "searchPlaceholder": "Search service catalog",
-      "search": "Search",
-      "clear": "Clear",
-      "select": "Select",
+      "searchPlaceholder": "Search the service catalog",
       "noDescription": "No description",
-      "unset": "-"
+      "unset": "-",
+      "none": "Not linked"
     },
     "form": {
       "title": "Form",
@@ -138,7 +135,9 @@
       "openBuilder": "Open form builder",
       "summary": "{{questions}} questions · {{required}} required",
       "requiredChip": "Required",
-      "datePlaceholder": "Pick a date"
+      "datePlaceholder": "Pick a date",
+      "showFields": "Show the questions",
+      "hideFields": "Hide the questions"
     },
     "execution": {
       "title": "Execution",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
-      "audienceSaveFailed": "Failed to update audience"
+      "audienceSaveFailed": "Failed to update audience",
+      "linkedServiceUpdateFailed": "Failed to update the linked service"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "The whole form",
         "description": "How the form looks and what happens after it is sent.",
         "width": "Form width",
+        "widthNarrow": "Narrow",
         "widthBoxed": "Comfortable reading width",
+        "widthWide": "Wide",
         "widthFull": "The full page",
         "submitLabel": "Send button wording",
         "submitLabelPlaceholder": "Submit request",

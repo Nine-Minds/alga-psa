@@ -56,14 +56,11 @@
       "formSubheading": "Formulario de solicitud"
     },
     "linkage": {
-      "title": "Vinculación",
       "linkedService": "Servicio vinculado",
       "searchPlaceholder": "Buscar en el catálogo de servicios",
-      "search": "Buscar",
-      "clear": "Borrar",
-      "select": "Seleccionar",
       "noDescription": "Sin descripción",
-      "unset": "-"
+      "unset": "-",
+      "none": "Sin vincular"
     },
     "form": {
       "title": "Formulario",
@@ -138,7 +135,9 @@
       "openBuilder": "Abrir el editor de formularios",
       "summary": "{{questions}} preguntas · {{required}} obligatorias",
       "requiredChip": "Obligatorio",
-      "datePlaceholder": "Elija una fecha"
+      "datePlaceholder": "Elija una fecha",
+      "showFields": "Mostrar las preguntas",
+      "hideFields": "Ocultar las preguntas"
     },
     "execution": {
       "title": "Ejecución",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "La configuración de visibilidad debe ser un objeto JSON",
       "visibilityInvalid": "JSON de visibilidad no válido",
       "saveAllPartial": "Algunas secciones no se pudieron guardar: {{sections}}",
-      "audienceSaveFailed": "No se pudo actualizar la audiencia"
+      "audienceSaveFailed": "No se pudo actualizar la audiencia",
+      "linkedServiceUpdateFailed": "No se pudo actualizar el servicio vinculado"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Todo el formulario",
         "description": "Aspecto del formulario y qué ocurre tras enviarlo.",
         "width": "Ancho del formulario",
+        "widthNarrow": "Estrecho",
         "widthBoxed": "Ancho cómodo de lectura",
+        "widthWide": "Ancho",
         "widthFull": "Toda la página",
         "submitLabel": "Texto del botón de envío",
         "submitLabelPlaceholder": "Enviar la solicitud",

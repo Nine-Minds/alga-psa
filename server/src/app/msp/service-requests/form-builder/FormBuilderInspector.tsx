@@ -19,10 +19,12 @@ import {
   validateFieldValue,
   type FieldValidationRuleKey,
 } from '@alga-psa/ui/form-fields';
-import type {
-  BasicFormField,
-  BasicFormFieldOption,
-  BasicFormSettings,
+import {
+  BASIC_FORM_WIDTH_PX,
+  isBasicFormWidth,
+  type BasicFormField,
+  type BasicFormFieldOption,
+  type BasicFormSettings,
 } from '../../../../lib/service-requests/formSchema';
 import { FormBuilderVisibilityRules } from './FormBuilderVisibilityRules';
 import { slugifyElementKey, uniqueOptionValue } from './formBuilderState';
@@ -136,16 +138,31 @@ export function FormBuilderInspector({
           title={t('formBuilder.inspector.formSettings.title')}
           description={t('formBuilder.inspector.formSettings.description')}
         >
+          {/* Each choice names the measure it renders at, so "how wide is the form?" has an
+              answer in the control itself rather than in the stylesheet. */}
           <CustomSelect
             id="service-request-form-settings-width"
             label={t('formBuilder.inspector.formSettings.width')}
             value={settings.layout?.width ?? 'boxed'}
             options={[
-              { value: 'boxed', label: t('formBuilder.inspector.formSettings.widthBoxed') },
+              {
+                value: 'narrow',
+                label: `${t('formBuilder.inspector.formSettings.widthNarrow')} · ${BASIC_FORM_WIDTH_PX.narrow} px`,
+              },
+              {
+                value: 'boxed',
+                label: `${t('formBuilder.inspector.formSettings.widthBoxed')} · ${BASIC_FORM_WIDTH_PX.boxed} px`,
+              },
+              {
+                value: 'wide',
+                label: `${t('formBuilder.inspector.formSettings.widthWide')} · ${BASIC_FORM_WIDTH_PX.wide} px`,
+              },
               { value: 'full', label: t('formBuilder.inspector.formSettings.widthFull') },
             ]}
             onValueChange={(value) =>
-              onSettingsChange({ layout: { width: value === 'full' ? 'full' : 'boxed' } })
+              onSettingsChange({
+                layout: { width: isBasicFormWidth(value) ? value : 'boxed' },
+              })
             }
           />
           <Input

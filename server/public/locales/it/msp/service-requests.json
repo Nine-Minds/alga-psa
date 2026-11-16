@@ -56,14 +56,11 @@
       "formSubheading": "Modulo di richiesta"
     },
     "linkage": {
-      "title": "Collegamento",
       "linkedService": "Servizio collegato",
       "searchPlaceholder": "Cerca nel catalogo servizi",
-      "search": "Cerca",
-      "clear": "Cancella",
-      "select": "Seleziona",
       "noDescription": "Nessuna descrizione",
-      "unset": "-"
+      "unset": "-",
+      "none": "Non collegato"
     },
     "form": {
       "title": "Modulo",
@@ -138,7 +135,9 @@
       "openBuilder": "Apri l'editor del modulo",
       "summary": "{{questions}} domande · {{required}} obbligatorie",
       "requiredChip": "Obbligatorio",
-      "datePlaceholder": "Scegli una data"
+      "datePlaceholder": "Scegli una data",
+      "showFields": "Mostra le domande",
+      "hideFields": "Nascondi le domande"
     },
     "execution": {
       "title": "Esecuzione",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
       "visibilityInvalid": "JSON della visibilità non valido",
       "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
-      "audienceSaveFailed": "Impossibile aggiornare i destinatari"
+      "audienceSaveFailed": "Impossibile aggiornare i destinatari",
+      "linkedServiceUpdateFailed": "Impossibile aggiornare il servizio collegato"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "L'intero modulo",
         "description": "Come appare il modulo e cosa succede dopo l'invio.",
         "width": "Larghezza del modulo",
+        "widthNarrow": "Stretta",
         "widthBoxed": "Larghezza di lettura comoda",
+        "widthWide": "Larga",
         "widthFull": "L'intera pagina",
         "submitLabel": "Testo del pulsante di invio",
         "submitLabelPlaceholder": "Invia la richiesta",

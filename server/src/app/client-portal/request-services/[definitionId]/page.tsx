@@ -17,7 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
-import { normalizeBasicFormSchema } from '../../../../lib/service-requests/formSchema';
+import {
+  getBasicFormWidthClass,
+  normalizeBasicFormSchema,
+} from '../../../../lib/service-requests/formSchema';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 
@@ -67,8 +70,13 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
     ? await getRequestServiceVisibilityContextAction()
     : null;
 
+  // The page takes the measure the form was authored at, so a boxed form sits in a card its
+  // own size instead of a narrow column stranded in a page-wide one. The author chooses it
+  // in the builder's form settings; "Full width" gives the page back to the form.
+  const widthClass = getBasicFormWidthClass(formSchema.settings);
+
   return (
-    <div className="space-y-4">
+    <div className={`${widthClass} space-y-4`}>
       <div>
         <h1 className="text-2xl font-semibold">{detail.title}</h1>
         <div className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">

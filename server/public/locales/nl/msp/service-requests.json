@@ -56,14 +56,11 @@
       "formSubheading": "Aanvraagformulier"
     },
     "linkage": {
-      "title": "Koppeling",
       "linkedService": "Gekoppelde service",
-      "searchPlaceholder": "Servicecatalogus zoeken",
-      "search": "Zoeken",
-      "clear": "Wissen",
-      "select": "Selecteren",
+      "searchPlaceholder": "Zoek in de servicecatalogus",
       "noDescription": "Geen beschrijving",
-      "unset": "-"
+      "unset": "-",
+      "none": "Niet gekoppeld"
     },
     "form": {
       "title": "Formulier",
@@ -138,7 +135,9 @@
       "openBuilder": "Formulierbouwer openen",
       "summary": "{{questions}} vragen · {{required}} verplicht",
       "requiredChip": "Verplicht",
-      "datePlaceholder": "Kies een datum"
+      "datePlaceholder": "Kies een datum",
+      "showFields": "Toon de vragen",
+      "hideFields": "Verberg de vragen"
     },
     "execution": {
       "title": "Uitvoering",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
-      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt",
+      "linkedServiceUpdateFailed": "Gekoppelde service kon niet worden bijgewerkt"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Het hele formulier",
         "description": "Hoe het formulier eruitziet en wat er na verzending gebeurt.",
         "width": "Formulierbreedte",
+        "widthNarrow": "Smal",
         "widthBoxed": "Prettige leesbreedte",
+        "widthWide": "Breed",
         "widthFull": "De hele pagina",
         "submitLabel": "Tekst op de verzendknop",
         "submitLabelPlaceholder": "Aanvraag versturen",

@@ -56,14 +56,11 @@
       "formSubheading": "Förfrågningsformulär"
     },
     "linkage": {
-      "title": "Koppling",
       "linkedService": "Kopplad tjänst",
       "searchPlaceholder": "Sök i tjänstekatalogen",
-      "search": "Sök",
-      "clear": "Rensa",
-      "select": "Välj",
       "noDescription": "Ingen beskrivning",
-      "unset": "-"
+      "unset": "-",
+      "none": "Inte kopplad"
     },
     "form": {
       "title": "Formulär",
@@ -138,7 +135,9 @@
       "openBuilder": "Öppna formulärbyggaren",
       "summary": "{{questions}} frågor · {{required}} obligatoriska",
       "requiredChip": "Obligatoriskt",
-      "datePlaceholder": "Välj ett datum"
+      "datePlaceholder": "Välj ett datum",
+      "showFields": "Visa frågorna",
+      "hideFields": "Dölj frågorna"
     },
     "execution": {
       "title": "Utförande",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
       "visibilityInvalid": "Ogiltig JSON för synlighet",
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
-      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
+      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen",
+      "linkedServiceUpdateFailed": "Det gick inte att uppdatera den kopplade tjänsten"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Hela formuläret",
         "description": "Hur formuläret ser ut och vad som händer efter att det skickats.",
         "width": "Formulärets bredd",
+        "widthNarrow": "Smal",
         "widthBoxed": "Bekväm läsbredd",
+        "widthWide": "Bred",
         "widthFull": "Hela sidan",
         "submitLabel": "Text på skicka-knappen",
         "submitLabelPlaceholder": "Skicka förfrågan",

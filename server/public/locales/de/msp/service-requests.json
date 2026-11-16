@@ -56,14 +56,11 @@
       "formSubheading": "Anforderungsformular"
     },
     "linkage": {
-      "title": "Verknüpfung",
       "linkedService": "Verknüpfter Service",
       "searchPlaceholder": "Servicekatalog durchsuchen",
-      "search": "Suchen",
-      "clear": "Löschen",
-      "select": "Auswählen",
       "noDescription": "Keine Beschreibung",
-      "unset": "-"
+      "unset": "-",
+      "none": "Nicht verknüpft"
     },
     "form": {
       "title": "Formular",
@@ -138,7 +135,9 @@
       "openBuilder": "Formular-Editor öffnen",
       "summary": "{{questions}} Fragen · {{required}} erforderlich",
       "requiredChip": "Erforderlich",
-      "datePlaceholder": "Datum auswählen"
+      "datePlaceholder": "Datum auswählen",
+      "showFields": "Fragen anzeigen",
+      "hideFields": "Fragen ausblenden"
     },
     "execution": {
       "title": "Ausführung",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
       "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
       "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
-      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
+      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden",
+      "linkedServiceUpdateFailed": "Verknüpfter Service konnte nicht aktualisiert werden"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Das ganze Formular",
         "description": "Aussehen des Formulars und was nach dem Absenden passiert.",
         "width": "Formularbreite",
+        "widthNarrow": "Schmal",
         "widthBoxed": "Angenehme Lesebreite",
+        "widthWide": "Breit",
         "widthFull": "Die ganze Seite",
         "submitLabel": "Beschriftung der Senden-Schaltfläche",
         "submitLabelPlaceholder": "Anfrage senden",

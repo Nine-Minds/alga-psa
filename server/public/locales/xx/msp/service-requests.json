@@ -56,14 +56,11 @@
       "formSubheading": "⟦Řḗʠŭḗşŧ Ƒȯřḿ⟧"
     },
     "linkage": {
-      "title": "⟦Ŀīƞķȧɠḗ⟧",
       "linkedService": "⟦Ŀīƞķḗḓ Şḗřṽīƈḗ⟧",
-      "searchPlaceholder": "⟦Şḗȧřƈħ şḗřṽīƈḗ ƈȧŧȧŀȯɠ⟧",
-      "search": "⟦Şḗȧřƈħ⟧",
-      "clear": "⟦Ƈŀḗȧř⟧",
-      "select": "⟦Şḗŀḗƈŧ⟧",
+      "searchPlaceholder": "⟦Şḗȧřƈħ ŧħḗ şḗřṽīƈḗ ƈȧŧȧŀȯɠ⟧",
       "noDescription": "⟦Ƞȯ ḓḗşƈřīƥŧīȯƞ⟧",
-      "unset": "⟦-⟧"
+      "unset": "⟦-⟧",
+      "none": "⟦Ƞȯŧ ŀīƞķḗḓ⟧"
     },
     "form": {
       "title": "⟦Ƒȯřḿ⟧",
@@ -138,7 +135,9 @@
       "openBuilder": "⟦Ȯƥḗƞ ƒȯřḿ ƀŭīŀḓḗř⟧",
       "summary": "⟦{{questions}} ʠŭḗşŧīȯƞş · {{required}} řḗʠŭīřḗḓ⟧",
       "requiredChip": "⟦Řḗʠŭīřḗḓ⟧",
-      "datePlaceholder": "⟦Ƥīƈķ ȧ ḓȧŧḗ⟧"
+      "datePlaceholder": "⟦Ƥīƈķ ȧ ḓȧŧḗ⟧",
+      "showFields": "⟦Şħȯẇ ŧħḗ ʠŭḗşŧīȯƞş⟧",
+      "hideFields": "⟦Ħīḓḗ ŧħḗ ʠŭḗşŧīȯƞş⟧"
     },
     "execution": {
       "title": "⟦Ḗẋḗƈŭŧīȯƞ⟧",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "⟦Ṽīşīƀīŀīŧẏ ƈȯƞƒīɠ ḿŭşŧ ƀḗ ȧ ĴŞȮȠ ȯƀĵḗƈŧ⟧",
       "visibilityInvalid": "⟦Īƞṽȧŀīḓ ṽīşīƀīŀīŧẏ ĴŞȮȠ⟧",
       "saveAllPartial": "⟦Şȯḿḗ şḗƈŧīȯƞş ƈȯŭŀḓƞ'ŧ ƀḗ şȧṽḗḓ: {{sections}}⟧",
-      "audienceSaveFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧŭḓīḗƞƈḗ⟧"
+      "audienceSaveFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧŭḓīḗƞƈḗ⟧",
+      "linkedServiceUpdateFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧħḗ ŀīƞķḗḓ şḗřṽīƈḗ⟧"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "⟦Ŧħḗ ẇħȯŀḗ ƒȯřḿ⟧",
         "description": "⟦Ħȯẇ ŧħḗ ƒȯřḿ ŀȯȯķş ȧƞḓ ẇħȧŧ ħȧƥƥḗƞş ȧƒŧḗř īŧ īş şḗƞŧ.⟧",
         "width": "⟦Ƒȯřḿ ẇīḓŧħ⟧",
+        "widthNarrow": "⟦Ƞȧřřȯẇ⟧",
         "widthBoxed": "⟦Ƈȯḿƒȯřŧȧƀŀḗ řḗȧḓīƞɠ ẇīḓŧħ⟧",
+        "widthWide": "⟦Ẇīḓḗ⟧",
         "widthFull": "⟦Ŧħḗ ƒŭŀŀ ƥȧɠḗ⟧",
         "submitLabel": "⟦Şḗƞḓ ƀŭŧŧȯƞ ẇȯřḓīƞɠ⟧",
         "submitLabelPlaceholder": "⟦Şŭƀḿīŧ řḗʠŭḗşŧ⟧",

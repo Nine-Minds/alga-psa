@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { FieldInputControl, getFieldType } from '@alga-psa/ui/form-fields';
 import {
+  getBasicFormWidthClass,
   groupFormElementsBySection,
   type BasicFormField,
   type BasicFormSettings,
@@ -252,9 +253,7 @@ export function ServiceRequestFormRenderer({
   const containerClass =
     previewWidth === 'mobile'
       ? 'mx-auto w-full max-w-[26rem]'
-      : settings?.layout?.width === 'full'
-        ? 'w-full'
-        : 'mx-auto w-full max-w-2xl';
+      : getBasicFormWidthClass(settings);
 
   return (
     <div className={`${containerClass} space-y-6`}>

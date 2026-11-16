@@ -56,14 +56,11 @@
       "formSubheading": "Formulário de solicitação"
     },
     "linkage": {
-      "title": "Ligação",
       "linkedService": "Serviço vinculado",
-      "searchPlaceholder": "Catálogo de serviços de pesquisa",
-      "search": "Procurar",
-      "clear": "Limpar",
-      "select": "Selecione",
+      "searchPlaceholder": "Pesquisar no catálogo de serviços",
       "noDescription": "Sem descrição",
-      "unset": "-"
+      "unset": "-",
+      "none": "Não vinculado"
     },
     "form": {
       "title": "Formulário",
@@ -138,7 +135,9 @@
       "openBuilder": "Abrir o editor de formulário",
       "summary": "{{questions}} perguntas · {{required}} obrigatórias",
       "requiredChip": "Obrigatório",
-      "datePlaceholder": "Escolha uma data"
+      "datePlaceholder": "Escolha uma data",
+      "showFields": "Mostrar as perguntas",
+      "hideFields": "Ocultar as perguntas"
     },
     "execution": {
       "title": "Execução",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "A configuração de visibilidade precisa ser um objeto JSON",
       "visibilityInvalid": "Visibilidade JSON inválida",
       "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
-      "audienceSaveFailed": "Falha ao atualizar o público-alvo"
+      "audienceSaveFailed": "Falha ao atualizar o público-alvo",
+      "linkedServiceUpdateFailed": "Falha ao atualizar o serviço vinculado"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Todo o formulário",
         "description": "Como o formulário aparece e o que acontece depois do envio.",
         "width": "Largura do formulário",
+        "widthNarrow": "Estreita",
         "widthBoxed": "Largura confortável de leitura",
+        "widthWide": "Larga",
         "widthFull": "A página inteira",
         "submitLabel": "Texto do botão de envio",
         "submitLabelPlaceholder": "Enviar a solicitação",

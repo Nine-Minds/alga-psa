@@ -56,14 +56,11 @@
       "formSubheading": "Formulaire de demande"
     },
     "linkage": {
-      "title": "Liaison",
       "linkedService": "Service lié",
       "searchPlaceholder": "Rechercher dans le catalogue de services",
-      "search": "Rechercher",
-      "clear": "Effacer",
-      "select": "Sélectionner",
       "noDescription": "Aucune description",
-      "unset": "-"
+      "unset": "-",
+      "none": "Non lié"
     },
     "form": {
       "title": "Formulaire",
@@ -138,7 +135,9 @@
       "openBuilder": "Ouvrir l'éditeur de formulaire",
       "summary": "{{questions}} questions · {{required}} obligatoires",
       "requiredChip": "Obligatoire",
-      "datePlaceholder": "Choisir une date"
+      "datePlaceholder": "Choisir une date",
+      "showFields": "Afficher les questions",
+      "hideFields": "Masquer les questions"
     },
     "execution": {
       "title": "Exécution",
@@ -505,7 +504,8 @@
       "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
       "visibilityInvalid": "JSON de visibilité non valide",
       "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
-      "audienceSaveFailed": "Échec de la mise à jour de l'audience"
+      "audienceSaveFailed": "Échec de la mise à jour de l'audience",
+      "linkedServiceUpdateFailed": "Échec de la mise à jour du service lié"
     }
   },
   "designer": {
@@ -713,7 +713,9 @@
         "title": "Le formulaire entier",
         "description": "L'apparence du formulaire et ce qui suit son envoi.",
         "width": "Largeur du formulaire",
+        "widthNarrow": "Étroite",
         "widthBoxed": "Largeur de lecture confortable",
+        "widthWide": "Large",
         "widthFull": "Toute la page",
         "submitLabel": "Libellé du bouton d'envoi",
         "submitLabelPlaceholder": "Envoyer la demande",

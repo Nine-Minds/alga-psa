@@ -56,14 +56,11 @@
       "formSubheading": "Formularz zgłoszenia"
     },
     "linkage": {
-      "title": "Powiązanie",
       "linkedService": "Powiązana usługa",
-      "searchPlaceholder": "Przeszukaj katalog usług",
-      "search": "Szukaj",
-      "clear": "Wyczyść",
-      "select": "Wybierz",
+      "searchPlaceholder": "Szukaj w katalogu usług",
       "noDescription": "Brak opisu",
-      "unset": "-"
+      "unset": "-",
+      "none": "Niepowiązana"
     },
     "form": {
       "title": "Formularz",
@@ -138,7 +135,9 @@
       "openBuilder": "Otwórz kreator formularza",
       "summary": "Pytania: {{questions}} · wymagane: {{required}}",
       "requiredChip": "Wymagane",
-      "datePlaceholder": "Wybierz datę"
+      "datePlaceholder": "Wybierz datę",
+      "showFields": "Pokaż pytania",
+      "hideFields": "Ukryj pytania"
     },
     "execution": {
       "title": "Wykonanie",
@@ -507,7 +506,8 @@
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
-      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców",
+      "linkedServiceUpdateFailed": "Nie udało się zaktualizować powiązanej usługi"
     }
   },
   "designer": {
@@ -715,7 +715,9 @@
         "title": "Cały formularz",
         "description": "Jak wygląda formularz i co dzieje się po wysłaniu.",
         "width": "Szerokość formularza",
+        "widthNarrow": "Wąska",
         "widthBoxed": "Wygodna szerokość do czytania",
+        "widthWide": "Szeroka",
         "widthFull": "Cała strona",
         "submitLabel": "Napis na przycisku wysyłania",
         "submitLabelPlaceholder": "Wyślij zgłoszenie",

@@ -88,9 +88,43 @@ export interface BasicFormField {
 /** v2 name. A "field" and an "element" are the same row; display blocks are elements too. */
 export type BasicFormElement = BasicFormField;
 
+/**
+ * How wide the form is allowed to grow. `boxed` is the default and keeps the measure a form
+ * has always had; the others let the author decide, because a three-question request and a
+ * twenty-question one want different room.
+ */
+export type BasicFormWidth = 'narrow' | 'boxed' | 'wide' | 'full';
+
+/** The measure each choice renders at, in px, so the author can be told what they picked. */
+export const BASIC_FORM_WIDTH_PX: Record<Exclude<BasicFormWidth, 'full'>, number> = {
+  narrow: 448,
+  boxed: 672,
+  wide: 896,
+};
+
+const BASIC_FORM_WIDTH_CLASS: Record<BasicFormWidth, string> = {
+  narrow: 'mx-auto w-full max-w-md',
+  boxed: 'mx-auto w-full max-w-2xl',
+  wide: 'mx-auto w-full max-w-4xl',
+  full: 'w-full',
+};
+
+export function isBasicFormWidth(value: unknown): value is BasicFormWidth {
+  return value === 'narrow' || value === 'boxed' || value === 'wide' || value === 'full';
+}
+
+/**
+ * The container classes for a form's chosen measure. The renderer and the portal page around
+ * it both read this, so the page never leaves a narrow form adrift in a wide card.
+ */
+export function getBasicFormWidthClass(settings: BasicFormSettings | undefined): string {
+  const width = settings?.layout?.width;
+  return BASIC_FORM_WIDTH_CLASS[isBasicFormWidth(width) ? width : 'boxed'];
+}
+
 export interface BasicFormLayoutSettings {
   /** `boxed` (default) keeps a readable measure; `full` lets the form use the page width. */
-  width?: 'boxed' | 'full';
+  width?: BasicFormWidth;
 }
 
 export interface BasicFormSettings {
@@ -188,7 +222,7 @@ function normalizeFormSettings(raw: unknown): BasicFormSettings | undefined {
   const layout = source.layout;
   if (layout && typeof layout === 'object' && !Array.isArray(layout)) {
     const width = (layout as Record<string, unknown>).width;
-    if (width === 'full' || width === 'boxed') {
+    if (isBasicFormWidth(width)) {
       settings.layout = { width };
     }
   }

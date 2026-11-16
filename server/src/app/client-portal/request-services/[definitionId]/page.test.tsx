@@ -226,6 +226,28 @@ describe('RequestServiceDetailPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('takes the measure the form was authored at, so the card is not wider than the form', async () => {
+    getRequestServiceDefinitionDetailAction.mockResolvedValue({
+      title: 'Access Request',
+      description: null,
+      icon: null,
+      formSchema: {
+        fields: [{ key: 'subject', type: 'short-text', label: 'Subject' }],
+        settings: { layout: { width: 'wide' } },
+      },
+      initialValues: {},
+      visibilityRules: [],
+    });
+
+    const { container } = render(
+      await RequestServiceDetailPage({
+        params: Promise.resolve({ definitionId: 'definition-1' }),
+      })
+    );
+
+    expect(container.firstElementChild!.className).toContain('max-w-4xl');
+  });
+
   it('shows no initial values dump or version, while still prefilling from initialValues', async () => {
     const contextUuid = '9f0c3a52-7b1e-4d0a-8a55-3c2f6d1e7b90';
     getRequestServiceDefinitionDetailAction.mockResolvedValue({

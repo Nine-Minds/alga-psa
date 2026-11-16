@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBasicFormWidthClass,
   getFormInputFields,
   groupFormElementsBySection,
   isDisplayElement,
@@ -223,7 +224,23 @@ describe('form-level settings', () => {
   });
 
   it('leaves settings off a schema that has none', () => {
-    expect(normalizeBasicFormSchema({ fields: [], settings: { layout: { width: 'wide' } } }).settings).toBeUndefined();
+    expect(
+      normalizeBasicFormSchema({ fields: [], settings: { layout: { width: 'enormous' } } }).settings
+    ).toBeUndefined();
+  });
+
+  it('keeps every measure the author can choose and falls back to boxed', () => {
+    for (const width of ['narrow', 'boxed', 'wide', 'full'] as const) {
+      const normalized = normalizeBasicFormSchema({ fields: [], settings: { layout: { width } } });
+      expect(normalized.settings).toEqual({ layout: { width } });
+    }
+    expect(getBasicFormWidthClass({ layout: { width: 'full' } })).toBe('w-full');
+
+    // An unknown measure, and no setting at all, both render at the default.
+    expect(getBasicFormWidthClass(undefined)).toContain('max-w-2xl');
+    expect(getBasicFormWidthClass({ layout: { width: 'enormous' as never } })).toContain('max-w-2xl');
+    expect(getBasicFormWidthClass({ layout: { width: 'narrow' } })).toContain('max-w-md');
+    expect(getBasicFormWidthClass({ layout: { width: 'wide' } })).toContain('max-w-4xl');
   });
 });
 
