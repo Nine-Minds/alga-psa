@@ -9,8 +9,8 @@ import { CO_MANAGED_SEAT_RESOLVER_ID } from './seatAuthority';
 import { admitCoManagedSeatRole } from './seatRole';
 
 /**
- * Seat invitations: a technician of one of the sponsor's clients, invited by name and email into
- * that client's seat arrangement and admitted against the arrangement's allocation, never against
+ * Seat invitations: a technician of one of the sponsor's clients, invited as one of that client's
+ * contacts into that client's seat arrangement and admitted against the arrangement's allocation, never against
  * the sponsor's own licensed seats. Accepting the invitation makes the technician an internal user
  * of the sponsor who holds the seat role and nothing else.
  *
@@ -25,13 +25,19 @@ const TOKEN_DISCOVERY_TENANT = '__co_managed_seat_invitation__';
 const TOKEN_DISCOVERY_REASON = 'seat invitation acceptance: the token is the only thing the technician holds, and it names the sponsor';
 
 type InvitationCode = 'INVALID_INVITATION' | 'ARRANGEMENT_NOT_FOUND' | 'ARRANGEMENT_ENDED' | 'ENTITLEMENT_LAPSED' |
-  'EMAIL_IN_USE' | 'EMAIL_INVITED' | 'SEAT_LIMIT' | 'INVALID_ACCEPTANCE' | 'INVITATION_NOT_FOUND' |
-  'INVITATION_EXPIRED' | 'INVITATION_REVOKED';
+  'EMAIL_IN_USE' | 'EMAIL_INVITED' | 'SEAT_LIMIT' | 'CONTACT_NOT_FOUND' | 'CONTACT_WRONG_CLIENT' |
+  'CONTACT_INACTIVE' | 'CONTACT_NO_EMAIL' | 'CONTACT_HAS_SEAT' | 'INVALID_ACCEPTANCE' | 'INVITATION_NOT_FOUND' |
+  'INVITATION_EXPIRED' | 'INVITATION_REVOKED' | 'ASSIGNMENT_NOT_PENDING';
 
 export class CoManagedSeatInvitationError extends Error {
   constructor(public readonly code: InvitationCode) {
     super(({
-      INVALID_INVITATION: 'Provide a name and a valid email address.',
+      INVALID_INVITATION: 'Choose a contact to invite.',
+      CONTACT_NOT_FOUND: 'This contact was not found.',
+      CONTACT_WRONG_CLIENT: 'This contact does not belong to the arrangement\'s client.',
+      CONTACT_INACTIVE: 'This contact is inactive. Reactivate the contact before inviting them.',
+      CONTACT_NO_EMAIL: 'This contact has no email address. Add one to the contact before inviting them.',
+      CONTACT_HAS_SEAT: 'This contact already holds a seat or a pending invitation.',
       ARRANGEMENT_NOT_FOUND: 'Seat arrangement not found.',
       ARRANGEMENT_ENDED: 'This seat arrangement has ended.',
       ENTITLEMENT_LAPSED: 'Restore the co-managed pool before inviting a technician.',
@@ -42,6 +48,7 @@ export class CoManagedSeatInvitationError extends Error {
       INVITATION_NOT_FOUND: 'This invitation is not valid.',
       INVITATION_EXPIRED: 'This invitation has expired. Ask for a new one.',
       INVITATION_REVOKED: 'This invitation was withdrawn.',
+      ASSIGNMENT_NOT_PENDING: 'Only a pending invitation can be changed here.',
     } satisfies Record<InvitationCode, string>)[code]);
     this.name = 'CoManagedSeatInvitationError';
   }
@@ -50,9 +57,8 @@ export class CoManagedSeatInvitationError extends Error {
 export interface InviteCoManagedSeatTechnicianInput {
   sponsorTenant: string;
   arrangementId: string;
-  email: string;
-  firstName: string;
-  lastName?: string;
+  /** The client contact to invite. Name and email are read from the contact, never supplied. */
+  contactId: string;
   /** The sponsor user who sent the invitation, when there is one. */
   invitedBy?: string;
 }
@@ -61,12 +67,22 @@ export interface CoManagedSeatInvitation {
   assignment_id: string;
   arrangement_id: string;
   invitation_id: string;
+  contact_id: string;
   email: string;
+  /** The contact's name, split for the invitation. */
+  firstName: string;
+  lastName: string;
   state: 'invited';
   /** The setup token. The caller delivers it after this command commits, never inside it. */
   token: string;
   /** False when the technician already held this invitation; no further seat was taken. */
   created: boolean;
+}
+
+/** Splits a contact's full name into the first and last name an invitation stores. */
+export function splitContactName(fullName: string): { firstName: string; lastName: string } {
+  const [firstName = '', ...rest] = fullName.trim().split(/\s+/);
+  return { firstName, lastName: rest.join(' ') };
 }
 
 /**
@@ -96,11 +112,17 @@ export function coManagedSeatCommitmentCounter(sponsorTenant: string): CountCoMa
  * Invites a technician into a seat arrangement. The assignment is recorded as `invited` and holds
  * one of the arrangement's seats from this moment; nobody can sign in until it is accepted.
  *
- * Declarative on the email: inviting a technician who already holds a pending invitation to this
+ * The technician is a contact of the arrangement's client. The name and email are read from the
+ * contact row inside the transaction and stored on the invitation; the caller supplies only the id.
+ *
+ * Declarative on the contact: inviting a contact who already holds a pending invitation to this
  * arrangement returns that invitation and takes no further seat.
  *
  * Refuses with `ARRANGEMENT_NOT_FOUND`, `ARRANGEMENT_ENDED`, `ENTITLEMENT_LAPSED` (lapse grace or
- * read-only, as every other seat admission), `EMAIL_IN_USE` (an internal user anywhere on the
+ * read-only, as every other seat admission), `CONTACT_NOT_FOUND` (no such contact in the sponsor
+ * tenant), `CONTACT_WRONG_CLIENT` (it belongs to another client), `CONTACT_INACTIVE`,
+ * `CONTACT_NO_EMAIL`, `CONTACT_HAS_SEAT` (it already holds a live seat or pending invitation, on
+ * this or any other arrangement), `EMAIL_IN_USE` (an internal user anywhere on the
  * platform already signs in with it), `EMAIL_INVITED` (it is promised to a pending invitation or
  * workspace setup) and `SEAT_LIMIT` (committed seats would exceed the allocation).
  *
@@ -110,7 +132,8 @@ export function coManagedSeatCommitmentCounter(sponsorTenant: string): CountCoMa
  *   2. the sponsor's entitlement row,
  *   3. the seat allocation row,
  *   4. the arrangement row,
- *   5. the sponsor's `tenants` row (KEY SHARE, taken by the invitation insert's foreign key).
+ *   5. the contact row (FOR SHARE, so it cannot be deactivated or moved to another client mid-invite),
+ *   6. the sponsor's `tenants` row (KEY SHARE, taken by the invitation insert's foreign key).
  *
  * Why this cannot deadlock. A deadlock needs two transactions that each hold a lock the other is
  * waiting for, so it needs two of these locks taken in opposite orders somewhere. None are:
@@ -119,27 +142,24 @@ export function coManagedSeatCommitmentCounter(sponsorTenant: string): CountCoMa
  *   hosted reconcile all take the entitlement row first and never take the seat lock, so against
  *   them (1) is uncontended and everything after it is ordered behind (2). Whichever holds (2)
  *   runs to commit; it waits for nothing an invitation can hold, because an invitation holds
- *   (3) to (5) only after it holds (2).
+ *   (3) to (6) only after it holds (2).
  * - Purchase and reservation also lock the `tenants` row, after the entitlement row: the same
- *   order as (2) then (5). Purchase's first transaction locks `tenants` alone and waits for no
+ *   order as (2) then (6). Purchase's first transaction locks `tenants` alone and waits for no
  *   other lock.
- * - Board scope locks the arrangement row alone.
+ * - Board scope locks the arrangement row alone. Contact edits lock the contact row alone and wait
+ *   for none of the above.
  * - The internal-user paths (create, invite, reactivate) take the seat lock first and then row
  *   locks, never the reverse, and they do not take this tenant's entitlement row.
  *
- * The total order is therefore: seat lock, entitlement, allocation, arrangement, tenant. Every
+ * The total order is therefore: seat lock, entitlement, allocation, arrangement, contact, tenant. Every
  * command takes a subsequence of it.
  */
 export async function inviteCoManagedSeatTechnician(
   db: Knex,
   input: InviteCoManagedSeatTechnicianInput,
 ): Promise<CoManagedSeatInvitation> {
-  const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
-  const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : '';
-  const lastName = typeof input.lastName === 'string' ? input.lastName.trim() : '';
-  if (![input.sponsorTenant, input.arrangementId, ...(input.invitedBy === undefined ? [] : [input.invitedBy])]
-        .every((id) => typeof id === 'string' && uuid.test(id)) ||
-      !emailShape.test(email) || !firstName) {
+  if (![input.sponsorTenant, input.arrangementId, input.contactId, ...(input.invitedBy === undefined ? [] : [input.invitedBy])]
+        .every((id) => typeof id === 'string' && uuid.test(id))) {
     throw new CoManagedSeatInvitationError('INVALID_INVITATION');
   }
 
@@ -159,27 +179,48 @@ export async function inviteCoManagedSeatTechnician(
     // (2) and (3): the pool, then the allocation, as every capacity writer locks them.
     const pool = await readCoManagedSeatAllocationState(trx, input.sponsorTenant, found.allocation_id);
     // (4)
-    const arrangement = await arrangements().forUpdate().first('state', 'allocation_id');
+    const arrangement = await arrangements().forUpdate().first('state', 'allocation_id', 'client_id');
     if (!arrangement) throw new CoManagedSeatInvitationError('ARRANGEMENT_NOT_FOUND');
     if (arrangement.state !== 'active' || arrangement.allocation_id !== found.allocation_id || pool.state === 'terminated') {
       throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
     }
     if (pool.state !== 'active') throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
 
-    // A technician who already holds a seat invitation here is not invited twice.
-    const invitations = await sponsor.table('user_invitations').whereRaw('lower(trim(email)) = ?', [email])
-      .select('invitation_id', 'token', 'used_at');
-    const held = invitations.length ? await liveAssignments(trx, input.sponsorTenant)
-      .whereIn('invitation_id', invitations.map((invitation) => invitation.invitation_id))
-      .where('state', 'invited').first('assignment_id', 'arrangement_id', 'invitation_id') : undefined;
-    if (held) {
-      if (held.arrangement_id !== input.arrangementId) throw new CoManagedSeatInvitationError('EMAIL_INVITED');
+    // A contact who already holds a live seat or pending invitation. On this arrangement a pending
+    // invitation is returned as it is (the command is declarative); anywhere else it is refused.
+    const holding = await liveAssignments(trx, input.sponsorTenant).where('contact_id', input.contactId)
+      .first('assignment_id', 'arrangement_id', 'invitation_id', 'state');
+    if (holding) {
+      const replay = holding.state === 'invited' && holding.arrangement_id === input.arrangementId && holding.invitation_id
+        ? await sponsor.table('user_invitations').where('invitation_id', holding.invitation_id)
+          .first('token', 'email', 'first_name', 'last_name', 'used_at')
+        : undefined;
+      if (!replay || replay.used_at) throw new CoManagedSeatInvitationError('CONTACT_HAS_SEAT');
       return {
-        assignment_id: held.assignment_id, arrangement_id: held.arrangement_id, invitation_id: held.invitation_id, email,
-        state: 'invited' as const, created: false,
-        token: invitations.find((invitation) => invitation.invitation_id === held.invitation_id)?.token ?? '',
+        assignment_id: holding.assignment_id, arrangement_id: holding.arrangement_id, invitation_id: holding.invitation_id,
+        contact_id: input.contactId, email: String(replay.email), firstName: String(replay.first_name ?? ''),
+        lastName: String(replay.last_name ?? ''), state: 'invited' as const, created: false, token: replay.token ?? '',
       };
     }
+
+    // (5) The contact, read here and nowhere else: its name and email are what the invitation stores.
+    const contact = await sponsor.table('contacts').where('contact_name_id', input.contactId).forShare()
+      .first('client_id', 'full_name', 'email', 'is_inactive');
+    if (!contact) throw new CoManagedSeatInvitationError('CONTACT_NOT_FOUND');
+    if (contact.client_id !== arrangement.client_id) throw new CoManagedSeatInvitationError('CONTACT_WRONG_CLIENT');
+    if (contact.is_inactive) throw new CoManagedSeatInvitationError('CONTACT_INACTIVE');
+    const email = typeof contact.email === 'string' ? contact.email.trim().toLowerCase() : '';
+    if (!emailShape.test(email)) throw new CoManagedSeatInvitationError('CONTACT_NO_EMAIL');
+    const { firstName, lastName } = splitContactName(String(contact.full_name ?? ''));
+    if (!firstName) throw new CoManagedSeatInvitationError('CONTACT_NOT_FOUND');
+
+    // The email may still be promised to another invitation (a legacy seat invitation or workspace setup).
+    const invitations = await sponsor.table('user_invitations').whereRaw('lower(trim(email)) = ?', [email])
+      .select('invitation_id');
+    const heldByEmail = invitations.length ? await liveAssignments(trx, input.sponsorTenant)
+      .whereIn('invitation_id', invitations.map((invitation) => invitation.invitation_id))
+      .where('state', 'invited').first('assignment_id') : undefined;
+    if (heldByEmail) throw new CoManagedSeatInvitationError('EMAIL_INVITED');
 
     // A technician becomes an internal user of the sponsor, and internal users sign in by email
     // with no tenant: the email must not already identify, or be promised to, an account anywhere.
@@ -198,7 +239,7 @@ export async function inviteCoManagedSeatTechnician(
     const assignmentId = randomUUID();
     // No role: the seat role is given at acceptance. Until then the team setup path refuses this
     // invitation, so the token alone opens nothing.
-    // (5) The foreign key to `tenants` takes KEY SHARE on the sponsor's tenant row here.
+    // (6) The foreign key to `tenants` takes KEY SHARE on the sponsor's tenant row here.
     // write-admission: exempt — seat invitation, written by its owning command under the pool and arrangement locks
     const [invitation] = await sponsor.table('user_invitations').insert({
       tenant: input.sponsorTenant,
@@ -220,10 +261,12 @@ export async function inviteCoManagedSeatTechnician(
       assignment_id: assignmentId,
       arrangement_id: input.arrangementId,
       invitation_id: invitation.invitation_id,
+      contact_id: input.contactId,
       state: 'invited',
     });
     return {
-      assignment_id: assignmentId, arrangement_id: input.arrangementId, invitation_id: invitation.invitation_id, email,
+      assignment_id: assignmentId, arrangement_id: input.arrangementId, invitation_id: invitation.invitation_id,
+      contact_id: input.contactId, email, firstName, lastName,
       state: 'invited' as const, token: invitation.token, created: true,
     };
   });
@@ -365,6 +408,107 @@ export async function acceptCoManagedSeatInvitation(
     return {
       sponsor_tenant: sponsorTenant, assignment_id: assignment.assignment_id, arrangement_id: assignment.arrangement_id,
       user_id: userId, email, state: 'active' as const, created: true,
+    };
+  });
+}
+
+export interface CoManagedSeatInvitationChange {
+  sponsorTenant: string;
+  /** The seat assignment the invitation holds, as listed on the arrangement. */
+  assignmentId: string;
+}
+
+export interface CoManagedSeatInvitationRefresh {
+  assignment_id: string;
+  arrangement_id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  /** The new setup token. The caller delivers it after this command commits, never inside it. */
+  token: string;
+}
+
+/** Locks the pending invitation behind an assignment, in the arrangement, assignment, invitation order acceptance uses. */
+async function lockPendingSeatInvitation(trx: Knex.Transaction, input: CoManagedSeatInvitationChange) {
+  const sponsor = tenantDb(trx, input.sponsorTenant);
+  const located = await sponsor.table('co_managed_seat_assignments').where('assignment_id', input.assignmentId)
+    .first('arrangement_id');
+  if (!located) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  const arrangement = await sponsor.table('co_managed_seat_arrangements')
+    .where('arrangement_id', located.arrangement_id).forUpdate().first('state');
+  const assignment = await sponsor.table('co_managed_seat_assignments').where('assignment_id', input.assignmentId)
+    .forUpdate().first('assignment_id', 'arrangement_id', 'invitation_id', 'state');
+  if (!arrangement || !assignment) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  const invitation = assignment.invitation_id ? await sponsor.table('user_invitations')
+    .where('invitation_id', assignment.invitation_id).forUpdate().first('invitation_id', 'email', 'first_name', 'last_name', 'used_at') : undefined;
+  return { sponsor, arrangement, assignment, invitation };
+}
+
+/**
+ * Withdraws a pending seat invitation and gives its seat back to the arrangement: the assignment
+ * becomes `revoked`, so it no longer counts as committed, and the invitation's token is spent.
+ *
+ * Pending invitations only. An accepted technician is a user, not an invitation; revoking one
+ * deactivates the user and belongs to the revocation command, which refuses here with
+ * `ASSIGNMENT_NOT_PENDING`. Declarative: revoking an invitation that is already revoked changes
+ * nothing and reports `revoked: false`.
+ *
+ * Locks the arrangement, assignment and invitation rows, in the order acceptance takes them, and
+ * never the pool.
+ */
+export async function revokeCoManagedSeatInvitation(
+  db: Knex,
+  input: CoManagedSeatInvitationChange,
+): Promise<{ revoked: boolean }> {
+  if (![input.sponsorTenant, input.assignmentId].every((id) => typeof id === 'string' && uuid.test(id))) {
+    throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  }
+  return db.transaction(async (trx) => {
+    const { sponsor, assignment, invitation } = await lockPendingSeatInvitation(trx, input);
+    if (assignment.state === 'revoked') return { revoked: false };
+    if (assignment.state !== 'invited') throw new CoManagedSeatInvitationError('ASSIGNMENT_NOT_PENDING');
+    // write-admission: exempt — seat assignment lifecycle state, written by its owning command under the arrangement lock
+    await sponsor.table('co_managed_seat_assignments').where('assignment_id', assignment.assignment_id)
+      .update({ state: 'revoked', revoked_at: trx.fn.now(), updated_at: trx.fn.now() });
+    if (invitation && !invitation.used_at) {
+      // write-admission: exempt — seat invitation, spent by its owning command under the arrangement lock
+      await sponsor.table('user_invitations').where('invitation_id', invitation.invitation_id).update({
+        used_at: trx.fn.now(),
+        metadata: trx.raw('metadata || ?::jsonb', [JSON.stringify({ revoked: true, revoked_at: new Date().toISOString() })]),
+      });
+    }
+    return { revoked: true };
+  });
+}
+
+/**
+ * Sends a pending seat invitation again: a new setup token (the old link stops working) and a
+ * new 24 hours. It takes no further seat, since the invitation already holds one. The caller
+ * delivers the returned token after this command commits.
+ *
+ * Refuses with `ARRANGEMENT_ENDED` for an arrangement that has ended and with
+ * `ASSIGNMENT_NOT_PENDING` for a technician who has accepted or an invitation that was revoked.
+ */
+export async function refreshCoManagedSeatInvitation(
+  db: Knex,
+  input: CoManagedSeatInvitationChange,
+): Promise<CoManagedSeatInvitationRefresh> {
+  if (![input.sponsorTenant, input.assignmentId].every((id) => typeof id === 'string' && uuid.test(id))) {
+    throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
+  }
+  return db.transaction(async (trx) => {
+    const { sponsor, arrangement, assignment, invitation } = await lockPendingSeatInvitation(trx, input);
+    if (arrangement.state !== 'active') throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
+    if (assignment.state !== 'invited' || !invitation || invitation.used_at) {
+      throw new CoManagedSeatInvitationError('ASSIGNMENT_NOT_PENDING');
+    }
+    const token = randomBytes(32).toString('hex');
+    // write-admission: exempt — seat invitation, refreshed by its owning command under the arrangement lock
+    await sponsor.table('user_invitations').where('invitation_id', invitation.invitation_id)
+      .update({ token, expires_at: trx.raw("now() + interval '24 hours'") });
+    return {
+      assignment_id: assignment.assignment_id, arrangement_id: assignment.arrangement_id, token,
+      email: String(invitation.email), firstName: String(invitation.first_name ?? ''), lastName: String(invitation.last_name ?? ''),
     };
   });
 }

@@ -30,6 +30,18 @@ export interface ResolveAuthorizationSubjectInput extends LoadAuthorizationSubje
   apiKeyId?: string | null;
 }
 
+/**
+ * The facts of every registered built-in rule resolver for one user, or undefined when none is registered.
+ * A caller that assembles its own subject (the policy simulator) loads them here, so a resolver's principals
+ * are decided in the simulator exactly as they are in the product.
+ */
+export function loadSubjectResolverFacts(
+  knex: Knex | Knex.Transaction,
+  subject: { tenant: string; userId: string }
+): Promise<Record<string, unknown> | undefined> {
+  return loadBuiltinResolverFacts(knex, subject);
+}
+
 export async function loadAuthorizationSubjectFacts(
   knex: Knex | Knex.Transaction,
   input: LoadAuthorizationSubjectFactsInput

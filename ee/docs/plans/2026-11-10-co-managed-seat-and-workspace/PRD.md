@@ -221,8 +221,8 @@ Every way a seat arrangement can stop or degrade has a defined result.
 1. Opens a client, **Co-managed IT** tab, and selects **Enable co-managed IT**.
 2. Sees two options with one line each. Seat: the client's technicians work in your PSA, limited to their company. Workspace: the client's IT team gets its own service desk and escalates to you.
 3. Chooses Seat. Sees pool capacity (purchased, allocated, available) and any eligibility blocker.
-4. Sets the number of seats, the boards in scope and the first technician's name and email.
-5. Confirms. The allocation is reserved and activated, the arrangement is written and the technician is invited.
+4. Sets the number of seats, the boards in scope and the first technician, chosen from the client's contacts. A person who is not yet a contact is added from the same picker through the standard quick-add contact dialog with the client preset, and is selected when created. There is no free-text name or email. Inactive contacts, contacts with no email address and contacts who already hold a seat or a pending invitation are not offered.
+5. Confirms. The allocation is reserved and activated, the arrangement is written and the technician is invited at the contact's email address.
 6. If capacity is short, reviews a pool purchase for the new total, then resumes without paying twice.
 
 ### Seat technician: daily work
@@ -304,7 +304,7 @@ From the co-managed redelivery plan, binding on every card:
 | --- | --- |
 | `co_managed_seat_arrangements` | One client's seat arrangement: client, allocation, state, handoff defaults, settings, revision. |
 | `co_managed_seat_board_scopes` | One board in an arrangement's scope, and whether technicians may create tickets on it. |
-| `co_managed_seat_assignments` | One technician seat: arrangement, user once accepted, invitation, state. |
+| `co_managed_seat_assignments` | One technician seat: arrangement, the client contact it is, user once accepted, invitation, state. A contact holds at most one live seat or pending invitation. |
 | `co_managed_seat_project_grants` | One project shared with an arrangement. |
 | `co_managed_seat_ticket_work` | Responsibility for one ticket: `client_it` or `msp`, revision. |
 | `co_managed_seat_ticket_handoffs` | One handoff receipt: operation id, fingerprint, from, to, note, actor. |
@@ -351,6 +351,7 @@ From the co-managed redelivery plan, binding on every card:
 - **Schedule coupling.** A real seat technician cannot sign in until the authorization plan lands.
 - **Lock order.** Seat admission takes the tenant advisory lock and then the entitlement row lock of the same tenant. Reservation, purchase and reconcile take the entitlement lock without the advisory lock. Segment B owns the proof that this cannot deadlock.
 - **Internal email claim.** Internal emails are unique across the platform. A technician whose email is already an internal user elsewhere cannot be invited. The invitation reports this plainly.
+- **Technicians are contacts.** Every seat technician is a contact of the arrangement's client, and the assignment records which one. The invitation command reads the contact inside its transaction and refuses, each with its own reason, a contact that is not in the tenant, belongs to another client, is inactive, has no email address, or already holds a seat or pending invitation. The technician's name and email come from the contact row, never from the request. The picker's eligibility list comes from a server action behind the same authorization as the commands.
 - **Self-hosted capacity.** The survey found no production writer for a `self_host` or `admin_grant` entitlement row on main. If that is right, neither shape is reachable on a self-hosted installation until that writer exists. Outside this plan.
 
 ## Open Questions

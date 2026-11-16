@@ -18,7 +18,7 @@ const parsed: { tokens: Record<string, string> } = { tokens: {} };
 vi.mock('@alga-psa/core/capability', () => ({ serves: (...a: unknown[]) => (servesMock as any)(...a), admits: async () => ({ admitted: true }) }));
 function qb(first: unknown) {
   const b: any = {};
-  for (const m of ['select', 'where', 'whereNotNull', 'andWhereRaw', 'whereRaw', 'orderBy']) b[m] = vi.fn().mockReturnThis();
+  for (const m of ['select', 'where', 'whereNotNull', 'whereIn', 'andWhereRaw', 'whereRaw', 'orderBy']) b[m] = vi.fn().mockReturnThis();
   b.andWhere = vi.fn((arg: unknown) => { if (typeof arg === 'function') (arg as any).call({ whereRaw: vi.fn().mockReturnThis(), orWhereRaw: vi.fn().mockReturnThis() }); return b; });
   b.first = vi.fn().mockResolvedValue(first);
   b.then = (res: any, rej: any) => Promise.resolve([]).then(res, rej);

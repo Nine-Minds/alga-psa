@@ -599,7 +599,10 @@
         "clientVisibleOnly": "El paquete permite {{action}} en {{resource}} solo cuando el registro es visible para el cliente.",
         "notSelfApprover": "Los usuarios no pueden aprobar sus propios registros.",
         "rulesUnavailable": "No se pudieron cargar las reglas del paquete, por lo que se deniega el acceso.",
-        "rbacDenied": "El rol del usuario no concede {{action}} en {{resource}}."
+        "rbacDenied": "El rol del usuario no concede {{action}} en {{resource}}.",
+        "resolverTemplateDenied": "Una regla de acceso integrada limita {{action}} en {{resource}} a registros que no coinciden con este usuario.",
+        "resolverBoardScope": "El registro está en un tablero fuera del ámbito de tableros de este usuario, por lo que se deniega {{action}} en {{resource}}.",
+        "resolverClientScope": "El registro pertenece a un cliente distinto de aquel para el que este usuario tiene puesto, por lo que se deniega {{action}} en {{resource}}."
       }
     },
     "createDialog": {

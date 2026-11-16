@@ -29,6 +29,7 @@
     "invoiceTitle": "FAKTURA",
     "issueDate": "Fakturadatum",
     "locationSubtotal": "Delsumma per plats",
+    "unassignedLocation": "Hela offerten",
     "monthly": "Månadsvis",
     "monthlyItems": "Månadskostnader",
     "monthlyTotal": "Totalt per månad",

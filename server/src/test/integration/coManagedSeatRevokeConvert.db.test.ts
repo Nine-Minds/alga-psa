@@ -27,7 +27,7 @@ import {
 } from '../../../../packages/users/src/lib/internalUserLicenseGuard';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const require = createRequire(import.meta.url);
 const permissionsDir = path.resolve(__dirname, '../../../migrations/utils/permissions');
@@ -60,8 +60,12 @@ describeDb('revoking and converting seat technicians', { shuffle: false }, () =>
   const arrange = async (sponsorTenant: string, seats = 1) => createCoManagedSeatArrangement(db, { sponsorTenant,
     clientId: await createClient(db, sponsorTenant, `Seat client ${randomUUID().slice(0, 8)}`), operationId: randomUUID(), seats });
   const address = () => `tech.${randomUUID().slice(0, 12)}@client.example`;
-  const invite = (sponsorTenant: string, arrangementId: string, email = address()) =>
-    inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, email, firstName: 'Dana', lastName: 'Reyes' });
+  /** Invites a new contact of the arrangement's client: a seat technician is always one of the client's contacts. */
+  const invite = async (sponsorTenant: string, arrangementId: string, email = address()) => {
+    const { client_id } = await db('co_managed_seat_arrangements').where({ tenant: sponsorTenant, arrangement_id: arrangementId }).first('client_id');
+    const contactId = await createContact(db, sponsorTenant, client_id, { fullName: 'Dana Reyes', email });
+    return inviteCoManagedSeatTechnician(db, { sponsorTenant, arrangementId, contactId });
+  };
   /** A seat technician as acceptance leaves one. */
   const technician = async (sponsorTenant: string, arrangementId: string) => {
     const invitation = await invite(sponsorTenant, arrangementId);

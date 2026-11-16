@@ -229,7 +229,7 @@
   {
     "id": "T026",
     "description": "E2E: a seat technician opens the native ticket list, sees only their client's in-scope tickets, and each view's count matches its rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -237,7 +237,7 @@
   {
     "id": "T027",
     "description": "E2E: on the native ticket screen a seat technician sees no billing, materials, credentials, bundle, delete or scheduling affordance and no billing profile picker; the network log shows no billing rollup or materials request.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F048",
@@ -247,7 +247,7 @@
   {
     "id": "T028",
     "description": "DB integration: a seat technician creates a ticket for their client; a request naming another client or an out-of-scope board is refused; an edit changing the client or moving to an out-of-scope board is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050",
       "F051"
@@ -276,7 +276,7 @@
   {
     "id": "T031",
     "description": "E2E: an MSP technician hands a ticket to client IT from the native screen, the seat technician sees it under Client IT, hands it back, and the MSP sees the chip change.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058",
       "F056",
@@ -287,7 +287,7 @@
   {
     "id": "T032",
     "description": "E2E: on an arrangement client's ticket the MSP composer shows three audiences defaulting to Private and the picker shows a Client IT group; on another client's ticket both are unchanged; the technician's composer shows two audiences.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F059",
@@ -297,7 +297,7 @@
   {
     "id": "T033",
     "description": "DB integration: MSP SLA elapsed time does not advance while responsibility is with client IT and resumes after handback; a ticket of a client with no arrangement is unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -305,7 +305,7 @@
   {
     "id": "T034",
     "description": "DB integration: a bulk handoff over a mixed selection acts on qualifying tickets and reports each failure; the responsibility filter returns the expected rows; a seat technician creating a tag is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064",
       "F062",
@@ -315,7 +315,7 @@
   {
     "id": "T035",
     "description": "E2E: a seat technician opens the time-entry dialog and saves an entry; the network log shows no service catalog, tax or contract request, and the stored entry is operational with no service or contract line.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F067"
@@ -324,7 +324,7 @@
   {
     "id": "T036",
     "description": "DB integration: a billing run, invoice preview, unbilled-time list and approval queue for the period do not include seat technician entries; the technician lists, edits and deletes their own.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F070"
@@ -333,7 +333,7 @@
   {
     "id": "T037",
     "description": "DB integration: the effort summary hides the MSP total from a seat technician by default, shows it when the arrangement allows, and shows both totals to MSP staff.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -341,7 +341,7 @@
   {
     "id": "T038",
     "description": "DB integration: a seat technician sees only shared projects; the project and task reads contain no budget, billing or rate key; task status, assignment, comment and time writes succeed on a shared project and fail on an unshared one.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F072",
@@ -395,8 +395,8 @@
   },
   {
     "id": "T044",
-    "description": "E2E: on a client with no arrangement an administrator chooses Seat, sets seats, scope and a first technician, and the overview shows the arrangement with pool totals reduced; choosing Workspace opens the existing provisioning flow.",
-    "implemented": false,
+    "description": "E2E: on a client with no arrangement an administrator chooses Seat, sets seats, scope and a first technician picked from the client's contacts (inactive, email-less and already-seated contacts are not offered), and the overview shows the arrangement with pool totals reduced; choosing Workspace opens the existing provisioning flow.",
+    "implemented": true,
     "featureIds": [
       "F084",
       "F085",
@@ -407,7 +407,7 @@
   {
     "id": "T045",
     "description": "E2E with the Stripe emulator: an allocation larger than available capacity leads to a purchase review for the new total and completes with one charge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -415,7 +415,7 @@
   {
     "id": "T046",
     "description": "E2E: user administration lists a seat technician under their client apart from MSP staff with licence usage unchanged, and the effective access view explains a denial caused by board scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088",
       "F089"
@@ -424,7 +424,7 @@
   {
     "id": "T047",
     "description": "Contract: no seat UI file reads the raw release flag, and with the capability off the client tab, overview rows and ticket affordances are absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090",
       "F002"
@@ -433,7 +433,7 @@
   {
     "id": "T048",
     "description": "DB integration: ending an arrangement deactivates technicians, releases the allocation once, returns responsibility to the MSP and leaves shared notes readable by MSP staff; a replay changes nothing; reactivating a technician without a live assignment is refused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091",
       "F095"
@@ -442,7 +442,7 @@
   {
     "id": "T049",
     "description": "DB integration: after grace expires a seat technician's write is refused with the lifecycle error while reads succeed, and an MSP user and a requester on the same ticket are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]

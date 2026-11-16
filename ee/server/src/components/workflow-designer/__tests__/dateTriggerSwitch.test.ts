@@ -37,6 +37,13 @@ describe('choosing a date source whose catalog row is picked as an event', () =>
     expect(source.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
   });
 
+  it('offers ticket.due_date with an offset, no params, and its payload schema', () => {
+    const dueDate = getDateTriggerSourceDefinition('ticket.due_date')!;
+    expect(dueDate).toMatchObject({ mode: 'window', usesOffset: true, hasParams: false, recurrence: 'once', payloadSchemaRef: 'payload.TicketDueDate.v1' });
+    expect(buildDateTriggerForSource(dueDate, { type: 'date', source: 'contract.end', offsetDays: -60, localTime: '07:00' }))
+      .toMatchObject({ type: 'date', source: 'ticket.due_date', offsetDays: -60, localTime: '07:00' });
+  });
+
   it('keeps timing when switching sources and drops params the new source does not take', () => {
     const statusAge = getDateTriggerSourceDefinition('ticket.status_age')!;
     const anniversary = getDateTriggerSourceDefinition('client.anniversary')!;

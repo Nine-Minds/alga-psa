@@ -593,6 +593,7 @@
       "requester": "Requester",
       "sharedIt": "Shared IT",
       "organizationPrivate": "Organization private",
+      "private": "Private",
       "placeholder": "Who can see this?",
       "required": "Choose who can see this comment before posting it."
     },
@@ -785,6 +786,13 @@
     "boardTabs": {
       "all": "All tickets"
     },
+    "seatViews": {
+      "clientIt": "Client IT",
+      "msp": "With MSP",
+      "unassigned": "Unassigned",
+      "all": "All",
+      "empty": "No tickets in {{view}} right now."
+    },
     "boardHeader": {
       "open": "Open",
       "overdue": "Overdue",
@@ -813,7 +821,12 @@
     "exportSelectedTooltip_few": "Export {{count}} selected tickets to CSV",
     "exportSelectedTooltip_many": "Export {{count}} selected tickets to CSV",
     "selectAllMatching_few": "Select all {{count}} tickets matching your filters",
-    "selectAllMatching_many": "Select all {{count}} tickets matching your filters"
+    "selectAllMatching_many": "Select all {{count}} tickets matching your filters",
+    "responsibility": {
+      "column": "Responsible",
+      "all": "All responsibility",
+      "filter": "Responsibility"
+    }
   },
   "bulk": {
     "bundleTickets": "Bundle Tickets",
@@ -1082,7 +1095,20 @@
     "moveConfirm_few": "Move {{count}} Tickets",
     "moveConfirm_many": "Move {{count}} Tickets",
     "moveSuccess_few": "{{count}} tickets moved",
-    "moveSuccess_many": "{{count}} tickets moved"
+    "moveSuccess_many": "{{count}} tickets moved",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "This ticket's current state is not loaded. Open its page of the list and try again.",
+      "partialFailure": "Some tickets could not be handed over",
+      "failure": "Failed to hand over the selected tickets",
+      "failedItemsHeading": "The following tickets could not be handed over:",
+      "success_one": "{{count}} ticket handed over",
+      "success_other": "{{count}} tickets handed over",
+      "promptToClientIt_one": "Client IT becomes responsible for this ticket. The note is shared with the client's technicians. A ticket that cannot be handed over is left as it is.",
+      "promptToClientIt_other": "Client IT becomes responsible for each of these {{count}} tickets. The note is shared with the client's technicians. A ticket that cannot be handed over is left as it is.",
+      "promptToMsp_one": "The MSP becomes responsible for this ticket. The note is shared with the MSP. A ticket that cannot be handed over is left as it is.",
+      "promptToMsp_other": "The MSP becomes responsible for each of these {{count}} tickets. The note is shared with the MSP. A ticket that cannot be handed over is left as it is."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Quick Add Ticket",
@@ -1270,6 +1296,7 @@
     "keepEditing": "Keep Editing",
     "statusRequiresSelection": "Select a status for the new board before saving.",
     "notAssigned": "Not assigned",
+    "clientItGroup": "Client IT",
     "additionalAgentsTooltip": "Additional Agents:",
     "loading": "Loading...",
     "tagsCannotBeManaged": "Tags cannot be managed",
@@ -1912,6 +1939,23 @@
     },
     "comment": {
       "audienceRequired": "Choose who can see this comment before posting it."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Write a shared note for client IT before handing this ticket over.",
+      "ticketNotFound": "This ticket is no longer available.",
+      "noArrangement": "This ticket's client no longer has a co-managed seat arrangement.",
+      "operationConflict": "This handoff was started with different details. Try again.",
+      "changed": "This ticket was handed off or reassigned. Refresh the ticket before trying again.",
+      "alreadyResponsible": "Client IT is already responsible for this ticket. Refresh the ticket to see its current state.",
+      "actorNotAllowed": "You cannot hand this ticket to client IT.",
+      "boardOutOfScope": "This ticket's board is not shared with client IT, so it cannot be handed over.",
+      "technicianNotAvailable": "The selected technician is no longer available for this client. Choose another or leave it unassigned.",
+      "unavailable": "Handing tickets to client IT is not available.",
+      "invalidHandoffToMsp": "Write a shared note for the MSP before handing this ticket over.",
+      "alreadyResponsibleMsp": "The MSP is already responsible for this ticket. Refresh the ticket to see its current state.",
+      "actorNotAllowedMsp": "You cannot hand this ticket to the MSP.",
+      "unavailableMsp": "Handing tickets to the MSP is not available.",
+      "unexpected": "This ticket could not be handed over. Refresh the list to see where it stands, then try again."
     }
   },
   "ticketSection": {
@@ -2099,6 +2143,18 @@
   "integration": {
     "loadTicketFailed": "Failed to load ticket",
     "noUserSession": "No user session found"
+  },
+  "seatEffort": {
+    "title": "Effort",
+    "clientIt": "Client IT",
+    "msp": "MSP",
+    "combined": "Combined",
+    "yours": "Your time",
+    "columns": {
+      "date": "Date",
+      "duration": "Duration",
+      "notes": "Notes"
+    }
   },
   "bento": {
     "hero": {
@@ -2387,7 +2443,9 @@
       "builtInGroup": "Built-in systems",
       "customGroup": "Custom systems",
       "urlPreview": "Opens:",
-      "urlPreviewIncomplete": "Fill in the fields above to preview the link."
+      "urlPreviewIncomplete": "Fill in the fields above to preview the link.",
+      "title": "Title",
+      "titlePlaceholder": "Optional, e.g. the article name"
     },
     "errors": {
       "ticketNotFound": "Ticket not found",
@@ -2799,7 +2857,8 @@
       "details": "Template",
       "ticket": "Ticket",
       "checklist": "Checklist",
-      "customFields": "Custom fields"
+      "customFields": "Custom fields",
+      "links": "Documentation links"
     },
     "fields": {
       "name": "Template name",
@@ -2854,13 +2913,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
-      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."
+      "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first.",
+      "duplicateLink": "This template already has that documentation link."
     },
     "usage": {
       "schedules": "Used by {{count}} schedules",
       "paused": "paused",
       "tickets": "{{count}} tickets created from this template",
       "scheduleThis": "Schedule this template…"
+    },
+    "links": {
+      "help": "Copied onto every ticket created from this template, as references. Later changes to the template do not change existing tickets.",
+      "empty": "No documentation links.",
+      "add": "Add link",
+      "remove": "Remove link",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "dialogTitle": "Add documentation link",
+      "pickFromHudu": "Pick from Hudu",
+      "huduPickerTitle": "Pick a Hudu article",
+      "huduSearch": "Search Hudu articles...",
+      "huduLoading": "Loading Hudu articles...",
+      "huduDisconnected": "Hudu is not connected. You can still add a link by entering its details.",
+      "huduError": "Hudu could not be reached. Try again later.",
+      "huduEmpty": "No Hudu articles found.",
+      "huduSelect": "Select",
+      "huduPrev": "Previous",
+      "huduNext": "Next"
     }
   },
   "enums": {
@@ -3007,6 +3086,24 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket updated",
+    "updatedMany": "{{count}} tickets updated",
+    "newOne": "1 new ticket",
+    "newMany": "{{count}} new tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 new ticket and 1 updated ticket",
+        "manyUpdated": "1 new ticket and {{updatedCount}} updated tickets"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} new tickets and 1 updated ticket",
+        "manyUpdated": "{{newCount}} new tickets and {{updatedCount}} updated tickets"
+      }
+    },
+    "updatedBadge": "Updated",
+    "boardActivity": "New activity on this board"
   },
   "batchDuplicate": {
     "title": "Duplicate #{{number}} for contacts",
@@ -3268,5 +3365,21 @@
   "statusChange": {
     "title": "Update Ticket Status",
     "message": "Are you sure you want to change the status from \"{{from}}\" to \"{{to}}\"?"
+  },
+  "seatResponsibility": {
+    "clientIt": "Client IT",
+    "msp": "MSP",
+    "label": "Responsible",
+    "chipTitle": "Who is responsible for this ticket",
+    "handToClientIt": "Hand to client IT",
+    "handedToClientIt": "Handed to client IT",
+    "handing": "Handing over…",
+    "handPrompt": "Client IT becomes responsible for this ticket and your SLA timers pause until it comes back. The note is shared with the client's technicians.",
+    "noteLabel": "Shared note for client IT",
+    "technicianLabel": "Technician (optional)",
+    "technicianPlaceholder": "Any technician of this client",
+    "technicianNone": "Leave the assignee as it is",
+    "handToMsp": "Hand to MSP",
+    "noteLabelMsp": "Shared note for the MSP"
   }
 }

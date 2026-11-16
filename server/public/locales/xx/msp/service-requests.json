@@ -150,7 +150,12 @@
         "priorityCalculated": "⟦Ƥřīȯřīŧẏ (Ƈȧŀƈŭŀȧŧḗḓ)⟧",
         "selectImpactAndUrgency": "⟦Şḗŀḗƈŧ īḿƥȧƈŧ ȧƞḓ ŭřɠḗƞƈẏ⟧",
         "priorityFormula": "⟦{{label}} (Īḿƥȧƈŧ {{impact}} ẋ Ŭřɠḗƞƈẏ {{urgency}})⟧",
-        "titleFieldKey": "⟦Ŧīŧŀḗ Ƒīḗŀḓ Ķḗẏ⟧",
+        "ticketSubject": "⟦Ŧīƈķḗŧ şŭƀĵḗƈŧ⟧",
+        "ticketSubjectHelp": "⟦Ȧƞşẇḗřş ȧřḗ ƒīŀŀḗḓ īƞ ẇħḗƞ ŧħḗ řḗʠŭḗşŧ īş şŭƀḿīŧŧḗḓ. Ŀḗȧṽḗ ƀŀȧƞķ ŧȯ ŭşḗ ŧħḗ ƒīřşŧ ȧƞşẇḗř.⟧",
+        "insertField": "⟦Īƞşḗřŧ ƒīḗŀḓ⟧",
+        "noInsertableFields": "⟦Ŧħīş ƒȯřḿ ħȧş ƞȯ ƒīḗŀḓş ŧȯ īƞşḗřŧ ẏḗŧ.⟧",
+        "unknownFields": "⟦Ŭƞķƞȯẇƞ ƒīḗŀḓ: {{fields}}⟧",
+        "unknownFieldsBlocked": "⟦Ƒīẋ ŧħḗ ŭƞķƞȯẇƞ ƒīḗŀḓş īƞ ŧħḗ ŧīƈķḗŧ şŭƀĵḗƈŧ ȯř ḓḗşƈřīƥŧīȯƞ ƥřḗƒīẋ ƀḗƒȯřḗ şȧṽīƞɠ.⟧",
         "descriptionPrefix": "⟦Ḓḗşƈřīƥŧīȯƞ Ƥřḗƒīẋ⟧",
         "save": "⟦Şȧṽḗ Ŧīƈķḗŧ Řȯŭŧīƞɠ⟧"
       },

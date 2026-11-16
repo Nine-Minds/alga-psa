@@ -32,6 +32,8 @@ const SUBTYPES = [
   { category: 'Tickets', name: 'Ticket Agent Assigned Client', description: 'When an individual agent is assigned to an existing ticket (client-facing)' },
   { category: 'Tickets', name: 'Ticket Created Client', description: 'When a new ticket is created (client-facing)' },
   { category: 'Tickets', name: 'Ticket Updated Client', description: 'When a ticket is modified (client-facing)' },
+  { category: 'Tickets', name: 'Ticket Comment Added Client', description: 'When a comment is added to a ticket (client-facing)' },
+  { category: 'Tickets', name: 'Ticket Closed Client', description: 'When a ticket is closed (client-facing)' },
   { category: 'Tickets', name: 'Ticket Auto-Close Warning', description: 'When a ticket is about to be closed automatically due to inactivity' },
   { category: 'Tickets', name: 'co-managed-routing', description: 'Escalation received, returned, or assignment of a shared (co-managed) ticket' },
   // Surveys

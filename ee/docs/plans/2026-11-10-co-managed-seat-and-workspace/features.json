@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "The native ticket list offers a seat technician Client IT, With MSP, Unassigned and All views, and each view's count equals the rows its filter returns.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "A seat technician opens a ticket on the native ticket screen with a capability set that turns off billing, quick invoice, materials, credentials, bundles, delete, duplicate, email logs, surveys, scheduling, templates, workflows and category creation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "The ticket page's server preloads (billing rollup, materials, surveys, email logs and the other capability-gated reads) are skipped when the viewer's capability is off, so those reads are not made for a seat technician.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "The billing profile picker and its change action are absent for a viewer without the billing capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "A seat technician creates a ticket only for their own client, on a board that allows creation, with a contact of their own client; responsibility starts with client IT.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "A seat technician edits a ticket's native fields but cannot change its client or move it to an out-of-scope board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "On the native ticket screen for a client with a live seat arrangement, MSP staff see who is responsible and a Hand to client IT action; both are absent for every other client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "The MSP assignee picker lists the ticket client's seat technicians in a separate Client IT group, only on that client's tickets, and never on other clients' tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "The MSP ticket composer offers Requester, Shared IT and Private in place of the Internal toggle for clients with a live seat arrangement, defaulting to Private.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "The seat technician's composer offers Requester and Shared IT and shows each comment's audience.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "The MSP ticket list offers a responsibility filter and column for tenants served by the capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "MSP SLA timers pause while a ticket's responsibility is with client IT and resume when it returns, through the ticket lifecycle hooks; tickets of other clients are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Bulk Hand to client IT and bulk Hand to MSP validate each selected ticket separately and report each failure without acting on tickets that do not qualify.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "A seat technician applies existing tags and cannot create a tag.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment E — Ticket work and handoff"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "The time-entry dialog opens for a seat technician in operational mode without reading the service catalog, tax or contract data, and saves without running billing allocation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "A seat technician's time entry is stored as operational with no service, no contract line and zero billable duration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "Seat technician time entries never appear in billing runs, invoice previews, unbilled-time lists or timesheet approval queues.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "A seat technician sees client IT's total effort and their own entries on a ticket; the MSP's total is shown only when the arrangement setting allows it, and MSP staff see both totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "A seat technician lists, edits and deletes their own operational entries; timesheet submission surfaces are absent for them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "An MSP administrator shares individual projects of the client with the arrangement, and a seat technician sees only shared projects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "A seat technician opens a shared project on the native project screen without budget, billing or rate data, and the task form loads without the service catalog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "A seat technician updates a task's status, assigns it to a technician of their client, comments with an audience, and logs operational time on it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment F — Time, projects, devices and documents"
     ]
@@ -666,14 +666,14 @@
   {
     "id": "F084",
     "description": "On a client with no arrangement, the Co-managed IT tab offers Seat and Workspace with one line each, the pool's available seats and any eligibility blocker; choosing Workspace continues into the existing provisioning flow unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
   },
   {
     "id": "F085",
-    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite, resend and revoke technicians, edit board scope, share projects and set handoff defaults.",
+    "description": "The seat arrangement panel shows seats used and allocated and lets an administrator change the allocation, invite technicians chosen from the client's contacts (a missing contact is added through the standard quick-add contact dialog; no free-text name or email), resend and revoke invitations, edit board scope, share projects and set handoff defaults.",
     "implemented": false,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "The Co-managed IT overview lists arrangements of both shapes in one table with client, shape, state and seats used and allocated, alongside pool totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "When available capacity is short, the panel offers the existing pool purchase review for the new pool total and then completes the allocation without a second charge.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "User administration lists seat technicians apart from MSP staff, labelled with their client, and the licence usage figure excludes them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "An administrator can see, for a seat technician and a ticket, why access is or is not granted, using the authorization simulator's reasons.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Every seat entry point is contributed through UI slots and gated by `useCapability('co-managed-seat')`, never by the raw flag.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment H — MSP administration surfaces"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Ending a seat arrangement, after a confirmation that lists the effects, deactivates its technicians, releases the allocation once, returns responsibility for its tickets to the MSP and keeps shared notes readable by MSP staff.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "After lapse grace expires, a seat technician's writes are refused with the lifecycle error while sign-in and reads continue, and MSP users and requesters are unaffected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "A deactivated seat technician can be reactivated only into a live assignment with a free seat.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Segment I — Ending, lapse and client lifecycle"
     ]

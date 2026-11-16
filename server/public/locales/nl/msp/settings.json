@@ -308,6 +308,36 @@
       "expiresPrefix": "Verloopt:",
       "revoke": "Intrekken",
       "revoking": "Bezig met intrekken..."
+    },
+    "seatTechnicians": {
+      "title": "Seat-technici",
+      "description": "Mensen die via de co-managed seat van een klant in uw PSA werken. Zij tellen niet mee voor uw gelicentieerde gebruikers.",
+      "clientUnavailable": "Klant niet beschikbaar",
+      "effectiveAccess": "Effectieve toegang",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "client": "Klant",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "state": {
+        "active": "Actief",
+        "invited": "Uitnodiging in behandeling"
+      },
+      "dialog": {
+        "title": "Effectieve toegang voor {{name}}",
+        "help": "Kies een ticket om te zien of deze seat-technicus het kan lezen, en waarom.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecteer een ticket...",
+        "checking": "Toegang controleren...",
+        "allowed": "{{name}} kan dit ticket lezen.",
+        "denied": "{{name}} kan dit ticket niet lezen.",
+        "noReasons": "Er zijn geen verdere details gemeld.",
+        "error": "Kon de toegang niet controleren. Probeer het opnieuw.",
+        "close": "Sluiten",
+        "unavailable": "Effectieve toegang kan voor dit ticket in deze editie of configuratie niet worden gecontroleerd."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Variabelenreferentie voor e-mailsjablonen",
       "panelTitle": "Sjabloonvariabelen",
+      "mspOnly": "Alleen MSP",
+      "clientSafeHelp": "Wordt naar klanten verzonden. Variabelen die alleen voor de MSP zijn, zijn niet beschikbaar.",
       "inferredContract": "Wordt momenteel niet verzonden. Dit contract is afgeleid van het sjabloon.",
       "empty": "Geen overeenkomende variabelen.",
       "example": "Voorbeeld:",
@@ -4553,7 +4585,7 @@
     "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
     "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Weergeven op chips",
     "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
     "loading": "Laden…",

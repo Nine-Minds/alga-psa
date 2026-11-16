@@ -36,4 +36,27 @@ describe('denial reason explanations', () => {
     ]);
     expect(out.map((e) => e.kind)).toEqual(['client_portfolio', 'create_out_of_scope']);
   });
+  describe('a built-in resolver\'s relationship-template denial', () => {
+    const denied = (templateKeys?: string[]) => ({ code: 'resolver_template_denied', metadata: { resource: 'ticket', action: 'read', ...(templateKeys ? { templateKeys } : {}) } });
+
+    it('names the board scope when the record failed a selected-boards template', () => {
+      expect(explainDenialReason(denied(['selected_boards']))).toMatchObject({
+        kind: 'resolver_board_scope', messageKey: 'policyManagement.simulator.explanations.resolverBoardScope', params: { resource: 'ticket', action: 'read' },
+      });
+    });
+
+    it('names the client when the record failed a selected-clients template', () => {
+      expect(explainDenialReason(denied(['selected_clients']))).toMatchObject({ kind: 'resolver_client_scope', messageKey: 'policyManagement.simulator.explanations.resolverClientScope' });
+    });
+
+    it('falls back to the general built-in rule message when no scope is named', () => {
+      expect(explainDenialReason(denied())).toMatchObject({ kind: 'other_denial', messageKey: 'policyManagement.simulator.explanations.resolverTemplateDenied' });
+      expect(explainDenialReason(denied(['selected_records']))).toMatchObject({ kind: 'other_denial' });
+    });
+
+    it('decides from the templates the resolver reported, not from rule ids', () => {
+      const reason = { code: 'resolver_template_denied', metadata: { ruleIds: ['seat:ticket:read:in_scope_board'], templateKeys: ['selected_clients'] } };
+      expect(explainDenialReason(reason)).toMatchObject({ kind: 'resolver_client_scope' });
+    });
+  });
 });

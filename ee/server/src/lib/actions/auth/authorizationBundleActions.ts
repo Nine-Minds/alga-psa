@@ -30,6 +30,7 @@ import {
   listAuthorizationBundles,
   publishBundleRevision,
   readPublishedBundleBaselines,
+  resolveBundleNarrowingRulesForEvaluation,
   setBundleAssignmentStatus,
   setBundleRevisionBaseline,
   normalizeBundleBaseline,
@@ -48,6 +49,8 @@ import {
 } from '@alga-psa/authorization/bundles/closedBundlePreview';
 import { explainDenialReasons, type DenialExplanation } from '@alga-psa/authorization/bundles/denialExplanations';
 import { readUserClientPortfolio } from '@alga-psa/authorization/portfolios/service';
+import { listSimulationTicketOptions } from '@alga-psa/authorization/bundles/simulationTickets';
+import { loadSubjectResolverFacts } from '@alga-psa/authorization/subject/resolver';
 
 export interface AuthorizationBundleLibraryEntry {
   bundleId: string;
@@ -785,7 +788,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
   async (
     user,
     { tenant },
-    input: { resourceType: string }
+    input: { resourceType: string; /** Tickets only: matches the ticket number or title. */ search?: string }
   ): Promise<AuthorizationSimulationOption[]> => {
     await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
@@ -793,11 +796,7 @@ export const listAuthorizationSimulationRecordsAction = withAuth(
     const { knex } = await createTenantKnex();
 
     if (input.resourceType === 'ticket') {
-      const rows = await tenantScopedTable(knex, tenant, 'tickets')
-        .orderBy('updated_at', 'desc')
-        .limit(50)
-        .select<{ ticket_id: string; title: string | null }[]>('ticket_id', 'title');
-      return rows.map((row) => ({ id: row.ticket_id, label: row.title || row.ticket_id }));
+      return listSimulationTicketOptions(knex, tenant, input.search);
     }
 
     if (input.resourceType === 'document') {
@@ -1028,7 +1027,11 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     user,
     { tenant },
     input: {
-      bundleId: string;
+      /**
+       * The bundle to compare draft against published. Omitted, the decision is the product's own for the
+       * principal (roles, built-in resolvers and the principal's assigned published bundles) and `draft` equals `published`.
+       */
+      bundleId?: string;
       principalUserId: string;
       resourceType: string;
       action: string;
@@ -1041,7 +1044,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       };
     }
   ): Promise<AuthorizationBundleSimulationActionResult> => {
-    await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
+    if (input.bundleId) await assertTierAccess(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES);
     await assertSecuritySettingsPermission(user, 'read');
 
     const { knex } = await createTenantKnex();
@@ -1072,39 +1075,43 @@ export const runAuthorizationBundleSimulationAction = withAuth(
 
     const canWrite = await hasPermission(user as any, 'system_settings', 'update');
 
-    const [portfolioClientIds, roleRows, teamRows, managedRows, bundle] = await Promise.all([
+    const [portfolioClientIds, roleRows, teamRows, managedRows, resolverFacts, bundle] = await Promise.all([
       readUserClientPortfolio(knex, { tenant, userId: principal.user_id }),
       tenantScopedTable(knex, tenant, 'user_roles').where('user_id', principal.user_id).select<{ role_id: string }[]>('role_id'),
       tenantScopedTable(knex, tenant, 'team_members').where('user_id', principal.user_id).select<{ team_id: string }[]>('team_id'),
       tenantScopedTable(knex, tenant, 'users').where('reports_to', principal.user_id).select<{ user_id: string }[]>('user_id'),
-      tenantScopedTable(knex, tenant, 'authorization_bundles')
-        .where('bundle_id', input.bundleId)
-        .first<{ published_revision_id: string | null }>('published_revision_id'),
+      // Built-in resolver principals (a co-managed seat technician) are decided from their facts, as in the product.
+      loadSubjectResolverFacts(knex, { tenant, userId: principal.user_id }),
+      input.bundleId
+        ? tenantScopedTable(knex, tenant, 'authorization_bundles')
+            .where('bundle_id', input.bundleId)
+            .first<{ published_revision_id: string | null }>('published_revision_id')
+        : Promise.resolve(null),
     ]);
 
-    if (!bundle) {
+    if (input.bundleId && !bundle) {
       throw new Error('Bundle not found in tenant scope.');
     }
 
-    const draftRevisionId = canWrite
+    const draftRevisionId = !input.bundleId || !bundle ? null : canWrite
       ? (
           await ensureDraftBundleRevision(knex, {
             tenant,
-            bundleId: input.bundleId,
+            bundleId: input.bundleId!,
             actorUserId: user.user_id,
           })
         ).revisionId
       : (
           await tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')
             .where({
-              bundle_id: input.bundleId,
+              bundle_id: input.bundleId!,
               lifecycle_state: 'draft',
             })
             .orderBy('revision_number', 'desc')
             .first<{ revision_id: string }>('revision_id')
-        )?.revision_id ?? bundle.published_revision_id;
+        )?.revision_id ?? bundle!.published_revision_id;
 
-    if (!draftRevisionId) {
+    if (input.bundleId && !draftRevisionId) {
       throw new Error('Draft or published revision not found for bundle in tenant scope.');
     }
 
@@ -1122,12 +1129,12 @@ export const runAuthorizationBundleSimulationAction = withAuth(
     // it is published, and the published side shows what users get today.
     const loadRevisionRules = async (revisionId: string) =>
       normalizeBundleRules(await listBundleRulesForRevision(knex, { tenant, revisionId }), {
-        bundleId: input.bundleId,
+        bundleId: input.bundleId!,
         revisionId,
         baseline: await readRevisionBaseline(knex, tenant, revisionId),
       });
-    const draftRules = await loadRevisionRules(draftRevisionId);
-    const publishedRules = bundle.published_revision_id ? await loadRevisionRules(bundle.published_revision_id) : [];
+    const draftRules = draftRevisionId ? await loadRevisionRules(draftRevisionId) : [];
+    const publishedRules = bundle?.published_revision_id ? await loadRevisionRules(bundle.published_revision_id) : [];
 
     const createKernelWithRules = (rules: BundleNarrowingRule[]) =>
       createAuthorizationKernelWithDefaultRbac({
@@ -1188,6 +1195,7 @@ export const runAuthorizationBundleSimulationAction = withAuth(
         managedUserIds: managedRows.map((row) => row.user_id),
         // The stored portfolio, so a client_portfolio rule decides here as it does in the product.
         portfolioClientIds,
+        ...(resolverFacts ? { resolverFacts } : {}),
       },
       resource: {
         type: input.resourceType,
@@ -1233,9 +1241,15 @@ export const runAuthorizationBundleSimulationAction = withAuth(
       });
     };
 
+    // No bundle named: the decision is the product's, so the rules are the principal's own published
+    // assignments (direct, role, team), resolved by the same function the product's evaluations use.
+    const assignedRules = input.bundleId
+      ? null
+      : await resolveBundleNarrowingRulesForEvaluation(knex, evaluationInput as never);
+
     const [draftDecision, publishedDecision] = await Promise.all([
-      evaluateDecision(draftRules),
-      evaluateDecision(publishedRules),
+      evaluateDecision(assignedRules ?? draftRules),
+      evaluateDecision(assignedRules ?? publishedRules),
     ]);
 
     return {

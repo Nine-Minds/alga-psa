@@ -34,6 +34,10 @@
       "import": "./dist/bundles/catalog.js",
       "types": "./src/bundles/catalog.ts"
     },
+    "./bundles/simulationTickets": {
+      "import": "./dist/bundles/simulationTickets.js",
+      "types": "./src/bundles/simulationTickets.ts"
+    },
     "./bundles/service": {
       "import": "./dist/bundles/service.js",
       "types": "./src/bundles/service.ts"
@@ -121,6 +125,10 @@
     "./recordProjection": {
       "import": "./dist/recordProjection.js",
       "types": "./src/recordProjection.ts"
+    },
+    "./recordProjectionDescriptors": {
+      "import": "./dist/recordProjectionDescriptors.js",
+      "types": "./src/recordProjectionDescriptors.ts"
     },
     "./rbac": {
       "import": "./dist/rbac.js",

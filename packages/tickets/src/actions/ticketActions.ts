@@ -1,7 +1,7 @@
 'use server';
 
-import { assertTicketCreateAllowed } from '../lib/ticketCreateAuthorization';
-import { assertHumanWorkAssignee, assertTicketMoveKeepsSeatsInScope } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { assertTicketCreateAllowed, assertTicketUpdateAllowed } from '../lib/ticketCreateAuthorization';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   assertActorMayAssign,
   resolveSeatAssigneeAudience,
@@ -932,6 +932,8 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
                 checklist_template_id: item.checklist_template_id,
               }))
             : [],
+          // Links are always copied (no form toggle): a technician who does not want a citation removes it.
+          links: sourceTemplate.links,
           fromTemplate: {
             template_id: sourceTemplate.template_id,
             template_name: sourceTemplate.name,
@@ -1546,6 +1548,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         throw new Error('Ticket not found');
       }
 
+      // A subject scoped to a client and boards (a co-managed seat technician) may only edit a ticket they can work,
+      // and only so that it stays where they can work it.
+      await assertTicketUpdateAllowed(trx, tenant, user, currentTicket, validatedData);
+
       // Clean up the data before update
       const updateData = { ...validatedData };
 
@@ -1726,10 +1732,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         await assertActorMayAssign(trx, tenant, user, [updateData.assigned_to]);
         await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId: id, pending: pendingPlacement });
       }
-      await assertTicketMoveKeepsSeatsInScope(
-        trx, tenant, id, pendingPlacement,
-        isChangingAssignment ? updateData.assigned_to : undefined
-      );
+      // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+      // after the write, clears and drops the seat technicians it strands (F094).
 
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
@@ -1867,6 +1871,22 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           old: currentTicket.due_date,
           new: updateData.due_date
         };
+      }
+
+      const hasChangedTicketFields = Object.entries(updateData).some(([field, value]) =>
+        value !== undefined && JSON.stringify(value) !== JSON.stringify(currentTicket[field])
+      );
+      if (hasChangedTicketFields) {
+        await writeTicketActivity(trx, {
+          tenant,
+          ticketId: id,
+          eventType: TICKET_ACTIVITY_EVENT.UPDATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
+          source: TICKET_ACTIVITY_SOURCE.UI,
+          occurredAt: occurredAt,
+          changes: structuredChanges,
+        });
       }
 
       // Keep the ticket row's denormalized close flag aligned with the selected status.

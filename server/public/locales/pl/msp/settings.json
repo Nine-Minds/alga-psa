@@ -308,6 +308,36 @@
       "expiresPrefix": "Wygasa:",
       "revoke": "Odwołaj",
       "revoking": "Odwoływanie..."
+    },
+    "seatTechnicians": {
+      "title": "Technicy stanowiska",
+      "description": "Osoby pracujące w Twoim PSA przez współzarządzane stanowisko klienta. Nie liczą się do Twoich licencjonowanych użytkowników.",
+      "clientUnavailable": "Klient niedostępny",
+      "effectiveAccess": "Efektywny dostęp",
+      "columns": {
+        "name": "Nazwa",
+        "email": "E-mail",
+        "client": "Klient",
+        "status": "Status",
+        "actions": "Akcje"
+      },
+      "state": {
+        "active": "Aktywny",
+        "invited": "Zaproszenie oczekuje"
+      },
+      "dialog": {
+        "title": "Efektywny dostęp użytkownika {{name}}",
+        "help": "Wybierz zgłoszenie, aby zobaczyć, czy ten technik stanowiska może je odczytać i dlaczego.",
+        "ticket": "Zgłoszenie",
+        "ticketPlaceholder": "Wybierz zgłoszenie...",
+        "checking": "Sprawdzanie dostępu...",
+        "allowed": "{{name}} może odczytać to zgłoszenie.",
+        "denied": "{{name}} nie może odczytać tego zgłoszenia.",
+        "noReasons": "Nie zgłoszono dalszych szczegółów.",
+        "error": "Nie udało się sprawdzić dostępu. Spróbuj ponownie.",
+        "close": "Zamknij",
+        "unavailable": "Nie można sprawdzić efektywnego dostępu do tego zgłoszenia w tej edycji lub konfiguracji."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Informacje o zmiennych szablonów e-mail",
       "panelTitle": "Zmienne szablonu",
+      "mspOnly": "Tylko MSP",
+      "clientSafeHelp": "Wysyłany do klientów. Zmienne tylko dla MSP są niedostępne.",
       "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
       "empty": "Brak pasujących zmiennych.",
       "example": "Przykład:",
@@ -4561,7 +4593,7 @@
     "seatNote": "Konta usługowe nie zużywają licencji użytkowników.",
     "blockedAccess": "Dostęp API i MCP do podmiotów usług jest natychmiast blokowany poniżej planu Pro. Istniejące rekordy pozostają dostępne do uporządkowania."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Wyświetlaj na chipach",
     "subtitle": "Tagi wyświetlane obok kontaktów i klientów na listach zgłoszeń, w nagłówkach zgłoszeń i w selektorach.",
     "loading": "Ładowanie…",

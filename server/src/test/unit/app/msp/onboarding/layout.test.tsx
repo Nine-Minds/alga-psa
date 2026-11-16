@@ -11,12 +11,16 @@ const mocks = vi.hoisted(() => ({
   // Like Next's redirect, it never returns: the layout stops where it is called.
   redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }),
   productCode: 'psa' as string,
+  surfaceKind: undefined as string | undefined,
   getCoManagedWorkspaceState: vi.fn(async (): Promise<any> => ({ kind: 'none' })),
   getDontNotifyCustomerDefault: vi.fn(async (): Promise<boolean> => false),
 }));
 
 vi.mock('react', async (importOriginal) => ({ ...await importOriginal<typeof import('react')>(), cache: (fn: unknown) => fn }));
-vi.mock('next/headers.js', () => ({ cookies: async () => ({ get: () => undefined }) }));
+vi.mock('next/headers.js', () => ({
+  cookies: async () => ({ get: () => undefined }),
+  headers: async () => ({ get: () => null }),
+}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => null),
@@ -33,9 +37,10 @@ vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () 
 }));
 vi.mock('@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale', () => ({ getHierarchicalLocaleAction: vi.fn(async () => 'en') }));
 vi.mock('server/src/app/msp/MspLayoutClient', () => ({ MspLayoutClient: () => null }));
+vi.mock('@alga-psa/scheduling/context/TimeEntryModeContext', () => ({ TimeEntryModeProvider: () => null }));
 vi.mock('@/lib/productAccess', () => ({
   getCurrentTenantProduct: vi.fn(async () => mocks.productCode),
-  getCurrentProductPrincipal: vi.fn(async () => ({ productCode: mocks.productCode })),
+  getCurrentProductPrincipal: vi.fn(async () => ({ productCode: mocks.productCode, surfaceKind: mocks.surfaceKind })),
 }));
 vi.mock('@/lib/actions/coManagedWorkspaceActions', () => ({ getCoManagedWorkspaceState: mocks.getCoManagedWorkspaceState }));
 vi.mock('@alga-psa/billing/actions/billingCurrencyActions', () => ({ getTenantDefaultCurrencyCode: vi.fn(async () => 'USD') }));
@@ -54,9 +59,38 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({ getServerTranslation: vi.fn
 
 const { default: MspLayout } = await import('../../../../../app/msp/layout');
 
+const { MspLayoutClient } = await import('server/src/app/msp/MspLayoutClient');
+const { TimeEntryModeProvider } = await import('@alga-psa/scheduling/context/TimeEntryModeContext');
+
+// Walks the rendered tree (without rendering it) to the first element of the given component type.
+function findElement(node: any, type: unknown): any {
+  if (!node || typeof node !== 'object') return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findElement(child, type);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (node.type === type) return node;
+  return findElement(node.props?.children, type);
+}
+
+async function renderLayout() {
+  return MspLayout({ children: null, modal: null });
+}
+
 async function layoutProps() {
-  const element: any = await MspLayout({ children: null, modal: null });
-  return element.props as { needsOnboarding: boolean; canRunOnboarding: boolean; workspaceNotice: unknown };
+  const shell = findElement(await renderLayout(), MspLayoutClient);
+  if (!shell) throw new Error('MspLayoutClient was not rendered');
+  return shell.props as { needsOnboarding: boolean; canRunOnboarding: boolean; workspaceNotice: unknown };
+}
+
+async function timeEntryMode() {
+  const provider = findElement(await renderLayout(), TimeEntryModeProvider);
+  if (!provider) throw new Error('TimeEntryModeProvider was not rendered');
+  expect(findElement(provider.props.children, MspLayoutClient)).not.toBeNull();
+  return provider.props.mode as string;
 }
 
 beforeEach(() => {
@@ -65,6 +99,7 @@ beforeEach(() => {
   mocks.session = { user: { user_type: 'internal', tenant: 'tenant-1' } };
   mocks.redirect.mockClear();
   mocks.productCode = 'psa';
+  mocks.surfaceKind = undefined;
   mocks.getCoManagedWorkspaceState.mockReset();
   mocks.getCoManagedWorkspaceState.mockResolvedValue({ kind: 'none' });
   mocks.getDontNotifyCustomerDefault.mockReset();
@@ -143,5 +178,22 @@ describe('MSP layout notification defaults', () => {
     mocks.getDontNotifyCustomerDefault.mockRejectedValue(new Error('denied'));
     expect(await layoutProps()).toMatchObject({ dontNotifyCustomerDefault: false });
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('MSP layout time-entry mode', () => {
+  it('wraps the shell in commercial mode for an ordinary MSP user', async () => {
+    expect(await timeEntryMode()).toBe('commercial');
+  });
+
+  it('wraps the shell in operational mode for a co-managed seat technician', async () => {
+    mocks.productCode = 'co_managed';
+    mocks.surfaceKind = 'co_managed_seat';
+    expect(await timeEntryMode()).toBe('operational');
+  });
+
+  it('keeps commercial mode for any other surface kind', async () => {
+    mocks.surfaceKind = 'some_other_surface';
+    expect(await timeEntryMode()).toBe('commercial');
   });
 });

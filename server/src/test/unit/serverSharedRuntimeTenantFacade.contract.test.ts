@@ -83,7 +83,12 @@ describe('server/shared runtime tenant facade roots', () => {
 
   it('routes notification and SLA tenant roots through tenantDb', () => {
     const sendEventEmail = read('server/src/lib/notifications/sendEventEmail.ts');
-    expect(sendEventEmail).toContain("db.table('tenant_email_templates')");
+    // The template read lives in lookupEmailTemplate, handed the tenantDb facade built here.
+    expect(sendEventEmail).toContain('const db = tenantDb(knex, params.tenantId);');
+    expect(sendEventEmail).toContain('lookupEmailTemplate(db, params.template, recipientLocale)');
+    const templateLookup = read('server/src/lib/notifications/emailTemplateLookup.ts');
+    expect(templateLookup).toContain("db.table('tenant_email_templates')");
+    expect(templateLookup).not.toMatch(directRootPattern(['tenant_email_templates', 'system_email_templates']));
     expect(sendEventEmail).toContain("db.table('tickets')");
     expect(sendEventEmail).not.toMatch(directRootPattern(['email_reply_tokens', 'tenant_email_templates', 'tickets']));
     expect(sendEventEmail).not.toMatch(/\.where\(\{\s*tenant:\s*params\.tenantId/);

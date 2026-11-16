@@ -357,6 +357,47 @@ export const setBillingProfileContactsSchema = z.object({
   contacts: z.array(billingProfileContactSchema)
 });
 
+// ---------------------------------------------------------------------------
+// Billing profiles (read-only)
+// ---------------------------------------------------------------------------
+
+/**
+ * A client billing profile as stored. Settings that are nullable mean
+ * "inherit from the client", so null is returned as null, not resolved.
+ * `*_name` fields are display names for the matching `*_id`; null when the id is unset.
+ * `client_name` is deliberately omitted: the profile is read under /clients/{id}.
+ */
+export const clientBillingProfileResponseSchema = z.object({
+  billing_profile_id: uuidSchema,
+  client_id: uuidSchema,
+  name: z.string(),
+  is_default: z.boolean(),
+  is_system_managed_default: z.boolean(),
+  is_active: z.boolean(),
+  bills_separately: z.boolean(),
+  bill_to_name: z.string().nullable(),
+  bill_to_location_id: uuidSchema.nullable(),
+  bill_to_location_name: z.string().nullable(),
+  billing_contact_id: uuidSchema.nullable(),
+  billing_contact_name: z.string().nullable(),
+  billing_email: z.string().nullable(),
+  is_tax_exempt: z.boolean().nullable(),
+  tax_exemption_certificate: z.string().nullable(),
+  tax_id_number: z.string().nullable(),
+  po_number: z.string().nullable(),
+  po_required: z.boolean().nullable(),
+  invoice_delivery_method: z.string().nullable(),
+  invoice_template_id: uuidSchema.nullable(),
+  invoice_template_name: z.string().nullable(),
+  billing_cycle: z.string().nullable(),
+  payment_terms: z.string().nullable(),
+  preferred_payment_method: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable()
+});
+
+export type ClientBillingProfileResponse = z.infer<typeof clientBillingProfileResponseSchema>;
+
 export type ClientMergePreviewRequest = z.infer<typeof clientMergePreviewRequestSchema>;
 export type ClientMergeRequest = z.infer<typeof clientMergeRequestSchema>;
 export type SetBillingProfileContactsRequest = z.infer<typeof setBillingProfileContactsSchema>;

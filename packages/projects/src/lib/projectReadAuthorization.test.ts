@@ -36,13 +36,14 @@ describe('project read authorization', () => {
     await expect(decide({ project_id: 'p1', client_id: 'c1', assigned_to: null })).resolves.toEqual({
       allowed: true,
       redactedFields: ['description', 'project_tasks.task_name'],
+      governed: false,
     });
     expect(kernel.authorizeResource).toHaveBeenCalledWith(expect.objectContaining({ resource: { type: 'project', action: 'read', id: 'p1' } }));
   });
 
   it('the decider denies a row without a project id and carries no redactions for it', async () => {
     const decide = await createProjectReadDecider(conn, 't1', user);
-    await expect(decide({})).resolves.toEqual({ allowed: false, redactedFields: [] });
+    await expect(decide({})).resolves.toEqual({ allowed: false, redactedFields: [], governed: false });
     expect(kernel.authorizeResource).not.toHaveBeenCalled();
   });
 

@@ -599,7 +599,10 @@
         "clientVisibleOnly": "Le bundle autorise {{action}} sur {{resource}} uniquement lorsque l’enregistrement est visible par le client.",
         "notSelfApprover": "Les utilisateurs ne peuvent pas approuver leurs propres enregistrements.",
         "rulesUnavailable": "Les règles du bundle n’ont pas pu être chargées, l’accès est donc refusé.",
-        "rbacDenied": "Le rôle de l’utilisateur n’accorde pas {{action}} sur {{resource}}."
+        "rbacDenied": "Le rôle de l’utilisateur n’accorde pas {{action}} sur {{resource}}.",
+        "resolverTemplateDenied": "Une règle d'accès intégrée limite {{action}} sur {{resource}} aux enregistrements qui ne correspondent pas à cet utilisateur.",
+        "resolverBoardScope": "L'enregistrement se trouve sur un tableau hors du périmètre de tableaux de cet utilisateur ; {{action}} sur {{resource}} est donc refusé.",
+        "resolverClientScope": "L'enregistrement appartient à un autre client que celui pour lequel cet utilisateur occupe un siège ; {{action}} sur {{resource}} est donc refusé."
       }
     },
     "createDialog": {

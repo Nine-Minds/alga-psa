@@ -169,7 +169,6 @@ vi.mock('@alga-psa/event-bus', () => ({
 }));
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(),
-  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(),
 }));
 vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
@@ -202,6 +201,9 @@ import { getConsolidatedTicketData } from './optimizedTicketActions';
 const TICKET_ID = 'ticket-1';
 const sensitiveKeys = new Set<string>(SENSITIVE_USER_FIELDS);
 const allowedKeys = new Set<string>(USER_RESPONSE_FIELD_NAMES);
+// Read by the availableAgents query for the ticket's seat context and stripped by the response
+// sanitizer before anything leaves; test (b) proves no response row carries it.
+const serverOnlyKeys = new Set<string>(['seat_reader']);
 
 function findSensitiveKeyPaths(value: unknown, path = '$', seen = new WeakSet<object>()): string[] {
   if (value === null || typeof value !== 'object') return [];
@@ -318,7 +320,7 @@ describe('getConsolidatedTicketData user credential exposure', () => {
     for (const query of wide) {
       for (const column of query.selected as string[]) {
         expect(sensitiveKeys.has(column)).toBe(false);
-        expect(allowedKeys.has(column)).toBe(true);
+        expect(allowedKeys.has(column) || serverOnlyKeys.has(column), column).toBe(true);
       }
     }
   });

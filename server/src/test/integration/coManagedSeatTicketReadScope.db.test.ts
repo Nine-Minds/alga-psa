@@ -11,7 +11,7 @@
  *  - the MSP ticket screen loader (`getConsolidatedTicketData`)
  *  - the ticket read action (`getTicketById`)
  *  - the comment reads (`findCommentsByTicketId`, `findCommentById`)
- *  - the REST read decision (`authorizeApiResourceRead` on the row `TicketService.getById` loads,
+ *  - the REST read decision (`projectApiResourceRead` on the row `TicketService.getById` loads,
  *    which is what `ApiTicketController` gates the ticket and its comments on)
  *
  * The move itself is made by the MSP user through the ticket screen save.
@@ -87,7 +87,7 @@ import {
 } from '../../../../packages/tickets/src/actions/optimizedTicketActions';
 import { getTicketById } from '../../../../packages/tickets/src/actions/ticketActions';
 import { findCommentById, findCommentsByTicketId } from '../../../../packages/tickets/src/actions/comment-actions/commentActions';
-import { authorizeApiResourceRead } from '../../lib/api/controllers/authorizationKernel';
+import { projectApiResourceRead } from '../../lib/api/controllers/authorizationKernel';
 import { buildTicketRecordContext } from '../../lib/api/controllers/recordContexts';
 import { TicketService } from '../../lib/api/services/TicketService';
 import {
@@ -180,10 +180,10 @@ function readsOf(user: any, ticketId: string, noteId: string): Record<string, ()
       const service = new TicketService();
       const row = await service.getById(ticketId, restContext);
       if (!row) throw new Error('ticket not found');
-      const decision = await authorizeApiResourceRead({ knex: db, tenant: tenant(), user, resource: 'ticket',
-        recordContext: buildTicketRecordContext(row as Record<string, any>) });
-      if (!decision.allowed) throw new Error('Permission denied: Cannot read ticket');
-      return { ticket: row, comments: await service.getTicketComments(ticketId, restContext) };
+      const ticket = await projectApiResourceRead({ knex: db, tenant: tenant(), user, kind: 'ticket',
+        record: row as Record<string, any>, recordContext: buildTicketRecordContext(row as Record<string, any>) });
+      if (!ticket) throw new Error('Permission denied: Cannot read ticket');
+      return { ticket, comments: await service.getTicketComments(ticketId, restContext) };
     }),
   };
 }

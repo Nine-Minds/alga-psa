@@ -27,7 +27,6 @@ const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 // The human-work guard is covered against a real database in T043; this fake DB has no users table.
 vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
   assertHumanWorkAssignee: vi.fn(async () => undefined),
-  assertTicketMoveKeepsSeatsInScope: vi.fn(async () => undefined),
   assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/shared/lib/humanWork/seatAssigneeAudience', () => ({
@@ -508,6 +507,7 @@ describe('updateTicketWithCache live updates', () => {
       last_name: 'Agent',
       tenant: 'tenant-1',
       user_type: 'internal',
+      seat_reader: false, // a loaded staff row: the write resolves its author with no seat SQL
     };
     hasPermissionMock.mockResolvedValue(true);
     resolveBundleRulesMock.mockReset().mockResolvedValue([]);

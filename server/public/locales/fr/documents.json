@@ -29,6 +29,7 @@
     "invoiceTitle": "FACTURE",
     "issueDate": "Date d'émission",
     "locationSubtotal": "Sous-total du site",
+    "unassignedLocation": "Ensemble du devis",
     "monthly": "Mensuel",
     "monthlyItems": "Articles mensuels",
     "monthlyTotal": "Total mensuel",
