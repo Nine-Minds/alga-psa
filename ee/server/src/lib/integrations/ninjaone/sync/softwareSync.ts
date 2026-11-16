@@ -152,8 +152,9 @@ function transformSoftware(ninjaSoftware: NinjaOneSoftware[]): SoftwareItem[] {
 /**
  * Find or create a software catalog entry
  * Uses normalized name + publisher for deduplication
+ * (exported for its unit test)
  */
-async function findOrCreateSoftwareCatalogEntry(
+export async function findOrCreateSoftwareCatalogEntry(
   knex: Knex,
   tenant: string,
   software: { name: string; publisher?: string }
@@ -174,7 +175,10 @@ async function findOrCreateSoftwareCatalogEntry(
     return existing.software_id;
   }
 
-  // Create new entry
+  // Create new entry. A batch syncs ~25 devices concurrently, so several devices
+  // reporting the same new title race here: ON CONFLICT DO NOTHING lets the
+  // losers fall through to re-read the winner's row instead of failing the
+  // whole device on idx_software_catalog_unique_name_publisher.
   const [entry] = await db.table('software_catalog')
     .insert({
       tenant,
@@ -186,9 +190,21 @@ async function findOrCreateSoftwareCatalogEntry(
       is_managed: false,
       is_security_relevant: isSecurityRelevant(software.name),
     })
+    .onConflict(['tenant', 'normalized_name', 'publisher'])
+    .ignore()
     .returning('software_id');
 
-  return entry.software_id;
+  if (entry?.software_id) {
+    return entry.software_id;
+  }
+
+  const winner = await db.table('software_catalog')
+    .where({ normalized_name: normalizedName, publisher })
+    .first('software_id');
+  if (!winner) {
+    throw new Error(`Software catalog entry for "${software.name}" was neither inserted nor found`);
+  }
+  return winner.software_id;
 }
 
 /**
