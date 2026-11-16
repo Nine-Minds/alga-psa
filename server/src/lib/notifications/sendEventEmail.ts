@@ -436,7 +436,26 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         templateContent = template.html_content;
         emailSubject = template.subject || params.subject;
         templateSource = 'tenant';
-        tenantCustomSubject = Boolean(template.subject);
+        // A tenant row only counts as a custom subject when it differs from the matching
+        // system template: body-only edits copy the system subject into the override row.
+        if (template.subject) {
+          let systemSubject: unknown;
+          try {
+            const systemMatch = await db.table('system_email_templates')
+              .where(template.system_template_id
+                ? { id: template.system_template_id }
+                : { name: template.name, language_code: template.language_code ?? null })
+              .first();
+            systemSubject = systemMatch?.subject;
+          } catch (lookupError) {
+            logger.warn('[SendEventEmail] System subject lookup failed; treating tenant subject as custom', {
+              template: params.template,
+              error: lookupError instanceof Error ? lookupError.message : String(lookupError)
+            });
+          }
+          const canon = (v: unknown) => String(v ?? '').replace(/\s+/g, ' ').trim();
+          tenantCustomSubject = canon(template.subject) !== canon(systemSubject);
+        }
       } else {
         logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
 
@@ -615,10 +634,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       if (tenantCustomSubject) {
         subject = normalizeTicketSubject(subject, ticketNumber);
       } else {
-        const title = typeof ticket?.title === 'string' && ticket.title.trim()
-          ? ticket.title
-          : (params.coManagedRecipient ? 'Shared ticket' : '');
-        subject = buildUniformTicketSubject(subject, ticketNumber, title);
+        const hasTitle = typeof ticket?.title === 'string' && ticket.title.trim() !== '';
+        if (hasTitle || params.coManagedRecipient) {
+          subject = buildUniformTicketSubject(subject, ticketNumber, hasTitle ? ticket?.title : 'Shared ticket');
+        } else {
+          subject = normalizeTicketSubject(subject, ticketNumber);
+        }
       }
     }
 

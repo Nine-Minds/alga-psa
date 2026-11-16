@@ -51,14 +51,14 @@ const EVENT_SUBJECTS: Array<[string, string]> = [
   ['ticket-closed', 'Ticket Closed: {{ticket.title}}'],
 ];
 
-const send = (template: string, subject = 'hardcoded default') =>
+const send = (template: string, subject = 'hardcoded default', ticket: Record<string, unknown> = { id: '1042', ticket_number: '1042', title: 'Printer down' }) =>
   sendEventEmail({
     mailClass: 'ticket' as const,
     tenantId: '11111111-1111-1111-1111-111111111111',
     to: 'client@example.test',
     subject,
     template,
-    context: { ticket: { id: '1042', ticket_number: '1042', title: 'Printer down' } },
+    context: { ticket },
     locale: 'en' as const,
     replyContext: { ticketId: 'ticket-uuid', threadId: 'thread-1' },
   });
@@ -98,5 +98,18 @@ describe('sendEventEmail uniform customer-facing ticket subject', () => {
     tenantRow = { id: 't', name: 'ticket-updated', html_content: '<p>x</p>', subject: '' };
     await send('ticket-updated', 'Ticket Updated: Printer down');
     expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Printer down');
+  });
+
+  it('treats a tenant row whose subject equals the system subject (body-only edit) as default', async () => {
+    systemRow = { id: 's', name: 'ticket-updated', html_content: '<p>x</p>', subject: 'Ticket Updated: {{ticket.title}}' };
+    tenantRow = { id: 't', name: 'ticket-updated', html_content: '<p>edited</p>', subject: '  Ticket Updated:   {{ticket.title}} ', system_template_id: 's' };
+    await send('ticket-updated');
+    expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Printer down');
+  });
+
+  it('falls back to tag-only (today\'s behaviour) for non-co-managed mail with a blank title', async () => {
+    systemRow = { id: 's', name: 'ticket-updated', html_content: '<p>x</p>', subject: 'Ticket Updated: {{ticket.title}}' };
+    await send('ticket-updated', 'x', { id: '1042', ticket_number: '1042', title: '   ' });
+    expect(sendEmail.mock.calls[0][0].templateProcessor.subject).toBe('[Ticket #1042] Ticket Updated:');
   });
 });
