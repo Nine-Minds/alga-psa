@@ -30604,6 +30604,31 @@
           "evidenceId"
         ]
       },
+      "OpportunityDeclarationParamsV1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opportunity UUID from opportunities.opportunity_id."
+          },
+          "checkpoint": {
+            "type": "string",
+            "enum": [
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal",
+              "won"
+            ],
+            "description": "The stage checkpoint whose declaration is edited. won is refused."
+          }
+        },
+        "required": [
+          "id",
+          "checkpoint"
+        ]
+      },
       "OpportunityStepParamsV1": {
         "type": "object",
         "properties": {
@@ -31041,6 +31066,40 @@
               "string",
               "null"
             ]
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ]
+            }
+          },
+          "refType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "refId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         },
         "required": [
@@ -31182,6 +31241,26 @@
               "null"
             ]
           },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ]
+            }
+          },
           "refType": {
             "type": [
               "string",
@@ -31200,6 +31279,37 @@
         "required": [
           "checkpoint"
         ]
+      },
+      "AmendOpportunityDeclarationBodyV1": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ]
+            }
+          }
+        }
       },
       "CorrectOpportunityEvidenceBodyV1": {
         "type": "object",
@@ -120676,7 +120786,7 @@
     "/api/v1/opportunities/{id}/stage": {
       "post": {
         "summary": "Set opportunity stage",
-        "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+        "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose. detail and citations (interaction or document sources of this opportunity) set the declaration note and sources; omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
         "tags": [
           "Opportunities v1"
         ],
@@ -121148,7 +121258,7 @@
     "/api/v1/opportunities/{id}/evidence": {
       "post": {
         "summary": "Record declared evidence",
-        "description": "Records the declared qualified checkpoint only.",
+        "description": "Declares a stage (identified through verbal) with an optional note (detail) and citations of interactions or documents attached to this opportunity. Omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
         "tags": [
           "Opportunities v1"
         ],
@@ -121264,7 +121374,7 @@
       },
       "get": {
         "summary": "List opportunity evidence",
-        "description": "Lists append-only evidence and corrected records in recorded order.",
+        "description": "Lists append-only evidence and corrected records in recorded order, with the sources each declaration cites.",
         "tags": [
           "Opportunities v1"
         ],
@@ -121302,6 +121412,141 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OpportunityApiArraySuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/opportunities/{id}/declarations/{checkpoint}": {
+      "put": {
+        "summary": "Edit stage declaration",
+        "description": "Replaces the note (detail) and sources (citations) of the declaration for a reached checkpoint (qualified, assessment, proposed or verbal) without moving the deal and without publishing a stage-changed event. Omitted fields keep their current value; null detail or an empty citations array clears it. Works on closed opportunities. An unreached checkpoint answers 409; won answers 400.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "qualified",
+                "assessment",
+                "proposed",
+                "verbal",
+                "won"
+              ],
+              "description": "The stage checkpoint whose declaration is edited. won is refused."
+            },
+            "required": true,
+            "description": "The stage checkpoint whose declaration is edited. won is refused.",
+            "name": "checkpoint",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmendOpportunityDeclarationBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiSuccessV1"
                 }
               }
             }

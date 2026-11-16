@@ -5,7 +5,9 @@ import { OpportunityService } from '../services/OpportunityService';
 import {
   completeOpportunityActionApiSchema,
   completeOpportunityStepApiSchema,
+  amendOpportunityDeclarationApiSchema,
   correctOpportunityEvidenceApiSchema,
+  opportunityDeclarationCheckpointParamSchema,
   createOpportunityApiSchema,
   declaredOpportunityEvidenceApiSchema,
   loseOpportunityApiSchema,
@@ -330,6 +332,26 @@ export class ApiOpportunityController extends ApiBaseController {
           const data = await this.validateData(apiRequest, correctOpportunityEvidenceApiSchema);
           const evidence = await this.opportunityService.correctEvidence(id, evidenceId, data, apiRequest.context);
           return createSuccessResponse(evidence);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  amendDeclaration() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const id = await this.extractIdFromPath(apiRequest);
+          const params = await (req as any).params;
+          const parsed = opportunityDeclarationCheckpointParamSchema.safeParse({ checkpoint: params?.checkpoint });
+          if (!parsed.success) throw new ValidationError('Invalid checkpoint');
+          const data = await this.validateData(apiRequest, amendOpportunityDeclarationApiSchema);
+          const opportunity = await this.opportunityService.amendDeclaration(id, parsed.data.checkpoint, data, apiRequest.context);
+          return createSuccessResponse(opportunity);
         });
       } catch (error) {
         return handleApiError(error);

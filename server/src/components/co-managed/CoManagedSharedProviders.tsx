@@ -35,6 +35,8 @@ export const SHARED_DOCUMENTS_CROSS_FEATURE: DocumentsCrossFeatureCallbacks = Ob
   renderDocumentStorageCard: none,
   downloadDocument: refuse('downloadDocument') as never,
   getDocumentDownloadUrl: refuse('getDocumentDownloadUrl') as never,
+  // Reads answer empty: no such document exists in the viewer's tenant.
+  getDocument: async () => null,
   getDocumentsByEntity: async () => [],
   // Same shape the native action returns: a Map of entity id -> count. Empty means "no counts to show".
   getDocumentCountsForEntities: async () => new Map<string, number>(),

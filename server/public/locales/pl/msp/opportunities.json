@@ -481,7 +481,8 @@
       "whitespaceSuggestionCreated": "Sugestia gotowa do sprawdzenia",
       "whitespaceSuggestionDismissed": "Sugestia ta została wcześniej odrzucona",
       "whitespaceSuggestionKnown": "Ta propozycja jest już znana",
-      "won": "Wygrana"
+      "won": "Wygrana",
+      "evidenceSaved": "Dowody zapisane"
     },
     "type": {
       "expansion": "Ekspansja",
@@ -601,14 +602,25 @@
     },
     "declare": {
       "title": "Przenieś do etapu {{stage}}",
-      "sourceLabel": "Źródło potwierdzające",
-      "noSource": "Brak źródła",
-      "sourceHelp": "Opcjonalnie. Wskaż interakcję lub dokument tej szansy. Jeśli go nie ma na liście, najpierw dołącz dokument do szansy.",
+      "sourceHelp": "Opcjonalnie. Powołaj się na interakcje lub dokumenty z tej szansy. Jeśli dokumentu nie ma na liście, najpierw załącz go do szansy.",
       "submit": "Zadeklaruj",
       "source": "Źródło",
       "sourceRemoved": "Źródło usunięte",
       "interactionFallback": "Interakcja",
-      "documentFallback": "Dokument"
+      "documentFallback": "Dokument",
+      "editTitle": "Dowody dla etapu {{stage}}",
+      "noteLabel": "Notatka",
+      "notePlaceholder": "Co pokazuje, że szansa jest na tym etapie?",
+      "sourcesLabel": "Źródła potwierdzające",
+      "groupInteractions": "Interakcje",
+      "groupDocuments": "Dokumenty",
+      "removeSource": "Usuń źródło",
+      "sourcesLoading": "Wczytywanie źródeł…",
+      "addSource": "Dodaj źródło",
+      "noSourcesAvailable": "Brak innych interakcji i dokumentów w tej szansie",
+      "save": "Zapisz",
+      "editEvidence": "Edytuj dowody",
+      "addEvidence": "Dodaj dowód"
     }
   }
 }

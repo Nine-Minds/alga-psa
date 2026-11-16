@@ -154,6 +154,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'opportunity_commitments',
   'opportunity_steps',
   'opportunity_step_templates',
+  'opportunity_evidence_citations',
   'opportunity_evidence',
   'opportunity_qbr_triggers',
   'opportunity_suggestions',

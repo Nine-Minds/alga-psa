@@ -597,6 +597,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'opportunity_evidence', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'opportunity_evidence_tenant_foreign' },
   { child: 'opportunity_evidence', parent: 'users', column: 'corrected_by', deleteRule: 'NO ACTION', name: 'opportunity_evidence_tenant_corrected_by_foreign' },
   { child: 'opportunity_evidence', parent: 'users', column: 'recorded_by', deleteRule: 'NO ACTION', name: 'opportunity_evidence_tenant_recorded_by_foreign' },
+  { child: 'opportunity_evidence_citations', parent: 'opportunity_evidence', column: 'evidence_id', deleteRule: 'CASCADE', name: 'opportunity_evidence_citations_evidence_fk' },
+  { child: 'opportunity_evidence_citations', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'opportunity_evidence_citations_tenant_foreign' },
   { child: 'opportunity_meeting_reviews', parent: 'opportunities', column: 'opportunity_id', deleteRule: 'CASCADE', name: 'opportunity_meeting_reviews_opportunity_fk' },
   { child: 'opportunity_meeting_reviews', parent: 'opportunity_meeting_sessions', column: 'session_id', deleteRule: 'CASCADE', name: 'opportunity_meeting_reviews_session_fk' },
   { child: 'opportunity_meeting_sessions', parent: 'users', column: 'started_by', deleteRule: 'NO ACTION', name: 'opportunity_meeting_sessions_started_by_fk' },

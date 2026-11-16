@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
+  amendDeclarationSchema,
   completeNextActionSchema,
+  declarationCitationSchema,
   completeOpportunityStepSchema,
   correctEvidenceSchema,
   createOpportunitySchema,
@@ -38,6 +40,20 @@ export const updateOpportunityApiSchema = updateOpportunitySchema.extend({
 export const setOpportunityStageApiSchema = z.object({
   stage: opportunityStageSchema,
   detail: z.string().trim().optional().nullable(),
+  citations: z.array(declarationCitationSchema).optional(),
+  // Shorthand for a single citation; never together with `citations`.
+  refType: z.string().trim().min(1).optional().nullable(),
+  refId: z.string().uuid().optional().nullable(),
+}).refine((value) => (value.refType == null) === (value.refId == null), {
+  message: 'A cited source needs both a type and an id',
+  path: ['refId'],
+}).refine((value) => value.citations === undefined || (value.refType == null && value.refId == null), {
+  message: 'Send either citations or refType and refId, not both',
+  path: ['citations'],
+});
+export const amendOpportunityDeclarationApiSchema = amendDeclarationSchema;
+export const opportunityDeclarationCheckpointParamSchema = z.object({
+  checkpoint: z.enum(['qualified', 'assessment', 'proposed', 'verbal', 'won']),
 });
 export const winOpportunityApiSchema = winOpportunitySchema;
 export const loseOpportunityApiSchema = loseOpportunitySchema;
@@ -73,6 +89,7 @@ export const opportunityListQuerySchema = z.object({
 
 export type CreateOpportunityApi = z.infer<typeof createOpportunityApiSchema>;
 export type UpdateOpportunityApi = z.infer<typeof updateOpportunityApiSchema>;
+export type AmendOpportunityDeclarationApi = z.infer<typeof amendOpportunityDeclarationApiSchema>;
 export type SetOpportunityStageApi = z.infer<typeof setOpportunityStageApiSchema>;
 export type WinOpportunityApi = z.infer<typeof winOpportunityApiSchema>;
 export type LoseOpportunityApi = z.infer<typeof loseOpportunityApiSchema>;
