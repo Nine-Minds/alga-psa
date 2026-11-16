@@ -189,6 +189,12 @@ function projectSponsorEmailContext(context: Record<string, unknown>, redactions
 
 const PREHEADER_MAX_CHARS = 140;
 const HIDDEN_STYLE = 'display:none;max-height:0;overflow:hidden;';
+/**
+ * Invisible padding after the preheader excerpt. Mail clients build the preview from all text in
+ * order, hidden or not, so without it the preview reads the excerpt and then the same opening
+ * lines again from the visible body. The filler fills the preview width so the body is not reached.
+ */
+const PREHEADER_FILLER = '&zwnj;&nbsp;'.repeat(90);
 
 function escapeHtmlText(value: string): string {
   return value
@@ -259,7 +265,7 @@ function applyReplyMarkers(
   const hiddenBoundary = `<div data-alga-reply-boundary="true" style="${HIDDEN_STYLE}"></div>`;
   const preheaderText = buildPreheaderText(html, text);
   const hiddenPreheader = preheaderText
-    ? `<div data-alga-preheader="true" style="${HIDDEN_STYLE}">${escapeHtmlText(preheaderText)}</div>`
+    ? `<div data-alga-preheader="true" style="${HIDDEN_STYLE}">${escapeHtmlText(preheaderText)}<span>${PREHEADER_FILLER}</span></div>`
     : '';
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 

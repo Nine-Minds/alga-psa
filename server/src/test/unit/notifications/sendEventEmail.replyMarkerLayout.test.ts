@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { stripPreheaderElements } from '@shared/lib/email/replyParser';
 
 const inserts: string[] = [];
 const templateHtml = vi.hoisted(() => ({ value: '<p>Ticket body</p>' }));
@@ -109,7 +110,7 @@ describe('sendEventEmail reply-marker layout', () => {
 
   it('escapes and truncates the preheader on a word boundary', async () => {
     const { html } = await sendHtml('<p>Tom &amp; Jerry said "<b>&lt;script&gt;</b>" it\'s broken</p>');
-    const pre = html.match(/<div data-alga-preheader="true"[^>]*>([^<]*)<\/div>/)![1];
+    const pre = html.match(/<div data-alga-preheader="true"[^>]*>([^<]*)<span>/)![1];
     expect(pre).toContain('&amp;');
     expect(pre).toContain('&quot;');
     expect(pre).toContain('&lt;script&gt;');
@@ -117,10 +118,23 @@ describe('sendEventEmail reply-marker layout', () => {
 
     const long = Array.from({ length: 60 }, (_, i) => `word${i}`).join(' ');
     const { html: h2 } = await sendHtml(`<p>${long}</p>`);
-    const pre2 = h2.match(/<div data-alga-preheader="true"[^>]*>([^<]*)<\/div>/)![1];
+    const pre2 = h2.match(/<div data-alga-preheader="true"[^>]*>([^<]*)<span>/)![1];
     expect(pre2.length).toBeLessThanOrEqual(140);
     expect(long.startsWith(pre2)).toBe(true);
     expect(long[pre2.length]).toBe(' ');
+  });
+
+  it('pads the preheader with invisible filler so the preview does not repeat the body opening', async () => {
+    const { html } = await sendHtml('<p>Printer on floor 3 is jammed</p>');
+    const preheader = html.match(/<div data-alga-preheader="true"[^>]*>([\s\S]*?)<\/div>/)![1];
+    expect(preheader.startsWith('Printer on floor 3 is jammed<span>')).toBe(true);
+    const filler = preheader.match(/<span>([^<]*)<\/span>/)![1];
+    expect(filler.replace(/&zwnj;&nbsp;/g, '')).toBe('');
+    expect(filler.length).toBeGreaterThanOrEqual('&zwnj;&nbsp;'.length * 80);
+    // Filler and excerpt sit before the token; the parser drops the whole element.
+    expect(html.indexOf('</span></div>')).toBeLessThan(html.indexOf('data-alga-reply-token'));
+    expect(stripPreheaderElements(html)).not.toContain('&zwnj;');
+    expect(stripPreheaderElements(html)).not.toContain('data-alga-preheader');
   });
 
   it('omits the preheader when the rendered body has no text', async () => {
