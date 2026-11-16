@@ -3088,22 +3088,22 @@
     }
   },
   "live": {
-    "updatedOne": "⟦1 ṱīċḳḗṱ ṳṕḍȧṱḗḍ⟧",
-    "updatedMany": "⟦{{count}} ṱīċḳḗṱş ṳṕḍȧṱḗḍ⟧",
-    "newOne": "⟦1 ƞḗẇ ṱīċḳḗṱ⟧",
-    "newMany": "⟦{{count}} ƞḗẇ ṱīċḳḗṱş⟧",
+    "updatedOne": "⟦1 ŧīƈķḗŧ ŭƥḓȧŧḗḓ⟧",
+    "updatedMany": "⟦{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ⟧",
+    "newOne": "⟦1 ƞḗẇ ŧīƈķḗŧ⟧",
+    "newMany": "⟦{{count}} ƞḗẇ ŧīƈķḗŧş⟧",
     "both": {
       "oneNew": {
-        "oneUpdated": "⟦1 ƞḗẇ ṱīċḳḗṱ ȧƞḍ 1 ṳṕḍȧṱḗḍ ṱīċḳḗṱ⟧",
-        "manyUpdated": "⟦1 ƞḗẇ ṱīċḳḗṱ ȧƞḍ {{updatedCount}} ṳṕḍȧṱḗḍ ṱīċḳḗṱş⟧"
+        "oneUpdated": "⟦1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ⟧",
+        "manyUpdated": "⟦1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧"
       },
       "manyNew": {
-        "oneUpdated": "⟦{{newCount}} ƞḗẇ ṱīċḳḗṱş ȧƞḍ 1 ṳṕḍȧṱḗḍ ṱīċḳḗṱ⟧",
-        "manyUpdated": "⟦{{newCount}} ƞḗẇ ṱīċḳḗṱş ȧƞḍ {{updatedCount}} ṳṕḍȧṱḗḍ ṱīċḳḗṱş⟧"
+        "oneUpdated": "⟦{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ⟧",
+        "manyUpdated": "⟦{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧"
       }
     },
-    "updatedBadge": "⟦ṳṕḍȧṱḗḍ⟧",
-    "boardActivity": "⟦ƞḗẇ ȧċṱīṿīṱẏ ȯƞ ṱħīş ƀȯȧřḍ⟧"
+    "updatedBadge": "⟦Ŭƥḓȧŧḗḓ⟧",
+    "boardActivity": "⟦Ƞḗẇ ȧƈŧīṽīŧẏ ȯƞ ŧħīş ƀȯȧřḓ⟧"
   },
   "batchDuplicate": {
     "title": "⟦Ḓŭƥŀīƈȧŧḗ #{{number}} ƒȯř ƈȯƞŧȧƈŧş⟧",

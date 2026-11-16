@@ -3088,22 +3088,22 @@
     }
   },
   "live": {
-    "updatedOne": "[1 ticket updated]",
-    "updatedMany": "[{{count}} tickets updated]",
-    "newOne": "[1 new ticket]",
-    "newMany": "[{{count}} new tickets]",
+    "updatedOne": "〖1 ŧīƈķḗŧ ŭƥḓȧŧḗḓ ·······〗",
+    "updatedMany": "〖{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ ··········〗",
+    "newOne": "〖1 ƞḗẇ ŧīƈķḗŧ ·····〗",
+    "newMany": "〖{{count}} ƞḗẇ ŧīƈķḗŧş ·········〗",
     "both": {
       "oneNew": {
-        "oneUpdated": "[1 new ticket and 1 updated ticket]",
-        "manyUpdated": "[1 new ticket and {{updatedCount}} updated tickets]"
+        "oneUpdated": "〖1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ ··············〗",
+        "manyUpdated": "〖1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş ····················〗"
       },
       "manyNew": {
-        "oneUpdated": "[{{newCount}} new tickets and 1 updated ticket]",
-        "manyUpdated": "[{{newCount}} new tickets and {{updatedCount}} updated tickets]"
+        "oneUpdated": "〖{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ ··················〗",
+        "manyUpdated": "〖{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş ·························〗"
       }
     },
-    "updatedBadge": "[Updated]",
-    "boardActivity": "[New activity on this board]"
+    "updatedBadge": "〖Ŭƥḓȧŧḗḓ ···〗",
+    "boardActivity": "〖Ƞḗẇ ȧƈŧīṽīŧẏ ȯƞ ŧħīş ƀȯȧřḓ ···········〗"
   },
   "batchDuplicate": {
     "title": "〖Ḓŭƥŀīƈȧŧḗ #{{number}} ƒȯř ƈȯƞŧȧƈŧş ··············〗",
