@@ -131,7 +131,6 @@
       "submitForReview": "Enviar para revisión",
       "publish": "Publicar",
       "archive": "Archivar",
-      "saveMetadata": "Guardar metadatos",
       "saving": "Guardando...",
       "delete": "Eliminar permanentemente",
       "saveContent": "Guardar"
@@ -140,9 +139,8 @@
       "permissionDenied": "Permiso denegado",
       "notFound": "Artículo no encontrado",
       "loadError": "No se pudo cargar el artículo",
-      "noChanges": "No hay cambios para guardar",
       "saveError": "No se pudo guardar el artículo",
-      "saveSuccess": "Metadatos del artículo guardados",
+      "saveSuccess": "Artículo guardado",
       "publishError": "No se pudo publicar el artículo",
       "publishSuccess": "Artículo publicado",
       "statusChangeError": "No se pudo cambiar el estado del artículo",

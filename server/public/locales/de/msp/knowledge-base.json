@@ -131,7 +131,6 @@
       "submitForReview": "Zur Überprüfung einreichen",
       "publish": "Veröffentlichen",
       "archive": "Archivieren",
-      "saveMetadata": "Metadaten speichern",
       "saving": "Speichern...",
       "delete": "Endgültig löschen",
       "saveContent": "Speichern"
@@ -140,9 +139,8 @@
       "permissionDenied": "Zugriff verweigert",
       "notFound": "Artikel nicht gefunden",
       "loadError": "Artikel konnte nicht geladen werden",
-      "noChanges": "Keine Änderungen zum Speichern",
       "saveError": "Artikel konnte nicht gespeichert werden",
-      "saveSuccess": "Artikelmetadaten gespeichert",
+      "saveSuccess": "Artikel gespeichert",
       "publishError": "Artikel konnte nicht veröffentlicht werden",
       "publishSuccess": "Artikel veröffentlicht",
       "statusChangeError": "Artikelstatus konnte nicht geändert werden",

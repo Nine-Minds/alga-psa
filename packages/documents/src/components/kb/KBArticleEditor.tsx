@@ -106,7 +106,6 @@ export default function KBArticleEditor({
   const [article, setArticle] = useState<IKBArticleWithDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedMetadata, setHasUnsavedMetadata] = useState(false);
   const [articleTags, setArticleTags] = useState<ITag[]>([]);
   const [isFallbackMode, setIsFallbackMode] = useState(!userName || !tenantId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -120,8 +119,9 @@ export default function KBArticleEditor({
   const isSavingContentRef = useRef(false);
   // Fallback-mode editor instance (DocumentEditor publishes it via editorRef).
   const fallbackEditorRef = useRef<Editor | null>(null);
-  // Mirrors hasUnsavedMetadata so loadArticle('refresh') can read it without
-  // becoming a dependency (which would re-trigger the initial-load effect).
+  // True while the metadata form has unsaved edits. A ref (not state) so
+  // loadArticle('refresh') can read it without becoming a dependency, which
+  // would re-trigger the initial-load effect.
   const hasUnsavedMetadataRef = useRef(false);
 
   // Auto-fallback if CollaborativeEditor can't connect within 2 seconds
@@ -212,7 +212,6 @@ export default function KBArticleEditor({
 
   const handleMetadataChange = () => {
     hasUnsavedMetadataRef.current = true;
-    setHasUnsavedMetadata(true);
   };
 
   const documentId = article?.document_id;
@@ -302,7 +301,6 @@ export default function KBArticleEditor({
           : prev
       );
       hasUnsavedMetadataRef.current = false;
-      setHasUnsavedMetadata(false);
       toast.success(t('editor.feedback.saveSuccess', { defaultValue: 'Article saved' }));
     } catch (error) {
       handleError(error, t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));

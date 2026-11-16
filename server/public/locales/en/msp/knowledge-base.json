@@ -132,7 +132,6 @@
       "publish": "Publish",
       "archive": "Archive",
       "delete": "Delete permanently",
-      "saveMetadata": "Save Metadata",
       "saving": "Saving...",
       "saveContent": "Save"
     },
@@ -140,9 +139,8 @@
       "permissionDenied": "Permission denied",
       "notFound": "Article not found",
       "loadError": "Failed to load article",
-      "noChanges": "No changes to save",
       "saveError": "Failed to save article",
-      "saveSuccess": "Article metadata saved",
+      "saveSuccess": "Article saved",
       "publishError": "Failed to publish article",
       "publishSuccess": "Article published",
       "statusChangeError": "Failed to change article status",

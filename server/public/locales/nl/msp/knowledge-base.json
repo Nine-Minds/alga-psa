@@ -131,7 +131,6 @@
       "submitForReview": "Ter beoordeling indienen",
       "publish": "Publiceren",
       "archive": "Archiveren",
-      "saveMetadata": "Metagegevens opslaan",
       "saving": "Opslaan...",
       "delete": "Permanent verwijderen",
       "saveContent": "Opslaan"
@@ -140,9 +139,8 @@
       "permissionDenied": "Toestemming geweigerd",
       "notFound": "Artikel niet gevonden",
       "loadError": "Kan artikel niet laden",
-      "noChanges": "Geen wijzigingen om op te slaan",
       "saveError": "Kan artikel niet opslaan",
-      "saveSuccess": "Metagegevens van artikel opgeslagen",
+      "saveSuccess": "Artikel opgeslagen",
       "publishError": "Kan artikel niet publiceren",
       "publishSuccess": "Artikel gepubliceerd",
       "statusChangeError": "Kan de artikelstatus niet wijzigen",

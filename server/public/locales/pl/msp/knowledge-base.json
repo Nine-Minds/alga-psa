@@ -131,7 +131,6 @@
       "submitForReview": "Prześlij do recenzji",
       "publish": "Publikuj",
       "archive": "Archiwizuj",
-      "saveMetadata": "Zapisz metadane",
       "saving": "Zapisywanie...",
       "delete": "Usuń trwale",
       "saveContent": "Zapisz"
@@ -140,9 +139,8 @@
       "permissionDenied": "Odmowa pozwolenia",
       "notFound": "Nie znaleziono artykułu",
       "loadError": "Nie udało się załadować artykułu",
-      "noChanges": "Brak zmian do zapisania",
       "saveError": "Nie udało się zapisać artykułu",
-      "saveSuccess": "Metadane artykułu zostały zapisane",
+      "saveSuccess": "Artykuł został zapisany",
       "publishError": "Nie udało się opublikować artykułu",
       "publishSuccess": "Artykuł opublikowany",
       "statusChangeError": "Nie udało się zmienić statusu artykułu",
