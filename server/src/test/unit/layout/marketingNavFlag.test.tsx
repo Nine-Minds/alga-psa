@@ -19,7 +19,7 @@ import { navigationSections } from '../../../config/menuConfig';
 import SidebarWithFeatureFlags from '../../../components/layout/SidebarWithFeatureFlags';
 
 const useFeatureFlag = vi.fn();
-const getCurrentUserPermissions = vi.fn();
+const heldPermissions = vi.fn();
 const useTier = vi.fn();
 const useProduct = vi.fn();
 const sidebarPropsSpy = vi.fn();
@@ -31,8 +31,10 @@ vi.mock('@alga-psa/ui/hooks', () => ({
   useServedCapabilities: () => new Set(),
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissions(...args),
+vi.mock('../../../lib/auth/currentUserGrants', () => ({
+  // The user holds `heldPermissions()`; the gate asks only about the keys it needs.
+  resolveCurrentUserGrants: async (keys: readonly string[]) =>
+    ((await heldPermissions()) as string[]).filter((key) => keys.includes(key)),
 }));
 
 vi.mock('../../../context/TierContext', () => ({
@@ -84,7 +86,7 @@ describe('T012: marketing nav menuConfig', () => {
 describe('T012: SidebarWithFeatureFlags marketing flag gating', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    getCurrentUserPermissions.mockResolvedValue([]);
+    heldPermissions.mockResolvedValue([]);
     useTier.mockReturnValue({ hasFeature: () => true });
     useProduct.mockReturnValue({ productCode: 'psa' });
     getLicenseStatus.mockResolvedValue({ selfHostMode: false });

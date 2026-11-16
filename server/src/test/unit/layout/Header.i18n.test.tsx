@@ -139,6 +139,10 @@ vi.mock('../../../components/layout/PaymentFailedBanner', () => ({
   PaymentFailedBanner: () => <div>Payment failed banner</div>,
 }));
 
+vi.mock('../../../lib/auth/currentUserGrants', () => ({
+  resolveCurrentUserGrants: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
   getCurrentUser: vi.fn().mockResolvedValue({

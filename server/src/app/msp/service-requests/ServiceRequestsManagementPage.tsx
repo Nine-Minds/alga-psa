@@ -9,8 +9,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { Archive, Copy, MoreVertical, Plus, Sparkles, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
-import { grantsAllPermissions } from '../../../lib/service-requests/mspSubmitPermissions';
+import { currentUserCanSubmitOnBehalf } from '../../../lib/service-requests/mspSubmitAccess';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   archiveServiceRequestDefinitionAction,
@@ -99,8 +98,8 @@ export default function ServiceRequestsManagementPage() {
   const [canSubmitOnBehalf, setCanSubmitOnBehalf] = useState(false);
   useEffect(() => {
     let mounted = true;
-    getCurrentUserPermissions()
-      .then((granted) => mounted && setCanSubmitOnBehalf(grantsAllPermissions(granted)))
+    currentUserCanSubmitOnBehalf()
+      .then((allowed) => mounted && setCanSubmitOnBehalf(allowed))
       .catch(() => mounted && setCanSubmitOnBehalf(false));
     return () => {
       mounted = false;

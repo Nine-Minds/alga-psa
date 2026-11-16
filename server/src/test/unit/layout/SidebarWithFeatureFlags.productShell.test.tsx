@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIER_FEATURES } from '@alga-psa/types';
 
 import SidebarWithFeatureFlags, {
+  collectRequiredPermissionKeys,
   filterNavigationSectionsByEdition,
   filterNavigationSectionsByFeatureAccess,
   filterNavigationSectionsByPermission,
@@ -14,7 +15,7 @@ import SidebarWithFeatureFlags, {
 import type { NavigationSection } from '../../../config/menuConfig';
 
 const useFeatureFlag = vi.fn();
-const getCurrentUserPermissions = vi.fn();
+const heldPermissions = vi.fn();
 const useTier = vi.fn();
 const useProduct = vi.fn();
 const sidebarPropsSpy = vi.fn();
@@ -26,12 +27,10 @@ vi.mock('@alga-psa/ui/hooks', () => ({
   useServedCapabilities: () => new Set(),
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
-  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissions(...args),
-}));
-
-vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
-  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissions(...args),
+vi.mock('../../../lib/auth/currentUserGrants', () => ({
+  // The user holds `heldPermissions()`; the gate asks only about the keys it needs.
+  resolveCurrentUserGrants: async (keys: readonly string[]) =>
+    ((await heldPermissions()) as string[]).filter((key) => keys.includes(key)),
 }));
 
 vi.mock('../../../context/TierContext', () => ({
@@ -57,7 +56,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     useFeatureFlag.mockReturnValue(true);
-    getCurrentUserPermissions.mockResolvedValue([]);
+    heldPermissions.mockResolvedValue([]);
     useTier.mockReturnValue({ hasFeature: () => true });
     useProduct.mockReturnValue({ productCode: 'psa', edition: 'enterprise' });
     getLicenseStatus.mockResolvedValue({ selfHostMode: false });
@@ -180,11 +179,11 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('hides Accounting Exports billing navigation without exports_execute', async () => {
-    getCurrentUserPermissions.mockResolvedValue([]);
+    heldPermissions.mockResolvedValue([]);
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
-    await waitFor(() => expect(getCurrentUserPermissions).toHaveBeenCalled());
+    await waitFor(() => expect(heldPermissions).toHaveBeenCalled());
     await waitFor(() => {
       const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
         billingSectionsOverride: Array<{ items: Array<{ name: string }> }>;
@@ -197,7 +196,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('shows Accounting Exports billing navigation with exports_execute', async () => {
-    getCurrentUserPermissions.mockResolvedValue(['accounting_integrations:exports_execute']);
+    heldPermissions.mockResolvedValue(['accounting_integrations:exports_execute']);
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
@@ -238,11 +237,11 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('hides the Recurring Tickets sub-item without recurring_ticket:read and keeps All Tickets', async () => {
-    getCurrentUserPermissions.mockResolvedValue([]);
+    heldPermissions.mockResolvedValue([]);
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
-    await waitFor(() => expect(getCurrentUserPermissions).toHaveBeenCalled());
+    await waitFor(() => expect(heldPermissions).toHaveBeenCalled());
     await waitFor(() => {
       const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
         menuSections: Array<{ items: Array<{ name: string; subItems?: Array<{ name: string }> }> }>;
@@ -253,7 +252,7 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
   });
 
   it('shows the Recurring Tickets sub-item with recurring_ticket:read', async () => {
-    getCurrentUserPermissions.mockResolvedValue(['recurring_ticket:read']);
+    heldPermissions.mockResolvedValue(['recurring_ticket:read']);
 
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
 
@@ -264,6 +263,49 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
       const tickets = latestProps.menuSections.flatMap((section) => section.items).find((item) => item.name === 'Tickets');
       expect(tickets?.subItems?.map((item) => item.name)).toEqual(['All Tickets', 'Recurring Tickets']);
     });
+  });
+
+  it('shows Submit on behalf of… to a default Technician grant set (no user:read) and asks only for gated keys', async () => {
+    heldPermissions.mockResolvedValue(['ticket:create', 'ticket:read', 'client:read', 'contact:read']);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string; subItems?: Array<{ name: string }> }> }>;
+      };
+      const serviceRequests = latestProps.menuSections.flatMap((section) => section.items).find((item) => item.name === 'Service Requests');
+      expect(serviceRequests?.subItems?.map((item) => item.name)).toEqual(['Manage Requests', 'Submit on behalf of…']);
+    });
+  });
+
+  it('hides Submit on behalf of… when ticket:create is missing', async () => {
+    heldPermissions.mockResolvedValue(['ticket:read', 'client:read', 'contact:read']);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(heldPermissions).toHaveBeenCalled());
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        menuSections: Array<{ items: Array<{ name: string; subItems?: Array<{ name: string }> }> }>;
+      };
+      const serviceRequests = latestProps.menuSections.flatMap((section) => section.items).find((item) => item.name === 'Service Requests');
+      expect(serviceRequests?.subItems?.map((item) => item.name)).toEqual(['Manage Requests']);
+    });
+  });
+
+  it('collects every requiredPermission key in the menu tree, including multi-key items', () => {
+    const Icon = () => null;
+    const keys = collectRequiredPermissionKeys([
+      {
+        title: '',
+        items: [
+          { name: 'A', icon: Icon, href: '/a', requiredPermission: 'a:read' },
+          { name: 'G', icon: Icon, subItems: [{ name: 'B', icon: Icon, href: '/b', requiredPermission: ['b:create', 'a:read'] }] },
+        ],
+      },
+    ], ['workflow:admin']);
+    expect(keys).toEqual(['a:read', 'b:create', 'workflow:admin']);
   });
 
   it('drops a nav group whose sub-items are all permission-gated away', () => {

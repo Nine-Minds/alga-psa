@@ -23,8 +23,7 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { ContactMarketingGate } from '@/components/marketing/ContactMarketingGate';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
-import { grantsAllPermissions } from '@/lib/service-requests/mspSubmitPermissions';
+import { currentUserCanSubmitOnBehalf } from '@/lib/service-requests/mspSubmitAccess';
 import { buildMspSubmitServiceRequestHref } from '@/lib/service-requests/mspSubmitRoute';
 import type { Metadata } from 'next';
 
@@ -108,7 +107,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
     }
 
     const canSubmitServiceRequest =
-      !isAlgaDesk && grantsAllPermissions(await getCurrentUserPermissions().catch(() => [] as string[]));
+      !isAlgaDesk && await currentUserCanSubmitOnBehalf();
 
     return (
       <AIChatContextBoundary

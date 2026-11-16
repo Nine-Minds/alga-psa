@@ -33,9 +33,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { CO_MANAGED_MENU_GROUP } from '@/config/coManagedMenu';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { MSP_SUBMIT_PERMISSION_KEYS } from '../../lib/service-requests/mspSubmitPermissions';
+import { resolveCurrentUserGrants } from '../../lib/auth/currentUserGrants';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
 import { isSelfHostLicensingAction } from '@alga-psa/licensing/actions/license-actions';
 import { NINEMINDS_PORTAL_URL } from '@/lib/ninemindsPortal';
@@ -271,7 +272,7 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [permissions, setPermissions] = useState<readonly string[]>([]);
   useEffect(() => {
     let mounted = true;
-    getCurrentUserPermissions()
+    resolveCurrentUserGrants(Object.values(QUICK_CREATE_REQUIRED_PERMISSIONS).flat())
       .then((granted) => mounted && setPermissions(granted))
       .catch(() => mounted && setPermissions([]));
     return () => {

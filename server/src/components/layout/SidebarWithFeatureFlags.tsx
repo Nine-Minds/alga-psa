@@ -18,7 +18,7 @@ import {
   type MenuEdition,
   type NavigationSection,
 } from '@/config/menuConfig';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
+import { resolveCurrentUserGrants } from '@/lib/auth/currentUserGrants';
 import { useTier } from '@/context/TierContext';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
@@ -138,6 +138,20 @@ export function filterMenuItemsByPermission(
   }, []);
 }
 
+/** Every `requiredPermission` key in the menu tree (plus `extra`), de-duplicated and sorted. */
+export function collectRequiredPermissionKeys(
+  sections: readonly NavigationSection[],
+  extra: readonly string[] = [],
+): string[] {
+  const keys = new Set<string>(extra);
+  const visit = (items: readonly MenuItem[]) => items.forEach((item) => {
+    if (item.requiredPermission !== undefined) [item.requiredPermission].flat().forEach((key) => keys.add(key));
+    if (item.subItems) visit(item.subItems);
+  });
+  sections.forEach((section) => visit(section.items));
+  return [...keys].sort();
+}
+
 export function filterNavigationSectionsByPermission(
   sections: readonly NavigationSection[],
   permissions: readonly string[],
@@ -191,35 +205,43 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     }
   }, [useNavigationSections]);
 
+  // Capability-gated contributions join before the edition → tier →
+  // permission → product chain, which then filters them like any menu item.
+  const contributedSections = useMemo<NavigationSection[]>(
+    () => resolveUiSlots<NavigationSection>('msp.navigation.group', servedCapabilities).flatMap((slot) => (slot.props ? [slot.props] : [])),
+    [servedCapabilities],
+  );
+
+  // Resolve exactly the permissions the menu gates on, through the server's hasPermission engine.
+  const requiredPermissionKeys = useMemo(
+    () => collectRequiredPermissionKeys([
+      ...originalSections,
+      { title: '', items: legacyMenuItems },
+      ...billingNavigationSections,
+      ...contributedSections,
+    ], ['workflow:admin']).join('|'),
+    [contributedSections],
+  );
+
   useEffect(() => {
     let isMounted = true;
-    const loadPermissions = async () => {
-      try {
-        const permissions = await getCurrentUserPermissions();
-        if (isMounted) {
-          setUserPermissions(permissions);
-        }
-      } catch (error) {
+    resolveCurrentUserGrants(requiredPermissionKeys.split('|'))
+      .then((granted) => {
+        if (isMounted) setUserPermissions(granted);
+      })
+      .catch((error) => {
         console.error('[Sidebar] Failed to load user permissions:', error);
-        if (isMounted) {
-          setUserPermissions([]);
-        }
-      }
-    };
-
-    loadPermissions();
+        if (isMounted) setUserPermissions([]);
+      });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [requiredPermissionKeys]);
 
   const canWorkflowAdmin = userPermissions.includes('workflow:admin');
 
   // Filter and modify menu items based on permissions
   const menuSections = useMemo<NavigationSection[]>(() => {
-    // Capability-gated contributions join before the edition → tier →
-    // permission → product chain, which then filters them like any menu item.
-    const contributedSections = resolveUiSlots<NavigationSection>('msp.navigation.group', servedCapabilities).flatMap((slot) => (slot.props ? [slot.props] : []));
     const baseSections = useNavigationSections
       ? [...originalSections, ...contributedSections]
       : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
@@ -255,7 +277,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, contributedSections]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
