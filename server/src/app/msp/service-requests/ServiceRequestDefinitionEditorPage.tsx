@@ -663,6 +663,22 @@ function FormFieldPreview({
   const defaultBooleanValue = typeof field.defaultValue === 'boolean' ? field.defaultValue : false;
   const labelWithRequired = `${label}${required ? ' *' : ''}`;
 
+  // An unknown type has no input to preview; showing a text box would repeat the silent degradation
+  // that publish validation now refuses (the field card above carries the actionable error).
+  if (!SUPPORTED_FORM_FIELD_TYPES.has(field.type)) {
+    return (
+      <div key={key} className="space-y-1">
+        <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">{labelWithRequired}</p>
+        <p id={`service-request-form-preview-${key}`} role="note" className="text-sm text-destructive">
+          {t('editor.form.unsupportedType', {
+            type: String(field.type ?? ''),
+            defaultValue: 'Unsupported field type "{{type}}". Remove this field and add it again before publishing.',
+          })}
+        </p>
+      </div>
+    );
+  }
+
   if (field.type === 'long-text') {
     return (
       <div key={key} className="space-y-1">
