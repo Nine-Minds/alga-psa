@@ -24,6 +24,7 @@ const ENDPOINTS = [
   '/api/v1/webhooks',
   '/api/v1/webhooks/{webhookId}',
   '/api/v1/webhooks/{webhookId}/deliveries',
+  '/api/v1/webhooks/templates',
   '/api/v1/rbac/audit',
 ];
 
@@ -78,5 +79,11 @@ describe('Admin-only API endpoints (catalog-provisioned roles)', () => {
 
   it.each(ENDPOINTS)('non-admin API key gets 403 on %s', async (endpoint) => {
     assertError(await technicianClient.get(resolve(endpoint)), 403);
+  });
+
+  it('template detail is a deliberate 404 for Admin (no template storage) and 403 for non-admin', async () => {
+    // A webhook id on the template route must not resolve the webhook.
+    assertError(await adminClient.get(`/api/v1/webhooks/templates/${webhookId}`), 404);
+    assertError(await technicianClient.get(`/api/v1/webhooks/templates/${webhookId}`), 403);
   });
 });

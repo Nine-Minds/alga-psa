@@ -220,6 +220,34 @@ describe('v1 webhooks API on the tenant-scoped webhookModel', () => {
     await expect(service.createWebhookFromTemplate(uuidv4(), {}, tenantA)).rejects.toMatchObject({ statusCode: 501 });
   });
 
+  it('GET /webhooks/templates/{id} is 404 (never a webhook lookup); template update/delete are 501', async () => {
+    const controller = new ApiWebhookController();
+    const templateUrl = (id: string) =>
+      new NextRequest(`http://localhost/api/v1/webhooks/templates/${id}`, {
+        headers: { 'x-api-key': 'irrelevant', 'content-type': 'application/json' },
+      }) as any;
+
+    // A real webhook id on the template route must not resolve that webhook.
+    const detail = await controller.getTemplate()(templateUrl(webhookA1));
+    expect(detail.status).toBe(404);
+    expect((await detail.json()).error.code).toBe('NOT_FOUND');
+
+    const badId = await controller.getTemplate()(templateUrl('not-a-uuid'));
+    expect(badId.status).toBe(400);
+
+    const del = await controller.deleteTemplate()(
+      new NextRequest(`http://localhost/api/v1/webhooks/templates/${webhookA1}`, {
+        method: 'DELETE',
+        headers: { 'x-api-key': 'irrelevant' },
+      }) as any,
+    );
+    expect(del.status).toBe(501);
+    expect(await webhookModel.getById(webhookA1, tenantA)).not.toBeNull();
+
+    const service = new WebhookService();
+    await expect(service.updateWebhookTemplate(uuidv4(), {}, tenantA)).rejects.toMatchObject({ statusCode: 501 });
+  });
+
   it('deleteWebhook removes only the caller tenant\'s webhook and deliveries', async () => {
     const service = new WebhookService();
 

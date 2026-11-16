@@ -774,7 +774,8 @@ export class WebhookService {
   // WEBHOOK TEMPLATES
   // ============================================================================
   // There is no webhook_templates table: templates are not a persisted concept. The list is therefore
-  // always empty, and the template create / use operations are explicitly not implemented (501).
+  // always empty, a template id never resolves (404), and the template create / update / delete / use
+  // operations are explicitly not implemented (501).
 
   async createWebhookTemplate(
     _template: Omit<WebhookTemplate, 'template_id' | 'created_at' | 'updated_at'>,
@@ -796,6 +797,36 @@ export class WebhookService {
       success: true,
       data: []
     };
+  }
+
+  async getWebhookTemplate(
+    _templateId: string,
+    tenantId: string
+  ): Promise<SuccessResponse<WebhookTemplate>> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotFoundError('Webhook template not found');
+  }
+
+  async updateWebhookTemplate(
+    _templateId: string,
+    _template: Partial<WebhookTemplate>,
+    tenantId: string,
+    _userId?: string
+  ): Promise<SuccessResponse<WebhookTemplate>> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
+  }
+
+  async deleteWebhookTemplate(
+    _templateId: string,
+    tenantId: string,
+    _userId?: string
+  ): Promise<void> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
   }
 
   async createWebhookFromTemplate(

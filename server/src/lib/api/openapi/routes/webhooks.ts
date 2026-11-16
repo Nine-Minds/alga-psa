@@ -810,6 +810,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     if (handler === 'update') req.body = { schema: CreateWebhookBody.partial() };
     if (handler === 'test' || handler === 'testById') req.body = { schema: WebhookTestBody };
     if (handler === 'createTemplate') req.body = { schema: WebhookTemplateBody };
+    if (handler === 'updateTemplate') req.body = { schema: WebhookTemplateBody.partial() };
     if (handler === 'useTemplate') req.body = { schema: WebhookTemplateCreateBody };
     if (handler === 'verifySignature') req.body = { schema: WebhookSignatureBody };
     if (handler === 'retryFailed') req.body = { schema: WebhookRetryFailedBody };
@@ -842,12 +843,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         'getSubscriptions',
         'verifySignature',
         'useTemplate',
+        'getTemplate',
       ].includes(handler)
     ) {
       responses[404] = { description: 'Webhook, delivery, template, or signing secret not found.', schema: ApiError };
     }
 
-    if (handler === 'createTemplate' || handler === 'useTemplate') {
+    if (['createTemplate', 'updateTemplate', 'deleteTemplate', 'useTemplate'].includes(handler)) {
       responses[501] = {
         description: 'Webhook templates are not supported: there is no template storage.',
         schema: ApiError,
@@ -867,7 +869,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }
 
     const code =
-      handler === 'delete'
+      handler === 'delete' || handler === 'deleteTemplate'
         ? 204
         : ['create', 'createTemplate', 'useTemplate'].includes(handler)
           ? 201
@@ -952,35 +954,32 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     {
       method: 'get',
       path: '/api/v1/webhooks/templates/{id}',
-      handler: 'getById',
+      handler: 'getTemplate',
       action: 'read',
-      summary: 'Get webhook template detail (webhook getById wiring)',
+      summary: 'Get webhook template detail',
       description:
-        'Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Templates are not persisted, so a template_id never resolves and the route returns 404.',
-      success: { description: 'Webhook detail returned.', schema: WebhookEnvelope },
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.getById()' },
+        'Webhook templates are not persisted, so a template id never resolves: returns 404 NOT_FOUND after the RBAC check and id validation.',
+      success: { description: 'Template detail.', schema: WebhookTemplateEnvelope },
     },
     {
       method: 'put',
       path: '/api/v1/webhooks/templates/{id}',
-      handler: 'update',
-      action: 'update',
-      summary: 'Update webhook template (webhook update wiring)',
+      handler: 'updateTemplate',
+      action: 'system_settings',
+      summary: 'Update webhook template',
       description:
-        'Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.',
-      success: { description: 'Webhook updated.', schema: WebhookEnvelope },
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.update()' },
+        'Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check, id validation and body validation.',
+      success: { description: 'Template updated.', schema: WebhookTemplateEnvelope },
     },
     {
       method: 'delete',
       path: '/api/v1/webhooks/templates/{id}',
-      handler: 'delete',
-      action: 'delete',
-      summary: 'Delete webhook template (webhook delete wiring)',
+      handler: 'deleteTemplate',
+      action: 'system_settings',
+      summary: 'Delete webhook template',
       description:
-        'Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.',
-      success: { description: 'Webhook deleted.', emptyBody: true },
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.delete()' },
+        'Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and id validation.',
+      success: { description: 'Template deleted.', emptyBody: true },
     },
     {
       method: 'post',
