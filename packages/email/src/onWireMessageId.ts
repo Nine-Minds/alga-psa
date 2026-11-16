@@ -137,8 +137,3 @@ export function replaceMessageIdInList(list: unknown, from: string, to: string):
   return out;
 }
 
-export function parseTextArray(value: unknown): string[] | null {
-  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string');
-  return null;
-}
-

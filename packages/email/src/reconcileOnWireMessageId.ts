@@ -6,11 +6,10 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { normalizeRfc822MessageId } from '@alga-psa/shared/services/email/inboundEmailIdentity';
 import {
   hasRecordedOnWireId,
   parseJsonObject,
-  parseTextArray,
-  replaceMessageIdInList,
   sameMessageId,
   toBracketedMessageId,
 } from './onWireMessageId';
@@ -50,6 +49,49 @@ interface LogRow {
   comment_thread_id: string | null;
 }
 
+/**
+ * SQL twin of `normalizeRfc822MessageId` (shared/services/email/inboundEmailIdentity.ts) for a text
+ * expression: trim, drop one surrounding `<>` pair, drop leading `rfc822:` prefixes, lower-case the domain;
+ * NULL when nothing is left. `expr` is always an internal column/alias reference, never input.
+ * The parity is pinned by onWireMessageIdStoredCopies.integration.test.ts.
+ */
+export function normalizedMessageIdSql(expr: string): string {
+  return `(SELECT CASE WHEN strpos(n3.v, '@') > 1
+      THEN left(n3.v, strpos(n3.v, '@') - 1) || '@' || lower(substr(n3.v, strpos(n3.v, '@') + 1))
+      ELSE NULLIF(n3.v, '') END
+    FROM (SELECT regexp_replace(n2.v, '^(rfc822:\\s*)+', '') AS v
+      FROM (SELECT CASE WHEN length(n1.v) > 2 AND left(n1.v, 1) = '<' AND right(n1.v, 1) = '>'
+              THEN regexp_replace(substr(n1.v, 2, length(n1.v) - 2), '^\\s+|\\s+$', '', 'g') ELSE n1.v END AS v
+        FROM (SELECT regexp_replace(${expr}, '^\\s+|\\s+$', '', 'g') AS v) n1) n2) n3)`;
+}
+
+/**
+ * Set-based twin of `replaceMessageIdInList` over a relation `elements(e text, ord bigint)`: replace the
+ * element equal (normalized) to binding #1 with binding #2, keep order, drop later duplicates (by
+ * normalized key), skip NULL elements. Evaluates to the rebuilt rows `(v, ord)`; two bindings.
+ */
+function replacedElementsSql(elements: string): string {
+  const key = `COALESCE(${normalizedMessageIdSql('r.v')}, r.v)`;
+  return `SELECT DISTINCT ON (${key}) r.v, r.ord
+    FROM (SELECT CASE WHEN ${normalizedMessageIdSql('el.e')} = ? THEN ? ELSE el.e END AS v, el.ord
+      FROM (${elements}) el WHERE el.e IS NOT NULL) r
+    ORDER BY ${key}, r.ord`;
+}
+
+const COMMENT_THREAD_REFERENCES = 'SELECT u.e, u.ord FROM unnest(email_references) WITH ORDINALITY AS u(e, ord)';
+const TICKET_REFERENCES =
+  "SELECT j.e #>> '{}' AS e, j.ord FROM jsonb_array_elements(CASE WHEN jsonb_typeof(email_metadata->'references') = 'array' THEN email_metadata->'references' ELSE '[]'::jsonb END) WITH ORDINALITY AS j(e, ord) WHERE jsonb_typeof(j.e) = 'string'";
+
+/** Whether the element relation holds the generated id; one binding (the normalized generated id). */
+const containsSql = (elements: string) =>
+  `EXISTS (SELECT 1 FROM (${elements}) c WHERE ${normalizedMessageIdSql('c.e')} = ?)`;
+
+/**
+ * Rewrite every stored copy of the generated id (see onWireMessageId.ts (3)-(6)) with one UPDATE per
+ * table. Matching and the element replacement happen in the statement itself, so nothing is read back
+ * and the row lock is the UPDATE's own: a concurrent append either lands before (and is rewritten) or
+ * after (and already carries the on-wire id). Only rows that hold the generated id are written.
+ */
 async function rewriteStoredCopies(
   trx: Knex.Transaction,
   tenant: string,
@@ -59,53 +101,59 @@ async function rewriteStoredCopies(
   onWire: string
 ): Promise<void> {
   const db = tenantDb(trx, tenant);
+  const generatedKey = normalizeRfc822MessageId(generated);
+  if (!generatedKey) return;
+  const threadRefsMatch = containsSql(COMMENT_THREAD_REFERENCES);
+  const ticketRefsMatch = containsSql(TICKET_REFERENCES);
+  const messageIdMatch = (expr: string) => `${normalizedMessageIdSql(expr)} = ?`;
 
   // (3) + (4): the comment thread this send belongs to.
   if (row.comment_thread_id) {
-    const thread = await db
+    await db
       .table('comment_threads')
       .where({ thread_id: row.comment_thread_id })
-      .forUpdate()
-      .first('email_references', 'email_message_id');
-    if (thread) {
-      const update: Record<string, unknown> = {};
-      const refs = replaceMessageIdInList(parseTextArray(thread.email_references), generated, onWire);
-      if (refs) update.email_references = refs;
-      if (typeof thread.email_message_id === 'string' && sameMessageId(thread.email_message_id, generated)) {
-        update.email_message_id = onWire;
-      }
-      if (Object.keys(update).length > 0) {
-        await db.table('comment_threads').where({ thread_id: row.comment_thread_id }).update(update);
-      }
-    }
+      .whereRaw(`(${threadRefsMatch} OR ${messageIdMatch('email_message_id')})`, [generatedKey, generatedKey])
+      .update({
+        email_references: trx.raw(
+          `CASE WHEN ${threadRefsMatch}
+            THEN COALESCE((SELECT array_agg(d.v ORDER BY d.ord) FROM (${replacedElementsSql(COMMENT_THREAD_REFERENCES)}) d), '{}'::text[])
+            ELSE email_references END`,
+          [generatedKey, generatedKey, onWire]
+        ),
+        email_message_id: trx.raw(`CASE WHEN ${messageIdMatch('email_message_id')} THEN ? ELSE email_message_id END`, [
+          generatedKey,
+          onWire,
+        ]),
+      });
   }
 
-  // (5) + (6): the ticket's accumulated reference chain.
+  // (5) + (6): the ticket's accumulated reference chain and thread root. Only the affected keys change;
+  // deliberately no updated_at / updated_by: email_metadata is bookkeeping (see appendOutboundMessageIdReference).
   const ticketIds = new Set<string>();
   if (row.entity_type === 'ticket' && row.entity_id) ticketIds.add(row.entity_id);
   const diagnosticTicketId = metadata?.algaDiagnostics?.outbound?.ticketId;
   if (typeof diagnosticTicketId === 'string' && diagnosticTicketId) ticketIds.add(diagnosticTicketId);
+  if (ticketIds.size === 0) return;
 
-  for (const ticketId of ticketIds) {
-    const ticket = await db
-      .table('tickets')
-      .where({ ticket_id: ticketId })
-      .forUpdate()
-      .first('email_metadata');
-    const meta = parseJsonObject(ticket?.email_metadata);
-    const refs = replaceMessageIdInList(meta.references, generated, onWire);
-    const rootMatches = typeof meta.threadRoot === 'string' && sameMessageId(meta.threadRoot, generated);
-    if (!refs && !rootMatches) continue;
-    // Replace only the affected keys of the row we hold a lock on. Deliberately no updated_at /
-    // updated_by: email_metadata is bookkeeping (see appendOutboundMessageIdReference).
-    await db.table('tickets').where({ ticket_id: ticketId }).update({
-      email_metadata: {
-        ...meta,
-        ...(refs ? { references: refs } : {}),
-        ...(rootMatches ? { threadRoot: onWire } : {}),
-      },
+  const threadRootMatch = `(jsonb_typeof(email_metadata->'threadRoot') = 'string' AND ${messageIdMatch("email_metadata->>'threadRoot'")})`;
+  await db
+    .table('tickets')
+    .whereIn('ticket_id', [...ticketIds])
+    .whereRaw(`jsonb_typeof(email_metadata) = 'object' AND (${ticketRefsMatch} OR ${threadRootMatch})`, [generatedKey, generatedKey])
+    .update({
+      email_metadata: trx.raw(
+        `jsonb_set(
+          CASE WHEN ${ticketRefsMatch}
+            THEN jsonb_set(email_metadata, '{references}',
+              COALESCE((SELECT jsonb_agg(to_jsonb(d.v) ORDER BY d.ord) FROM (${replacedElementsSql(TICKET_REFERENCES)}) d), '[]'::jsonb))
+            ELSE email_metadata END,
+          '{threadRoot}',
+          CASE WHEN ${threadRootMatch} THEN to_jsonb(?::text) ELSE COALESCE(email_metadata->'threadRoot', 'null'::jsonb) END,
+          jsonb_typeof(email_metadata->'threadRoot') IS NOT NULL
+        )`,
+        [generatedKey, generatedKey, onWire, generatedKey, onWire]
+      ),
     });
-  }
 }
 
 /**

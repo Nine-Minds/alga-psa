@@ -66,8 +66,8 @@ function makeQueryBuilder(firstResult: unknown) {
 }
 
 /**
- * email_sending_logs stub for the batched outbound-id lookup: records the forms passed to
- * whereIn('rfc_message_id') and resolves (as an array) to rows built by `rowFor(forms)`.
+ * email_sending_logs stub for the batched outbound-id lookup: records the forms bound to the
+ * `rfc_message_id = ANY(?)` predicate and resolves (as an array) to rows built by `rowFor(forms)`.
  * `queries` counts every query issued against the table.
  */
 const logQueries = { count: 0 };
@@ -79,12 +79,12 @@ function makeLogsBuilder(rowFor: (forms: string[]) => Record<string, unknown> | 
     where: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
-    whereRaw: vi.fn().mockReturnThis(),
-    orderBy: vi.fn().mockReturnThis(),
-    whereIn: vi.fn((_column: string, values: string[]) => {
-      forms = values;
+    whereRaw: vi.fn((sql: string, bindings?: unknown[]) => {
+      if (sql.includes('rfc_message_id = ANY(?)')) forms = (bindings?.[0] as string[]) ?? [];
       return builder;
     }),
+    orderBy: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
     // notificationLoopDetection awaits `.first()`; header lookups await the builder for rows.
     first: vi.fn().mockResolvedValue(undefined),
     then: (resolve: any, reject: any) => {
@@ -504,7 +504,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         if (table === 'boards') return makeQueryBuilder({});
 
         if (table === 'email_sending_logs') {
-          // Batched lookup: ONE whereIn over every reference's forms. Only the older reference matches.
+          // Batched lookup: ONE query over every reference's forms. Only the older reference matches.
           return makeLogsBuilder((forms) => {
             if (forms.length > 0) rfcLookups.push(forms.join('|'));
             return forms.includes('<target-reference@example.test>')
@@ -754,17 +754,14 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         if (table === 'boards') return makeQueryBuilder({});
         if (table === 'email_sending_logs') {
           const builder = makeLogsBuilder(() => undefined);
-          const whereIn = builder.whereIn;
-          builder.whereIn = vi.fn((column: string, values: string[]) => {
-            if (column === 'rfc_message_id') onWireQueries.push(values);
-            return whereIn(column, values);
-          });
+          const whereRaw = builder.whereRaw;
           builder.whereRaw = vi.fn((sql: string, bindings?: unknown[]) => {
+            if (sql.includes('rfc_message_id = ANY(?)')) onWireQueries.push((bindings?.[0] as string[]) ?? []);
             if (sql.includes('generatedRfcMessageId')) {
               generatedQueries.push(bindings ?? []);
               generatedSql.push(sql);
             }
-            return builder;
+            return whereRaw(sql, bindings);
           });
           return builder;
         }
@@ -782,9 +779,10 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       emailData: buildEmailData({ id: 'email-forward-1', inReplyTo: references[11], references }),
     });
 
-    // In-Reply-To: 1 on-wire + <=1 generated; References: 1 on-wire + <=1 generated — not 2 per entry.
+    // One statement for In-Reply-To and one for the whole References chain, each matching the on-wire
+    // and the generated id together — never a second (generated-id) statement, never one per entry.
     expect(onWireQueries.length).toBeLessThanOrEqual(2);
-    expect(generatedQueries.length).toBeLessThanOrEqual(2);
+    expect(generatedQueries.length).toBe(onWireQueries.length);
     // Must stay the exact expression + predicate of idx_email_sending_logs_tenant_generated_rfc_message.
     for (const sql of generatedSql) {
       expect(sql).toContain("(metadata->>'generatedRfcMessageId') IS NOT NULL");
@@ -854,11 +852,11 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
               }
               return builder;
             }),
-            whereIn: vi.fn((column: string) => {
-              if (column === 'rfc_message_id') emailLogQueried = true;
+            whereIn: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn((sql: string) => {
+              if (sql.includes('rfc_message_id')) emailLogQueried = true;
               return builder;
             }),
-            whereRaw: vi.fn().mockReturnThis(),
             andWhereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             // Lacks from_address/to_addresses, so notificationLoopDetection's
@@ -936,19 +934,20 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
           const builder: any = {
             select: vi.fn().mockReturnThis(),
             whereNotNull: vi.fn().mockReturnThis(),
-            whereRaw: vi.fn().mockReturnThis(),
+            whereRaw: vi.fn((sql: string, bindings?: unknown[]) => {
+              if (sql.includes('rfc_message_id = ANY(?)')) {
+                const values = (bindings?.[0] as string[]) ?? [];
+                criteria = { ...criteria, rfc_message_id: values.find((v) => opts.sendingLogs?.[v]) ?? values[0], forms: values };
+              }
+              return builder;
+            }),
             andWhereRaw: vi.fn().mockReturnThis(),
             orderBy: vi.fn().mockReturnThis(),
             where: vi.fn((c: Record<string, any>) => {
               criteria = { ...criteria, ...(typeof c === 'object' ? c : {}) };
               return builder;
             }),
-            whereIn: vi.fn((column: string, values: string[]) => {
-              if (column === 'rfc_message_id') {
-                criteria = { ...criteria, rfc_message_id: values.find((v) => opts.sendingLogs?.[v]) ?? values[0], forms: values };
-              }
-              return builder;
-            }),
+            whereIn: vi.fn().mockReturnThis(),
             // The one-off Cc/Bcc lookup awaits the comments builder for a row list.
             then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
           };

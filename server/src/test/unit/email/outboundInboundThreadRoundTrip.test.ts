@@ -97,8 +97,8 @@ vi.mock('@alga-psa/shared/services/email/processInboundEmailArtifacts', () => ({
 
 function makeQueryBuilder(table: string) {
   const whereCriteria: Criteria = {};
-  // resolveReplyTargetFromOutboundMessageId: on-wire match is whereIn(rfc_message_id, forms); the
-  // generated-id fallback is whereRaw("metadata->>'generatedRfcMessageId' = ANY(?)", [forms]).
+  // resolveReplyTargetFromOutboundMessageId: one whereRaw matching rfc_message_id = ANY(forms) OR
+  // metadata->>'generatedRfcMessageId' = ANY(forms).
   let rfcMessageIdForms: string[] | null = null;
   let generatedIdForms: string[] | null = null;
   const builder = {
@@ -122,12 +122,12 @@ function makeQueryBuilder(table: string) {
       }
       return builder;
     }),
-    whereIn: vi.fn((column: string, values: string[]) => {
-      if (column === 'rfc_message_id') rfcMessageIdForms = values;
-      return builder;
-    }),
+    whereIn: vi.fn(() => builder),
     whereRaw: vi.fn((sql: string, bindings?: unknown[]) => {
-      if (sql.includes('generatedRfcMessageId')) generatedIdForms = (bindings?.[0] as string[]) ?? null;
+      if (sql.includes('rfc_message_id = ANY(?)')) rfcMessageIdForms = (bindings?.[0] as string[]) ?? null;
+      if (sql.includes("(metadata->>'generatedRfcMessageId') = ANY(?)")) {
+        generatedIdForms = (bindings?.[sql.includes('rfc_message_id = ANY(?)') ? 1 : 0] as string[]) ?? null;
+      }
       return builder;
     }),
     // Batched outbound-id lookups await the builder for rows (newest first).
@@ -137,9 +137,8 @@ function makeQueryBuilder(table: string) {
           ? dbState.emailLogs
               .filter((log) => log.tenant === whereCriteria.tenant)
               .filter((log) =>
-                rfcMessageIdForms
-                  ? rfcMessageIdForms.includes(log.rfc_message_id as string)
-                  : generatedIdForms!.includes((log.metadata as any)?.generatedRfcMessageId)
+                Boolean(rfcMessageIdForms?.includes(log.rfc_message_id as string))
+                || Boolean(generatedIdForms?.includes((log.metadata as any)?.generatedRfcMessageId))
               )
               .map((log) => ({
                 rfc_message_id: log.rfc_message_id,

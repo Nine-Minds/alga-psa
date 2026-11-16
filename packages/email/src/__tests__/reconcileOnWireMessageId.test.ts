@@ -43,6 +43,7 @@ function seed(): FakeTables {
   };
 }
 
+// Stored-copy rewrites (comment_threads / tickets) run as SQL; see onWireMessageIdStoredCopies.integration.test.ts.
 describe('reconcileOnWireMessageId (T001, F001/F002)', () => {
   let tables: FakeTables;
   let knex: any;
@@ -73,22 +74,6 @@ describe('reconcileOnWireMessageId (T001, F001/F002)', () => {
     expect(log.metadata.onWireMessageId).toBe(WIRE);
     expect(log.metadata.algaDiagnostics.outbound.rfcMessageId).toBe(WIRE);
     expect(JSON.stringify(t2())).toBe(before2);
-  });
-
-  it('rewrites each stored copy by element, leaving the rest of the chain alone', async () => {
-    await reconcileOnWireMessageId(knex, { tenant: T1, providerMessageId: 're_123', onWireMessageId: WIRE });
-    const { thread, ticket } = t1();
-    expect(thread.email_references).toEqual([GEN_OTHER, WIRE]);
-    expect(thread.email_message_id).toBe(WIRE);
-    expect(ticket.email_metadata.references).toEqual(['<customer@x.com>', GEN_OTHER, WIRE]);
-    expect(ticket.email_metadata.messageId).toBe('<customer@x.com>');
-    expect(ticket.email_metadata.threadRoot).toBe('<ticket-1@d>');
-  });
-
-  it('replaces threadRoot only when it is the generated id', async () => {
-    tables.tickets[0].email_metadata.threadRoot = GEN;
-    await reconcileOnWireMessageId(knex, { tenant: T1, providerMessageId: 're_123', onWireMessageId: WIRE });
-    expect(t1().ticket.email_metadata.threadRoot).toBe(WIRE);
   });
 
   it('is idempotent', async () => {

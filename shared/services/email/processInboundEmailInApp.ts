@@ -817,14 +817,19 @@ function outboundLookupForms(rfcMessageId: string): string[] {
 const MAX_OUTBOUND_LOOKUP_IDS = 50;
 
 /**
- * Find the email_sending_logs row for each Message-ID (same index as input; null = no match) using at
- * most TWO tenant-scoped queries regardless of how many ids are given:
- *   1. one `rfc_message_id IN (all forms)`   (index idx_email_sending_logs_tenant_rfc_message)
- *   2. one generated-id query, only when an id newer than the best on-wire match is still unmatched
- *      (index idx_email_sending_logs_tenant_generated_rfc_message; the predicate below must stay the
- *      exact indexed expression).
- * A reply names either the on-wire id (rfc_message_id) or the id we generated before the provider
- * replaced it (metadata.generatedRfcMessageId, kept for References already sent to customers).
+ * Predicate matching a log row by either id a reply can name: the on-wire id (rfc_message_id, index
+ * idx_email_sending_logs_tenant_rfc_message) or the id we generated before the provider replaced it
+ * (metadata.generatedRfcMessageId, kept for References already sent to customers; index
+ * idx_email_sending_logs_tenant_generated_rfc_message, so the second branch must stay that index's exact
+ * expression and partial predicate). Wrapped in parentheses so the OR stays inside the tenant filter.
+ */
+const OUTBOUND_MESSAGE_ID_MATCH_SQL =
+  "(rfc_message_id = ANY(?) OR ((metadata->>'generatedRfcMessageId') IS NOT NULL AND (metadata->>'generatedRfcMessageId') = ANY(?)))";
+
+/**
+ * Find the email_sending_logs row for each Message-ID (same index as input; null = no match) with ONE
+ * tenant-scoped statement regardless of how many ids are given (both indexes combine as a bitmap OR).
+ * Per id an on-wire match wins over a generated-id match; within each kind the newest row wins.
  * Old generated ids stored with an upper-case domain are not matched.
  */
 async function findOutboundLogRowsForMessageIds(
@@ -837,42 +842,27 @@ async function findOutboundLogRowsForMessageIds(
   if (allForms.length === 0) return result;
 
   const toRow = (r: any): OutboundLogRow => ({ threadId: r.threadId ?? null, entityType: r.entityType ?? null, entityId: r.entityId ?? null });
-  const rowsOf = (value: unknown): any[] => (Array.isArray(value) ? value : []);
+  const generatedIdOf = (r: any): unknown => {
+    let meta = r.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = null; }
+    }
+    return meta?.generatedRfcMessageId;
+  };
 
-  await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
-    const onWireRows = rowsOf(await db.table('email_sending_logs')
-      .select('rfc_message_id', 'comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .whereIn('rfc_message_id', allForms)
-      .orderBy('created_at', 'desc'));
-    // Rows are newest first, so the first row seen for an id is the one `.first()` used to return.
-    formsById.forEach((forms, index) => {
-      const hit = onWireRows.find((r) => forms.includes(r.rfc_message_id));
-      if (hit) result[index] = toRow(hit);
-    });
+  const rows: any[] = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
+    const found = await db.table('email_sending_logs')
+      .select('rfc_message_id', 'metadata', 'comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
+      .whereRaw(OUTBOUND_MESSAGE_ID_MATCH_SQL, [allForms, allForms])
+      .orderBy('created_at', 'desc');
+    return Array.isArray(found) ? found : [];
+  });
 
-    let bestMatched = -1;
-    result.forEach((row, index) => { if (row) bestMatched = index; });
-    const unmatched = formsById.flatMap((forms, index) => (index > bestMatched && !result[index] ? forms : []));
-    if (unmatched.length === 0) return;
-
-    const generatedRows = rowsOf(await db.table('email_sending_logs')
-      .select('metadata', 'comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .whereRaw(
-        "(metadata->>'generatedRfcMessageId') IS NOT NULL AND (metadata->>'generatedRfcMessageId') = ANY(?)",
-        [unmatched]
-      )
-      .orderBy('created_at', 'desc'));
-    formsById.forEach((forms, index) => {
-      if (result[index]) return;
-      const hit = generatedRows.find((r) => {
-        let meta = r.metadata;
-        if (typeof meta === 'string') {
-          try { meta = JSON.parse(meta); } catch { meta = null; }
-        }
-        return forms.includes(meta?.generatedRfcMessageId);
-      });
-      if (hit) result[index] = toRow(hit);
-    });
+  // Rows are newest first, so the first row seen for an id is the newest one.
+  formsById.forEach((forms, index) => {
+    const hit = rows.find((r) => forms.includes(r.rfc_message_id))
+      ?? rows.find((r) => forms.includes(generatedIdOf(r) as string));
+    if (hit) result[index] = toRow(hit);
   });
   return result;
 }

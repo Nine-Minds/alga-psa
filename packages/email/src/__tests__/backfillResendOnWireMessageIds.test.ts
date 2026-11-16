@@ -48,7 +48,6 @@ describe('backfillResendOnWireMessageIds (T006, F006)', () => {
     expect(first).toMatchObject({ candidates: 3, recorded: 1, notReturnedByResend: 1, noMessageIdYet: 1, errors: 0 });
     expect(tables.email_sending_logs[0].rfc_message_id).toBe('<0100abc-000000@email.amazonses.com>');
     expect(tables.email_sending_logs[0].metadata.generatedRfcMessageId).toBe('<gen-1@alga.test>');
-    expect(tables.tickets[0].email_metadata.references).toEqual(['<0100abc-000000@email.amazonses.com>', '<x@y>']);
     // untouched: Resend does not return it, other provider, other tenant, already recorded
     expect(tables.email_sending_logs[1].rfc_message_id).toBe('<gen-2@alga.test>');
     expect(tables.email_sending_logs[3].rfc_message_id).toBe('<gen-4@alga.test>');

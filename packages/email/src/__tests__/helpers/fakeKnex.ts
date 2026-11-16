@@ -7,7 +7,18 @@
 export type Row = Record<string, any>;
 export type FakeTables = Record<string, Row[]>;
 
-export function createFakeKnex(tables: FakeTables, rawFilters: Record<string, (row: Row) => boolean> = {}) {
+/**
+ * The stored-copy rewrite (comment_threads / tickets) is a set-based SQL UPDATE that this fake cannot
+ * evaluate; it matches nothing here. Its behavior is covered against Postgres by
+ * server/src/test/integration/email/onWireMessageIdStoredCopies.integration.test.ts.
+ */
+const STORED_COPY_REWRITE_FILTERS: Record<string, (row: Row) => boolean> = {
+  'unnest(email_references)': () => false,
+  "jsonb_typeof(email_metadata) = 'object'": () => false,
+};
+
+export function createFakeKnex(tables: FakeTables, extraRawFilters: Record<string, (row: Row) => boolean> = {}) {
+  const rawFilters = { ...STORED_COPY_REWRITE_FILTERS, ...extraRawFilters };
   const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
   function builder(table: string) {
