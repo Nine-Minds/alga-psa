@@ -199,6 +199,9 @@ const DEFINITIONS: Record<FieldTypeKey, FieldTypeDefinition> = {
     // An unchecked box is an answer, not a blank. Required-ness on a checkbox is handled
     // by the consumer's own rule, never by emptiness.
     isEmpty: () => false,
+    // A ticked box has no words of its own, so this is the untranslated fallback for a caller
+    // with no wording to offer. Every user-facing path goes through `describeFormAnswer`, which
+    // is given the localized yes/no labels and never reaches this line.
     format: (value) => (coerceBoolean(value) ? 'Yes' : 'No'),
   },
   date: {

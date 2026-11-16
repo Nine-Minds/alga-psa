@@ -519,10 +519,15 @@ describe('Form Studio publish', () => {
 
     await user.click(document.getElementById('service-request-form-builder-publish')!);
 
+    // The sentence the author reads is localized; the validator's own wording, which this
+    // screen does not own, is shown under it as detail rather than standing in for it.
     await waitFor(() =>
       expect(document.getElementById('service-request-form-builder-notice')).toHaveTextContent(
-        'Pick a category first'
+        'Fix what the definition page reports, then publish.'
       )
     );
+    expect(
+      document.getElementById('service-request-form-builder-notice-detail')
+    ).toHaveTextContent('Pick a category first');
   });
 });

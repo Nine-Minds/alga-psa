@@ -122,7 +122,15 @@ export interface FieldTypeDefinition {
   coerce(value: unknown): unknown;
   /** Whether a coerced value counts as "no answer". An unchecked checkbox is an answer. */
   isEmpty(value: unknown): boolean;
-  /** Read-only text for a stored answer. Options are passed so choices read as labels. */
+  /**
+   * Read-only text for a stored answer. Options are passed so choices read as labels.
+   *
+   * Not localized: it returns the answer's own words (a typed string, an option label) and,
+   * where a type has no words of its own, an untranslated English fallback. A surface shown to
+   * a user must supply the wording itself — see `describeFormAnswer`, which takes the yes/no
+   * labels and the locale and is what the ticket subject, the ticket description and the portal
+   * detail page all call.
+   */
   format(value: unknown, options?: readonly FieldOption[]): string;
 }
 

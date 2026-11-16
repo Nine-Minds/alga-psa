@@ -7,6 +7,12 @@
  *
  * It owns layout (boxed measure, sections, half-width pairs, inline errors) and delegates every
  * control to the shared field type registry in `@alga-psa/ui/form-fields`.
+ *
+ * Why it lives here and not in a shared package: it is specific to the service request form
+ * schema, and both of its consumers (the portal form and the builder canvas) are in `server/`.
+ * The two pieces the card asked to be shared are, and neither knows about service requests: the
+ * field type registry (`@alga-psa/ui/form-fields`) and the designer shell
+ * (`@alga-psa/ui/components/designer`). Move this out when a consumer outside `server/` appears.
  */
 import React from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';

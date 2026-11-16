@@ -193,7 +193,17 @@ export function ServiceRequestFormBuilder({
   // The builder answers in a banner under its own toolbar, not in a floating toast: a toast
   // pinned to the top right of the window lands on Edit / Try it and Publish at 1280 px and
   // swallows the clicks meant for them.
-  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  // `detail` carries wording this screen does not own — a publish-validation line, a thrown
+  // message — so `message` can always be the localized sentence and the specifics still show.
+  // LEVERAGE: pattern service-request-publish-validation — validateServiceRequestDefinitionForPublish
+  // (and validateBasicFormSchema under it) returns assembled English, as it does for the
+  // definition page; converting it to issue codes with parameters would let both screens
+  // localize the specifics the way the portal already localizes detail.validation.*.
+  const [notice, setNotice] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+    detail?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (notice?.tone !== 'success') return;
@@ -448,7 +458,8 @@ export function ServiceRequestFormBuilder({
       if (errors.length > 0) {
         setNotice({
           tone: 'error',
-          message: errors[0] ?? t('formBuilder.messages.publishBlocked'),
+          message: t('formBuilder.messages.publishBlocked'),
+          detail: errors[0],
         });
         return;
       }
@@ -458,10 +469,8 @@ export function ServiceRequestFormBuilder({
       console.error('Failed to publish service request definition', error);
       setNotice({
         tone: 'error',
-        message:
-          error instanceof Error && error.message
-            ? error.message
-            : t('formBuilder.messages.publishFailed'),
+        message: t('formBuilder.messages.publishFailed'),
+        detail: error instanceof Error && error.message ? error.message : undefined,
       });
     } finally {
       setIsPublishing(false);
@@ -912,7 +921,17 @@ export function ServiceRequestFormBuilder({
               className="shrink-0 rounded-none border-x-0 border-t-0 py-2 pr-2 shadow-none"
             >
               <AlertDescription className="flex items-center gap-2 pl-7">
-                <span className="min-w-0 flex-1">{notice.message}</span>
+                <span className="min-w-0 flex-1">
+                  {notice.message}
+                  {notice.detail ? (
+                    <span
+                      id="service-request-form-builder-notice-detail"
+                      className="block text-xs opacity-80"
+                    >
+                      {notice.detail}
+                    </span>
+                  ) : null}
+                </span>
                 <Button
                   id="service-request-form-builder-notice-dismiss"
                   variant="ghost"
