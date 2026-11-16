@@ -189,19 +189,30 @@ describe('ticket email audience split (integration)', () => {
     expect(mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket.url).toContain('/client-portal/tickets/');
   });
 
-  it('comment added: one shared template, branched by recipient.isInternal, client-safe variables only for the client side', async () => {
-    const ticketId = await desk.createTicket();
-    const content = note('AUDIENCE-PUBLIC-REPLY');
+  /** A public reply by an MSP agent on a ticket of `target`, delivered through the real handler. */
+  async function publicReply(target: Desk, text: string): Promise<void> {
+    const ticketId = await target.createTicket();
+    const content = note(text);
     const created = await testDb.transaction((trx) => TicketModel.createComment({
-      ticket_id: ticketId, content, author_type: 'internal', author_id: desk.author, is_internal: false,
-    } as any, desk.tenant, trx));
+      ticket_id: ticketId, content, author_type: 'internal', author_id: target.author, is_internal: false,
+    } as any, target.tenant, trx));
 
-    await runWithTenant(desk.tenant, () => handlers.handleTicketCommentAdded(event(desk.tenant, 'TICKET_COMMENT_ADDED', ticketId, {
-      userId: desk.author, actorUserId: desk.author, actorType: 'USER',
+    await runWithTenant(target.tenant, () => handlers.handleTicketCommentAdded(event(target.tenant, 'TICKET_COMMENT_ADDED', ticketId, {
+      userId: target.author, actorUserId: target.author, actorType: 'USER',
       // `authorType` is not a classified variable: it must not reach the client side.
       comment: { id: created.comment_id, content, author: 'Morgan Author', isInternal: false, authorType: 'internal' },
     })));
+  }
 
+  it('comment added: the client side gets the client template and client-safe variables only', async () => {
+    await publicReply(desk, 'AUDIENCE-PUBLIC-REPLY');
+
+    expect(audienceOf()).toEqual({
+      [CONTACT_EMAIL]: { template: 'ticket-comment-added-client', isInternal: false },
+      [OUTSIDE_WATCHER_EMAIL]: { template: 'ticket-comment-added-client', isInternal: false },
+      [ASSIGNEE_EMAIL]: { template: 'ticket-comment-added', isInternal: true },
+      [STAFF_WATCHER_EMAIL]: { template: 'ticket-comment-added', isInternal: true },
+    });
     const contact = mailTo(CONTACT_EMAIL);
     expect(contact.context.recipient).toEqual({ isInternal: false });
     expect(JSON.stringify(contact.context)).toContain('AUDIENCE-PUBLIC-REPLY');
@@ -220,17 +231,55 @@ describe('ticket email audience split (integration)', () => {
     expect(mailTo(STAFF_WATCHER_EMAIL).context.recipient).toEqual({ isInternal: true });
   });
 
-  it('ticket closed: the audience is on every copy', async () => {
+  describe('the internal and the client comment email are switched separately', () => {
+    const subtypeId = async (tenant: string, name: string) =>
+      (await tenantDb(testDb, tenant).table('notification_subtypes').where({ name }).first('id')).id as number;
+    const switchOff = async (tenant: string, name: string) =>
+      tenantDb(testDb, tenant).table('tenant_notification_subtype_settings')
+        .insert({ tenant, subtype_id: await subtypeId(tenant, name), is_enabled: false });
+    const recipients = () => sent.map((mail) => mail.to.toLowerCase()).sort();
+
+    it('the internal one off: clients are still mailed', async () => {
+      const other = await seedDesk();
+      await switchOff(other.tenant, 'Ticket Comment Added');
+
+      await publicReply(other, 'AUDIENCE-CLIENT-ONLY');
+
+      expect(recipients()).toEqual([CONTACT_EMAIL, OUTSIDE_WATCHER_EMAIL].sort());
+    });
+
+    it('the client one off: staff are still mailed', async () => {
+      const other = await seedDesk();
+      await switchOff(other.tenant, 'Ticket Comment Added Client');
+
+      await publicReply(other, 'AUDIENCE-STAFF-ONLY');
+
+      expect(recipients()).toEqual([ASSIGNEE_EMAIL, STAFF_WATCHER_EMAIL].sort());
+    });
+
+    it('both off, as the split migration leaves a tenant that had the shared email off: nobody is mailed', async () => {
+      const other = await seedDesk();
+      await switchOff(other.tenant, 'Ticket Comment Added');
+      await switchOff(other.tenant, 'Ticket Comment Added Client');
+
+      await publicReply(other, 'AUDIENCE-SWITCHED-OFF');
+
+      expect(sent).toEqual([]);
+    });
+  });
+
+  it('ticket closed: the client side gets the client template, and the audience is on every copy', async () => {
     const ticketId = await desk.createTicket();
     await runWithTenant(desk.tenant, () => handlers.handleTicketClosed(event(desk.tenant, 'TICKET_CLOSED', ticketId, {
       userId: desk.author, actorUserId: desk.author, actorType: 'USER',
     })));
 
-    const audiences = audienceOf();
-    expect(audiences[CONTACT_EMAIL].isInternal).toBe(false);
-    expect(audiences[OUTSIDE_WATCHER_EMAIL].isInternal).toBe(false);
-    expect(audiences[ASSIGNEE_EMAIL].isInternal).toBe(true);
-    expect(audiences[STAFF_WATCHER_EMAIL].isInternal).toBe(true);
+    expect(audienceOf()).toEqual({
+      [CONTACT_EMAIL]: { template: 'ticket-closed-client', isInternal: false },
+      [OUTSIDE_WATCHER_EMAIL]: { template: 'ticket-closed-client', isInternal: false },
+      [ASSIGNEE_EMAIL]: { template: 'ticket-closed', isInternal: true },
+      [STAFF_WATCHER_EMAIL]: { template: 'ticket-closed', isInternal: true },
+    });
     expect(mailTo(CONTACT_EMAIL).context.ticket.closedBy).not.toBe('');
     expectNoTicketVariableLost();
   });

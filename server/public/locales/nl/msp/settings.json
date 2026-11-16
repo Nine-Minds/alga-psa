@@ -2207,6 +2207,8 @@
       },
       "title": "Variabelenreferentie voor e-mailsjablonen",
       "panelTitle": "Sjabloonvariabelen",
+      "mspOnly": "Alleen MSP",
+      "clientSafeHelp": "Wordt naar klanten verzonden. Variabelen die alleen voor de MSP zijn, zijn niet beschikbaar.",
       "inferredContract": "Wordt momenteel niet verzonden. Dit contract is afgeleid van het sjabloon.",
       "empty": "Geen overeenkomende variabelen.",
       "example": "Voorbeeld:",

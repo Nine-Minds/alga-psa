@@ -3,7 +3,9 @@ import { templateVariableRegistry } from "./registry";
 import {
   CLIENT_TICKET_EMAIL_TEMPLATES,
   TICKET_EMAIL_CLIENT_VARIANTS,
+  TICKET_EMAIL_TEMPLATES_COPIED_FROM,
   TICKET_EMAIL_VARIABLE_AUDIENCE,
+  isTicketEmailTemplate,
   isTicketVariableClassified,
   projectTicketEmailContext,
   resolveTicketEmailTemplate,
@@ -191,6 +193,59 @@ describe("templateVariablesHiddenFromClients", () => {
     for (const [name, entry] of ticketTemplates) {
       const text = entry.variables.map((variable) => `{{${variable.path}}}`).join(" ");
       expect(templateVariablesHiddenFromClients(text), name).toEqual([]);
+    }
+  });
+});
+
+describe("client templates split from a shared one", () => {
+  it("covers the comment and close emails", () => {
+    expect(resolveTicketEmailTemplate("ticket-comment-added", "Ticket Comment Added", "client")).toEqual({
+      template: "ticket-comment-added-client",
+      subtype: "Ticket Comment Added Client",
+    });
+    expect(resolveTicketEmailTemplate("ticket-closed", "Ticket Closed", "client")).toEqual({
+      template: "ticket-closed-client",
+      subtype: "Ticket Closed Client",
+    });
+  });
+
+  it("keeps the bundled-child subtype a send path chose", () => {
+    expect(
+      resolveTicketEmailTemplate("ticket-closed", "Ticket Closed (Bundled Child)", "client"),
+    ).toEqual({ template: "ticket-closed-client", subtype: "Ticket Closed (Bundled Child)" });
+  });
+
+  it("names the shared template each copied client template came from, for the new pairs only", () => {
+    // The 2026-06 pairs (created, updated) were split without a copy.
+    expect(TICKET_EMAIL_TEMPLATES_COPIED_FROM).toEqual({
+      "ticket-comment-added-client": "ticket-comment-added",
+      "ticket-closed-client": "ticket-closed",
+    });
+  });
+
+  it("recognises a template in either rendering", () => {
+    expect(isTicketEmailTemplate("ticket-comment-added", "ticket-comment-added")).toBe(true);
+    expect(isTicketEmailTemplate("ticket-comment-added-client", "ticket-comment-added")).toBe(true);
+    expect(isTicketEmailTemplate("ticket-closed-client", "ticket-comment-added")).toBe(false);
+  });
+
+  it("lists only client-safe variables on every client template", () => {
+    for (const name of CLIENT_TICKET_EMAIL_TEMPLATES) {
+      const entry = templateVariableRegistry[name];
+      expect(entry, name).toBeDefined();
+      expect(entry.variables.filter((variable) => variable.audience !== "client")).toEqual([]);
+    }
+  });
+
+  it("gives each client template the client-safe variables of its internal template", () => {
+    for (const internalTemplate of ["ticket-comment-added", "ticket-closed"]) {
+      const clientPaths = new Set(
+        templateVariableRegistry[TICKET_EMAIL_CLIENT_VARIANTS[internalTemplate].template].variables.map((v) => v.path),
+      );
+      const expected = templateVariableRegistry[internalTemplate].variables
+        .filter((variable) => variable.audience === "client")
+        .map((variable) => variable.path);
+      expect(expected.filter((path) => !clientPaths.has(path))).toEqual([]);
     }
   });
 });

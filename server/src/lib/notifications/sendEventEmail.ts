@@ -19,7 +19,11 @@ import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage'
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { persistReplyToken } from './replyTokenPersistence';
-import { templateVariablesHiddenFromClients } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { lookupEmailTemplate } from './emailTemplateLookup';
+import { isTicketEmailTemplate, templateVariablesHiddenFromClients } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+
+/** The comment email in either rendering: the internal template or its client counterpart. */
+const isTicketCommentTemplate = (template: string): boolean => isTicketEmailTemplate(template, 'ticket-comment-added');
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 
@@ -326,7 +330,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
       const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (isTicketCommentTemplate(params.template) && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
     }
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
@@ -376,124 +380,24 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     let emailSubject = params.subject;
     let templateSource = 'system';
 
-    logger.debug('[SendEventEmail] Looking up tenant template:', {
-      tenant: params.tenantId,
-      template: params.template,
-      locale: recipientLocale
-    });
-
     try {
-      // First try to get tenant-specific template in recipient's language
-      let tenantTemplateQuery = db.table('tenant_email_templates')
-        .where({
-          name: params.template,
-          language_code: recipientLocale
-        })
-        .first();
+      // The tenant's own template under this name, else the stock one.
+      const found = await lookupEmailTemplate(db, params.template, recipientLocale);
+      if (!found) {
+        throw new Error(`Template not found: ${params.template}`);
+      }
 
-      logger.debug('[SendEventEmail] Executing tenant template query (with locale):', {
-        sql: tenantTemplateQuery.toSQL().sql,
-        bindings: tenantTemplateQuery.toSQL().bindings,
-        locale: recipientLocale
+      logger.debug('[SendEventEmail] Found template:', {
+        source: found.source,
+        templateId: found.template.id,
+        templateName: found.template.name,
+        languageCode: found.template.language_code,
+        htmlContentLength: found.template.html_content?.length,
+        subject: found.template.subject
       });
-
-      let template = await tenantTemplateQuery;
-
-      // If no template found for recipient's locale, try English fallback
-      if (!template && recipientLocale !== 'en') {
-        logger.debug('[SendEventEmail] No template found for locale, trying English fallback');
-        tenantTemplateQuery = db.table('tenant_email_templates')
-          .where({
-            name: params.template,
-            language_code: 'en'
-          })
-          .first();
-
-        template = await tenantTemplateQuery;
-      }
-
-      // If still no template, try without language filter (legacy templates)
-      if (!template) {
-        logger.debug('[SendEventEmail] No language-specific template, trying legacy template');
-        tenantTemplateQuery = db.table('tenant_email_templates')
-          .where({
-            name: params.template
-          })
-          .whereNull('language_code')
-          .first();
-
-        template = await tenantTemplateQuery;
-      }
-
-      if (template) {
-        logger.debug('[SendEventEmail] Found tenant template:', {
-          templateId: template.id,
-          templateName: template.name,
-          tenant: template.tenant,
-          languageCode: template.language_code,
-          htmlContentLength: template.html_content?.length,
-          subject: template.subject
-        });
-        templateContent = template.html_content;
-        emailSubject = template.subject || params.subject;
-        templateSource = 'tenant';
-      } else {
-        logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
-
-        // Fall back to system template in recipient's language
-        let systemTemplateQuery = db.table('system_email_templates')
-          .where({
-            name: params.template,
-            language_code: recipientLocale
-          })
-          .first();
-
-        logger.debug('[SendEventEmail] Executing system template query (with locale):', {
-          sql: systemTemplateQuery.toSQL().sql,
-          bindings: systemTemplateQuery.toSQL().bindings,
-          locale: recipientLocale
-        });
-
-        let systemTemplate = await systemTemplateQuery;
-
-        // If no template found for recipient's locale, try English fallback
-        if (!systemTemplate && recipientLocale !== 'en') {
-          logger.debug('[SendEventEmail] No system template found for locale, trying English fallback');
-          systemTemplateQuery = db.table('system_email_templates')
-            .where({
-              name: params.template,
-              language_code: 'en'
-            })
-            .first();
-
-          systemTemplate = await systemTemplateQuery;
-        }
-
-        // If still no template, try without language filter (legacy templates)
-        if (!systemTemplate) {
-          logger.debug('[SendEventEmail] No language-specific system template, trying legacy template');
-          systemTemplateQuery = db.table('system_email_templates')
-            .where({ name: params.template })
-            .whereNull('language_code')
-            .first();
-
-          systemTemplate = await systemTemplateQuery;
-        }
-
-        if (!systemTemplate) {
-          throw new Error(`Template not found: ${params.template}`);
-        }
-
-        logger.debug('[SendEventEmail] Found system template:', {
-          templateId: systemTemplate.id,
-          templateName: systemTemplate.name,
-          languageCode: systemTemplate.language_code,
-          htmlContentLength: systemTemplate.html_content?.length,
-          subject: systemTemplate.subject
-        });
-        templateContent = systemTemplate.html_content;
-        emailSubject = systemTemplate.subject || params.subject;
-      }
+      templateContent = found.template.html_content;
+      emailSubject = found.template.subject || params.subject;
+      templateSource = found.source;
     } catch (error) {
       logger.error('[SendEventEmail] Error during template lookup:', {
         error,
@@ -528,10 +432,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
-    const attachmentCommentId = params.template === 'ticket-comment-added'
+    const attachmentCommentId = isTicketCommentTemplate(params.template)
       ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
     const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
-    if (params.template === 'ticket-comment-added' && params.commentSource) {
+    if (isTicketCommentTemplate(params.template) && params.commentSource) {
       const destinationTicketId = params.replyContext?.ticketId;
       // Bundling shares public updates, not document permissions. Recheck the
       // destination and source on every retry before preparing source files.
@@ -596,7 +500,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
       const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (isTicketCommentTemplate(params.template) && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
       if (projectCoManagedNotificationSnapshot(sponsorRedactions, { commentContent: '', commentPreview: '' }).conversationSuppressed) {
         params = { ...params, attachments: [], context: { ...params.context, comment: { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' } } };
         attachmentDownloadText = '';
@@ -605,7 +509,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
-    if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
+    if (params.coManagedRecipient && isTicketCommentTemplate(params.template)) {
       const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
       subject = `New Comment on Ticket: ${typeof title === 'string' ? title : 'Shared ticket'}`;
     }

@@ -125,13 +125,17 @@ function ticketVariables(
   templateName: string,
   variables: InventoryVariable[],
 ): VariableDef[] {
-  return correctedVariables(templateName, [
+  const classified = correctedVariables(templateName, [
     ...variables,
     ...ticketRecipientVariables(templateName),
   ]).map((variable) => ({
     ...variable,
     audience: ticketVariableAudience(variable.path),
   }));
+  // A client template is rendered from client-safe variables only, so it lists nothing else.
+  return CLIENT_TICKET_EMAIL_TEMPLATES.has(templateName)
+    ? classified.filter((variable) => variable.audience === "client")
+    : classified;
 }
 
 export const templateVariableRegistry: TemplateVariableRegistry =

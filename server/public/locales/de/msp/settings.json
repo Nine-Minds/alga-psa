@@ -2207,6 +2207,8 @@
       },
       "title": "Variablenreferenz für E-Mail-Vorlagen",
       "panelTitle": "Vorlagenvariablen",
+      "mspOnly": "Nur MSP",
+      "clientSafeHelp": "Wird an Kunden gesendet. Variablen nur für MSP sind nicht verfügbar.",
       "inferredContract": "Wird derzeit nicht gesendet. Dieser Vertrag wird aus der Vorlage abgeleitet.",
       "empty": "Keine passenden Variablen.",
       "example": "Beispiel:",

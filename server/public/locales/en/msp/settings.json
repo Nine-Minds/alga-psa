@@ -2207,6 +2207,8 @@
       },
       "title": "Email template variable reference",
       "panelTitle": "Template variables",
+      "mspOnly": "MSP only",
+      "clientSafeHelp": "Sent to clients. MSP-only variables are not available.",
       "inferredContract": "Not currently sent. This contract is inferred from the template.",
       "empty": "No matching variables.",
       "example": "Example:",

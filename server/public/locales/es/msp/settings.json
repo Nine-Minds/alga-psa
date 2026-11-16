@@ -2207,6 +2207,8 @@
       },
       "title": "Referencia de variables de plantillas de correo electrónico",
       "panelTitle": "Variables de plantilla",
+      "mspOnly": "Solo MSP",
+      "clientSafeHelp": "Se envía a los clientes. Las variables solo para MSP no están disponibles.",
       "inferredContract": "No se envía actualmente. Este contrato se infiere de la plantilla.",
       "empty": "No hay variables coincidentes.",
       "example": "Ejemplo:",

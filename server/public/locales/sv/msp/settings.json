@@ -2207,6 +2207,8 @@
       },
       "title": "Referens för variabler i e-postmallar",
       "panelTitle": "Mallvariabler",
+      "mspOnly": "Endast MSP",
+      "clientSafeHelp": "Skickas till kunder. Variabler som endast gäller MSP är inte tillgängliga.",
       "inferredContract": "Skickas inte för närvarande. Detta kontrakt härleds från mallen.",
       "empty": "Inga matchande variabler.",
       "example": "Exempel:",

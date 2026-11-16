@@ -359,7 +359,8 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
     const external = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
     expect(external.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
-    expect(external[0].template).toBe('ticket-closed');
+    // An external party gets the client template, like every other client-side recipient.
+    expect(external[0].template).toBe('ticket-closed-client');
     expect(JSON.stringify(external[0].context)).not.toContain('/msp/');
 
     // Their own client's ticket: one message of their own.
@@ -367,7 +368,8 @@ describe('audience-safe notifications for a seat technician (integration)', () =
     expect(mailTo(CLIENT_EMAIL).map(addressesOf)).toEqual([[CLIENT_EMAIL, OUTSIDER_EMAIL]]);
     const withSeat = sent.filter(mail => addressesOf(mail).includes(SEAT_EMAIL));
     expect(withSeat.map(addressesOf)).toEqual([[SEAT_EMAIL]]);
-    expect(withSeat[0].template).toBe('ticket-closed');
+    // Copied on the client's message, so it is the client rendering they are sent.
+    expect(withSeat[0].template).toBe('ticket-closed-client');
   });
 
   it('resolves a seat technician only while the ticket is in their scope', async () => {

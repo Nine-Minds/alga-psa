@@ -190,6 +190,14 @@ export interface TicketEmailClientVariant {
   subtype: string;
   /** The internal template's subtype; a send under any other subtype keeps the one it named. */
   internalSubtype: string;
+  /**
+   * True when the internal template used to go to clients too, and the split migration copied
+   * each tenant's version of it (and its on/off settings) to the client template. The two are
+   * separate from then on; a copied row is what branding recognises as its own
+   * (`TICKET_EMAIL_TEMPLATES_COPIED_FROM`). The 2026-06 pairs (created, updated) were split
+   * without a copy.
+   */
+  copiedFromShared?: boolean;
 }
 
 /**
@@ -207,7 +215,34 @@ export const TICKET_EMAIL_CLIENT_VARIANTS: Readonly<Record<string, TicketEmailCl
     subtype: "Ticket Updated Client",
     internalSubtype: "Ticket Updated",
   },
+  "ticket-comment-added": {
+    template: "ticket-comment-added-client",
+    subtype: "Ticket Comment Added Client",
+    internalSubtype: "Ticket Comment Added",
+    copiedFromShared: true,
+  },
+  "ticket-closed": {
+    template: "ticket-closed-client",
+    subtype: "Ticket Closed Client",
+    internalSubtype: "Ticket Closed",
+    copiedFromShared: true,
+  },
 };
+
+/** Is `template` this internal template or its client counterpart? */
+export function isTicketEmailTemplate(template: string, internalTemplate: string): boolean {
+  return template === internalTemplate || TICKET_EMAIL_CLIENT_VARIANTS[internalTemplate]?.template === template;
+}
+
+/**
+ * Client template name -> the shared template its tenant rows were copied from when it was
+ * split off. Email branding uses it to recognise a copied row it wrote itself.
+ */
+export const TICKET_EMAIL_TEMPLATES_COPIED_FROM: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(TICKET_EMAIL_CLIENT_VARIANTS)
+    .filter(([, variant]) => variant.copiedFromShared)
+    .map(([internalTemplate, variant]) => [variant.template, internalTemplate]),
+);
 
 /** Ticket templates only clients ever receive: the counterparts above and the requester-only mails. */
 export const CLIENT_TICKET_EMAIL_TEMPLATES: ReadonlySet<string> = new Set([
