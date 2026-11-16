@@ -120,7 +120,7 @@ export function InboundQuarantineQueue({ initialTicketId, initialStatus = 'open'
     ...QUARANTINE_STATUSES.map((value) => ({ value, label: t(`quarantine.status.${value}`, { defaultValue: value }) })),
   ], [t]);
 
-  const columns: ColumnDefinition<InboundQuarantineRow>[] = useMemo(() => [
+  const columns = useMemo((): ColumnDefinition<InboundQuarantineRow>[] => [
     { title: t('quarantine.columns.mailbox', { defaultValue: 'Mailbox' }), dataIndex: 'mailbox', sortable: false },
     { title: t('quarantine.columns.sender', { defaultValue: 'Sender' }), dataIndex: 'sender', sortable: false },
     {
