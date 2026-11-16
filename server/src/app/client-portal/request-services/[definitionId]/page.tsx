@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -29,8 +28,6 @@ interface RequestServiceDetailPageProps {
     definitionId: string;
   }>;
   searchParams?: Promise<{
-    submitted?: string;
-    ticketId?: string;
     error?: string;
   }>;
 }
@@ -47,10 +44,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
     notFound();
   }
 
-  const submittedRequestId =
-    typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;
-  const submittedTicketId =
-    typeof resolvedSearchParams?.ticketId === 'string' ? resolvedSearchParams.ticketId : null;
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
@@ -87,32 +80,8 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <p className="text-sm text-[rgb(var(--color-text-700))]">{detail.description}</p>
       )}
 
-      {submittedRequestId && (
-        <Alert variant="success">
-          <AlertTitle>{t('detail.submitted')}</AlertTitle>
-          <AlertDescription>
-            {formSchema.settings?.successMessage ? (
-              <p className="mb-1">{formSchema.settings.successMessage}</p>
-            ) : null}
-            <p>
-              {t('detail.requestIdLabel')}
-              <span className="font-mono">{submittedRequestId}</span>
-            </p>
-            {submittedTicketId && (
-              <p>
-                {t('detail.ticketIdLabel')}
-                <Link
-                  href={`/client-portal/tickets/${submittedTicketId}`}
-                  className="font-mono underline"
-                >
-                  {submittedTicketId}
-                </Link>
-              </p>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      {/* A successful submit redirects to the catalog, which confirms it and says the form's
+          own success message; this page only has to answer a refused one. */}
       {submitError && (
         <Alert variant="destructive">
           <AlertTitle>{t('detail.unableToSubmit')}</AlertTitle>

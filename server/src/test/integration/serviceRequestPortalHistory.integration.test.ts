@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   getClientServiceRequestSubmissionDetail,
+  getClientServiceRequestSubmissionSuccessMessage,
   getServiceRequestSubmissionDetailForDefinition,
   listClientServiceRequestSubmissions,
 } from '../../lib/service-requests/submissionHistory';
@@ -131,6 +132,112 @@ describe('service request portal history', () => {
 
     const forbiddenDetail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, submissionB);
     expect(forbiddenDetail).toBeNull();
+  });
+
+  // The confirmation banner after a submit is the author's one chance to say what happens
+  // next, and it has to come from the version the client submitted, not the current draft.
+  it('reads the submitted version`s success message, and only for the submitting client', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionWithMessage = uuidv4();
+    const versionWithout = uuidv4();
+    const clientA = uuidv4();
+    const clientB = uuidv4();
+    const submissionWithMessage = uuidv4();
+    const submissionWithout = uuidv4();
+
+    await tenantRows().insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await tenantTable(tenant, 'service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'New Employee Setup',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    const versionDefaults = {
+      tenant,
+      definition_id: definitionId,
+      name: 'New Employee Setup',
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    };
+
+    await tenantTable(tenant, 'service_request_definition_versions').insert([
+      {
+        ...versionDefaults,
+        version_id: versionWithMessage,
+        version_number: 1,
+        form_schema_snapshot: {
+          fields: [{ key: 'employee_name', label: 'Employee name', type: 'short-text' }],
+          settings: { successMessage: 'IT will reach out within one business day.' },
+        },
+      },
+      {
+        ...versionDefaults,
+        version_id: versionWithout,
+        version_number: 2,
+        form_schema_snapshot: {
+          fields: [{ key: 'employee_name', label: 'Employee name', type: 'short-text' }],
+        },
+      },
+    ]);
+
+    await tenantTable(tenant, 'service_request_submissions').insert([
+      {
+        tenant,
+        submission_id: submissionWithMessage,
+        definition_id: definitionId,
+        definition_version_id: versionWithMessage,
+        requester_user_id: uuidv4(),
+        client_id: clientA,
+        contact_id: uuidv4(),
+        request_name: 'New Employee Setup',
+        submitted_payload: { employee_name: 'Dorothy Gale' },
+        execution_status: 'succeeded',
+      },
+      {
+        tenant,
+        submission_id: submissionWithout,
+        definition_id: definitionId,
+        definition_version_id: versionWithout,
+        requester_user_id: uuidv4(),
+        client_id: clientA,
+        contact_id: uuidv4(),
+        request_name: 'New Employee Setup',
+        submitted_payload: { employee_name: 'Toto' },
+        execution_status: 'pending',
+      },
+    ]);
+
+    await expect(
+      getClientServiceRequestSubmissionSuccessMessage(db, tenant, clientA, submissionWithMessage)
+    ).resolves.toBe('IT will reach out within one business day.');
+
+    // A form whose author wrote no message still confirms; it just has nothing extra to say.
+    await expect(
+      getClientServiceRequestSubmissionSuccessMessage(db, tenant, clientA, submissionWithout)
+    ).resolves.toBeNull();
+
+    // Another client's submission is not readable, message or not.
+    await expect(
+      getClientServiceRequestSubmissionSuccessMessage(db, tenant, clientB, submissionWithMessage)
+    ).resolves.toBeNull();
   });
 
   it('T025: submission detail includes attachment references when uploaded files were linked', async () => {

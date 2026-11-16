@@ -17,6 +17,7 @@ type TranslationOptions = {
 
 const listRequestServiceCatalogGroupsActionMock = vi.fn();
 const listMyRecentServiceRequestsActionMock = vi.fn();
+const getMyServiceRequestSubmissionSuccessMessageActionMock = vi.fn();
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
   template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => String(values[key] ?? ''));
@@ -62,6 +63,8 @@ vi.mock('server/src/app/client-portal/request-services/actions', () => ({
     listRequestServiceCatalogGroupsActionMock(...args),
   listMyRecentServiceRequestsAction: (...args: unknown[]) =>
     listMyRecentServiceRequestsActionMock(...args),
+  getMyServiceRequestSubmissionSuccessMessageAction: (...args: unknown[]) =>
+    getMyServiceRequestSubmissionSuccessMessageActionMock(...args),
 }));
 
 vi.mock(
@@ -79,6 +82,7 @@ describe('/client-portal/request-services catalog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listMyRecentServiceRequestsActionMock.mockResolvedValue([]);
+    getMyServiceRequestSubmissionSuccessMessageActionMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -122,5 +126,52 @@ describe('/client-portal/request-services catalog', () => {
     // Both destination modes render as ordinary catalog entries.
     expect(screen.getByText('Onboarding Questionnaire')).toBeInTheDocument();
     expect(screen.getByText('Access Request')).toBeInTheDocument();
+  });
+
+  // A submit redirects here, so this banner is the only place the author's own success
+  // message can reach the person who filled the form in.
+  it('says the form author`s success message when a submit lands here', async () => {
+    listRequestServiceCatalogGroupsActionMock.mockResolvedValue([]);
+    getMyServiceRequestSubmissionSuccessMessageActionMock.mockResolvedValue(
+      'IT will reach out within one business day.'
+    );
+
+    render(
+      await ServiceRequestsPage({
+        searchParams: Promise.resolve({ submitted: 'submission-1', ticketId: 'ticket-123' }),
+      })
+    );
+
+    expect(getMyServiceRequestSubmissionSuccessMessageActionMock).toHaveBeenCalledWith(
+      'submission-1'
+    );
+    expect(
+      screen.getByText('IT will reach out within one business day.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('submission-1')).toBeInTheDocument();
+    const ticketLink = screen.getByRole('link', { name: 'ticket-123' });
+    expect(ticketLink).toHaveAttribute('href', '/client-portal/tickets/ticket-123');
+  });
+
+  it('confirms a submit from a form with no success message, and asks for nothing else', async () => {
+    listRequestServiceCatalogGroupsActionMock.mockResolvedValue([]);
+
+    render(
+      await ServiceRequestsPage({
+        searchParams: Promise.resolve({ submitted: 'submission-2' }),
+      })
+    );
+
+    expect(screen.getByText(t('detail.submitted'))).toBeInTheDocument();
+    expect(screen.getByText('submission-2')).toBeInTheDocument();
+  });
+
+  it('asks for no success message when no submit just landed', async () => {
+    listRequestServiceCatalogGroupsActionMock.mockResolvedValue([]);
+
+    render(await ServiceRequestsPage({}));
+
+    expect(getMyServiceRequestSubmissionSuccessMessageActionMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
   });
 });

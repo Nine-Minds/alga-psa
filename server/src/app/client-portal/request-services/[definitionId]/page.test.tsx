@@ -54,12 +54,15 @@ describe('RequestServiceDetailPage', () => {
     cleanup();
   });
 
-  it('renders a linked ticket reference in the successful confirmation state', async () => {
+  it('leaves confirming a submit to the catalog page a submit lands on', async () => {
     getRequestServiceDefinitionDetailAction.mockResolvedValue({
       title: 'Access Request',
       description: 'Request secure access',
       icon: 'shield',
-      formSchema: { fields: [] },
+      formSchema: {
+        fields: [{ key: 'subject', type: 'short-text', label: 'Subject' }],
+        settings: { successMessage: 'IT will reach out within one business day.' },
+      },
       initialValues: {},
       visibilityRules: [],
     });
@@ -67,15 +70,16 @@ describe('RequestServiceDetailPage', () => {
     render(
       await RequestServiceDetailPage({
         params: Promise.resolve({ definitionId: 'definition-1' }),
-        searchParams: Promise.resolve({
-          submitted: 'submission-1',
-          ticketId: 'ticket-123',
-        }),
       })
     );
 
-    const ticketLink = screen.getByRole('link', { name: 'ticket-123' });
-    expect(ticketLink).toHaveAttribute('href', '/client-portal/tickets/ticket-123');
+    // The form page has no confirmation of its own: a successful submit redirects to the
+    // catalog, which says the author's message there. A second banner here would only ever
+    // be dead wording.
+    expect(
+      screen.queryByText('IT will reach out within one business day.')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ticket-/ })).not.toBeInTheDocument();
     expect(screen.queryByText('shield')).not.toBeInTheDocument();
   });
 
@@ -199,31 +203,6 @@ describe('RequestServiceDetailPage', () => {
     expect(vpnReason()).toBeNull();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Needs VPN' }));
     expect(vpnReason()).not.toBeNull();
-  });
-
-  it('shows the form settings success message on the confirmation state', async () => {
-    getRequestServiceDefinitionDetailAction.mockResolvedValue({
-      title: 'Access Request',
-      description: null,
-      icon: null,
-      formSchema: {
-        fields: [{ key: 'subject', type: 'short-text', label: 'Subject' }],
-        settings: { successMessage: 'IT will reach out within one business day.' },
-      },
-      initialValues: {},
-      visibilityRules: [],
-    });
-
-    render(
-      await RequestServiceDetailPage({
-        params: Promise.resolve({ definitionId: 'definition-1' }),
-        searchParams: Promise.resolve({ submitted: 'submission-1' }),
-      })
-    );
-
-    expect(
-      screen.getByText('IT will reach out within one business day.')
-    ).toBeInTheDocument();
   });
 
   it('takes the measure the form was authored at, so the card is not wider than the form', async () => {

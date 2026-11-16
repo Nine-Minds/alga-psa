@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
+  getMyServiceRequestSubmissionSuccessMessageAction,
   listRequestServiceCatalogGroupsAction,
   listMyRecentServiceRequestsAction,
 } from './actions';
@@ -42,10 +43,14 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
 
   // Fetching all submissions here keeps the page a single round-trip; the table
   // paginates client-side, which is fine for the small per-client volume.
-  const [groups, allSubmissions, { t }] = await Promise.all([
+  // The author's own confirmation wording is only looked up when a submit just landed here.
+  const [groups, allSubmissions, { t }, submittedSuccessMessage] = await Promise.all([
     listRequestServiceCatalogGroupsAction(),
     listMyRecentServiceRequestsAction(1000),
     getServerTranslation(undefined, 'client-portal/service-requests'),
+    submittedRequestId
+      ? getMyServiceRequestSubmissionSuccessMessageAction(submittedRequestId)
+      : Promise.resolve(null),
   ]);
 
   const rows: MyRequestsTableRow[] = allSubmissions.map((submission) => ({
@@ -64,11 +69,15 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
     <div className="space-y-8">
       {/* Header is provided by the layout topbar via clientPortalRouteTitles */}
 
-      {/* Success banner: rendered after a redirect from the form-submit action. */}
+      {/* Success banner: rendered after a redirect from the form-submit action. This is where
+          a submit lands, so it is where the form's own success message has to be said. */}
       {submittedRequestId && (
         <Alert variant="success">
           <AlertTitle>{t('detail.submitted')}</AlertTitle>
           <AlertDescription>
+            {submittedSuccessMessage ? (
+              <p className="mb-1">{submittedSuccessMessage}</p>
+            ) : null}
             <p>
               {t('detail.requestIdLabel')}
               <span className="font-mono">{submittedRequestId}</span>
