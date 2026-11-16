@@ -802,69 +802,120 @@ async function resolveReplyTargetFromCommentThread(params: {
   });
 }
 
-export async function resolveReplyTargetFromOutboundMessageId(params: {
-  tenantId: string;
-  rfcMessageId: string;
-}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
-  const normalizedMessageId = params.rfcMessageId.trim();
-  if (!normalizedMessageId) {
-    return null;
-  }
+type OutboundLogRow = { threadId: string | null; entityType: string | null; entityId: string | null };
+type ReplyTarget = { ticketId: string; threadId: string | null; parentCommentId: string | null };
 
-  const row = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
-    return db.table('email_sending_logs')
-      .select('comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
-      .where({ rfc_message_id: normalizedMessageId })
-      .orderBy('created_at', 'desc')
-      .first();
+// LEVERAGE: friction rfc-lookup-forms-bracketed — rfcMessageIdLookupForms yields bare + raw forms, but
+// email_sending_logs stores the bracketed header value, so callers re-derive the bracketed variant.
+function outboundLookupForms(rfcMessageId: string): string[] {
+  return Array.from(
+    new Set(rfcMessageIdLookupForms(rfcMessageId).flatMap((form) => (form.startsWith('<') ? [form] : [form, `<${form}>`])))
+  );
+}
+
+/** Cap on Message-IDs resolved per inbound email (newest kept); bounds the IN lists. */
+const MAX_OUTBOUND_LOOKUP_IDS = 50;
+
+/**
+ * Predicate matching a log row by either id a reply can name: the on-wire id (rfc_message_id, index
+ * idx_email_sending_logs_tenant_rfc_message) or the id we generated before the provider replaced it
+ * (metadata.generatedRfcMessageId, kept for References already sent to customers; index
+ * idx_email_sending_logs_tenant_generated_rfc_message, so the second branch must stay that index's exact
+ * expression and partial predicate). Wrapped in parentheses so the OR stays inside the tenant filter.
+ */
+const OUTBOUND_MESSAGE_ID_MATCH_SQL =
+  "(rfc_message_id = ANY(?) OR ((metadata->>'generatedRfcMessageId') IS NOT NULL AND (metadata->>'generatedRfcMessageId') = ANY(?)))";
+
+/**
+ * Find the email_sending_logs row for each Message-ID (same index as input; null = no match) with ONE
+ * tenant-scoped statement regardless of how many ids are given (both indexes combine as a bitmap OR).
+ * Per id an on-wire match wins over a generated-id match; within each kind the newest row wins.
+ * Old generated ids stored with an upper-case domain are not matched.
+ */
+async function findOutboundLogRowsForMessageIds(
+  tenantId: string,
+  messageIds: string[]
+): Promise<Array<OutboundLogRow | null>> {
+  const formsById = messageIds.map((id) => outboundLookupForms(id));
+  const result: Array<OutboundLogRow | null> = messageIds.map(() => null);
+  const allForms = Array.from(new Set(formsById.flat()));
+  if (allForms.length === 0) return result;
+
+  const toRow = (r: any): OutboundLogRow => ({ threadId: r.threadId ?? null, entityType: r.entityType ?? null, entityId: r.entityId ?? null });
+  const generatedIdOf = (r: any): unknown => {
+    let meta = r.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = null; }
+    }
+    return meta?.generatedRfcMessageId;
+  };
+
+  const rows: any[] = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
+    const found = await db.table('email_sending_logs')
+      .select('rfc_message_id', 'metadata', 'comment_thread_id as threadId', 'entity_type as entityType', 'entity_id as entityId')
+      .whereRaw(OUTBOUND_MESSAGE_ID_MATCH_SQL, [allForms, allForms])
+      .orderBy('created_at', 'desc');
+    return Array.isArray(found) ? found : [];
   });
 
-  if (!row) {
-    return null;
-  }
+  // Rows are newest first, so the first row seen for an id is the newest one.
+  formsById.forEach((forms, index) => {
+    const hit = rows.find((r) => forms.includes(r.rfc_message_id))
+      ?? rows.find((r) => forms.includes(generatedIdOf(r) as string));
+    if (hit) result[index] = toRow(hit);
+  });
+  return result;
+}
 
+async function resolveReplyTargetFromOutboundLogRow(tenantId: string, row: OutboundLogRow): Promise<ReplyTarget | null> {
   // Comment-thread match: resolve to the latest comment in the thread.
   if (row.threadId) {
-    return resolveReplyTargetFromCommentThread({
-      tenantId: params.tenantId,
-      threadId: row.threadId,
-    });
+    return resolveReplyTargetFromCommentThread({ tenantId, threadId: row.threadId });
   }
 
   // Ticket-scoped match: a reply to any non-comment ticket notification
   // (created/updated/closed/assigned). Append at ticket level, no parent comment.
   if (row.entityType === 'ticket' && row.entityId) {
-    const ticketExists = await withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
+    const entityId = row.entityId;
+    const ticketExists = await withTenantAdminTransaction(tenantId, async (_trx: any, db: any) => {
       return db.table('tickets')
-        .where({ ticket_id: row.entityId })
+        .where({ ticket_id: entityId })
         .first('ticket_id');
     });
     if (ticketExists?.ticket_id) {
-      return { ticketId: row.entityId, threadId: null, parentCommentId: null };
+      return { ticketId: entityId, threadId: null, parentCommentId: null };
     }
   }
 
   return null;
 }
 
+export async function resolveReplyTargetFromOutboundMessageId(params: {
+  tenantId: string;
+  rfcMessageId: string;
+}): Promise<ReplyTarget | null> {
+  const [row] = await findOutboundLogRowsForMessageIds(params.tenantId, [params.rfcMessageId]);
+  return row ? resolveReplyTargetFromOutboundLogRow(params.tenantId, row) : null;
+}
+
 async function resolveReplyTargetFromReferences(params: {
   tenantId: string;
   references?: string[];
-}): Promise<{ ticketId: string; threadId: string | null; parentCommentId: string | null } | null> {
+}): Promise<ReplyTarget | null> {
   const references = (params.references ?? [])
     .map((value) => value.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(-MAX_OUTBOUND_LOOKUP_IDS);
+  if (references.length === 0) return null;
 
+  // One batched lookup for the whole chain, then prefer the newest reference that resolves.
+  const rows = await findOutboundLogRowsForMessageIds(params.tenantId, references);
   for (let index = references.length - 1; index >= 0; index -= 1) {
-    const target = await resolveReplyTargetFromOutboundMessageId({
-      tenantId: params.tenantId,
-      rfcMessageId: references[index],
-    });
-    if (target) {
-      return target;
-    }
+    const row = rows[index];
+    if (!row) continue;
+    const target = await resolveReplyTargetFromOutboundLogRow(params.tenantId, row);
+    if (target) return target;
   }
-
   return null;
 }
 
