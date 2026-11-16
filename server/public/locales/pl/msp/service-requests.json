@@ -731,7 +731,9 @@
       "defaultNotAnOption": "Ta odpowiedź nie jest żadną z powyższych opcji.",
       "defaultFailsRules": "Ta odpowiedź nie przechodzi sprawdzeń ustawionych poniżej.",
       "legacyRuleOutsideBuilder": "Ten element ma też regułę ustawioną poza kreatorem, która nadal obowiązuje.",
-      "renameBreaksTemplates": "Temat lub opis zgłoszenia nadal odwołuje się do „{{key}}”. Popraw to na stronie wniosku."
+      "renameBreaksTemplates": "Temat lub opis zgłoszenia nadal odwołuje się do „{{key}}”. Popraw to na stronie wniosku.",
+      "renameKeyEmpty": "Klucz odpowiedzi nie może być pusty. Poprzedni klucz pozostaje w użyciu.",
+      "renameKeyTaken": "Inne pytanie używa już klucza odpowiedzi „{{key}}”. Poprzedni klucz pozostaje w użyciu."
     },
     "tryIt": {
       "banner": "Odpowiedzi na tym ekranie nigdzie nie trafiają. Reguły i sprawdzenia działają dokładnie tak, jak u klienta.",

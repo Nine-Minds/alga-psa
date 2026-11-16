@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Esta resposta não é nenhuma das opções acima.",
       "defaultFailsRules": "Esta resposta não passa nas verificações definidas abaixo.",
       "legacyRuleOutsideBuilder": "Este elemento também tem uma regra definida fora do construtor, que continua a aplicar-se.",
-      "renameBreaksTemplates": "O assunto ou a descrição do ticket ainda faz referência a «{{key}}». Atualize-o na página do pedido."
+      "renameBreaksTemplates": "O assunto ou a descrição do ticket ainda faz referência a «{{key}}». Atualize-o na página do pedido.",
+      "renameKeyEmpty": "A chave de resposta não pode estar vazia. A chave anterior continua em uso.",
+      "renameKeyTaken": "Outra pergunta já usa a chave de resposta «{{key}}». A chave anterior continua em uso."
     },
     "tryIt": {
       "banner": "As respostas desta tela não são guardadas. Regras e verificações funcionam como para um cliente.",

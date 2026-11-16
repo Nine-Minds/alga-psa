@@ -35,7 +35,8 @@ export interface FormBuilderInspectorProps {
   precedingElements: BasicFormField[];
   settings: BasicFormSettings;
   onChange: (patch: Partial<BasicFormField>, options?: { coalesceId?: string | null }) => void;
-  onRenameKey: (nextKey: string) => void;
+  /** Returns false when the key was refused; the box then goes back to the key in force. */
+  onRenameKey: (nextKey: string) => boolean;
   onDuplicate: () => void;
   onDelete: () => void;
   onSettingsChange: (patch: Partial<BasicFormSettings>, options?: { coalesceId?: string | null }) => void;
@@ -130,6 +131,15 @@ export function FormBuilderInspector({
   React.useEffect(() => {
     setKeyDraft(element?.key ?? '');
   }, [element?.key]);
+
+  // A refused key must not stay in the box pretending to be the element's: the builder says
+  // why, and the box goes back to the key that is actually in force.
+  const elementKey = element?.key ?? '';
+  // The raw draft goes out, not a slug: slugging first turns a cleared box into `field`, and
+  // the builder could then never tell an empty key from a deliberate one.
+  const commitKeyDraft = () => {
+    setKeyDraft(onRenameKey(keyDraft) ? slugifyElementKey(keyDraft) : elementKey);
+  };
 
   if (showFormSettings || !element) {
     return (
@@ -339,11 +349,11 @@ export function FormBuilderInspector({
             containerClassName="mb-0"
             value={keyDraft}
             onChange={(event) => setKeyDraft(event.target.value)}
-            onBlur={() => onRenameKey(slugifyElementKey(keyDraft))}
+            onBlur={() => commitKeyDraft()}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 event.preventDefault();
-                onRenameKey(slugifyElementKey(keyDraft));
+                commitKeyDraft();
               }
             }}
           />

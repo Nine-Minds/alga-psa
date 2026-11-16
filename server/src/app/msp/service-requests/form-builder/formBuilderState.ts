@@ -142,14 +142,35 @@ export function findElementsReferencingKey(
 }
 
 /**
+ * Why a rename cannot go through, or `null` when it can. Re-entering the key the element
+ * already has is not a problem, it is a no-op.
+ *
+ * `nextKeyInput` is what the author typed, not a slug: `slugifyElementKey` turns an empty box
+ * into `field`, so emptiness has to be judged before slugging or a cleared box would quietly
+ * rename the question to something nobody asked for.
+ */
+export type ElementKeyRenameIssue = 'empty' | 'taken';
+
+export function elementKeyRenameIssue(
+  document: FormBuilderDocument,
+  key: string,
+  nextKeyInput: string
+): ElementKeyRenameIssue | null {
+  if (!nextKeyInput.trim()) return 'empty';
+  const slug = slugifyElementKey(nextKeyInput);
+  if (slug === key) return null;
+  return document.elements.some((element) => element.key === slug) ? 'taken' : null;
+}
+
+/**
  * Renames an element's storage key, keeping its position, and rewrites every reference to it
  * inside the schema in the same undo step — a condition that read the old key would otherwise
  * never match again and quietly hide its element for good. References the builder cannot reach
  * (the ticket subject and description templates, which live on the definition page) are the
  * caller's to warn about; `findElementsReferencingKey` is the in-schema half.
  *
- * Returns the state unchanged when the new key is empty or already taken — the caller shows why
- * rather than silently renaming.
+ * Returns the state unchanged when the new key is empty or already taken. The caller asks
+ * `elementKeyRenameIssue` first and says why, so a rejected rename is never silent.
  */
 export function renameElementKey(
   state: FormBuilderState,
@@ -157,9 +178,9 @@ export function renameElementKey(
   nextKeyInput: string
 ): FormBuilderState {
   const document = getDocument(state);
+  if (elementKeyRenameIssue(document, key, nextKeyInput)) return state;
   const slug = slugifyElementKey(nextKeyInput);
-  if (!slug || slug === key) return state;
-  if (document.elements.some((element) => element.key === slug)) return state;
+  if (slug === key) return state;
   const elements = document.elements.map((element) => {
     const renamed = element.key === key ? { ...element, key: slug } : element;
     if (!renamed.visibleWhen?.some((rule) => rule.source === key)) {

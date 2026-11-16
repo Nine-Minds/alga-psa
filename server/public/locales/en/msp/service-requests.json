@@ -729,7 +729,9 @@
       "defaultNotAnOption": "This answer is not one of the choices above.",
       "defaultFailsRules": "This answer does not pass the checks set below.",
       "legacyRuleOutsideBuilder": "This element also has a rule set outside the builder, which keeps applying.",
-      "renameBreaksTemplates": "The ticket subject or description still refers to \"{{key}}\". Update it on the request page."
+      "renameBreaksTemplates": "The ticket subject or description still refers to \"{{key}}\". Update it on the request page.",
+      "renameKeyEmpty": "An answer key cannot be blank. The previous key is still in use.",
+      "renameKeyTaken": "Another question already uses the answer key \"{{key}}\". The previous key is still in use."
     },
     "tryIt": {
       "banner": "Answers on this screen go nowhere. Rules and checks behave exactly as they will for a client.",

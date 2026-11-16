@@ -118,6 +118,42 @@ describe('Form Studio selection and inspector', () => {
     expect(document.getElementById('service-request-form-builder-key')).toHaveValue('full_name');
   });
 
+  it('refuses a key another question already uses, and says so', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(canvasElement('full_name'));
+    const key = document.getElementById('service-request-form-builder-key') as HTMLInputElement;
+    await user.clear(key);
+    await user.type(key, 'needs_laptop');
+    await user.tab();
+
+    expect(
+      screen.getByText(
+        'Another question already uses the answer key "needs_laptop". The previous key is still in use.'
+      )
+    ).toBeInTheDocument();
+    // The box goes back to the key actually in force rather than keeping the refused one.
+    expect(key).toHaveValue('full_name');
+    expect(canvasElement('full_name')).toBeInTheDocument();
+  });
+
+  it('refuses a blank key instead of renaming the question to "field"', async () => {
+    const user = userEvent.setup();
+    renderBuilder();
+
+    await user.click(canvasElement('full_name'));
+    const key = document.getElementById('service-request-form-builder-key') as HTMLInputElement;
+    await user.clear(key);
+    await user.tab();
+
+    expect(
+      screen.getByText('An answer key cannot be blank. The previous key is still in use.')
+    ).toBeInTheDocument();
+    expect(key).toHaveValue('full_name');
+    expect(canvasElement('full_name')).toBeInTheDocument();
+  });
+
   it('round-trips an inspector edit back onto the canvas', async () => {
     const user = userEvent.setup();
     renderBuilder();

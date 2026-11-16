@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Questa risposta non è una delle scelte qui sopra.",
       "defaultFailsRules": "Questa risposta non supera i controlli impostati qui sotto.",
       "legacyRuleOutsideBuilder": "Questo elemento ha anche una regola impostata fuori dal generatore, che continua a valere.",
-      "renameBreaksTemplates": "L'oggetto o la descrizione del ticket fa ancora riferimento a «{{key}}». Aggiornalo nella pagina della richiesta."
+      "renameBreaksTemplates": "L'oggetto o la descrizione del ticket fa ancora riferimento a «{{key}}». Aggiornalo nella pagina della richiesta.",
+      "renameKeyEmpty": "La chiave di risposta non può essere vuota. Resta in uso la chiave precedente.",
+      "renameKeyTaken": "Un’altra domanda usa già la chiave di risposta «{{key}}». Resta in uso la chiave precedente."
     },
     "tryIt": {
       "banner": "Le risposte su questa schermata non vengono salvate. Regole e controlli si comportano come per un cliente.",

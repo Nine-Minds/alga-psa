@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Det här svaret är inget av valen ovan.",
       "defaultFailsRules": "Det här svaret klarar inte kontrollerna nedan.",
       "legacyRuleOutsideBuilder": "Elementet har även en regel som satts utanför byggaren och fortsätter att gälla.",
-      "renameBreaksTemplates": "Ärendets rubrik eller beskrivning hänvisar fortfarande till ”{{key}}”. Uppdatera det på begärandesidan."
+      "renameBreaksTemplates": "Ärendets rubrik eller beskrivning hänvisar fortfarande till ”{{key}}”. Uppdatera det på begärandesidan.",
+      "renameKeyEmpty": "En svarsnyckel kan inte vara tom. Den tidigare nyckeln gäller fortfarande.",
+      "renameKeyTaken": "En annan fråga använder redan svarsnyckeln ”{{key}}”. Den tidigare nyckeln gäller fortfarande."
     },
     "tryIt": {
       "banner": "Svaren på den här skärmen sparas ingenstans. Regler och kontroller fungerar precis som för en kund.",

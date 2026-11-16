@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Diese Antwort ist keine der Auswahlmöglichkeiten oben.",
       "defaultFailsRules": "Diese Antwort besteht die unten festgelegten Prüfungen nicht.",
       "legacyRuleOutsideBuilder": "Für dieses Element gibt es außerdem eine Regel außerhalb des Builders, die weiterhin gilt.",
-      "renameBreaksTemplates": "Der Ticket-Betreff oder die Beschreibung verweist weiterhin auf „{{key}}“. Bitte auf der Anfrageseite anpassen."
+      "renameBreaksTemplates": "Der Ticket-Betreff oder die Beschreibung verweist weiterhin auf „{{key}}“. Bitte auf der Anfrageseite anpassen.",
+      "renameKeyEmpty": "Ein Antwortschlüssel darf nicht leer sein. Der bisherige Schlüssel bleibt bestehen.",
+      "renameKeyTaken": "Eine andere Frage verwendet den Antwortschlüssel „{{key}}“ bereits. Der bisherige Schlüssel bleibt bestehen."
     },
     "tryIt": {
       "banner": "Antworten auf diesem Bildschirm werden nirgends gespeichert. Regeln und Prüfungen verhalten sich genau wie beim Kunden.",

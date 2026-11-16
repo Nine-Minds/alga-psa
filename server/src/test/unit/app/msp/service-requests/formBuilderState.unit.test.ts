@@ -12,6 +12,7 @@ import {
   moveElement,
   nudgeElement,
   redo,
+  elementKeyRenameIssue,
   renameElementKey,
   replaceDocument,
   selectElement,
@@ -101,6 +102,17 @@ describe('form builder edits', () => {
 
     const unchanged = renameElementKey(state, 'employee_name', 'start_date');
     expect(unchanged).toBe(state);
+  });
+
+  it('says why a key was refused, so the rejection is never silent', () => {
+    const state = createFormBuilderState(baseDocument());
+    const document = getDocument(state);
+
+    expect(elementKeyRenameIssue(document, 'full_name', '  ')).toBe('empty');
+    expect(elementKeyRenameIssue(document, 'full_name', 'Start date')).toBe('taken');
+    // Re-entering the key it already has is not a problem, it is a no-op.
+    expect(elementKeyRenameIssue(document, 'full_name', 'full_name')).toBeNull();
+    expect(elementKeyRenameIssue(document, 'full_name', 'Employee name')).toBeNull();
   });
 
   it('rewrites every condition that reads the renamed key, in one undo step', () => {

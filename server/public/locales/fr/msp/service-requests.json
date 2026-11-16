@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Cette réponse ne fait pas partie des choix ci-dessus.",
       "defaultFailsRules": "Cette réponse ne passe pas les vérifications définies ci-dessous.",
       "legacyRuleOutsideBuilder": "Cet élément a aussi une règle définie hors du générateur, qui continue de s’appliquer.",
-      "renameBreaksTemplates": "L’objet ou la description du ticket fait encore référence à « {{key}} ». Mettez-le à jour sur la page de la demande."
+      "renameBreaksTemplates": "L’objet ou la description du ticket fait encore référence à « {{key}} ». Mettez-le à jour sur la page de la demande.",
+      "renameKeyEmpty": "Une clé de réponse ne peut pas être vide. La clé précédente reste en place.",
+      "renameKeyTaken": "Une autre question utilise déjà la clé de réponse « {{key}} ». La clé précédente reste en place."
     },
     "tryIt": {
       "banner": "Les réponses saisies ici ne sont enregistrées nulle part. Les règles et vérifications se comportent comme pour un client.",

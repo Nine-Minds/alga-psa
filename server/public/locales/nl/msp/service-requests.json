@@ -729,7 +729,9 @@
       "defaultNotAnOption": "Dit antwoord staat niet bij de keuzes hierboven.",
       "defaultFailsRules": "Dit antwoord komt niet door de controles hieronder.",
       "legacyRuleOutsideBuilder": "Dit element heeft ook een regel buiten de bouwer, die blijft gelden.",
-      "renameBreaksTemplates": "Het ticketonderwerp of de omschrijving verwijst nog naar ‘{{key}}’. Werk dat bij op de aanvraagpagina."
+      "renameBreaksTemplates": "Het ticketonderwerp of de omschrijving verwijst nog naar ‘{{key}}’. Werk dat bij op de aanvraagpagina.",
+      "renameKeyEmpty": "Een antwoordsleutel mag niet leeg zijn. De vorige sleutel blijft in gebruik.",
+      "renameKeyTaken": "Een andere vraag gebruikt de antwoordsleutel ‘{{key}}’ al. De vorige sleutel blijft in gebruik."
     },
     "tryIt": {
       "banner": "Antwoorden op dit scherm worden nergens bewaard. Regels en controles werken precies zoals bij een klant.",

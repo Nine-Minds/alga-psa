@@ -86,7 +86,9 @@ import {
   moveElement,
   nudgeElement,
   redo,
+  elementKeyRenameIssue,
   renameElementKey,
+  slugifyElementKey,
   replaceDocument,
   selectElement,
   undo,
@@ -813,16 +815,35 @@ export function ServiceRequestFormBuilder({
         onChange={(patch, options) =>
           selected && setState((previous) => updateElement(previous, selected.key, patch, options))
         }
-        onRenameKey={(nextKey) => {
-          if (!selected) return;
+        onRenameKey={(nextKeyInput) => {
+          if (!selected) return false;
           const previousKey = selected.key;
-          setState((previous) => renameElementKey(previous, previousKey, nextKey));
+          // A key that is blank or already on another element cannot be taken; saying so beats
+          // leaving the author with a box that quietly keeps showing the old key.
+          const issue = elementKeyRenameIssue(document, previousKey, nextKeyInput);
+          if (issue) {
+            setNotice({
+              tone: 'error',
+              message: t(
+                issue === 'empty'
+                  ? 'formBuilder.inspector.renameKeyEmpty'
+                  : 'formBuilder.inspector.renameKeyTaken',
+                { key: slugifyElementKey(nextKeyInput) }
+              ),
+            });
+            return false;
+          }
+          setState((previous) => renameElementKey(previous, previousKey, nextKeyInput));
           // Conditions inside the schema are rewritten with the rename. The ticket subject and
           // description templates live on the definition page, out of the builder's reach, so
           // the author is told rather than left to find out at publish.
-          if (nextKey !== previousKey && ticketTemplateKeys.has(previousKey)) {
+          if (
+            slugifyElementKey(nextKeyInput) !== previousKey &&
+            ticketTemplateKeys.has(previousKey)
+          ) {
             toast(t('formBuilder.inspector.renameBreaksTemplates', { key: previousKey }));
           }
+          return true;
         }}
         hasRuleOutsideBuilder={
           !!selected && unadoptedRuleKeys.has(selected.key)
