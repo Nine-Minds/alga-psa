@@ -221,6 +221,11 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'opportunities', action: 'read', msp: true, client: false, description: 'View opportunities', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'opportunities', action: 'update', msp: true, client: false, description: 'Update opportunities', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
+  { resource: 'permission', action: 'create', msp: true, client: false, description: 'Create permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'permission', action: 'delete', msp: true, client: false, description: 'Delete permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'permission', action: 'read', msp: true, client: false, description: 'View the permission catalog, permission categories, the roles that hold a permission, and run permission checks', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'permission', action: 'update', msp: true, client: false, description: 'Update permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+
   { resource: 'priority', action: 'create', msp: true, client: false, description: 'Create ticket priorities', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'project', action: 'create', msp: true, client: false, description: 'Create new projects', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Project Manager'] } },
@@ -254,11 +259,6 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'reports', action: 'update', msp: true, client: false, description: 'Update reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
   { resource: 'rmm', action: 'execute_command', msp: true, client: false, description: 'Execute raw RMM remote commands', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
-
-  { resource: 'permission', action: 'create', msp: true, client: false, description: 'Create permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
-  { resource: 'permission', action: 'delete', msp: true, client: false, description: 'Delete permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
-  { resource: 'permission', action: 'read', msp: true, client: false, description: 'View the permission catalog, permission categories, the roles that hold a permission, and run permission checks', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
-  { resource: 'permission', action: 'update', msp: true, client: false, description: 'Update permission definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
   { resource: 'role', action: 'create', msp: true, client: false, description: 'Create roles and copy roles', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'role', action: 'delete', msp: true, client: false, description: 'Delete roles and the permission assignments they carry', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },

@@ -20,6 +20,7 @@ const { DEFAULT_ROLES } = require(path.join(permissionsDir, 'roleGrants.cjs'));
 const { ACTIVE_PERMISSIONS, getProductPermissions } = require(path.join(permissionsDir, 'catalog.cjs'));
 const { syncPermissionCatalog } = require(path.join(permissionsDir, 'syncPermissionCatalog.cjs'));
 const migration = require(path.join(migrationsDir, '20261115120000_add_api_admin_permissions.cjs'));
+const permissionMigration = require(path.join(migrationsDir, '20261116120000_add_permission_catalog_resource.cjs'));
 
 const RESOURCES = ['metadata', 'role', 'webhook', 'permission'];
 const PERMISSION_KEYS = ['permission:create', 'permission:delete', 'permission:read', 'permission:update'];
@@ -104,7 +105,7 @@ describe('add_api_admin_permissions migration integration', () => {
     const tenantId = await tenantFor(product);
     expect(await heldBy(tenantId, 'Admin')).not.toEqual(expect.arrayContaining(PERMISSION_KEYS));
 
-    await migration.up(ctx.db);
+    await permissionMigration.up(ctx.db);
 
     const holders = (await table(tenantId, 'role_permissions as rp')
       .join('roles as r', function join() { this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant'); })
@@ -128,5 +129,10 @@ describe('add_api_admin_permissions migration integration', () => {
   it('is irreversible and non-transactional like its sibling migrations', async () => {
     await expect(migration.down()).rejects.toThrow(/irreversible/);
     expect(migration.config).toEqual({ transaction: false });
+  });
+
+  it('add_permission_catalog_resource is irreversible and non-transactional', async () => {
+    await expect(permissionMigration.down()).rejects.toThrow(/irreversible/);
+    expect(permissionMigration.config).toEqual({ transaction: false });
   });
 });
