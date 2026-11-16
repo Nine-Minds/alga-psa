@@ -7,7 +7,7 @@ import {
   type FieldTypeKey,
   type FieldValidationRules,
 } from '@alga-psa/ui/form-fields';
-import { formatCalendarDate } from '@alga-psa/tickets/lib/titleTokens';
+import { formatCalendarDate, isCalendarDate, resolveLocale } from '@alga-psa/tickets/lib/titleTokens';
 import {
   parseElementVisibilityRules,
   type ElementVisibilityRule,
@@ -397,6 +397,45 @@ export function isFormAnswerMissing(field: FormAnswerField | undefined, value: u
 }
 
 /**
+ * A date answer in the reader's language, or `null` when the stored text is not a date at all
+ * and the caller should fall back to showing it verbatim.
+ *
+ * Two shapes reach this. A `date` field stores `YYYY-MM-DD`, which is read as floating UTC
+ * midnight so the server's zone never shifts the day. A `date-time` field stores the instant
+ * the picker produced (`Date.toISOString()`), which is not `YYYY-MM-DD` and so must not go
+ * through the calendar path; it is shown in UTC with the zone named, because nothing on the
+ * server path knows the reader's zone and a silent server-local time would be a lie.
+ */
+function formatDateAnswer(raw: string, locale: string): string | null {
+  if (isCalendarDate(raw)) {
+    try {
+      return formatCalendarDate(raw, locale, { dateStyle: 'long' });
+    } catch {
+      return null;
+    }
+  }
+  const instant = new Date(raw);
+  if (Number.isNaN(instant.getTime())) {
+    return null;
+  }
+  try {
+    // Spelled out rather than `dateStyle`/`timeStyle`, which ECMA-402 forbids pairing with
+    // `timeZoneName` — and the zone has to be named for a UTC rendering to be honest.
+    return new Intl.DateTimeFormat(resolveLocale(locale), {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: 'UTC',
+      timeZoneName: 'short',
+    }).format(instant);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The one place that turns a stored answer into text. The ticket subject template, the ticket
  * description and the portal submission detail page all read it, so a new field type renders
  * the same way in all three without touching any of them.
@@ -423,11 +462,9 @@ export function describeFormAnswer(
   }
 
   if ((definition?.key === 'date' || definition?.key === 'date-time') && format.locale) {
-    const raw = String(value).trim();
-    try {
-      return formatCalendarDate(raw, format.locale, { dateStyle: 'long' });
-    } catch {
-      return raw;
+    const formatted = formatDateAnswer(String(value).trim(), format.locale);
+    if (formatted) {
+      return formatted;
     }
   }
 

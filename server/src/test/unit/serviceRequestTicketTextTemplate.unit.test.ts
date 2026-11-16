@@ -140,6 +140,15 @@ describe('v2 schema in ticket text', () => {
       'https://example.com/jane'
     );
     expect(renderV2('{{starts_at}}', { starts_at: '2026-03-02' })).toBe('March 2, 2026');
+    // What the date-time picker actually stores is a full instant, not YYYY-MM-DD: it must read
+    // as a date and a time, never as a raw ISO timestamp.
+    expect(renderV2('{{starts_at}}', { starts_at: '2026-03-02T14:30:00.000Z' })).toBe(
+      'March 2, 2026 at 2:30 PM UTC'
+    );
+    // Not a date at all: shown verbatim rather than dropped.
+    expect(renderV2('{{starts_at}}', { starts_at: 'as soon as possible' })).toBe(
+      'as soon as possible'
+    );
   });
 
   it('renders choice labels and section groups in the description', () => {
