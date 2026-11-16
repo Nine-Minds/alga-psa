@@ -1,5 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import type { ITimePeriodView, TimeEntryWorkItemContext } from '@alga-psa/types';
+import type { WorkDayCalendar } from './stopwatch/stopwatchMath';
 
 /**
  * Only these sheet statuses accept new or changed time. Anything else
@@ -34,6 +35,23 @@ function toInstant(value: string | Date): Temporal.Instant {
 /** The calendar date an instant falls on in the subject user's timezone. */
 export function workDateInTimeZone(value: string | Date, timeZone: string | null | undefined): string {
   return toInstant(value).toZonedDateTimeISO(normalizeTimeZone(timeZone)).toPlainDate().toString();
+}
+
+/**
+ * Work-day calendar for the stopwatch planner. Day boundaries come from `startOfDay`, so zones
+ * that skip local midnight on a DST day still get a correct boundary.
+ */
+export function zonedWorkDayCalendar(timeZone: string | null | undefined): WorkDayCalendar {
+  const zone = normalizeTimeZone(timeZone);
+  return {
+    dayOf: (ms) => workDateInTimeZone(new Date(ms), zone),
+    nextDayStart: (ms) =>
+      Temporal.Instant.fromEpochMilliseconds(ms)
+        .toZonedDateTimeISO(zone)
+        .add({ days: 1 })
+        .startOfDay()
+        .epochMilliseconds,
+  };
 }
 
 /** The instant for a plain wall-clock time (HH:mm) on a date in a timezone. */
@@ -194,6 +212,26 @@ export function resolveEntryDefaults(params: {
   }
 
   return { defaultStartTime, defaultEndTime, date: defaultStartTime, source, moved };
+}
+
+/**
+ * Defaults for a stopwatch session whose plan has exactly one item. The context's startTime/endTime
+ * come from toEntrySpan (first start + total active minutes) and can cross midnight when the planner
+ * dropped a day or capped the end at 23:59, so the planned span replaces them. Everything else,
+ * including the move-to-editable-day fallback, is resolveEntryDefaults as usual.
+ */
+export function resolveSingleDayPlanDefaults(params: {
+  context: TimeEntryWorkItemContext;
+  planItem: { start: Date; end: Date };
+  periods: readonly CatalogPeriod[];
+  timeZone: string | null | undefined;
+  now?: Date;
+}): ResolvedEntryDefaults | null {
+  const { context, planItem, ...rest } = params;
+  return resolveEntryDefaults({
+    ...rest,
+    context: { ...context, startTime: planItem.start, endTime: planItem.end },
+  });
 }
 
 /** The last day a period covers, derived from the exclusive `end_date`. */

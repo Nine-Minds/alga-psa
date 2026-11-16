@@ -180,6 +180,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'hour_blocks',
   'contract_line_block_issuances',
   // Time tracking. Notes are children of time_sheets and must be deleted first.
+  'time_tracking_session_entries',
   'time_tracking_session_segments',
   'time_tracking_sessions',
   'time_entry_suggestion_dismissals',

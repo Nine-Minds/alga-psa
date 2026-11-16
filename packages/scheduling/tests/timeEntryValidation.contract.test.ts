@@ -7,11 +7,13 @@ function readSource(relativePath: string): string {
 }
 
 describe('time entry service validation contract', () => {
-  it('keeps service required in both dialog and inline form validation', () => {
+  it('keeps service required in both dialog and inline form validation, shown inline rather than as a toast', () => {
     const dialogSource = readSource('../src/components/time-management/time-entry/time-sheet/TimeEntryDialog.tsx');
     const formSource = readSource('../src/components/time-management/time-entry/time-sheet/TimeEntryEditForm.tsx');
 
-    expect(dialogSource).toContain("toast.error(t('messages.serviceRequired'));");
+    // The drawer's Save validates on its own and hands the error to the form's service slot.
+    expect(dialogSource).toContain("errors.service = t('timeEntryForm.validation.serviceRequired'");
+    expect(dialogSource).not.toContain("toast.error(t('messages.serviceRequired'));");
     expect(formSource).toContain("defaultValue: 'Service is required for time entries'");
     expect(formSource).toContain("defaultValue: 'Service'");
     expect(formSource).toContain('<span className="text-red-500">*</span>');

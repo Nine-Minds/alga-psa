@@ -20,6 +20,7 @@ const session = {
   closed_at: null,
   created_at: '2026-09-09T10:00:00Z',
   updated_at: '2026-09-09T10:00:00Z',
+  time_entry_ids: [],
   segments: [],
   active_ms: 5_400_000,
   server_now: '2026-09-09T11:30:00Z',
@@ -81,6 +82,24 @@ describe('stopwatchSessionToTimeEntryContext', () => {
     expect(context.timeDescription).toBe('stored notes');
     expect(context.stopwatchSessionId).toBe('session-1');
     expect(context.notice).toBeUndefined();
+  });
+
+  it('carries the session segments so the launcher can split them per work day', () => {
+    const segments = [
+      { segment_id: 's1', started_at: '2026-10-28T23:06:00Z', ended_at: '2026-10-29T05:06:00Z' },
+      { segment_id: 's2', started_at: '2026-11-03T13:21:00Z', ended_at: '2026-11-03T19:55:00Z' },
+    ];
+    const context = stopwatchSessionToTimeEntryContext(
+      { ...session, segments },
+      span({ pausedMs: 128 * 3_600_000, segmentCount: 2, billableMinutes: 754 }),
+      { translate },
+    );
+
+    expect(context.stopwatchSegments).toEqual(segments);
+    expect(context.stopwatchSessionId).toBe('session-1');
+    // The single-span view stays for other consumers, and the paused notice is unchanged.
+    expect(context.startTime).toEqual(new Date('2026-09-09T10:00:00Z'));
+    expect(context.notice).toContain('across 2 segments');
   });
 
   it('prefers a non-empty description typed on the screen over stored notes', () => {
