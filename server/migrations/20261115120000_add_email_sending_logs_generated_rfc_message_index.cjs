@@ -1,3 +1,7 @@
+const { ensureConcurrentIndex } = require('./utils/ensureConcurrentIndex.cjs');
+
+const INDEX = 'idx_email_sending_logs_tenant_generated_rfc_message';
+
 /**
  * Index for the inbound generated-id fallback (alga0002306).
  *
@@ -9,6 +13,9 @@
  * Partial on "key is present": only rows where an on-wire id replaced ours are indexed. The predicate is
  * written with IS NOT NULL (not jsonb `?`) because metadata is a json column in some environments.
  * The query in processInboundEmailInApp.ts repeats the same predicate and expression; keep them in sync.
+ *
+ * Built CONCURRENTLY (email_sending_logs is large and distributed in Citus), so the migration runs outside a
+ * transaction; ensureConcurrentIndex drops an invalid index left by an interrupted build before retrying.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -22,11 +29,13 @@ exports.up = async function up(knex) {
     throw new Error('email_sending_logs is missing both tenant and tenant_id columns');
   }
 
-  await knex.schema.raw(`
-    CREATE INDEX IF NOT EXISTS idx_email_sending_logs_tenant_generated_rfc_message
+  await ensureConcurrentIndex(
+    knex,
+    INDEX,
+    `CREATE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX}
     ON email_sending_logs (${tenantColumn}, ((metadata->>'generatedRfcMessageId')))
-    WHERE (metadata->>'generatedRfcMessageId') IS NOT NULL
-  `);
+    WHERE (metadata->>'generatedRfcMessageId') IS NOT NULL`
+  );
 };
 
 /**
@@ -34,7 +43,7 @@ exports.up = async function up(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function down(knex) {
-  await knex.schema.raw('DROP INDEX IF EXISTS idx_email_sending_logs_tenant_generated_rfc_message');
+  await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX}`);
 };
 
 exports.config = { transaction: false };
