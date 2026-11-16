@@ -19,7 +19,8 @@
     "datePlaceholder": "Selecione a data",
     "optionLabel": "Opção {{index}}",
     "submit": "Enviar solicitação",
-    "requiredField": "Este campo é obrigatório."
+    "requiredField": "Este campo é obrigatório.",
+    "unsupportedField": "Esta pergunta não está disponível."
   },
   "myRequests": {
     "title": "Minhas solicitações",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Processamento concluído",
       "service_request_submission_execution_failed": "Falha no processamento"
     },
-    "unnamedAttachment": "Anexo"
+    "unnamedAttachment": "Anexo",
+    "lookupUnavailable": "(não está mais disponível)"
   },
   "recent": {
     "title": "Suas solicitações recentes",

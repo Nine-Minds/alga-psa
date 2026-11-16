@@ -11,8 +11,10 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import {
   normalizeTicketSubject,
   renderServiceRequestTemplate,
+  type ServiceRequestLookupLabels,
   type ServiceRequestTemplateFormat,
 } from '../../ticketTextTemplate';
+import { resolveLookupLabels } from '../../lookupFields';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
   const value = config[key];
@@ -35,6 +37,8 @@ export interface TicketTextContext {
   formSchema: Record<string, unknown> | undefined;
   payload: Record<string, unknown>;
   format: ServiceRequestTemplateFormat;
+  /** Snapshot of lookup answers' display labels, resolved at execution time. */
+  lookupLabels?: ServiceRequestLookupLabels;
 }
 
 /** Subject chain: template, then legacy `titleFieldKey`, then the first non-empty answer, then `Service Request <id8>`. */
@@ -54,7 +58,7 @@ export function buildTicketTitle(
 
   const configuredFieldKey = getStringConfig(config, 'titleFieldKey');
   if (configuredFieldKey) {
-    const configuredValue = payload[configuredFieldKey];
+    const configuredValue = text.lookupLabels?.[configuredFieldKey] ?? payload[configuredFieldKey];
     if (typeof configuredValue === 'string') {
       const normalized = normalizeTicketSubject(configuredValue);
       if (normalized.length > 0) {
@@ -63,7 +67,10 @@ export function buildTicketTitle(
     }
   }
 
-  for (const value of Object.values(payload)) {
+  // Lookup answers are ids: never a subject, whatever their position in the payload.
+  const lookupKeys = new Set(Object.keys(text.lookupLabels ?? {}));
+  for (const [key, value] of Object.entries(payload)) {
+    if (lookupKeys.has(key)) continue;
     if (typeof value === 'string') {
       const normalized = normalizeTicketSubject(value);
       if (normalized.length > 0) {
@@ -92,10 +99,14 @@ const paragraph = (text: string) => ({ type: 'paragraph', content: textCell(text
 function describeAnswer(
   field: FormFieldSnapshot | undefined,
   value: unknown,
-  format: ServiceRequestTemplateFormat
+  format: ServiceRequestTemplateFormat,
+  lookupLabel?: string
 ): string {
   if (value === null || value === undefined || value === '') {
     return '—';
+  }
+  if (field?.type === 'lookup') {
+    return lookupLabel ?? String(value);
   }
   if (field?.type === 'checkbox') {
     return value === true || value === 'true' || value === 'on' || value === '1' ? format.yes : format.no;
@@ -152,7 +163,7 @@ export function buildTicketDescription(
       rows: orderedKeys.map((key) => {
         const field = fieldByKey.get(key);
         const label = typeof field?.label === 'string' && field.label.trim() ? field.label.trim() : key;
-        return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key], text.format))] };
+        return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key], text.format, text.lookupLabels?.[key]))] };
       }),
     },
   });
@@ -286,6 +297,11 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           formSchema: context.formSchema,
           payload: context.payload,
           format: { locale, yes: t('yes', { defaultValue: 'Yes' }), no: t('no', { defaultValue: 'No' }) },
+          // Snapshot at execution time: the ticket keeps saying "Manager: Jane Doe" even if Jane is renamed.
+          lookupLabels: await resolveLookupLabels(trx, context.tenant, context.formSchema?.fields, context.payload, {
+            clientId: context.clientId,
+            contactId: context.contactId ?? null,
+          }),
         };
         const title = buildTicketTitle(text, context.definitionId, context.config);
         const description = buildTicketDescription(text, context.config);

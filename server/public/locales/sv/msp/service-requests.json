@@ -92,7 +92,8 @@
         "select": "Vallista",
         "checkbox": "Kryssruta",
         "date": "Datum",
-        "file-upload": "Filuppladdning"
+        "file-upload": "Filuppladdning",
+        "lookup": "Uppslag"
       },
       "visibility": {
         "title": "Visa när…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Avancerat (JSON)",
         "advancedJsonHelp": "Hela den sparade konfigurationen, inklusive kontextstandarder. Synlighetsregler ändras enklast med ”Visa när…” på varje fält. Osparade ändringar här förkastas om en regel ändras där."
-      }
+      },
+      "lookup": {
+        "entity": "Slå upp",
+        "entities": {
+          "contact": "Kontakt",
+          "user": "MSP-användare"
+        },
+        "scope": "Alternativen hämtas från",
+        "scopes": {
+          "requester-client": "Beställarens kund",
+          "tenant": "Hela arbetsytan"
+        }
+      },
+      "unsupportedType": "Fälttypen ”{{type}}” stöds inte. Ta bort fältet och lägg till det igen innan du publicerar."
     },
     "execution": {
       "title": "Utförande",

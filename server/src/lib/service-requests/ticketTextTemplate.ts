@@ -69,7 +69,19 @@ export function findUnknownServiceRequestTemplateTokens(template: string, formSc
   return listTokens(template ?? '').filter((token) => !known.has(token));
 }
 
-function formatAnswer(field: SchemaField | undefined, value: unknown, format: ServiceRequestTemplateFormat): string {
+/**
+ * Resolved display labels for lookup answers, keyed by field key (see lookupFields.resolveLookupLabels).
+ * A lookup answer is an entity id; it renders as its label, and only falls back to the id if the
+ * entity no longer resolves.
+ */
+export type ServiceRequestLookupLabels = Record<string, string>;
+
+function formatAnswer(
+  field: SchemaField | undefined,
+  value: unknown,
+  format: ServiceRequestTemplateFormat,
+  lookupLabels?: ServiceRequestLookupLabels
+): string {
   if (value === null || value === undefined) return '';
   if (!field) return String(value);
 
@@ -79,6 +91,11 @@ function formatAnswer(field: SchemaField | undefined, value: unknown, format: Se
     case 'select': {
       const raw = String(value);
       return field.options.find((option) => option.value === raw)?.label ?? raw.trim();
+    }
+    // LEVERAGE: pattern service-request-answer-display — third site resolving per-type answer display (with describeAnswer and getSubmissionFieldDisplay); each now needs its own lookup branch.
+    case 'lookup': {
+      const raw = String(value).trim();
+      return lookupLabels?.[field.key] ?? raw;
     }
     case 'date': {
       const raw = String(value).trim();
@@ -99,6 +116,7 @@ export function renderServiceRequestTemplate(
     formSchema?: unknown;
     payload: Record<string, unknown>;
     format: ServiceRequestTemplateFormat;
+    lookupLabels?: ServiceRequestLookupLabels;
   }
 ): string {
   try {
@@ -109,7 +127,7 @@ export function renderServiceRequestTemplate(
       if (field?.type === 'file-upload') return '';
       if (!Object.prototype.hasOwnProperty.call(payload, token)) return '';
       // A payload key with no schema field (older callers, no schema) renders as its raw string.
-      return formatAnswer(field, payload[token], context.format);
+      return formatAnswer(field, payload[token], context.format, context.lookupLabels);
     });
   } catch {
     return '';

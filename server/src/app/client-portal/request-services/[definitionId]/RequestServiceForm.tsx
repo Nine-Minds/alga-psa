@@ -7,6 +7,9 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import type { IContact, IUser } from '@alga-psa/types';
 import {
   computeVisibleFieldKeys,
   isMissingRequiredValue,
@@ -43,6 +46,44 @@ interface RequestServiceFormField {
   required?: boolean;
   helpText?: string | null;
   options?: Array<{ value?: string; label?: string }>;
+  /** Lookup fields only. The options themselves come from `lookupOptions`, resolved by the server. */
+  lookup?: { entity: 'contact' | 'user' };
+}
+
+/** One server-resolved choice for a lookup field (see lib/service-requests/lookupFields.ts). */
+export interface RequestServiceLookupOption {
+  id: string;
+  label: string;
+  secondaryLabel?: string;
+}
+
+// The shared pickers take full entity rows; these carry only what the pickers read for display.
+function toPickerContact(option: RequestServiceLookupOption): IContact {
+  return {
+    contact_name_id: option.id,
+    full_name: option.label,
+    email: option.secondaryLabel ?? null,
+    is_inactive: false,
+    client_id: null,
+    phone_numbers: [],
+    role: null,
+    notes: null,
+    created_at: '',
+    updated_at: '',
+    tenant: '',
+  } as IContact;
+}
+
+function toPickerUser(option: RequestServiceLookupOption): IUser {
+  return {
+    user_id: option.id,
+    first_name: option.label,
+    last_name: '',
+    email: option.secondaryLabel ?? '',
+    user_type: 'internal',
+    is_inactive: false,
+    tenant: '',
+  } as unknown as IUser;
 }
 
 interface RequestServiceFormLabels {
@@ -51,7 +92,11 @@ interface RequestServiceFormLabels {
   submit: string;
   /** Shown under a visible required field that is still empty when the client submits. */
   requiredField: string;
+  /** Shown instead of an input for a field whose type this form does not know. */
+  unsupportedField: string;
 }
+
+const KNOWN_FIELD_TYPES = new Set(['short-text', 'long-text', 'select', 'checkbox', 'date', 'file-upload', 'lookup']);
 
 interface RequestServiceFormVisibility {
   enabled: boolean;
@@ -63,6 +108,11 @@ interface RequestServiceFormProps {
   action: (formData: FormData) => void | Promise<void>;
   fields: RequestServiceFormField[];
   initialValues: Record<string, unknown>;
+  /**
+   * Options for lookup fields keyed by field key, resolved server-side for this requester. The form
+   * never asks for a list of people itself, and the server re-checks every posted id on submit.
+   */
+  lookupOptions?: Record<string, RequestServiceLookupOption[]>;
   /** Live conditional-visibility rules; when absent or disabled every field renders. */
   visibility?: RequestServiceFormVisibility;
   labels: RequestServiceFormLabels;
@@ -78,6 +128,7 @@ export function RequestServiceForm({
   action,
   fields,
   initialValues,
+  lookupOptions,
   visibility,
   labels,
   clientSubmissionKey,
@@ -131,6 +182,9 @@ export function RequestServiceForm({
       const key = field.key || `field_${index}`;
       if (!field.required || (visibleFieldKeys && !visibleFieldKeys.has(key))) {
         return;
+      }
+      if (field.type !== undefined && !KNOWN_FIELD_TYPES.has(field.type)) {
+        return; // inert row: there is nothing to fill in
       }
       if (field.type === 'file-upload') {
         const input = event.currentTarget.elements.namedItem(key);
@@ -187,6 +241,19 @@ export function RequestServiceForm({
         const currentValue = values[key];
         const automationId = `request-service-field-${key}`;
 
+        // Defence in depth: a published version only exists if its schema validated, but a legacy
+        // definition must never masquerade as a free-text question.
+        if (field.type !== undefined && !KNOWN_FIELD_TYPES.has(field.type)) {
+          return (
+            <div key={key} className="space-y-1">
+              <p className="text-sm font-medium text-[rgb(var(--color-text-700))]">{label}</p>
+              <p id={automationId} role="note" className="text-sm text-destructive">
+                {labels.unsupportedField}
+              </p>
+            </div>
+          );
+        }
+
         if (field.type === 'long-text') {
           return (
             <div key={key} className="space-y-1">
@@ -229,6 +296,51 @@ export function RequestServiceForm({
                 allowClear={!field.required}
               />
               <input type="hidden" name={key} value={typeof currentValue === 'string' ? currentValue : ''} />
+              {renderRequiredError(key)}
+              {renderHelpText(helpText)}
+            </div>
+          );
+        }
+
+        if (field.type === 'lookup') {
+          const options = lookupOptions?.[key] ?? [];
+          const selectedId = typeof currentValue === 'string' ? currentValue : '';
+          return (
+            <div key={key} className="space-y-1">
+              {/* The shared pickers do not render a form label (ContactPicker ignores `label` visually,
+                  UserPicker draws its own heading), so the question label is drawn here like select/date. */}
+              <label
+                htmlFor={automationId}
+                className="block text-sm font-medium text-[rgb(var(--color-text-700))]"
+              >
+                {labelWithRequired}
+              </label>
+              {field.lookup?.entity === 'user' ? (
+                <UserPicker
+                  id={automationId}
+                  label={label}
+                  labelStyle="none"
+                  value={selectedId}
+                  onValueChange={(value) => setValue(key, value)}
+                  users={options.map(toPickerUser)}
+                  userTypeFilter="internal"
+                  placeholder={labels.selectPlaceholder}
+                  buttonWidth="full"
+                  modal={false}
+                />
+              ) : (
+                <ContactPicker
+                  id={automationId}
+                  label={label}
+                  contacts={options.map(toPickerContact)}
+                  value={selectedId}
+                  onValueChange={(value) => setValue(key, value)}
+                  placeholder={labels.selectPlaceholder}
+                  buttonWidth="full"
+                  modal={false}
+                />
+              )}
+              <input type="hidden" name={key} value={selectedId} />
               {renderRequiredError(key)}
               {renderHelpText(helpText)}
             </div>

@@ -19,7 +19,8 @@
     "datePlaceholder": "Selecteer een datum",
     "optionLabel": "Optie {{index}}",
     "submit": "Aanvraag indienen",
-    "requiredField": "Dit veld is verplicht."
+    "requiredField": "Dit veld is verplicht.",
+    "unsupportedField": "Deze vraag is niet beschikbaar."
   },
   "myRequests": {
     "title": "Mijn aanvragen",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Verwerking voltooid",
       "service_request_submission_execution_failed": "Verwerking mislukt"
     },
-    "unnamedAttachment": "Bijlage"
+    "unnamedAttachment": "Bijlage",
+    "lookupUnavailable": "(niet meer beschikbaar)"
   },
   "recent": {
     "title": "Uw recente verzoeken",

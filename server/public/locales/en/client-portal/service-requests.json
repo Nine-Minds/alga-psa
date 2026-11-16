@@ -19,7 +19,8 @@
     "datePlaceholder": "Select date",
     "optionLabel": "Option {{index}}",
     "submit": "Submit Request",
-    "requiredField": "This field is required."
+    "requiredField": "This field is required.",
+    "unsupportedField": "This question is not available."
   },
   "myRequests": {
     "title": "My Requests",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Request processing completed",
       "service_request_submission_execution_failed": "Request processing failed"
     },
-    "unnamedAttachment": "Attachment"
+    "unnamedAttachment": "Attachment",
+    "lookupUnavailable": "(no longer available)"
   },
   "recent": {
     "title": "Your recent requests",

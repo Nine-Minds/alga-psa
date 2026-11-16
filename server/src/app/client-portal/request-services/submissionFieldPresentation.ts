@@ -40,7 +40,8 @@ export function getSubmissionFieldDisplay(
   field: SubmissionFieldSnapshot,
   fields: SubmissionFieldSnapshot[],
   payload: Record<string, unknown>,
-  attachments: SubmissionAttachmentSnapshot[]
+  attachments: SubmissionAttachmentSnapshot[],
+  lookup: { labels: Record<string, string>; unavailableText: string } = { labels: {}, unavailableText: '' }
 ): SubmissionFieldDisplay {
   const key = typeof field?.key === 'string' ? field.key : null;
   if (!key) {
@@ -75,6 +76,11 @@ export function getSubmissionFieldDisplay(
   const value = payload[key];
   if (isMissingValue(value)) {
     return { kind: 'missing' };
+  }
+
+  // A lookup answer is an entity id: show its resolved label, never the id.
+  if (field.type === 'lookup') {
+    return { kind: 'text', text: lookup.labels[key] ?? lookup.unavailableText };
   }
 
   if (field.type === 'select' && Array.isArray(field.options)) {

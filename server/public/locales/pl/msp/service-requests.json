@@ -92,7 +92,8 @@
         "select": "lista wyboru",
         "checkbox": "pole wyboru",
         "date": "data",
-        "file-upload": "przesyłanie pliku"
+        "file-upload": "przesyłanie pliku",
+        "lookup": "Wyszukiwanie"
       },
       "visibility": {
         "title": "Pokaż, gdy…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Zaawansowane (JSON)",
         "advancedJsonHelp": "Pełna zapisana konfiguracja, w tym wartości domyślne kontekstu. Reguły widoczności łatwiej zmieniać w edytorze „Pokaż, gdy…” przy każdym polu. Niezapisane zmiany w tym miejscu zostaną odrzucone, jeśli zmienisz tam regułę."
-      }
+      },
+      "lookup": {
+        "entity": "Wyszukaj",
+        "entities": {
+          "contact": "Kontakt",
+          "user": "Użytkownik MSP"
+        },
+        "scope": "Opcje pochodzą z",
+        "scopes": {
+          "requester-client": "Klient zgłaszającego",
+          "tenant": "Cała przestrzeń robocza"
+        }
+      },
+      "unsupportedType": "Nieobsługiwany typ pola „{{type}}”. Usuń to pole i dodaj je ponownie przed publikacją."
     },
     "execution": {
       "title": "Wykonanie",

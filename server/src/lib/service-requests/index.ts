@@ -7,6 +7,7 @@ export * from './definitionManagement';
 export * from './definitionEditor';
 export * from './definitionAudience';
 export * from './basicFormBuilder';
+export * from './lookupFields';
 export * from './submissionAudit';
 export * from './submissionHistory';
 export * from './portalCatalog';

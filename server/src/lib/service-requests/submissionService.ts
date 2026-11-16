@@ -15,6 +15,7 @@ import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 import { isUniqueViolationOnIndex } from './pgUniqueConstraint';
+import { validateLookupAnswers } from './lookupFields';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -324,6 +325,21 @@ export async function submitPortalServiceRequest(
   });
   if (validationErrors.length > 0) {
     throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
+  }
+
+  // The one async step: every visible lookup answer must resolve inside its own field's option set
+  // for THIS requester (session-derived clientId). Runs before the insert, so a refused submission
+  // leaves no row. Hidden lookups are not validated and were already dropped from visiblePayload.
+  const lookupErrors = await validateLookupAnswers(
+    knex,
+    tenant,
+    (definitionDetail.formSchema as { fields?: unknown } | null)?.fields,
+    visiblePayload,
+    { clientId, contactId },
+    visibleFieldKeySet
+  );
+  if (lookupErrors.length > 0) {
+    throw new Error(`Submission validation failed: ${lookupErrors.join('; ')}`);
   }
 
   if (visibleAttachments.length > 0) {

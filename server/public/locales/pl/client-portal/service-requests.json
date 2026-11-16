@@ -19,7 +19,8 @@
     "datePlaceholder": "Wybierz datę",
     "optionLabel": "Opcja {{index}}",
     "submit": "Prześlij zgłoszenie",
-    "requiredField": "To pole jest wymagane."
+    "requiredField": "To pole jest wymagane.",
+    "unsupportedField": "To pytanie jest niedostępne."
   },
   "myRequests": {
     "title": "Moje zgłoszenia",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Przetwarzanie zakończone",
       "service_request_submission_execution_failed": "Przetwarzanie nie powiodło się"
     },
-    "unnamedAttachment": "Załącznik"
+    "unnamedAttachment": "Załącznik",
+    "lookupUnavailable": "(już niedostępne)"
   },
   "recent": {
     "title": "Twoje ostatnie zgłoszenia",

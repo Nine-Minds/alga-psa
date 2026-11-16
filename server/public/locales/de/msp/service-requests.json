@@ -92,7 +92,8 @@
         "select": "Auswahlliste",
         "checkbox": "Kontrollkästchen",
         "date": "Datum",
-        "file-upload": "Datei-Upload"
+        "file-upload": "Datei-Upload",
+        "lookup": "Nachschlagen"
       },
       "visibility": {
         "title": "Anzeigen, wenn…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Erweitert (JSON)",
         "advancedJsonHelp": "Die vollständige gespeicherte Konfiguration, einschließlich Kontext-Standardwerten. Sichtbarkeitsregeln ändern Sie einfacher über „Anzeigen, wenn…“ an jedem Feld. Ungespeicherte Änderungen hier werden verworfen, wenn dort eine Regel geändert wird."
-      }
+      },
+      "lookup": {
+        "entity": "Nachschlagen von",
+        "entities": {
+          "contact": "Kontakt",
+          "user": "MSP-Benutzer"
+        },
+        "scope": "Optionen stammen aus",
+        "scopes": {
+          "requester-client": "Kunde des Anfragenden",
+          "tenant": "Gesamter Arbeitsbereich"
+        }
+      },
+      "unsupportedType": "Nicht unterstützter Feldtyp „{{type}}“. Entfernen Sie dieses Feld und fügen Sie es vor der Veröffentlichung erneut hinzu."
     },
     "execution": {
       "title": "Ausführung",

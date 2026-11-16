@@ -12,6 +12,8 @@ import {
   submitPortalServiceRequest,
   resolveSubmissionVisibility,
   validateSubmissionAgainstPublishedSchema,
+  resolveLookupOptionsForFields,
+  type LookupOption,
   toPortalFormView,
   type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
@@ -64,6 +66,7 @@ function requestServiceSubmitErrorMessage(error: unknown): string {
     return 'This request form is no longer available.';
   }
 
+  // Includes lookup refusals ("Invalid selection for "<field label>""), which name the field.
   if (error.message.startsWith('Submission validation failed:')) {
     return `Please fix the form: ${error.message.replace('Submission validation failed:', '').trim()}`;
   }
@@ -102,6 +105,41 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
       definitionId
     );
     return detail ? toPortalFormView(detail) : null;
+  });
+});
+
+/**
+ * Options for the lookup fields of ONE definition the requester can see. This is deliberately not a
+ * general "list contacts" action: it takes no client id, derives scope from the session, and returns
+ * nothing for a definition that is not visible or has no lookup fields.
+ */
+export const getRequestServiceLookupOptionsAction = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  definitionId: string
+): Promise<Record<string, LookupOption[]>> => {
+  if (!isClientUserType(currentUser.user_type)) {
+    return {};
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
+    const requester = { clientId, contactId: currentUser.contact_id ?? null };
+    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
+      trx,
+      { tenant, requesterUserId: currentUser.user_id, ...requester },
+      definitionId
+    );
+    if (!detail) {
+      return {};
+    }
+    return resolveLookupOptionsForFields(
+      trx,
+      tenant,
+      (detail.formSchema as { fields?: unknown }).fields,
+      requester
+    );
   });
 });
 
