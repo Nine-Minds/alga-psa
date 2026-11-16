@@ -2645,7 +2645,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <ListCard>
         {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
           <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
-            className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900 disabled:opacity-60"
+            className="mb-3 w-full rounded-md border border-[rgb(var(--badge-info-border))] bg-[rgb(var(--badge-info-bg))] px-3 py-2 text-left text-sm font-medium text-[rgb(var(--badge-info-text))] hover:brightness-95 dark:hover:brightness-110 disabled:opacity-60"
             aria-live="polite">
             {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
               ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,

@@ -279,7 +279,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               >
                 {value}
               </Link>
-              {record.ticket_id && isTicketChanged?.(record.ticket_id) && <span className="shrink-0 rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900 dark:text-sky-100">{t('live.updatedBadge', 'Updated')}</span>}
+              {record.ticket_id && isTicketChanged?.(record.ticket_id) && <span className="shrink-0 rounded-full bg-[rgb(var(--badge-info-bg))] px-1.5 py-0.5 text-[10px] font-medium text-[rgb(var(--badge-info-text))]">{t('live.updatedBadge', 'Updated')}</span>}
               </div>
               {(showTicketNumberSubtitle || showCategorySubtitle) && (
                 <div className="flex items-center gap-1.5 overflow-hidden text-[11px] leading-tight text-[rgb(var(--color-text-500))]">
