@@ -134,6 +134,11 @@ export type TicketComment = {
   scheduled_publish_at?: string | null;
   scheduled_publish_tz?: string | null;
   published_at?: string | null;
+  /**
+   * Comment metadata as returned by the v1 comments API (full format). Carries the
+   * `opensTicket` marker and `attachmentCount` for the comment that opened a ticket by email.
+   */
+  metadata?: Record<string, unknown> | string | null;
   /** One-off Cc/Bcc the agent added to this single comment. */
   email_recipients?: {
     cc?: Array<{ email: string; name?: string }>;

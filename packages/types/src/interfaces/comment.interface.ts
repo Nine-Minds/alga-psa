@@ -52,6 +52,13 @@ export interface CommentMetadata {
   email?: CommentMetadataEmail;
   /** Per-comment Cc/Bcc for the outbound comment email. Public comments only. */
   email_recipients?: CommentEmailRecipients;
+  /**
+   * This comment is the inbound email that opened its ticket. Top-level on purpose:
+   * `metadata.email` is stripped for client principals, this marker is not.
+   */
+  opensTicket?: boolean;
+  /** Non-inline attachment count of the opening email. Absent when unknown (and on backfilled rows). */
+  attachmentCount?: number;
   [key: string]: unknown;
 }
 

@@ -1599,9 +1599,18 @@ export async function createCommentFromEmail(
      * Absent for every other sender, whose reply follows the native rules.
      */
     audience?: { author: CommentAudienceReader; audience: CommentAudience };
-    // Keep this comment in-app only (no tech email). Set for the first comment on a new
-    // inbound-email ticket, which the TICKET_CREATED email already covers.
+    // Keep this comment in-app only (no tech email). Still honored for callers that suppress
+    // without opening a ticket; the opener call sites use `opensTicket`, which implies it.
     suppressTechEmailNotification?: boolean;
+    /**
+     * This comment is the inbound email that opened its ticket (the first comment on a brand-new
+     * ticket). Stored as top-level `metadata.opensTicket` (NOT under `metadata.email`, which is
+     * redacted for client principals) and implies in-app-only: the TICKET_CREATED email already
+     * covers it. Reply paths never set this.
+     */
+    opensTicket?: boolean;
+    /** Non-inline attachment count of the opening email. Only written with `opensTicket`; omit when unknown. */
+    attachmentCount?: number;
     inboundReplyEvent?: {
       messageId: string;
       threadId?: string;
@@ -1642,6 +1651,16 @@ export async function createCommentFromEmail(
         ? 'internal'
         : 'system';
 
+  const suppressTechEmail = Boolean(commentData.opensTicket) || (commentData.suppressTechEmailNotification ?? false);
+  const openerMetadata: Record<string, unknown> = commentData.opensTicket
+    ? {
+        opensTicket: true,
+        ...(typeof commentData.attachmentCount === 'number' && Number.isFinite(commentData.attachmentCount) && commentData.attachmentCount >= 0
+          ? { attachmentCount: Math.floor(commentData.attachmentCount) }
+          : {}),
+      }
+    : {};
+
   const createCommentInTransaction = async (content: string): Promise<string> =>
     withAdminTransaction(async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
@@ -1650,13 +1669,13 @@ export async function createCommentFromEmail(
       const eventPublisher =
         executionOptions?.eventPublisher ??
         new WorkflowEventPublisher({
-          suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
+          suppressCommentEmail: suppressTechEmail,
           transaction: trx,
         });
       // The durable outbox publisher distinguishes the initial comment (in-app
       // only) from a reply comment; drive that from this call's flag.
       if (eventPublisher && typeof (eventPublisher as any).setSuppressCommentEmail === 'function') {
-        (eventPublisher as any).setSuppressCommentEmail(commentData.suppressTechEmailNotification ?? false);
+        (eventPublisher as any).setSuppressCommentEmail(suppressTechEmail);
       }
       const analyticsTracker = executionOptions?.analyticsTracker ?? new WorkflowAnalyticsTracker();
 
@@ -1673,15 +1692,18 @@ export async function createCommentFromEmail(
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
         contact_id: commentData.contact_id,
-        metadata: buildInboundEmailCommentMetadata(
-          commentData.metadata,
-          commentData.inboundReplyEvent
-            ? {
-                provider: commentData.inboundReplyEvent.provider,
-                from: commentData.inboundReplyEvent.from,
-              }
-            : undefined
-        )
+        metadata: {
+          ...buildInboundEmailCommentMetadata(
+            commentData.metadata,
+            commentData.inboundReplyEvent
+              ? {
+                  provider: commentData.inboundReplyEvent.provider,
+                  from: commentData.inboundReplyEvent.from,
+                }
+              : undefined
+          ),
+          ...openerMetadata,
+        }
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
       // Apply the shared response-state rules to the comment's final visibility.
