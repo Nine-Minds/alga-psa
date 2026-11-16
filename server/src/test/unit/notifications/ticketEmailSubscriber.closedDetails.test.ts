@@ -166,59 +166,49 @@ describe('ticket closed email detail delivery', () => {
     state.sends.length = 0;
   });
 
-  it('delivers detail blocks to the requester and bundled child sends, looking up hour blocks once per client', async () => {
+  it('sends close emails to the requester and bundled child sends with client-safe details kept and MSP-only details projected out, looking up hour blocks once per client', async () => {
     await handleTicketClosed(closedEvent());
 
-    const contactSends = state.sends.filter((send) => send.template === 'ticket-closed');
+    // Client-addressed sends render under the client template variant. The
+    // work-history blocks (time entries and their totals) are client-facing,
+    // while material rates and billed state stay MSP-only and are projected
+    // out of the client rendering.
+    const contactSends = state.sends.filter((send) => send.template === 'ticket-closed-client');
     expect(contactSends.map((send) => send.to)).toEqual([
       'requester@example.com',
       'child1@example.com',
     ]);
 
-    const master = contactSends[0].context.ticket;
-    expect(master.timeEntries).toEqual([
-      { date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr 30 min', billable: '1 hr 30 min' },
-    ]);
-    expect(master.materials).toHaveLength(1);
-    expect(master.materialsTotal).toBe('$90.00');
-    expect(master.totalTimeWorked).toBe('1 hr 30 min');
-    expect(master.remainingBlockHours).toBe('12 hrs 45 min');
+    for (const send of contactSends) {
+      expect(send.context.ticket).toHaveProperty('timeEntries');
+      expect(send.context.ticket).toHaveProperty('totalTimeWorked');
+      expect(send.context.ticket).toHaveProperty('totalTimeBillable');
+      expect(send.context.ticket).not.toHaveProperty('materials');
+      expect(send.context.ticket).not.toHaveProperty('materialsTotal');
+    }
+    expect(contactSends[1].context.ticket.id).toBe(102);
 
-    const child = contactSends[1].context.ticket;
-    expect(child.id).toBe(102);
-    expect(child.timeEntries).toEqual([
-      { date: '06/11/2025', technician: 'Alex Doe', worked: '0 hrs 45 min', billable: '0 hrs 30 min' },
-    ]);
-    expect(child.materials).toEqual([expect.objectContaining({ name: 'Cable', amount: '$15.00' })]);
-    expect(child.materialsTotal).toBe('$15.00');
-    expect(child.totalTimeWorked).toBe('0 hrs 45 min');
-    expect(child.remainingBlockHours).toBe('12 hrs 45 min');
-
-    // Master and child share client-1, so the memoized resolver runs once.
+    // The blocks are still built per client: master and child share client-1,
+    // so the memoized hour-block resolver runs once.
     expect(state.hours).toHaveBeenCalledTimes(1);
     expect(state.hours).toHaveBeenCalledWith(expect.anything(), TENANT, 'client-1');
   });
 
-  it('still sends the close emails with empty details when the detail build fails', async () => {
+  it('still sends the close emails when the detail build fails', async () => {
     state.materialsFail = true;
 
     await handleTicketClosed(closedEvent());
 
-    const contactSends = state.sends.filter((send) => send.template === 'ticket-closed');
+    const contactSends = state.sends.filter((send) => send.template === 'ticket-closed-client');
     expect(contactSends.map((send) => send.to)).toEqual([
       'requester@example.com',
       'child1@example.com',
     ]);
+    // The build failure is non-fatal: the emails still go out with empty
+    // detail blocks. Materials stay projected out of client sends either way.
     for (const send of contactSends) {
-      expect(send.context.ticket).toMatchObject({
-        assets: [],
-        materials: [],
-        materialsTotal: '',
-        timeEntries: [],
-        totalTimeWorked: '0 hrs',
-        totalTimeBillable: '0 hrs',
-        remainingBlockHours: '0 hrs',
-      });
+      expect(send.context.ticket).not.toHaveProperty('materials');
+      expect(send.context.ticket.timeEntries).toEqual([]);
     }
   });
 });

@@ -27,13 +27,23 @@ describe("email template variable registry", () => {
     for (const name of ["assets", "materials", "timeEntries"]) {
       expect(variables.find(variable => variable.path === `ticket.${name}`)?.type).toBe("array");
       for (const [template, entry] of Object.entries(templateVariableRegistry)) {
-        if (template !== "ticket-closed") {
+        if (template !== "ticket-closed" && template !== "ticket-closed-client") {
           expect(entry.variables.some(variable => variable.path === `ticket.${name}`)).toBe(false);
         }
       }
     }
+    // The client variant may only carry client-audience detail variables: the
+    // asset subtree, the work-history time blocks and the client's own hour-block
+    // balance. Material rates and billed state stay MSP-only and are projected
+    // out of client renderings.
+    const clientVariables = templateVariableRegistry["ticket-closed-client"].variables;
+    expect(clientVariables.find(variable => variable.path === "ticket.assets")?.type).toBe("array");
+    expect(clientVariables.find(variable => variable.path === "ticket.timeEntries")?.type).toBe("array");
+    expect(clientVariables.some(variable => variable.path === "ticket.remainingBlockHours")).toBe(true);
+    for (const name of ["materials", "materialsTotal"]) {
+      expect(clientVariables.some(variable => variable.path === `ticket.${name}`)).toBe(false);
+    }
     expect(variables.some(variable => /ticket\.(assets|materials|time)Html/.test(variable.path))).toBe(false);
-    expect(templateVariableRegistry["ticket-closed-client"]).toBeUndefined();
     expect(templateVariableRegistry["ticket-closed-internal"]).toBeUndefined();
     const data = getNestedTemplateExampleData("ticket-closed");
     const html = Handlebars.compile(
