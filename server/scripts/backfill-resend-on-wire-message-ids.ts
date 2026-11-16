@@ -8,6 +8,7 @@
  * Run inside a server pod (RESEND_API_KEY is the platform key the sends used):
  *   npx tsx scripts/backfill-resend-on-wire-message-ids.ts --tenant <id> [--dry-run] [--limit N]
  *       [--after-id <id>] [--min-interval-ms 250] [--api-key-env RESEND_API_KEY]
+ *   RESEND_BASE_URL overrides the API base (default https://api.resend.com), as on the send path.
  *
  * Output is counts and ids only, never the API key. Exits non-zero if any row errored.
  */
@@ -50,7 +51,8 @@ async function run() {
     const summary = await backfillResendOnWireMessageIds(knexInstance, {
       tenant,
       dryRun,
-      retrieve: createResendRetrieve(apiKey),
+      // Same base-URL override the send path honours (SystemEmailProviderFactory, ManagedDomainService).
+      retrieve: createResendRetrieve(apiKey, process.env.RESEND_BASE_URL?.trim() || undefined),
       afterId: option(argv, '--after-id') ?? null,
       limit: limit ? Number(limit) : undefined,
       minIntervalMs: minInterval ? Number(minInterval) : undefined,
