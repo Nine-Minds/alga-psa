@@ -517,6 +517,10 @@
     "viewTicket": "Ticket bekijken",
     "noTicket": "Voor deze aanvraag is geen ticket aangemaakt.",
     "action": "Indienen namens…",
-    "actionShort": "Indienen voor een klant"
+    "actionShort": "Indienen voor een klant",
+    "noAccess": {
+      "title": "U kunt geen serviceaanvragen indienen",
+      "description": "Voor het indienen van een aanvraag voor een klantcontact is toestemming nodig om tickets aan te maken en klanten en contacten te bekijken. Vraag een beheerder om toegang te verlenen."
+    }
   }
 }

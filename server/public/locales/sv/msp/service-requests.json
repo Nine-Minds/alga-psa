@@ -517,6 +517,10 @@
     "viewTicket": "Visa ärendet",
     "noTicket": "Inget ärende skapades för den här begäran.",
     "action": "Skicka in på uppdrag av…",
-    "actionShort": "Skicka in för en kund"
+    "actionShort": "Skicka in för en kund",
+    "noAccess": {
+      "title": "Du kan inte skicka in serviceförfrågningar",
+      "description": "Att skicka in en förfrågan åt en kundkontakt kräver behörighet att skapa ärenden och att visa kunder och kontakter. Be en administratör ge dig åtkomst."
+    }
   }
 }

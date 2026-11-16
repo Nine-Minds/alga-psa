@@ -20,16 +20,38 @@ import {
 } from '../onBehalfActions';
 
 interface SubmitOnBehalfPageProps {
+  /** Whether the user holds the shared MSP submit gate; without it nothing loads. */
+  canSubmit: boolean;
   initialClientId: string | null;
   initialContactId: string | null;
   initialDefinitionId: string | null;
 }
 
-export default function SubmitOnBehalfPage({
+export default function SubmitOnBehalfPage({ canSubmit, ...props }: SubmitOnBehalfPageProps) {
+  const { t } = useTranslation('msp/service-requests');
+  if (!canSubmit) {
+    return (
+      <div className="p-6 max-w-3xl">
+        <Alert variant="destructive" id="service-request-submit-no-access">
+          <AlertTitle>{t('submit.noAccess.title', { defaultValue: 'You cannot submit service requests' })}</AlertTitle>
+          <AlertDescription>
+            {t('submit.noAccess.description', {
+              defaultValue:
+                'Submitting a request for a client contact requires permission to create tickets and to view clients and contacts. Ask an administrator to grant access.',
+            })}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  return <SubmitOnBehalfFlow {...props} />;
+}
+
+function SubmitOnBehalfFlow({
   initialClientId,
   initialContactId,
   initialDefinitionId,
-}: SubmitOnBehalfPageProps) {
+}: Omit<SubmitOnBehalfPageProps, 'canSubmit'>) {
   const { t } = useTranslation('msp/service-requests');
   const [clientId, setClientId] = useState<string | null>(initialClientId);
   const [contactId, setContactId] = useState<string>(initialContactId ?? '');

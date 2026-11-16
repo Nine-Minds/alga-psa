@@ -517,6 +517,10 @@
     "viewTicket": "Visualizza il ticket",
     "noTicket": "Per questa richiesta non è stato creato alcun ticket.",
     "action": "Invia per conto di…",
-    "actionShort": "Invia per un cliente"
+    "actionShort": "Invia per un cliente",
+    "noAccess": {
+      "title": "Non puoi inviare richieste di servizio",
+      "description": "Inviare una richiesta per un contatto cliente richiede l'autorizzazione a creare ticket e a visualizzare clienti e contatti. Chiedi a un amministratore di concederti l'accesso."
+    }
   }
 }

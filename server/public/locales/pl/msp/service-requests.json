@@ -519,6 +519,10 @@
     "viewTicket": "Zobacz zgłoszenie",
     "noTicket": "Dla tego zgłoszenia nie utworzono ticketu.",
     "action": "Prześlij w imieniu…",
-    "actionShort": "Prześlij dla klienta"
+    "actionShort": "Prześlij dla klienta",
+    "noAccess": {
+      "title": "Nie możesz przesyłać zgłoszeń serwisowych",
+      "description": "Przesłanie zgłoszenia w imieniu kontaktu klienta wymaga uprawnień do tworzenia zgłoszeń oraz przeglądania klientów i kontaktów. Poproś administratora o przyznanie dostępu."
+    }
   }
 }

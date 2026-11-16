@@ -5,18 +5,21 @@
  *   POST /api/v1/service-requests/{definitionId}/submissions
  *
  * Thin over lib/service-requests/mspSubmissions.ts, the same functions the MSP UI calls.
- * RBAC: the existing `service` resource - read for the catalog, create for a submission.
- * No client-scoped rule; the tenant is the boundary.
+ * RBAC: the shared MSP submit gate (lib/service-requests/mspSubmitPermissions.ts) - catalog needs
+ * client:read + contact:read; a submission also needs ticket:create. Not `service:*` (catalog authoring).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, type ZodSchema } from 'zod';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { getConnection } from '../../db/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { ApiBaseController } from './ApiBaseController';
 import {
   AuthenticatedApiRequest,
+  ForbiddenError,
   NotFoundError,
+  UnauthorizedError,
   ValidationError,
   createSuccessResponse,
   handleApiError,
@@ -26,6 +29,13 @@ import {
   serviceRequestSubmissionBodySchema,
   serviceRequestSubmissionParamsSchema,
 } from '../schemas/serviceRequestSubmission';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import {
+  findMissingPermission,
+  MSP_CATALOG_PERMISSIONS,
+  MSP_SUBMIT_PERMISSIONS,
+  permissionKey,
+} from '../../service-requests/mspSubmitPermissions';
 import { requireContactInReadScope } from '../../service-requests/servicePermission';
 import {
   listDefinitionsForRequester,
@@ -36,7 +46,21 @@ import {
 
 export class ApiServiceRequestController extends ApiBaseController {
   constructor() {
-    super({} as any, { resource: 'service_request', permissionResource: 'service' });
+    super({} as any, { resource: 'service_request' });
+  }
+
+  // LEVERAGE: friction api-controller-multi-permission — ApiBaseController.checkPermission takes one resource:action; this surface needs a set (ticket:create + client:read + contact:read), so the check is overridden here instead of expressed in controller options.
+  protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
+    if (!req.context.user) throw new UnauthorizedError('User context required');
+    const required = action === 'create' ? MSP_SUBMIT_PERMISSIONS : MSP_CATALOG_PERMISSIONS;
+    const knex = await getConnection(req.context.tenant);
+    const missing = await findMissingPermission(
+      (resource, act) => hasApiContextPermission(req.context, resource, act, knex),
+      required,
+    );
+    if (missing) {
+      throw new ForbiddenError(`Permission denied: ${permissionKey(missing)} required`);
+    }
   }
 
   private async parseBody<T>(req: AuthenticatedApiRequest, schema: ZodSchema<T>): Promise<T> {

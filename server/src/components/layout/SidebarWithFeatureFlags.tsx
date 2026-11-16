@@ -119,7 +119,8 @@ export function filterMenuItemsByPermission(
   permissions: readonly string[],
 ): MenuItem[] {
   return items.reduce<MenuItem[]>((visibleItems, item) => {
-    if (item.requiredPermission && !permissions.includes(item.requiredPermission)) {
+    const required = item.requiredPermission === undefined ? [] : [item.requiredPermission].flat();
+    if (!required.every((key) => permissions.includes(key))) {
       return visibleItems;
     }
 

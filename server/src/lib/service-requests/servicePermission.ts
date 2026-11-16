@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { MspSubmissionError } from './mspSubmissions';
+import { findMissingPermission, permissionKey, type MspSubmitPermission } from './mspSubmitPermissions';
 
 type PermissionUser = Parameters<typeof hasPermission>[0];
 
@@ -14,23 +15,22 @@ export class ServiceRequestPermissionError extends Error {
   }
 }
 
-// LEVERAGE: pattern service-request-permission-gate — app/msp/service-requests/actions.ts has a private copy of this gate (MSP-only + `service:<action>`); one shared helper would serve both.
 /**
- * Gate for MSP service-request surfaces: MSP users only, holding the existing
- * `service` resource permission. Deliberately no `service_request:*` resource
- * (RBAC for that is owned by another card) and no client-scoped rule.
+ * Gate for MSP submit-on-behalf surfaces: MSP users only, holding every permission in `required`
+ * (see mspSubmitPermissions.ts). Deliberately no `service:*` (catalog authoring) and no new
+ * `service_request:*` resource (RBAC for that is owned by another card).
  */
-export async function requireServiceRequestPermission(
+export async function requireMspSubmitPermissions(
   user: PermissionUser,
-  action: 'create' | 'read' | 'update' | 'delete',
+  required: readonly MspSubmitPermission[],
   knex?: Knex
 ): Promise<void> {
   if ((user as { user_type?: string }).user_type === 'client') {
     throw new ServiceRequestPermissionError('MSP user required');
   }
-  const allowed = await hasPermission(user, 'service', action, knex);
-  if (!allowed) {
-    throw new ServiceRequestPermissionError(`Service permission "${action}" required`);
+  const missing = await findMissingPermission((resource, action) => hasPermission(user, resource, action, knex), required);
+  if (missing) {
+    throw new ServiceRequestPermissionError(`Permission "${permissionKey(missing)}" required`);
   }
 }
 

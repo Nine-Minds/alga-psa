@@ -92,15 +92,18 @@ New `server/src/lib/service-requests/mspSubmissions.ts`:
 MSP server actions (`server/src/app/msp/service-requests/onBehalfActions.ts`) wrap these with
 `requireServiceRequestPermission(user, 'read' | 'create')` and pass `submittedByUserId = user.user_id`.
 
-**Authorization decision.** Submission requires `service:read` (choose and open forms) and
-`service:create` (submit) — the two existing actions on the `service` resource that
-`requireServiceRequestPermission` already enforces for the authoring screens
-(`server/src/app/msp/service-requests/actions.ts:94-107`). Deliberately **not** inventing a
-`service_request:*` permission resource in this card: the RBAC resource set is being reconciled elsewhere,
-and a half-provisioned resource is what card `81594969` exists to fix. There is no client-scoped MSP RBAC
-anywhere in the app, so imposing one here would be inventing a rule the rest of the app does not have;
-the tenant boundary is the boundary. This is the one place I chose an existing gate over a new one, and it
-is worth the captain's eye at review.
+**Authorization decision.** The gate is `ticket:create` + `client:read` + `contact:read`; the catalog and
+pickers (list definitions for a contact, load the form, client/contact lookup,
+`GET /api/v1/service-requests/catalog`) need `client:read` + `contact:read`. `service:*` is not used: it
+controls catalog authoring ("create services/products in the service catalog", admin-only by default), so
+gating on it left a default Technician able to see the form but unable to submit. The outcome of this action
+is a ticket for a client contact, so the gate is the ticket permission plus the reads needed to pick and
+resolve the contact. All three are granted by default to Admin, Dispatcher, Manager, Project Manager and
+Technician in psa, and to Agent in algadesk. The two sets live in one module,
+`server/src/lib/service-requests/mspSubmitPermissions.ts`; the actions, the API controller, the page and
+every entry point import it so they cannot drift. Deliberately **not** inventing a `service_request:*`
+permission resource in this card: the RBAC resource set is being reconciled elsewhere (card `81594969`).
+The existing `requireContactInReadScope` client-scope check still applies on top.
 
 ### 4. The form is shared, not copied
 
@@ -136,15 +139,15 @@ Entry points, all deep links into that page:
 - **Service Requests area**: a "Submit for a client" action next to "New definition".
 - **Client and contact detail pages**: a button carrying `clientId`/`contactId`, so the common case
   ("the client called") is two clicks.
-- All of them hidden for users without `service:read` (same `requiredPermission` mechanism already used
-  by `menuConfig.ts` entries).
+- All of them hidden, and the page itself showing a no-access state, for users lacking the full submit set
+  (`ticket:create` + `client:read` + `contact:read`). `menuConfig.ts` `requiredPermission` accepts a list.
 
 ### 6. API
 
 `POST /api/v1/service-requests/[definitionId]/submissions`
 — API-key auth, body `{clientId, contactId, answers, clientSubmissionKey?}`, response
 `{submissionId, executionStatus, ticketId}`, `404` when the contact cannot see the definition (`403` only
-for a key lacking `service:create`).
+for a key lacking the submit set).
 `GET /api/v1/service-requests?clientId=&contactId=` lists the catalog for that contact — without it the
 POST is unusable, since a caller cannot guess definition ids.
 
@@ -227,8 +230,8 @@ submission, one ticket.
 - **The `string → string | null` widening of `requesterUserId`** touches providers, audit and search
   events. Compile errors are the map; the risk is a `?? ''` slipping in where a real id is required —
   review every call site, and keep the portal path's identity unchanged.
-- **Authorization breadth** (§3): `service:create` may be granted more widely than "may act for a client".
-  Acceptable because the app has no finer MSP gate; name it in the PR so the captain sees it at review.
+- **Authorization breadth** (§3): `ticket:create` is held by every technician-type role, so any of them may
+  act for any client contact within their read scope. Acceptable because the app has no finer MSP gate.
 - **Ticket origin choice** (§2): if operators have saved filters on `client_portal`, staff-entered tickets
   will not appear there. That is the intended correction, but it is a visible behaviour change.
 - **Contact without a portal user** must never fall back to the technician's identity in

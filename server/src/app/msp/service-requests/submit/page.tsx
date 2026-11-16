@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
+import { grantsAllPermissions } from '../../../../lib/service-requests/mspSubmitPermissions';
 import SubmitOnBehalfPage from './SubmitOnBehalfPage';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,8 +21,10 @@ const asId = (value: unknown): string | null =>
 /** `clientId`, `contactId` and `definitionId` prefill the flow so entry points can deep-link. */
 export default async function MspSubmitServiceRequestPage({ searchParams }: PageProps) {
   const params = searchParams ? await searchParams : undefined;
+  const canSubmit = grantsAllPermissions(await getCurrentUserPermissions().catch(() => [] as string[]));
   return (
     <SubmitOnBehalfPage
+      canSubmit={canSubmit}
       initialClientId={asId(params?.clientId)}
       initialContactId={asId(params?.contactId)}
       initialDefinitionId={asId(params?.definitionId)}

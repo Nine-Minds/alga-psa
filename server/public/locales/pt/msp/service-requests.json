@@ -517,6 +517,10 @@
     "viewTicket": "Ver o ticket",
     "noTicket": "Não foi criado nenhum ticket para esta solicitação.",
     "action": "Enviar em nome de…",
-    "actionShort": "Enviar para um cliente"
+    "actionShort": "Enviar para um cliente",
+    "noAccess": {
+      "title": "Você não pode enviar solicitações de serviço",
+      "description": "Enviar uma solicitação em nome de um contato do cliente exige permissão para criar tickets e para visualizar clientes e contatos. Peça a um administrador para conceder o acesso."
+    }
   }
 }

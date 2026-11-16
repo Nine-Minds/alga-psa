@@ -517,6 +517,10 @@
     "viewTicket": "View the ticket",
     "noTicket": "No ticket was created for this request.",
     "action": "Submit on behalf of…",
-    "actionShort": "Submit for a client"
+    "actionShort": "Submit for a client",
+    "noAccess": {
+      "title": "You cannot submit service requests",
+      "description": "Submitting a request for a client contact requires permission to create tickets and to view clients and contacts. Ask an administrator to grant access."
+    }
   }
 }

@@ -517,6 +517,10 @@
     "viewTicket": "Voir le ticket",
     "noTicket": "Aucun ticket n'a été créé pour cette demande.",
     "action": "Soumettre au nom de…",
-    "actionShort": "Soumettre pour un client"
+    "actionShort": "Soumettre pour un client",
+    "noAccess": {
+      "title": "Vous ne pouvez pas soumettre de demandes de service",
+      "description": "Soumettre une demande pour un contact client nécessite l'autorisation de créer des tickets et de consulter les clients et les contacts. Demandez à un administrateur de vous accorder l'accès."
+    }
   }
 }

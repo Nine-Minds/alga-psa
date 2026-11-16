@@ -9,6 +9,7 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
+import { grantsAllPermissions } from '@/lib/service-requests/mspSubmitPermissions';
 import { buildMspSubmitServiceRequestHref } from '@/lib/service-requests/mspSubmitRoute';
 import type { Metadata } from 'next';
 
@@ -51,7 +52,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     ]);
     const documents = Array.isArray(documentsResult) ? documentsResult : [];
     const canSubmitServiceRequest =
-      !isAlgaDesk && (await getCurrentUserPermissions().catch(() => [] as string[])).includes('service:read');
+      !isAlgaDesk && grantsAllPermissions(await getCurrentUserPermissions().catch(() => [] as string[]));
 
     return (
       <AIChatContextBoundary

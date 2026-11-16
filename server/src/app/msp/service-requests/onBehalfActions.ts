@@ -20,9 +20,10 @@ import {
 } from '../../../lib/service-requests/mspSubmissions';
 import {
   requireContactInReadScope,
-  requireServiceRequestPermission,
+  requireMspSubmitPermissions,
   ServiceRequestPermissionError,
 } from '../../../lib/service-requests/servicePermission';
+import { MSP_CATALOG_PERMISSIONS, MSP_SUBMIT_PERMISSIONS } from '../../../lib/service-requests/mspSubmitPermissions';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from '../../../components/service-requests/clientSubmissionKey';
 
 export interface OnBehalfFormView {
@@ -42,7 +43,7 @@ export const listOnBehalfCatalogAction = withAuth(async (
   contactId: string
 ): Promise<ServiceRequestPortalCatalogItem[]> => {
   const { knex } = await createTenantKnex();
-  await requireServiceRequestPermission(user, 'read', knex);
+  await requireMspSubmitPermissions(user, MSP_CATALOG_PERMISSIONS, knex);
   await requireContactInReadScope(knex, tenant, user, contactId);
   const requester = await resolveRequesterForMspSubmission(knex, tenant, clientId, contactId, user.user_id);
   return listDefinitionsForRequester(knex, tenant, requester);
@@ -56,7 +57,7 @@ export const getOnBehalfDefinitionFormAction = withAuth(async (
   definitionId: string
 ): Promise<OnBehalfFormView | null> => {
   const { knex } = await createTenantKnex();
-  await requireServiceRequestPermission(user, 'read', knex);
+  await requireMspSubmitPermissions(user, MSP_CATALOG_PERMISSIONS, knex);
   await requireContactInReadScope(knex, tenant, user, contactId);
   const requester = await resolveRequesterForMspSubmission(knex, tenant, clientId, contactId, user.user_id);
   const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
@@ -101,7 +102,7 @@ export const submitOnBehalfServiceRequestAction = withAuth(async (
 
   const { knex } = await createTenantKnex();
   try {
-    await requireServiceRequestPermission(user, 'create', knex);
+    await requireMspSubmitPermissions(user, MSP_SUBMIT_PERMISSIONS, knex);
   } catch (error) {
     return outcomeForError(error);
   }
