@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { CollaborativeEditor } from '../CollaborativeEditor';
 import type { CollaborativeEditorHandle } from '../CollaborativeEditor';
+import type { Editor } from '@tiptap/react';
 import { DocumentEditor } from '../DocumentEditor';
 import { syncCollabSnapshot } from '../../actions/collaborativeEditingActions';
 import { updateBlockContent } from '../../actions/documentBlockContentActions';
@@ -117,9 +118,13 @@ export default function KBArticleEditor({
   // flush + preview refresh.
   const collabEditorRef = useRef<CollaborativeEditorHandle | null>(null);
   const isSavingContentRef = useRef(false);
-  const [isSavingContent, setIsSavingContent] = useState(false);
+  // Fallback-mode editor instance (DocumentEditor publishes it via editorRef).
+  const fallbackEditorRef = useRef<Editor | null>(null);
+  // Mirrors hasUnsavedMetadata so loadArticle('refresh') can read it without
+  // becoming a dependency (which would re-trigger the initial-load effect).
+  const hasUnsavedMetadataRef = useRef(false);
 
-  // Auto-fallback if CollaborativeEditor can't connect within 5 seconds
+  // Auto-fallback if CollaborativeEditor can't connect within 2 seconds
   const collabConnectedRef = useRef(false);
   useEffect(() => {
     if (isFallbackMode) return;
@@ -157,8 +162,10 @@ export default function KBArticleEditor({
     ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
   ];
 
-  const loadArticle = useCallback(async () => {
-    setIsLoading(true);
+  // 'initial' shows the page spinner. 'refresh' updates the article in place and
+  // must never unmount the editor (that would discard unsaved content).
+  const loadArticle = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+    if (mode === 'initial') setIsLoading(true);
     try {
       const result = await getArticle(articleId);
       if (isDocumentActionError(result)) {
@@ -171,12 +178,15 @@ export default function KBArticleEditor({
         return;
       }
       setArticle(articleData);
-      setTitle(articleData.document_name || '');
-      setSlug(articleData.slug || '');
-      setArticleType(articleData.article_type);
-      setAudience(articleData.audience);
-      setCategoryId(articleData.category_id || '');
-      setReviewCycleDays(articleData.review_cycle_days?.toString() || '');
+      // A refresh must not clobber metadata edits the user has not saved yet.
+      if (mode === 'initial' || !hasUnsavedMetadataRef.current) {
+        setTitle(articleData.document_name || '');
+        setSlug(articleData.slug || '');
+        setArticleType(articleData.article_type);
+        setAudience(articleData.audience);
+        setCategoryId(articleData.category_id || '');
+        setReviewCycleDays(articleData.review_cycle_days?.toString() || '');
+      }
 
       // Load tags for the article
       try {
@@ -192,113 +202,115 @@ export default function KBArticleEditor({
     } catch (error) {
       handleError(error, tRef.current('editor.feedback.loadError', { defaultValue: 'Failed to load article' }));
     } finally {
-      setIsLoading(false);
+      if (mode === 'initial') setIsLoading(false);
     }
   }, [articleId]);
 
   useEffect(() => {
-    loadArticle();
+    loadArticle('initial');
   }, [loadArticle]);
 
-  const handleSaveMetadata = async () => {
-    if (!article) return;
+  const handleMetadataChange = () => {
+    hasUnsavedMetadataRef.current = true;
+    setHasUnsavedMetadata(true);
+  };
 
+  const documentId = article?.document_id;
+
+  // Flush editor content to the server. Throws on failure so saveArticle can
+  // abort before touching metadata.
+  const flushContent = async (docId: string): Promise<void> => {
+    if (isFallbackMode) {
+      const editor = fallbackEditorRef.current;
+      if (!editor || editor.isDestroyed) {
+        throw new Error('Editor is not ready');
+      }
+      // LEVERAGE: pattern editor-json-to-block-content — same getJSON -> updateBlockContent shape as DocumentEditor.handleSave and the collab fallback below
+      const contentResult = await updateBlockContent(docId, {
+        block_data: JSON.stringify(editor.getJSON()),
+        user_id: userId,
+      });
+      if (isDocumentActionError(contentResult)) {
+        throw new Error(getErrorMessage(contentResult));
+      }
+      return;
+    }
+
+    // Live edits are autosaved server-side by the Hocuspocus persistence
+    // extension (~2s debounce + on disconnect); this forces an immediate flush.
+    const result = await syncCollabSnapshot(docId);
+    if (!result || !('success' in result) || !result.success) {
+      // Fallback: write the client-side editor JSON directly.
+      const json = collabEditorRef.current?.getJSON();
+      if (!json) {
+        const message =
+          result && 'message' in result && result.message
+            ? result.message
+            : 'Snapshot sync failed';
+        throw new Error(message);
+      }
+      const contentResult = await updateBlockContent(docId, {
+        block_data: JSON.stringify(json),
+        user_id: userId,
+      });
+      if (isDocumentActionError(contentResult)) {
+        throw new Error(getErrorMessage(contentResult));
+      }
+    }
+  };
+
+  // Single Save: content first, then metadata. Never reloads the article, so the
+  // editor stays mounted and unsaved content cannot be lost.
+  const saveArticle = async () => {
+    if (!article || !documentId || isSavingContentRef.current) return;
+    isSavingContentRef.current = true;
     setIsSaving(true);
     try {
-      const updates: IUpdateArticleInput = {};
-
-      if (title !== article.document_name) {
-        updates.title = title;
-      }
-      if (slug !== article.slug) {
-        updates.slug = slug;
-      }
-      if (articleType !== article.article_type) {
-        updates.articleType = articleType;
-      }
-      if (audience !== article.audience) {
-        updates.audience = audience;
-      }
-      if ((categoryId || null) !== article.category_id) {
-        updates.categoryId = categoryId || null;
-      }
-      const newReviewCycleDays = reviewCycleDays ? parseInt(reviewCycleDays, 10) : null;
-      if (newReviewCycleDays !== article.review_cycle_days) {
-        updates.reviewCycleDays = newReviewCycleDays;
-      }
-
-      if (Object.keys(updates).length === 0) {
-        toast.success(t('editor.feedback.noChanges', { defaultValue: 'No changes to save' }));
+      try {
+        await flushContent(documentId);
+      } catch (error) {
+        console.error('[KBArticleEditor] Content save failed', error);
+        toast.error(
+          t('editor.feedback.contentSaveError', { defaultValue: 'Failed to save article content' })
+        );
         return;
       }
+
+      const updates: IUpdateArticleInput = {};
+      if (title !== article.document_name) updates.title = title;
+      if (slug !== article.slug) updates.slug = slug;
+      if (articleType !== article.article_type) updates.articleType = articleType;
+      if (audience !== article.audience) updates.audience = audience;
+      if ((categoryId || null) !== article.category_id) updates.categoryId = categoryId || null;
+      const newReviewCycleDays = reviewCycleDays ? parseInt(reviewCycleDays, 10) : null;
+      if (newReviewCycleDays !== article.review_cycle_days) updates.reviewCycleDays = newReviewCycleDays;
 
       const result = await updateArticle(article.article_id, updates);
       if (isDocumentActionError(result)) {
         toast.error(t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
         return;
       }
-      toast.success(t('editor.feedback.saveSuccess', { defaultValue: 'Article metadata saved' }));
+      // updateArticle returns the bare kb_articles row (no document join), so
+      // keep the joined fields (block_data, document_name, ...) from state.
+      setArticle((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...(result as object),
+              document_name: updates.title !== undefined ? updates.title.trim() : prev.document_name,
+            }
+          : prev
+      );
+      hasUnsavedMetadataRef.current = false;
       setHasUnsavedMetadata(false);
-      // Reload article to get updated data while keeping the editor open.
-      await loadArticle();
+      toast.success(t('editor.feedback.saveSuccess', { defaultValue: 'Article saved' }));
     } catch (error) {
       handleError(error, t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
     } finally {
+      isSavingContentRef.current = false;
       setIsSaving(false);
     }
   };
-
-  const handleMetadataChange = () => {
-    setHasUnsavedMetadata(true);
-  };
-
-  const documentId = article?.document_id;
-
-  // Force an immediate save of the collaborative content. Live edits are
-  // autosaved server-side by the Hocuspocus persistence extension (~2s
-  // debounce + on disconnect); this is an explicit "save now" that also
-  // refreshes the document preview immediately.
-  const saveContent = useCallback(async (): Promise<void> => {
-    if (!documentId || isFallbackMode || isSavingContentRef.current) return;
-    isSavingContentRef.current = true;
-    setIsSavingContent(true);
-    try {
-      const result = await syncCollabSnapshot(documentId);
-      if (!result || !('success' in result) || !result.success) {
-        // Fallback: write the client-side editor JSON directly.
-        const json = collabEditorRef.current?.getJSON();
-        if (!json) {
-          const message =
-            result && 'message' in result && result.message
-              ? result.message
-              : 'Snapshot sync failed';
-          throw new Error(message);
-        }
-        const contentResult = await updateBlockContent(documentId, {
-          block_data: JSON.stringify(json),
-          user_id: userId,
-        });
-        if (isDocumentActionError(contentResult)) {
-          throw new Error(getErrorMessage(contentResult));
-        }
-      }
-      toast.success(
-        tRef.current('editor.feedback.contentSaveSuccess', {
-          defaultValue: 'Article content saved',
-        })
-      );
-    } catch (error) {
-      handleError(
-        error,
-        tRef.current('editor.feedback.contentSaveError', {
-          defaultValue: 'Failed to save article content',
-        })
-      );
-    } finally {
-      isSavingContentRef.current = false;
-      setIsSavingContent(false);
-    }
-  }, [documentId, isFallbackMode, userId]);
 
   const handleStatusChange = async (newStatus: 'review' | 'published' | 'archived') => {
     if (!article) return;
@@ -324,7 +336,7 @@ export default function KBArticleEditor({
             : t('editor.feedback.archiveSuccess', { defaultValue: 'Article archived' })
         );
       }
-      await loadArticle();
+      await loadArticle('refresh');
     } catch (error) {
       handleError(error, t('editor.feedback.statusChangeError', { defaultValue: 'Failed to change article status' }));
     } finally {
@@ -418,20 +430,18 @@ export default function KBArticleEditor({
           </div>
           {/* Status Actions */}
           <div className="flex items-center gap-2">
-            {!isFallbackMode && (
-              <Button
-                id="kb-editor-save-content"
-                variant="outline"
-                size="sm"
-                onClick={() => void saveContent()}
-                disabled={isSavingContent}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSavingContent
-                  ? t('editor.actions.saving', { defaultValue: 'Saving...' })
-                  : t('editor.actions.saveContent', { defaultValue: 'Save' })}
-              </Button>
-            )}
+            <Button
+              id="kb-editor-save"
+              variant="outline"
+              size="sm"
+              onClick={() => void saveArticle()}
+              disabled={isSaving}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving
+                ? t('editor.actions.saving', { defaultValue: 'Saving...' })
+                : t('editor.actions.saveContent', { defaultValue: 'Save' })}
+            </Button>
             {article.status === 'draft' && (
               <>
                 <Button
@@ -500,6 +510,8 @@ export default function KBArticleEditor({
             userId={userId}
             initialContent={article.block_data ?? null}
             imageNamePrefix={article.slug}
+            editorRef={fallbackEditorRef}
+            hideSaveButton
           />
         ) : (
           <CollaborativeEditor
@@ -518,6 +530,19 @@ export default function KBArticleEditor({
             }}
           />
         )}
+
+        <div className="flex justify-end mt-4">
+          <Button
+            id="kb-editor-save-bottom"
+            onClick={() => void saveArticle()}
+            disabled={isSaving}
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving
+              ? t('editor.actions.saving', { defaultValue: 'Saving...' })
+              : t('editor.actions.saveContent', { defaultValue: 'Save' })}
+          </Button>
+        </div>
       </div>
 
       {/* Metadata Sidebar */}
@@ -663,19 +688,6 @@ export default function KBArticleEditor({
                 </p>
               )}
             </div>
-
-            {/* Save Button */}
-            <Button
-              id="kb-editor-save"
-              onClick={handleSaveMetadata}
-              disabled={!hasUnsavedMetadata || isSaving}
-              className="w-full"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving
-                ? t('editor.actions.saving', { defaultValue: 'Saving...' })
-                : t('editor.actions.saveMetadata', { defaultValue: 'Save Metadata' })}
-            </Button>
           </CardContent>
         </Card>
 
