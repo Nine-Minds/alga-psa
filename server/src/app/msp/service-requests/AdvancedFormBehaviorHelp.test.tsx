@@ -64,11 +64,26 @@ describe('AdvancedFormBehaviorHelp', () => {
     expect(JSON.parse(writeText.mock.calls[0][0])).toEqual(ADVANCED_FORM_BEHAVIOR_EXAMPLES[2].config);
   });
 
-  it('reports a copy failure', async () => {
+  it('falls back to execCommand when the Clipboard API is denied (plain-http self-hosted installs)', async () => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
       configurable: true,
     });
+    const execCommand = vi.fn().mockReturnValue(true);
+    Object.defineProperty(document, 'execCommand', { value: execCommand, configurable: true });
+    render(<AdvancedFormBehaviorHelp />);
+    fireEvent.click(document.getElementById('service-request-form-behavior-example-showWhen-copy')!);
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('reports a copy failure when both the Clipboard API and the fallback fail', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      configurable: true,
+    });
+    Object.defineProperty(document, 'execCommand', { value: vi.fn().mockReturnValue(false), configurable: true });
     render(<AdvancedFormBehaviorHelp />);
     fireEvent.click(document.getElementById('service-request-form-behavior-example-showWhen-copy')!);
     await waitFor(() => expect(toast.error).toHaveBeenCalled());

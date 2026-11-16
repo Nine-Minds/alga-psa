@@ -4,6 +4,7 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 import { VISIBILITY_OPERATORS } from './fieldVisibilityModel';
 import {
   ADVANCED_FORM_BEHAVIOR_EXAMPLES,
@@ -19,10 +20,9 @@ export function AdvancedFormBehaviorHelp() {
   const k = (suffix: string) => `editor.execution.advanced.help.${suffix}`;
 
   const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    if (await copyTextToClipboard(text)) {
       toast.success(t(k('copied')));
-    } catch {
+    } else {
       toast.error(t(k('copyFailed')));
     }
   };
