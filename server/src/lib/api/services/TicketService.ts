@@ -3987,6 +3987,10 @@ export class TicketService extends BaseService<ITicket> {
         throw new ConflictError(
           'The master cannot be reopened because no open ticket status is configured.',
         );
+      case 'master_closed_state_mismatch':
+        throw new ConflictError(
+          'The existing bundle master and the ticket chosen as the new master must both be open or both be closed.',
+        );
     }
   }
 

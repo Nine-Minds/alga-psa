@@ -25,7 +25,7 @@ import { getTicketAutoCloseState } from '@alga-psa/tickets/actions/close-rules/c
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { listTicketMaterials } from '@alga-psa/tickets/actions/materialCatalogActions';
 import { hasAdminSettingsViewAccess } from '@alga-psa/tickets/components/ticket/commentMetadataDebug';
-import { hasWorkflowManageAccess, type TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
+import { hasTicketUpdateAccess, hasWorkflowManageAccess, type TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBootstrap';
 import { getAdjacentTicketIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import { listEntityAssets } from '@alga-psa/assets/actions/assetActions';
@@ -205,6 +205,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
       canManageWorkflows: permissions ? hasWorkflowManageAccess(permissions) : null,
+      canUpdateTickets: permissions ? hasTicketUpdateAccess(permissions) : null,
       teams: safeTeams,
       displaySettings,
       tags: safeTags,

@@ -11,6 +11,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   attach: vi.fn<(...args: unknown[]) => Promise<BundleAttachResult>>(),
+  bundleUnderMaster: vi.fn<(...args: unknown[]) => Promise<BundleAttachResult>>(),
   changeSettings: vi.fn<(...args: unknown[]) => Promise<BundleModeChangeResult>>(),
   registerAfterCommit: vi.fn(),
   revalidatePath: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publishWorkflowEvent }));
 vi.mock('./ticketBundleUtils', () => ({
   attachChildrenToBundle: mocks.attach,
+  bundleTicketsUnderRequestedMaster: mocks.bundleUnderMaster,
   changeBundleSettings: mocks.changeSettings,
 }));
 
@@ -41,11 +43,11 @@ const input = { masterTicketId, childTicketIds };
 beforeEach(() => vi.resetAllMocks());
 
 describe.each([
-  ['bundleTicketsAction', bundleTicketsAction],
-  ['addChildrenToBundleAction', addChildrenToBundleAction],
-] as const)('%s result handling', (_name, action) => {
+  ['bundleTicketsAction', bundleTicketsAction, mocks.bundleUnderMaster],
+  ['addChildrenToBundleAction', addChildrenToBundleAction, mocks.attach],
+] as const)('%s result handling', (_name, action, attach) => {
   it('returns a localized business failure without publishing or refreshing tickets', async () => {
-    mocks.attach.mockResolvedValue({
+    attach.mockResolvedValue({
       ok: false,
       code: 'already_bundled',
       childTicketId: childTicketIds[0],
@@ -66,7 +68,7 @@ describe.each([
       sourceTicketId: childTicketIds[0], targetTicketId: masterTicketId,
       mergedAt: '2026-11-08T12:00:00Z', reason: 'bundle:added_children',
     });
-    mocks.attach.mockResolvedValue({
+    attach.mockResolvedValue({
       ok: true,
       value: {
         masterTicketId,

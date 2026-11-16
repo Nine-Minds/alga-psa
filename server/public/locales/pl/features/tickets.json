@@ -962,7 +962,10 @@
       "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status. Pola workflow są zablokowane tylko w trybie Sync Updates. Odpowiedzi przychodzące na zgłoszenia podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
-      "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
+      "existingMasterChangeable": "Jedno z wybranych zgłoszeń jest już głównym zgłoszeniem pakietu. Wybranie innego zgłoszenia jako głównego sprawia, że to zgłoszenie staje się głównym, ustawienia pakietu (tryb, ponowne otwarcie po odpowiedzi podrzędnego) przechodzą na nie, a obecne główne zgłoszenie staje się podrzędnym.",
+      "changeMasterSummary": "{{newMaster}} zostanie głównym zgłoszeniem pakietu, a {{oldMaster}} zostanie podrzędnym. Ustawienia pakietu przechodzą na {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} i {{newMaster}} muszą być oba otwarte lub oba zamknięte, aby {{newMaster}} mogło zostać głównym zgłoszeniem. Najpierw otwórz ponownie lub zamknij jedno z nich.",
+      "syncUpdatesKeptHelp": "Tryb istniejącego pakietu zostaje zachowany i przechodzi na nowe główne zgłoszenie.",
       "multipleExistingMasters": "Wiele wybranych zgłoszeń jest już zgłoszeniami nadrzędnymi ({{count}}). Rozłącz wszystkie oprócz jednego przed łączeniem.",
       "propagationSummary": "{{masters}} wybranych zgłoszeń to zgłoszenia nadrzędne w trybie synchronizacji; ta zmiana zamknie lub ponownie otworzy {{children}} zgłoszeń podrzędnych.",
       "masterSummary": "{{children}} zgłoszeń podrzędnych",
@@ -1853,7 +1856,8 @@
       "closedMasterChoiceNotAllowed": "Ta opcja nie jest dozwolona dla tego zgłoszenia nadrzędnego. Wybierz jedną z opcji: {{choices}}.",
       "choiceOnOpenMaster": "Ta opcja ma zastosowanie tylko wtedy, gdy zgłoszenie nadrzędne pakietu jest zamknięte.",
       "closeRuleFailed": "Tego zgłoszenia nie można jeszcze zamknąć: {{reason}}",
-      "reopenUnavailable": "Nie można ponownie otworzyć zgłoszenia nadrzędnego, ponieważ nie skonfigurowano żadnego otwartego statusu zgłoszenia."
+      "reopenUnavailable": "Nie można ponownie otworzyć zgłoszenia nadrzędnego, ponieważ nie skonfigurowano żadnego otwartego statusu zgłoszenia.",
+      "masterClosedStateMismatch": "Obecne główne zgłoszenie pakietu i zgłoszenie wybrane jako nowe główne muszą być oba otwarte lub oba zamknięte. Najpierw otwórz ponownie lub zamknij jedno z nich."
     },
     "ticket": {
       "validationDetails": "Popraw dane zgłoszenia: {{details}}",
@@ -1997,6 +2001,10 @@
       "masterBanner": "To zgłoszenie jest nadrzędnym w pakiecie ({{count}} podrzędnych). Tryb: {{mode}}.",
       "childLockedNotice": "Pola workflow są zablokowane; pracuj w zgłoszeniu nadrzędnym.",
       "childLinkedNotice": "Jest powiązane ze zgłoszeniem nadrzędnym i zarządzane niezależnie.",
+      "makeMaster": "Ustaw jako główne",
+      "promoteConfirmTitle": "Zmienić główne zgłoszenie pakietu?",
+      "promoteConfirmMessage": "Ustawić {{newMaster}} jako główne zgłoszenie tego pakietu? Ustawienia pakietu (tryb, ponowne otwarcie po odpowiedzi podrzędnego) przechodzą na {{newMaster}}, a obecne główne zgłoszenie {{oldMaster}} staje się podrzędnym.",
+      "promoteConfirmLabel": "Ustaw jako główne",
       "multipleClients": "Wielu klientów",
       "mode": "Tryb: {{mode}}",
       "unbundle": "Rozpakuj",

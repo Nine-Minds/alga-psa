@@ -886,7 +886,10 @@
       "childrenDescription": "Underärenden behåller sin nuvarande status. Arbetsflödesfält är bara låsta i läget Sync Updates. Inkommande svar på underärenden visas nedan som skrivskyddade.",
       "checkingMasters": "Kontrollerar befintliga grupper…",
       "existingMasterSuffix": "(befintligt huvudärende)",
-      "existingMasterLocked": "Ett markerat ärende är redan huvudärende i en grupp. Det används som huvudärende och övriga läggs till som underärenden.",
+      "existingMasterChangeable": "Ett av de valda ärendena är redan huvudärende i en bunt. Om du väljer ett annat ärende som huvudärende blir det ärendet huvudärende, buntens inställningar (läge, återöppna vid svar från underärende) flyttas till det och det nuvarande huvudärendet blir ett underärende.",
+      "changeMasterSummary": "{{newMaster}} blir huvudärende för bunten och {{oldMaster}} blir ett underärende. Buntens inställningar flyttas till {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} och {{newMaster}} måste båda vara öppna eller båda vara stängda innan {{newMaster}} kan bli huvudärende. Öppna eller stäng ett av dem först.",
+      "syncUpdatesKeptHelp": "Den befintliga buntens läge behålls och flyttas till det nya huvudärendet.",
       "multipleExistingMasters": "Flera markerade ärenden är redan huvudärenden i grupper ({{count}}). Lös upp alla grupper utom en innan du grupperar ärendena.",
       "propagationSummary": "Markerade ärenden som är huvudärenden i synkroniserade grupper: {{masters}}. Den här ändringen stänger eller öppnar underärenden igen (antal: {{children}}).",
       "masterSummary": "Underärenden: {{children}}",
@@ -1707,7 +1710,8 @@
       "closedMasterChoiceNotAllowed": "Det alternativet är inte tillåtet för det här huvudärendet. Välj något av: {{choices}}.",
       "choiceOnOpenMaster": "Det alternativet gäller endast när gruppens huvudärende är stängt.",
       "closeRuleFailed": "Det här ärendet kan inte stängas ännu: {{reason}}",
-      "reopenUnavailable": "Huvudärendet kan inte öppnas igen eftersom ingen öppen ärendestatus har konfigurerats."
+      "reopenUnavailable": "Huvudärendet kan inte öppnas igen eftersom ingen öppen ärendestatus har konfigurerats.",
+      "masterClosedStateMismatch": "Buntens nuvarande huvudärende och ärendet som valts som nytt huvudärende måste båda vara öppna eller båda vara stängda. Öppna eller stäng ett av dem först."
     },
     "ticket": {
       "validationDetails": "Korrigera ärendeuppgifterna: {{details}}",
@@ -1851,6 +1855,10 @@
       "masterBanner": "Det här ärendet är huvudärende i en grupp (underärenden: {{count}}). Läge: {{mode}}.",
       "childLockedNotice": "Arbetsflödesfält är låsta; arbeta från huvudärendet.",
       "childLinkedNotice": "Det är länkat till huvudärendet och hanteras separat.",
+      "makeMaster": "Gör till huvudärende",
+      "promoteConfirmTitle": "Ändra buntens huvudärende?",
+      "promoteConfirmMessage": "Göra {{newMaster}} till huvudärende för den här bunten? Buntens inställningar (läge, återöppna vid svar från underärende) flyttas till {{newMaster}} och det nuvarande huvudärendet {{oldMaster}} blir ett underärende.",
+      "promoteConfirmLabel": "Gör till huvudärende",
       "multipleClients": "Flera kunder",
       "mode": "Läge: {{mode}}",
       "unbundle": "Lös upp grupp",

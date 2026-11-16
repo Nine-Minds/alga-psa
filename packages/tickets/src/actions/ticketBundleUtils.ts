@@ -671,6 +671,7 @@ export type BundleAttachFailureCode =
   | 'choice_on_open_master'
   | 'close_rule_failed'
   | 'reopen_unavailable'
+  | 'master_closed_state_mismatch'
   | 'no_children';
 
 export type BundleAttachFailure = {
@@ -988,6 +989,217 @@ export async function attachChildrenToBundle(
       masterTicketId: params.masterTicketId,
       childTicketIds: childIds,
       mode: params.mode,
+      publications,
+    },
+  };
+}
+
+export type PromoteBundleMasterParams = {
+  oldMasterTicketId: string;
+  newMasterTicketId: string;
+  actorUserId: string | null;
+};
+
+/**
+ * Promotes a current child to be the master of its bundle, inside the caller's
+ * transaction. The new master must be a direct child of the old master and
+ * must have no children of its own. The settings row (mode,
+ * reopen_on_child_reply) moves to the new master, the other children are
+ * re-pointed, and the old master becomes a child. Throws on any violation so
+ * the surrounding transaction rolls back. Publishing the `bundle:promote_master`
+ * TICKET_MERGED event is the caller's job (after commit).
+ */
+export async function promoteBundleMaster(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: PromoteBundleMasterParams
+): Promise<{ oldMasterTicketId: string; newMasterTicketId: string }> {
+  const { oldMasterTicketId, newMasterTicketId, actorUserId } = params;
+
+  const oldMaster = await tenantScopedTable(trx, 'tickets', tenant)
+    .select('ticket_id', 'master_ticket_id')
+    .where({ ticket_id: oldMasterTicketId })
+    .first();
+  if (!oldMaster) throw new Error('Old master ticket not found');
+  if (oldMaster.master_ticket_id) throw new Error('Old master ticket is not a master');
+
+  const newMaster = await tenantScopedTable(trx, 'tickets', tenant)
+    .select('ticket_id', 'master_ticket_id')
+    .where({ ticket_id: newMasterTicketId })
+    .first();
+  if (!newMaster) throw new Error('New master ticket not found');
+  if (newMaster.master_ticket_id !== oldMasterTicketId) {
+    throw new Error('New master ticket must be a child of the current master');
+  }
+
+  const now = nowIso();
+
+  // Prevent nesting bundles: the promoted ticket cannot itself have children
+  const promotedMasterConflicts = await findBundleMasterIds(trx, tenant, [newMasterTicketId]);
+  if (promotedMasterConflicts.length > 0) {
+    throw new Error('Promoted ticket already has children of its own.');
+  }
+
+  // Move bundle settings to new master
+  const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: oldMasterTicketId })
+    .first();
+  if (settings) {
+    await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .where({ master_ticket_id: oldMasterTicketId })
+      .delete();
+    await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+      .insert({
+        ...settings,
+        master_ticket_id: newMasterTicketId,
+      })
+      .onConflict(['tenant', 'master_ticket_id'])
+      .merge({
+        mode: settings.mode,
+        reopen_on_child_reply: settings.reopen_on_child_reply,
+      });
+  }
+
+  // Re-point children to new master (including old master)
+  await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ master_ticket_id: oldMasterTicketId })
+    .andWhereNot({ ticket_id: newMasterTicketId })
+    .update({
+      master_ticket_id: newMasterTicketId,
+      updated_by: actorUserId,
+      updated_at: now,
+    });
+
+  // New master becomes root
+  await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ ticket_id: newMasterTicketId })
+    .update({
+      master_ticket_id: null,
+      updated_by: actorUserId,
+      updated_at: now,
+    });
+
+  // Old master becomes child
+  await tenantScopedTable(trx, 'tickets', tenant)
+    .where({ ticket_id: oldMasterTicketId })
+    .update({
+      master_ticket_id: newMasterTicketId,
+      updated_by: actorUserId,
+      updated_at: now,
+    });
+
+  return { oldMasterTicketId, newMasterTicketId };
+}
+
+/**
+ * Bundles `childTicketIds` under `masterTicketId`, honoring the requested master. After an ok
+ * result `masterTicketId` is the master of the bundle that contains every listed ticket.
+ *
+ * - No listed ticket is an existing master, or the requested master is the existing master:
+ *   plain attach (`params.mode` upserts the settings, as before). Listed tickets that are
+ *   already children of the requested master are skipped rather than rejected.
+ * - Exactly one listed ticket is an existing master and it is not the requested master: the other
+ *   tickets are attached to the existing bundle and the requested master is then promoted, in the
+ *   caller's transaction (a throw in the promote step rolls the attach back). The existing
+ *   bundle's settings are kept and move with the master, so `params.mode` is deliberately not
+ *   written. The open/closed state of the existing and requested masters must match, because
+ *   the closed-master choice is validated against the existing master.
+ * - Two or more existing masters: rejected by the attach step (`children_are_masters`).
+ *
+ * Every publication (attach and promote) is returned for the caller to publish after commit.
+ */
+export async function bundleTicketsUnderRequestedMaster(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: AttachChildrenParams & { actorUserId: string | null }
+): Promise<BundleAttachResult> {
+  const { actorUserId, ...attachParams } = params;
+  const requestedMasterId = params.masterTicketId;
+  const listedIds = Array.from(new Set([requestedMasterId, ...params.childTicketIds]));
+
+  // Listed tickets that are already children of `masterId` need no attaching. Anything bundled
+  // elsewhere is still rejected by the attach step.
+  const listedChildrenOf = async (masterId: string): Promise<Set<string>> => {
+    const rows = await tenantScopedTable(trx, 'tickets', tenant)
+      .select('ticket_id')
+      .whereIn('ticket_id', listedIds)
+      .where({ master_ticket_id: masterId });
+    return new Set<string>(rows.map((row: any) => row.ticket_id));
+  };
+
+  const existingMasterIds = await findBundleMasterIds(trx, tenant, listedIds);
+  const existingMasterId =
+    existingMasterIds.length === 1 && existingMasterIds[0] !== requestedMasterId
+      ? existingMasterIds[0]
+      : null;
+  if (!existingMasterId) {
+    if (existingMasterIds.length === 1) {
+      // The requested master is the existing master: the selection may include its current
+      // children (the dialog lists the whole bundle), so attach only the new tickets.
+      const alreadyChildren = await listedChildrenOf(requestedMasterId);
+      const newChildIds = params.childTicketIds.filter((id) => !alreadyChildren.has(id));
+      if (alreadyChildren.size > 0 && newChildIds.length > 0) {
+        return attachChildrenToBundle(trx, tenant, { ...attachParams, childTicketIds: newChildIds });
+      }
+    }
+    return attachChildrenToBundle(trx, tenant, attachParams);
+  }
+
+  const [existingContext, requestedContext] = await Promise.all([
+    getBundleMasterClosedContext(trx, tenant, existingMasterId),
+    getBundleMasterClosedContext(trx, tenant, requestedMasterId),
+  ]);
+  if (!existingContext || !requestedContext) {
+    return { ok: false, code: 'master_not_found' };
+  }
+  if (existingContext.isClosed !== requestedContext.isClosed) {
+    return { ok: false, code: 'master_closed_state_mismatch' };
+  }
+
+  // The requested master itself may already be in the existing bundle.
+  const alreadyInBundleIds = await listedChildrenOf(existingMasterId);
+  const toAttach = listedIds.filter((id) => id !== existingMasterId && !alreadyInBundleIds.has(id));
+
+  const publications: BundleAfterCommitPublication[] = [];
+  if (toAttach.length > 0) {
+    const attached = await attachChildrenToBundle(trx, tenant, {
+      ...attachParams,
+      masterTicketId: existingMasterId,
+      childTicketIds: toAttach,
+      mode: undefined,
+      mergedReason: 'bundle:added_children',
+    });
+    if (!attached.ok) return attached;
+    publications.push(...attached.value.publications);
+  }
+
+  const occurredAt = params.occurredAt ?? nowIso();
+  await promoteBundleMaster(trx, tenant, {
+    oldMasterTicketId: existingMasterId,
+    newMasterTicketId: requestedMasterId,
+    actorUserId,
+  });
+  publications.push({
+    eventType: 'TICKET_MERGED',
+    payload: buildTicketMergedPayload({
+      sourceTicketId: existingMasterId,
+      targetTicketId: requestedMasterId,
+      mergedAt: occurredAt,
+      reason: 'bundle:promote_master',
+    }),
+    eventName: 'Ticket Merged',
+  });
+
+  const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .select('mode')
+    .where({ master_ticket_id: requestedMasterId })
+    .first();
+  return {
+    ok: true,
+    value: {
+      masterTicketId: requestedMasterId,
+      childTicketIds: listedIds.filter((id) => id !== requestedMasterId),
+      mode: settings?.mode as BundleMode | undefined,
       publications,
     },
   };

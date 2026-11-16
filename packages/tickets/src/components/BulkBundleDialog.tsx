@@ -35,7 +35,8 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
   const [syncUpdates, setSyncUpdates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [existingMasterIds, setExistingMasterIds] = useState<Set<string>>(new Set());
-  const [closedContext, setClosedContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+  const [chosenClosedContext, setChosenClosedContext] = useState<BundleMasterClosedContextActionResult | null>(null);
+  const [existingClosedContext, setExistingClosedContext] = useState<BundleMasterClosedContextActionResult | null>(null);
   const [closedChoice, setClosedChoice] = useState<ClosedMasterChoice | null>(null);
   const [loadingMasters, setLoadingMasters] = useState(false);
   const [loadingClosed, setLoadingClosed] = useState(false);
@@ -57,7 +58,25 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     })
     : null;
   const displayedError = error ?? multipleMastersError;
+  const existingMasterId = existingMasterIds.size === 1 ? Array.from(existingMasterIds)[0] : null;
+  const changingMaster = Boolean(existingMasterId && masterId && masterId !== existingMasterId);
+  // The closed-master question is about the bundle as it will be once the dialog finishes, so it
+  // follows the chosen master. The server attaches to the existing master first, so when the
+  // two are different tickets they must agree on open/closed and the offered choices are those
+  // valid for both.
+  const closedStateMismatch = changingMaster
+    && chosenClosedContext !== null && existingClosedContext !== null
+    && chosenClosedContext.isClosed !== existingClosedContext.isClosed;
+  const closedContext = useMemo<BundleMasterClosedContextActionResult | null>(() => {
+    if (!chosenClosedContext) return null;
+    if (!changingMaster || !existingClosedContext) return chosenClosedContext;
+    return {
+      ...chosenClosedContext,
+      allowedChoices: chosenClosedContext.allowedChoices.filter(choice => existingClosedContext.allowedChoices.includes(choice)),
+    };
+  }, [chosenClosedContext, existingClosedContext, changingMaster]);
   const needsClosedChoice = closedContext?.isClosed === true;
+  const ticketNumberOf = (ticketId: string | null) => members.find(member => member.ticket_id === ticketId)?.ticket_number ?? '';
   const choiceReady = !needsClosedChoice || Boolean(closedChoice);
 
   useEffect(() => {
@@ -67,7 +86,8 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     setError(null);
     setSyncUpdates(true);
     setExistingMasterIds(new Set());
-    setClosedContext(null);
+    setChosenClosedContext(null);
+    setExistingClosedContext(null);
     setClosedChoice(null);
 
     const currentTicketIds = initialTicketIdsRef.current;
@@ -141,7 +161,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
 
   useEffect(() => {
     if (!isOpen || !masterId) {
-      setClosedContext(null);
+      setChosenClosedContext(null);
       setClosedChoice(null);
       return;
     }
@@ -151,11 +171,11 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
     void getBundleMasterClosedContextAction({ masterTicketId: masterId }).then(context => {
       if (cancelled) return;
       if (isActionMessageError(context) || isActionPermissionError(context)) {
-        setClosedContext(null);
+        setChosenClosedContext(null);
         return;
       }
 
-      setClosedContext(context);
+      setChosenClosedContext(context);
       setClosedChoice(context.isClosed
         ? context.allowedChoices.includes('keep_closed') ? 'keep_closed' : context.allowedChoices[0] ?? null
         : null);
@@ -167,6 +187,25 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
 
     return () => { cancelled = true; };
   }, [isOpen, masterId]);
+
+  // When another ticket is chosen over the existing master, also read the existing master's
+  // closed state (the server attaches the other tickets to it before promoting the chosen one).
+  useEffect(() => {
+    if (!isOpen || !existingMasterId || !masterId || masterId === existingMasterId) {
+      setExistingClosedContext(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getBundleMasterClosedContextAction({ masterTicketId: existingMasterId }).then(context => {
+      if (cancelled) return;
+      setExistingClosedContext(isActionMessageError(context) || isActionPermissionError(context) ? null : context);
+    }).catch(loadError => {
+      if (!cancelled) setError(getErrorMessage(loadError));
+    });
+
+    return () => { cancelled = true; };
+  }, [isOpen, existingMasterId, masterId]);
 
   const loadOptions = React.useCallback(async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
     if (!search.trim()) return { options: [], total: 0 };
@@ -254,7 +293,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
   };
 
   const performBundle = async () => {
-    if (members.length < 2 || !masterId || hasMultipleMasters) return;
+    if (members.length < 2 || !masterId || hasMultipleMasters || closedStateMismatch) return;
     if (needsClosedChoice && !closedChoice) {
       setError(t('errors.bundle.closedMasterChoiceRequired', {
         choices: (closedContext?.allowedChoices ?? []).join(', '),
@@ -301,8 +340,32 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
               </Alert>
             )}
             {existingMasterIds.size === 1 && !displayedError && (
-              <Alert variant="warning">
-                <AlertDescription>{t('bulk.bundle.existingMasterLocked', 'One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.')}</AlertDescription>
+              <Alert id={`${id}-bundle-existing-master-notice`} variant="warning">
+                <AlertDescription>
+                  {t('bulk.bundle.existingMasterChangeable', 'One selected ticket is already a bundle master. Choosing another ticket as the master makes that ticket the master, moves the bundle\'s settings (mode, reopen on child reply) to it, and makes the current master a child.')}
+                </AlertDescription>
+              </Alert>
+            )}
+            {changingMaster && !displayedError && (
+              <Alert id={`${id}-bundle-change-master-summary`} variant="info">
+                <AlertDescription>
+                  {t('bulk.bundle.changeMasterSummary', {
+                    newMaster: ticketNumberOf(masterId),
+                    oldMaster: ticketNumberOf(existingMasterId),
+                    defaultValue: '{{newMaster}} will become the master of the bundle and {{oldMaster}} will become a child. The bundle\'s settings move to {{newMaster}}.',
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
+            {closedStateMismatch && !displayedError && (
+              <Alert id={`${id}-bundle-closed-state-mismatch`} variant="destructive">
+                <AlertDescription>
+                  {t('bulk.bundle.closedStateMismatch', {
+                    newMaster: ticketNumberOf(masterId),
+                    oldMaster: ticketNumberOf(existingMasterId),
+                    defaultValue: '{{oldMaster}} and {{newMaster}} must both be open or both be closed before {{newMaster}} can become the master. Reopen or close one of them first.',
+                  })}
+                </AlertDescription>
               </Alert>
             )}
             {multiClient && (
@@ -364,16 +427,21 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
                 }))}
                 onValueChange={setMasterId}
                 placeholder={loadingMasters ? t('bulk.bundle.checkingMasters', 'Checking existing bundles...') : t('bulk.bundle.selectMasterTicket', 'Select master ticket...')}
-                disabled={loadingMasters || hasMultipleMasters || existingMasterIds.size === 1}
+                disabled={loadingMasters || hasMultipleMasters}
               />
             </div>
 
             <div className="flex items-center gap-2">
-              <Checkbox id={`${id}-bundle-sync-updates`} checked={syncUpdates} onChange={event => setSyncUpdates(event.target.checked)} skipRegistration />
+              <Checkbox id={`${id}-bundle-sync-updates`} checked={syncUpdates} onChange={event => setSyncUpdates(event.target.checked)} disabled={changingMaster} skipRegistration />
               <label htmlFor={`${id}-bundle-sync-updates`} className="text-sm text-[rgb(var(--color-text-700))]">
                 {t('bulk.bundle.syncUpdates', 'Sync updates from master to children (public replies + workflow changes)')}
               </label>
             </div>
+            {changingMaster && (
+              <div className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('bulk.bundle.syncUpdatesKeptHelp', "The existing bundle's mode is kept and moves to the new master.")}
+              </div>
+            )}
             <div className="text-xs text-[rgb(var(--color-text-500))]">
               {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. With sync updates on, workflow fields are locked on children. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.')}
             </div>
@@ -399,7 +467,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
 
             <div className="flex justify-end gap-2">
               <Button id={`${id}-bundle-cancel`} variant="outline" onClick={onClose}>{t('actions.cancel', 'Cancel')}</Button>
-              <Button id={`${id}-bundle-confirm`} onClick={confirm} disabled={members.length < 2 || !masterId || loadingMasters || loadingClosed || !choiceReady || hasMultipleMasters}>
+              <Button id={`${id}-bundle-confirm`} onClick={confirm} disabled={members.length < 2 || !masterId || loadingMasters || loadingClosed || !choiceReady || hasMultipleMasters || closedStateMismatch}>
                 {t('bulk.bundleTickets', 'Bundle Tickets')}
               </Button>
             </div>

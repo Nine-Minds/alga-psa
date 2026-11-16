@@ -960,7 +960,10 @@
       "childrenDescription": "Kindtickets behouden hun huidige status. Workflowvelden zijn alleen in de modus Sync Updates vergrendeld. Inkomende reacties op kindtickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
-      "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
+      "existingMasterChangeable": "Een van de geselecteerde tickets is al de hoofdticket van een bundel. Als u een ander ticket als hoofdticket kiest, wordt dat ticket het hoofdticket, gaan de instellingen van de bundel (modus, heropenen bij reactie van een kind) naar dat ticket en wordt het huidige hoofdticket een kind.",
+      "changeMasterSummary": "{{newMaster}} wordt het hoofdticket van de bundel en {{oldMaster}} wordt een kind. De instellingen van de bundel gaan naar {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} en {{newMaster}} moeten beide open of beide gesloten zijn voordat {{newMaster}} het hoofdticket kan worden. Heropen of sluit eerst een van beide.",
+      "syncUpdatesKeptHelp": "De modus van de bestaande bundel blijft behouden en gaat naar het nieuwe hoofdticket.",
       "multipleExistingMasters": "Meerdere geselecteerde tickets zijn al hoofdtickets ({{count}}). Ontkoppel alle op één na voordat u bundelt.",
       "propagationSummary": "{{masters}} geselecteerde ticket(s) zijn masters in synchronisatiemodus; deze wijziging sluit/heropent {{children}} kindticket(s).",
       "masterSummary": "{{children}} kindticket(s)",
@@ -1845,7 +1848,8 @@
       "closedMasterChoiceNotAllowed": "Die keuze is niet toegestaan voor dit hoofdticket. Kies een van de volgende opties: {{choices}}.",
       "choiceOnOpenMaster": "Die keuze geldt alleen wanneer het hoofdticket van de bundel gesloten is.",
       "closeRuleFailed": "Dit ticket kan nog niet worden gesloten: {{reason}}",
-      "reopenUnavailable": "Het hoofdticket kan niet worden heropend omdat er geen open ticketstatus is geconfigureerd."
+      "reopenUnavailable": "Het hoofdticket kan niet worden heropend omdat er geen open ticketstatus is geconfigureerd.",
+      "masterClosedStateMismatch": "Het huidige hoofdticket van de bundel en het als nieuw hoofdticket gekozen ticket moeten beide open of beide gesloten zijn. Heropen of sluit eerst een van beide."
     },
     "ticket": {
       "validationDetails": "Corrigeer de ticketgegevens: {{details}}",
@@ -1989,6 +1993,10 @@
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
       "childLockedNotice": "Workflowvelden zijn vergrendeld; werk vanuit het masterticket.",
       "childLinkedNotice": "Het is gekoppeld aan de master en wordt zelfstandig beheerd.",
+      "makeMaster": "Hoofdticket maken",
+      "promoteConfirmTitle": "Hoofdticket van de bundel wijzigen?",
+      "promoteConfirmMessage": "{{newMaster}} het hoofdticket van deze bundel maken? De instellingen van de bundel (modus, heropenen bij reactie van een kind) gaan naar {{newMaster}} en het huidige hoofdticket {{oldMaster}} wordt een kind.",
+      "promoteConfirmLabel": "Hoofdticket maken",
       "multipleClients": "Meerdere klanten",
       "mode": "Modus: {{mode}}",
       "unbundle": "Ontbundelen",

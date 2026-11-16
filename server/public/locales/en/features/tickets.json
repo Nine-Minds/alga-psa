@@ -960,7 +960,10 @@
       "childrenDescription": "Children keep their current status. Workflow fields are locked on children only in Sync Updates mode. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
-      "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
+      "existingMasterChangeable": "One selected ticket is already a bundle master. Choosing another ticket as the master makes that ticket the master, moves the bundle's settings (mode, reopen on child reply) to it, and makes the current master a child.",
+      "changeMasterSummary": "{{newMaster}} will become the master of the bundle and {{oldMaster}} will become a child. The bundle's settings move to {{newMaster}}.",
+      "closedStateMismatch": "{{oldMaster}} and {{newMaster}} must both be open or both be closed before {{newMaster}} can become the master. Reopen or close one of them first.",
+      "syncUpdatesKeptHelp": "The existing bundle's mode is kept and moves to the new master.",
       "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.",
       "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
       "masterSummary": "{{children}} child ticket(s)",
@@ -1845,7 +1848,8 @@
       "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
       "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
       "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
-      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured.",
+      "masterClosedStateMismatch": "The existing bundle master and the ticket chosen as the new master must both be open or both be closed. Reopen or close one of them first."
     },
     "ticket": {
       "validationDetails": "Please fix the ticket details: {{details}}",
@@ -1989,6 +1993,10 @@
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
       "childLockedNotice": "Workflow fields are locked; work from the master ticket.",
       "childLinkedNotice": "It is linked to the master and managed on its own.",
+      "makeMaster": "Make master",
+      "promoteConfirmTitle": "Change bundle master?",
+      "promoteConfirmMessage": "Make {{newMaster}} the master of this bundle? The bundle's settings (mode, reopen on child reply) move to {{newMaster}}, and the current master {{oldMaster}} becomes a child.",
+      "promoteConfirmLabel": "Make master",
       "multipleClients": "Multiple clients",
       "mode": "Mode: {{mode}}",
       "unbundle": "Unbundle",

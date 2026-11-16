@@ -7,7 +7,7 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 import { tenantDb } from '@alga-psa/db';
 import { BundlePropagationConfirmationRequiredError } from '@alga-psa/tickets/lib/ticketBundlePropagation';
 import { resolveCommentAuthor } from '@alga-psa/tickets/lib';
-import { publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { ValidationError } from '@/lib/api/middleware/apiMiddleware';
 
 vi.mock('server/src/lib/utils/getSecret', () => ({
@@ -490,6 +490,216 @@ describe('Ticket bundling integration', () => {
 
     const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: child1Id }).first();
     expect(settings?.mode).toBe('sync_updates');
+  });
+
+  describe('changing a bundle master', () => {
+    const scoped = () => tenantDb(db, tenantId);
+
+    async function makeTicket(clientId: string, contactId: string, label: string): Promise<string> {
+      const ticketId = uuidv4();
+      await insertTicket(db, { tenant: tenantId, ticketId, ticketNumber: `CHM-${uuidv4().slice(0, 6)}`, title: label, clientId, contactId, statusId: statusOpenId, priorityId, boardId });
+      return ticketId;
+    }
+
+    async function setup() {
+      const clientId = await createClient(db, tenantId, `CHM ${uuidv4().slice(0, 6)}`);
+      const contactId = await createContact(db, tenantId, clientId, `chm-${uuidv4().slice(0, 6)}@example.com`);
+      return { clientId, contactId, make: (label: string) => makeTicket(clientId, contactId, label) };
+    }
+
+    const masterOf = async (ticketId: string) =>
+      (await scoped().table('tickets').where({ ticket_id: ticketId }).first())?.master_ticket_id ?? null;
+
+    const mergedReasons = () =>
+      vi.mocked(publishWorkflowEvent).mock.calls
+        .map(([arg]: any[]) => arg)
+        .filter((arg: any) => arg?.eventType === 'TICKET_MERGED')
+        .map((arg: any) => JSON.stringify(arg.payload));
+
+    it('T001: promoteBundleMasterAction promotes a child, and rejects a non-child and a ticket with children of its own', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C'); const outsider = await make('Outsider');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b, c], mode: 'link_only' }, internalUser as any));
+      await scoped().table('ticket_bundle_settings').where({ master_ticket_id: a }).update({ reopen_on_child_reply: true });
+
+      const nonChild = await runWithTenant(tenantId, () =>
+        promoteBundleMasterAction({ oldMasterTicketId: a, newMasterTicketId: outsider }, internalUser as any));
+      expect(nonChild).toMatchObject({ actionError: expect.stringMatching(/must be a child of the current master/i) });
+
+      // A child with children of its own cannot exist through the actions; force it directly.
+      await scoped().table('tickets').where({ ticket_id: outsider }).update({ master_ticket_id: b });
+      const withChildren = await runWithTenant(tenantId, () =>
+        promoteBundleMasterAction({ oldMasterTicketId: a, newMasterTicketId: b }, internalUser as any));
+      expect(withChildren).toMatchObject({ actionError: expect.stringMatching(/already has children of its own/i) });
+      expect(await masterOf(b)).toBe(a);
+      await scoped().table('tickets').where({ ticket_id: outsider }).update({ master_ticket_id: null });
+
+      vi.mocked(publishWorkflowEvent).mockClear();
+      const ok = await runWithTenant(tenantId, () =>
+        promoteBundleMasterAction({ oldMasterTicketId: a, newMasterTicketId: b }, internalUser as any));
+      expect(ok).toEqual({ oldMasterTicketId: a, newMasterTicketId: b });
+      expect(await masterOf(b)).toBeNull();
+      expect(await masterOf(a)).toBe(b);
+      expect(await masterOf(c)).toBe(b);
+      expect(await scoped().table('ticket_bundle_settings').where({ master_ticket_id: a }).first()).toBeFalsy();
+      const moved = await scoped().table('ticket_bundle_settings').where({ master_ticket_id: b }).first();
+      expect(moved).toMatchObject({ mode: 'link_only', reopen_on_child_reply: true });
+      expect(mergedReasons().filter((p) => p.includes('bundle:promote_master'))).toHaveLength(1);
+    });
+
+    it('promoteBundleMasterAction is refused without ticket update permission', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+      mockCurrentUser = clientUser;
+      try {
+        const denied = await runWithTenant(tenantId, () =>
+          promoteBundleMasterAction({ oldMasterTicketId: a, newMasterTicketId: b }, clientUser as any));
+        expect(denied).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      } finally {
+        mockCurrentUser = internalUser;
+      }
+      expect(await masterOf(b)).toBe(a);
+    });
+
+    it('T002: a requested master that is not the existing master takes over the existing bundle, with its settings', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C'); const d = await make('D');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'link_only' }, internalUser as any));
+      await scoped().table('ticket_bundle_settings').where({ master_ticket_id: a }).update({ reopen_on_child_reply: true });
+
+      vi.mocked(publishWorkflowEvent).mockClear();
+      // The dialog's sync toggle defaults to on; it must not rewrite the existing bundle's mode.
+      const result = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: c, childTicketIds: [a, d], mode: 'sync_updates' }, internalUser as any));
+      expect(result).toMatchObject({ masterTicketId: c, mode: 'link_only' });
+
+      expect(await masterOf(c)).toBeNull();
+      for (const child of [a, b, d]) expect(await masterOf(child)).toBe(c);
+      expect(await scoped().table('ticket_bundle_settings').where({ master_ticket_id: a }).first()).toBeFalsy();
+      expect(await scoped().table('ticket_bundle_settings').where({ master_ticket_id: c }).first())
+        .toMatchObject({ mode: 'link_only', reopen_on_child_reply: true });
+
+      const merged = mergedReasons();
+      expect(merged.some((p) => p.includes('bundle:promote_master'))).toBe(true);
+      // C and D are attached to A first (one event each), then C is promoted.
+      expect(merged.filter((p) => p.includes('bundle:added_children'))).toHaveLength(2);
+
+      // Choosing the existing master keeps today's behavior: others are added under it.
+      const e = await make('E');
+      const same = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: c, childTicketIds: [e], mode: 'link_only' }, internalUser as any));
+      expect(same).toMatchObject({ masterTicketId: c });
+      expect(await masterOf(e)).toBe(c);
+    });
+
+    it('T002: keeping the existing master with its current children in the selection adds only the new tickets', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+
+      // The dialog lists the whole bundle (A, its child B) plus the new ticket C.
+      const result = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b, c], mode: 'sync_updates' }, internalUser as any));
+      expect(result).toMatchObject({ masterTicketId: a, childTicketIds: [c] });
+      expect(await masterOf(a)).toBeNull();
+      expect(await masterOf(b)).toBe(a);
+      expect(await masterOf(c)).toBe(a);
+
+      // A ticket bundled under a different master is still rejected.
+      const x = await make('X'); const y = await make('Y'); const z = await make('Z');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: x, childTicketIds: [y], mode: 'sync_updates' }, internalUser as any));
+      await scoped().table('tickets').where({ ticket_id: x }).update({ master_ticket_id: null });
+      const elsewhere = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [y, z], mode: 'sync_updates' }, internalUser as any));
+      expect(elsewhere).toMatchObject({ actionError: expect.stringMatching(/already bundled/i) });
+      expect(await masterOf(z)).toBeNull();
+    });
+
+    it('T002: choosing a member that is already a child as the master promotes it', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+      const result = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: b, childTicketIds: [a], mode: 'sync_updates' }, internalUser as any));
+      expect(result).toMatchObject({ masterTicketId: b });
+      expect(await masterOf(b)).toBeNull();
+      expect(await masterOf(a)).toBe(b);
+    });
+
+    it('T002: a failure in the promote step rolls back the attach and publishes nothing', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C'); const d = await make('D');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'link_only' }, internalUser as any));
+
+      // Promote is the only step that sets a child's master_ticket_id back to NULL.
+      const fn = `chm_fail_${uuidv4().slice(0, 8)}`;
+      await db.raw(`CREATE FUNCTION ${fn}() RETURNS trigger AS $$ BEGIN
+        IF NEW.ticket_id = '${c}' AND OLD.master_ticket_id IS NOT NULL AND NEW.master_ticket_id IS NULL THEN
+          RAISE EXCEPTION 'injected promote failure';
+        END IF; RETURN NEW; END; $$ LANGUAGE plpgsql`);
+      await db.raw(`CREATE TRIGGER ${fn} BEFORE UPDATE ON tickets FOR EACH ROW EXECUTE FUNCTION ${fn}()`);
+      vi.mocked(publishWorkflowEvent).mockClear();
+      try {
+        await expect(runWithTenant(tenantId, () =>
+          bundleTicketsAction({ masterTicketId: c, childTicketIds: [a, d], mode: 'sync_updates' }, internalUser as any))
+        ).rejects.toThrow(/injected promote failure/);
+      } finally {
+        await db.raw(`DROP TRIGGER IF EXISTS ${fn} ON tickets`);
+        await db.raw(`DROP FUNCTION IF EXISTS ${fn}()`);
+      }
+
+      expect(await masterOf(a)).toBeNull();
+      expect(await masterOf(b)).toBe(a);
+      expect(await masterOf(c)).toBeNull();
+      expect(await masterOf(d)).toBeNull();
+      expect(await scoped().table('ticket_bundle_settings').where({ master_ticket_id: a }).first()).toMatchObject({ mode: 'link_only' });
+      expect(await scoped().table('ticket_bundle_settings').where({ master_ticket_id: c }).first()).toBeFalsy();
+      expect(mergedReasons()).toHaveLength(0);
+    });
+
+    it('T002: the requested master and the existing master must agree on open/closed; nothing changes otherwise', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const c = await make('C');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+      await closeTicketRow(db, tenantId, c, statusClosedId, internalUser.user_id);
+      const result = await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: c, childTicketIds: [a], mode: 'sync_updates', onClosedMaster: 'keep_closed' }, internalUser as any));
+      expect(result).toMatchObject({ actionError: expect.stringMatching(/both be open or both be closed/i) });
+      expect(await masterOf(a)).toBeNull();
+      expect(await masterOf(b)).toBe(a);
+    });
+
+    it('T003: two existing masters in the selection are rejected and nothing changes', async () => {
+      const { make } = await setup();
+      const a = await make('A'); const b = await make('B'); const e = await make('E'); const f = await make('F'); const c = await make('C');
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: a, childTicketIds: [b], mode: 'sync_updates' }, internalUser as any));
+      await runWithTenant(tenantId, () =>
+        bundleTicketsAction({ masterTicketId: e, childTicketIds: [f], mode: 'link_only' }, internalUser as any));
+
+      for (const input of [
+        { masterTicketId: c, childTicketIds: [a, e] },
+        { masterTicketId: a, childTicketIds: [e, c] },
+      ]) {
+        const result = await runWithTenant(tenantId, () =>
+          bundleTicketsAction({ ...input, mode: 'sync_updates' }, internalUser as any));
+        expect(result).toMatchObject({ actionError: expect.stringMatching(/already (a bundle master|bundle masters)/i) });
+      }
+      expect(await masterOf(a)).toBeNull();
+      expect(await masterOf(e)).toBeNull();
+      expect(await masterOf(b)).toBe(a);
+      expect(await masterOf(f)).toBe(e);
+      expect(await masterOf(c)).toBeNull();
+    });
   });
 
   it('sync_updates propagates workflow changes; children lock workflow fields', async () => {
