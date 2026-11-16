@@ -91,6 +91,17 @@ vi.mock('./SingleTimeEntryForm', () => ({
           })
         }
       />
+      <button
+        type="button"
+        data-testid={`extend-${props.index ?? 0}`}
+        onClick={() =>
+          props.onUpdateEntry(props.index ?? 0, {
+            ...props.entry,
+            end_time: new Date(Date.parse(props.entry.end_time) + 30 * 60_000).toISOString(),
+            isDirty: true,
+          })
+        }
+      />
       {props.showErrors && props.errors?.startTime && <span data-testid={`start-error-${props.index ?? 0}`}>{props.errors.startTime}</span>}
       {props.showErrors && props.errors?.endTime && <span data-testid={`end-error-${props.index ?? 0}`}>{props.errors.endTime}</span>}
       {props.showErrors && props.errors?.duration && <span data-testid={`duration-error-${props.index ?? 0}`}>{props.errors.duration}</span>}
@@ -195,6 +206,17 @@ describe('TimeEntryDialog with a stopwatch plan', () => {
     // A sheet is resolved for each entry.
     expect(entries.every((e: any) => e.time_sheet_id === 'sheet-1')).toBe(true);
     expect(mocks.saveTimeEntry).not.toHaveBeenCalled();
+  });
+
+  it('the footer total follows an edited day, not only the planned spans', async () => {
+    prime();
+    renderDialog(threeDays);
+    await screen.findByTestId('entry-form-2');
+    expect(screen.getByText('Total: 3h 0m')).toBeInTheDocument();
+
+    // Day 1 grows from 30 to 60 minutes: 60 + 60 + 90.
+    fireEvent.click(screen.getByTestId('extend-0'));
+    await waitFor(() => expect(screen.getByText('Total: 3h 30m')).toBeInTheDocument());
   });
 
   it('an entry edited across midnight shows inline errors and sends nothing: no alert, no toast', async () => {

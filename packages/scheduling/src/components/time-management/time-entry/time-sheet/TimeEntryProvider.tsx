@@ -74,13 +74,21 @@ function timeEntryReducer(state: TimeEntryState, action: TimeEntryAction): TimeE
           ...action.payload,
         },
       };
-    case 'UPDATE_ENTRY':
+    case 'UPDATE_ENTRY': {
       const newEntries = [...state.entries];
       newEntries[action.payload.index] = action.payload.entry;
+      // Keep the per-entry durations in step with the edited span; the multi-day footer total sums them.
+      const newDurations = [...state.totalDurations];
+      newDurations[action.payload.index] = calculateDuration(
+        parseISO(action.payload.entry.start_time),
+        parseISO(action.payload.entry.end_time),
+      );
       return {
         ...state,
         entries: newEntries,
+        totalDurations: newDurations,
       };
+    }
     case 'REMOVE_ENTRY': {
       const remaining = state.entries.filter((_, index) => index !== action.payload);
       return {
