@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { ticketVariableAudience } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -116,14 +117,16 @@ describe('ticket email audience split (integration)', () => {
     return mails[0];
   };
   /**
-   * The client rendering is built from client-safe variables only. Every variable the handlers
-   * send today is client-safe, so a client copy must carry the same ticket variables as a staff
-   * copy: a variable missing here was dropped by the classification and now renders empty.
+   * The client rendering is built from client-safe variables only. Every client-audience
+   * variable the handlers send must appear in a client copy exactly as it does in a staff
+   * copy: one missing here was dropped by the classification and now renders empty.
+   * MSP-audience variables (material rates and billed state) may be absent by design.
    */
   const expectNoTicketVariableLost = () => {
-    const staff = Object.keys(mailTo(ASSIGNEE_EMAIL).context.ticket).sort();
-    expect(Object.keys(mailTo(CONTACT_EMAIL).context.ticket).sort()).toEqual(staff);
-    expect(Object.keys(mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket).sort()).toEqual(staff);
+    const clientSafe = (keys: string[]) => keys.filter((key) => ticketVariableAudience(`ticket.${key}`) === 'client').sort();
+    const staff = clientSafe(Object.keys(mailTo(ASSIGNEE_EMAIL).context.ticket));
+    expect(clientSafe(Object.keys(mailTo(CONTACT_EMAIL).context.ticket))).toEqual(staff);
+    expect(clientSafe(Object.keys(mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket))).toEqual(staff);
   };
   const audienceOf = () => Object.fromEntries(sent.map((mail) => [mail.to.toLowerCase(), {
     template: mail.template, isInternal: mail.context.recipient?.isInternal,
