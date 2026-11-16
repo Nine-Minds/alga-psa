@@ -11,10 +11,10 @@ const get = (obj: any, key: string) => key.split('.').reduce((node, part) => nod
 const NEW_KEYS = [
   'editor.execution.visibility.description',
   ...[
-    'whatItIs', 'ruleShapeTitle', 'ruleShape', 'ruleAll', 'ruleNone', 'ruleSource', 'ruleEarlier', 'ruleHidden',
+    'whatItIs', 'ruleShapeTitle', 'ruleShape', 'ruleAll', 'ruleNone', 'ruleSource', 'ruleEarlier', 'ruleHidden', 'ruleHiddenAnswers',
     'operatorsTitle', 'operatorsIntro', 'contextTitle', 'contextIntro', 'placeholders.clientId',
     'placeholders.contactId', 'placeholders.requesterUserId', 'timingTitle', 'timing', 'editionTitle', 'edition',
-    'examplesTitle', 'examples.showWhen.title', 'examples.hideWhen.title', 'examples.prefill.title', 'copy',
+    'examplesTitle', 'examples.showWhen.title', 'examples.hideWhen.title', 'examples.clientScoped.title', 'examples.clientScoped.note', 'copy',
     'copied', 'copyFailed',
   ].map((suffix) => `editor.execution.advanced.help.${suffix}`),
 ];

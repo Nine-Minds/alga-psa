@@ -184,6 +184,7 @@
           "ruleSource": "source är en fältnyckel eller en av context.requesterUserId, context.clientId och context.contactId.",
           "ruleEarlier": "Ett fält som används som source måste ligga tidigare i formuläret än det fält det styr.",
           "ruleHidden": "Ett dolt fält räknas som tomt, så om du döljer ett styrande fält döljs också de fält som beror på det.",
+          "ruleHiddenAnswers": "Svar i dolda fält, inklusive förifyllda värden, skickas inte med begäran.",
           "operatorsTitle": "Operatorer",
           "operatorsIntro": "operator måste vara något av följande:",
           "contextTitle": "Förifyllda värden (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "Dölj ”Company” när ”I am the end user” är ikryssad"
             },
-            "prefill": {
-              "title": "Förifyll ett dolt fält ”Client” med den begärande användarens klient"
+            "clientScoped": {
+              "title": "Visa ”Site code” bara för en klient och förifyll ”Client reference” med klientens ID",
+              "note": "Ersätt exemplets klient-ID med ID:t för din klient. Det förifyllda värdet är ett ID, och klienten kan se och redigera det i formuläret."
             }
           },
           "copy": "Kopiera",

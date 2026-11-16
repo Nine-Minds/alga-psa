@@ -184,6 +184,7 @@
           "ruleSource": "source to klucz pola albo jedna z wartości context.requesterUserId, context.clientId i context.contactId.",
           "ruleEarlier": "Pole użyte jako source musi występować w formularzu wcześniej niż pole, którym steruje.",
           "ruleHidden": "Ukryte pole jest traktowane jak puste, więc ukrycie pola sterującego ukrywa też pola od niego zależne.",
+          "ruleHiddenAnswers": "Odpowiedzi w ukrytych polach, w tym wstępnie wypełnione wartości, nie są wysyłane razem ze zgłoszeniem.",
           "operatorsTitle": "Operatory",
           "operatorsIntro": "operator musi być jedną z wartości:",
           "contextTitle": "Wstępnie wypełnione wartości (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "Ukryj „Company”, gdy zaznaczono „I am the end user”"
             },
-            "prefill": {
-              "title": "Wstępnie wypełnij ukryte pole „Client” klientem użytkownika zgłaszającego"
+            "clientScoped": {
+              "title": "Pokaż „Site code” tylko dla jednego klienta i wstępnie wypełnij „Client reference” identyfikatorem klienta",
+              "note": "Zastąp przykładowy identyfikator klienta identyfikatorem swojego klienta. Wstępnie wypełniona wartość to identyfikator, który klient widzi i może edytować w formularzu."
             }
           },
           "copy": "Kopiuj",

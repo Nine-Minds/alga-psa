@@ -184,6 +184,7 @@
           "ruleSource": "source is een veldsleutel of een van context.requesterUserId, context.clientId en context.contactId.",
           "ruleEarlier": "Een veld dat als source wordt gebruikt, moet eerder in het formulier staan dan het veld dat het aanstuurt.",
           "ruleHidden": "Een verborgen veld telt als leeg. Als je een aansturend veld verbergt, worden dus ook de velden verborgen die ervan afhangen.",
+          "ruleHiddenAnswers": "Antwoorden op verborgen velden, inclusief vooraf ingevulde waarden, worden niet met het verzoek verzonden.",
           "operatorsTitle": "Operators",
           "operatorsIntro": "operator moet een van de volgende zijn:",
           "contextTitle": "Vooraf ingevulde waarden (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "“Company” verbergen als “I am the end user” is aangevinkt"
             },
-            "prefill": {
-              "title": "Een verborgen veld “Client” vooraf invullen met de klant van de aanvragende gebruiker"
+            "clientScoped": {
+              "title": "“Site code” alleen tonen voor één klant en “Client reference” vooraf invullen met het klant-ID",
+              "note": "Vervang het voorbeeld-klant-ID door het ID van jouw klant. De vooraf ingevulde waarde is een ID, en de klant kan die in het formulier zien en aanpassen."
             }
           },
           "copy": "Kopiëren",

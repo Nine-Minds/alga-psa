@@ -59,7 +59,7 @@ describe('AdvancedFormBehaviorHelp', () => {
       const block = document.getElementById(`service-request-form-behavior-example-${example.id}`)!;
       expect(JSON.parse(block.querySelector('pre')!.textContent!)).toEqual(example.config);
     }
-    fireEvent.click(document.getElementById('service-request-form-behavior-example-prefill-copy')!);
+    fireEvent.click(document.getElementById('service-request-form-behavior-example-clientScoped-copy')!);
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(JSON.parse(writeText.mock.calls[0][0])).toEqual(ADVANCED_FORM_BEHAVIOR_EXAMPLES[2].config);
   });

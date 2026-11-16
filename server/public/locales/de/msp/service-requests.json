@@ -184,6 +184,7 @@
           "ruleSource": "source ist ein Feldschlüssel oder einer von context.requesterUserId, context.clientId und context.contactId.",
           "ruleEarlier": "Ein als source verwendetes Feld muss im Formular vor dem Feld stehen, das es steuert.",
           "ruleHidden": "Ein ausgeblendetes Feld gilt als leer. Wird ein steuerndes Feld ausgeblendet, werden daher auch die davon abhängigen Felder ausgeblendet.",
+          "ruleHiddenAnswers": "Antworten auf ausgeblendete Felder, einschließlich vorausgefüllter Werte, werden nicht mit der Anfrage übermittelt.",
           "operatorsTitle": "Operatoren",
           "operatorsIntro": "operator muss einer der folgenden Werte sein:",
           "contextTitle": "Vorausgefüllte Werte (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "„Company“ ausblenden, wenn „I am the end user“ angekreuzt ist"
             },
-            "prefill": {
-              "title": "Ein ausgeblendetes Feld „Client“ mit dem Client des anfragenden Benutzers vorausfüllen"
+            "clientScoped": {
+              "title": "„Site code“ nur für einen Client anzeigen und „Client reference“ mit der Client-ID vorausfüllen",
+              "note": "Ersetzen Sie die Beispiel-Client-ID durch die ID Ihres Clients. Der vorausgefüllte Wert ist eine ID, und der Client kann ihn im Formular sehen und bearbeiten."
             }
           },
           "copy": "Kopieren",

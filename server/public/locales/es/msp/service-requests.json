@@ -184,6 +184,7 @@
           "ruleSource": "source es una clave de campo, o uno de context.requesterUserId, context.clientId y context.contactId.",
           "ruleEarlier": "Un campo usado como source debe aparecer en el formulario antes del campo que controla.",
           "ruleHidden": "Un campo oculto cuenta como vacío, por lo que ocultar un campo de control también oculta los campos que dependen de él.",
+          "ruleHiddenAnswers": "Las respuestas de los campos ocultos, incluidos los valores rellenados previamente, no se envían con la solicitud.",
           "operatorsTitle": "Operadores",
           "operatorsIntro": "operator debe ser uno de los siguientes:",
           "contextTitle": "Valores rellenados previamente (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "Ocultar «Company» cuando «I am the end user» esté marcado"
             },
-            "prefill": {
-              "title": "Rellenar previamente un campo oculto «Client» con el cliente del usuario solicitante"
+            "clientScoped": {
+              "title": "Mostrar «Site code» solo para un cliente y rellenar previamente «Client reference» con el ID del cliente",
+              "note": "Sustituya el ID de cliente del ejemplo por el ID de su cliente. El valor rellenado previamente es un ID, y el cliente puede verlo y editarlo en el formulario."
             }
           },
           "copy": "Copiar",

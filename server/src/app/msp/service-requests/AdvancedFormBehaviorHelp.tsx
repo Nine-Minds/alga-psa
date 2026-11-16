@@ -44,6 +44,7 @@ export function AdvancedFormBehaviorHelp() {
           <li>{t(k('ruleSource'))}</li>
           <li>{t(k('ruleEarlier'))}</li>
           <li>{t(k('ruleHidden'))}</li>
+          <li>{t(k('ruleHiddenAnswers'))}</li>
         </ul>
       </section>
 
@@ -100,6 +101,7 @@ export function AdvancedFormBehaviorHelp() {
                 </Button>
               </div>
               <pre className="overflow-x-auto rounded border bg-white p-2 font-mono">{json}</pre>
+              {example.id === 'clientScoped' && <p>{t(k('examples.clientScoped.note'))}</p>}
             </div>
           );
         })}

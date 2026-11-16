@@ -7,7 +7,7 @@
  */
 export interface AdvancedFormBehaviorExample {
   /** Suffix of the `editor.execution.advanced.help.examples.<id>.*` translation keys. */
-  id: 'showWhen' | 'hideWhen' | 'prefill';
+  id: 'showWhen' | 'hideWhen' | 'clientScoped';
   config: Record<string, unknown>;
 }
 
@@ -27,10 +27,19 @@ export const ADVANCED_FORM_BEHAVIOR_EXAMPLES: ReadonlyArray<AdvancedFormBehavior
     },
   },
   {
-    id: 'prefill',
+    // The prefilled field is visible, so its value is submitted. The client ID is a placeholder
+    // for the admin to replace.
+    id: 'clientScoped',
     config: {
-      visibilityRules: [{ fieldKey: 'client', source: 'context.clientId', operator: 'is-empty' }],
-      contextDefaults: { client: '{{clientId}}' },
+      visibilityRules: [
+        {
+          fieldKey: 'site_code',
+          source: 'context.clientId',
+          operator: 'equals',
+          value: '00000000-0000-0000-0000-000000000000',
+        },
+      ],
+      contextDefaults: { client_reference: '{{clientId}}' },
     },
   },
 ];

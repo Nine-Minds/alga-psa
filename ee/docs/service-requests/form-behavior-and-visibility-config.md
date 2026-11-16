@@ -42,6 +42,7 @@ How conditions combine:
 - A field with several conditions is shown only when **all** of them pass. There is no OR; conditions are combined with AND only.
 - A field used as `source` should appear **earlier** in the form than the field it controls. Fields are evaluated from top to bottom, so a later field has not been decided yet. "Show when…" only offers earlier fields for this reason.
 - A hidden field counts as empty. If you hide a controlling field, every field that depends on it is evaluated against an empty value too, so those fields are hidden or shown according to that empty value. Choose conditions with that in mind.
+- Answers to hidden fields, including prefilled values, are not submitted with the request. A prefilled value only reaches the ticket or workflow if its field is visible.
 - For `select` fields, compare against the option's stored value, not its display label.
 
 ### Operators
@@ -102,24 +103,27 @@ Field keys here are illustrative; use the keys from your own form.
 
 `is-false` passes when the box is unchecked, so "Company" is shown only in that case.
 
-**Prefill a hidden "Client" field with the requesting client**
+**Show "Site code" only for one client, and prefill "Client reference" with the client's ID**
 
 ```json
 {
   "visibilityRules": [
     {
-      "fieldKey": "client",
+      "fieldKey": "site_code",
       "source": "context.clientId",
-      "operator": "is-empty"
+      "operator": "equals",
+      "value": "00000000-0000-0000-0000-000000000000"
     }
   ],
   "contextDefaults": {
-    "client": "{{clientId}}"
+    "client_reference": "{{clientId}}"
   }
 }
 ```
 
-This example uses both keys. A client user always has a client, so `is-empty` never passes and the field stays hidden. A hidden field is not rendered and its answer is not submitted with the request, so use this pattern only for a value you need while the form is open. To show the prefilled value to the client instead, leave out the rule and keep `contextDefaults`.
+This example uses both keys. Replace the placeholder `value` with the ID of your client: open the client in the MSP portal and copy the ID from the address (`/msp/clients/<client ID>`). Users of that client see "Site code"; everyone else does not.
+
+"Client reference" has no rule, so it is always visible and its prefilled value is submitted. The prefilled value is the client's ID, and the client user can see and edit it in the form. Because answers to hidden fields are not submitted, do not prefill a field that a rule hides.
 
 ## When rules are applied
 

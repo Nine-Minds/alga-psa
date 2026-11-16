@@ -184,6 +184,7 @@
           "ruleSource": "source è una chiave di campo, oppure uno tra context.requesterUserId, context.clientId e context.contactId.",
           "ruleEarlier": "Un campo usato come source deve comparire nel modulo prima del campo che controlla.",
           "ruleHidden": "Un campo nascosto conta come vuoto, quindi nascondere un campo di controllo nasconde anche i campi che dipendono da esso.",
+          "ruleHiddenAnswers": "Le risposte ai campi nascosti, compresi i valori precompilati, non vengono inviate con la richiesta.",
           "operatorsTitle": "Operatori",
           "operatorsIntro": "operator deve essere uno dei seguenti:",
           "contextTitle": "Valori precompilati (contextDefaults)",
@@ -205,8 +206,9 @@
             "hideWhen": {
               "title": "Nascondi «Company» quando «I am the end user» è selezionato"
             },
-            "prefill": {
-              "title": "Precompila un campo nascosto «Client» con il cliente dell’utente richiedente"
+            "clientScoped": {
+              "title": "Mostra «Site code» solo per un cliente e precompila «Client reference» con l’ID del cliente",
+              "note": "Sostituisci l’ID cliente dell’esempio con l’ID del tuo cliente. Il valore precompilato è un ID e il cliente può vederlo e modificarlo nel modulo."
             }
           },
           "copy": "Copia",
