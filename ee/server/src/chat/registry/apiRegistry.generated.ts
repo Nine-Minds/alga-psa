@@ -41574,6 +41574,160 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_servicerequests_catalog",
+    "method": "get",
+    "path": "/api/v1/service-requests/catalog",
+    "displayName": "List the service requests a client contact can see",
+    "summary": "List the service requests a client contact can see",
+    "description": "Returns the published service-request catalog exactly as the contact would see it in the client portal (visibility provider and audience applied). Use it to discover definitionId values for the submissions endpoint. Requires client:read and contact:read.",
+    "tags": [
+      "Service Requests"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "clientId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "contactId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ServiceRequestCatalogItem"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_servicerequests_definitionid_submissions",
+    "method": "post",
+    "path": "/api/v1/service-requests/{definitionId}/submissions",
+    "displayName": "Submit a service request on behalf of a client contact",
+    "summary": "Submit a service request on behalf of a client contact",
+    "description": "Files a published service request for a client contact. The contact is the requester (their active portal user, when one exists) and the API-key user is recorded as the submitter; the ticket is entered by the API-key user with origin internal/source msp. Send clientSubmissionKey to make retries idempotent: a repeated key returns the original submission with 200. Requires ticket:create, client:read and contact:read (not service:*, which controls catalog authoring).",
+    "tags": [
+      "Service Requests"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contactId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "clientSubmissionKey": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "clientId",
+        "contactId",
+        "payload"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "submissionId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "executionStatus": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "succeeded",
+                "failed"
+              ]
+            },
+            "ticketId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "submissionId",
+            "executionStatus",
+            "ticketId"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_statuses",
     "method": "get",
     "path": "/api/v1/statuses",
