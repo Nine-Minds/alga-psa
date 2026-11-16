@@ -65,9 +65,12 @@ vi.mock('@ee/lib/integrations/ninjaone/sync/softwareSync', () => ({ syncSoftware
 vi.mock('@ee/lib/integrations/ninjaone/sync/patchSync', () => ({ syncPatchStatus: h.syncPatches }));
 
 const actions = await import('@ee/lib/actions/integrations/ninjaoneActions');
-const { triggerSoftwareInventorySync, triggerPatchStatusSync, getRmmComplianceSummary } = actions;
+const { triggerSoftwareInventorySync, triggerPatchStatusSync, getRmmComplianceSummary, getRmmInventorySyncStatus } = actions;
 
-const runningRecord = { status: 'running', jobId: 'job-live', startedAt: '2026-11-16T10:00:00.000Z' };
+const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+// Fresh by heartbeat; the heartbeat is the source of liveness, not jobs.status.
+const runningRecord = () => ({ status: 'running', jobId: 'job-live', startedAt: ago(20 * 60_000), heartbeatAt: ago(10_000), done: 100, total: 831 });
+const staleRecord = () => ({ status: 'running', jobId: 'job-live', startedAt: ago(30 * 60_000), heartbeatAt: ago(6 * 60_000) });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,24 +107,46 @@ describe.each([
   });
 
   it('returns the in-flight jobId instead of scheduling a duplicate', async () => {
-    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord } } };
-    h.jobRow = { status: 'processing' };
+    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord() } } };
+    h.jobRow = { status: 'processing', runner_type: 'pgboss' };
     expect(await trigger()).toEqual({ success: true, jobId: 'job-live' });
     expect(h.scheduleJob).not.toHaveBeenCalled();
     expect(h.updates).toHaveLength(0);
   });
 
-  it.each(['completed', 'failed'])('overwrites a stale running record whose job is %s', async (status) => {
-    h.integration = { integration_id: 'int-1', settings: JSON.stringify({ inventorySync: { [kind]: runningRecord } }) };
-    h.jobRow = { status };
+  // Temporal forwards the job fire-and-forget: the jobs row is terminal while the walk runs.
+  it.each(['completed', 'failed'])('a forwarded (temporal) job reading %s does NOT make a fresh running record stale', async (status) => {
+    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord() } } };
+    h.jobRow = { status, runner_type: 'temporal' };
+    expect(await trigger()).toEqual({ success: true, jobId: 'job-live' });
+    expect(h.scheduleJob).not.toHaveBeenCalled();
+  });
+
+  it('a fresh running record whose job row is missing is still live', async () => {
+    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord() } } };
+    h.jobRow = null;
+    expect(await trigger()).toEqual({ success: true, jobId: 'job-live' });
+    expect(h.scheduleJob).not.toHaveBeenCalled();
+  });
+
+  it('a running record with no heartbeat yet counts as live from startedAt', async () => {
+    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: { status: 'running', jobId: 'job-live', startedAt: ago(5_000) } } } };
+    h.jobRow = { status: 'pending', runner_type: 'temporal' };
+    expect(await trigger()).toEqual({ success: true, jobId: 'job-live' });
+  });
+
+  it.each(['temporal', 'pgboss'])('a stale heartbeat (%s) is overwritten and a new job scheduled', async (runner_type) => {
+    h.integration = { integration_id: 'int-1', settings: JSON.stringify({ inventorySync: { [kind]: staleRecord() } }) };
+    h.jobRow = { status: 'processing', runner_type };
     expect(await trigger()).toEqual({ success: true, jobId: 'job-new' });
     expect(h.scheduleJob).toHaveBeenCalledTimes(1);
   });
 
-  it('treats a running record whose job row is gone as stale', async () => {
-    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord } } };
-    h.jobRow = null;
+  it.each(['completed', 'failed'])('on pg-boss a terminal job (%s) with a still-fresh running record is declared stale', async (status) => {
+    h.integration = { integration_id: 'int-1', settings: { inventorySync: { [kind]: runningRecord() } } };
+    h.jobRow = { status, runner_type: 'pgboss' };
     expect(await trigger()).toEqual({ success: true, jobId: 'job-new' });
+    expect(h.scheduleJob).toHaveBeenCalledTimes(1);
   });
 
   it('a finished outcome (not running) never blocks a new run', async () => {
@@ -188,15 +213,35 @@ describe('getRmmComplianceSummary inventorySync', () => {
       status: 'partial', assetsProcessed: 831, assetsUpdated: 828, assetsFailed: 3, errorCount: 3,
       errors: ['a', 'b', 'c'], startedAt: 's', completedAt: 'e', jobId: 'job-1',
     };
-    h.integration = { last_sync_at: null, settings: { tokenLifecycle: { status: 'ok' }, inventorySync: { software: partial, patches: runningRecord } } };
+    const running = runningRecord();
+    h.integration = { last_sync_at: null, settings: { tokenLifecycle: { status: 'ok' }, inventorySync: { software: partial, patches: running } } };
     const result = await getRmmComplianceSummary();
     expect(result.success).toBe(true);
-    expect(result.summary?.inventorySync).toEqual({ software: partial, patches: runningRecord });
+    // running records additionally carry the server-computed `stale` flag
+    expect(result.summary?.inventorySync).toEqual({ software: partial, patches: { ...running, stale: false } });
   });
 
   it('returns an empty inventorySync when nothing has run', async () => {
     h.integration = { last_sync_at: null, settings: {} };
     const result = await getRmmComplianceSummary();
     expect(result.summary?.inventorySync).toEqual({});
+  });
+});
+
+describe('getRmmInventorySyncStatus', () => {
+  it('returns only the inventorySync records, flagging a stale heartbeat', async () => {
+    const stale = staleRecord();
+    h.integration = { settings: { inventorySync: { software: runningRecord(), patches: stale } } };
+    const result = await getRmmInventorySyncStatus();
+    expect(result.success).toBe(true);
+    expect(result.inventorySync?.software).toMatchObject({ status: 'running', stale: false, done: 100, total: 831 });
+    expect(result.inventorySync?.patches).toMatchObject({ status: 'running', stale: true });
+  });
+
+  it('refuses without asset:read', async () => {
+    h.hasPermission.mockResolvedValue(false);
+    const result = await getRmmInventorySyncStatus();
+    expect(result.success).toBe(false);
+    expect(result.inventorySync).toBeUndefined();
   });
 });

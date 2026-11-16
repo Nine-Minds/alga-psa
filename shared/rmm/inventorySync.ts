@@ -28,6 +28,20 @@ export interface RmmInventorySyncRunning {
   status: 'running';
   jobId: string;
   startedAt: string;
+  /**
+   * Refreshed by the handler on every batch. The stored record — not jobs.status —
+   * is the source of liveness: on Temporal the job is forwarded fire-and-forget,
+   * so its `jobs` row reads terminal as soon as the event is published.
+   */
+  heartbeatAt?: string;
+  /** Devices done / total, written alongside each heartbeat. */
+  done?: number;
+  total?: number;
+  /**
+   * Derived on read (annotateInventorySyncLiveness), never stored: the record is
+   * `running` but its heartbeat is older than INVENTORY_SYNC_STALE_MS.
+   */
+  stale?: boolean;
 }
 
 export interface RmmInventorySyncOutcome {
@@ -88,4 +102,33 @@ export function inventorySyncSettingsPatch(
      )`,
     [kind, JSON.stringify(record)],
   );
+}
+
+/**
+ * A running record is live while its last heartbeat (or startedAt, before the
+ * first batch) is newer than this. Well above one batch (25–50 devices, a few
+ * seconds) so a slow batch never reads as dead.
+ */
+export const INVENTORY_SYNC_STALE_MS = 5 * 60 * 1000;
+
+export function isInventorySyncRunningFresh(
+  record: RmmInventorySyncRunning,
+  now: number = Date.now(),
+): boolean {
+  const last = Date.parse(record.heartbeatAt ?? record.startedAt);
+  return Number.isFinite(last) && now - last < INVENTORY_SYNC_STALE_MS;
+}
+
+/** Marks running records whose heartbeat has gone stale, so clients never compare clocks. */
+export function annotateInventorySyncLiveness(
+  settings: RmmInventorySyncSettings,
+  now: number = Date.now(),
+): RmmInventorySyncSettings {
+  const out: RmmInventorySyncSettings = {};
+  for (const kind of RMM_INVENTORY_SYNC_KINDS) {
+    const rec = settings[kind];
+    if (!rec) continue;
+    out[kind] = rec.status === 'running' ? { ...rec, stale: !isInventorySyncRunningFresh(rec, now) } : rec;
+  }
+  return out;
 }

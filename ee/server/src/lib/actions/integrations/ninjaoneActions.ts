@@ -47,6 +47,8 @@ import { buildIntegrationDisconnectedPayload } from '@alga-psa/workflow-streams'
 import { getJobRunnerInstance, initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import {
   RMM_INVENTORY_SYNC_JOB,
+  annotateInventorySyncLiveness,
+  isInventorySyncRunningFresh,
   inventorySyncSettingsPatch,
   readInventorySyncSettings,
   type RmmInventorySyncKind,
@@ -1305,18 +1307,27 @@ async function scheduleInventorySync(
     const integrationId = integration.integration_id;
 
     // Already running? Attach the caller to the in-flight job instead of starting another.
+    // Liveness comes from the stored record's heartbeat, NOT jobs.status: on Temporal
+    // the job is forwarded fire-and-forget, so its row reads terminal the moment the
+    // event is published, long before the fleet walk ends.
     const existing = readInventorySyncSettings(integration.settings)[kind];
     if (existing?.status === 'running' && existing.jobId) {
       const job = await db.table('jobs')
         .where({ job_id: existing.jobId })
-        .first('status') as { status?: string } | undefined;
-      if (job?.status && NON_TERMINAL_JOB_STATUSES.has(String(job.status))) {
+        .first('status', 'runner_type') as { status?: string; runner_type?: string } | undefined;
+      // Extra stale signal, pg-boss only: there the job row is terminal exactly when
+      // the handler returned, so a still-`running` record means it died or no-op'd.
+      // A terminal job alone is never proof for any other runner.
+      const pgBossFinished = job?.runner_type === 'pgboss'
+        && !!job.status && !NON_TERMINAL_JOB_STATUSES.has(String(job.status));
+      if (isInventorySyncRunningFresh(existing) && !pgBossFinished) {
         return { success: true, jobId: existing.jobId };
       }
-      // Record says running but the job is finished (or gone): it died without
-      // writing an outcome. Stale — fall through and overwrite it.
+      // Heartbeat expired (or pg-boss finished without an outcome): it died without
+      // writing one. Stale — fall through and overwrite it.
       logger.warn('[NinjaOneActions] Overwriting stale running inventory sync record', {
         tenant, integrationId, kind, jobId: existing.jobId, jobStatus: job?.status ?? 'missing',
+        heartbeatAt: existing.heartbeatAt, startedAt: existing.startedAt,
       });
     }
 
@@ -1439,6 +1450,35 @@ export const searchSoftware = withAdvancedAssetsAccess(async (
 });
 
 /**
+ * Lightweight read of just `settings.inventorySync`, for the panel's 2s poll while
+ * a sync runs (the full summary runs several aggregate queries). Running records
+ * carry a server-computed `stale` flag so the client never compares clocks.
+ */
+export const getRmmInventorySyncStatus = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
+  success: boolean;
+  inventorySync?: RmmInventorySyncSettings;
+  error?: string;
+}> => {
+  try {
+    const canView = await hasPermission(user, 'asset', 'read');
+    if (!canView) {
+      throw new Error('Insufficient permissions to view sync status');
+    }
+    const { knex } = await createTenantKnex();
+    const integration = await tenantDb(knex, tenant).table('rmm_integrations')
+      .where('provider', 'ninjaone')
+      .first('settings') as { settings?: unknown } | undefined;
+    return {
+      success: true,
+      inventorySync: annotateInventorySyncLiveness(readInventorySyncSettings(integration?.settings)),
+    };
+  } catch (error) {
+    logger.error('[NinjaOneActions] Error getting inventory sync status:', extractErrorInfo(error));
+    return { success: false, error: ninjaOneActionErrorMessage(error, 'Unable to load NinjaOne sync status.') };
+  }
+});
+
+/**
  * Get compliance summary for RMM-managed assets
  */
 export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { tenant }): Promise<{
@@ -1538,7 +1578,7 @@ export const getRmmComplianceSummary = withAdvancedAssetsAccess(async (user, { t
         patchesPending: totalPending,
         patchesFailed: totalFailed,
         lastSyncAt: integration?.last_sync_at,
-        inventorySync: readInventorySyncSettings(integration?.settings),
+        inventorySync: annotateInventorySyncLiveness(readInventorySyncSettings(integration?.settings)),
       },
     };
   } catch (error) {

@@ -24,6 +24,7 @@ import {
   inventorySyncSettingsPatch,
   type RmmInventorySyncKind,
   type RmmInventorySyncOutcome,
+  type RmmInventorySyncRecord,
 } from '@alga-psa/shared/rmm/inventorySync';
 import type { Knex } from 'knex';
 import type { BaseJobData } from '../jobs/interfaces';
@@ -129,10 +130,10 @@ async function writeProgressRow(
   }
 }
 
-async function writeOutcome(
+async function writeRecord(
   knex: Knex,
   data: RmmInventorySyncJobData,
-  outcome: RmmInventorySyncOutcome,
+  outcome: RmmInventorySyncRecord,
 ): Promise<void> {
   await tenantDb(knex, data.tenantId)
     .table('rmm_integrations')
@@ -173,7 +174,8 @@ export async function rmmInventorySyncHandler(
   // Re-check eligibility per run (same gates as rmmDeviceSyncHandler): a queued
   // job that outlives a disconnect must be a no-op, not an API-key error in
   // someone's settings panel. Nothing is written — the schedule-time `running`
-  // record is recognised as stale by the action once this job is terminal.
+  // record never gets a heartbeat, so it goes stale (INVENTORY_SYNC_STALE_MS) and
+  // is overwritable; on pg-boss a terminal job row declares it stale at once.
   if (!row || !row.is_active) {
     logger.info('[RmmInventorySyncJob] Skipping: integration missing or inactive', data);
     return;
@@ -194,17 +196,40 @@ export async function rmmInventorySyncHandler(
   const startedAt = new Date().toISOString();
   let outcome: RmmInventorySyncOutcome;
 
+  // The running record (with heartbeat) is the liveness signal: written now, then
+  // refreshed per batch. Never rely on jobs.status for this — on Temporal the job
+  // is forwarded fire-and-forget and reads terminal while this walk still runs.
+  const writeHeartbeat = async (done?: number, total?: number) => {
+    try {
+      await writeRecord(knex, data, {
+        status: 'running',
+        jobId: jobRecordId,
+        startedAt,
+        heartbeatAt: new Date().toISOString(),
+        ...(done !== undefined ? { done, total } : {}),
+      });
+    } catch (error) {
+      // Bookkeeping: must never fail the sync.
+      logger.warn('[RmmInventorySyncJob] Failed to write heartbeat', {
+        jobRecordId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
   try {
-    // Fire-and-forget progress writes are chained so rows land in batch order.
+    await writeHeartbeat();
+    // Progress writes are chained so rows and heartbeats land in batch order.
     let progressWrites: Promise<void> = Promise.resolve();
     const result = await run(data.tenantId, data.integrationId, {
       assetIds: data.assetIds,
       trackChanges: data.trackChanges,
       performedBy: data.performedBy,
       onProgress: (done, total) => {
-        progressWrites = progressWrites.then(() =>
-          writeProgressRow(knex, data.tenantId, jobRecordId, data.kind, done, total),
-        );
+        progressWrites = progressWrites.then(async () => {
+          await writeProgressRow(knex, data.tenantId, jobRecordId, data.kind, done, total);
+          await writeHeartbeat(done, total);
+        });
       },
     });
     await progressWrites;
@@ -236,7 +261,7 @@ export async function rmmInventorySyncHandler(
     };
   }
 
-  await writeOutcome(knex, data, outcome);
+  await writeRecord(knex, data, outcome);
   await revalidateAssetsPage();
 
   logger.info('[RmmInventorySyncJob] complete', {

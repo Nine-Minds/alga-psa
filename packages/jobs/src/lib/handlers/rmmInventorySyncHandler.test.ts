@@ -56,6 +56,10 @@ vi.mock('@enterprise/lib/integrations/ninjaone/sync/patchSync', () => ({
 
 const { rmmInventorySyncHandler } = await import('./rmmInventorySyncHandler');
 
+type PatchCall = [unknown, string, Record<string, unknown>];
+const patchCalls = () => h.patch.mock.calls as unknown as PatchCall[];
+const lastRecord = () => patchCalls()[patchCalls().length - 1][2];
+
 const data = {
   tenantId: 'tenant-1',
   integrationId: 'int-1',
@@ -125,8 +129,10 @@ describe('rmmInventorySyncHandler', () => {
       'tenant-1', 'int-1',
       expect.objectContaining({ assetIds: ['x'], trackChanges: true, performedBy: 'u1', onProgress: expect.any(Function) }),
     );
-    expect(h.patch).toHaveBeenCalledTimes(1);
-    const [, kind, record] = h.patch.mock.calls[0] as unknown as [unknown, string, Record<string, unknown>];
+    // start heartbeat + final outcome (no batches reported by this stub)
+    expect(h.patch).toHaveBeenCalledTimes(2);
+    expect(patchCalls()[0][2]).toMatchObject({ status: 'running', jobId: 'job-1' });
+    const [, kind, record] = patchCalls()[1];
     expect(kind).toBe('software');
     expect(record).toMatchObject({
       status: 'partial', assetsProcessed: 831, assetsUpdated: 830, assetsFailed: 1,
@@ -134,7 +140,7 @@ describe('rmmInventorySyncHandler', () => {
     });
     expect(typeof record.startedAt).toBe('string');
     expect(typeof record.completedAt).toBe('string');
-    expect(h.updates).toHaveLength(1);
+    expect(h.updates).toHaveLength(2);
     expect(h.revalidate).toHaveBeenCalled();
   });
 
@@ -143,13 +149,13 @@ describe('rmmInventorySyncHandler', () => {
     await rmmInventorySyncHandler('ignored', { ...data, kind: 'patches' });
     expect(h.runPatches).toHaveBeenCalledTimes(1);
     expect(h.runSoftware).not.toHaveBeenCalled();
-    expect((h.patch.mock.calls[0] as unknown[])[1]).toBe('patches');
+    expect(patchCalls().every(c => c[1] === 'patches')).toBe(true);
   });
 
   it('records `failed` when the sync throws, and still revalidates', async () => {
     h.runSoftware.mockRejectedValue(new Error('NinjaOne exploded'));
     await expect(rmmInventorySyncHandler('ignored', data)).resolves.toBeUndefined();
-    const record = (h.patch.mock.calls[0] as unknown as [unknown, string, Record<string, unknown>])[2];
+    const record = lastRecord();
     expect(record).toMatchObject({ status: 'failed', errorCount: 1, errors: ['NinjaOne exploded'], jobId: 'job-1' });
     expect(h.revalidate).toHaveBeenCalled();
   });
@@ -157,7 +163,32 @@ describe('rmmInventorySyncHandler', () => {
   it('records the sync\'s own `failed` status (returned, not thrown) as failed with its errors', async () => {
     h.runSoftware.mockResolvedValue({ ...okResult, status: 'failed', assetsProcessed: 0, assetsUpdated: 0, assetsFailed: 0, errors: ['no credentials'] });
     await rmmInventorySyncHandler('ignored', data);
-    const record = (h.patch.mock.calls[0] as unknown as [unknown, string, Record<string, unknown>])[2];
-    expect(record).toMatchObject({ status: 'failed', errors: ['no credentials'] });
+    expect(lastRecord()).toMatchObject({ status: 'failed', errors: ['no credentials'] });
+  });
+
+  it('writes a running record with a heartbeat at start and refreshes it (with done/total) on every batch', async () => {
+    h.runSoftware.mockImplementation(async (_t, _i, opts) => {
+      opts.onProgress(25, 60);
+      opts.onProgress(60, 60);
+      return { ...okResult, status: 'succeeded', assetsFailed: 0, errorCount: 0, errors: [] };
+    });
+    await rmmInventorySyncHandler('ignored', data);
+
+    const records = patchCalls().map(c => c[2]);
+    // start, batch 1, batch 2, outcome
+    expect(records.map(r => r.status)).toEqual(['running', 'running', 'running', 'succeeded']);
+    expect(records[0]).toMatchObject({ jobId: 'job-1' });
+    expect(typeof records[0].heartbeatAt).toBe('string');
+    expect(records[0].startedAt).toBe(records[2].startedAt);
+    expect(records[1]).toMatchObject({ done: 25, total: 60, jobId: 'job-1' });
+    expect(records[2]).toMatchObject({ done: 60, total: 60 });
+    expect(typeof records[2].heartbeatAt).toBe('string');
+  });
+
+  it('does not let a failing heartbeat write fail the sync', async () => {
+    h.patch.mockImplementationOnce(() => { throw new Error('db hiccup'); });
+    h.runSoftware.mockResolvedValue(okResult);
+    await expect(rmmInventorySyncHandler('ignored', data)).resolves.toBeUndefined();
+    expect(lastRecord()).toMatchObject({ status: 'partial' });
   });
 });

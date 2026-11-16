@@ -10,6 +10,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 const actions = vi.hoisted(() => ({
   getRmmComplianceSummary: vi.fn(),
+  getRmmInventorySyncStatus: vi.fn(),
   triggerPatchStatusSync: vi.fn(),
   triggerSoftwareInventorySync: vi.fn(),
 }));
@@ -129,6 +130,7 @@ describe('NinjaOneComplianceDashboard', () => {
     }));
     actions.triggerPatchStatusSync.mockResolvedValue({ success: true, jobId: 'job-9' });
     jobs.getJobProgressAction.mockResolvedValue({ header: { status: 'processing' }, details: [] });
+    actions.getRmmInventorySyncStatus.mockResolvedValue({ success: true, inventorySync: { patches: { status: 'running', jobId: 'job-9', startedAt: 's', stale: false } } });
     render(<Dashboard />);
     await screen.findByText('integrations.rmm.ninjaOne.compliance.metrics.devicesOnline');
 
@@ -139,79 +141,125 @@ describe('NinjaOneComplianceDashboard', () => {
     expect(document.getElementById('ninjaone-sync-patches-strip')!.textContent).toContain('compliance.sync.running.patches');
   });
 
-  describe('polling a running job', () => {
-    const running = { status: 'running', jobId: 'job-live', startedAt: '2026-11-16T10:00:00.000Z' };
-    const progress = (status: string, done?: number, total?: number) => ({
-      header: { status },
-      details: done === undefined ? [] : [{ result: JSON.stringify({ kind: 'software', done, total }) }],
+  describe('polling a running sync (liveness comes from the stored heartbeat, not jobs.status)', () => {
+    const running = (extra: Record<string, unknown> = {}) => ({
+      status: 'running', jobId: 'job-live', startedAt: '2026-11-16T10:00:00.000Z',
+      heartbeatAt: '2026-11-16T10:05:00.000Z', stale: false, ...extra,
     });
+    const status = (software: Record<string, unknown>) => ({ success: true, inventorySync: { software } });
+    const strip = () => document.getElementById('ninjaone-sync-software-strip')!.textContent;
+    const btn = (id: string) => document.getElementById(id) as HTMLButtonElement;
 
-    it('shows done/total, disables only the running kind, and refetches once when the job finishes', async () => {
+    it('shows done/total from the record, disables only the running kind, and refetches once when the outcome lands', async () => {
       vi.useFakeTimers();
       actions.getRmmComplianceSummary
-        .mockResolvedValueOnce(summaryWith({ software: running }))
+        .mockResolvedValueOnce(summaryWith({ software: running({ done: 100, total: 831 }) }))
         .mockResolvedValueOnce(summaryWith({ software: { ...partialRecord, jobId: 'job-live' } }));
-      jobs.getJobProgressAction
-        .mockResolvedValueOnce(progress('processing', 412, 831))
-        .mockResolvedValueOnce(progress('processing', 600, 831))
-        .mockResolvedValueOnce(progress('completed', 831, 831));
+      actions.getRmmInventorySyncStatus
+        .mockResolvedValueOnce(status(running({ done: 412, total: 831 })))
+        .mockResolvedValueOnce(status(running({ done: 600, total: 831 })))
+        .mockResolvedValueOnce(status({ ...partialRecord, jobId: 'job-live' }));
 
       render(<Dashboard />);
       await flush();
       await flush();
 
-      const strip = () => document.getElementById('ninjaone-sync-software-strip')!.textContent;
       expect(strip()).toContain('compliance.sync.progress {"done":412,"total":831}');
-      expect((document.getElementById('ninjaone-sync-software-btn') as HTMLButtonElement).disabled).toBe(true);
-      expect((document.getElementById('ninjaone-sync-patches-btn') as HTMLButtonElement).disabled).toBe(false);
+      expect(btn('ninjaone-sync-software-btn').disabled).toBe(true);
+      expect(btn('ninjaone-sync-patches-btn').disabled).toBe(false);
 
       await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
       expect(strip()).toContain('"done":600');
-
       expect(actions.getRmmComplianceSummary).toHaveBeenCalledTimes(1);
+
       await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
       await flush();
-      // Terminal job → exactly one more summary fetch, which delivers the durable outcome.
       expect(actions.getRmmComplianceSummary).toHaveBeenCalledTimes(2);
       expect(strip()).toContain('compliance.sync.partial.software');
-      expect((document.getElementById('ninjaone-sync-software-btn') as HTMLButtonElement).disabled).toBe(false);
+      expect(btn('ninjaone-sync-software-btn').disabled).toBe(false);
 
-      // Polling has stopped.
-      const calls = jobs.getJobProgressAction.mock.calls.length;
+      const calls = actions.getRmmInventorySyncStatus.mock.calls.length;
       await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
-      expect(jobs.getJobProgressAction.mock.calls.length).toBe(calls);
+      expect(actions.getRmmInventorySyncStatus.mock.calls.length).toBe(calls);
+    });
+
+    it('keeps the strip running and keeps polling when the job row is terminal but the record heartbeat is fresh', async () => {
+      vi.useFakeTimers();
+      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running() }));
+      // A forwarded (Temporal) job reads completed as soon as the event is published.
+      jobs.getJobProgressAction.mockResolvedValue({ header: { status: 'completed' }, details: [] });
+      actions.getRmmInventorySyncStatus.mockResolvedValue(status(running({ done: 50, total: 831 })));
+
+      render(<Dashboard />);
+      await flush();
+      await flush();
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+
+      expect(strip()).toContain('compliance.sync.running.software');
+      expect(strip()).toContain('"done":50');
+      expect(strip()).not.toContain('endedWithoutResult');
+      expect(btn('ninjaone-sync-software-btn').disabled).toBe(true);
+      expect(actions.getRmmInventorySyncStatus.mock.calls.length).toBeGreaterThanOrEqual(3);
+      // No premature summary refetch: still only the initial load.
+      expect(actions.getRmmComplianceSummary).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports endedWithoutResult (a sync failure, panel intact) once the heartbeat is stale', async () => {
+      vi.useFakeTimers();
+      actions.getRmmComplianceSummary
+        .mockResolvedValueOnce(summaryWith({ software: running() }))
+        .mockResolvedValueOnce(summaryWith({ software: running({ stale: true }) }));
+      actions.getRmmInventorySyncStatus.mockResolvedValue(status(running({ stale: true })));
+      jobs.getJobProgressAction.mockResolvedValue({ header: { status: 'completed' }, details: [] });
+
+      render(<Dashboard />);
+      await flush();
+      await flush();
+      await flush();
+
+      expect(strip()).toContain('compliance.sync.endedWithoutResult');
+      expect(document.getElementById('ninjaone-sync-software-retry-btn')).toBeTruthy();
+      expect(screen.getByText('integrations.rmm.ninjaOne.compliance.metrics.devicesOnline')).toBeTruthy();
+      expect(btn('ninjaone-sync-software-btn').disabled).toBe(false);
+    });
+
+    it('seeding a stale running record on load shows endedWithoutResult straight away', async () => {
+      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running({ stale: true }) }));
+      render(<Dashboard />);
+      await screen.findByText('integrations.rmm.ninjaOne.compliance.metrics.devicesOnline');
+      expect(strip()).toContain('compliance.sync.endedWithoutResult');
+      expect(actions.getRmmInventorySyncStatus).not.toHaveBeenCalled();
+    });
+
+    it('falls back to job_details progress before the first batch heartbeat', async () => {
+      vi.useFakeTimers();
+      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running() }));
+      actions.getRmmInventorySyncStatus.mockResolvedValue(status(running()));
+      jobs.getJobProgressAction.mockResolvedValue({
+        header: { status: 'processing' },
+        details: [{ result: JSON.stringify({ kind: 'software', done: 25, total: 831 }) }],
+      });
+      render(<Dashboard />);
+      await flush();
+      await flush();
+      expect(strip()).toContain('compliance.sync.progress {"done":25,"total":831}');
     });
 
     it('stops polling when the panel unmounts', async () => {
       vi.useFakeTimers();
-      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running }));
-      jobs.getJobProgressAction.mockResolvedValue(progress('processing', 1, 831));
+      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running() }));
+      actions.getRmmInventorySyncStatus.mockResolvedValue(status(running({ done: 1, total: 831 })));
 
       const { unmount } = render(<Dashboard />);
       await flush();
       await flush();
       await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
-      const calls = jobs.getJobProgressAction.mock.calls.length;
+      const calls = actions.getRmmInventorySyncStatus.mock.calls.length;
       expect(calls).toBeGreaterThanOrEqual(2);
 
       unmount();
       await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
-      expect(jobs.getJobProgressAction.mock.calls.length).toBe(calls);
-    });
-
-    it('a record still saying running once the job is terminal is reported as a sync failure, not a summary failure', async () => {
-      vi.useFakeTimers();
-      actions.getRmmComplianceSummary.mockResolvedValue(summaryWith({ software: running }));
-      jobs.getJobProgressAction.mockResolvedValue(progress('completed'));
-
-      render(<Dashboard />);
-      await flush();
-      await flush();
-      await flush();
-
-      expect(document.getElementById('ninjaone-sync-software-strip')!.textContent)
-        .toContain('compliance.sync.endedWithoutResult');
-      expect(screen.getByText('integrations.rmm.ninjaOne.compliance.metrics.devicesOnline')).toBeTruthy();
+      expect(actions.getRmmInventorySyncStatus.mock.calls.length).toBe(calls);
     });
   });
 });

@@ -34,6 +34,7 @@ import type {
 } from '@alga-psa/shared/rmm/inventorySync';
 import {
   getRmmComplianceSummary,
+  getRmmInventorySyncStatus,
   triggerPatchStatusSync,
   triggerSoftwareInventorySync,
 } from '../../../lib/actions/integrations/ninjaoneActions';
@@ -69,7 +70,6 @@ type SyncState = Record<RmmInventorySyncKind, SyncKindState | null>;
 
 const SYNC_KINDS: readonly RmmInventorySyncKind[] = ['software', 'patches'];
 const JOB_POLL_INTERVAL_MS = 2000;
-const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
 
 interface MetricCardProps {
   icon: React.ElementType;
@@ -140,12 +140,21 @@ function latestProgress(details: Array<{ result?: unknown }>): { done: number; t
 }
 
 /**
- * Polls getJobProgressAction every 2s while `jobId` is set. Stops on a terminal
- * job status (or a vanished job) and on unmount. Deliberately no client-side
- * timeout: a 30-minute fleet sync is exactly the case this exists for.
+ * Polls while a sync is running, every 2s, until the sync is over or the panel
+ * unmounts. Deliberately no client-side timeout: a 30-minute fleet sync is
+ * exactly the case this exists for.
+ *
+ * Liveness is read from the stored settings record (heartbeat), NOT from the
+ * job's status: on Temporal the job is forwarded fire-and-forget, so its `jobs`
+ * row reads terminal as soon as the event is published while the walk is still
+ * running. A terminal job with a fresh running record therefore keeps polling.
+ * The sync is over when the record is no longer this job's running record, or
+ * its heartbeat has gone stale. done/total come from the record; job_details
+ * progress (getJobProgressAction) is only a fallback before the first batch.
  */
-// LEVERAGE: friction job-progress-polling — useJobMonitor (@alga-psa/jobs/hooks) polls on a fixed 5s and never stops on a terminal status, so this panel re-implements the poll loop
+// LEVERAGE: friction job-progress-polling — useJobMonitor (@alga-psa/jobs/hooks) polls on a fixed 5s and never stops on a terminal status, and jobs.status is not trustworthy for forwarded (Temporal) jobs, so this panel re-implements the poll loop over the settings record
 function useInventoryJobPolling(
+  kind: RmmInventorySyncKind,
   jobId: string | null,
   onProgress: (done: number, total: number) => void,
   onFinished: () => void,
@@ -163,19 +172,27 @@ function useInventoryJobPolling(
     const tick = async () => {
       let finished = false;
       try {
-        const progress = await getJobProgressAction(jobId);
+        const status = await getRmmInventorySyncStatus();
         if (cancelled) return;
-        if (isActionMessageError(progress)) {
-          // The job row is gone (expired/deleted): nothing left to wait for.
-          finished = true;
-        } else {
-          const latest = latestProgress(progress.details as Array<{ result?: unknown }>);
-          if (latest) progressRef.current(latest.done, latest.total);
-          finished = TERMINAL_JOB_STATUSES.has(String(progress.header.status));
+        if (status.success && status.inventorySync) {
+          const record = status.inventorySync[kind];
+          if (!record || record.jobId !== jobId || record.status !== 'running' || record.stale) {
+            finished = true;
+          } else if (record.done !== undefined && record.total !== undefined) {
+            progressRef.current(record.done, record.total);
+          } else {
+            // No batch finished yet: fall back to the job_details progress rows.
+            const progress = await getJobProgressAction(jobId);
+            if (cancelled) return;
+            if (!isActionMessageError(progress)) {
+              const latest = latestProgress(progress.details as Array<{ result?: unknown }>);
+              if (latest) progressRef.current(latest.done, latest.total);
+            }
+          }
         }
       } catch (err) {
         // Transient (network/server restart): keep polling.
-        console.error('Failed to poll inventory sync job:', err);
+        console.error('Failed to poll inventory sync status:', err);
       }
       if (cancelled) return;
       if (finished) {
@@ -190,7 +207,7 @@ function useInventoryJobPolling(
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [jobId]);
+  }, [jobId, kind]);
 }
 
 interface NinjaOneComplianceDashboardProps {
@@ -224,7 +241,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
   /**
    * Maps the durable settings record to strip state. `overwrite` is false for
    * seeding (panel load / manual refresh must not clobber a live local state)
-   * and true once a polled job has finished, when the stored outcome is the truth.
+   * and true once polling saw the sync end, when the stored record is the truth.
    */
   const applyInventorySync = (records: RmmInventorySyncSettings | undefined, overwrite: boolean) => {
     if (!records) return;
@@ -235,9 +252,10 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         if (!record) continue;
         if (!overwrite && prev[kind]) continue;
         if (record.status === 'running') {
-          next[kind] = overwrite
-            // Job finished yet the record still says running: it ended without
-            // writing an outcome (ineligible no-op, killed worker).
+          next[kind] = record.stale
+            // Heartbeat expired: the run died without writing an outcome
+            // (ineligible no-op, killed worker). A *fresh* record stays running
+            // however the job row reads.
             ? {
                 phase: 'failed',
                 assetsUpdated: 0,
@@ -246,7 +264,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
                 errorCount: 0,
                 message: t('integrations.rmm.ninjaOne.compliance.sync.endedWithoutResult'),
               }
-            : { phase: 'running', jobId: record.jobId };
+            : { phase: 'running', jobId: record.jobId, done: record.done, total: record.total };
         } else {
           next[kind] = {
             phase: record.status,
@@ -262,8 +280,8 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
     });
   };
 
-  const fetchSummary = async (overwriteSync = false): Promise<boolean> => {
-    let ok = false;
+  const fetchSummary = async (overwriteSync = false): Promise<RmmInventorySyncSettings | null> => {
+    let records: RmmInventorySyncSettings | null = null;
     setIsLoading(true);
     setSummaryError(null);
     try {
@@ -274,7 +292,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
       } else if (result.summary) {
         setSummary(result.summary);
         applyInventorySync(result.summary.inventorySync, overwriteSync);
-        ok = true;
+        records = result.summary.inventorySync ?? {};
       } else {
         setSummary(null);
       }
@@ -285,7 +303,7 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
     } finally {
       setIsLoading(false);
     }
-    return ok;
+    return records;
   };
 
   useEffect(() => {
@@ -319,17 +337,18 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
       }),
     // One summary refetch picks up the durable outcome written by the handler.
     onFinished: () => {
-      void fetchSummary(true).then((ok) => {
-        // Could not read the outcome: drop the stale "running" state so the
-        // buttons come back; a later successful load re-seeds it from settings.
-        if (!ok) patchSyncState(kind, null);
+      void fetchSummary(true).then((records) => {
+        // Could not read an outcome (summary failed, or the record is gone): drop
+        // the "running" state so the buttons come back; a later successful load
+        // re-seeds it from settings.
+        if (!records?.[kind]) patchSyncState(kind, null);
       });
     },
   });
   const softwareTracking = trackJob('software');
   const patchesTracking = trackJob('patches');
-  useInventoryJobPolling(runningJobId('software'), softwareTracking.onProgress, softwareTracking.onFinished);
-  useInventoryJobPolling(runningJobId('patches'), patchesTracking.onProgress, patchesTracking.onFinished);
+  useInventoryJobPolling('software', runningJobId('software'), softwareTracking.onProgress, softwareTracking.onFinished);
+  useInventoryJobPolling('patches', runningJobId('patches'), patchesTracking.onProgress, patchesTracking.onFinished);
 
   const startSync = async (kind: RmmInventorySyncKind) => {
     setIsStarting((prev) => ({ ...prev, [kind]: true }));
