@@ -14,6 +14,12 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
 import { createNinjaOneClient } from '../ninjaOneClient';
+import {
+  recordSyncError,
+  reportProgress,
+  statusForCompletedRun,
+  type SyncRunStatus,
+} from './syncOutcome';
 import type { NinjaOneSoftware } from '../../../../interfaces/ninjaone.interfaces';
 import type {
   SoftwareCatalogEntry,
@@ -48,10 +54,19 @@ export interface SoftwareSyncOptions {
   performedBy?: string;
   /** Track changes in asset history */
   trackChanges?: boolean;
+  /** Called once per completed batch with devices done so far and the total to process. */
+  onProgress?: (done: number, total: number) => void;
 }
 
 export interface SoftwareSyncResult {
+  /**
+   * Legacy boolean, kept exactly as before (`assetsFailed === 0`). A run that
+   * updated 830 of 831 devices reads `false` here, so user-facing code must NOT
+   * branch on it — read `status` instead.
+   */
   success: boolean;
+  /** User-facing outcome: `partial` = ran to completion with at least one device failing; `failed` = threw. */
+  status: SyncRunStatus;
   assetsProcessed: number;
   assetsUpdated: number;
   assetsFailed: number;
@@ -59,7 +74,9 @@ export interface SoftwareSyncResult {
   softwareInstalled: number;
   softwareUninstalled: number;
   catalogEntriesCreated: number;
+  /** First 20 messages only (MAX_SYNC_ERRORS); `errorCount` is the real total. */
   errors: string[];
+  errorCount: number;
   startedAt: string;
   completedAt: string;
 }
@@ -272,6 +289,7 @@ async function syncAssetSoftwareToNormalizedTables(
  * Sync software inventory for all RMM-managed devices or a specific set
  * Now uses normalized tables (software_catalog + asset_software)
  */
+// LEVERAGE: pattern fleet-batch-walk — query assets, Promise.all per batch, count/record errors, sleep; same loop as syncPatchStatus (and the device sync); a batched-fleet-walk engine would own status/progress/error-cap once
 export async function syncSoftwareInventory(
   tenantId: string,
   integrationId: string,
@@ -280,6 +298,7 @@ export async function syncSoftwareInventory(
   const startTime = new Date().toISOString();
   const result: SoftwareSyncResult = {
     success: true,
+    status: 'succeeded',
     assetsProcessed: 0,
     assetsUpdated: 0,
     assetsFailed: 0,
@@ -288,11 +307,12 @@ export async function syncSoftwareInventory(
     softwareUninstalled: 0,
     catalogEntriesCreated: 0,
     errors: [],
+    errorCount: 0,
     startedAt: startTime,
     completedAt: '',
   };
 
-  const { batchSize = 25, assetIds, performedBy, trackChanges = false } = options;
+  const { batchSize = 25, assetIds, performedBy, trackChanges = false, onProgress } = options;
 
   try {
     logger.info('[SoftwareSync] Starting software inventory sync (normalized tables)', {
@@ -402,7 +422,7 @@ export async function syncSoftwareInventory(
           } catch (assetError) {
             result.assetsFailed++;
             const errorMsg = assetError instanceof Error ? assetError.message : String(assetError);
-            result.errors.push(`Asset ${asset.asset_id} (${asset.name}): ${errorMsg}`);
+            recordSyncError(result, `Asset ${asset.asset_id} (${asset.name}): ${errorMsg}`);
 
             logger.warn('[SoftwareSync] Failed to sync software for asset', {
               assetId: asset.asset_id,
@@ -412,6 +432,8 @@ export async function syncSoftwareInventory(
         })
       );
 
+      reportProgress(onProgress, Math.min(i + batchSize, assets.length), assets.length);
+
       // Longer delay between batches for software sync (more data)
       if (i + batchSize < assets.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -420,6 +442,7 @@ export async function syncSoftwareInventory(
 
     result.completedAt = new Date().toISOString();
     result.success = result.assetsFailed === 0;
+    result.status = statusForCompletedRun(result.assetsFailed);
 
     logger.info('[SoftwareSync] Software inventory sync completed', {
       tenantId,
@@ -437,7 +460,8 @@ export async function syncSoftwareInventory(
   } catch (error) {
     result.completedAt = new Date().toISOString();
     result.success = false;
-    result.errors.push(error instanceof Error ? error.message : String(error));
+    result.status = 'failed';
+    recordSyncError(result, error instanceof Error ? error.message : String(error));
 
     logger.error('[SoftwareSync] Software inventory sync failed', { tenantId, error: extractErrorInfo(error) });
 
