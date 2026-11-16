@@ -70,12 +70,19 @@ type InventorySyncRunner = (
 // fails and the run is recorded as failed).
 export const INVENTORY_SYNC_RUNNERS: Record<RmmInventorySyncKind, InventorySyncRunner> = {
   software: async (tenant, integrationId, opts) => {
-    const mod = await import('@enterprise/lib/integrations/ninjaone/sync/softwareSync');
+    // Cast: the CE stub exports `undefined`, the EE module the real function.
+    const mod = (await import('@enterprise/lib/integrations/ninjaone/sync/softwareSync')) as {
+      syncSoftwareInventory?: InventorySyncRunner;
+    };
+    if (!mod.syncSoftwareInventory) throw new Error('Software inventory sync is not available in this edition');
     return mod.syncSoftwareInventory(tenant, integrationId, opts);
   },
   patches: async (tenant, integrationId, opts) => {
-    const mod = await import('@enterprise/lib/integrations/ninjaone/sync/patchSync');
-    return mod.syncPatchStatus(tenant, integrationId, { ...opts });
+    const mod = (await import('@enterprise/lib/integrations/ninjaone/sync/patchSync')) as {
+      syncPatchStatus?: InventorySyncRunner;
+    };
+    if (!mod.syncPatchStatus) throw new Error('Patch status sync is not available in this edition');
+    return mod.syncPatchStatus(tenant, integrationId, opts);
   },
 };
 
