@@ -78,6 +78,19 @@ describe('adoptLegacyVisibilityRules', () => {
     ]);
   });
 
+  it('keeps a rule whose source sits below the element it governs', () => {
+    // The config evaluator reads the whole payload, so this rule works today. An element
+    // condition may only read an answer above it, so adopting it would make a definition that
+    // publishes today unpublishable.
+    const result = adoptLegacyVisibilityRules(elements(), {
+      visibilityRules: [{ fieldKey: 'needs_vpn', source: 'vpn_reason', operator: 'has-value' }],
+    });
+
+    expect(result.elements[0].visibleWhen).toBeUndefined();
+    expect(result.remainingConfig).toBeNull();
+    expect(result.unadoptedRules.map((rule) => rule.fieldKey)).toEqual(['needs_vpn']);
+  });
+
   it('handles a definition that mixes both kinds', () => {
     const withOwnRule = elements();
     withOwnRule[1] = {
