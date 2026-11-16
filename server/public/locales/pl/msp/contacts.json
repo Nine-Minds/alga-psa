@@ -839,7 +839,8 @@
       "cancel": "Anuluj",
       "empty": "Brak notatek",
       "add": "Dodaj notatki"
-    }
+    },
+    "submitServiceRequest": "Prześlij zgłoszenie usługi"
   },
   "errors": {
     "contact": {

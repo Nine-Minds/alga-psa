@@ -330,7 +330,8 @@
       "loadFailed": "Checklistsjablonen laden mislukt",
       "retry": "Opnieuw proberen"
     },
-    "audits": "Audits"
+    "audits": "Audits",
+    "submitServiceRequest": "Serviceaanvraag indienen"
   },
   "clientCommandCenter": {
     "cards": {

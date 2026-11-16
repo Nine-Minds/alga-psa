@@ -82,6 +82,8 @@ interface ContactBentoLayoutProps {
   portalSummary?: ContactPortalSummary | null;
   /** Prebuilt create-ticket route href (built by the page; clients can't depend on the tickets package). */
   newTicketHref?: string;
+  /** Prebuilt "submit a service request for this contact" route; the page only passes it when the user may read services. */
+  submitServiceRequestHref?: string;
   /**
    * FR-C6 / FR-E12: the contact's assigned assets and shared workspaces,
    * injected by the page because clients can't depend on the assets package.
@@ -237,6 +239,7 @@ export function ContactBentoLayout({
   relatedWork,
   portalSummary,
   newTicketHref,
+  submitServiceRequestHref,
   assetsSlot,
   userPermissions = { canInvite: false, canUpdateRoles: false, canRead: false },
   quickView = false,
@@ -542,6 +545,11 @@ export function ContactBentoLayout({
           <Button id={`${id}-edit-contact`} size="sm" variant="outline" onClick={openEditDrawer} className="mt-1">
             <Pencil className="mr-1 h-3.5 w-3.5" /> {t('contactBento.editContact', { defaultValue: 'Edit contact' })}
           </Button>
+          {submitServiceRequestHref ? (
+            <Button id={`${id}-submit-service-request`} size="sm" variant="outline" asChild className="mt-1">
+              <Link href={submitServiceRequestHref}>{t('contactBento.submitServiceRequest', { defaultValue: 'Submit service request' })}</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     </BentoTile>

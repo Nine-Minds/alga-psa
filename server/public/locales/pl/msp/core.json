@@ -114,7 +114,9 @@
     "coManaged": "IT w współzarządzaniu",
     "coManagedArchive": "Archiwum współzarządzania",
     "coManagedAdministration": "Dostęp i administracja",
-    "assetsAudits": "Audyty lokalizacji"
+    "assetsAudits": "Audyty lokalizacji",
+    "serviceRequestsManage": "Zarządzaj zgłoszeniami",
+    "serviceRequestsSubmit": "Prześlij w imieniu…"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -212,6 +214,10 @@
         "product": {
           "label": "Produkt",
           "description": "Dodaj nowy produkt do katalogu"
+        },
+        "serviceRequest": {
+          "label": "Zgłoszenie usługi",
+          "description": "Prześlij zgłoszenie usługi dla kontaktu klienta"
         }
       }
     },

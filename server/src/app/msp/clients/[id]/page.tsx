@@ -8,6 +8,8 @@ import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { currentUserCanSubmitOnBehalf } from '@/lib/service-requests/mspSubmitAccess';
+import { buildMspSubmitServiceRequestHref } from '@/lib/service-requests/mspSubmitRoute';
 import type { Metadata } from 'next';
 
 const getCachedClient = cache((id: string) => getClientById(id));
@@ -48,6 +50,8 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
       })
     ]);
     const documents = Array.isArray(documentsResult) ? documentsResult : [];
+    const canSubmitServiceRequest =
+      !isAlgaDesk && await currentUserCanSubmitOnBehalf();
 
     return (
       <AIChatContextBoundary
@@ -71,6 +75,9 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             isInDrawer={false}
             surveySummary={surveySummary}
             isAlgaDeskMode={isAlgaDesk}
+            submitServiceRequestHref={
+              canSubmitServiceRequest ? buildMspSubmitServiceRequestHref({ clientId: id }) : undefined
+            }
           />
         </div>
       </AIChatContextBoundary>

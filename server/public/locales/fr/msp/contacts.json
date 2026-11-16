@@ -839,7 +839,8 @@
       "cancel": "Annuler",
       "empty": "Aucune note pour le moment",
       "add": "Ajouter des notes"
-    }
+    },
+    "submitServiceRequest": "Soumettre une demande de service"
   },
   "errors": {
     "contact": {

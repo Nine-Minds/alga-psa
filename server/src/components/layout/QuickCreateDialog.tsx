@@ -6,7 +6,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 
-export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'opportunity' | 'asset' | 'service' | 'product' | null;
+export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'opportunity' | 'asset' | 'service' | 'product' | 'serviceRequest' | null;
 
 interface QuickCreateDialogProps {
   type: QuickCreateType;
@@ -22,6 +22,7 @@ const QUICK_CREATE_HREFS: Record<Exclude<QuickCreateType, null>, () => string> =
   asset: () => '/msp/create-asset',
   service: () => '/msp/create-service',
   product: () => '/msp/create-product',
+  serviceRequest: () => '/msp/service-requests/submit',
 };
 
 export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {

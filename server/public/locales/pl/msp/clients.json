@@ -360,7 +360,8 @@
       "loadFailed": "Nie udało się wczytać szablonów list kontrolnych",
       "retry": "Ponów"
     },
-    "audits": "Audyty"
+    "audits": "Audyty",
+    "submitServiceRequest": "Prześlij zgłoszenie usługi"
   },
   "clientCommandCenter": {
     "cards": {

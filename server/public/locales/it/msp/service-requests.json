@@ -492,5 +492,35 @@
       "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
       "audienceSaveFailed": "Impossibile aggiornare i destinatari"
     }
+  },
+  "submit": {
+    "title": "Invia richiesta di servizio",
+    "description": "Invia una richiesta di servizio pubblicata per un contatto del cliente. Il contatto viene registrato come richiedente e tu come mittente.",
+    "client": "Cliente",
+    "clientPlaceholder": "Seleziona cliente",
+    "contact": "Richiedente (contatto)",
+    "contactPlaceholder": "Seleziona contatto",
+    "definition": "Richiesta di servizio",
+    "definitionPlaceholder": "Seleziona una richiesta di servizio",
+    "loadError": "Impossibile caricare le richieste di servizio per questo contatto.",
+    "emptyCatalog": "Questo contatto non può vedere alcuna richiesta di servizio pubblicata.",
+    "notAvailable": "Questa richiesta di servizio non è disponibile per questo contatto.",
+    "unableToSubmit": "Impossibile inviare",
+    "noFields": "Questa richiesta non ha campi.",
+    "optionLabel": "Opzione {{index}}",
+    "selectOption": "Seleziona un'opzione",
+    "datePlaceholder": "Seleziona una data",
+    "submit": "Invia richiesta",
+    "requiredField": "Questo campo è obbligatorio",
+    "submitted": "Richiesta di servizio inviata",
+    "alreadySubmitted": "Questa richiesta è già stata inviata",
+    "viewTicket": "Visualizza il ticket",
+    "noTicket": "Per questa richiesta non è stato creato alcun ticket.",
+    "action": "Invia per conto di…",
+    "actionShort": "Invia per un cliente",
+    "noAccess": {
+      "title": "Non puoi inviare richieste di servizio",
+      "description": "Inviare una richiesta per un contatto cliente richiede l'autorizzazione a creare ticket e a visualizzare clienti e contatti. Chiedi a un amministratore di concederti l'accesso."
+    }
   }
 }

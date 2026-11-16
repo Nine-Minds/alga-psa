@@ -4,6 +4,8 @@
     "userActivities": "User Activities",
     "tickets": "Tickets",
     "serviceRequests": "Service Requests",
+    "serviceRequestsManage": "Manage Requests",
+    "serviceRequestsSubmit": "Submit on behalf of…",
     "surveys": "Surveys",
     "projects": "Projects",
     "projectsAll": "All Projects",
@@ -569,6 +571,10 @@
         "product": {
           "label": "Product",
           "description": "Add a new product to your catalog"
+        },
+        "serviceRequest": {
+          "label": "Service request",
+          "description": "Submit a service request for a client contact"
         }
       }
     },

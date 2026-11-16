@@ -15,6 +15,7 @@ import type { ServiceRequestExecutionResult } from './providers/contracts';
 import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 import { recordServiceRequestSubmissionAudit } from './submissionAudit';
 import { isUniqueViolationOnIndex } from './pgUniqueConstraint';
+import type { ServiceRequestRequester } from './requester';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -28,7 +29,16 @@ export interface SubmitPortalServiceRequestInput {
   knex: Knex;
   tenant: string;
   definitionId: string;
-  requesterUserId: string;
+  /**
+   * The requester's portal user; null when the requester (a client contact) has
+   * no portal login. Never the MSP technician filing on their behalf.
+   */
+  requesterUserId: ServiceRequestRequester['requesterUserId'];
+  /**
+   * The MSP user who filed this on the requester's behalf. Omit/null when the
+   * requester filed it themselves (client portal).
+   */
+  submittedByUserId?: ServiceRequestRequester['submittedByUserId'];
   clientId: string;
   contactId?: string | null;
   payload: Record<string, unknown>;
@@ -64,7 +74,11 @@ export interface SubmitPortalServiceRequestResult {
 const CLIENT_SUBMISSION_KEY_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const CLIENT_SUBMISSION_KEY_UNIQUE_INDEX = 'service_request_submissions_client_key_unique';
+const CLIENT_SUBMISSION_KEY_UNIQUE_INDEXES = [
+  'service_request_submissions_client_key_unique',
+  // Covers rows whose requester has no portal user (requester_user_id IS NULL).
+  'service_request_submissions_submitter_client_key_unique',
+];
 
 interface ExistingSubmissionByClientKeyRow {
   submission_id: string;
@@ -89,16 +103,29 @@ async function findSubmissionByClientKey(
   knex: Knex,
   tenant: string,
   scope: {
-    requesterUserId: string;
+    requesterUserId: string | null;
+    submittedByUserId: string | null;
     definitionId: string;
     clientSubmissionKey: string;
   }
 ): Promise<ExistingSubmissionByClientKeyRow | null> {
+  const { requesterUserId, submittedByUserId } = scope;
   const row = await tenantDb(knex, tenant).table('service_request_submissions')
     .where({
-      requester_user_id: scope.requesterUserId,
       definition_id: scope.definitionId,
       client_submission_key: scope.clientSubmissionKey,
+    })
+    // A replay must hit whichever unique index the original row fell under:
+    // the requester index, or - when the requester has no portal user - the
+    // submitter index.
+    .where((scopeQuery) => {
+      if (requesterUserId) scopeQuery.orWhere('requester_user_id', requesterUserId);
+      if (submittedByUserId) {
+        scopeQuery.orWhere((submitterQuery) =>
+          submitterQuery.whereNull('requester_user_id').where('submitted_by_user_id', submittedByUserId)
+        );
+      }
+      if (!requesterUserId && !submittedByUserId) scopeQuery.whereRaw('false');
     })
     .first<ExistingSubmissionByClientKeyRow | undefined>(
       'submission_id',
@@ -122,7 +149,8 @@ async function recordSubmissionExecutionOutcome(
   tenant: string,
   args: {
     submissionId: string;
-    requesterUserId: string;
+    /** The acting user: the submitter when filed on someone's behalf, else the requester. */
+    actorUserId: string | null;
     executionProvider: string;
   } & (
     | {
@@ -151,7 +179,7 @@ async function recordSubmissionExecutionOutcome(
         });
       await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_execution_succeeded', {
         submissionId: args.submissionId,
-        userId: args.requesterUserId,
+        userId: args.actorUserId,
         changedData: {
           execution_status: 'succeeded',
           created_ticket_id: args.createdTicketId ?? null,
@@ -171,7 +199,7 @@ async function recordSubmissionExecutionOutcome(
       });
     await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_execution_failed', {
       submissionId: args.submissionId,
-      userId: args.requesterUserId,
+      userId: args.actorUserId,
       changedData: { execution_status: 'failed' },
       details: { error_summary: args.errorSummary },
     });
@@ -179,7 +207,7 @@ async function recordSubmissionExecutionOutcome(
 }
 
 export function isClientSubmissionKeyConflict(error: unknown): boolean {
-  return isUniqueViolationOnIndex(error, CLIENT_SUBMISSION_KEY_UNIQUE_INDEX);
+  return CLIENT_SUBMISSION_KEY_UNIQUE_INDEXES.some((index) => isUniqueViolationOnIndex(error, index));
 }
 
 /**
@@ -259,12 +287,14 @@ export async function submitPortalServiceRequest(
     tenant,
     definitionId,
     requesterUserId,
+    submittedByUserId = null,
     clientId,
     contactId = null,
     payload,
     attachments = [],
     clientSubmissionKey = null,
   } = input;
+  const actorUserId = submittedByUserId ?? requesterUserId;
 
   if (clientSubmissionKey !== null && !CLIENT_SUBMISSION_KEY_PATTERN.test(clientSubmissionKey)) {
     throw new Error('Client submission key must be a UUID');
@@ -276,6 +306,7 @@ export async function submitPortalServiceRequest(
   if (clientSubmissionKey) {
     const existingSubmission = await findSubmissionByClientKey(knex, tenant, {
       requesterUserId,
+      submittedByUserId,
       definitionId,
       clientSubmissionKey,
     });
@@ -350,6 +381,7 @@ export async function submitPortalServiceRequest(
           definition_id: definitionDetail.definitionId,
           definition_version_id: definitionDetail.versionId,
           requester_user_id: requesterUserId,
+          submitted_by_user_id: submittedByUserId,
           client_id: clientId,
           contact_id: contactId,
           request_name: definitionDetail.title,
@@ -382,9 +414,12 @@ export async function submitPortalServiceRequest(
       // cannot record its durable history must not persist at all.
       await recordServiceRequestSubmissionAudit(trx, tenant, 'service_request_submission_created', {
         submissionId,
-        userId: requesterUserId,
+        userId: actorUserId,
         changedData: { execution_status: 'pending' },
         details: {
+          requester_user_id: requesterUserId,
+          contact_id: contactId,
+          submitted_by_user_id: submittedByUserId,
           definition_id: definitionDetail.definitionId,
           definition_version_id: definitionDetail.versionId,
           client_id: clientId,
@@ -403,6 +438,7 @@ export async function submitPortalServiceRequest(
     if (clientSubmissionKey && isClientSubmissionKeyConflict(error)) {
       const winningSubmission = await findSubmissionByClientKey(knex, tenant, {
         requesterUserId,
+        submittedByUserId,
         definitionId,
         clientSubmissionKey,
       });
@@ -420,7 +456,7 @@ export async function submitPortalServiceRequest(
     {
       definitionId: definitionDetail.definitionId,
       clientId,
-      requesterUserId,
+      requesterUserId: actorUserId ?? undefined,
       executionStatus: 'pending',
       changedFields: ['request_name', 'submitted_payload', 'execution_status'],
     },
@@ -431,7 +467,7 @@ export async function submitPortalServiceRequest(
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
     await recordSubmissionExecutionOutcome(knex, tenant, {
       submissionId,
-      requesterUserId,
+      actorUserId,
       executionProvider: definitionDetail.executionProvider,
       executionStatus: 'failed',
       errorSummary,
@@ -443,7 +479,7 @@ export async function submitPortalServiceRequest(
       {
         definitionId: definitionDetail.definitionId,
         clientId,
-        requesterUserId,
+        requesterUserId: actorUserId ?? undefined,
         executionStatus: 'failed',
         changedFields: ['execution_status', 'execution_error_summary'],
       },
@@ -467,6 +503,7 @@ export async function submitPortalServiceRequest(
       definitionVersionId: definitionDetail.versionId,
       submissionId,
       requesterUserId,
+      submittedByUserId,
       clientId,
       contactId,
       payload: visiblePayload,
@@ -483,7 +520,7 @@ export async function submitPortalServiceRequest(
   if (executionResult.status === 'succeeded') {
     await recordSubmissionExecutionOutcome(knex, tenant, {
       submissionId,
-      requesterUserId,
+      actorUserId,
       executionProvider: definitionDetail.executionProvider,
       executionStatus: 'succeeded',
       createdTicketId: executionResult.createdTicketId ?? null,
@@ -497,7 +534,7 @@ export async function submitPortalServiceRequest(
       {
         definitionId: definitionDetail.definitionId,
         clientId,
-        requesterUserId,
+        requesterUserId: actorUserId ?? undefined,
         executionStatus: 'succeeded',
         changedFields: [
           'execution_status',
@@ -519,7 +556,7 @@ export async function submitPortalServiceRequest(
 
   await recordSubmissionExecutionOutcome(knex, tenant, {
     submissionId,
-    requesterUserId,
+    actorUserId,
     executionProvider: definitionDetail.executionProvider,
     executionStatus: 'failed',
     errorSummary: executionResult.errorSummary ?? 'Execution failed.',
@@ -531,7 +568,7 @@ export async function submitPortalServiceRequest(
     {
       definitionId: definitionDetail.definitionId,
       clientId,
-      requesterUserId,
+      requesterUserId: actorUserId ?? undefined,
       executionStatus: 'failed',
       changedFields: ['execution_status', 'execution_error_summary'],
     },
@@ -558,7 +595,7 @@ export async function deleteServiceRequestSubmission(input: {
     .first<{
       definition_id: string;
       client_id: string | null;
-      requester_user_id: string;
+      requester_user_id: string | null;
       execution_status: string;
     }>();
 
@@ -588,7 +625,7 @@ export async function deleteServiceRequestSubmission(input: {
       {
         definitionId: existing.definition_id,
         clientId: existing.client_id,
-        requesterUserId: deletedBy ?? existing.requester_user_id,
+        requesterUserId: deletedBy ?? existing.requester_user_id ?? undefined,
         executionStatus: existing.execution_status,
       },
     );

@@ -330,7 +330,8 @@
       "loadFailed": "Falha ao carregar os modelos de checklist",
       "retry": "Tentar novamente"
     },
-    "audits": "Auditorias"
+    "audits": "Auditorias",
+    "submitServiceRequest": "Enviar solicitação de serviço"
   },
   "clientCommandCenter": {
     "cards": {

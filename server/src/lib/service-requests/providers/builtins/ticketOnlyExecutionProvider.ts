@@ -1,6 +1,7 @@
 import { SERVICE_REQUEST_EXECUTION_MODES } from '../../domain';
 import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import type { ServiceRequestExecutionProvider } from '../contracts';
+import { TICKET_ORIGINS } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@shared/models/ticketModel';
 import { ticketCreatedPublishedByCaller } from '@shared/lib/tickets/ticketLifecycleEvents';
@@ -202,6 +203,20 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
       // hooks are only run by the transaction-owning frame, never for a savepoint, so
       // TICKET_CREATED is registered on the outer transaction once the savepoint has succeeded.
       // With a plain Knex there is no outer transaction: withTransaction owns the commit.
+      // The acting user is the submitter when staff filed on the requester's behalf, else the
+      // requester. The contact (context.contactId) stays the ticket's contact either way, and
+      // origin follows the door: staff-entered submissions are INTERNAL/msp, portal ones are
+      // CLIENT_PORTAL.
+      const actorUserId = context.submittedByUserId ?? context.requesterUserId;
+      if (!actorUserId) {
+        return {
+          status: 'failed',
+          errorSummary: 'Ticket execution requires a requester or submitting user.',
+        } as const;
+      }
+      const ticketSource = context.submittedByUserId ? 'msp' : 'client_portal';
+      const ticketOrigin = context.submittedByUserId ? TICKET_ORIGINS.INTERNAL : TICKET_ORIGINS.CLIENT_PORTAL;
+
       const outerIsTransaction = typeof (context.knex as unknown as { commit?: unknown }).commit === 'function';
       let outerTrx: Knex.Transaction | undefined = outerIsTransaction
         ? (context.knex as unknown as Knex.Transaction)
@@ -304,16 +319,16 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
             contact_id: context.contactId ?? undefined,
             itil_impact: configuredItilImpact,
             itil_urgency: configuredItilUrgency,
-            entered_by: context.requesterUserId,
-            source: 'client_portal',
-            ticket_origin: 'client_portal',
+            entered_by: actorUserId,
+            source: ticketSource,
+            ticket_origin: ticketOrigin,
           },
           context.tenant,
           trx,
           {},
           ticketCreatedPublishedByCaller('published on the owning transaction after the savepoint succeeds'),
           undefined,
-          context.requesterUserId,
+          actorUserId,
           1,
           { serviceRequestSubmissionId: context.submissionId }
         );
@@ -321,9 +336,9 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
         await new WorkflowEventPublisher({ transaction: outerTrx! }).publishTicketCreated({
           tenantId: context.tenant,
           ticketId: ticket.ticket_id,
-          userId: context.requesterUserId,
+          userId: actorUserId,
           metadata: {
-            source: 'client_portal',
+            source: ticketSource,
             board_id: boardId,
             priority_id: priorityId,
             client_id: context.clientId,

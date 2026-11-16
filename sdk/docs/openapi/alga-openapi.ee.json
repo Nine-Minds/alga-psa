@@ -164,6 +164,9 @@
       "name": "Service Categories"
     },
     {
+      "name": "Service Requests"
+    },
+    {
       "name": "Service Types"
     },
     {
@@ -18424,6 +18427,161 @@
         },
         "additionalProperties": false,
         "description": "Payload for updating a board. All fields are optional."
+      },
+      "ServiceRequestCatalogQuery": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clientId",
+          "contactId"
+        ]
+      },
+      "ServiceRequestSubmissionParams": {
+        "type": "object",
+        "properties": {
+          "definitionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "definitionId"
+        ]
+      },
+      "ServiceRequestSubmissionRequest": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "clientSubmissionKey": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "clientId",
+          "contactId",
+          "payload"
+        ]
+      },
+      "ServiceRequestCatalogItem": {
+        "type": "object",
+        "properties": {
+          "definitionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "icon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "definitionId",
+          "title",
+          "description",
+          "icon",
+          "categoryId",
+          "categoryName",
+          "sortOrder"
+        ]
+      },
+      "ServiceRequestCatalogEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceRequestCatalogItem"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ServiceRequestSubmissionEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "submissionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "executionStatus": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "succeeded",
+                  "failed"
+                ]
+              },
+              "ticketId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "submissionId",
+              "executionStatus",
+              "ticketId"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "StatusIdParams": {
         "type": "object",
@@ -103990,6 +104148,312 @@
           },
           "404": {
             "description": "Board not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/service-requests/catalog": {
+      "get": {
+        "summary": "List the service requests a client contact can see",
+        "description": "Returns the published service-request catalog exactly as the contact would see it in the client portal (visibility provider and audience applied). Use it to discover definitionId values for the submissions endpoint. Requires client:read and contact:read.",
+        "tags": [
+          "Service Requests"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clientId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "contactId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catalog returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRequestCatalogEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks client:read or contact:read. ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The contact does not exist or does not belong to the client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/service-requests/{definitionId}/submissions": {
+      "post": {
+        "summary": "Submit a service request on behalf of a client contact",
+        "description": "Files a published service request for a client contact. The contact is the requester (their active portal user, when one exists) and the API-key user is recorded as the submitter; the ticket is entered by the API-key user with origin internal/source msp. Send clientSubmissionKey to make retries idempotent: a repeated key returns the original submission with 200. Requires ticket:create, client:read and contact:read (not service:*, which controls catalog authoring).",
+        "tags": [
+          "Service Requests"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "create"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "definitionId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+            },
+            "required": false,
+            "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+            "name": "X-Alga-Act-As",
+            "in": "header"
+          }
+        ],
+        "requestBody": {
+          "description": "Client, contact and answers keyed by form field key.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "description": "Client, contact and answers keyed by form field key.",
+              "schema": {
+                "$ref": "#/components/schemas/ServiceRequestSubmissionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replay of an earlier submission with the same clientSubmissionKey.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRequestSubmissionEnvelope"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Submission created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceRequestSubmissionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (body or required answers). ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks ticket:create, client:read or contact:read. ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not in the client, or the definition is not visible to the contact.",
             "content": {
               "application/json": {
                 "schema": {

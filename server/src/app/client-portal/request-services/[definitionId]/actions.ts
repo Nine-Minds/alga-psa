@@ -15,7 +15,7 @@ import {
   toPortalFormView,
   type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
-import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
+import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from '../../../../components/service-requests/clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,
@@ -259,6 +259,8 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         tenant,
         definitionId,
         requesterUserId: currentUser.user_id,
+        // The requester filed this themselves: no separate submitter.
+        submittedByUserId: null,
         clientId,
         contactId: currentUser.contact_id ?? null,
         payload,

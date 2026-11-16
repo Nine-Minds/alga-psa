@@ -7,6 +7,7 @@ import { registerRmmIntegrationRoutes } from './routes/rmmIntegrations';
 import { registerAuthRoutes } from './routes/auth';
 import { registerBillingRoutes } from './routes/billing';
 import { registerBoardRoutes } from './routes/boards';
+import { registerServiceRequestsV1Routes } from './routes/serviceRequestsV1';
 import { registerChatRoutes } from './routes/chat';
 import { registerClientContactRoutes } from './routes/clientsContacts';
 import { registerClientBillingProfileRoutes } from './routes/clientsBillingProfiles';
@@ -81,6 +82,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerQuickBooksRoutes(registry);
   registerQuickBooksV1Routes(registry);
   registerBoardRoutes(registry, components);
+  registerServiceRequestsV1Routes(registry, components);
   registerStatusRoutes(registry, components);
   registerSearchRoutes(registry);
   registerServiceCategoryRoutes(registry, components);

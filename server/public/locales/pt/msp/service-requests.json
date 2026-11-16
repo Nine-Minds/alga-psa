@@ -492,5 +492,35 @@
       "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
       "audienceSaveFailed": "Falha ao atualizar o público-alvo"
     }
+  },
+  "submit": {
+    "title": "Enviar solicitação de serviço",
+    "description": "Envie uma solicitação de serviço publicada para um contato do cliente. O contato é registrado como solicitante e você como remetente.",
+    "client": "Cliente",
+    "clientPlaceholder": "Selecionar cliente",
+    "contact": "Solicitante (contato)",
+    "contactPlaceholder": "Selecionar contato",
+    "definition": "Solicitação de serviço",
+    "definitionPlaceholder": "Selecionar uma solicitação de serviço",
+    "loadError": "Não foi possível carregar as solicitações de serviço deste contato.",
+    "emptyCatalog": "Este contato não consegue ver nenhuma solicitação de serviço publicada.",
+    "notAvailable": "Esta solicitação de serviço não está disponível para este contato.",
+    "unableToSubmit": "Não foi possível enviar",
+    "noFields": "Esta solicitação não tem campos.",
+    "optionLabel": "Opção {{index}}",
+    "selectOption": "Selecionar uma opção",
+    "datePlaceholder": "Selecionar uma data",
+    "submit": "Enviar solicitação",
+    "requiredField": "Este campo é obrigatório",
+    "submitted": "Solicitação de serviço enviada",
+    "alreadySubmitted": "Esta solicitação já havia sido enviada",
+    "viewTicket": "Ver o ticket",
+    "noTicket": "Não foi criado nenhum ticket para esta solicitação.",
+    "action": "Enviar em nome de…",
+    "actionShort": "Enviar para um cliente",
+    "noAccess": {
+      "title": "Você não pode enviar solicitações de serviço",
+      "description": "Enviar uma solicitação em nome de um contato do cliente exige permissão para criar tickets e para visualizar clientes e contatos. Peça a um administrador para conceder o acesso."
+    }
   }
 }

@@ -23,6 +23,8 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { ContactMarketingGate } from '@/components/marketing/ContactMarketingGate';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { currentUserCanSubmitOnBehalf } from '@/lib/service-requests/mspSubmitAccess';
+import { buildMspSubmitServiceRequestHref } from '@/lib/service-requests/mspSubmitRoute';
 import type { Metadata } from 'next';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
@@ -104,6 +106,9 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
       console.error('[contact-bento] Optional tag fetch failed:', tags);
     }
 
+    const canSubmitServiceRequest =
+      !isAlgaDesk && await currentUserCanSubmitOnBehalf();
+
     return (
       <AIChatContextBoundary
         value={{
@@ -142,6 +147,11 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
                   }
                 : {}),
             })}
+            submitServiceRequestHref={
+              canSubmitServiceRequest && contact.client_id
+                ? buildMspSubmitServiceRequestHref({ clientId: contact.client_id, contactId: contact.contact_name_id })
+                : undefined
+            }
             assetsSlot={
               isAlgaDesk ? null : <ContactAssetsSection contactId={contact.contact_name_id} />
             }

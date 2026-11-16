@@ -492,5 +492,35 @@
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
       "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
     }
+  },
+  "submit": {
+    "title": "Skicka in servicebegäran",
+    "description": "Skicka in en publicerad servicebegäran för en kundkontakt. Kontakten registreras som beställare och du som inskickare.",
+    "client": "Kund",
+    "clientPlaceholder": "Välj kund",
+    "contact": "Beställare (kontakt)",
+    "contactPlaceholder": "Välj kontakt",
+    "definition": "Servicebegäran",
+    "definitionPlaceholder": "Välj en servicebegäran",
+    "loadError": "Det gick inte att läsa in servicebegäranden för den här kontakten.",
+    "emptyCatalog": "Den här kontakten kan inte se några publicerade servicebegäranden.",
+    "notAvailable": "Den här servicebegäran är inte tillgänglig för den här kontakten.",
+    "unableToSubmit": "Det gick inte att skicka in",
+    "noFields": "Den här begäran har inga fält.",
+    "optionLabel": "Alternativ {{index}}",
+    "selectOption": "Välj ett alternativ",
+    "datePlaceholder": "Välj ett datum",
+    "submit": "Skicka in begäran",
+    "requiredField": "Det här fältet är obligatoriskt",
+    "submitted": "Servicebegäran inskickad",
+    "alreadySubmitted": "Den här begäran har redan skickats in",
+    "viewTicket": "Visa ärendet",
+    "noTicket": "Inget ärende skapades för den här begäran.",
+    "action": "Skicka in på uppdrag av…",
+    "actionShort": "Skicka in för en kund",
+    "noAccess": {
+      "title": "Du kan inte skicka in serviceförfrågningar",
+      "description": "Att skicka in en förfrågan åt en kundkontakt kräver behörighet att skapa ärenden och att visa kunder och kontakter. Be en administratör ge dig åtkomst."
+    }
   }
 }

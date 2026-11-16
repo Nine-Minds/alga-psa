@@ -214,6 +214,9 @@
       "title": "Demandes de service",
       "detail": {
         "fallbackTitle": "Demande de service"
+      },
+      "submit": {
+        "title": "Soumettre une demande de service"
       }
     },
     "surveys": {

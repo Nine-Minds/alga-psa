@@ -29,7 +29,7 @@ export interface VisibilityRule {
 }
 
 export interface VisibilityContext {
-  requesterUserId: string;
+  requesterUserId: string | null;
   clientId: string;
   contactId?: string | null;
 }

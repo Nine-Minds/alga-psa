@@ -330,7 +330,8 @@
       "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈħḗƈķŀīşŧ ŧḗḿƥŀȧŧḗş⟧",
       "retry": "⟦Řḗŧřẏ⟧"
     },
-    "audits": "⟦Ȧŭḓīŧş⟧"
+    "audits": "⟦Ȧŭḓīŧş⟧",
+    "submitServiceRequest": "⟦Şŭƀḿīŧ şḗřṽīƈḗ řḗʠŭḗşŧ⟧"
   },
   "clientCommandCenter": {
     "cards": {

@@ -492,5 +492,35 @@
       "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
       "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
     }
+  },
+  "submit": {
+    "title": "Serviceanfrage einreichen",
+    "description": "Reichen Sie eine veröffentlichte Serviceanfrage für einen Kundenkontakt ein. Der Kontakt wird als Anfragender erfasst, Sie als Einreichender.",
+    "client": "Kunde",
+    "clientPlaceholder": "Kunde auswählen",
+    "contact": "Anfragender (Kontakt)",
+    "contactPlaceholder": "Kontakt auswählen",
+    "definition": "Serviceanfrage",
+    "definitionPlaceholder": "Serviceanfrage auswählen",
+    "loadError": "Serviceanfragen für diesen Kontakt konnten nicht geladen werden.",
+    "emptyCatalog": "Dieser Kontakt kann keine veröffentlichten Serviceanfragen sehen.",
+    "notAvailable": "Diese Serviceanfrage ist für diesen Kontakt nicht verfügbar.",
+    "unableToSubmit": "Einreichen nicht möglich",
+    "noFields": "Diese Anfrage hat keine Felder.",
+    "optionLabel": "Option {{index}}",
+    "selectOption": "Option auswählen",
+    "datePlaceholder": "Datum auswählen",
+    "submit": "Anfrage einreichen",
+    "requiredField": "Dieses Feld ist erforderlich",
+    "submitted": "Serviceanfrage eingereicht",
+    "alreadySubmitted": "Diese Anfrage wurde bereits eingereicht",
+    "viewTicket": "Ticket anzeigen",
+    "noTicket": "Für diese Anfrage wurde kein Ticket erstellt.",
+    "action": "Im Namen von … einreichen",
+    "actionShort": "Für einen Kunden einreichen",
+    "noAccess": {
+      "title": "Sie können keine Serviceanfragen einreichen",
+      "description": "Zum Einreichen einer Anfrage für einen Kundenkontakt sind Berechtigungen zum Erstellen von Tickets sowie zum Anzeigen von Kunden und Kontakten erforderlich. Bitten Sie einen Administrator, den Zugriff zu gewähren."
+    }
   }
 }

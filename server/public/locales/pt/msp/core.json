@@ -114,7 +114,9 @@
     "coManaged": "TI cogerida",
     "coManagedArchive": "Arquivo de TI cogerida",
     "coManagedAdministration": "Acesso e administração",
-    "assetsAudits": "Auditorias de locais"
+    "assetsAudits": "Auditorias de locais",
+    "serviceRequestsManage": "Gerenciar solicitações",
+    "serviceRequestsSubmit": "Enviar em nome de…"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -217,6 +219,10 @@
         "product": {
           "label": "Produto",
           "description": "Adicione um novo produto ao seu catálogo"
+        },
+        "serviceRequest": {
+          "label": "Solicitação de serviço",
+          "description": "Enviar uma solicitação de serviço para um contato do cliente"
         }
       }
     },
