@@ -121,7 +121,7 @@
           "has-value": "has a value",
           "is-empty": "is empty"
         },
-        "advancedJson": "Advanced (JSON)",
+        "advancedJson": "Edit as JSON",
         "advancedJsonHelp": "The full saved configuration, including context defaults. Visibility rules are easier to change with “Show when…” on each field. Unsaved edits here are discarded if a rule is changed there."
       }
     },
@@ -172,14 +172,51 @@
         "save": "Save Workflow Settings"
       },
       "advanced": {
-        "title": "Advanced Form Behavior",
+        "title": "Show or hide fields (advanced)",
         "config": "Form Behavior Config (JSON object)",
-        "save": "Save Form Behavior Config"
+        "save": "Save Form Behavior Config",
+        "help": {
+          "whatItIs": "This panel stores field visibility and prefilled values as JSON. “Show when…” on each field is the normal way to set up visibility. Use this panel for bulk edits and for contextDefaults, which have no other editor.",
+          "ruleShapeTitle": "Visibility rules",
+          "ruleShape": "Each entry in visibilityRules has these properties. value is only needed for equals and does not equal.",
+          "ruleAll": "Every condition on a field must pass. Conditions are combined with AND only.",
+          "ruleNone": "A field with no condition is always shown.",
+          "ruleSource": "source is a field key, or one of context.requesterUserId, context.clientId and context.contactId.",
+          "ruleEarlier": "A field used as source must appear earlier in the form than the field it controls.",
+          "ruleHidden": "A hidden field counts as empty, so hiding a controlling field also hides the fields that depend on it.",
+          "operatorsTitle": "Operators",
+          "operatorsIntro": "operator must be one of:",
+          "contextTitle": "Prefilled values (contextDefaults)",
+          "contextIntro": "contextDefaults maps a field key to the value that field starts with. These placeholders are replaced with details of the client user who opens the form:",
+          "placeholders": {
+            "clientId": "the requesting user’s client",
+            "contactId": "the requesting user’s contact (empty if there is none)",
+            "requesterUserId": "the requesting user"
+          },
+          "timingTitle": "When it applies",
+          "timing": "Prefilled values are filled in when the client opens the form. Conditions are checked in the browser as the client fills in the form, and checked again when they submit.",
+          "editionTitle": "Availability",
+          "edition": "This panel needs the Enterprise advanced form-behavior provider.",
+          "examplesTitle": "Examples",
+          "examples": {
+            "showWhen": {
+              "title": "Show “Tell us more” only when “Reason” equals “Other”"
+            },
+            "hideWhen": {
+              "title": "Hide “Company” when “I am the end user” is checked"
+            },
+            "prefill": {
+              "title": "Prefill a hidden “Client” field with the requesting user’s client"
+            }
+          },
+          "copy": "Copy",
+          "copied": "Example copied",
+          "copyFailed": "Could not copy the example"
+        }
       },
       "visibility": {
-        "title": "Visibility Configuration",
-        "config": "Visibility Config (JSON object)",
-        "save": "Save Visibility Config",
+        "title": "Who can see this form",
+        "description": "Controls which client users can open this request. It does not show or hide answers inside the form.",
         "audience": {
           "removedReferences": "Unavailable audience selections were removed. Review and save the audience.",
           "reference_client_id": "Client",
@@ -487,8 +524,6 @@
       "workflowConfigurationInvalid": "Invalid workflow configuration JSON",
       "formBehaviorNotObject": "Form behavior config must be a JSON object",
       "formBehaviorInvalid": "Invalid form behavior JSON",
-      "visibilityNotObject": "Visibility config must be a JSON object",
-      "visibilityInvalid": "Invalid visibility JSON",
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
       "audienceSaveFailed": "Failed to update audience"
     }

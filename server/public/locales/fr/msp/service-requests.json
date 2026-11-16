@@ -121,7 +121,7 @@
           "has-value": "a une valeur",
           "is-empty": "est vide"
         },
-        "advancedJson": "Avancé (JSON)",
+        "advancedJson": "Modifier en JSON",
         "advancedJsonHelp": "La configuration enregistrée complète, y compris les valeurs par défaut du contexte. Les règles de visibilité se modifient plus facilement avec « Afficher quand… » sur chaque champ. Les modifications non enregistrées ici sont abandonnées si une règle y est modifiée."
       }
     },
@@ -172,14 +172,51 @@
         "save": "Enregistrer les paramètres du workflow"
       },
       "advanced": {
-        "title": "Comportement avancé du formulaire",
+        "title": "Afficher ou masquer des champs (avancé)",
         "config": "Configuration du comportement du formulaire (objet JSON)",
-        "save": "Enregistrer la configuration du comportement du formulaire"
+        "save": "Enregistrer la configuration du comportement du formulaire",
+        "help": {
+          "whatItIs": "Ce panneau enregistre la visibilité des champs et les valeurs préremplies au format JSON. « Afficher quand… » sur chaque champ est la méthode habituelle pour configurer la visibilité. Utilisez ce panneau pour les modifications en masse et pour contextDefaults, qui n’ont pas d’autre éditeur.",
+          "ruleShapeTitle": "Règles de visibilité",
+          "ruleShape": "Chaque entrée de visibilityRules possède ces propriétés. value n’est nécessaire que pour equals et does not equal.",
+          "ruleAll": "Toutes les conditions d’un champ doivent être remplies. Les conditions sont combinées uniquement avec AND.",
+          "ruleNone": "Un champ sans condition est toujours affiché.",
+          "ruleSource": "source est une clé de champ, ou l’une de context.requesterUserId, context.clientId et context.contactId.",
+          "ruleEarlier": "Un champ utilisé comme source doit apparaître dans le formulaire avant le champ qu’il contrôle.",
+          "ruleHidden": "Un champ masqué compte comme vide : masquer un champ de contrôle masque donc aussi les champs qui en dépendent.",
+          "operatorsTitle": "Opérateurs",
+          "operatorsIntro": "operator doit être l’une des valeurs suivantes :",
+          "contextTitle": "Valeurs préremplies (contextDefaults)",
+          "contextIntro": "contextDefaults associe une clé de champ à la valeur initiale de ce champ. Ces marqueurs sont remplacés par les informations de l’utilisateur du client qui ouvre le formulaire :",
+          "placeholders": {
+            "clientId": "le client de l’utilisateur demandeur",
+            "contactId": "le contact de l’utilisateur demandeur (vide s’il n’y en a pas)",
+            "requesterUserId": "l’utilisateur demandeur"
+          },
+          "timingTitle": "Quand cela s’applique",
+          "timing": "Les valeurs préremplies sont renseignées à l’ouverture du formulaire par le client. Les conditions sont vérifiées dans le navigateur pendant que le client remplit le formulaire, puis une nouvelle fois à l’envoi.",
+          "editionTitle": "Disponibilité",
+          "edition": "Ce panneau nécessite le fournisseur de comportement de formulaire avancé Enterprise.",
+          "examplesTitle": "Exemples",
+          "examples": {
+            "showWhen": {
+              "title": "Afficher « Tell us more » uniquement lorsque « Reason » est égal à « Other »"
+            },
+            "hideWhen": {
+              "title": "Masquer « Company » lorsque « I am the end user » est coché"
+            },
+            "prefill": {
+              "title": "Préremplir un champ masqué « Client » avec le client de l’utilisateur demandeur"
+            }
+          },
+          "copy": "Copier",
+          "copied": "Exemple copié",
+          "copyFailed": "Impossible de copier l’exemple"
+        }
       },
       "visibility": {
-        "title": "Configuration de la visibilité",
-        "config": "Configuration de la visibilité (objet JSON)",
-        "save": "Enregistrer la configuration de la visibilité",
+        "title": "Qui peut voir ce formulaire",
+        "description": "Détermine quels utilisateurs du client peuvent ouvrir cette demande. Cela n’affiche ni ne masque les réponses dans le formulaire.",
         "audience": {
           "removedReferences": "Les sélections de public indisponibles ont été supprimées. Vérifiez et enregistrez le public.",
           "reference_client_id": "Client",
@@ -487,8 +524,6 @@
       "workflowConfigurationInvalid": "Configuration JSON du workflow non valide",
       "formBehaviorNotObject": "La configuration du comportement du formulaire doit être un objet JSON",
       "formBehaviorInvalid": "JSON du comportement du formulaire non valide",
-      "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
-      "visibilityInvalid": "JSON de visibilité non valide",
       "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
       "audienceSaveFailed": "Échec de la mise à jour de l'audience"
     }

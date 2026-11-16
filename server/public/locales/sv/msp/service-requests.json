@@ -121,7 +121,7 @@
           "has-value": "har ett värde",
           "is-empty": "är tomt"
         },
-        "advancedJson": "Avancerat (JSON)",
+        "advancedJson": "Redigera som JSON",
         "advancedJsonHelp": "Hela den sparade konfigurationen, inklusive kontextstandarder. Synlighetsregler ändras enklast med ”Visa när…” på varje fält. Osparade ändringar här förkastas om en regel ändras där."
       }
     },
@@ -172,14 +172,51 @@
         "save": "Spara arbetsflödesinställningar"
       },
       "advanced": {
-        "title": "Avancerat formulärbeteende",
+        "title": "Visa eller dölj fält (avancerat)",
         "config": "Inställningar för formulärbeteende (JSON-objekt)",
-        "save": "Spara inställningar för formulärbeteende"
+        "save": "Spara inställningar för formulärbeteende",
+        "help": {
+          "whatItIs": "Den här panelen lagrar fältens synlighet och förifyllda värden som JSON. ”Visa när…” på varje fält är det vanliga sättet att ställa in synlighet. Använd panelen för massändringar och för contextDefaults, som saknar annan redigerare.",
+          "ruleShapeTitle": "Synlighetsregler",
+          "ruleShape": "Varje post i visibilityRules har dessa egenskaper. value behövs bara för equals och does not equal.",
+          "ruleAll": "Alla villkor för ett fält måste uppfyllas. Villkor kombineras bara med AND.",
+          "ruleNone": "Ett fält utan villkor visas alltid.",
+          "ruleSource": "source är en fältnyckel eller en av context.requesterUserId, context.clientId och context.contactId.",
+          "ruleEarlier": "Ett fält som används som source måste ligga tidigare i formuläret än det fält det styr.",
+          "ruleHidden": "Ett dolt fält räknas som tomt, så om du döljer ett styrande fält döljs också de fält som beror på det.",
+          "operatorsTitle": "Operatorer",
+          "operatorsIntro": "operator måste vara något av följande:",
+          "contextTitle": "Förifyllda värden (contextDefaults)",
+          "contextIntro": "contextDefaults kopplar en fältnyckel till fältets startvärde. Följande platshållare ersätts med uppgifter om den klientanvändare som öppnar formuläret:",
+          "placeholders": {
+            "clientId": "den begärande användarens klient",
+            "contactId": "den begärande användarens kontakt (tom om det saknas)",
+            "requesterUserId": "den begärande användaren"
+          },
+          "timingTitle": "När det gäller",
+          "timing": "Förifyllda värden fylls i när klienten öppnar formuläret. Villkor kontrolleras i webbläsaren medan klienten fyller i formuläret och kontrolleras igen vid inskickning.",
+          "editionTitle": "Tillgänglighet",
+          "edition": "Den här panelen kräver Enterprise-leverantören för avancerat formulärbeteende.",
+          "examplesTitle": "Exempel",
+          "examples": {
+            "showWhen": {
+              "title": "Visa ”Tell us more” bara när ”Reason” är lika med ”Other”"
+            },
+            "hideWhen": {
+              "title": "Dölj ”Company” när ”I am the end user” är ikryssad"
+            },
+            "prefill": {
+              "title": "Förifyll ett dolt fält ”Client” med den begärande användarens klient"
+            }
+          },
+          "copy": "Kopiera",
+          "copied": "Exemplet kopierades",
+          "copyFailed": "Det gick inte att kopiera exemplet"
+        }
       },
       "visibility": {
-        "title": "Synlighetsinställningar",
-        "config": "Synlighetsinställningar (JSON-objekt)",
-        "save": "Spara synlighetsinställningar",
+        "title": "Vem som kan se det här formuläret",
+        "description": "Styr vilka klientanvändare som kan öppna den här begäran. Det visar eller döljer inte svar inuti formuläret.",
         "audience": {
           "removedReferences": "Otillgängliga målgruppsval har tagits bort. Granska och spara målgruppen.",
           "reference_client_id": "Kund",
@@ -487,8 +524,6 @@
       "workflowConfigurationInvalid": "Ogiltig JSON för arbetsflödesinställningar",
       "formBehaviorNotObject": "Inställningarna för formulärbeteende måste vara ett JSON-objekt",
       "formBehaviorInvalid": "Ogiltig JSON för formulärbeteende",
-      "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
-      "visibilityInvalid": "Ogiltig JSON för synlighet",
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
       "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
     }

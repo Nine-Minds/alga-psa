@@ -121,7 +121,7 @@
           "has-value": "hat einen Wert",
           "is-empty": "ist leer"
         },
-        "advancedJson": "Erweitert (JSON)",
+        "advancedJson": "Als JSON bearbeiten",
         "advancedJsonHelp": "Die vollständige gespeicherte Konfiguration, einschließlich Kontext-Standardwerten. Sichtbarkeitsregeln ändern Sie einfacher über „Anzeigen, wenn…“ an jedem Feld. Ungespeicherte Änderungen hier werden verworfen, wenn dort eine Regel geändert wird."
       }
     },
@@ -172,14 +172,51 @@
         "save": "Workflow-Einstellungen speichern"
       },
       "advanced": {
-        "title": "Erweitertes Formularverhalten",
+        "title": "Felder ein- oder ausblenden (erweitert)",
         "config": "Formularverhalten-Konfiguration (JSON-Objekt)",
-        "save": "Formularverhalten-Konfiguration speichern"
+        "save": "Formularverhalten-Konfiguration speichern",
+        "help": {
+          "whatItIs": "Dieses Panel speichert die Sichtbarkeit von Feldern und vorausgefüllte Werte als JSON. „Anzeigen, wenn…“ bei jedem Feld ist der normale Weg, die Sichtbarkeit einzurichten. Verwenden Sie dieses Panel für Massenänderungen und für contextDefaults, für die es keinen anderen Editor gibt.",
+          "ruleShapeTitle": "Sichtbarkeitsregeln",
+          "ruleShape": "Jeder Eintrag in visibilityRules hat diese Eigenschaften. value wird nur für equals und does not equal benötigt.",
+          "ruleAll": "Jede Bedingung eines Felds muss erfüllt sein. Bedingungen werden ausschließlich mit UND verknüpft.",
+          "ruleNone": "Ein Feld ohne Bedingung wird immer angezeigt.",
+          "ruleSource": "source ist ein Feldschlüssel oder einer von context.requesterUserId, context.clientId und context.contactId.",
+          "ruleEarlier": "Ein als source verwendetes Feld muss im Formular vor dem Feld stehen, das es steuert.",
+          "ruleHidden": "Ein ausgeblendetes Feld gilt als leer. Wird ein steuerndes Feld ausgeblendet, werden daher auch die davon abhängigen Felder ausgeblendet.",
+          "operatorsTitle": "Operatoren",
+          "operatorsIntro": "operator muss einer der folgenden Werte sein:",
+          "contextTitle": "Vorausgefüllte Werte (contextDefaults)",
+          "contextIntro": "contextDefaults ordnet einem Feldschlüssel den Anfangswert des Felds zu. Diese Platzhalter werden durch Angaben des Clientbenutzers ersetzt, der das Formular öffnet:",
+          "placeholders": {
+            "clientId": "der Client des anfragenden Benutzers",
+            "contactId": "der Kontakt des anfragenden Benutzers (leer, falls keiner vorhanden)",
+            "requesterUserId": "der anfragende Benutzer"
+          },
+          "timingTitle": "Wann es gilt",
+          "timing": "Vorausgefüllte Werte werden eingetragen, wenn der Client das Formular öffnet. Bedingungen werden im Browser geprüft, während der Client das Formular ausfüllt, und beim Absenden erneut.",
+          "editionTitle": "Verfügbarkeit",
+          "edition": "Für dieses Panel ist der Enterprise-Anbieter für erweitertes Formularverhalten erforderlich.",
+          "examplesTitle": "Beispiele",
+          "examples": {
+            "showWhen": {
+              "title": "„Tell us more“ nur anzeigen, wenn „Reason“ gleich „Other“ ist"
+            },
+            "hideWhen": {
+              "title": "„Company“ ausblenden, wenn „I am the end user“ angekreuzt ist"
+            },
+            "prefill": {
+              "title": "Ein ausgeblendetes Feld „Client“ mit dem Client des anfragenden Benutzers vorausfüllen"
+            }
+          },
+          "copy": "Kopieren",
+          "copied": "Beispiel kopiert",
+          "copyFailed": "Das Beispiel konnte nicht kopiert werden"
+        }
       },
       "visibility": {
-        "title": "Sichtbarkeitskonfiguration",
-        "config": "Sichtbarkeitskonfiguration (JSON-Objekt)",
-        "save": "Sichtbarkeitskonfiguration speichern",
+        "title": "Wer dieses Formular sehen kann",
+        "description": "Legt fest, welche Clientbenutzer diese Anfrage öffnen können. Antworten innerhalb des Formulars werden dadurch nicht ein- oder ausgeblendet.",
         "audience": {
           "removedReferences": "Nicht verfügbare Zielgruppenauswahlen wurden entfernt. Prüfen und speichern Sie die Zielgruppe.",
           "reference_client_id": "Kunde",
@@ -487,8 +524,6 @@
       "workflowConfigurationInvalid": "Ungültige Workflow-Konfiguration (JSON)",
       "formBehaviorNotObject": "Formularverhalten-Konfiguration muss ein JSON-Objekt sein",
       "formBehaviorInvalid": "Ungültiges Formularverhalten-JSON",
-      "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
-      "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
       "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
       "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
     }
