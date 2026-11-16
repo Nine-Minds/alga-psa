@@ -19,7 +19,8 @@
     "datePlaceholder": "Seleziona una data",
     "optionLabel": "Opzione {{index}}",
     "submit": "Invia richiesta",
-    "requiredField": "Questo campo è obbligatorio."
+    "requiredField": "Questo campo è obbligatorio.",
+    "unsupportedField": "Questa domanda non è disponibile."
   },
   "myRequests": {
     "title": "Le mie richieste",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Elaborazione completata",
       "service_request_submission_execution_failed": "Elaborazione non riuscita"
     },
-    "unnamedAttachment": "Allegato"
+    "unnamedAttachment": "Allegato",
+    "lookupUnavailable": "(non più disponibile)"
   },
   "recent": {
     "title": "Le tue richieste recenti",

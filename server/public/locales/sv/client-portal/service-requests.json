@@ -19,7 +19,8 @@
     "datePlaceholder": "Välj datum",
     "optionLabel": "Alternativ {{index}}",
     "submit": "Skicka in förfrågan",
-    "requiredField": "Det här fältet är obligatoriskt."
+    "requiredField": "Det här fältet är obligatoriskt.",
+    "unsupportedField": "Den här frågan är inte tillgänglig."
   },
   "myRequests": {
     "title": "Mina förfrågningar",
@@ -60,7 +61,8 @@
       "service_request_submission_execution_succeeded": "Behandlingen av förfrågan har slutförts",
       "service_request_submission_execution_failed": "Behandlingen av förfrågan misslyckades"
     },
-    "unnamedAttachment": "Bilaga"
+    "unnamedAttachment": "Bilaga",
+    "lookupUnavailable": "(inte längre tillgänglig)"
   },
   "recent": {
     "title": "Dina senaste förfrågningar",

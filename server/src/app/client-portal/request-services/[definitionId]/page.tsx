@@ -6,6 +6,7 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
   getRequestServiceDefinitionDetailAction,
+  getRequestServiceLookupOptionsAction,
   getRequestServiceVisibilityContextAction,
   submitRequestServiceDefinitionAction,
 } from './actions';
@@ -64,6 +65,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
     : null;
+  // Options for lookup fields, resolved on the server from the session's client. Only fetched when
+  // the form has a lookup field, and only for a definition this requester can see.
+  const hasLookupField = fields.some((field: any) => field?.type === 'lookup');
+  const lookupOptions = hasLookupField ? await getRequestServiceLookupOptionsAction(definitionId) : {};
 
   return (
     <div className="space-y-4">
@@ -118,6 +123,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               key: typeof field?.key === 'string' ? field.key : `field_${index}`,
               label: typeof field?.label === 'string' ? field.label : (typeof field?.key === 'string' ? field.key : `field_${index}`),
               type: typeof field?.type === 'string' ? field.type : undefined,
+              lookup:
+                field?.type === 'lookup' && (field?.lookup?.entity === 'contact' || field?.lookup?.entity === 'user')
+                  ? { entity: field.lookup.entity }
+                  : undefined,
               required: !!field?.required,
               helpText: typeof field?.helpText === 'string' ? field.helpText : null,
               options: Array.isArray(field?.options)
@@ -132,6 +141,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
                 : undefined,
             }))}
             initialValues={detail.initialValues}
+            lookupOptions={lookupOptions}
             visibility={{
               enabled: visibilityEnabled && visibilityContext !== null,
               rules: visibilityEnabled && visibilityContext !== null ? visibilityRules : [],
@@ -143,6 +153,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               datePlaceholder: t('detail.datePlaceholder'),
               submit: t('detail.submit'),
               requiredField: t('detail.requiredField'),
+              unsupportedField: t('detail.unsupportedField'),
             }}
           />
         )}

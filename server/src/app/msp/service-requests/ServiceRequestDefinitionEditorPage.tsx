@@ -162,6 +162,8 @@ interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  /** Live display labels for lookup answers, keyed by field key. */
+  lookup_labels?: Record<string, string>;
   audit_events: DefinitionSubmissionAuditEvent[];
 }
 
@@ -181,12 +183,14 @@ interface FormFieldOption {
 
 interface FormField {
   key: string;
-  type: 'short-text' | 'long-text' | 'select' | 'checkbox' | 'date' | 'file-upload';
+  type: 'short-text' | 'long-text' | 'select' | 'checkbox' | 'date' | 'file-upload' | 'lookup';
   label: string;
   helpText?: string | null;
   required?: boolean;
   defaultValue?: string | boolean | null;
   options?: FormFieldOption[];
+  /** Lookup fields only; scope is derived server-side from the entity and shown read-only. */
+  lookup?: { entity: 'contact' | 'user'; scope: 'requester-client' | 'tenant' };
 }
 
 interface TicketRoutingBoardConfig {
@@ -206,7 +210,17 @@ const FORM_FIELD_TYPES: Array<FormField['type']> = [
   'checkbox',
   'date',
   'file-upload',
+  'lookup',
 ];
+
+const LOOKUP_ENTITIES: Array<NonNullable<FormField['lookup']>['entity']> = ['contact', 'user'];
+// LEVERAGE: friction lookup-entity-scope-mirror — the client editor re-declares the server's entity→scope table because basicFormBuilder.ts imports server-only modules; a client-safe schema module would remove the copy.
+// Mirrors LOOKUP_ENTITY_SCOPES in lib/service-requests/basicFormBuilder.ts (server-derived; display only).
+const LOOKUP_ENTITY_SCOPE: Record<
+  NonNullable<FormField['lookup']>['entity'],
+  NonNullable<FormField['lookup']>['scope']
+> = { contact: 'requester-client', user: 'tenant' };
+const SUPPORTED_FORM_FIELD_TYPES = new Set<string>(FORM_FIELD_TYPES);
 
 function buildFormFieldTypeOptions(t: TFunction): SelectOption[] {
   return FORM_FIELD_TYPES.map((fieldType) => ({
@@ -380,6 +394,14 @@ function FormFieldEditorCard({
 }: FormFieldEditorCardProps) {
   const { t } = useTranslation('msp/service-requests');
   const checkboxDefaultOptions = useMemo(() => buildCheckboxDefaultOptions(t), [t]);
+  const lookupEntityOptions = useMemo<SelectOption[]>(
+    () =>
+      LOOKUP_ENTITIES.map((entity) => ({
+        value: entity,
+        label: t(`editor.form.lookup.entities.${entity}`, { defaultValue: entity }),
+      })),
+    [t]
+  );
   const key = field.key ?? `field_${index}`;
   const [labelValue, setLabelValue] = useState(field.label ?? key);
   const [helpTextValue, setHelpTextValue] = useState(field.helpText ?? '');
@@ -518,7 +540,7 @@ function FormFieldEditorCard({
             await reloadDefinitionEditorState(definitionId);
           }}
         />
-        {field.type !== 'file-upload' && (
+        {field.type !== 'file-upload' && field.type !== 'lookup' && (
           <>
             {field.type === 'checkbox' ? (
               <CustomSelect
@@ -552,6 +574,44 @@ function FormFieldEditorCard({
           </>
         )}
       </div>
+      {!SUPPORTED_FORM_FIELD_TYPES.has(field.type) && (
+        <p role="alert" className="text-sm text-destructive">
+          {t('editor.form.unsupportedType', {
+            type: String(field.type ?? ''),
+            defaultValue: 'Unsupported field type "{{type}}". Remove this field and add it again before publishing.',
+          })}
+        </p>
+      )}
+      {field.type === 'lookup' && (
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:items-end">
+          <CustomSelect
+            id={`service-request-form-lookup-entity-${key}`}
+            label={t('editor.form.lookup.entity', { defaultValue: 'Look up' })}
+            value={field.lookup?.entity ?? ''}
+            options={lookupEntityOptions}
+            onValueChange={async (value) => {
+              await updateServiceRequestFormFieldAction(definitionId, key, {
+                lookup: { entity: value as NonNullable<FormField['lookup']>['entity'] },
+              });
+              await reloadDefinitionEditorState(definitionId);
+            }}
+          />
+          <Input
+            id={`service-request-form-lookup-scope-${key}`}
+            label={t('editor.form.lookup.scope', { defaultValue: 'Options come from' })}
+            containerClassName="mb-0"
+            value={
+              field.lookup?.entity
+                ? t(`editor.form.lookup.scopes.${LOOKUP_ENTITY_SCOPE[field.lookup.entity]}`, {
+                    defaultValue: LOOKUP_ENTITY_SCOPE[field.lookup.entity],
+                  })
+                : ''
+            }
+            readOnly
+            disabled
+          />
+        </div>
+      )}
       {field.type === 'select' && (
         <TextArea
           label={t('editor.form.options')}
@@ -657,6 +717,23 @@ function FormFieldPreview({
           </span>
         }
       />
+    );
+  }
+
+  if (field.type === 'lookup') {
+    return (
+      <div key={key} className="space-y-1">
+        <CustomSelect
+          id={`service-request-form-preview-${key}`}
+          label={labelWithRequired}
+          value={null}
+          options={[]}
+          onValueChange={() => {}}
+          placeholder={t('editor.form.selectOption')}
+          disabled
+        />
+        {helpText && <span className="text-xs text-[rgb(var(--color-text-600))]">{helpText}</span>}
+      </div>
     );
   }
 
@@ -2108,6 +2185,20 @@ export default function ServiceRequestDefinitionEditorPage() {
                 </ol>
               )}
             </div>
+            {Object.keys(selectedSubmissionDetail.lookup_labels ?? {}).length > 0 && (
+              <div className="space-y-1">
+                {Object.entries(selectedSubmissionDetail.lookup_labels ?? {}).map(([fieldKey, answerLabel]) => (
+                  <FieldRow
+                    key={fieldKey}
+                    label={
+                      getSchemaFields(data.form.schema).find((candidate) => candidate.key === fieldKey)?.label ??
+                      fieldKey
+                    }
+                    value={answerLabel}
+                  />
+                ))}
+              </div>
+            )}
             <pre className="text-xs bg-white p-2 rounded overflow-auto">
               {JSON.stringify(selectedSubmissionDetail.submitted_payload, null, 2)}
             </pre>

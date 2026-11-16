@@ -119,7 +119,8 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
               field,
               displayFields,
               payload as Record<string, unknown>,
-              submission.attachments
+              submission.attachments,
+              { labels: submission.lookup_labels, unavailableText: t('submissionDetail.lookupUnavailable') }
             );
             return (
               <div key={key} className="rounded border bg-white p-2">

@@ -92,7 +92,8 @@
         "select": "selecione",
         "checkbox": "caixa de seleção",
         "date": "data",
-        "file-upload": "upload de arquivo"
+        "file-upload": "upload de arquivo",
+        "lookup": "Pesquisa"
       },
       "visibility": {
         "title": "Mostrar quando…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Avançado (JSON)",
         "advancedJsonHelp": "A configuração salva completa, incluindo os padrões de contexto. As regras de visibilidade são mais fáceis de alterar com “Mostrar quando…” em cada campo. Edições não salvas aqui são descartadas se uma regra for alterada lá."
-      }
+      },
+      "lookup": {
+        "entity": "Pesquisar",
+        "entities": {
+          "contact": "Contacto",
+          "user": "Utilizador MSP"
+        },
+        "scope": "As opções vêm de",
+        "scopes": {
+          "requester-client": "Cliente do solicitante",
+          "tenant": "Todo o espaço de trabalho"
+        }
+      },
+      "unsupportedType": "Tipo de campo não suportado \"{{type}}\". Remova este campo e adicione-o novamente antes de publicar."
     },
     "execution": {
       "title": "Execução",

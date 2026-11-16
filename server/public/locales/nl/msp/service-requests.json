@@ -92,7 +92,8 @@
         "select": "select",
         "checkbox": "checkbox",
         "date": "date",
-        "file-upload": "file-upload"
+        "file-upload": "file-upload",
+        "lookup": "Opzoeken"
       },
       "visibility": {
         "title": "Tonen wanneer…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Geavanceerd (JSON)",
         "advancedJsonHelp": "De volledige opgeslagen configuratie, inclusief contextstandaarden. Zichtbaarheidsregels wijzigt u makkelijker met „Tonen wanneer…” bij elk veld. Niet-opgeslagen wijzigingen hier worden verworpen als daar een regel wordt gewijzigd."
-      }
+      },
+      "lookup": {
+        "entity": "Opzoeken van",
+        "entities": {
+          "contact": "Contactpersoon",
+          "user": "MSP-gebruiker"
+        },
+        "scope": "Opties komen van",
+        "scopes": {
+          "requester-client": "Klant van de aanvrager",
+          "tenant": "Hele werkruimte"
+        }
+      },
+      "unsupportedType": "Niet-ondersteund veldtype \"{{type}}\". Verwijder dit veld en voeg het opnieuw toe voordat u publiceert."
     },
     "execution": {
       "title": "Uitvoering",

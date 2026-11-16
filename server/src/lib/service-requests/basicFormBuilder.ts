@@ -8,7 +8,39 @@ export type BasicFormFieldType =
   | 'select'
   | 'checkbox'
   | 'date'
-  | 'file-upload';
+  | 'file-upload'
+  | 'lookup';
+
+export type BasicFormLookupEntity = 'contact' | 'user';
+export type BasicFormLookupScope = 'requester-client' | 'tenant';
+
+/**
+ * Data descriptor for a `lookup` field: its option set is resolved from an entity table
+ * (see lookupFields.ts), not authored. The answer stored in the payload is the entity id.
+ */
+export interface BasicFormFieldLookup {
+  entity: BasicFormLookupEntity;
+  /** Derived from the requester at submit/render time; never from client input. */
+  scope: BasicFormLookupScope;
+  /** Optional equality filters on the entity row; keys are checked against the adapter's allowlist. */
+  filters?: Record<string, string | boolean>;
+}
+
+/**
+ * Which scopes each entity may use. `contact` is requester-client only: a tenant-wide contact
+ * universe would let the client portal read other clients' people. New adapters (asset, location)
+ * add an entry here and in lookupFields.ts' adapter map.
+ */
+export const LOOKUP_ENTITY_SCOPES: Record<BasicFormLookupEntity, readonly BasicFormLookupScope[]> = {
+  contact: ['requester-client'],
+  user: ['tenant'],
+};
+
+/** Allowlisted filter columns per entity (equality, scalar values only). */
+export const LOOKUP_ENTITY_FILTER_KEYS: Record<BasicFormLookupEntity, readonly string[]> = {
+  contact: ['role', 'is_client_admin', 'work_arrangement'],
+  user: [],
+};
 
 export interface BasicFormFieldOption {
   label: string;
@@ -23,6 +55,8 @@ export interface BasicFormField {
   required?: boolean;
   defaultValue?: string | boolean | null;
   options?: BasicFormFieldOption[];
+  /** Present only on `lookup` fields. */
+  lookup?: BasicFormFieldLookup;
 }
 
 export interface BasicFormSchema {
@@ -41,7 +75,32 @@ const SUPPORTED_FIELD_TYPES = new Set<BasicFormFieldType>([
   'checkbox',
   'date',
   'file-upload',
+  'lookup',
 ]);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Keeps the author's descriptor as written (including unknown entities and non-scalar filters) so
+ * validateBasicFormSchema can reject it; only a missing scope is defaulted, from the entity.
+ */
+function normalizeLookupDescriptor(raw: unknown): BasicFormFieldLookup | undefined {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  const entity = raw.entity as BasicFormLookupEntity;
+  const defaultScope = LOOKUP_ENTITY_SCOPES[entity]?.[0];
+  const lookup: BasicFormFieldLookup = {
+    entity,
+    scope: (typeof raw.scope === 'string' ? raw.scope : defaultScope) as BasicFormLookupScope,
+  };
+  if (raw.filters !== undefined && raw.filters !== null) {
+    lookup.filters = raw.filters as BasicFormFieldLookup['filters'];
+  }
+  return lookup;
+}
 
 function slugifyFieldKey(source: string): string {
   const normalized = source
@@ -84,10 +143,11 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
       : withUniqueFieldKey(slugifyFieldKey(fallbackLabel), seenKeys);
     seenKeys.add(nextKey);
 
+    // An unrecognised type is kept verbatim: coercing it to 'short-text' here made the membership
+    // check in validateBasicFormSchema unreachable and silently rewrote the author's schema on
+    // re-save. validateBasicFormSchema rejects it; the cast is the one place the type is unproven.
     const rawType = (raw as any).type;
-    const type: BasicFormFieldType = SUPPORTED_FIELD_TYPES.has(rawType)
-      ? (rawType as BasicFormFieldType)
-      : 'short-text';
+    const type = (typeof rawType === 'string' ? rawType : '') as BasicFormFieldType;
 
     const label = typeof (raw as any).label === 'string' && (raw as any).label.trim()
       ? (raw as any).label.trim()
@@ -113,6 +173,13 @@ export function normalizeBasicFormSchema(schema: unknown): BasicFormSchema {
         .filter((option: BasicFormFieldOption) => option.label && option.value);
     }
 
+    if (type === 'lookup') {
+      const lookup = normalizeLookupDescriptor((raw as any).lookup);
+      if (lookup) {
+        field.lookup = lookup;
+      }
+    }
+
     normalizedFields.push(field);
   }
 
@@ -135,7 +202,9 @@ export function resolveStaticDefaultValues(
       continue;
     }
 
-    if (field.type === 'file-upload') {
+    // Not defaultable: file uploads, lookups (option set is data), and types we do not recognise
+    // (a legacy row keeps its raw type; it must not pick up string defaults as if it were text).
+    if (field.type === 'file-upload' || field.type === 'lookup' || !SUPPORTED_FIELD_TYPES.has(field.type)) {
       continue;
     }
 
@@ -158,6 +227,46 @@ export function resolveStaticDefaultValues(
   return initialValues;
 }
 
+function validateLookupField(field: BasicFormField, errors: string[]): void {
+  const ref = `Field "${field.key}"`;
+  if (field.options && field.options.length > 0) {
+    errors.push(`${ref} is a lookup and cannot have static options`);
+  }
+  if (field.defaultValue !== undefined && field.defaultValue !== null && field.defaultValue !== '') {
+    errors.push(`${ref} is a lookup and cannot have a default value`);
+  }
+
+  const lookup = field.lookup;
+  if (!lookup || typeof lookup.entity !== 'string' || !lookup.entity) {
+    errors.push(`${ref} is a lookup and requires an entity`);
+    return;
+  }
+  const allowedScopes = LOOKUP_ENTITY_SCOPES[lookup.entity];
+  if (!allowedScopes) {
+    errors.push(`${ref} has unsupported lookup entity "${String(lookup.entity)}"`);
+    return;
+  }
+  if (!allowedScopes.includes(lookup.scope)) {
+    errors.push(
+      `${ref} cannot use scope "${String(lookup.scope)}" for entity "${lookup.entity}"`
+    );
+  }
+  if (lookup.filters !== undefined) {
+    if (!isPlainObject(lookup.filters)) {
+      errors.push(`${ref} lookup filters must be an object`);
+      return;
+    }
+    const allowedKeys = LOOKUP_ENTITY_FILTER_KEYS[lookup.entity];
+    for (const [filterKey, filterValue] of Object.entries(lookup.filters)) {
+      if (!allowedKeys.includes(filterKey)) {
+        errors.push(`${ref} lookup filter "${filterKey}" is not supported for ${lookup.entity}`);
+      } else if (typeof filterValue !== 'string' && typeof filterValue !== 'boolean') {
+        errors.push(`${ref} lookup filter "${filterKey}" must be a string or boolean`);
+      }
+    }
+  }
+}
+
 export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidationResult {
   const normalized = normalizeBasicFormSchema(schema);
   const errors: string[] = [];
@@ -175,10 +284,16 @@ export function validateBasicFormSchema(schema: unknown): BasicFormSchemaValidat
     seenKeys.add(field.key);
 
     if (!SUPPORTED_FIELD_TYPES.has(field.type)) {
-      errors.push(`${fieldRef} has unsupported type "${String(field.type)}"`);
+      errors.push(
+        `${fieldRef} ("${field.label}") has unsupported type "${String(field.type)}"`
+      );
     }
     if (!field.label?.trim()) {
       errors.push(`${fieldRef} is missing a label`);
+    }
+
+    if (field.type === 'lookup') {
+      validateLookupField(field, errors);
     }
 
     const defaultValue = field.defaultValue;
@@ -272,6 +387,8 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
   const existingKeys = new Set(schema.fields.map((field) => field.key));
   const baseKey = slugifyFieldKey(input.field.key?.trim() || input.field.label || input.field.type);
   const key = withUniqueFieldKey(baseKey, existingKeys);
+  // A new lookup starts valid (first entity, its default scope) so the author only has to change it.
+  const defaultEntity = Object.keys(LOOKUP_ENTITY_SCOPES)[0] as BasicFormLookupEntity;
   const nextField: BasicFormField = {
     key,
     type: input.field.type,
@@ -280,6 +397,13 @@ export async function addBasicFormFieldToDefinitionDraft(input: {
     required: Boolean(input.field.required),
     defaultValue: input.field.defaultValue,
     options: input.field.options,
+    lookup:
+      input.field.type === 'lookup'
+        ? (input.field.lookup ?? {
+            entity: defaultEntity,
+            scope: LOOKUP_ENTITY_SCOPES[defaultEntity][0],
+          })
+        : undefined,
   };
 
   const nextFields = [...schema.fields];
@@ -301,17 +425,21 @@ export async function updateBasicFormFieldInDefinitionDraft(input: {
   tenant: string;
   definitionId: string;
   fieldKey: string;
-  updates: Omit<Partial<BasicFormField>, 'key'>;
+  /** A `lookup` update may omit `scope`; the normalizer derives it from the entity. */
+  updates: Omit<Partial<BasicFormField>, 'key' | 'lookup'> & {
+    lookup?: Pick<BasicFormFieldLookup, 'entity'> & Partial<BasicFormFieldLookup>;
+  };
   updatedBy?: string | null;
 }): Promise<ServiceRequestDefinitionManagementRow> {
   const schema = await getDefinitionFormSchema(input.knex, input.tenant, input.definitionId);
   const nextFields = schema.fields.map((field) =>
     field.key === input.fieldKey
-      ? {
+      ? ({
           ...field,
           ...input.updates,
           key: field.key,
-        }
+          // An omitted lookup scope is derived from the entity by normalizeBasicFormSchema on save.
+        } as BasicFormField)
       : field
   );
 

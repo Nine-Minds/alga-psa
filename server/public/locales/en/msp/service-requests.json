@@ -92,7 +92,8 @@
         "select": "select",
         "checkbox": "checkbox",
         "date": "date",
-        "file-upload": "file-upload"
+        "file-upload": "file-upload",
+        "lookup": "Lookup"
       },
       "visibility": {
         "title": "Show when…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Advanced (JSON)",
         "advancedJsonHelp": "The full saved configuration, including context defaults. Visibility rules are easier to change with “Show when…” on each field. Unsaved edits here are discarded if a rule is changed there."
-      }
+      },
+      "lookup": {
+        "entity": "Look up",
+        "entities": {
+          "contact": "Contact",
+          "user": "MSP user"
+        },
+        "scope": "Options come from",
+        "scopes": {
+          "requester-client": "Requester's client",
+          "tenant": "Entire workspace"
+        }
+      },
+      "unsupportedType": "Unsupported field type \"{{type}}\". Remove this field and add it again before publishing."
     },
     "execution": {
       "title": "Execution",

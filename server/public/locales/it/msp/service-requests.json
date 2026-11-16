@@ -92,7 +92,8 @@
         "select": "selezione",
         "checkbox": "casella di controllo",
         "date": "data",
-        "file-upload": "caricamento file"
+        "file-upload": "caricamento file",
+        "lookup": "Ricerca"
       },
       "visibility": {
         "title": "Mostra quando…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Avanzate (JSON)",
         "advancedJsonHelp": "La configurazione salvata completa, inclusi i valori predefiniti di contesto. Le regole di visibilità si modificano più facilmente con «Mostra quando…» su ogni campo. Le modifiche non salvate qui vengono scartate se lì si modifica una regola."
-      }
+      },
+      "lookup": {
+        "entity": "Cerca",
+        "entities": {
+          "contact": "Contatto",
+          "user": "Utente MSP"
+        },
+        "scope": "Le opzioni provengono da",
+        "scopes": {
+          "requester-client": "Cliente del richiedente",
+          "tenant": "Intero spazio di lavoro"
+        }
+      },
+      "unsupportedType": "Tipo di campo non supportato «{{type}}». Rimuovi questo campo e aggiungilo di nuovo prima di pubblicare."
     },
     "execution": {
       "title": "Esecuzione",

@@ -19,6 +19,7 @@ import {
   createServiceRequestDefinitionFromTemplate,
   duplicateServiceRequestDefinition,
   type BasicFormFieldType,
+  type BasicFormLookupEntity,
   listServiceRequestDefinitionsForManagement,
   listServiceRequestTemplateOptions,
   removeBasicFormFieldFromDefinitionDraft,
@@ -384,6 +385,8 @@ export const updateServiceRequestFormFieldAction = withAuth(async (
     required?: boolean;
     defaultValue?: string | boolean | null;
     options?: Array<{ label: string; value: string }>;
+    /** Entity only: the scope is derived server-side from the entity and cannot be set by the caller. */
+    lookup?: { entity: BasicFormLookupEntity };
   }
 ): Promise<ServiceRequestDefinitionManagementRow> => {
   const { knex } = await createTenantKnex();

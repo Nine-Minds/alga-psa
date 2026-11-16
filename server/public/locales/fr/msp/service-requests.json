@@ -92,7 +92,8 @@
         "select": "liste de sélection",
         "checkbox": "case à cocher",
         "date": "sélecteur de date",
-        "file-upload": "téléversement de fichier"
+        "file-upload": "téléversement de fichier",
+        "lookup": "Recherche"
       },
       "visibility": {
         "title": "Afficher quand…",
@@ -123,7 +124,20 @@
         },
         "advancedJson": "Avancé (JSON)",
         "advancedJsonHelp": "La configuration enregistrée complète, y compris les valeurs par défaut du contexte. Les règles de visibilité se modifient plus facilement avec « Afficher quand… » sur chaque champ. Les modifications non enregistrées ici sont abandonnées si une règle y est modifiée."
-      }
+      },
+      "lookup": {
+        "entity": "Rechercher",
+        "entities": {
+          "contact": "Contact",
+          "user": "Utilisateur MSP"
+        },
+        "scope": "Les options proviennent de",
+        "scopes": {
+          "requester-client": "Client du demandeur",
+          "tenant": "Tout l'espace de travail"
+        }
+      },
+      "unsupportedType": "Type de champ non pris en charge « {{type}} ». Supprimez ce champ et ajoutez-le à nouveau avant de publier."
     },
     "execution": {
       "title": "Exécution",
