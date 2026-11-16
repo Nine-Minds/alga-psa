@@ -232,6 +232,9 @@
       "title": "Richieste di servizio",
       "detail": {
         "fallbackTitle": "Richiesta di servizio"
+      },
+      "submit": {
+        "title": "Invia richiesta di servizio"
       }
     },
     "surveys": {

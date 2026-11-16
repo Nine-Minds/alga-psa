@@ -136,7 +136,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Service Requests',
         translationKey: 'nav.serviceRequests',
         icon: LayoutTemplate,
-        href: '/msp/service-requests'
+        subItems: [
+          { name: 'Manage Requests', translationKey: 'nav.serviceRequestsManage', icon: LayoutTemplate, href: '/msp/service-requests' },
+          { name: 'Submit on behalf of…', translationKey: 'nav.serviceRequestsSubmit', icon: LayoutTemplate, href: '/msp/service-requests/submit', requiredPermission: 'service:read' }
+        ]
       },
       {
         name: 'Surveys',

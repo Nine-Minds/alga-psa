@@ -492,5 +492,31 @@
       "saveAllPartial": "Algunas secciones no se pudieron guardar: {{sections}}",
       "audienceSaveFailed": "No se pudo actualizar la audiencia"
     }
+  },
+  "submit": {
+    "title": "Enviar solicitud de servicio",
+    "description": "Envíe una solicitud de servicio publicada para un contacto del cliente. El contacto se registra como solicitante y usted como remitente.",
+    "client": "Cliente",
+    "clientPlaceholder": "Seleccionar cliente",
+    "contact": "Solicitante (contacto)",
+    "contactPlaceholder": "Seleccionar contacto",
+    "definition": "Solicitud de servicio",
+    "definitionPlaceholder": "Seleccionar una solicitud de servicio",
+    "loadError": "No se pudieron cargar las solicitudes de servicio de este contacto.",
+    "emptyCatalog": "Este contacto no puede ver ninguna solicitud de servicio publicada.",
+    "notAvailable": "Esta solicitud de servicio no está disponible para este contacto.",
+    "unableToSubmit": "No se pudo enviar",
+    "noFields": "Esta solicitud no tiene campos.",
+    "optionLabel": "Opción {{index}}",
+    "selectOption": "Seleccionar una opción",
+    "datePlaceholder": "Seleccionar una fecha",
+    "submit": "Enviar solicitud",
+    "requiredField": "Este campo es obligatorio",
+    "submitted": "Solicitud de servicio enviada",
+    "alreadySubmitted": "Esta solicitud ya se había enviado",
+    "viewTicket": "Ver el ticket",
+    "noTicket": "No se creó ningún ticket para esta solicitud.",
+    "action": "Enviar en nombre de…",
+    "actionShort": "Enviar para un cliente"
   }
 }

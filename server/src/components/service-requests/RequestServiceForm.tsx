@@ -12,7 +12,7 @@ import {
   isMissingRequiredValue,
   type VisibilityContext,
   type VisibilityRule,
-} from '../../../../lib/service-requests/formVisibility';
+} from '../../lib/service-requests/formVisibility';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function toIsoDateString(value: Date | undefined): string {

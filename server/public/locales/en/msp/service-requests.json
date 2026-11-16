@@ -492,5 +492,31 @@
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
       "audienceSaveFailed": "Failed to update audience"
     }
+  },
+  "submit": {
+    "title": "Submit service request",
+    "description": "File a published service request for a client contact. The contact is recorded as the requester and you as the submitter.",
+    "client": "Client",
+    "clientPlaceholder": "Select client",
+    "contact": "Requester (contact)",
+    "contactPlaceholder": "Select contact",
+    "definition": "Service request",
+    "definitionPlaceholder": "Select a service request",
+    "loadError": "Unable to load service requests for this contact.",
+    "emptyCatalog": "This contact cannot see any published service requests.",
+    "notAvailable": "This service request is not available to this contact.",
+    "unableToSubmit": "Unable to submit",
+    "noFields": "This request has no fields.",
+    "optionLabel": "Option {{index}}",
+    "selectOption": "Select an option",
+    "datePlaceholder": "Select a date",
+    "submit": "Submit request",
+    "requiredField": "This field is required",
+    "submitted": "Service request submitted",
+    "alreadySubmitted": "This request was already submitted",
+    "viewTicket": "View the ticket",
+    "noTicket": "No ticket was created for this request.",
+    "action": "Submit on behalf of…",
+    "actionShort": "Submit for a client"
   }
 }

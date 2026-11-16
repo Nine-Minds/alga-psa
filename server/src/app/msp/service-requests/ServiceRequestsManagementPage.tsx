@@ -249,6 +249,13 @@ export default function ServiceRequestsManagementPage() {
             }
           />
           <Button
+            id="service-request-submit-on-behalf"
+            variant="outline"
+            onClick={() => router.push('/msp/service-requests/submit')}
+          >
+            {t('submit.action', { defaultValue: 'Submit on behalf of…' })}
+          </Button>
+          <Button
             id="service-request-create-blank"
             onClick={() =>
               startTransition(async () => {

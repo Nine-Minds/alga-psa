@@ -330,7 +330,8 @@
       "loadFailed": "Det gick inte att läsa in checklistmallar",
       "retry": "Försök igen"
     },
-    "audits": "Inventeringar"
+    "audits": "Inventeringar",
+    "submitServiceRequest": "Skicka in servicebegäran"
   },
   "clientCommandCenter": {
     "cards": {

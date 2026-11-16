@@ -492,5 +492,31 @@
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
       "audienceSaveFailed": "Doelgroep bijwerken mislukt"
     }
+  },
+  "submit": {
+    "title": "Serviceaanvraag indienen",
+    "description": "Dien een gepubliceerde serviceaanvraag in voor een klantcontact. Het contact wordt vastgelegd als aanvrager en u als indiener.",
+    "client": "Klant",
+    "clientPlaceholder": "Klant selecteren",
+    "contact": "Aanvrager (contact)",
+    "contactPlaceholder": "Contact selecteren",
+    "definition": "Serviceaanvraag",
+    "definitionPlaceholder": "Selecteer een serviceaanvraag",
+    "loadError": "De serviceaanvragen voor dit contact konden niet worden geladen.",
+    "emptyCatalog": "Dit contact kan geen gepubliceerde serviceaanvragen zien.",
+    "notAvailable": "Deze serviceaanvraag is niet beschikbaar voor dit contact.",
+    "unableToSubmit": "Indienen niet mogelijk",
+    "noFields": "Deze aanvraag heeft geen velden.",
+    "optionLabel": "Optie {{index}}",
+    "selectOption": "Selecteer een optie",
+    "datePlaceholder": "Selecteer een datum",
+    "submit": "Aanvraag indienen",
+    "requiredField": "Dit veld is verplicht",
+    "submitted": "Serviceaanvraag ingediend",
+    "alreadySubmitted": "Deze aanvraag is al ingediend",
+    "viewTicket": "Ticket bekijken",
+    "noTicket": "Voor deze aanvraag is geen ticket aangemaakt.",
+    "action": "Indienen namens…",
+    "actionShort": "Indienen voor een klant"
   }
 }

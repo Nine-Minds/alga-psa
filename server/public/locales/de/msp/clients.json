@@ -330,7 +330,8 @@
       "loadFailed": "Checklistenvorlagen konnten nicht geladen werden",
       "retry": "Erneut versuchen"
     },
-    "audits": "Inventuren"
+    "audits": "Inventuren",
+    "submitServiceRequest": "Serviceanfrage einreichen"
   },
   "clientCommandCenter": {
     "cards": {

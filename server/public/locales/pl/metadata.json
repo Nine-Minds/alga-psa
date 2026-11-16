@@ -444,6 +444,9 @@
       "title": "Zgłoszenia serwisowe",
       "detail": {
         "fallbackTitle": "Zgłoszenie serwisowe"
+      },
+      "submit": {
+        "title": "Prześlij zgłoszenie usługi"
       }
     },
     "timeEntry": {

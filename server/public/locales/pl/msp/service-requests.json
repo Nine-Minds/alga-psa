@@ -494,5 +494,31 @@
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
       "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
     }
+  },
+  "submit": {
+    "title": "Prześlij zgłoszenie usługi",
+    "description": "Prześlij opublikowane zgłoszenie usługi dla kontaktu klienta. Kontakt jest zapisywany jako zgłaszający, a Ty jako przesyłający.",
+    "client": "Klient",
+    "clientPlaceholder": "Wybierz klienta",
+    "contact": "Zgłaszający (kontakt)",
+    "contactPlaceholder": "Wybierz kontakt",
+    "definition": "Zgłoszenie usługi",
+    "definitionPlaceholder": "Wybierz zgłoszenie usługi",
+    "loadError": "Nie udało się wczytać zgłoszeń usług dla tego kontaktu.",
+    "emptyCatalog": "Ten kontakt nie widzi żadnych opublikowanych zgłoszeń usług.",
+    "notAvailable": "To zgłoszenie usługi jest niedostępne dla tego kontaktu.",
+    "unableToSubmit": "Nie można przesłać",
+    "noFields": "To zgłoszenie nie ma pól.",
+    "optionLabel": "Opcja {{index}}",
+    "selectOption": "Wybierz opcję",
+    "datePlaceholder": "Wybierz datę",
+    "submit": "Prześlij zgłoszenie",
+    "requiredField": "To pole jest wymagane",
+    "submitted": "Zgłoszenie usługi przesłane",
+    "alreadySubmitted": "To zgłoszenie zostało już przesłane",
+    "viewTicket": "Zobacz zgłoszenie",
+    "noTicket": "Dla tego zgłoszenia nie utworzono ticketu.",
+    "action": "Prześlij w imieniu…",
+    "actionShort": "Prześlij dla klienta"
   }
 }

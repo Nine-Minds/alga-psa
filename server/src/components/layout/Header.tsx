@@ -33,7 +33,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { CO_MANAGED_MENU_GROUP } from '@/config/coManagedMenu';
-import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
 import { isSelfHostLicensingAction } from '@alga-psa/licensing/actions/license-actions';
@@ -152,8 +152,23 @@ const quickCreateOptions: QuickCreateOption[] = [
     label: 'Product',
     description: 'Add a new product to your catalog',
     type: 'product'
+  },
+  {
+    id: 'create-service-request',
+    labelKey: 'header.quickCreate.options.serviceRequest.label',
+    labelDefault: 'Service request',
+    descriptionKey: 'header.quickCreate.options.serviceRequest.description',
+    descriptionDefault: 'Submit a service request for a client contact',
+    label: 'Service request',
+    description: 'Submit a service request for a client contact',
+    type: 'serviceRequest'
   }
 ];
+
+/** Quick Create options that need a permission the user may not hold (resource:action). */
+const QUICK_CREATE_REQUIRED_PERMISSION: Partial<Record<Exclude<QuickCreateType, null>, string>> = {
+  serviceRequest: 'service:read',
+};
 
 type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
 
@@ -252,9 +267,23 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAlgaDesk } = useProduct();
-  const visibleOptions = isAlgaDesk
+  const [permissions, setPermissions] = useState<readonly string[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    getCurrentUserPermissions()
+      .then((granted) => mounted && setPermissions(granted))
+      .catch(() => mounted && setPermissions([]));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  const productOptions = isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
     : quickCreateOptions;
+  const visibleOptions = productOptions.filter((option) => {
+    const required = option.type ? QUICK_CREATE_REQUIRED_PERMISSION[option.type] : undefined;
+    return !required || permissions.includes(required);
+  });
   const translatedOptions = visibleOptions.map((option) => ({
     ...option,
     label: t(option.labelKey, { defaultValue: option.labelDefault }),

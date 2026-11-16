@@ -330,7 +330,8 @@
       "loadFailed": "Failed to load checklist templates",
       "retry": "Retry"
     },
-    "audits": "Audits"
+    "audits": "Audits",
+    "submitServiceRequest": "Submit service request"
   },
   "clientCommandCenter": {
     "cards": {

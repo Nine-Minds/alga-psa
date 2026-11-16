@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
-import { RequestServiceForm } from './RequestServiceForm';
+import { RequestServiceForm } from '../../../../components/service-requests/RequestServiceForm';
 
 interface RequestServiceDetailPageProps {
   params: Promise<{

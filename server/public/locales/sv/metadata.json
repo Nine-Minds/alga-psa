@@ -452,7 +452,10 @@
       "detail": {
         "fallbackTitle": "Tjänsteförfrågan"
       },
-      "title": "Tjänsteförfrågningar"
+      "title": "Tjänsteförfrågningar",
+      "submit": {
+        "title": "Skicka in servicebegäran"
+      }
     },
     "settings": {
       "extensions": {

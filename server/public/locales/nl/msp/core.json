@@ -114,7 +114,9 @@
     "coManaged": "Gezamenlijk beheerde IT",
     "coManagedArchive": "Archief gezamenlijk beheer",
     "coManagedAdministration": "Toegang en beheer",
-    "assetsAudits": "Locatieaudits"
+    "assetsAudits": "Locatieaudits",
+    "serviceRequestsManage": "Aanvragen beheren",
+    "serviceRequestsSubmit": "Indienen namens…"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -212,6 +214,10 @@
         "product": {
           "label": "Product",
           "description": "Voeg een nieuw product toe aan uw catalogus"
+        },
+        "serviceRequest": {
+          "label": "Serviceaanvraag",
+          "description": "Dien een serviceaanvraag in voor een klantcontact"
         }
       }
     },

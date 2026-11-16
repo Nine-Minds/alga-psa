@@ -15,7 +15,7 @@ import {
   toPortalFormView,
   type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
-import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
+import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from '../../../../components/service-requests/clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,

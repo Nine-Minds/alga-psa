@@ -492,5 +492,31 @@
       "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
       "audienceSaveFailed": "Échec de la mise à jour de l'audience"
     }
+  },
+  "submit": {
+    "title": "Soumettre une demande de service",
+    "description": "Soumettez une demande de service publiée pour un contact client. Le contact est enregistré comme demandeur et vous comme émetteur.",
+    "client": "Client",
+    "clientPlaceholder": "Sélectionner un client",
+    "contact": "Demandeur (contact)",
+    "contactPlaceholder": "Sélectionner un contact",
+    "definition": "Demande de service",
+    "definitionPlaceholder": "Sélectionner une demande de service",
+    "loadError": "Impossible de charger les demandes de service de ce contact.",
+    "emptyCatalog": "Ce contact ne peut voir aucune demande de service publiée.",
+    "notAvailable": "Cette demande de service n'est pas disponible pour ce contact.",
+    "unableToSubmit": "Soumission impossible",
+    "noFields": "Cette demande n'a aucun champ.",
+    "optionLabel": "Option {{index}}",
+    "selectOption": "Sélectionner une option",
+    "datePlaceholder": "Sélectionner une date",
+    "submit": "Soumettre la demande",
+    "requiredField": "Ce champ est obligatoire",
+    "submitted": "Demande de service soumise",
+    "alreadySubmitted": "Cette demande a déjà été soumise",
+    "viewTicket": "Voir le ticket",
+    "noTicket": "Aucun ticket n'a été créé pour cette demande.",
+    "action": "Soumettre au nom de…",
+    "actionShort": "Soumettre pour un client"
   }
 }

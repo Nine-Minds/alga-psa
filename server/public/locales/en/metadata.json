@@ -452,6 +452,9 @@
       "detail": {
         "fallbackTitle": "Service Request"
       },
+      "submit": {
+        "title": "Submit Service Request"
+      },
       "title": "Service Requests"
     },
     "settings": {

@@ -4,6 +4,8 @@
     "userActivities": "⟦Ŭşḗř Ȧƈŧīṽīŧīḗş⟧",
     "tickets": "⟦Ŧīƈķḗŧş⟧",
     "serviceRequests": "⟦Şḗřṽīƈḗ Řḗʠŭḗşŧş⟧",
+    "serviceRequestsManage": "⟦Ḿȧƞȧɠḗ Řḗʠŭḗşŧş⟧",
+    "serviceRequestsSubmit": "⟦Şŭƀḿīŧ ȯƞ ƀḗħȧŀƒ ȯƒ…⟧",
     "surveys": "⟦Şŭřṽḗẏş⟧",
     "projects": "⟦Ƥřȯĵḗƈŧş⟧",
     "projectsAll": "⟦Ȧŀŀ Ƥřȯĵḗƈŧş⟧",
@@ -569,6 +571,10 @@
         "product": {
           "label": "⟦Ƥřȯḓŭƈŧ⟧",
           "description": "⟦Ȧḓḓ ȧ ƞḗẇ ƥřȯḓŭƈŧ ŧȯ ẏȯŭř ƈȧŧȧŀȯɠ⟧"
+        },
+        "serviceRequest": {
+          "label": "⟦Şḗřṽīƈḗ řḗʠŭḗşŧ⟧",
+          "description": "⟦Şŭƀḿīŧ ȧ şḗřṽīƈḗ řḗʠŭḗşŧ ƒȯř ȧ ƈŀīḗƞŧ ƈȯƞŧȧƈŧ⟧"
         }
       }
     },
