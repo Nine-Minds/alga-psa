@@ -41,7 +41,9 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
-  tenantDb: (conn: any) => ({
+  // Seat work state settles only when a write moves the ticket's client/board; these tests never do.
+  releaseSeatTicketOnMove: vi.fn(async () => ({ assigneeCleared: false })),
+  tenantDb:(conn: any) => ({
     table: (table: string) => conn(table),
     subquery: (table: string) => conn(table),
     tenantJoin: (query: any) => query.join?.() ?? query,
@@ -480,7 +482,11 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
         }),
       };
       if (table === 'statuses') return { where: () => ({ first: async () => ({ status_id: 'status-1', is_closed: false }) }) };
-      if (table === 'users') return { where: () => ({ first: async () => undefined }) };
+      // The update guard resolves the editor as an authorization subject: an ordinary internal user with no
+      // roles, teams, reports or client portfolio, so no built-in rule resolver governs the write.
+      if (table === 'users') return { where: () => ({ first: async () => undefined, select: async () => [] }) };
+      if (table === 'user_roles' || table === 'team_members') return { where: () => ({ select: async () => [] }) };
+      if (table === 'user_client_portfolios') return { where: () => ({ orderBy: () => ({ select: async () => [] }) }) };
       if (table === 'ticket_audit_logs') return { insert: async (row: any) => { auditRows.push(row); } };
       throw new Error(`Unexpected table ${table}`);
     };
