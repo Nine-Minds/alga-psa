@@ -2590,6 +2590,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "· {{count}} item",
       "Markdown",
       "Offline",

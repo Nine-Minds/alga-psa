@@ -2207,6 +2207,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "Layout",
       "1 asset",
       "Offline",

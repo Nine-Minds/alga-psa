@@ -2216,6 +2216,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
