@@ -65,6 +65,9 @@ const KNOWN_UNDECLARED_CONTROLLER_RESOURCES = [
  * 403s for every caller (Admin included). Found by the exact-pair controller
  * scan; tracked as follow-up and NOT provisioned alongside the API admin fix.
  * Never extend this list: a new permission goes in the catalog.
+ *
+ * invoice.payment left it when the MSP "Record payment" action landed and
+ * 20261117120000_add_invoice_payment_permission provisioned the pair.
  */
 const KNOWN_UNDECLARED_CONTROLLER_PAIRS = [
   'ApiInvoiceController.ts: invoice.analytics',
@@ -74,7 +77,6 @@ const KNOWN_UNDECLARED_CONTROLLER_PAIRS = [
   'ApiInvoiceController.ts: invoice.bulk_delete',
   'ApiInvoiceController.ts: invoice.bulk_send',
   'ApiInvoiceController.ts: invoice.bulk_update',
-  'ApiInvoiceController.ts: invoice.payment',
   'ApiInvoiceController.ts: invoice.recurring',
   'ApiInvoiceController.ts: invoice.reject',
 ] as const;
@@ -170,7 +172,7 @@ describe('permission catalog contract', () => {
     const stale = [...pairQuarantine].filter((pair) => !missing.includes(pair));
     expect(undeclared, 'Add the controller permission to the catalog; never extend KNOWN_UNDECLARED_CONTROLLER_PAIRS').toEqual([]);
     expect(stale, 'Remove stale controller-pair quarantine entries').toEqual([]);
-    expect(KNOWN_UNDECLARED_CONTROLLER_PAIRS).toHaveLength(10);
+    expect(KNOWN_UNDECLARED_CONTROLLER_PAIRS).toHaveLength(9);
   });
 
   it('declares every action the webhook controller checks', () => {
