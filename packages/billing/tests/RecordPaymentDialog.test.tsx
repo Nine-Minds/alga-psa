@@ -59,6 +59,14 @@ vi.mock('@alga-psa/ui/components/CurrencyInput', () => ({
     />
   ),
 }));
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({
+  Checkbox: ({ id, label, checked, onChange, disabled }: any) => (
+    <label htmlFor={id}>
+      <input id={id} type="checkbox" checked={checked} disabled={disabled} onChange={onChange} />
+      {label}
+    </label>
+  ),
+}));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   DatePicker: ({ id, label }: any) => <input id={id} aria-label={label} readOnly />,
 }));
@@ -137,6 +145,63 @@ describe('RecordPaymentDialog', () => {
       expect.objectContaining({ amount: 4000, method: 'check', referenceNumber: '1042' }),
     ));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  // Any amount at all used to be accepted, so an extra digit silently became
+  // money the client never owed (operator report on alga-2026-0003329).
+  it('warns about an amount above the balance due and holds the submit', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+
+    expect(screen.getByText(/more than the balance due/)).toBeInTheDocument();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+
+    fireEvent.click(screen.getByText('Record Payment'));
+    expect(mocks.recordManualInvoicePayment).not.toHaveBeenCalled();
+  });
+
+  it('records the overpayment with an explicit acknowledgement once confirmed', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+
+    fireEvent.click(screen.getByText('Record Payment'));
+
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 15000, allowOverpayment: true }),
+    ));
+  });
+
+  it('withdraws the acknowledgement when the amount is edited again', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '150' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.getByText('Record Payment').closest('button')).toBeEnabled();
+
+    fireEvent.change(amount, { target: { value: '250' } });
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+  });
+
+  it('says nothing about overpayment for an amount within the balance', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    const amount = await screen.findByLabelText('Amount');
+    fireEvent.change(amount, { target: { value: '40' } });
+
+    expect(screen.queryByText(/more than the balance due/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Record Payment'));
+    await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 4000, allowOverpayment: undefined }),
+    ));
   });
 
   it('surfaces an action refusal and keeps the dialog open', async () => {

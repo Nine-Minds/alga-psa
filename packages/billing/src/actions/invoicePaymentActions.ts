@@ -61,6 +61,12 @@ export interface RecordManualInvoicePaymentInput {
   paymentDate?: string;
   referenceNumber?: string;
   notes?: string;
+  /**
+   * Acknowledgement that the amount exceeds the balance due. Without it an
+   * over-balance amount is refused, because it is far more often a typo than a
+   * real overpayment and nothing downstream backs it out.
+   */
+  allowOverpayment?: boolean;
 }
 
 export interface RecordManualInvoicePaymentSuccess {
@@ -246,6 +252,19 @@ export const recordManualInvoicePayment = withAuth(async (
     );
   }
 
+  // An amount above the balance due is usually a slip (an extra digit, or a
+  // payment someone already recorded), and nothing downstream reverses it: the
+  // surplus simply sits on a `paid` invoice as money the client never owed.
+  // It is still allowed — clients do overpay — but only on an explicit
+  // acknowledgement from the dialog, never by default.
+  const overpayment = amount - summary.balanceDue;
+  if (overpayment > 0 && !input.allowOverpayment) {
+    return actionError(
+      'This payment is more than the balance due. Confirm the overpayment to record it.',
+      `${KEY_PREFIX}.overpaymentNotConfirmed`,
+    );
+  }
+
   const paymentDate = input.paymentDate ? new Date(`${input.paymentDate}T00:00:00Z`) : new Date();
   if (Number.isNaN(paymentDate.getTime())) {
     return actionError('Enter a valid payment date.', `${KEY_PREFIX}.invalidDate`);
@@ -274,6 +293,9 @@ export const recordManualInvoicePayment = withAuth(async (
     transactionMetadata: {
       recorded_by_user_id: user.user_id,
       entry_method: 'manual',
+      // Kept on the ledger entry so a surplus is auditable as a deliberate
+      // choice rather than something to be puzzled over later.
+      ...(overpayment > 0 ? { overpayment_amount: overpayment } : {}),
     },
   });
 
@@ -284,6 +306,17 @@ export const recordManualInvoicePayment = withAuth(async (
       error: result.error,
     });
     return actionError(result.error ?? 'Failed to record the payment.', `${KEY_PREFIX}.recordFailed`);
+  }
+
+  if (overpayment > 0) {
+    logger.warn('[recordManualInvoicePayment] Recorded a confirmed overpayment', {
+      tenant,
+      invoiceId: input.invoiceId,
+      paymentId: result.paymentId,
+      amount,
+      balanceDue: summary.balanceDue,
+      overpayment,
+    });
   }
 
   // recordExternalPayment publishes PAYMENT_RECORDED; the application of that

@@ -2973,6 +2973,7 @@
       "invalidDate": "Wprowadź prawidłową datę płatności.",
       "noBalanceDue": "Ta faktura nie ma kwoty do zapłaty.",
       "statusNotPayable": "Nie można zarejestrować płatności dla faktury o statusie: {{status}}.",
+      "overpaymentNotConfirmed": "Ta płatność jest wyższa niż pozostała kwota do zapłaty. Potwierdź nadpłatę, aby ją zarejestrować.",
       "recordFailed": "Nie udało się zarejestrować płatności. Spróbuj ponownie."
     }
   },
@@ -3022,6 +3023,10 @@
       "bank_transfer": "Przelew bankowy",
       "cash": "Gotówka",
       "other": "Inne"
+    },
+    "overpayment": {
+      "warning": "Ta płatność przekracza o {{excess}} pozostałą kwotę do zapłaty wynoszącą {{balanceDue}}.",
+      "confirm": "Zarejestruj mimo to tę nadpłatę"
     },
     "actions": {
       "cancel": "Anuluj",

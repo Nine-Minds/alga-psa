@@ -2921,6 +2921,7 @@
       "invalidDate": "Enter a valid payment date.",
       "noBalanceDue": "This invoice has no balance due.",
       "statusNotPayable": "Cannot record a payment for an invoice with status: {{status}}.",
+      "overpaymentNotConfirmed": "This payment is more than the balance due. Confirm the overpayment to record it.",
       "recordFailed": "Failed to record the payment. Please try again."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Bank Transfer",
       "cash": "Cash",
       "other": "Other"
+    },
+    "overpayment": {
+      "warning": "This payment is {{excess}} more than the balance due of {{balanceDue}}.",
+      "confirm": "Record this overpayment anyway"
     },
     "actions": {
       "cancel": "Cancel",

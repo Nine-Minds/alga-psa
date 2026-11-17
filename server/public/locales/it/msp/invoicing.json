@@ -2921,6 +2921,7 @@
       "invalidDate": "Inserisci una data di pagamento valida.",
       "noBalanceDue": "Questa fattura non ha un saldo da pagare.",
       "statusNotPayable": "Impossibile registrare un pagamento per una fattura con stato: {{status}}.",
+      "overpaymentNotConfirmed": "Questo pagamento è superiore al saldo da pagare. Conferma il pagamento in eccesso per registrarlo.",
       "recordFailed": "Registrazione del pagamento non riuscita. Riprova."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Bonifico bancario",
       "cash": "Contanti",
       "other": "Altro"
+    },
+    "overpayment": {
+      "warning": "Questo pagamento supera di {{excess}} il saldo da pagare di {{balanceDue}}.",
+      "confirm": "Registra comunque questo pagamento in eccesso"
     },
     "actions": {
       "cancel": "Annulla",

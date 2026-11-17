@@ -119,6 +119,8 @@ describe('FinalizedTab i18n wiring contract', () => {
       'recordPayment.fields.reference',
       'recordPayment.fields.notes',
       'recordPayment.placeholders.reference',
+      'recordPayment.overpayment.warning',
+      'recordPayment.overpayment.confirm',
       'recordPayment.actions.cancel',
       'recordPayment.actions.record',
       'recordPayment.toasts.recorded',
@@ -144,6 +146,7 @@ describe('FinalizedTab i18n wiring contract', () => {
       'errors.recordPayment.invalidDate',
       'errors.recordPayment.noBalanceDue',
       'errors.recordPayment.statusNotPayable',
+      'errors.recordPayment.overpaymentNotConfirmed',
       'errors.recordPayment.recordFailed',
     ]) {
       expect(getLeaf(en, key)).toBeDefined();

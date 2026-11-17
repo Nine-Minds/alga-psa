@@ -2921,6 +2921,7 @@
       "invalidDate": "Saisissez une date de paiement valide.",
       "noBalanceDue": "Cette facture n'a plus de solde dû.",
       "statusNotPayable": "Impossible d’enregistrer un paiement pour une facture au statut : {{status}}.",
+      "overpaymentNotConfirmed": "Ce paiement dépasse le solde dû. Confirmez le trop-perçu pour l'enregistrer.",
       "recordFailed": "Échec de l'enregistrement du paiement. Veuillez réessayer."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Virement bancaire",
       "cash": "Espèces",
       "other": "Autre"
+    },
+    "overpayment": {
+      "warning": "Ce paiement dépasse de {{excess}} le solde dû de {{balanceDue}}.",
+      "confirm": "Enregistrer quand même ce trop-perçu"
     },
     "actions": {
       "cancel": "Annuler",

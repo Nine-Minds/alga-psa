@@ -2921,6 +2921,7 @@
       "invalidDate": "Voer een geldige betaaldatum in.",
       "noBalanceDue": "Deze factuur heeft geen openstaand bedrag.",
       "statusNotPayable": "Kan geen betaling vastleggen voor een factuur met status: {{status}}.",
+      "overpaymentNotConfirmed": "Deze betaling is hoger dan het openstaande bedrag. Bevestig de overbetaling om deze vast te leggen.",
       "recordFailed": "Het vastleggen van de betaling is mislukt. Probeer het opnieuw."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Bankoverschrijving",
       "cash": "Contant",
       "other": "Overig"
+    },
+    "overpayment": {
+      "warning": "Deze betaling is {{excess}} hoger dan het openstaande bedrag van {{balanceDue}}.",
+      "confirm": "Deze overbetaling toch vastleggen"
     },
     "actions": {
       "cancel": "Annuleren",

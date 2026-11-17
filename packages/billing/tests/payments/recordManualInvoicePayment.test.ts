@@ -276,6 +276,38 @@ describe('recordManualInvoicePayment', () => {
     expect(payments()).toHaveLength(1);
   });
 
+  // An amount above the balance used to land in full with no objection, so a
+  // mistyped figure became money the client never owed (operator report).
+  it('refuses an amount above the balance due unless it is confirmed', async () => {
+    rows('invoice_payments').push({ payment_id: 'pay-old', invoice_id: INVOICE, amount: 4000 });
+
+    const result: any = await recordManualInvoicePayment({
+      invoiceId: INVOICE, amount: 9000, method: 'check',
+    });
+
+    expect(result.messageKey).toBe('msp/invoicing:errors.recordPayment.overpaymentNotConfirmed');
+    expect(payments()).toHaveLength(1);
+    expect(invoice().status).toBe('sent');
+  });
+
+  it('records an overpayment once it is confirmed, and marks it on the ledger', async () => {
+    const result: any = await recordManualInvoicePayment({
+      invoiceId: INVOICE, amount: 12000, method: 'check', allowOverpayment: true,
+    });
+
+    expect(result).toMatchObject({ success: true, newStatus: 'paid' });
+    expect(result.balanceDue).toBe(-2000);
+    expect(payments()).toHaveLength(1);
+    expect(store.tables.transactions[0].metadata).toMatchObject({ overpayment_amount: 2000 });
+  });
+
+  it('does not mark an exact-balance payment as an overpayment', async () => {
+    await recordManualInvoicePayment({ invoiceId: INVOICE, amount: 10000, method: 'check' });
+
+    expect(payments()).toHaveLength(1);
+    expect(store.tables.transactions[0].metadata.overpayment_amount).toBeUndefined();
+  });
+
   // The Finalized tab lists every invoice that is finalized OR simply not a
   // draft, so a sent invoice with no finalization timestamp was offered the
   // action and then refused by a finalized_at gate the dialog could not explain.

@@ -2921,6 +2921,7 @@
       "invalidDate": "Ange ett giltigt betalningsdatum.",
       "noBalanceDue": "Den här fakturan har inget återstående belopp.",
       "statusNotPayable": "Det går inte att registrera en betalning för en faktura med status: {{status}}.",
+      "overpaymentNotConfirmed": "Betalningen är högre än det återstående beloppet. Bekräfta överbetalningen för att registrera den.",
       "recordFailed": "Det gick inte att registrera betalningen. Försök igen."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Banköverföring",
       "cash": "Kontant",
       "other": "Annat"
+    },
+    "overpayment": {
+      "warning": "Den här betalningen är {{excess}} mer än det återstående beloppet på {{balanceDue}}.",
+      "confirm": "Registrera överbetalningen ändå"
     },
     "actions": {
       "cancel": "Avbryt",

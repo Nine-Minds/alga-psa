@@ -2921,6 +2921,7 @@
       "invalidDate": "Geben Sie ein gültiges Zahlungsdatum ein.",
       "noBalanceDue": "Für diese Rechnung ist kein Betrag mehr offen.",
       "statusNotPayable": "Für eine Rechnung mit dem Status {{status}} kann keine Zahlung erfasst werden.",
+      "overpaymentNotConfirmed": "Diese Zahlung ist höher als der offene Betrag. Bestätigen Sie die Überzahlung, um sie zu erfassen.",
       "recordFailed": "Die Zahlung konnte nicht erfasst werden. Bitte versuchen Sie es erneut."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Banküberweisung",
       "cash": "Bargeld",
       "other": "Sonstiges"
+    },
+    "overpayment": {
+      "warning": "Diese Zahlung liegt {{excess}} über dem offenen Betrag von {{balanceDue}}.",
+      "confirm": "Überzahlung trotzdem erfassen"
     },
     "actions": {
       "cancel": "Abbrechen",

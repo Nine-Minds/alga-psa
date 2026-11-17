@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -73,6 +74,7 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
   const [method, setMethod] = useState<ManualPaymentMethod>('manual');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [confirmOverpayment, setConfirmOverpayment] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !invoiceId) return;
@@ -86,6 +88,7 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
     setMethod('manual');
     setReference('');
     setNotes('');
+    setConfirmOverpayment(false);
 
     void (async () => {
       try {
@@ -113,7 +116,18 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
     ? 0
     : toMinorUnits(amount, locale, currencyCode);
   const canRecord = Boolean(summary?.canRecordPayment);
-  const canSubmit = Boolean(invoiceId) && !loading && !saving && amountMinorUnits > 0 && canRecord;
+  // More than is owed is almost always a mistyped amount, so it is called out
+  // and has to be acknowledged; the action refuses it otherwise.
+  const overpaymentMinorUnits = summary
+    ? Math.max(amountMinorUnits - summary.balanceDue, 0)
+    : 0;
+  const isOverpayment = overpaymentMinorUnits > 0;
+  const canSubmit = Boolean(invoiceId)
+    && !loading
+    && !saving
+    && amountMinorUnits > 0
+    && canRecord
+    && (!isOverpayment || confirmOverpayment);
 
   // A disabled form with no explanation is a dead end: whenever the invoice
   // cannot take a payment the dialog says why instead of swallowing input.
@@ -133,6 +147,13 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
     label: t(`recordPayment.methods.${value}`, { defaultValue: METHOD_LABEL_DEFAULTS[value] }),
   }));
 
+  // Editing the amount withdraws the acknowledgement: it was given for a
+  // figure that no longer stands.
+  const handleAmountChange = (value: number | undefined) => {
+    setAmount(value);
+    setConfirmOverpayment(false);
+  };
+
   const handleSubmit = async () => {
     if (!invoiceId || !canSubmit) return;
     setSaving(true);
@@ -145,6 +166,7 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
         paymentDate: toCalendarDate(paymentDate),
         referenceNumber: reference.trim() || undefined,
         notes: notes.trim() || undefined,
+        allowOverpayment: isOverpayment || undefined,
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         setError(getErrorMessage(result));
@@ -248,11 +270,36 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
                   id="record-payment-amount"
                   label={t('recordPayment.fields.amount', { defaultValue: 'Amount' })}
                   value={amount}
-                  onChange={setAmount}
+                  onChange={handleAmountChange}
                   currencyCode={currencyCode}
                   disabled={saving}
                   required
                 />
+
+                {isOverpayment && summary && (
+                  <Alert variant="warning" id="record-payment-overpayment-warning">
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <p>
+                          {t('recordPayment.overpayment.warning', {
+                            defaultValue: 'This payment is {{excess}} more than the balance due of {{balanceDue}}.',
+                            excess: formatCurrencyFromMinorUnits(overpaymentMinorUnits, locale, summary.currencyCode),
+                            balanceDue: formatCurrencyFromMinorUnits(summary.balanceDue, locale, summary.currencyCode),
+                          })}
+                        </p>
+                        <Checkbox
+                          id="record-payment-confirm-overpayment"
+                          checked={confirmOverpayment}
+                          onChange={(event) => setConfirmOverpayment(event.target.checked)}
+                          disabled={saving}
+                          label={t('recordPayment.overpayment.confirm', {
+                            defaultValue: 'Record this overpayment anyway',
+                          })}
+                        />
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="space-y-1">
                   <label htmlFor="record-payment-date" className="block text-sm font-medium">

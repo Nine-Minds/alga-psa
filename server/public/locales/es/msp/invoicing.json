@@ -24,6 +24,10 @@
       "cash": "Efectivo",
       "other": "Otro"
     },
+    "overpayment": {
+      "warning": "Este pago supera en {{excess}} el saldo pendiente de {{balanceDue}}.",
+      "confirm": "Registrar este pago en exceso de todos modos"
+    },
     "actions": {
       "cancel": "Cancelar",
       "record": "Registrar pago"
@@ -2896,6 +2900,7 @@
       "invalidDate": "Ingrese una fecha de pago válida.",
       "noBalanceDue": "Esta factura no tiene saldo pendiente.",
       "statusNotPayable": "No se puede registrar un pago para una factura con estado: {{status}}.",
+      "overpaymentNotConfirmed": "Este pago es mayor que el saldo pendiente. Confirme el pago en exceso para registrarlo.",
       "recordFailed": "No se pudo registrar el pago. Inténtelo de nuevo."
     },
     "permissions": {

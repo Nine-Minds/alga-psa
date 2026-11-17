@@ -2921,6 +2921,7 @@
       "invalidDate": "Informe uma data de pagamento válida.",
       "noBalanceDue": "Esta fatura não tem saldo devedor.",
       "statusNotPayable": "Não é possível registrar um pagamento para uma fatura com status: {{status}}.",
+      "overpaymentNotConfirmed": "Este pagamento é maior que o saldo devedor. Confirme o pagamento em excesso para registrá-lo.",
       "recordFailed": "Falha ao registrar o pagamento. Tente novamente."
     }
   },
@@ -2970,6 +2971,10 @@
       "bank_transfer": "Transferência bancária",
       "cash": "Dinheiro",
       "other": "Outro"
+    },
+    "overpayment": {
+      "warning": "Este pagamento excede em {{excess}} o saldo devedor de {{balanceDue}}.",
+      "confirm": "Registrar este pagamento em excesso mesmo assim"
     },
     "actions": {
       "cancel": "Cancelar",
