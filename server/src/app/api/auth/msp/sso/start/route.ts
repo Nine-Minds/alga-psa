@@ -74,19 +74,30 @@ function clearCookie(response: NextResponse, name: string): void {
   response.cookies.set({ name, value: '', maxAge: 0, ...cookieBase() });
 }
 
-/** An active domain serving the MSP app (any tenant: tenant ownership is checked at handoff). */
+/**
+ * An active domain serving the MSP app (any tenant: tenant ownership is checked at handoff).
+ *
+ * `rawDomain` is the browser's `location.host`, so it carries the port when the custom host is
+ * served on a non-default one. Domains are stored without a port (the middleware's host-surface
+ * lookup matches the bare hostname), so try `host:port` first and then the bare hostname, the
+ * same candidates `computeVanityRedirect` and `/api/portal-domain/surface` use. The value
+ * returned is the host the browser used (port included), so the handoff lands back on it.
+ */
 async function lookupMspHandoffDomain(rawDomain: string | null): Promise<string | null> {
-  const hostname = rawDomain ? normalizeHostname(rawDomain) : '';
-  if (!hostname) {
+  const host = rawDomain ? normalizeHostname(rawDomain) : '';
+  if (!host) {
     return null;
   }
+  const candidates = host.includes(':') ? [host, host.slice(0, host.lastIndexOf(':'))] : [host];
   try {
     const knex = await getAdminConnection();
-    const record = await getPortalDomainByHostname(knex, hostname);
-    if (!record || !isPortalDomainHandoffTarget(record, 'msp')) {
-      return null;
+    for (const candidate of candidates) {
+      const record = await getPortalDomainByHostname(knex, candidate);
+      if (record && isPortalDomainHandoffTarget(record, 'msp')) {
+        return host;
+      }
     }
-    return record.domain;
+    return null;
   } catch (error) {
     console.warn('[msp-sso-start] custom domain lookup failed; continuing on the canonical host', {
       error: error instanceof Error ? error.message : String(error),

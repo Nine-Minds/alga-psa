@@ -120,6 +120,19 @@ describe('GET /api/auth/msp/sso/start: step 1 (resolve, remember the custom doma
     expect(parseAndVerifyMspSsoHandoffCookie({ value: handoff.value, secret: 'other-secret' })).toBeNull();
   });
 
+  it('matches a custom host on a non-default port against its port-less domain row and keeps the port for the handoff', async () => {
+    getPortalDomainByHostnameMock.mockImplementation(async (_knex: unknown, hostname: string) =>
+      hostname === 'msp.acme.test' ? { domain: 'msp.acme.test', status: 'active', surface: 'both', tenant: 't1' } : null,
+    );
+
+    await GET(startRequest({ provider: 'google', email: 'tech@acme.test', domain: 'msp.acme.test:3001', return: '/msp/tickets' }));
+
+    expect(getPortalDomainByHostnameMock.mock.calls.map((call) => call[1])).toEqual(['msp.acme.test:3001', 'msp.acme.test']);
+    expect(parseAndVerifyMspSsoHandoffCookie({ value: cookie(MSP_SSO_HANDOFF_COOKIE).value, secret: 'unit-test-signing-secret' })).toMatchObject({
+      domain: 'msp.acme.test:3001',
+    });
+  });
+
   it.each([
     ['inactive', { domain: 'msp.acme.test', status: 'deploying', surface: 'both' }],
     ['client_portal-only', { domain: 'msp.acme.test', status: 'active', surface: 'client_portal' }],
