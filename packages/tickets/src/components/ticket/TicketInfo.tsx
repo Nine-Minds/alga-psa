@@ -760,7 +760,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const classes = ['rounded-lg transition-colors duration-[600ms]'];
 
     if (isFieldHighlighted(field)) {
-      classes.push('bg-[rgb(var(--badge-info-bg))] ring-1 ring-[rgb(var(--badge-info-border))] px-3 py-2');
+      classes.push('chip-primary px-3 py-2');
     }
 
     if (isFieldFrozen(field)) {
