@@ -4,7 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import type { PortalSessionTokenPayload } from './session';
+import { isPortalDomainHandoffTarget, type AppSurface } from '@alga-psa/shared/core/portalDomainSurface';
 import type { PortalDomainRecord } from './PortalDomainModel';
 
 const TABLE_NAME = 'portal_domain_session_otts';
@@ -43,7 +43,10 @@ export interface PortalDomainSessionOttMetadata {
   issuedBy?: string;
   issuedFromHost?: string;
   issuedAt?: string;
-  userSnapshot: PortalSessionTokenPayload;
+  /** The app the OTT was issued for; the exchange refuses a return path outside it. */
+  surface: AppSurface;
+  /** How the user signed in on the canonical host; carried into the minted session. */
+  loginMethod?: string;
   [key: string]: unknown;
 }
 
@@ -65,7 +68,8 @@ export interface IssuePortalDomainOttParams {
   portalDomainId: string;
   userId: string;
   targetDomain: string;
-  userSnapshot: PortalSessionTokenPayload;
+  surface: AppSurface;
+  loginMethod?: string;
   requestedBy?: string;
   issuedFromHost: string;
   returnPath?: string;
@@ -100,9 +104,10 @@ function mapMetadata(raw: unknown, fallback: PortalDomainSessionOttMetadata): Po
   const issuedBy = typeof candidate.issuedBy === 'string' ? candidate.issuedBy : fallback.issuedBy;
   const issuedFromHost = typeof candidate.issuedFromHost === 'string' ? candidate.issuedFromHost : fallback.issuedFromHost;
   const issuedAt = typeof candidate.issuedAt === 'string' ? candidate.issuedAt : fallback.issuedAt;
-  const userSnapshot = candidate.userSnapshot && typeof candidate.userSnapshot === 'object'
-    ? candidate.userSnapshot as PortalSessionTokenPayload
-    : fallback.userSnapshot;
+  const surface = candidate.surface === 'msp' || candidate.surface === 'client_portal'
+    ? candidate.surface
+    : fallback.surface;
+  const loginMethod = typeof candidate.loginMethod === 'string' ? candidate.loginMethod : fallback.loginMethod;
 
   return {
     ...candidate,
@@ -111,16 +116,16 @@ function mapMetadata(raw: unknown, fallback: PortalDomainSessionOttMetadata): Po
     issuedBy,
     issuedFromHost,
     issuedAt,
-    userSnapshot,
+    surface,
+    loginMethod,
   };
 }
 
 function mapRow(row: PortalDomainSessionOttRow): PortalDomainSessionOtt {
   const fallbackMetadata: PortalDomainSessionOttMetadata = {
     targetDomain: '',
-    userSnapshot: {
-      id: row.user_id,
-    },
+    // Rows issued before the surface was recorded were client-portal handoffs.
+    surface: 'client_portal',
   };
 
   return {
@@ -159,7 +164,8 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
     portalDomainId,
     userId,
     targetDomain,
-    userSnapshot,
+    surface,
+    loginMethod,
     requestedBy,
     issuedFromHost,
     returnPath,
@@ -190,6 +196,18 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
     throw new Error('Portal domain is not active.');
   }
 
+  // Last line of defence behind the callers' own checks: an OTT is only ever issued for a
+  // domain that serves the app the user is being handed to.
+  if (!isPortalDomainHandoffTarget(domain, surface)) {
+    logger.warn('Attempted to issue OTT for a domain that does not serve the surface', {
+      tenant,
+      portalDomainId,
+      surface,
+      domainSurface: domain.surface,
+    });
+    throw new Error('Portal domain does not serve this surface.');
+  }
+
   if (domain.domain !== targetDomain) {
     logger.warn('Target domain mismatch during OTT issuance', {
       tenant,
@@ -211,7 +229,8 @@ export async function issuePortalDomainOtt(params: IssuePortalDomainOttParams): 
     issuedBy: requestedBy ?? userId,
     issuedFromHost,
     issuedAt: new Date().toISOString(),
-    userSnapshot,
+    surface,
+    loginMethod,
   };
 
   const [row] = await tenantDb(knex, tenant).table<PortalDomainSessionOttRow>(TABLE_NAME)

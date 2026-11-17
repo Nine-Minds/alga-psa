@@ -16,7 +16,6 @@ export const PORTAL_DOMAIN_STATUSES = [
   'certificate_issuing',
   'certificate_failed',
   'deploying',
-  'pending_redirect_uri',
   'active',
   'disabled',
 ] as const;

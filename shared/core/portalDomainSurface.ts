@@ -47,79 +47,74 @@ export function surfaceForPath(pathname: string): AppSurface | null {
 }
 
 // ---------------------------------------------------------------------------
-// SSO redirect URIs (D3)
+// Session handoff (alga-2026-0002996)
 // ---------------------------------------------------------------------------
 
-export const SSO_REDIRECT_URI_PROVIDERS = ['google', 'azure-ad', 'keycloak'] as const;
-export type SsoRedirectUriProvider = (typeof SSO_REDIRECT_URI_PROVIDERS)[number];
-
-/** Callback URIs the identity provider(s) must allow for NextAuth on `domain`. */
-export function getRequiredSsoRedirectUris(
-  domain: string,
-  providers: readonly string[],
-  protocol: 'https' | 'http' = 'https'
-): string[] {
-  const host = domain.trim().toLowerCase();
-  return [...new Set(providers)]
-    .sort()
-    .map((provider) => `${protocol}://${host}/api/auth/callback/${provider}`);
+/**
+ * A custom domain a signed-in user may be handed off to: active AND serving the app the
+ * return path belongs to. A domain that does not serve the surface would land the user on
+ * the middleware surface gate instead of the page they asked for.
+ */
+export function isPortalDomainHandoffTarget(
+  portalDomain: { status: string; surface?: unknown },
+  wanted: AppSurface
+): boolean {
+  return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, wanted);
 }
+
+/** The path prefix that bounds a surface for handoff return paths. */
+const HANDOFF_SURFACE_PREFIX: Record<AppSurface, string> = {
+  client_portal: '/client-portal',
+  msp: '/msp',
+};
+
+/** Default landing page after a handoff, by surface. */
+export const HANDOFF_DEFAULT_RETURN_PATH: Record<AppSurface, string> = {
+  client_portal: '/client-portal/dashboard',
+  msp: '/msp/dashboard',
+};
 
 /**
- * Persisted under portal_domains.verification_details.sso_redirect_uris.
- *  - required:  URIs that must be registered with the IdP(s) for the MSP surface to log in via SSO
- *  - confirmed: URIs confirmed as registered (by automation or an operator)
- *  - source:    who confirmed ("not_required" = no SSO providers are configured)
+ * Validates a handoff return path. Returns the normalised relative path (path + query +
+ * hash) when it is a same-origin relative path inside the surface, otherwise null.
+ *
+ * Rejected: anything not starting with a single '/', protocol-relative or backslash forms
+ * (`//host`, `/\host`), control characters, paths whose parsed origin differs from the
+ * request origin, and paths outside the surface's prefix (including dot-segment escapes,
+ * which URL parsing resolves before the prefix check).
  */
-export interface SsoRedirectUriState {
-  required: string[];
-  confirmed: string[];
-  source?: 'not_required' | 'operator' | 'automation';
-  confirmed_at?: string;
-}
-
-export function readSsoRedirectUriState(
-  verificationDetails: Record<string, unknown> | null | undefined
-): SsoRedirectUriState | null {
-  const raw = verificationDetails?.sso_redirect_uris;
-  if (!raw || typeof raw !== 'object') {
+export function normalizeHandoffReturnPath(raw: unknown, surface: AppSurface): string | null {
+  if (typeof raw !== 'string' || raw.length === 0 || raw.length > 2048) {
     return null;
   }
-  const candidate = raw as Record<string, unknown>;
-  const asStrings = (value: unknown): string[] =>
-    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
-  return {
-    required: asStrings(candidate.required),
-    confirmed: asStrings(candidate.confirmed),
-    source: candidate.source as SsoRedirectUriState['source'],
-    confirmed_at: typeof candidate.confirmed_at === 'string' ? candidate.confirmed_at : undefined,
-  };
+  if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) {
+    return null;
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(raw)) {
+    return null;
+  }
+
+  const probeOrigin = 'http://handoff.invalid';
+  let parsed: URL;
+  try {
+    parsed = new URL(raw, probeOrigin);
+  } catch {
+    return null;
+  }
+  if (parsed.origin !== probeOrigin) {
+    return null;
+  }
+
+  const prefix = HANDOFF_SURFACE_PREFIX[surface];
+  if (parsed.pathname !== prefix && !parsed.pathname.startsWith(`${prefix}/`)) {
+    return null;
+  }
+
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
 }
 
-export interface RedirectUriGateResult {
-  /** True when the domain may be activated. */
-  ok: boolean;
-  /** Required URIs that are not confirmed (empty when ok). */
-  missing: string[];
-}
-
-/**
- * Gate for activating a domain. Only surfaces serving the MSP app are gated; the
- * client-portal-only flow keeps authenticating on the canonical host via the handoff.
- * A domain whose state was never computed (no `sso_redirect_uris`) is NOT ok for an MSP
- * surface: we never activate on the absence of information.
- */
-export function evaluateSsoRedirectUriGate(
-  surface: unknown,
-  verificationDetails: Record<string, unknown> | null | undefined
-): RedirectUriGateResult {
-  if (!portalDomainServes(surface, 'msp')) {
-    return { ok: true, missing: [] };
-  }
-  const state = readSsoRedirectUriState(verificationDetails);
-  if (!state) {
-    return { ok: false, missing: [] };
-  }
-  const missing = state.required.filter((uri) => !state.confirmed.includes(uri));
-  return { ok: missing.length === 0, missing };
+/** The surface a user type signs in to: client users the portal, everyone else the MSP app. */
+export function surfaceForUserType(userType: string | null | undefined): AppSurface {
+  return userType === 'client' ? 'client_portal' : 'msp';
 }

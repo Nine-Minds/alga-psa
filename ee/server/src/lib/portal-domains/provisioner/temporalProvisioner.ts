@@ -6,12 +6,6 @@ import {
 } from '@/models/PortalDomainModel';
 
 import { enqueuePortalDomainWorkflow } from '../workflowClient';
-import {
-  buildSsoRedirectUriState,
-  resolveSsoProvidersForTenant,
-  readSsoRedirectUriState,
-  withSsoRedirectUriState,
-} from '@/lib/portal-domains/ssoRedirectUris';
 import type {
   PortalDomainProvisioner,
   ReconcileInput,
@@ -27,9 +21,6 @@ import type {
 export const temporalProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
     const { knex, tenant, canonicalHost, domain, existing, domainChanged, surface } = input;
-    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
-    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
-
     const record = await upsertPortalDomain(knex, tenant, {
       domain,
       surface,
@@ -38,20 +29,11 @@ export const temporalProvisioner: PortalDomainProvisioner = {
       statusMessage: domainChanged
         ? `Updating custom domain. Waiting for DNS verification of ${domain}.`
         : `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
-      // The worker reads (never computes) sso_redirect_uris to gate activation of MSP surfaces.
-      verificationDetails: withSsoRedirectUriState(
-        {
-          expected_cname: canonicalHost,
-          requested_domain: domain,
-          ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
-        },
-        buildSsoRedirectUriState({
-          domain,
-          surface,
-          providers: ssoProviders,
-          previous: existing && !domainChanged ? readSsoRedirectUriState(existing.verificationDetails) : null,
-        })
-      ),
+      verificationDetails: {
+        expected_cname: canonicalHost,
+        requested_domain: domain,
+        ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
+      },
       lastCheckedAt: new Date().toISOString(),
       certificateSecretName: null,
       lastSyncedResourceVersion: null,

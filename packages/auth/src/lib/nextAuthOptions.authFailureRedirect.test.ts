@@ -106,7 +106,10 @@ vi.mock('@alga-psa/db/models/user', () => ({
   default: { updateLastLogin: (...args: unknown[]) => updateLastLoginMock(...args) },
 }));
 
-const { getAuthOptions, isClientPortalHandoffDomain } = await import('./nextAuthOptions');
+const { getAuthOptions } = await import('./nextAuthOptions');
+const { isPortalDomainHandoffTarget } = await import('@alga-psa/shared/core/portalDomainSurface');
+const isClientPortalHandoffDomain = (domain: { status: string; surface?: unknown }) =>
+  isPortalDomainHandoffTarget(domain, 'client_portal');
 
 const LINK_STATE_COOKIE_NAME = 'sso-link-state';
 
@@ -274,7 +277,7 @@ describe('client-portal handoff target (alga-2026-0002799)', () => {
 
   it('never hands off to an MSP-only or inactive domain', () => {
     expect(isClientPortalHandoffDomain({ status: 'active', surface: 'msp' })).toBe(false);
-    expect(isClientPortalHandoffDomain({ status: 'pending_redirect_uri', surface: 'both' })).toBe(false);
+    expect(isClientPortalHandoffDomain({ status: 'deploying', surface: 'both' })).toBe(false);
     expect(isClientPortalHandoffDomain({ status: 'pending_dns', surface: 'client_portal' })).toBe(false);
   });
 });

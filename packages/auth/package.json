@@ -98,6 +98,14 @@
       "import": "./src/lib/authPolicyStore.ts",
       "types": "./src/lib/authPolicyStore.ts"
     },
+    "./lib/sso/mspSsoHandoff": {
+      "import": "./src/lib/sso/mspSsoHandoff.ts",
+      "types": "./src/lib/sso/mspSsoHandoff.ts"
+    },
+    "./lib/portalDomainHandoff": {
+      "import": "./src/lib/portalDomainHandoff.ts",
+      "types": "./src/lib/portalDomainHandoff.ts"
+    },
     "./lib/sso/mspSsoResolution": {
       "import": "./src/lib/sso/mspSsoResolution.ts",
       "types": "./src/lib/sso/mspSsoResolution.ts"

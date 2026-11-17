@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const source = readFileSync(resolve(__dirname, 'nextAuthOptions.ts'), 'utf8');
+// The subscription/plan queries moved with the shared session minting (sessionTokenMinting.ts);
+// the rules apply to both files.
+const source = [
+  readFileSync(resolve(__dirname, 'nextAuthOptions.ts'), 'utf8'),
+  readFileSync(resolve(__dirname, 'sessionTokenMinting.ts'), 'utf8'),
+].join('\n');
 
 describe('nextAuthOptions tenant-scoped query contract', () => {
   it('uses structural tenant scoping for subscription and client-contact roots', () => {

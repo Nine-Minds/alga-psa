@@ -9,8 +9,6 @@ import {
   renderPortalDomainResources,
 } from '../portal-domain-activities.js';
 
-const URI = 'https://msp.example.com/api/auth/callback/google';
-
 function createRecord(overrides: Partial<PortalDomainActivityRecord> = {}): PortalDomainActivityRecord {
   return {
     id: '123e4567-e89b-12d3-a456-426614174000',
@@ -29,7 +27,7 @@ function createRecord(overrides: Partial<PortalDomainActivityRecord> = {}): Port
   };
 }
 
-describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
+describe('checkPortalDomainDeploymentStatus activation', () => {
   const originalEnv = { ...process.env };
   let row: PortalDomainActivityRecord;
   let updates: Array<Record<string, unknown>>;
@@ -79,45 +77,21 @@ describe('checkPortalDomainDeploymentStatus SSO redirect URI gate', () => {
     vi.restoreAllMocks();
   });
 
-  it('activates a client_portal domain regardless of redirect URI state', async () => {
-    row = createRecord({ surface: 'client_portal' });
+  // T006 (alga-2026-0002996): every surface goes live once HTTPS and routing are ready; MSP SSO
+  // runs on the canonical host and is handed off, so there is no redirect-URI gate.
+  it.each(['client_portal', 'msp', 'both'])('activates a %s domain once HTTPS and routing are ready', async (surface) => {
+    row = createRecord({ surface });
     const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
     expect(result?.status).toBe('active');
+    expect(result?.statusMessage).toBe('Your domain is live and protected by HTTPS.');
     expect(updates.at(-1)?.status).toBe('active');
   });
 
-  it.each(['msp', 'both'])('holds %s domains in pending_redirect_uri when URIs are unconfirmed', async (surface) => {
-    row = createRecord({
-      surface,
-      verification_details: { sso_redirect_uris: { required: [URI], confirmed: [] } },
-    });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
-    expect(result?.status).toBe('pending_redirect_uri');
-    expect(result?.statusMessage).toContain(URI);
-    expect(updates.at(-1)?.status).toBe('pending_redirect_uri');
-  });
-
-  it('says the state could not be confirmed when no redirect URI state exists', async () => {
-    row = createRecord({ surface: 'msp', verification_details: {} });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
-    expect(result?.status).toBe('pending_redirect_uri');
-    expect(result?.statusMessage).toContain('could not be confirmed');
-  });
-
-  it.each(['msp', 'both'])('activates %s domains once URIs are confirmed', async (surface) => {
-    row = createRecord({
-      surface,
-      verification_details: { sso_redirect_uris: { required: [URI], confirmed: [URI], source: 'operator' } },
-    });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
-    expect(result?.status).toBe('active');
-  });
-
-  it('does not regress a domain already in pending_redirect_uri', async () => {
-    row = createRecord({ surface: 'msp', status: 'pending_redirect_uri', status_message: 'waiting' });
-    const result = await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
-    expect(result).toEqual({ status: 'pending_redirect_uri', statusMessage: 'waiting' });
-    expect(updates).toHaveLength(0);
+  it('activates without touching verification_details', async () => {
+    row = createRecord({ surface: 'both', verification_details: { expected_cname: 'tenant123.portal.algapsa.com' } });
+    await checkPortalDomainDeploymentStatus({ portalDomainId: row.id, tenantId: row.tenant });
+    expect(updates.every((update) => !('verification_details' in update))).toBe(true);
+    expect(row.verification_details).toEqual({ expected_cname: 'tenant123.portal.algapsa.com' });
   });
 
   it('routes all paths to the app service for msp and both surfaces', () => {

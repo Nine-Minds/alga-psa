@@ -31,6 +31,8 @@ interface MspLoginFormProps {
   tenantSlug?: string;
   /** Open with the "email me sign-in links" offer (SSO `tenant_required` hand-off). */
   initialTenantRequired?: boolean;
+  /** Canonical origin for SSO when this page is served on a custom domain. */
+  canonicalSsoOrigin?: string;
   onError: (alertInfo: AlertProps) => void;
   onTwoFactorRequired: () => void;
 }
@@ -41,6 +43,7 @@ export default function MspLoginForm({
   initialEmail,
   tenantSlug,
   initialTenantRequired = false,
+  canonicalSsoOrigin,
   onError,
   onTwoFactorRequired,
 }: MspLoginFormProps) {
@@ -321,6 +324,7 @@ export default function MspLoginForm({
        email={email}
        publicWorkstation={isPublicWorkstation}
        tenantHint={tenantSlug}
+       canonicalSsoOrigin={canonicalSsoOrigin}
        onError={(message) => setLookupError(message || null)}
      />
 

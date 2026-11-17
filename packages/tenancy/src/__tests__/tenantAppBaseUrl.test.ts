@@ -74,7 +74,7 @@ describe('getTenantAppBaseUrl', () => {
   });
 
   it('ignores domains that are not active', async () => {
-    state.rows = [row({ surface: 'both', status: 'pending_dns' }), row({ surface: 'msp', status: 'pending_redirect_uri', domain: 'm.acme.test' })];
+    state.rows = [row({ surface: 'both', status: 'pending_dns' }), row({ surface: 'msp', status: 'deploying', domain: 'm.acme.test' })];
     expect(await getTenantAppBaseUrl('t1', 'msp')).toBe('https://app.example.com');
   });
 

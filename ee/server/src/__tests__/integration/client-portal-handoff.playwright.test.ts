@@ -178,7 +178,7 @@ test.describe('Client Portal vanity handoff', () => {
       attachFailFastHandlers(page, BASE_URL);
       await seedClientPortalSession(page, sessionUser);
 
-      await page.route(`${BASE_URL}/api/client-portal/domain-session`, async (route) => {
+      await page.route(`${BASE_URL}/api/auth/domain-session`, async (route) => {
         const request = route.request();
         let payload: Record<string, unknown> = {};
         try {
@@ -227,7 +227,7 @@ test.describe('Client Portal vanity handoff', () => {
       attachFailFastHandlers(page, BASE_URL);
       await seedClientPortalSession(page, sessionUser);
 
-      await page.route(`${BASE_URL}/api/client-portal/domain-session`, async (route) => {
+      await page.route(`${BASE_URL}/api/auth/domain-session`, async (route) => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',

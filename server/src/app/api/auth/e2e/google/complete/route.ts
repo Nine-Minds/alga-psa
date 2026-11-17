@@ -12,6 +12,11 @@ import {
   getSessionCookieConfig,
   getSessionMaxAge,
 } from '@alga-psa/auth/lib/session';
+import {
+  MSP_SSO_HANDOFF_COOKIE,
+  parseAndVerifyMspSsoHandoffCookie,
+} from '@alga-psa/auth/lib/sso/mspSsoHandoff';
+import { computeVanityRedirect } from '@alga-psa/auth/lib/portalDomainHandoff';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -58,6 +63,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const response = buildErrorRedirect(request);
     response.cookies.set(buildClearedPendingRememberContextCookie());
     return response;
+  }
+
+  // A sign-in begun on a custom MSP domain (see /api/auth/msp/sso/start) is handed back to it,
+  // as the real OAuth callback does in the NextAuth signIn callback.
+  const handoff = parseAndVerifyMspSsoHandoffCookie({
+    value: request.cookies.get(MSP_SSO_HANDOFF_COOKIE)?.value,
+    secret: signingSecret,
+  });
+  if (handoff && process.env.NEXTAUTH_URL) {
+    const protocol = new URL(process.env.NEXTAUTH_URL).protocol;
+    const vanityRedirect = await computeVanityRedirect({
+      url: `${protocol}//${handoff.domain}${handoff.returnPath}`,
+      baseUrl: process.env.NEXTAUTH_URL,
+      token: { id: user.user_id, tenant: user.tenant, user_type: 'internal', login_method: 'google' },
+    });
+    if (vanityRedirect) {
+      const handoffResponse = NextResponse.redirect(vanityRedirect);
+      handoffResponse.cookies.set({ name: MSP_SSO_HANDOFF_COOKIE, value: '', path: '/', maxAge: 0 });
+      handoffResponse.cookies.set(buildClearedPendingRememberContextCookie());
+      return handoffResponse;
+    }
   }
 
   const sessionCookie = getSessionCookieConfig();

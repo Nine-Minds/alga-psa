@@ -8,7 +8,6 @@ import {
   computeCanonicalHost,
   getPortalDomain,
   getPortalDomainByHostname,
-  updatePortalDomain,
   isPortalDomainSurface,
   DEFAULT_PORTAL_DOMAIN_SURFACE,
   type PortalDomainStatus,
@@ -20,13 +19,6 @@ import type {
   PortalDomainRegistrationRequest,
   PortalDomainRegistrationResult,
 } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
-import {
-  confirmAllRequired,
-  describeMissingRedirectUris,
-  evaluateSsoRedirectUriGate,
-  readSsoRedirectUriState,
-  withSsoRedirectUriState,
-} from '@/lib/portal-domains/ssoRedirectUris';
 import { isEnterpriseEdition } from '@/lib/features';
 import { resolvePortalDomainProvisioning } from '@/lib/portal-domains/provisioner';
 import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
@@ -72,26 +64,6 @@ function buildVerificationDetails(record: PortalDomain | null, canonicalHost: st
   return { expected_cname: canonicalHost };
 }
 
-function buildRedirectUriStatus(
-  record: PortalDomain | null,
-  mode: string
-): Pick<PortalDomainStatusResponse, 'ssoRedirectUris'> {
-  const state = readSsoRedirectUriState(record?.verificationDetails);
-  if (!record || !state) {
-    return {};
-  }
-  return {
-    ssoRedirectUris: {
-      required: state.required,
-      confirmed: state.confirmed,
-      missing: evaluateSsoRedirectUriGate(record.surface, record.verificationDetails).missing,
-      source: state.source ?? null,
-      // Only the appliance owner controls the IdP + proxy; hosted needs platform ops.
-      canSelfConfirm: mode === 'direct',
-    },
-  };
-}
-
 function createStatusResponse(record: PortalDomain | null, canonicalHost: string): PortalDomainStatusResponse {
   const statusMessage = record?.statusMessage ?? 'No custom domain registered yet.';
   const { mode } = resolvePortalDomainProvisioning();
@@ -115,7 +87,6 @@ function createStatusResponse(record: PortalDomain | null, canonicalHost: string
     edition: isEnterpriseEdition() ? 'ee' : 'ce',
     mode,
     surface: record?.surface ?? DEFAULT_PORTAL_DOMAIN_SURFACE,
-    ...buildRedirectUriStatus(record, mode),
   };
 }
 
@@ -372,40 +343,5 @@ export const disablePortalDomainAction = withAuth(async (user, { tenant }): Prom
     status: status.status,
   });
 
-  return status;
-});
-
-
-/**
- * Attest that the SSO redirect URIs for the domain are registered with the identity
- * provider(s). Self-service only where the tenant owns the IdP and proxy (appliance /
- * direct mode); hosted deployments need platform operators to register the URIs.
- */
-export const confirmPortalDomainRedirectUrisAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
-  const { knex } = await createTenantKnex();
-  const permissionFailure = await checkPermission(user, UPDATE_ACTION, knex);
-  if (permissionFailure) {
-    return permissionFailure;
-  }
-
-  const { provisioner, mode } = resolvePortalDomainProvisioning();
-  if (mode !== 'direct') {
-    return permissionError('Redirect URIs for hosted domains are registered by platform support.', 'msp/settings:errors.clientPortalDomain.redirectUrisHosted');
-  }
-
-  const current = await getPortalDomain(knex, tenant);
-  const state = readSsoRedirectUriState(current?.verificationDetails);
-  if (!current || current.status !== 'pending_redirect_uri' || !state) {
-    return actionError('No pending SSO redirect URI confirmation for this domain.', 'msp/settings:errors.clientPortalDomain.nothingToConfirm');
-  }
-
-  const updated = await updatePortalDomain(knex, tenant, { id: current.id }, {
-    verificationDetails: withSsoRedirectUriState(current.verificationDetails, confirmAllRequired(state)),
-    statusMessage: describeMissingRedirectUris([]),
-  });
-  await provisioner.refresh({ knex, tenant, existing: updated ?? current });
-
-  const status = await fetchStatus(knex, tenant);
-  analytics.capture('portal_domain.redirect_uris_confirmed', { tenant_id: tenant, status: status.status });
   return status;
 });

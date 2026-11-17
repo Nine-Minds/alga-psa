@@ -37,6 +37,14 @@ export type {
   ConsumePortalDomainOttResult
 } from './lib/PortalDomainSessionToken';
 
+// Session minting shared by direct sign-in and the custom-domain handoff
+export {
+  mintSessionToken,
+  loadSessionUser,
+  applySubscriptionClaims,
+} from './lib/sessionTokenMinting';
+export type { SessionUser, SessionDeviceInfo, MintSessionTokenParams } from './lib/sessionTokenMinting';
+
 // Permission utilities
 export {
   hasPermission,

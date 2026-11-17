@@ -12,7 +12,6 @@ import os from "os";
 
 import { getAdminConnection, retryOnAdminReadOnly } from "@alga-psa/db/admin.js";
 import { tenantDb } from "@alga-psa/db";
-import { evaluateSsoRedirectUriGate } from "@alga-psa/shared/core/portalDomainSurface.js";
 
 import type {
   PortalDomainActivityRecord,
@@ -122,7 +121,6 @@ const ACTIVE_RECONCILE_STATUSES = new Set([
   "certificate_issuing",
   "certificate_failed",
   "deploying",
-  "pending_redirect_uri",
   "active",
 ]);
 
@@ -654,7 +652,7 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'pending_redirect_uri']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
   }
@@ -716,16 +714,10 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     );
 
       if (gatewayExists && virtualServiceExists) {
-        const redirectGate = evaluateSsoRedirectUriGate(record.surface, record.verification_details);
-        if (redirectGate.ok) {
-          nextStatus = 'active';
-          nextMessage = 'Your domain is live and protected by HTTPS.';
-        } else {
-          nextStatus = 'pending_redirect_uri';
-          nextMessage = redirectGate.missing.length > 0
-            ? `HTTPS is ready. Register these SSO redirect URIs with your identity provider(s) to finish activation: ${redirectGate.missing.join(', ')}`
-            : 'HTTPS is ready, but the SSO redirect URI state for this domain could not be confirmed. Confirm the redirect URIs to finish activation.';
-        }
+        // Every surface goes live once HTTPS and routing are ready: MSP SSO runs on the
+        // canonical host and is handed off, so no per-domain provider callback is needed.
+        nextStatus = 'active';
+        nextMessage = 'Your domain is live and protected by HTTPS.';
       } else {
         nextStatus = 'deploying';
         nextMessage = 'SSL is ready. Finishing the domain routing setup...';
