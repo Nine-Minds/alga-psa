@@ -482,7 +482,9 @@ export function MicrosoftCalendarProviderForm({
                   {t('calendar.providers.microsoft.setup.suppliedIntro', { defaultValue: 'Outlook Calendar connects with the Microsoft application supplied by AlgaPSA. You will be asked to sign in with your Microsoft account.' })}
                 </p>
               </div>
-            ) : !providerSetupLoading && (
+            ) : !providerSetupLoading && (providerSetupReady || !platformOffered) && (
+            // Not ready while the supplied app is offered: the not-configured alert's
+            // provider-setup link is the next step, so no Entra instructions here.
             <div id="microsoft-calendar-setup-guidance" className="space-y-3 rounded-lg border p-4">
               <div className="font-medium">{t('calendar.providers.microsoft.setup.title', { defaultValue: 'Before you connect' })}</div>
               <p className="text-sm text-muted-foreground">

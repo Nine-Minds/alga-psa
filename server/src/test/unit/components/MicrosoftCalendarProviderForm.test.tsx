@@ -143,6 +143,17 @@ describe('MicrosoftCalendarProviderForm', () => {
     renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
     await waitFor(() => expect(document.getElementById('microsoft-calendar-supplied-app-offer')).not.toBeNull());
     expect(document.getElementById('microsoft-calendar-supplied-app-offer')!.textContent).toMatch(/application AlgaPSA supplies/);
+    expect(document.getElementById('microsoft-calendar-redirect-uri')).toBeNull();
+    expect(document.getElementById('microsoft-calendar-scopes')).toBeNull();
+    expect(screen.queryByText(/In your Microsoft Entra app registration/)).toBeNull();
+  });
+
+  it('T007: not-configured without the supplied app offered still shows the Entra instructions', async () => {
+    setStatus({ ready: false, state: 'not_configured', reasonCode: 'binding_not_configured', platformOffered: false });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(screen.getByText(/In your Microsoft Entra app registration/)).toBeInTheDocument());
+    expect(document.getElementById('microsoft-calendar-redirect-uri')).not.toBeNull();
+    expect(document.getElementById('microsoft-calendar-supplied-app-offer')).toBeNull();
   });
 
   it('T007: supplied-app ready state hides the Entra instructions and shows supplied-app copy', async () => {
