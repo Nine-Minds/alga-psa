@@ -10,6 +10,7 @@
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('opportunity_evidence_citations'))) return;
 
+  // migration-lint: allow 5 - one-shot copy bounded to user_declared rows carrying a #4018 interaction/document ref (live since 2026-11-13, very few rows); idempotent via ON CONFLICT, so no loop+LIMIT batching
   await knex.raw(`
     INSERT INTO opportunity_evidence_citations (tenant, evidence_id, ref_type, ref_id, position, created_at)
     SELECT oe.tenant, oe.evidence_id, oe.ref_type, oe.ref_id, 0, oe.recorded_at
