@@ -4,7 +4,9 @@ import { signRequest } from '@/lib/webhooks/sign';
 
 export const INTAKE_SIGNATURE_HEADER = 'X-Alga-Support-Signature';
 
-const DEFAULT_INTAKE_URL = 'https://nineminds.com/api/support/intake';
+// www, not the apex: nineminds.com 301s wholesale to www, and fetch re-issues a
+// redirected POST as a bodyless GET, which would silently strand every request.
+const DEFAULT_INTAKE_URL = 'https://www.nineminds.com/api/support/intake';
 const INTAKE_SECRET_NAME = 'VENDOR_SUPPORT_INTAKE_SECRET';
 const INTAKE_TIMEOUT_MS = 8_000;
 const MAX_REASON_DETAIL = 200;
@@ -103,6 +105,9 @@ export async function submitVendorSupportIntake(
       method: 'POST',
       headers,
       body,
+      // A redirect would be re-issued as a bodyless GET carrying a signature
+      // over a body that is no longer sent; fail loudly instead.
+      redirect: 'error',
       signal: AbortSignal.timeout(INTAKE_TIMEOUT_MS),
     });
   } catch (error) {
@@ -111,7 +116,8 @@ export async function submitVendorSupportIntake(
       return { ok: false, reason: 'timeout' };
     }
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: `network:${truncate(message)}` };
+    const cause = error instanceof Error && error.cause instanceof Error ? ` (${error.cause.message})` : '';
+    return { ok: false, reason: `network:${truncate(`${message}${cause}`)}` };
   }
 
   if (!response.ok) {

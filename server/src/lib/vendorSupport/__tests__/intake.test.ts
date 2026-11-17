@@ -20,7 +20,7 @@ import {
   type VendorSupportIntakePayload,
 } from '../intake';
 
-const DEFAULT_URL = 'https://nineminds.com/api/support/intake';
+const DEFAULT_URL = 'https://www.nineminds.com/api/support/intake';
 
 const payload: VendorSupportIntakePayload = {
   tenantId: '11111111-2222-3333-4444-555555555555',
@@ -84,8 +84,11 @@ describe('submitVendorSupportIntake', () => {
     });
 
     const { url, init, headers, body } = lastRequest();
+    // The apex 301s to www, and a redirected POST is re-issued as a bodyless
+    // GET, so the default has to be the host that answers directly.
     expect(url).toBe(DEFAULT_URL);
     expect(init.method).toBe('POST');
+    expect(init.redirect).toBe('error');
     expect(headers['Content-Type']).toBe('application/json');
     expect(JSON.parse(body)).toEqual({
       source: 'in_app',
@@ -214,6 +217,17 @@ describe('submitVendorSupportIntake', () => {
     expect(await submitVendorSupportIntake(payload)).toEqual({
       ok: false,
       reason: 'network:fetch failed',
+    });
+  });
+
+  it('names the cause so a redirected endpoint is loud, not silent', async () => {
+    fetchMock.mockRejectedValueOnce(
+      new TypeError('fetch failed', { cause: new Error('unexpected redirect') }),
+    );
+
+    expect(await submitVendorSupportIntake(payload)).toEqual({
+      ok: false,
+      reason: 'network:fetch failed (unexpected redirect)',
     });
   });
 });
