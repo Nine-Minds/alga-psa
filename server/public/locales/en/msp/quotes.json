@@ -606,6 +606,10 @@
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
       "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
+    },
+    "taxUnresolved": {
+      "badge": "No tax rate for {{region}}",
+      "totalsNote": "Tax could not be calculated for some lines. Those lines show 0 tax."
     }
   },
   "quoteRecipients": {

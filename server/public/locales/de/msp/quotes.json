@@ -606,6 +606,10 @@
       "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
       "allLocationsInUse": "Jeder aktive Standort dieses Kunden hat auf diesem Angebot bereits eine Gruppe.",
       "emptyGroup": "Noch keine Positionen für diesen Standort."
+    },
+    "taxUnresolved": {
+      "badge": "Kein Steuersatz für {{region}}",
+      "totalsNote": "Für einige Positionen konnte die Steuer nicht berechnet werden. Diese Positionen zeigen 0 Steuer."
     }
   },
   "quoteRecipients": {

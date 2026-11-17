@@ -15,13 +15,13 @@ const h = vi.hoisted(() => ({
   knex: undefined as any,
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: h.tenant })),
-  tenantDb: vi.fn((knex: any) => ({
-    table: (table: string) => knex(table),
-    unscoped: (table: string) => knex(table),
-  })),
-}));
+vi.mock('@alga-psa/db', async () => {
+  const { modelBackedTenantDb } = await import('./helpers/modelBackedTenantDb');
+  return {
+    createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: h.tenant })),
+    tenantDb: vi.fn((knex: any) => modelBackedTenantDb(knex)),
+  };
+});
 
 vi.mock('../../src/models/clientTaxSettings', () => ({
   default: {

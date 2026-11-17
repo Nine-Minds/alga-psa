@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { calculateTaxForAmount } from '@alga-psa/shared/billingClients/taxEngine';
+import { toQuoteTaxDate } from '@alga-psa/shared/billingClients/quoteTaxResolution';
 
 import { isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 import { allocateIncludedQuoteDiscounts, computeQuoteTotals, rowGrossAmount } from '@alga-psa/core';
@@ -35,24 +37,8 @@ interface QuoteItemRow {
   location_id?: string | null;
 }
 
-interface TaxRateThresholdRow {
-  tax_rate_id: string;
-  min_amount: number | string;
-  max_amount?: number | string | null;
-  rate: number | string;
-}
-
 function toNumber(value: unknown): number {
   return Number(value ?? 0);
-}
-
-function toQuoteDate(value?: string | null): string {
-  if (!value) {
-    return new Date().toISOString();
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
 function resolveQuoteDiscounts(
@@ -74,188 +60,6 @@ function resolveQuoteDiscounts(
   return { byItemId, shareByBaseId, totalDiscount: allocation.totalDiscount };
 }
 
-function isDateApplicable(row: { start_date?: string | Date | null; end_date?: string | Date | null }, date: string): boolean {
-  const currentDate = new Date(date);
-  if (row.start_date && new Date(row.start_date) > currentDate) return false;
-  if (row.end_date && new Date(row.end_date) < currentDate) return false;
-  return true;
-}
-
-function calculateThresholdBasedTax(
-  thresholds: Array<{ min_amount: number | string; max_amount?: number | string | null; rate: number | string }>,
-  netAmount: number
-): { taxAmount: number; taxRate: number } {
-  let taxAmount = 0;
-  let remainingAmount = netAmount;
-
-  for (const threshold of thresholds) {
-    if (remainingAmount <= 0) break;
-
-    const minAmount = toNumber(threshold.min_amount);
-    const maxAmount = threshold.max_amount == null ? null : toNumber(threshold.max_amount);
-    const taxableAmount = maxAmount == null
-      ? remainingAmount
-      : Math.min(remainingAmount, Math.max(maxAmount - minAmount, 0));
-
-    taxAmount += Math.ceil((taxableAmount * toNumber(threshold.rate)) / 100);
-    remainingAmount -= taxableAmount;
-  }
-
-  return {
-    taxAmount,
-    taxRate: netAmount > 0 ? (taxAmount / netAmount) * 100 : 0,
-  };
-}
-
-async function getApplicableTaxHoliday(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  taxRateId: string,
-  date: string
-): Promise<Record<string, unknown> | undefined> {
-  const currentDate = new Date(date);
-  const holidays = await tenantDb(knexOrTrx, tenant).parentScopedTable('tax_holidays')
-    .where({ tax_rate_id: taxRateId })
-    .orderBy('start_date');
-
-  return holidays.find((holiday) =>
-    new Date(holiday.start_date) <= currentDate && new Date(holiday.end_date) >= currentDate
-  );
-}
-
-async function calculateComponentTax(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  component: Record<string, unknown>,
-  amount: number,
-  date: string
-): Promise<number> {
-  const holiday = await getApplicableTaxHoliday(knexOrTrx, tenant, String(component.tax_rate_id), date);
-  if (holiday) return 0;
-  return Math.ceil((amount * toNumber(component.rate)) / 100);
-}
-
-async function calculateTaxWithConnection(
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  clientId: string,
-  netAmount: number,
-  date: string,
-  regionCode: string | undefined,
-  isTaxable: boolean,
-  currencyCode?: string | null
-): Promise<{ taxAmount: number; taxRate: number }> {
-  const db = tenantDb(knexOrTrx, tenant);
-  const client = await db.table('clients')
-    .where({ client_id: clientId })
-    .select('is_tax_exempt')
-    .first();
-
-  if (!client) {
-    throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
-  }
-
-  if (client.is_tax_exempt || !isTaxable) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  const taxSettings = await db.table('client_tax_settings')
-    .where({ client_id: clientId })
-    .select('is_reverse_charge_applicable')
-    .first();
-  if (taxSettings?.is_reverse_charge_applicable) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  if (regionCode) {
-    const applicableRates = await db.table('tax_rates')
-      .where({ region_code: regionCode, is_active: true })
-      .andWhere('start_date', '<=', date)
-      .andWhere(function dateRange() {
-        this.whereNull('end_date').orWhere('end_date', '>', date);
-      })
-      .andWhere(function currencyRange() {
-        this.whereNull('currency_code');
-        if (currencyCode) this.orWhere('currency_code', currencyCode);
-      })
-      .select('tax_percentage');
-
-    const combinedTaxRate = applicableRates.reduce((sum, rate) => sum + toNumber(rate.tax_percentage), 0);
-    return {
-      taxAmount: netAmount > 0 ? Math.ceil((netAmount * combinedTaxRate) / 100) : 0,
-      taxRate: combinedTaxRate,
-    };
-  }
-
-  const defaultRateAssoc = await db.table('client_tax_rates')
-    .where({ client_id: clientId, is_default: true })
-    .whereNull('location_id')
-    .select('tax_rate_id')
-    .first();
-
-  if (!defaultRateAssoc) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  const taxRate = await db.table('tax_rates')
-    .where({ tax_rate_id: defaultRateAssoc.tax_rate_id, is_active: true })
-    .andWhere('start_date', '<=', date)
-    .andWhere(function dateRange() {
-      this.whereNull('end_date').orWhere('end_date', '>', date);
-    })
-    .andWhere(function currencyRange() {
-      this.whereNull('currency_code');
-      if (currencyCode) this.orWhere('currency_code', currencyCode);
-    })
-    .first();
-
-  if (!taxRate) {
-    return { taxAmount: 0, taxRate: 0 };
-  }
-
-  if (taxRate.is_composite) {
-    const componentsQuery = db.parentScopedTable<Record<string, unknown>>('composite_tax_mappings as ctm')
-      .where('ctm.composite_tax_id', taxRate.tax_rate_id)
-      .orderBy('ctm.sequence');
-    db.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
-      tenantPredicate: 'literal',
-    });
-    const components = await componentsQuery.select('tc.*') as Record<string, unknown>[];
-
-    let totalTaxAmount = 0;
-    let taxableAmount = netAmount;
-    for (const component of components) {
-      if (!isDateApplicable(component, date)) continue;
-      const componentTax = await calculateComponentTax(knexOrTrx, tenant, component, taxableAmount, date);
-      totalTaxAmount += componentTax;
-      if (component.is_compound) taxableAmount += componentTax;
-    }
-
-    return {
-      taxAmount: totalTaxAmount,
-      taxRate: netAmount > 0 ? (totalTaxAmount / netAmount) * 100 : 0,
-    };
-  }
-
-  const thresholds = await db.parentScopedTable<TaxRateThresholdRow>('tax_rate_thresholds')
-    .where({ tax_rate_id: taxRate.tax_rate_id })
-    .orderBy('min_amount');
-
-  if (thresholds.length > 0) {
-    return calculateThresholdBasedTax(thresholds, netAmount);
-  }
-
-  if (netAmount <= 0) {
-    return { taxAmount: 0, taxRate: toNumber(taxRate.tax_percentage) };
-  }
-
-  const taxRatePercentage = toNumber(taxRate.tax_percentage);
-  return {
-    taxAmount: Math.ceil((netAmount * taxRatePercentage) / 100),
-    taxRate: taxRatePercentage,
-  };
-}
-
 interface ResolvedRowTax {
   /** Tax the row carries when included in the quote (0 for discounts / external tax). */
   taxAmountIfIncluded: number;
@@ -264,6 +68,8 @@ interface ResolvedRowTax {
   /** The exact percentage the engine used, for callers that never persist it. */
   taxPercentage: number;
   taxRegion: string | null;
+  /** A taxable row whose region has no active rate: tax is 0, not genuinely nil. */
+  taxUnresolved: boolean;
 }
 
 /** Per-row tax inputs the client portal needs to preview a selection locally. */
@@ -322,7 +128,7 @@ async function resolveQuoteRowTaxes(
     }
   }
 
-  const quoteDate = toQuoteDate(quote.quote_date);
+  const quoteDate = toQuoteTaxDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
   const taxSource = quote.tax_source ?? 'internal';
   const resolved = new Map<string, ResolvedRowTax>();
@@ -343,6 +149,7 @@ async function resolveQuoteRowTaxes(
     let taxAmount = 0;
     let taxRate = toNumber(item.tax_rate);
     let taxPercentage = taxRate;
+    let taxUnresolved = false;
 
     if (!isDiscount) {
       if (quote.client_id && taxSource === 'internal') {
@@ -352,19 +159,25 @@ async function resolveQuoteRowTaxes(
           0,
           resolvedTotalPrice - (discountShareByBaseId.get(item.quote_item_id) ?? 0)
         );
-        const taxResult = await calculateTaxWithConnection(
-          knexOrTrx,
-          tenant,
-          quote.client_id,
-          taxableBase,
-          quoteDate,
-          taxRegion ?? undefined,
-          item.is_taxable !== false,
-          currencyCode
-        );
+        const taxResult = await calculateTaxForAmount(knexOrTrx, tenant, {
+          clientId: quote.client_id,
+          netAmount: taxableBase,
+          date: quoteDate,
+          regionCode: taxRegion ?? undefined,
+          isTaxable: item.is_taxable !== false,
+          currencyCode,
+        });
 
-        taxAmount = taxResult.taxAmount;
-        taxPercentage = Number(taxResult.taxRate ?? 0);
+        if (taxResult.resolved) {
+          taxAmount = taxResult.taxAmount;
+          taxPercentage = Number(taxResult.taxRate ?? 0);
+        } else {
+          // No active rate for the region: store 0 and flag the row rather
+          // than presenting 0 as a calculated tax.
+          taxAmount = 0;
+          taxPercentage = 0;
+          taxUnresolved = true;
+        }
         // Store the exact percentage: rounding 6.875 to 7 displayed a rate the
         // line was never charged at. `quote_items.tax_rate` is numeric.
         taxRate = taxPercentage;
@@ -375,7 +188,7 @@ async function resolveQuoteRowTaxes(
       }
     }
 
-    resolved.set(item.quote_item_id, { taxAmountIfIncluded: taxAmount, taxRate, taxPercentage, taxRegion });
+    resolved.set(item.quote_item_id, { taxAmountIfIncluded: taxAmount, taxRate, taxPercentage, taxRegion, taxUnresolved });
   }
 
   return resolved;
@@ -489,6 +302,9 @@ export async function recalculateQuoteFinancials(
         tax_amount: isIncludedInTotals ? rowTax.taxAmountIfIncluded : 0,
         tax_region: rowTax.taxRegion,
         tax_rate: rowTax.taxRate,
+        // Only an included row's unresolved tax matters: it is what the totals
+        // and conversion rely on. A pending optional row is re-resolved when selected.
+        tax_unresolved: isIncludedInTotals && rowTax.taxUnresolved,
         updated_at: knexOrTrx.fn.now(),
       });
   }

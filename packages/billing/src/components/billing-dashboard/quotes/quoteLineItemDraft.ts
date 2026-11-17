@@ -43,6 +43,8 @@ export type DraftQuoteItem = {
   is_taxable?: boolean;
   tax_region?: string | null;
   tax_rate?: number | null;
+  /** Server-set at the last recalculation: the taxable row's region had no active rate. */
+  tax_unresolved?: boolean;
   location_id?: string | null;
 };
 
@@ -96,6 +98,7 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     is_taxable: item.is_taxable ?? true,
     tax_region: item.tax_region ?? null,
     tax_rate: item.tax_rate ?? null,
+    tax_unresolved: item.tax_unresolved === true,
     location_id: item.location_id ?? null,
   };
 }

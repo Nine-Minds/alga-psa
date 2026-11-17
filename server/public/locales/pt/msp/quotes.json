@@ -606,6 +606,10 @@
       "needMoreLocations": "Este cliente possui apenas um local ativo. Adicione um segundo local nas configurações do cliente para ativar a cotação de vários sites.",
       "allLocationsInUse": "Todos os locais ativos deste cliente já têm um grupo nesta cotação.",
       "emptyGroup": "Ainda não há itens para este local."
+    },
+    "taxUnresolved": {
+      "badge": "Sem taxa de imposto para {{region}}",
+      "totalsNote": "Não foi possível calcular o imposto de algumas linhas. Essas linhas mostram 0 de imposto."
     }
   },
   "quoteRecipients": {

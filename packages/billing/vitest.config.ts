@@ -128,6 +128,7 @@ export default defineConfig({
       // clearing, discount lines staying unsited, the remove-location
       // move/delete choice, and the create-from-template item override.
       'src/components/billing-dashboard/quotes/QuoteForm.locations.test.tsx',
+      'src/components/billing-dashboard/quotes/QuoteLineItemsEditor.taxUnresolved.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.

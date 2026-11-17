@@ -606,6 +606,10 @@
       "needMoreLocations": "Ce client n'a qu'un seul emplacement actif. Ajoutez un deuxième emplacement dans les paramètres du client pour activer les devis multi-sites.",
       "allLocationsInUse": "Chaque emplacement actif de ce client a déjà un groupe sur ce devis.",
       "emptyGroup": "Aucun élément pour cet emplacement pour le moment."
+    },
+    "taxUnresolved": {
+      "badge": "Aucun taux de taxe pour {{region}}",
+      "totalsNote": "La taxe n'a pas pu être calculée pour certaines lignes. Ces lignes affichent 0 de taxe."
     }
   },
   "quoteRecipients": {

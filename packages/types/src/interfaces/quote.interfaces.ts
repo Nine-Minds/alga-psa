@@ -67,6 +67,8 @@ export interface IQuoteItem extends TenantEntity {
   /** Read-only, client-portal payload only: exact percentage behind `tax_amount_if_included`, so the preview can re-tax the row on its discounted base. Never persisted. */
   tax_rate_if_included?: number | null;
   location_id?: string | null;
+  /** Set by recalculation when this taxable row's region had no active rate: its tax is stored as 0, not calculated. */
+  tax_unresolved?: boolean;
   created_by?: string | null;
   updated_by?: string | null;
   created_at?: ISO8601String;

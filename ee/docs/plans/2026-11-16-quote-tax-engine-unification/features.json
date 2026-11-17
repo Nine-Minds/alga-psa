@@ -1,0 +1,130 @@
+[
+  {
+    "id": "F001",
+    "description": "A tax engine module under shared/billingClients calculates tax with an explicit knexOrTrx and tenant and imports no session, tenant-context or packages/billing code",
+    "implemented": true,
+    "prdRefs": [
+      "R1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "The engine covers tax exemption, reverse charge, the region path with per-rate caps, the client default rate, composite rates, threshold brackets, tax holidays, and date and currency filters, using the TaxService arithmetic",
+    "implemented": true,
+    "prdRefs": [
+      "R1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "The engine returns an unresolved result with reason, region and date for a taxable amount whose region has no active rate",
+    "implemented": true,
+    "prdRefs": [
+      "R1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "The engine reads a client with no client_tax_settings row as default settings and inserts nothing",
+    "implemented": true,
+    "prdRefs": [
+      "R1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "The engine resolves client tax settings per billing profile, defaulting to the client's default profile",
+    "implemented": true,
+    "prdRefs": [
+      "R1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "TaxService.calculateTax and calculateTaxForPeriod call the engine and raise NO_TAX_RATE with today's message and details for an unresolved result",
+    "implemented": true,
+    "prdRefs": [
+      "R2"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "TaxService callers get the same results as before, and the calculation path no longer provisions default tax settings",
+    "implemented": true,
+    "prdRefs": [
+      "R2"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "quoteCalculationService resolves row tax through the engine, and calculateTaxWithConnection and its bracket, component and holiday helpers are deleted",
+    "implemented": true,
+    "prdRefs": [
+      "R3"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "crmWorkerDal quote recalculation calls the engine, its tax copy is deleted, and the quote-recalc-dup LEVERAGE marker is updated",
+    "implemented": true,
+    "prdRefs": [
+      "R3"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "The workflow worker import validation passes with the engine imported",
+    "implemented": true,
+    "prdRefs": [
+      "R3"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Migration adds quote_items.tax_unresolved boolean not null default false",
+    "implemented": true,
+    "prdRefs": [
+      "R4"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Quote recalculation sets tax_unresolved and stores 0 tax for a taxable row the engine could not resolve, and clears it otherwise",
+    "implemented": true,
+    "prdRefs": [
+      "R4"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Quote item reads (actions and REST) include tax_unresolved",
+    "implemented": true,
+    "prdRefs": [
+      "R4"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Converting a quote to an invoice through the action, REST or workflow path is refused with the NO_TAX_RATE message while an included one-time row is unresolved",
+    "implemented": true,
+    "prdRefs": [
+      "R4"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "The quote line editor shows a warning with the region's name on a line with unresolved tax",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "The quote totals show a note when any included line has unresolved tax",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  }
+]

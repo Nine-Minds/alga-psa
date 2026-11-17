@@ -19,6 +19,8 @@ import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
 import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 import { getEffectiveTaxSourceForClient } from '@alga-psa/shared/billingClients/taxSettings';
+import { findUnresolvedQuoteTaxBlocker } from '@alga-psa/shared/billingClients/quoteTaxResolution';
+import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
   allocatedOneTimeAmountFor,
@@ -1063,6 +1065,17 @@ function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : value;
 }
 
+/**
+ * Refuse to bill a quote whose included one-time row has no tax rate: the
+ * invoice engine would refuse the same line, and the quote's 0 is not a tax.
+ */
+function assertNoUnresolvedQuoteTax(quote: IQuote): void {
+  const blocker = findUnresolvedQuoteTaxBlocker(quote.quote_items ?? [], quote.quote_date);
+  if (blocker) {
+    throw new ManualInvoiceError('NO_TAX_RATE', blocker.message, { region: blocker.region, date: blocker.date });
+  }
+}
+
 async function convertQuoteToDraftInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -1103,6 +1116,8 @@ async function convertQuoteToDraftInvoiceRecords(
   if (!quote.client_id) {
     throw new Error('Quotes must be linked to a client before they can be converted to an invoice');
   }
+
+  assertNoUnresolvedQuoteTax(quote);
 
   const quoteItemsForInvoice = quote.quote_items ?? [];
   const shares = resolveQuoteDiscountConversionShares(quoteItemsForInvoice);
@@ -1372,6 +1387,9 @@ async function convertQuoteToDraftContractAndInvoiceRecords(
   if (recurringItems.length === 0 || oneTimeItems.length === 0) {
     throw new Error('Quote must contain both recurring and one-time items to convert to both records');
   }
+
+  // Checked before the contract is created so a refusal creates nothing.
+  assertNoUnresolvedQuoteTax(quote);
 
   const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
   const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);

@@ -37,6 +37,8 @@ import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoi
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
+import { QuoteTaxUnresolvedNote } from './QuoteTaxUnresolvedNote';
+import { getTaxRegions } from '../../../actions/taxSettingsActions';
 import {
   pickDefaultLocation,
   collectDistinctLocationIds,
@@ -319,6 +321,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   useEffect(() => {
     void loadFormData();
   }, [quoteId]);
+
+  // Region names for the "No tax rate for <region>" badge: a line stores its
+  // region code, the badge shows the region's name.
+  const [taxRegionNames, setTaxRegionNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const regions = await getTaxRegions();
+        if (cancelled || !Array.isArray(regions)) return;
+        setTaxRegionNames(Object.fromEntries(regions.map((region) => [region.region_code, region.region_name])));
+      } catch (regionError) {
+        console.error('Failed to load tax regions:', regionError);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load locations whenever the selected client changes so the picker is fresh.
   // The previous client's list is dropped first: until the new one arrives the
@@ -2010,6 +2032,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               <QuoteLineItemsEditor
                 items={lineItems}
                 currencyCode={form.currency_code}
+                taxRegionNames={taxRegionNames}
                 onChange={setLineItems}
                 disabled={isSaving || isReadOnly}
                 locations={clientLocations}
@@ -2196,6 +2219,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
                     <dd>{formattedTax}</dd>
                   </div>
+                  <QuoteTaxUnresolvedNote items={lineItems} />
                   {formattedCadenceSummary.map((entry) => (
                     <div key={entry.cadence_key} className="flex items-center justify-between">
                       <dt className="text-muted-foreground">

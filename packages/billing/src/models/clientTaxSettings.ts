@@ -1,6 +1,11 @@
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  getCompositeTaxComponents as getCompositeTaxComponentsEngine,
+  getTaxHolidays as getTaxHolidaysEngine,
+  getTaxRateThresholds as getTaxRateThresholdsEngine,
+} from '@alga-psa/shared/billingClients/taxEngine';
 import type {
   IClientTaxSettings,
   ITaxComponent,
@@ -150,15 +155,7 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax components lookup');
       }
-      const facade = tenantDb(db, tenant);
-      const componentsQuery = facade.parentScopedTable<ITaxComponent>('composite_tax_mappings as ctm')
-        .where('ctm.composite_tax_id', tax_rate_id)
-        .orderBy('ctm.sequence');
-      facade.tenantJoin(componentsQuery, 'tax_components as tc', 'ctm.tax_component_id', 'tc.tax_component_id', {
-        tenantPredicate: 'literal',
-      });
-      const components = await componentsQuery.select('tc.*') as ITaxComponent[];
-      return components;
+      return await getCompositeTaxComponentsEngine(db, tenant, tax_rate_id);
     } catch (error) {
       console.error(`Error getting composite tax components for tax rate ${tax_rate_id}:`, error);
       throw error;
@@ -171,11 +168,7 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax rate thresholds lookup');
       }
-      const thresholds = await tenantDb(db, tenant)
-        .parentScopedTable<ITaxRateThreshold>('tax_rate_thresholds')
-        .where({ tax_rate_id })
-        .orderBy('min_amount');
-      return thresholds;
+      return await getTaxRateThresholdsEngine(db, tenant, tax_rate_id);
     } catch (error) {
       console.error(`Error getting tax rate thresholds for tax rate ${tax_rate_id}:`, error);
       throw error;
@@ -188,11 +181,7 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax holidays lookup');
       }
-      const holidays = await tenantDb(db, tenant)
-        .parentScopedTable<ITaxHoliday>('tax_holidays')
-        .where('tax_rate_id', tax_rate_id)
-        .orderBy('start_date');
-      return holidays;
+      return await getTaxHolidaysEngine(db, tenant, tax_rate_id);
     } catch (error) {
       console.error(`Error getting tax holidays for tax rate ${tax_rate_id}:`, error);
       throw error;

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
@@ -34,6 +35,7 @@ import {
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
+import { isTaxUnresolvedLine } from './QuoteTaxUnresolvedNote';
 
 interface InlineEditableValueProps {
   displayValue: string;
@@ -161,6 +163,8 @@ const PhaseSectionInput: React.FC<PhaseSectionInputProps> = ({
 
 interface QuoteLineItemsEditorProps {
   items: DraftQuoteItem[];
+  /** Tax region names by region code, for the "No tax rate for <region>" badge. */
+  taxRegionNames?: Record<string, string>;
   currencyCode: string;
   disabled?: boolean;
   onChange: (items: DraftQuoteItem[]) => void;
@@ -277,6 +281,7 @@ const isQuoteWideGroup = (group: LocationGroupEntry<DraftQuoteItem>): boolean =>
 const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   items,
   currencyCode,
+  taxRegionNames = {},
   disabled = false,
   onChange,
   locations = [],
@@ -621,6 +626,14 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 disabled={disabled}
                 onChange={(event) => updateItem(item.local_id, { is_taxable: event.target.checked })}
               />
+              {isTaxUnresolvedLine(item) ? (
+                <Badge id={`quote-line-tax-unresolved-${item.local_id}`} variant="warning">
+                  {t('quoteLineItems.taxUnresolved.badge', {
+                    defaultValue: 'No tax rate for {{region}}',
+                    region: (item.tax_region && taxRegionNames[item.tax_region]) || item.tax_region || '',
+                  })}
+                </Badge>
+              ) : null}
               <Checkbox
                 id={`quote-line-recurring-${item.local_id}`}
                 checked={item.is_recurring}
