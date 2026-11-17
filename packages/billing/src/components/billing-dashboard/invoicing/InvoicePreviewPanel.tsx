@@ -25,6 +25,7 @@ import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import CreditApplicationUI from '../CreditApplicationUI';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { getInvoicePaymentLinkAction } from '../../../actions/invoicePaymentLinkActions';
@@ -134,6 +135,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidedHere, setVoidedHere] = useState(false);
   const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
   const [paymentLinkRefusal, setPaymentLinkRefusal] = useState<{ reason: string | null; message: string } | null>(null);
+  // Set when the link was built but the browser refused the clipboard write
+  // (permission policy, or no Clipboard API outside a secure context): the
+  // link is shown for manual copying instead of being lost behind an error.
+  const [paymentLinkToCopy, setPaymentLinkToCopy] = useState<string | null>(null);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
   const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
@@ -193,6 +198,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     if (!invoiceId) return;
     setPaymentLinkBusy(true);
     setPaymentLinkRefusal(null);
+    setPaymentLinkToCopy(null);
     try {
       const result = await getInvoicePaymentLinkAction(invoiceId);
       if (isReturnedActionError(result)) {
@@ -203,8 +209,13 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         setPaymentLinkRefusal({ reason: result.reason, message: result.message });
         return;
       }
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-      await navigator.clipboard.writeText(result.url);
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(result.url);
+      } catch {
+        setPaymentLinkToCopy(result.url);
+        return;
+      }
       toast.success(t('invoicePreview.paymentLink.copied', { defaultValue: 'Payment link copied' }));
     } catch (err) {
       setPaymentLinkRefusal({ reason: null, message: getErrorMessage(err) });
@@ -861,6 +872,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               </Alert>
             ) : null}
 
+            {paymentLinkToCopy ? (
+              <Alert variant="info" className="mb-4" id="invoice-payment-link-manual-copy">
+                <AlertDescription>
+                  <Input
+                    id="invoice-payment-link-url"
+                    label={t('invoicePreview.paymentLink.manualCopy', {
+                      defaultValue: 'Your browser blocked copying. Copy the payment link from here:',
+                    })}
+                    value={paymentLinkToCopy}
+                    readOnly
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <div className="flex flex-wrap gap-2 mb-4">
               {!isFinalized && onFinalize && (
                 <Button
@@ -944,7 +971,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   variant="outline"
                   onClick={handleCopyPaymentLink}
                   disabled={isActionLoading || paymentLinkBusy}
-                  className="flex-1"
+                  className="flex-1 whitespace-nowrap"
                 >
                   {t('invoicePreview.paymentLink.copy', { defaultValue: 'Copy payment link' })}
                 </Button>

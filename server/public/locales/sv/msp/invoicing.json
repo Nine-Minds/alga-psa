@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Kopiera betalningslänk",
       "copied": "Betalningslänk kopierad",
+      "manualCopy": "Webbläsaren blockerade kopieringen. Kopiera betalningslänken härifrån:",
       "reasons": {
         "invoice-not-found": "Fakturan hittades inte.",
         "invoice-voided": "Fakturan har annullerats och har därför ingen betalningslänk.",

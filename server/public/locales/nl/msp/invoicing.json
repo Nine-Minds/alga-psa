@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Betaallink kopiëren",
       "copied": "Betaallink gekopieerd",
+      "manualCopy": "Uw browser heeft het kopiëren geblokkeerd. Kopieer de betaallink hier:",
       "reasons": {
         "invoice-not-found": "Deze factuur is niet gevonden.",
         "invoice-voided": "Deze factuur is geannuleerd en heeft daarom geen betaallink.",

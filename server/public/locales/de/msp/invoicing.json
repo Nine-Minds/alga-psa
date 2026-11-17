@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Zahlungslink kopieren",
       "copied": "Zahlungslink kopiert",
+      "manualCopy": "Ihr Browser hat das Kopieren blockiert. Kopieren Sie den Zahlungslink von hier:",
       "reasons": {
         "invoice-not-found": "Diese Rechnung wurde nicht gefunden.",
         "invoice-voided": "Diese Rechnung wurde storniert und hat daher keinen Zahlungslink.",

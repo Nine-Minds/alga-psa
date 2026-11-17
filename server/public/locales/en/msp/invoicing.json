@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Copy payment link",
       "copied": "Payment link copied",
+      "manualCopy": "Your browser blocked copying. Copy the payment link from here:",
       "reasons": {
         "invoice-not-found": "This invoice could not be found.",
         "invoice-voided": "This invoice has been voided, so it has no payment link.",

@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Copiar enlace de pago",
       "copied": "Enlace de pago copiado",
+      "manualCopy": "Su navegador bloqueó la copia. Copie el enlace de pago desde aquí:",
       "reasons": {
         "invoice-not-found": "No se encontró esta factura.",
         "invoice-voided": "Esta factura ha sido anulada, por lo que no tiene enlace de pago.",

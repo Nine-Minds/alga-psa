@@ -928,6 +928,7 @@
     "paymentLink": {
       "copy": "Copier le lien de paiement",
       "copied": "Lien de paiement copié",
+      "manualCopy": "Votre navigateur a bloqué la copie. Copiez le lien de paiement ici :",
       "reasons": {
         "invoice-not-found": "Cette facture est introuvable.",
         "invoice-voided": "Cette facture a été annulée ; elle n'a donc pas de lien de paiement.",

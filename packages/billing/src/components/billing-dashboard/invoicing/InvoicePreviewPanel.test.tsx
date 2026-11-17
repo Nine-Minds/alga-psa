@@ -34,6 +34,10 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('../../../actions/voidInvoiceActions', () => ({ voidInvoice: vi.fn() }));
+const getInvoicePaymentLinkActionMock = vi.fn();
+vi.mock('../../../actions/invoicePaymentLinkActions', () => ({
+  getInvoicePaymentLinkAction: (...args: unknown[]) => getInvoicePaymentLinkActionMock(...args),
+}));
 vi.mock('../../../actions/accountingSyncActions', () => ({
   queueInvoiceSync: vi.fn(), runAccountingSyncNow: vi.fn(),
   resolveAccountingDriftReExport: vi.fn(), resolveAccountingDriftAccept: vi.fn(),
@@ -258,5 +262,51 @@ describe('InvoicePreviewPanel', () => {
     rejectPrevious({ success: false, code: 'UNAUTHENTICATED', params: {}, message: 'Authentication required' });
     await waitFor(() => expect(screen.getByText('INV-1001::tpl-resolved')).toBeTruthy());
     expect(screen.queryByText(/session expired while loading this invoice/i)).toBeNull();
+  });
+
+  describe('Copy payment link', () => {
+    const PAY_URL = 'https://portal.example.test/pay/token-abc';
+    const renderFinalized = () => render(
+      <InvoicePreviewPanel invoiceId="inv-1" templates={defaultTemplates as any} selectedTemplateId={null} onTemplateChange={vi.fn()} isFinalized />
+    );
+
+    beforeEach(() => {
+      getInvoicePaymentLinkActionMock.mockReset();
+      getInvoicePaymentLinkActionMock.mockResolvedValue({ url: PAY_URL });
+    });
+
+    it('writes the payment link to the clipboard', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      renderFinalized();
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy payment link' }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(PAY_URL));
+      expect(getInvoicePaymentLinkActionMock).toHaveBeenCalledWith('inv-1');
+      expect(document.querySelector('#invoice-payment-link-url')).toBeNull();
+    });
+
+    it('shows the link for manual copying when the browser blocks the clipboard', async () => {
+      const writeText = vi.fn().mockRejectedValue(new DOMException('Write permission denied.', 'NotAllowedError'));
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      renderFinalized();
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy payment link' }));
+      await waitFor(() => expect((document.querySelector('#invoice-payment-link-url') as HTMLInputElement | null)?.value).toBe(PAY_URL));
+      expect(screen.queryByText(/Write permission denied/)).toBeNull();
+    });
+
+    it('shows the link when the Clipboard API is missing (non-secure context)', async () => {
+      vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+      renderFinalized();
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy payment link' }));
+      await waitFor(() => expect((document.querySelector('#invoice-payment-link-url') as HTMLInputElement | null)?.value).toBe(PAY_URL));
+    });
+
+    it('shows the refusal reason, never a link, for an ineligible invoice', async () => {
+      getInvoicePaymentLinkActionMock.mockResolvedValue({ reason: 'invoice-voided', message: 'This invoice has been voided, so it has no payment link.' });
+      renderFinalized();
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy payment link' }));
+      expect(await screen.findByText('This invoice has been voided, so it has no payment link.')).toBeTruthy();
+      expect(document.querySelector('#invoice-payment-link-url')).toBeNull();
+    });
   });
 });
