@@ -123,7 +123,7 @@ describe('ticketing dashboard smart search wiring contract', () => {
     // Regression: changing a chip (e.g. a board tab) flipped isLoadingMore and
     // replaced the whole body with a spinner, unmounting the panel so it
     // remounted and re-ran its stream with the new scope ("Scored 1").
-    expect(source).toContain('{isLoadingMore && !smartSearch.active ? (');
+    expect(source).toContain('{isLoadingMore && !smartSearch.active && ticketsWithIds.length === 0 ? (');
   });
 
   it('resolves selected rows from streamed smart results, not only the paginated list', () => {

@@ -3009,8 +3009,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         {/* The smart search panel owns its run: an ordinary-list refresh (a chip
             change, pagination, or a background fetch) must not unmount it, or it
             would restart its stream over whatever scope it remounts with. Only
-            the ordinary table gets replaced by the loading spinner. */}
-        {isLoadingMore && !smartSearch.active ? (
+            the ordinary table gets the loading spinner, and only when it has no rows
+            to show yet: once rows exist, later fetches (sort, filter, refresh, paging)
+            keep the DataTable mounted so view state such as "Show all" survives. */}
+        {isLoadingMore && !smartSearch.active && ticketsWithIds.length === 0 ? (
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
@@ -3056,7 +3058,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </AlertDescription>
               </Alert>
             )}
-            <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+            <ShortcutActiveRegion id="tickets-shortcut-region" className={`outline-none transition-opacity ${isLoadingMore && !smartSearch.active ? 'opacity-60 pointer-events-none' : ''}`} aria-busy={isLoadingMore && !smartSearch.active}>
               {smartSearch.active ? (
                 <SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>
                   // Each run is a fresh panel: the old one unmounts, so its
@@ -3091,7 +3093,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 />
               ) : (
               <DataTable
-                key={`${currentPage}-${pageSize}`}
                 {...withDataAutomationId({ id: `${id}-tickets-table` })}
                 id={`${id}-tickets-table`}
                 persistPageSize={false}
