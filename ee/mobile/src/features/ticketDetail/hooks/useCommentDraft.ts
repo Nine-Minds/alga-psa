@@ -11,6 +11,7 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import type { TicketRichTextEditorRef } from "../../ticketRichText/TicketRichTextEditor";
+import { useOperationalOnly } from "../../../capabilities/CapabilitiesContext";
 import type { TicketDetailDeps } from "../types";
 import { MAX_COMMENT_LENGTH, } from "../types";
 import { getApiErrorMessage } from "../utils";
@@ -29,6 +30,9 @@ export function useCommentDraft(
   const target = useMemo<CommentTarget>(() => deps.target ?? ticketTarget(ticketId), [deps.target, ticketId]);
   const api = useMemo(() => createCommentApi(target), [target]);
   const isTicket = target.kind === "ticket";
+  // A seat technician never writes an MSP-private note: their non-public comment is Shared IT (the MSP and the
+  // client's IT), as on the web, where the seat composer offers Requester and Shared IT only.
+  const operationalOnly = useOperationalOnly();
 
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
   const [commentDraft, setCommentDraft] = useState("");
@@ -175,6 +179,7 @@ export function useCommentDraft(
           // comment carries them.
           ...(isTicket && !originalIsInternal && cc?.length ? { cc } : {}),
           ...(isTicket && !originalIsInternal && bcc?.length ? { bcc } : {}),
+          ...(isTicket && operationalOnly && originalIsInternal ? { collaboration_audience: "shared_it" as const } : {}),
           auditHeaders,
         });
         if (!result.ok) {
@@ -239,7 +244,7 @@ export function useCommentDraft(
         commentSendInFlightRef.current = false;
       }
     },
-    [api, client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, isTicket, session, showToast, ticketId],
+    [api, client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, isTicket, operationalOnly, session, showToast, ticketId],
   );
 
   // Lean reply path: optimistic insert nested under the parent, POST with

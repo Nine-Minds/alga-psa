@@ -407,7 +407,9 @@ export function ProjectTaskDetailScreen({ navigation, route }: Props) {
     ? task.priority_name ?? priorities.find((item) => item.priority_id === task.priority_id)?.priority_name ?? null
     : null;
   const canChangeStatus = canAct && Boolean(task?.project_id);
-  const detailsEditable = canAct && !detailsReadOnly && !isOffline;
+  // A seat technician comments on shared tasks but does not edit them, log time on them or time them.
+  const operationalOnly = features.operationalOnly;
+  const detailsEditable = canAct && !detailsReadOnly && !isOffline && !operationalOnly;
   const checklistDone = checklist.filter((item) => item.completed).length;
 
   return (
@@ -598,17 +600,19 @@ export function ProjectTaskDetailScreen({ navigation, route }: Props) {
           <Text style={{ ...typography.caption, color: colors.textSecondary }}>
             {t("projectTask.timeEntries")}{totalMinutes > 0 ? ` • ${formatMinutesDuration(totalMinutes)}` : ""}
           </Text>
-          <Pressable
-            testID="project-task-log-time"
-            onPress={() => timeEntryHook.openTimeEntryModal()}
-            accessibilityRole="button"
-            accessibilityLabel={t("projectTask.logTime")}
-            hitSlop={8}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", opacity: pressed ? 0.7 : 1 })}
-          >
-            <Feather name="plus" size={14} color={colors.primary} />
-            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600", marginLeft: 2 }}>{t("projectTask.logTime")}</Text>
-          </Pressable>
+          {operationalOnly ? null : (
+            <Pressable
+              testID="project-task-log-time"
+              onPress={() => timeEntryHook.openTimeEntryModal()}
+              accessibilityRole="button"
+              accessibilityLabel={t("projectTask.logTime")}
+              hitSlop={8}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", opacity: pressed ? 0.7 : 1 })}
+            >
+              <Feather name="plus" size={14} color={colors.primary} />
+              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600", marginLeft: 2 }}>{t("projectTask.logTime")}</Text>
+            </Pressable>
+          )}
         </View>
         {entriesError ? (
           <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.xs }}>{entriesError}</Text>

@@ -43,6 +43,7 @@ import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useTheme } from "../ui/ThemeContext";
 import { formatDateShort } from "../ui/formatters/dateTime";
 import { logger } from "../logging/logger";
+import { useOperationalOnly } from "../capabilities/CapabilitiesContext";
 
 type Props = CompositeScreenProps<
   DrawerScreenProps<DrawerParamList, "ProjectsTab">,
@@ -537,6 +538,8 @@ function ProjectFiltersSheet({
   onClose: () => void;
   onApply: (filters: ProjectListFilters) => void;
 }) {
+  // A seat technician sees one client's projects, and the client list is closed to them.
+  const operationalOnly = useOperationalOnly();
   const { t } = useTranslation("projects");
   const theme = useTheme();
   const [draft, setDraft] = useState<ProjectListFilters>(filters);
@@ -643,53 +646,57 @@ function ProjectFiltersSheet({
             })}
           </View>
 
-          <Text
-            style={{
-              ...theme.typography.caption,
-              color: theme.colors.textSecondary,
-              fontWeight: "700",
-              marginTop: theme.spacing.lg,
-            }}
-          >
-            {t("filters.client", "Client")}
-          </Text>
-          <Pressable
-            testID="projects-filter-client"
-            onPress={() => {
-              setClientPickerOpen(true);
-              void loadClients();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t("filters.selectClient", "Select a client")}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: theme.spacing.sm,
-              padding: theme.spacing.md,
-              borderRadius: theme.borderRadius.md,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.card,
-            }}
-          >
-            <Text style={{ ...theme.typography.body, color: theme.colors.text }} numberOfLines={1}>
-              {draft.clientName ?? t("filters.anyClient", "Any client")}
-            </Text>
-            {draft.clientId ? (
-              <Pressable
-                testID="projects-filter-client-clear"
-                onPress={() => setDraft((current) => ({ ...current, clientId: null, clientName: null }))}
-                accessibilityRole="button"
-                accessibilityLabel={t("task.clear", "Clear")}
-                hitSlop={8}
+          {operationalOnly ? null : (
+            <>
+              <Text
+                style={{
+                  ...theme.typography.caption,
+                  color: theme.colors.textSecondary,
+                  fontWeight: "700",
+                  marginTop: theme.spacing.lg,
+                }}
               >
-                <Feather name="x" size={16} color={theme.colors.textSecondary} />
+                {t("filters.client", "Client")}
+              </Text>
+              <Pressable
+                testID="projects-filter-client"
+                onPress={() => {
+                  setClientPickerOpen(true);
+                  void loadClients();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("filters.selectClient", "Select a client")}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.card,
+                }}
+              >
+                <Text style={{ ...theme.typography.body, color: theme.colors.text }} numberOfLines={1}>
+                  {draft.clientName ?? t("filters.anyClient", "Any client")}
+                </Text>
+                {draft.clientId ? (
+                  <Pressable
+                    testID="projects-filter-client-clear"
+                    onPress={() => setDraft((current) => ({ ...current, clientId: null, clientName: null }))}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("task.clear", "Clear")}
+                    hitSlop={8}
+                  >
+                    <Feather name="x" size={16} color={theme.colors.textSecondary} />
+                  </Pressable>
+                ) : (
+                  <Feather name="chevron-right" size={18} color={theme.colors.textSecondary} />
+                )}
               </Pressable>
-            ) : (
-              <Feather name="chevron-right" size={18} color={theme.colors.textSecondary} />
-            )}
-          </Pressable>
+            </>
+          )}
 
           <View
             style={{

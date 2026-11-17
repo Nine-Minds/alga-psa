@@ -24,7 +24,7 @@ import type { DrawerParamList, RootStackParamList } from "../navigation/types";
 import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useAuth } from "../auth/AuthContext";
-import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { useCapabilities, useOperationalOnly } from "../capabilities/CapabilitiesContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient, type ApiClient } from "../api";
 import {
@@ -580,6 +580,8 @@ function AssetFiltersSheet({
   onClose: () => void;
   onApply: (filters: AssetListFilters) => void;
 }) {
+  // A seat technician sees one client's devices, and the client and location lists are closed to them.
+  const operationalOnly = useOperationalOnly();
   const { t } = useTranslation("assets");
   const theme = useTheme();
   const [draft, setDraft] = useState<AssetListFilters>(filters);
@@ -664,43 +666,47 @@ function AssetFiltersSheet({
         </View>
 
         <ScrollView contentContainerStyle={{ padding: theme.spacing.lg }}>
-          <FilterRow
-            testID="assets-filter-client"
-            label={t("list.client", "Client")}
-            value={draft.clientName ?? t("list.anyClient", "Any client")}
-            onPress={() => {
-              setClientPickerOpen(true);
-              void loadClients();
-            }}
-            onClear={
-              draft.clientId
-                ? () =>
-                    setDraft((current) => ({
-                      ...current,
-                      clientId: null,
-                      clientName: null,
-                      locationId: null,
-                      locationName: null,
-                    }))
-                : undefined
-            }
-          />
-          <FilterRow
-            testID="assets-filter-location"
-            label={t("list.location", "Location")}
-            value={draft.locationName ?? t("list.anyLocation", "Any location")}
-            disabled={!draft.clientId}
-            onPress={() => {
-              if (!draft.clientId) return;
-              setLocationPickerOpen(true);
-              void loadLocations(draft.clientId);
-            }}
-            onClear={
-              draft.locationId
-                ? () => setDraft((current) => ({ ...current, locationId: null, locationName: null }))
-                : undefined
-            }
-          />
+          {operationalOnly ? null : (
+            <>
+              <FilterRow
+                testID="assets-filter-client"
+                label={t("list.client", "Client")}
+                value={draft.clientName ?? t("list.anyClient", "Any client")}
+                onPress={() => {
+                  setClientPickerOpen(true);
+                  void loadClients();
+                }}
+                onClear={
+                  draft.clientId
+                    ? () =>
+                        setDraft((current) => ({
+                          ...current,
+                          clientId: null,
+                          clientName: null,
+                          locationId: null,
+                          locationName: null,
+                        }))
+                    : undefined
+                }
+              />
+              <FilterRow
+                testID="assets-filter-location"
+                label={t("list.location", "Location")}
+                value={draft.locationName ?? t("list.anyLocation", "Any location")}
+                disabled={!draft.clientId}
+                onPress={() => {
+                  if (!draft.clientId) return;
+                  setLocationPickerOpen(true);
+                  void loadLocations(draft.clientId);
+                }}
+                onClear={
+                  draft.locationId
+                    ? () => setDraft((current) => ({ ...current, locationId: null, locationName: null }))
+                    : undefined
+                }
+              />
+            </>
+          )}
 
           <Text
             style={{

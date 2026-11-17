@@ -135,4 +135,20 @@ describe("BottomSheet sizing", () => {
     expect(height).toBeCloseTo(390 * 0.92);
     expect(height).toBeLessThanOrEqual(windowSize.height);
   });
+
+  // Wide windows (iPad, opened foldable): the sheet becomes a centred dialog
+  // instead of a full-width strip along the bottom edge.
+  it("becomes a capped-width dialog on wide windows", async () => {
+    windowSize = { width: 1024, height: 768 };
+    const { BottomSheet } = await import("./index");
+    let renderer!: ReactTestRenderer;
+    act(() => {
+      renderer = create(
+        React.createElement(BottomSheet, { visible: true, onClose: () => {}, title: "Filters", children: null }),
+      );
+    });
+    const [sheet] = renderer.root.findAll((node) => node.props?.style?.borderTopLeftRadius !== undefined);
+    expect(sheet.props.style.width).toBeLessThanOrEqual(560);
+    expect(sheet.props.style.borderBottomLeftRadius).toBeGreaterThan(0);
+  });
 });

@@ -19,6 +19,7 @@ import { createApiClient } from "../api";
 import { refreshSession as refreshSessionApi, revokeSession } from "../api/mobileAuth";
 import { logger } from "../logging/logger";
 import { clearPendingMobileAuth, clearReceivedOtt } from "../auth/mobileAuth";
+import { clearWebSignInSession } from "../auth/webSession";
 import { unregisterPushToken } from "../api/pushToken";
 import { clearPushRegistration } from "../notifications/pushRegistration";
 import { getStableDeviceId } from "../device/clientMetadata";
@@ -332,18 +333,20 @@ export function AppRoot() {
       }
     } catch (e) {
       logger.warn("Logout revoke failed", { error: e });
-    } finally {
-      await Promise.allSettled([
-        clearPendingMobileAuth(),
-        clearReceivedOtt(),
-        clearPushRegistration(),
-        // A different tenant must not inherit this one's colours.
-        clearCachedTheme(baseUrl, currentSession?.tenantId),
-        clearRecentSearches(baseUrl, currentSession?.user?.id),
-      ]);
-      setCachedTenantTheme(null);
-      setSession(null);
     }
+    // The sign-in browser keeps its own web session; end it too, or the next
+    // sign-in silently returns this user.
+    if (baseUrl && currentSession) await clearWebSignInSession(baseUrl);
+    await Promise.allSettled([
+      clearPendingMobileAuth(),
+      clearReceivedOtt(),
+      clearPushRegistration(),
+      // A different tenant must not inherit this one's colours.
+      clearCachedTheme(baseUrl, currentSession?.tenantId),
+      clearRecentSearches(baseUrl, currentSession?.user?.id),
+    ]);
+    setCachedTenantTheme(null);
+    setSession(null);
   }, [baseUrl, setSession]);
 
   const setHost = useCallback(
