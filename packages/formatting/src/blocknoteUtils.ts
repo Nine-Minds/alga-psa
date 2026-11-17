@@ -532,13 +532,6 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
 }
 
 /**
- * Converts a table block to markdown format with styling support
- *
- * @param block - The table block to convert
- * @returns The markdown representation of the table
- */
-
-/**
  * Inline content of one table cell. Legacy tables store a cell as the inline
  * array itself; BlockNote 0.47 stores `{ type: 'tableCell', content: [...] }`.
  * Both email renditions read cells through this so the shapes cannot drift.
@@ -552,6 +545,12 @@ function tableCellInlineContent(cell: unknown): any[] {
   return [];
 }
 
+/**
+ * Converts a table block to markdown format with styling support
+ *
+ * @param block - The table block to convert
+ * @returns The markdown representation of the table
+ */
 function convertTableToMarkdown(block: Block | PartialBlock): string {
   try {
     const content = block.content as any;
