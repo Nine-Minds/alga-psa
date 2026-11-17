@@ -604,8 +604,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     // Plain-text fall-back: strip tags AND decode common HTML entities so
     // literal characters like `"` and `&` don't leak through as `&quot;` /
-    // `&amp;` in clients that show the text/plain alternative.
+    // `&amp;` in clients that show the text/plain alternative. Block and table-cell
+    // boundaries become spaces first so adjacent cells (an HTML table description)
+    // do not run together ("HostServer01StateDOWN").
+    // LEVERAGE: pattern html-to-text — same block-break set as htmlToVisibleText (shared/lib/email/replyParser.ts) plus td/th; one shared HTML-to-text helper would serve both.
     let text = html
+      .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/td|\/th|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, ' ')
       .replace(/<[^>]*>/g, '')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
