@@ -986,10 +986,16 @@ describe('executeEntraSync continues past per-user failures', () => {
     handleEligibleClientPortalProvisioningMock.mockRejectedValueOnce(new Error('portal boom'));
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
-    const result = await executeEntraSync({ ...base, users: [buildUser('a')] });
+    const result = await executeEntraSync({
+      ...base,
+      users: [{ ...buildUser('a'), mobilePhone: '+14165551234;ext=12345678901' }],
+      fieldSyncConfig: { phone: true },
+    });
 
     expect(result.counters).toMatchObject({ linked: 1, failed: 1 });
+    // The phone notice recorded before the throw survives alongside the failure.
     expect(result.userIssues).toEqual([
+      expect.objectContaining({ severity: 'notice', stage: 'link', field: 'phone_numbers', contactNameId: 'existing' }),
       expect.objectContaining({ severity: 'failure', stage: 'link', contactNameId: 'existing', message: 'portal boom' }),
     ]);
   });

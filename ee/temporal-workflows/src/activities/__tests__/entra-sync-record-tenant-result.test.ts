@@ -39,9 +39,9 @@ vi.mock('@ee/lib/integrations/entra/notifications/entraSyncNotificationRules', (
 
 const knex = { fn: { now: () => 'now' }, raw: (sql: string, bindings: unknown[]) => ({ sql, bindings }) } as any;
 
-function issue(index: number) {
+function issue(index: number, severity: 'failure' | 'notice' = 'failure') {
   return {
-    severity: 'failure' as const,
+    severity,
     stage: 'create' as const,
     entraObjectId: `o${index}`,
     userPrincipalName: `u${index}@example.com`,
@@ -97,6 +97,24 @@ describe('recordSyncTenantResultWithDb per-user issues', () => {
     const bindings = (hoisted.updates[0].user_issues as { bindings: string[] }).bindings;
     expect(JSON.parse(bindings[0])).toHaveLength(100);
     expect(hoisted.updates[0]).not.toHaveProperty('tenant');
+  });
+
+  it('T007: 150 notices followed by 3 failures still persists all 3 failures', async () => {
+    const issues = [
+      ...Array.from({ length: 150 }, (_, index) => issue(index, 'notice')),
+      issue(1000), issue(1001), issue(1002),
+    ];
+    const { recordSyncTenantResultWithDb } = await import('../entra-sync-activities');
+    await recordSyncTenantResultWithDb(knex, {
+      tenantId: 'tenant-1',
+      runId: 'run-1',
+      result: { ...baseResult, failed: 3, userIssues: issues },
+    } as any);
+
+    const stored = JSON.parse((hoisted.inserts[0].user_issues as { bindings: string[] }).bindings[0]);
+    expect(stored).toHaveLength(100);
+    expect(stored.filter((entry: { severity: string }) => entry.severity === 'failure')).toHaveLength(3);
+    expect(stored.slice(0, 3).map((entry: { entraObjectId: string }) => entry.entraObjectId)).toEqual(['o1000', 'o1001', 'o1002']);
   });
 
   it('T007: defaults to 0 failures and an empty list when the result carries none', async () => {

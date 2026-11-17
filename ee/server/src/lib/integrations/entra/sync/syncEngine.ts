@@ -137,7 +137,7 @@ function phoneNoticeIssues(
 /**
  * Syncs one user. Throws on any failure; the caller records it and moves on.
  * `ctx.progress` tells the caller how far this user got before a throw.
- * Returns the field notices for this user.
+ * Field notices are pushed onto `ctx.issues`.
  */
 async function syncOneEntraUser(
   input: ExecuteEntraSyncInput,
@@ -147,10 +147,11 @@ async function syncOneEntraUser(
     counters: EntraSyncResultAggregator;
     preview: EntraSyncPreviewIdentity[] | undefined;
     progress: { stage: EntraSyncUserIssueStage; contactNameId: string | null };
+    /** Owned by the caller so notices survive a later throw. */
+    issues: EntraSyncUserIssue[];
   }
-): Promise<EntraSyncUserIssue[]> {
-  const { dryRun, counters, preview } = ctx;
-  const issues: EntraSyncUserIssue[] = [];
+): Promise<void> {
+  const { dryRun, counters, preview, issues } = ctx;
   const userWithEntitlement: EntraSyncUser = input.portalEntitlement
     ? {
         ...user,
@@ -178,7 +179,7 @@ async function syncOneEntraUser(
       );
       counters.increment('ambiguous');
     }
-    return issues;
+    return;
   }
 
   if (candidates.length === 1) {
@@ -278,7 +279,7 @@ async function syncOneEntraUser(
         }
       }
     }
-    return issues;
+    return;
   }
 
   ctx.progress.stage = 'create';
@@ -349,7 +350,7 @@ async function syncOneEntraUser(
       }
     }
   }
-  return issues;
+  return;
 }
 
 export async function executeEntraSync(
@@ -367,9 +368,12 @@ export async function executeEntraSync(
       stage: 'match',
       contactNameId: null,
     };
+    const issues: EntraSyncUserIssue[] = [];
     try {
-      userIssues.push(...await syncOneEntraUser(input, user, { dryRun, counters, preview, progress }));
+      await syncOneEntraUser(input, user, { dryRun, counters, preview, progress, issues });
+      userIssues.push(...issues);
     } catch (error) {
+      userIssues.push(...issues);
       counters.increment('failed');
       const message = error instanceof Error ? error.message : String(error);
       userIssues.push({

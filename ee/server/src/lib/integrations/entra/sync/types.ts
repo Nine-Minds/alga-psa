@@ -72,3 +72,17 @@ export interface EntraSyncUserIssue {
   field?: 'phone_numbers';
   message: string;
 }
+
+/**
+ * Caps a mixed issue list without letting notices hide failures: all failures
+ * first (up to the limit), then notices fill the remaining slots. User order is
+ * preserved within each group.
+ */
+export function capEntraSyncUserIssues(
+  issues: EntraSyncUserIssue[],
+  limit: number = ENTRA_SYNC_USER_ISSUE_LIMIT
+): EntraSyncUserIssue[] {
+  const failures = issues.filter((issue) => issue.severity === 'failure').slice(0, limit);
+  const notices = issues.filter((issue) => issue.severity !== 'failure').slice(0, limit - failures.length);
+  return [...failures, ...notices];
+}
