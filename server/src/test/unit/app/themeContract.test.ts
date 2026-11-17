@@ -936,11 +936,13 @@ describe('tab chrome ink', () => {
  * where every surface is supposed to collapse to black and white. A `dark:`
  * variant does not redeem it; it adapts to the mode and to nothing else.
  *
- * Reach instead for `--badge-info-*` (status chrome: restated per mode and in
- * both high-contrast blocks, so it collapses when the rest of the page does),
- * the `.chip-*` utilities (soft fills that survive ramp inversion), or the
- * token rungs — `--color-primary-*` for a pair-hued accent, `--color-border-*`
- * for surfaces and hairlines.
+ * Reach instead for the `.chip-*` utilities — soft fills drawn from the pair's
+ * own primary/secondary/accent ramp, with their own high-contrast rule — or the
+ * token rungs: `--color-primary-*` for a pair-hued accent, `--color-border-*`
+ * for surfaces and hairlines. Not `--badge-*`: that family is deliberately
+ * branding-independent, restated per mode and in both high-contrast blocks but
+ * never by a pair, so for seven of the nine it only trades a fixed sky for a
+ * fixed blue.
  *
  * Per-file ceilings live in ./themeContract.paletteBaseline.ts, which is the
  * same mechanism as LITERAL_BASELINE and externalised only for its size. There
