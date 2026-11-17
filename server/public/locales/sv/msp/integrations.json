@@ -681,8 +681,6 @@
             "result": "Resultat",
             "updated": "Ändrade"
           },
-          "contactsFailed_one": "{{count}} kontakt misslyckades",
-          "contactsFailed_other": "{{count}} kontakter misslyckades",
           "empty": "Ingen synkronisering har körts ännu.",
           "progress": "{{processed}} av {{total}} kunder är klara hittills.",
           "results": {

@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getEntraSyncRunHistory, type EntraSyncHistoryRun, type EntraSyncRunUserIssue } from '@alga-psa/integrations/actions';
+import { EntraSyncUserIssueList } from './entra/EntraSyncUserIssueList';
 
 interface EntraRunDetail {
   run: {
@@ -111,58 +112,6 @@ export default function EntraSyncHistoryPanel() {
     }
   }, [expandedRunId, loadDetails]);
 
-  const renderIssueList = (issues: EntraSyncRunUserIssue[]) => (
-    <ul className="list-disc space-y-0.5 pl-4">
-      {issues.map((issue, issueIndex) => (
-        <li key={`${issue.entraObjectId}-${issue.stage}-${issueIndex}`}>
-          {t('integrations.entra.syncHistory.details.failureEntry', {
-            user:
-              issue.displayName
-              || issue.userPrincipalName
-              || t('integrations.entra.syncHistory.details.userUnknown'),
-            stage: t(`integrations.entra.syncHistory.details.stages.${issue.stage}`),
-            message: issue.message,
-          })}
-        </li>
-      ))}
-    </ul>
-  );
-
-  const renderUserIssues = (tenant: NonNullable<EntraRunDetail['tenantResults']>[number]) => {
-    const failedCount = tenant.failed ?? 0;
-    const issues = tenant.userIssues ?? [];
-    const failures = issues.filter((issue) => issue.severity === 'failure');
-    const notices = issues.filter((issue) => issue.severity === 'notice');
-    if (failedCount <= 0 && notices.length === 0) {
-      return null;
-    }
-    return (
-      <>
-        {failedCount > 0 ? (
-          <div className="mt-1 text-destructive">
-            <p className="font-medium">
-              {t('integrations.entra.syncHistory.details.contactsFailed', { count: failedCount })}
-            </p>
-            {renderIssueList(failures)}
-            {failedCount > failures.length ? (
-              <p>
-                {t('integrations.entra.syncHistory.details.moreFailures', {
-                  count: failedCount - failures.length,
-                })}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-        {notices.length > 0 ? (
-          <div className="mt-1 text-muted-foreground">
-            <p className="font-medium">{t('integrations.entra.syncHistory.details.noticeHeading')}</p>
-            {renderIssueList(notices)}
-          </div>
-        ) : null}
-      </>
-    );
-  };
-
   return (
     <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-sync-history-panel">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -260,7 +209,11 @@ export default function EntraSyncHistoryPanel() {
                           {tenant.errorMessage ? (
                             <p className="text-destructive">{tenant.errorMessage}</p>
                           ) : null}
-                          {renderUserIssues(tenant)}
+                          <EntraSyncUserIssueList
+                            failed={tenant.failed ?? 0}
+                            issues={tenant.userIssues ?? []}
+                            idPrefix={`entra-sync-history-issues-${tenant.managedTenantId ?? index}`}
+                          />
                         </div>
                       ))
                     )}

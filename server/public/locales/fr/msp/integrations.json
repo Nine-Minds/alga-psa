@@ -681,8 +681,6 @@
             "result": "Résultat",
             "updated": "Modifié"
           },
-          "contactsFailed_one": "{{count}} contact en échec",
-          "contactsFailed_other": "{{count}} contacts en échec",
           "empty": "Aucune synchronisation n'a encore été exécutée.",
           "progress": "{{processed}} clients sur {{total}} traités jusqu'ici.",
           "results": {

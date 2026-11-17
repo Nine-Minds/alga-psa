@@ -681,8 +681,6 @@
             "result": "Resultaat",
             "updated": "Gewijzigd"
           },
-          "contactsFailed_one": "{{count}} contactpersoon mislukt",
-          "contactsFailed_other": "{{count}} contactpersonen mislukt",
           "empty": "Er is nog geen synchronisatie uitgevoerd.",
           "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
           "results": {

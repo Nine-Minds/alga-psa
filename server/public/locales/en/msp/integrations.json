@@ -681,8 +681,6 @@
             "result": "Result",
             "updated": "Changed"
           },
-          "contactsFailed_one": "{{count}} contact failed",
-          "contactsFailed_other": "{{count}} contacts failed",
           "empty": "No sync has run yet.",
           "progress": "{{processed}} of {{total}} clients done so far.",
           "results": {

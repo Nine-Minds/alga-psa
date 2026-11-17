@@ -687,10 +687,6 @@
             "result": "Wynik",
             "updated": "Zmienione"
           },
-          "contactsFailed_few": "{{count}} kontakty zakończyły się błędem",
-          "contactsFailed_many": "{{count}} kontaktów zakończyło się błędem",
-          "contactsFailed_one": "{{count}} kontakt zakończył się błędem",
-          "contactsFailed_other": "{{count}} kontaktów zakończyło się błędem",
           "empty": "Nie uruchomiono jeszcze żadnej synchronizacji.",
           "progress": "Dotychczas {{processed}} z {{total}} klientów.",
           "results": {

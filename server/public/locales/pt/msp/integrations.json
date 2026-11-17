@@ -681,8 +681,6 @@
             "result": "Resultado",
             "updated": "Alterado"
           },
-          "contactsFailed_one": "{{count}} contacto com falha",
-          "contactsFailed_other": "{{count}} contactos com falha",
           "empty": "Ainda não foi executada nenhuma sincronização.",
           "progress": "{{processed}} de {{total}} clientes concluídos até agora.",
           "results": {
