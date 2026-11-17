@@ -328,12 +328,16 @@ export async function recordExternalPayment(
 
   // Fire-and-forget: push the payment to QBO on the next sync cycle.
   // Must never throw — a producer failure must not fail the payment action.
+  // The push applier refuses an op with a blank reference, so a manually
+  // entered payment with none (cash) falls back to the Alga payment id: the
+  // provider record still carries a reference that leads back here, instead of
+  // the op retrying its way to 'skipped' and counting as a sync error.
   void enqueueExternalPaymentPush(knex, tenantId, {
     invoiceId: input.invoiceId,
     paymentId,
     amountCents: input.amount,
     provider: input.provider,
-    referenceNumber
+    referenceNumber: referenceNumber || paymentId
   });
 
   // Every balance mutation is reconciled immediately, not just terminal ones.
