@@ -1858,6 +1858,11 @@
           "description": "Połącz Microsoft 365 za pomocą aplikacji dostarczonej przez AlgaPSA. Rejestracja aplikacji Entra nie jest wymagana.",
           "readyDescription": "Aplikacja Microsoft jest zatwierdzona i gotowa do logowania do skrzynki pocztowej.",
           "connectAction": "Połącz skrzynkę pocztową →",
+          "suppliedTitle": "Microsoft jest gotowy do połączenia",
+          "suppliedReadyDescriptionCalendar": "Aplikacja Microsoft udostępniana przez AlgaPSA jest zatwierdzona. Możesz za jej pomocą połączyć skrzynki pocztowe i kalendarze Outlook.",
+          "connectCalendarAction": "Połącz kalendarz →",
+          "approveCalendarAction": "Zatwierdź dostęp do kalendarza",
+          "approveCalendarHint": "Użyj opcji „Zatwierdź dostęp do kalendarza”, jeśli administrator Microsoft zatwierdził tę aplikację, zanim uwzględniono kalendarz.",
           "unavailableTitle": "Poświadczenia Microsoft platformy są niedostępne",
           "unavailableDescription": "To wdrożenie wymaga aplikacji zarządzanej przez Twoją organizację. Dodaj ją za pomocą poniższej konfiguracji zaawansowanej."
         },

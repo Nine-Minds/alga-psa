@@ -1852,6 +1852,11 @@
           "description": "Conecte o Microsoft 365 com o aplicativo fornecido pelo AlgaPSA. Não é necessário registrar um aplicativo no Entra.",
           "readyDescription": "O aplicativo da Microsoft foi aprovado e está pronto para o login da caixa de correio.",
           "connectAction": "Conectar uma caixa de correio →",
+          "suppliedTitle": "A Microsoft está pronta para conectar",
+          "suppliedReadyDescriptionCalendar": "O aplicativo da Microsoft fornecido pela AlgaPSA foi aprovado. Você pode conectar caixas de correio e calendários do Outlook com ele.",
+          "connectCalendarAction": "Conectar um calendário →",
+          "approveCalendarAction": "Aprovar acesso ao calendário",
+          "approveCalendarHint": "Use \"Aprovar acesso ao calendário\" se o administrador da Microsoft aprovou este aplicativo antes de o calendário ser incluído.",
           "unavailableTitle": "As credenciais da Microsoft gerenciadas pela plataforma não estão disponíveis",
           "unavailableDescription": "Esta implantação requer um aplicativo mantido pela sua organização. Use a configuração avançada abaixo para adicionar um."
         },

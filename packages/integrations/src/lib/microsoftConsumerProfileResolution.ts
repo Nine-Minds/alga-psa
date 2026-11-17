@@ -1,3 +1,4 @@
+// LEVERAGE: pattern microsoft-consumer-resolver-fork — forked resolver (also ee/packages/calendar/src/lib/microsoftConsumerProfileResolution.ts); the calendar copy returns `reasonCode` (drives the form's setupReason copy) which the shared one lacks, so the calendar status cannot yet use the shared resolver. Source/offered flags are derived outside it (client id vs platform client id).
 import { randomUUID } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
@@ -165,6 +166,17 @@ export async function getMicrosoftPlatformCredentialAvailability(): Promise<Micr
     clientSecretConfigured,
     tenantIdConfigured: config.tenantIdConfigured,
   };
+}
+
+/**
+ * Client id of the AlgaPSA-supplied Microsoft application, or null when the
+ * platform credentials are not configured. A profile whose client id equals this
+ * is "the platform profile" (see `microsoftPlatformApp.ts`).
+ */
+export async function getMicrosoftPlatformClientId(): Promise<string | null> {
+  const secretProvider = await getSecretProviderInstance();
+  const config = await loadPlatformMicrosoftEmailConfig(secretProvider);
+  return isConfigured(config.clientId) && isConfigured(config.clientSecret) ? config.clientId : null;
 }
 
 async function resolveHostedMicrosoftEmailConfig(

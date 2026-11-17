@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "Inställningarna för Microsoft-leverantören har inte konfigurerats.",
           "body": "Konfigurera först leverantörer under Inställningar → Integrationer → Leverantörer och återvänd sedan hit för att ansluta Outlook-kalendern.",
-          "openSettings": "Öppna leverantörsinställningar"
+          "openSettings": "Öppna leverantörsinställningar",
+          "suppliedApp": "Under Leverantörer kan du konfigurera Microsoft med det program som AlgaPSA tillhandahåller. Ingen Entra-appregistrering behövs."
         },
         "setupReason": {
           "unsupported_consumer": "Microsoft-konsumenttypen stöds inte för kalendern.",
           "binding_not_configured": "Kalendern är ännu inte kopplad till en Microsoft-profil. Konfigurera leverantörer först och återvänd sedan hit för att ansluta Outlook-kalendern.",
           "profile_missing": "Microsoft-profilen som är kopplad till kalendern saknas eller är arkiverad. Välj en aktiv profil under Leverantörer och återvänd sedan hit.",
+          "profile_capability_missing": "Microsoft-profilen som är kopplad till kalendern är inte aktiverad för kalendern. Uppdatera profilen under Leverantörer och återvänd sedan hit.",
           "profile_credentials_missing": "Microsoft-profilen som är kopplad till kalendern saknar nödvändiga autentiseringsuppgifter. Uppdatera profilen under Leverantörer och återvänd sedan hit."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Det gick inte att kopiera",
           "unavailable": "Inte tillgänglig",
           "permissions": "Delegerade behörigheter (Microsoft Graph)",
+          "suppliedIntro": "Outlook-kalendern ansluts med det Microsoft-program som AlgaPSA tillhandahåller. Du blir ombedd att logga in med ditt Microsoft-konto.",
           "tenancy": "Appen kan vara enkelklientorganisation eller flerklientorganisation. Inloggningen följer katalog-ID:t (klient-ID:t) för den Microsoft-profil som är kopplad till Calendar.",
           "openProviders": "Öppna Microsofts leverantörsinställningar"
         },
         "adminConsentPending": {
           "title": "Administratörsgodkännande väntar.",
           "body": "En Microsoft 365-administratör måste fortfarande godkänna den appregistrering som är kopplad till Calendar. Be dem bevilja administratörsmedgivande för behörigheterna nedan och kom sedan tillbaka hit för att ansluta Outlook Calendar.",
+          "bodySupplied": "En Microsoft-administratör i din organisation måste godkänna kalenderåtkomst för det Microsoft-program som AlgaPSA tillhandahåller. Återvänd hit när åtkomsten är godkänd för att ansluta Outlook-kalendern.",
+          "approve": "Godkänn kalenderåtkomst",
+          "linkFailed": "Det gick inte att skapa Microsofts godkännandelänk.",
           "openSettings": "Öppna Microsofts leverantörsinställningar"
         }
       }

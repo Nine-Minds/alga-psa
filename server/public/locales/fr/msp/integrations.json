@@ -1852,6 +1852,11 @@
           "description": "Connectez Microsoft 365 avec l'application fournie par AlgaPSA. Aucun enregistrement d'application Entra n'est requis.",
           "readyDescription": "L'application Microsoft est approuvée et prête pour la connexion à la boîte aux lettres.",
           "connectAction": "Connecter une boîte aux lettres →",
+          "suppliedTitle": "Microsoft est prêt à être connecté",
+          "suppliedReadyDescriptionCalendar": "L'application Microsoft fournie par AlgaPSA est approuvée. Vous pouvez l'utiliser pour connecter des boîtes aux lettres et des calendriers Outlook.",
+          "connectCalendarAction": "Connecter un calendrier →",
+          "approveCalendarAction": "Approuver l'accès au calendrier",
+          "approveCalendarHint": "Utilisez « Approuver l'accès au calendrier » si votre administrateur Microsoft a approuvé cette application avant l'ajout du calendrier.",
           "unavailableTitle": "Les identifiants Microsoft de la plateforme ne sont pas disponibles",
           "unavailableDescription": "Ce déploiement nécessite une application gérée par votre organisation. Utilisez la configuration avancée ci-dessous pour en ajouter une."
         },

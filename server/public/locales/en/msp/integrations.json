@@ -1852,6 +1852,11 @@
           "description": "Connect Microsoft 365 with the application supplied by AlgaPSA. No Entra app registration is required.",
           "readyDescription": "The Microsoft app is approved and ready for mailbox sign-in.",
           "connectAction": "Connect a mailbox →",
+          "suppliedTitle": "Microsoft is ready to connect",
+          "suppliedReadyDescriptionCalendar": "The Microsoft app supplied by AlgaPSA is approved. You can connect Outlook mailboxes and calendars with it.",
+          "connectCalendarAction": "Connect a calendar →",
+          "approveCalendarAction": "Approve calendar access",
+          "approveCalendarHint": "Use \"Approve calendar access\" if your Microsoft administrator approved this app before calendar was included.",
           "unavailableTitle": "Platform Microsoft credentials are unavailable",
           "unavailableDescription": "This deployment requires an app maintained by your organization. Use the advanced setup below to add one."
         },

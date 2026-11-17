@@ -113,6 +113,12 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Microsoft Calendar OAuth error:', error, errorDescription);
       const redirectFailureKind = classifyMicrosoftOAuthFailure({ error, errorDescription });
+      if (redirectFailureKind === 'admin_consent_required') {
+        console.info('Microsoft Calendar OAuth failure classified as admin consent required', {
+          stage: 'authorize',
+          oauthError: error,
+        });
+      }
       const redirectFailureMessage = redirectFailureKind
         ? describeMicrosoftOAuthFailureForMailboxFlow(redirectFailureKind, {
             redirectUri: extractRedirectUriFromDescription(errorDescription),
@@ -469,6 +475,13 @@ export async function GET(request: NextRequest) {
         message: safeFailure.status ? undefined : (safeFailure.message ?? error?.message),
       });
       const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind === 'admin_consent_required') {
+        console.info('Microsoft Calendar OAuth failure classified as admin consent required', {
+          stage: 'token_exchange',
+          oauthError: safeFailure.error,
+          errorCodes: safeFailure.errorCodes,
+        });
+      }
       const errorMessage = failureKind
         ? describeMicrosoftOAuthFailureForMailboxFlow(failureKind, {
             redirectUri: extractRedirectUriFromDescription(safeFailure.errorDescription) ?? redirectUri,

@@ -6,6 +6,7 @@ Use this order for all CE/EE environments:
 2. Configure provider credentials first:
    - Google: `google_client_id`, `google_client_secret`
    - Microsoft: `microsoft_client_id`, `microsoft_client_secret`, optional `microsoft_tenant_id` (`common` default)
+   - Hosted Microsoft alternative: choose **Set up Microsoft** with the application AlgaPSA supplies. It serves Outlook email and Outlook Calendar with no Entra app registration; a customer Entra app is optional.
 3. Save provider settings.
 4. Configure MSP SSO login domains for tenant discovery in `Settings -> Integrations -> Providers`:
    - Add one or more tenant-owned login domains (for example: `acme.com`).

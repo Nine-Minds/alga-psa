@@ -1852,6 +1852,11 @@
           "description": "Anslut Microsoft 365 med appen som tillhandahålls av AlgaPSA. Ingen Entra-appregistrering krävs.",
           "readyDescription": "Microsoft-appen är godkänd och klar för inloggning till e-postlåda.",
           "connectAction": "Anslut en e-postlåda →",
+          "suppliedTitle": "Microsoft är klar att ansluta",
+          "suppliedReadyDescriptionCalendar": "Microsoft-appen som AlgaPSA tillhandahåller är godkänd. Du kan ansluta Outlook-postlådor och -kalendrar med den.",
+          "connectCalendarAction": "Anslut en kalender →",
+          "approveCalendarAction": "Godkänn kalenderåtkomst",
+          "approveCalendarHint": "Använd ”Godkänn kalenderåtkomst” om din Microsoft-administratör godkände den här appen innan kalendern ingick.",
           "unavailableTitle": "Plattformens Microsoft-autentiseringsuppgifter är inte tillgängliga",
           "unavailableDescription": "Den här installationen kräver en app som underhålls av din organisation. Lägg till en via den avancerade konfigurationen nedan."
         },

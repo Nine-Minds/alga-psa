@@ -29,6 +29,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
+import { getMicrosoftEmailAdminConsentUrl } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
 // Deep link to the Microsoft app registration section of the Providers page.
 const MICROSOFT_PROVIDERS_SETTINGS_URL = '/msp/settings?tab=integrations&category=providers&provider=microsoft';
 
@@ -64,6 +66,13 @@ export function MicrosoftCalendarProviderForm({
   // consent (error=consent_required, AADSTS65001, AADSTS90094).
   const [pendingAdminConsent, setPendingAdminConsent] = useState(false);
   const [redirectUri, setRedirectUri] = useState<string | null>(null);
+  // Whose Microsoft app Calendar is bound to once ready: the AlgaPSA-supplied
+  // app ('platform') or a tenant-owned one ('tenant_app').
+  const [providerSetupSource, setProviderSetupSource] = useState<'platform' | 'tenant_app' | null>(null);
+  const [platformOffered, setPlatformOffered] = useState(false);
+  const [setupProfileId, setSetupProfileId] = useState<string | null>(null);
+  const [canManageProviderSettings, setCanManageProviderSettings] = useState(false);
+  const [consentLinkError, setConsentLinkError] = useState<string | null>(null);
   const { toast } = useToast();
   const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
     | 'unsupported_consumer'
@@ -106,9 +115,14 @@ export function MicrosoftCalendarProviderForm({
         setProviderSetupReady(Boolean(res.success && res.ready));
         setProviderSetupReasonCode(res.success ? res.reasonCode || null : null);
         setRedirectUri(res.success ? res.redirectUri || null : null);
+        setProviderSetupSource(res.success && res.ready ? res.source || null : null);
+        setPlatformOffered(Boolean(res.success && res.platformOffered));
+        setSetupProfileId(res.success ? res.profileId || null : null);
+        setCanManageProviderSettings(Boolean(res.success && res.canManageProviderSettings));
       } catch {
         setProviderSetupReady(false);
         setProviderSetupReasonCode(null);
+        setProviderSetupSource(null);
       } finally {
         setProviderSetupLoading(false);
       }
@@ -161,6 +175,22 @@ export function MicrosoftCalendarProviderForm({
         variant: 'destructive',
       });
     }
+  };
+
+  const openPlatformAdminConsent = async () => {
+    setConsentLinkError(null);
+    if (!setupProfileId) return;
+    const result = await getMicrosoftEmailAdminConsentUrl({ profileId: setupProfileId });
+    if (!result.success || !result.url) {
+      setConsentLinkError(result.error || t('calendar.providers.microsoft.adminConsentPending.linkFailed', { defaultValue: 'Could not create the Microsoft approval link.' }));
+      return;
+    }
+    const popup = window.open(result.url, 'microsoft-calendar-admin-consent', 'popup,width=520,height=680');
+    if (!popup) {
+      window.location.assign(result.url);
+      return;
+    }
+    popup.focus?.();
   };
 
   const handleAuthorize = async () => {
@@ -375,19 +405,40 @@ export function MicrosoftCalendarProviderForm({
                   <div className="space-y-2">
                     <div className="font-medium">{t('calendar.providers.microsoft.adminConsentPending.title', { defaultValue: 'Administrator approval is pending.' })}</div>
                     <div className="text-sm text-muted-foreground">
-                      {t('calendar.providers.microsoft.adminConsentPending.body', {
-                        defaultValue: 'A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.',
-                      })}
+                      {providerSetupSource === 'platform'
+                        ? t('calendar.providers.microsoft.adminConsentPending.bodySupplied', {
+                            defaultValue: 'A Microsoft administrator for your organization must approve calendar access for the Microsoft application AlgaPSA supplies. Once they have approved it, return here to connect Outlook Calendar.',
+                          })
+                        : t('calendar.providers.microsoft.adminConsentPending.body', {
+                            defaultValue: 'A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.',
+                          })}
                     </div>
-                    <Button
-                      id="microsoft-calendar-admin-consent-providers-link"
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
-                    >
-                      {t('calendar.providers.microsoft.adminConsentPending.openSettings', { defaultValue: 'Open Microsoft Provider Settings' })}
-                    </Button>
+                    {canManageProviderSettings && providerSetupSource === 'platform' && setupProfileId && (
+                      <Button
+                        id="microsoft-calendar-admin-consent-approve"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void openPlatformAdminConsent()}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        {t('calendar.providers.microsoft.adminConsentPending.approve', { defaultValue: 'Approve calendar access' })}
+                      </Button>
+                    )}
+                    {canManageProviderSettings && providerSetupSource !== 'platform' && (
+                      <Button
+                        id="microsoft-calendar-admin-consent-providers-link"
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
+                      >
+                        {t('calendar.providers.microsoft.adminConsentPending.openSettings', { defaultValue: 'Open Microsoft Provider Settings' })}
+                      </Button>
+                    )}
+                    {consentLinkError && (
+                      <div className="text-sm text-destructive">{consentLinkError}</div>
+                    )}
                   </div>
                 </AlertDescription>
               </Alert>
@@ -406,12 +457,17 @@ export function MicrosoftCalendarProviderForm({
                           })
                         : t('calendar.providers.microsoft.configAlert.body', { defaultValue: 'Configure Providers first in Settings → Integrations → Providers, then return here to connect Outlook Calendar.' })}
                     </div>
+                    {platformOffered && (
+                      <div id="microsoft-calendar-supplied-app-offer" className="text-sm text-muted-foreground">
+                        {t('calendar.providers.microsoft.configAlert.suppliedApp', { defaultValue: 'In Providers you can set up Microsoft with the application AlgaPSA supplies. No Entra app registration is required.' })}
+                      </div>
+                    )}
                     <Button
                       id="configure-microsoft-calendar-providers-link"
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.assign(MICROSOFT_PROVIDERS_SETTINGS_URL)}
+                      onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                     >
                       {t('calendar.providers.microsoft.configAlert.openSettings', { defaultValue: 'Open Providers Settings' })}
                     </Button>
@@ -419,6 +475,14 @@ export function MicrosoftCalendarProviderForm({
                 </AlertDescription>
               </Alert>
             )}
+            {!providerSetupLoading && providerSetupSource === 'platform' ? (
+              <div id="microsoft-calendar-setup-guidance" className="space-y-3 rounded-lg border p-4">
+                <div className="font-medium">{t('calendar.providers.microsoft.setup.title', { defaultValue: 'Before you connect' })}</div>
+                <p className="text-sm text-muted-foreground">
+                  {t('calendar.providers.microsoft.setup.suppliedIntro', { defaultValue: 'Outlook Calendar connects with the Microsoft application supplied by AlgaPSA. You will be asked to sign in with your Microsoft account.' })}
+                </p>
+              </div>
+            ) : !providerSetupLoading && (
             <div id="microsoft-calendar-setup-guidance" className="space-y-3 rounded-lg border p-4">
               <div className="font-medium">{t('calendar.providers.microsoft.setup.title', { defaultValue: 'Before you connect' })}</div>
               <p className="text-sm text-muted-foreground">
@@ -464,6 +528,7 @@ export function MicrosoftCalendarProviderForm({
                 {t('calendar.providers.microsoft.setup.openProviders', { defaultValue: 'Open Microsoft provider settings' })}
               </Button>
             </div>
+            )}
             <div className={`p-4 rounded-lg transition-colors ${
               oauthStatus === 'success' ? 'bg-success/10 border-2 border-success/30' : 'bg-muted/50'
             }`}>

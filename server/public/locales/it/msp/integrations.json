@@ -1852,6 +1852,11 @@
           "description": "Connetti Microsoft 365 con l'applicazione fornita da AlgaPSA. Non occorre registrare un'app Entra.",
           "readyDescription": "L'app Microsoft è approvata e pronta per l'accesso alla cassetta postale.",
           "connectAction": "Collega una cassetta postale →",
+          "suppliedTitle": "Microsoft è pronto per la connessione",
+          "suppliedReadyDescriptionCalendar": "L'app Microsoft fornita da AlgaPSA è approvata. Puoi usarla per collegare cassette postali e calendari di Outlook.",
+          "connectCalendarAction": "Collega un calendario →",
+          "approveCalendarAction": "Approva l'accesso al calendario",
+          "approveCalendarHint": "Usa «Approva l'accesso al calendario» se il tuo amministratore Microsoft ha approvato questa app prima che il calendario fosse incluso.",
           "unavailableTitle": "Le credenziali Microsoft della piattaforma non sono disponibili",
           "unavailableDescription": "Questa distribuzione richiede un'app gestita dalla tua organizzazione. Usa la configurazione avanzata qui sotto per aggiungerne una."
         },

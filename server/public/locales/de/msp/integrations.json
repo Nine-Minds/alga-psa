@@ -1852,6 +1852,11 @@
           "description": "Verbinden Sie Microsoft 365 mit der von AlgaPSA bereitgestellten Anwendung. Eine Entra-App-Registrierung ist nicht erforderlich.",
           "readyDescription": "Die Microsoft-App ist genehmigt und für die Postfachanmeldung bereit.",
           "connectAction": "Postfach verbinden →",
+          "suppliedTitle": "Microsoft kann verbunden werden",
+          "suppliedReadyDescriptionCalendar": "Die von AlgaPSA bereitgestellte Microsoft-App ist genehmigt. Sie können damit Outlook-Postfächer und -Kalender verbinden.",
+          "connectCalendarAction": "Kalender verbinden →",
+          "approveCalendarAction": "Kalenderzugriff genehmigen",
+          "approveCalendarHint": "Verwenden Sie „Kalenderzugriff genehmigen“, wenn Ihr Microsoft-Administrator diese App genehmigt hat, bevor der Kalender enthalten war.",
           "unavailableTitle": "Microsoft-Plattformanmeldedaten sind nicht verfügbar",
           "unavailableDescription": "Diese Bereitstellung erfordert eine App, die von Ihrer Organisation verwaltet wird. Fügen Sie über die erweiterte Einrichtung unten eine hinzu."
         },

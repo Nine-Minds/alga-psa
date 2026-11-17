@@ -232,12 +232,14 @@
         "configAlert": {
           "title": "As configurações do provedor Microsoft não estão definidas.",
           "body": "Configure os provedores primeiro em Configurações → Integrações → Provedores e depois retorne aqui para conectar o Calendário do Outlook.",
-          "openSettings": "Abra as configurações dos provedores"
+          "openSettings": "Abra as configurações dos provedores",
+          "suppliedApp": "Em Provedores, você pode configurar a Microsoft com o aplicativo fornecido pela AlgaPSA. Não é necessário registrar um aplicativo no Entra."
         },
         "setupReason": {
           "unsupported_consumer": "Tipo de consumidor da Microsoft sem suporte para Calendário.",
           "binding_not_configured": "O Calendário ainda não está vinculado a um perfil da Microsoft. Configure os provedores primeiro e depois retorne aqui para conectar o Calendário do Outlook.",
           "profile_missing": "O perfil da Microsoft vinculado ao Calendário está ausente ou arquivado. Selecione um perfil ativo em Provedores e retorne aqui.",
+          "profile_capability_missing": "O perfil da Microsoft vinculado ao Calendário não está habilitado para o Calendário. Atualize o perfil em Provedores e retorne aqui.",
           "profile_credentials_missing": "O perfil da Microsoft vinculado ao Calendário não possui as credenciais necessárias. Atualize o perfil em Provedores e retorne aqui."
         },
         "defaults": {
@@ -253,12 +255,16 @@
           "copyFailed": "Não foi possível copiar",
           "unavailable": "Indisponível",
           "permissions": "Permissões delegadas (Microsoft Graph)",
+          "suppliedIntro": "O Calendário do Outlook se conecta com o aplicativo da Microsoft fornecido pela AlgaPSA. Você será solicitado a entrar com sua conta da Microsoft.",
           "tenancy": "O aplicativo pode ser de locatário único ou multilocatário. O login segue o ID do diretório (locatário) do perfil da Microsoft vinculado ao Calendar.",
           "openProviders": "Abrir configurações de provedores da Microsoft"
         },
         "adminConsentPending": {
           "title": "A aprovação do administrador está pendente.",
           "body": "Um administrador do Microsoft 365 ainda precisa aprovar o registro de aplicativo vinculado ao Calendar. Peça que conceda o consentimento do administrador para as permissões listadas abaixo e volte aqui para conectar o Outlook Calendar.",
+          "bodySupplied": "Um administrador da Microsoft da sua organização precisa aprovar o acesso ao calendário para o aplicativo da Microsoft fornecido pela AlgaPSA. Depois da aprovação, retorne aqui para conectar o Calendário do Outlook.",
+          "approve": "Aprovar acesso ao calendário",
+          "linkFailed": "Não foi possível criar o link de aprovação da Microsoft.",
           "openSettings": "Abrir configurações de provedores da Microsoft"
         }
       }

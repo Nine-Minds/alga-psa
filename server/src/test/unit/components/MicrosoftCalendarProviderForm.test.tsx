@@ -18,9 +18,14 @@ vi.mock('@alga-psa/ee-calendar/actions', () => ({
 vi.mock('@alga-psa/ee-calendar/lib/actions/integrations/calendarSetupActions', () => ({
   getMicrosoftCalendarSetupStatus: vi.fn(),
 }));
+vi.mock('@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions', () => ({
+  getMicrosoftEmailAdminConsentUrl: vi.fn(),
+}));
 const toast = vi.hoisted(() => vi.fn());
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({ useToast: () => ({ toast }) }));
 
+import { getMicrosoftEmailAdminConsentUrl } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import { getMicrosoftCalendarSetupStatus } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarSetupActions';
 
 const REDIRECT_URI = 'https://psa.example.test/api/auth/microsoft/calendar/callback';
@@ -84,7 +89,7 @@ describe('MicrosoftCalendarProviderForm', () => {
   });
 
   it('shows the admin-consent-pending state when the callback reports it, and keeps Connect available', async () => {
-    setStatus({ ready: true, state: 'ready' });
+    setStatus({ ready: true, state: 'ready', canManageProviderSettings: true });
     renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
     await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
     expect(screen.queryByText('Administrator approval is pending.')).toBeNull();
@@ -127,7 +132,68 @@ describe('MicrosoftCalendarProviderForm', () => {
 
     await waitFor(() => expect(screen.getByText('Microsoft provider settings are not configured.')).toBeInTheDocument());
     await userEvent.click(document.getElementById('configure-microsoft-calendar-providers-link')!);
-    expect(assign).toHaveBeenCalledWith(PROVIDERS_URL);
+    expect(assign).toHaveBeenCalledWith(PROVIDER_SETUP_ENTRY_PATH);
     expect(document.getElementById('microsoft-authorize-button')).toBeDisabled();
+    // No supplied-app offer unless the deployment offers it.
+    expect(document.getElementById('microsoft-calendar-supplied-app-offer')).toBeNull();
+  });
+
+  it('T007: not-configured state describes the supplied-app path when it is offered', async () => {
+    setStatus({ ready: false, state: 'not_configured', reasonCode: 'binding_not_configured', platformOffered: true });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-calendar-supplied-app-offer')).not.toBeNull());
+    expect(document.getElementById('microsoft-calendar-supplied-app-offer')!.textContent).toMatch(/application AlgaPSA supplies/);
+  });
+
+  it('T007: supplied-app ready state hides the Entra instructions and shows supplied-app copy', async () => {
+    setStatus({ ready: true, state: 'ready', source: 'platform', platformOffered: true, profileId: 'p1' });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(screen.getByText(/Microsoft application supplied by AlgaPSA/)).toBeInTheDocument());
+    expect(screen.getByText(/asked to sign in/)).toBeInTheDocument();
+    expect(screen.getByText('Before you connect')).toBeInTheDocument();
+    expect(screen.queryByText(/Entra app registration/)).toBeNull();
+    expect(document.getElementById('microsoft-calendar-redirect-uri')).toBeNull();
+    expect(document.getElementById('microsoft-calendar-scopes')).toBeNull();
+    expect(document.getElementById('microsoft-authorize-button')).toBeEnabled();
+  });
+
+  it('T007: tenant-owned ready state still shows the Entra instructions', async () => {
+    setStatus({ ready: true, state: 'ready', source: 'tenant_app', platformOffered: true });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(screen.getByText(/In your Microsoft Entra app registration/)).toBeInTheDocument());
+    expect(document.getElementById('microsoft-calendar-scopes')).not.toBeNull();
+  });
+
+  const consentFailure = () => act(() => {
+    window.dispatchEvent(new MessageEvent('message', {
+      data: { type: 'oauth-callback', provider: 'microsoft', resource: 'calendar', success: false, error: 'pending_admin_consent', errorDescription: 'x' },
+    }));
+  });
+
+  it('T010: admin-approval error shows the message and the consent link to a user who can manage provider settings', async () => {
+    setStatus({ ready: true, state: 'ready', source: 'platform', profileId: 'p1', canManageProviderSettings: true });
+    vi.mocked(getMicrosoftEmailAdminConsentUrl).mockResolvedValue({ success: true, url: 'https://login.microsoftonline.com/x/adminconsent' } as any);
+    const open = vi.fn().mockReturnValue({ focus: vi.fn() });
+    Object.defineProperty(window, 'open', { configurable: true, value: open });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
+    consentFailure();
+
+    await waitFor(() => expect(screen.getByText(/administrator for your organization must approve calendar access/)).toBeInTheDocument());
+    await userEvent.click(document.getElementById('microsoft-calendar-admin-consent-approve')!);
+    expect(getMicrosoftEmailAdminConsentUrl).toHaveBeenCalledWith({ profileId: 'p1' });
+    expect(open).toHaveBeenCalledWith('https://login.microsoftonline.com/x/adminconsent', expect.any(String), expect.any(String));
+  });
+
+  it('T010: a user without provider settings permission sees the message but no consent link', async () => {
+    setStatus({ ready: true, state: 'ready', source: 'platform', profileId: 'p1', canManageProviderSettings: false });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
+    consentFailure();
+
+    await waitFor(() => expect(screen.getByText(/administrator for your organization must approve calendar access/)).toBeInTheDocument());
+    expect(document.getElementById('microsoft-calendar-admin-consent-approve')).toBeNull();
+    expect(document.getElementById('microsoft-calendar-admin-consent-providers-link')).toBeNull();
+    expect(getMicrosoftEmailAdminConsentUrl).not.toHaveBeenCalled();
   });
 });

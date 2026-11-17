@@ -1852,6 +1852,11 @@
           "description": "Conecte Microsoft 365 con la aplicación proporcionada por AlgaPSA. No es necesario registrar una aplicación de Entra.",
           "readyDescription": "La aplicación de Microsoft está aprobada y lista para iniciar sesión en el buzón.",
           "connectAction": "Conectar un buzón →",
+          "suppliedTitle": "Microsoft está listo para conectarse",
+          "suppliedReadyDescriptionCalendar": "La aplicación de Microsoft que suministra AlgaPSA está aprobada. Puede conectar buzones y calendarios de Outlook con ella.",
+          "connectCalendarAction": "Conectar un calendario →",
+          "approveCalendarAction": "Aprobar el acceso al calendario",
+          "approveCalendarHint": "Use «Aprobar el acceso al calendario» si su administrador de Microsoft aprobó esta aplicación antes de que se incluyera el calendario.",
           "unavailableTitle": "Las credenciales de Microsoft de la plataforma no están disponibles",
           "unavailableDescription": "Esta implementación requiere una aplicación mantenida por su organización. Use la configuración avanzada que aparece a continuación para agregar una."
         },

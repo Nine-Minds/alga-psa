@@ -1852,6 +1852,11 @@
           "description": "Verbind Microsoft 365 met de toepassing die AlgaPSA levert. Er is geen Entra-appregistratie nodig.",
           "readyDescription": "De Microsoft-app is goedgekeurd en gereed voor aanmelding bij het postvak.",
           "connectAction": "Een postvak verbinden →",
+          "suppliedTitle": "Microsoft kan worden gekoppeld",
+          "suppliedReadyDescriptionCalendar": "De Microsoft-app die AlgaPSA levert is goedgekeurd. U kunt er Outlook-postvakken en -agenda's mee verbinden.",
+          "connectCalendarAction": "Een agenda verbinden →",
+          "approveCalendarAction": "Agendatoegang goedkeuren",
+          "approveCalendarHint": "Gebruik \"Agendatoegang goedkeuren\" als uw Microsoft-beheerder deze app heeft goedgekeurd voordat de agenda erbij zat.",
           "unavailableTitle": "Microsoft-platformreferenties zijn niet beschikbaar",
           "unavailableDescription": "Voor deze implementatie is een door uw organisatie beheerde app vereist. Gebruik de geavanceerde configuratie hieronder om er een toe te voegen."
         },

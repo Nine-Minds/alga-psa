@@ -8,6 +8,11 @@ import {
   hasMicrosoftProfileCapability,
   normalizeMicrosoftProfileCapabilities,
 } from '../actions/integrations/microsoftShared';
+import { getMicrosoftPlatformClientId } from './microsoftConsumerProfileResolution';
+import {
+  applyMicrosoftPlatformAppServedConsumers,
+  isMicrosoftPlatformClientId,
+} from './microsoftPlatformApp';
 
 export const MICROSOFT_EMAIL_CONSENT_EXPECTED_ERRORS = [
   'The pending Microsoft Email profile no longer exists',
@@ -25,7 +30,10 @@ function normalizeClientId(value: string): string {
 /**
  * The single writer of `email_admin_consent_granted_at`. Validates the pending
  * profile, stamps consent (keeping the original timestamp when the same Microsoft
- * tenant was already granted) and always (re)binds the `email` consumer.
+ * tenant was already granted) and always (re)binds the `email` consumer. When the
+ * consented profile is the AlgaPSA-supplied (platform) app, it also binds every
+ * other consumer the platform app serves that has no binding yet, never
+ * replacing a binding to a different profile. Tenant-owned profiles: email only.
  * `actorUserId` is null when consent arrives via a copied approval link.
  */
 export async function writeMicrosoftEmailAdminConsent(input: {
@@ -38,6 +46,7 @@ export async function writeMicrosoftEmailAdminConsent(input: {
   const { knex } = await createTenantKnex();
   const tenant = input.algaTenant;
   const now = new Date();
+  const platformClientId = await getMicrosoftPlatformClientId();
 
   await knex.transaction(async (trx: any) => {
     const db = tenantDb(trx, tenant);
@@ -91,6 +100,24 @@ export async function writeMicrosoftEmailAdminConsent(input: {
         created_at: now,
         updated_at: now,
       });
+    }
+
+    if (isMicrosoftPlatformClientId(profile.client_id, platformClientId)) {
+      const applied = await applyMicrosoftPlatformAppServedConsumers(
+        db,
+        tenant,
+        profile,
+        undefined,
+        input.actorUserId
+      );
+      if (applied.changed) {
+        console.info('[microsoftEmailAdminConsent] bound supplied-app consumers at consent', {
+          tenant,
+          profileId: input.profileId,
+          addedCapabilities: applied.addedCapabilities,
+          addedBindings: applied.addedBindings,
+        });
+      }
     }
   });
 }

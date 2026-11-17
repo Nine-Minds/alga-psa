@@ -12,7 +12,7 @@ export type MicrosoftOAuthFailureKind =
   | 'redirect_uri_mismatch' // AADSTS50011
   | 'invalid_client_secret' // AADSTS7000215
   | 'expired_client_secret' // AADSTS7000222
-  | 'admin_consent_required'; // error=consent_required, AADSTS65001, AADSTS90094
+  | 'admin_consent_required'; // error=consent_required, AADSTS65001, AADSTS90094, interaction_required + admin/consent description
 
 export interface MicrosoftOAuthFailureInput {
   error?: string | null;
@@ -50,7 +50,13 @@ export function classifyMicrosoftOAuthFailure(
   const code = extractAadstsCode(input);
   if (code) return CODE_TO_KIND[code];
   // The authorize redirect reports a missing grant as a bare OAuth error.
-  if ((input.error || '').toLowerCase() === 'consent_required') return 'admin_consent_required';
+  const error = (input.error || '').toLowerCase();
+  if (error === 'consent_required') return 'admin_consent_required';
+  // `interaction_required` alone just means "the user must sign in again"; it is
+  // a consent failure only when the description says the grant needs approval.
+  if (error === 'interaction_required' && /admin|consent/i.test(input.errorDescription || '')) {
+    return 'admin_consent_required';
+  }
   return null;
 }
 

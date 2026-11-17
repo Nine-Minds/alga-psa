@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { MAILBOX_SETUP_ENTRY_PATH, resolveProductNavDestination } from '@alga-psa/types';
+import { CALENDAR_SETUP_ENTRY_PATH, MAILBOX_SETUP_ENTRY_PATH, resolveProductNavDestination } from '@alga-psa/types';
 
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
@@ -393,7 +393,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
 
     render(<MicrosoftIntegrationSettings />);
 
-    expect(await screen.findByText('Microsoft email is ready to connect')).toBeInTheDocument();
+    expect(await screen.findByText('Microsoft is ready to connect')).toBeInTheDocument();
     expect(screen.queryByText('Which Microsoft app each service uses')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New app registration' })).not.toBeInTheDocument();
 
@@ -434,6 +434,39 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(resolveProductNavDestination('mailbox', 'psa')).toBe(
       '/msp/settings/integrations?category=communication'
     );
+  });
+
+  it('T008: supplied-app ready banner offers mailbox and calendar actions (EE) plus calendar approval', async () => {
+    const user = userEvent.setup();
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailSetup: { state: 'ready', source: 'platform', hosted: true, platformOffered: true, automatedCreationAvailable: true, profileId: 'platform-profile' },
+    }));
+    getMicrosoftEmailAdminConsentUrlMock.mockResolvedValue({ success: true, url: 'https://login.microsoftonline.com/t/adminconsent' });
+    const open = vi.fn().mockReturnValue({ focus: vi.fn() });
+    Object.defineProperty(window, 'open', { configurable: true, value: open });
+
+    render(<MicrosoftIntegrationSettings />);
+
+    await user.click(await screen.findByRole('button', { name: 'Connect a calendar →' }));
+    expect(routerPushMock).toHaveBeenCalledWith(CALENDAR_SETUP_ENTRY_PATH);
+    await user.click(screen.getByRole('button', { name: 'Connect a mailbox →' }));
+    expect(routerPushMock).toHaveBeenCalledWith(MAILBOX_SETUP_ENTRY_PATH);
+    await user.click(screen.getByRole('button', { name: 'Approve calendar access' }));
+    expect(getMicrosoftEmailAdminConsentUrlMock).toHaveBeenCalledWith({ profileId: 'platform-profile' });
+    expect(open).toHaveBeenCalledWith('https://login.microsoftonline.com/t/adminconsent', expect.any(String), expect.any(String));
+  });
+
+  it('T008: without calendar (CE) the supplied-app banner offers the mailbox action only', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus({
+      emailSetup: { state: 'ready', source: 'platform', hosted: true, platformOffered: true, automatedCreationAvailable: true, profileId: 'platform-profile' },
+    }));
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByRole('button', { name: 'Connect a mailbox →' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect a calendar →' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve calendar access' })).not.toBeInTheDocument();
   });
 
   it('does not offer the platform app when the server reports a self-hosted deployment', async () => {
