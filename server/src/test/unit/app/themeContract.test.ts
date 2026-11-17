@@ -1,5 +1,5 @@
 /**
- * One suite for the whole theme contract, in six layers:
+ * One suite for the whole theme contract, in eight layers:
  *
  *   1. token blocks     — every pair declares the values it must, and the
  *                         shade-inversion / separation invariants hold.
@@ -11,10 +11,16 @@
  *   6. element contrast — what components actually paint: every className that
  *                         names a --color-* as both ink and fill, measured
  *                         across all nine pairs in both modes.
+ *   7. tab chrome ink   — the grey rungs tab strips name, measured against the
+ *                         ground they rest on, in shipped and generated pairs.
+ *   8. palette classes  — no file grows a new raw Tailwind palette class, which
+ *                         no layer above can see and no theme can reach.
  *
- * They live together because they fail together: all six exist to catch styling
- * that looks correct in light mode and breaks in dark. Layers 4 and 6 are the
- * pair: 4 checks tokens against each other, 6 checks the combinations shipped.
+ * They live together because they fail together: each one catches styling that
+ * looks correct as authored and breaks once the tenant's pair, mode or
+ * high-contrast setting moves. Layers 4 and 6 are the pair: 4 checks tokens
+ * against each other, 6 checks the combinations shipped. Layers 5, 7 and 8 are
+ * the escape hatches — colour that names no token, so no other layer sees it.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'fs';
