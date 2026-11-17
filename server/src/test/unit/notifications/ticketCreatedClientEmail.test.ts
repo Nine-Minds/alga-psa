@@ -21,6 +21,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 import { ticketEmailSubscriberTestHarness } from '../../../lib/eventBus/subscribers/ticketEmailSubscriber';
+import { projectTicketEmailContext } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
 import { StaticTemplateProcessor } from '../../../../../packages/email/src/templateProcessors';
 
 const require = createRequire(import.meta.url);
@@ -61,6 +62,13 @@ describe.each(getTemplate().translations)('ticket-created-client ($language)', (
       undefined,
     );
     expect(baseTicketContext.fromEmail).toBe(fromEmail);
+    // Client recipients render the projected context, which must retain the origin flag.
+    const projection = projectTicketEmailContext(
+      { ticket: { ...baseTicketContext, url: portalUrl } },
+      'client',
+    );
+    expect(projection.context.ticket).toHaveProperty('fromEmail', fromEmail);
+    expect(projection.dropped).not.toContain('ticket.fromEmail');
 
     const processor = new StaticTemplateProcessor(
       translation.subject,
@@ -68,7 +76,7 @@ describe.each(getTemplate().translations)('ticket-created-client ($language)', (
       translation.textContent,
     );
     const { subject, html, text } = await processor.process({
-      templateData: { ticket: { ...baseTicketContext, url: portalUrl } },
+      templateData: projection.context,
     });
 
     const dom = new JSDOM(html);
