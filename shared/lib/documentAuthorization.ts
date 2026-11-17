@@ -393,7 +393,10 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
-      mutationGuards: [refuseMutationGrantedOnlyByPublishedParent],
+      // Only a subject that holds the rule can be refused by it; MSP subjects carry no relationship rules.
+      mutationGuards: relationshipRules.some((rule) => rule.template === 'readable_via_published_parent')
+        ? [refuseMutationGrantedOnlyByPublishedParent]
+        : [],
     }),
     bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,

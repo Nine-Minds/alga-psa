@@ -263,6 +263,15 @@ describeDb('KB article images readable by client portal users', { shuffle: false
   });
 
   describe('5. MSP regression', () => {
+    it('an MSP user who did not upload the image may still update it (the mutation guard does not touch MSP)', async () => {
+      const otherMsp = userRow(await createUser(db, tenant, { user_type: 'internal' }), tenant, 'internal');
+      const docs = await imageDocs(['published', 'internal']);
+      for (const action of ['update', 'delete'] as const) {
+        const out = await db.transaction((trx) => authorizeAndRedactDocumentsForAction(trx, tenant, otherMsp, docs as any, action));
+        expect(out, action).toHaveLength(2);
+      }
+    });
+
     it('an MSP user still reads both client-audience and internal-audience images (record check and real path)', async () => {
       const readable = await recordReadable(users.msp, ['published', 'internal', 'draft']);
       expect(readable).toEqual(new Set(['published', 'internal', 'draft']));

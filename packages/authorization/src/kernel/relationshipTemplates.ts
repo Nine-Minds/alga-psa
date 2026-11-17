@@ -313,6 +313,13 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   },
   // The record itself is on an explicit list (a project shared with a seat arrangement, say). An empty list
   // and a resource with no id column both deny.
+  selected_records: {
+    matches: (input) => Boolean(input.record?.id && input.selectedRecordIds?.includes(input.record.id)),
+    compileSql: (builder, ctx) => {
+      if (!ctx.adapter.idColumn) { deny(builder); return; }
+      whereInOrDeny(builder, ctx.adapter.idColumn, ctx.selectedRecordIds);
+    },
+  },
   // The record is readable because a published parent (e.g. a client-audience KB article for its embedded
   // images) is. The resource decides that when it builds the record; undefined is a refusal.
   readable_via_published_parent: {
@@ -320,13 +327,6 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     compileSql: (builder, ctx) => {
       if (ctx.adapter.applyReadableViaPublishedParent) ctx.adapter.applyReadableViaPublishedParent(builder);
       else deny(builder);
-    },
-  },
-  selected_records: {
-    matches: (input) => Boolean(input.record?.id && input.selectedRecordIds?.includes(input.record.id)),
-    compileSql: (builder, ctx) => {
-      if (!ctx.adapter.idColumn) { deny(builder); return; }
-      whereInOrDeny(builder, ctx.adapter.idColumn, ctx.selectedRecordIds);
     },
   },
 };
