@@ -537,6 +537,21 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
  * @param block - The table block to convert
  * @returns The markdown representation of the table
  */
+
+/**
+ * Inline content of one table cell. Legacy tables store a cell as the inline
+ * array itself; BlockNote 0.47 stores `{ type: 'tableCell', content: [...] }`.
+ * Both email renditions read cells through this so the shapes cannot drift.
+ */
+function tableCellInlineContent(cell: unknown): any[] {
+  if (Array.isArray(cell)) return cell;
+  if (cell && typeof cell === 'object') {
+    const content = (cell as { content?: unknown }).content;
+    if (Array.isArray(content)) return content;
+  }
+  return [];
+}
+
 function convertTableToMarkdown(block: Block | PartialBlock): string {
   try {
     const content = block.content as any;
@@ -567,13 +582,12 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
       // Add cells for this row
       let rowMarkdown = '|';
       for (let colIndex = 0; colIndex < numCols; colIndex++) {
-        const cell = cells[colIndex] || [];
+        const cellInline = tableCellInlineContent(cells[colIndex]);
         let cellText = ' ';
 
-        // Extract styled text from cell content
-        if (Array.isArray(cell)) {
-          // Use our styled text extraction function
-          cellText = extractStyledTextFromContent(cell);
+        // Use our styled text extraction function
+        if (cellInline.length > 0) {
+          cellText = extractStyledTextFromContent(cellInline);
 
           // If cell is empty, use a space to maintain table structure
           if (!cellText || cellText.trim() === '') {
@@ -846,7 +860,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
             tableHTML += '<tr>';
             const cells = Array.isArray(row?.cells) ? row.cells : [];
             cells.forEach((cellContent) => {
-              const inlineArray = Array.isArray(cellContent) ? cellContent : [];
+              const inlineArray = tableCellInlineContent(cellContent);
               tableHTML += `<td>${extractStyledTextToHTML(inlineArray as any[])}</td>`;
             });
             tableHTML += '</tr>';
