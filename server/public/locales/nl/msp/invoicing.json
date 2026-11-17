@@ -924,6 +924,23 @@
       "refusedCancelled": "Ongeldig gemaakte of geannuleerde facturen worden niet met {{provider}} gesynchroniseerd.",
       "cycleFailed": "Synchronisatie met {{provider}} mislukt: {{reason}} De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd.",
       "cycleFailedNoReason": "Synchronisatie met {{provider}} mislukt. De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd."
+    },
+    "paymentLink": {
+      "copy": "Betaallink kopiëren",
+      "copied": "Betaallink gekopieerd",
+      "manualCopy": "Uw browser heeft het kopiëren geblokkeerd. Kopieer de betaallink hier:",
+      "reasons": {
+        "invoice-not-found": "Deze factuur is niet gevonden.",
+        "invoice-voided": "Deze factuur is geannuleerd en heeft daarom geen betaallink.",
+        "invoice-paid": "Deze factuur is al betaald en heeft daarom geen betaallink.",
+        "invoice-not-finalized": "Deze factuur is nog niet definitief gemaakt en heeft daarom geen betaallink.",
+        "credit-note": "Bij een creditnota is niets te betalen, dus er is geen betaallink.",
+        "nothing-due": "Deze factuur heeft geen openstaand bedrag en heeft daarom geen betaallink.",
+        "offline-payment-method": "Deze factuur wordt gefactureerd met een methode die niet online wordt betaald en heeft daarom geen betaallink.",
+        "online-payments-off": "Online betalingen zijn niet ingeschakeld voor dit account, dus er is geen betaallink.",
+        "no-public-origin": "Er is geen openbaar webadres ingesteld voor het klantenportaal, dus er kan geen betaallink worden gemaakt.",
+        "link-unavailable": "De betaallink kon nu niet worden gemaakt. Probeer het opnieuw."
+      }
     }
   },
   "templateEditor": {
@@ -1176,7 +1193,9 @@
     "errors": {
       "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
       "sendFailed": "Het verzenden van e-mails is niet gelukt"
-    }
+    },
+    "invoiceCancelledRefusal": "Deze factuur is geannuleerd en kan daarom niet per e-mail worden verzonden.",
+    "paidReceiptNotice": "Deze factuur is betaald: de e-mail wordt verzonden als betalingsbewijs."
   },
   "generateTab": {
     "fields": {

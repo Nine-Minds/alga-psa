@@ -61,7 +61,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
-import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
@@ -2201,48 +2201,19 @@ async function adaptToWasmViewModel(
   previewTax: number,
   tenant: string | null // Added tenant for fetching tenant client info
 ): Promise<WasmInvoiceViewModel> {
-  // Fetch Tenant Client Info (similar logic to getFullInvoiceById)
+  // Tenant party (name, address, Settings > Branding logo) comes from the same
+  // adapter the invoice screen view and the PDF use.
   let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
   let poNumber: string | null = null;
   if (tenant) {
     const { knex } = await createTenantKnex(tenant); // Get knex instance again if needed
-    const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, tenant).table('tenant_companies')
-        .where({ is_default: true })
-        .select('client_id')
-        .first();
-    });
-
-    if (tenantClientLink) {
-      const tenantClientDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const db = tenantDb(trx, tenant);
-        const query = db.table('clients as c');
-        db.tenantJoin(query, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
-          type: 'left',
-          on(join) {
-            join.andOn('cl.is_default', '=', trx.raw('true'));
-          },
-        });
-
-        return await query
-          .select(
-            'c.client_name',
-            'cl.address_line1 as address'
-          )
-          .where({
-            'c.client_id': tenantClientLink.client_id,
-          })
-          .first();
-      });
-
-      if (tenantClientDetails) {
-        const logoUrl = await getClientDocumentLogoUrl(tenantClientLink.client_id, tenant);
-        tenantClientInfo = {
-          name: tenantClientDetails.client_name,
-          address: tenantClientDetails.address || 'N/A',
-          logoUrl: logoUrl || null, // Use null if logoUrl is empty/null
-        };
-      }
+    const tenantParty = await fetchTenantParty(knex, tenant);
+    if (tenantParty) {
+      tenantClientInfo = {
+        name: tenantParty.name,
+        address: tenantParty.address || 'N/A',
+        logoUrl: tenantParty.logo_url,
+      };
     }
 
     const clientContractId = getSingleClientContractIdFromCharges(billingResult.charges);

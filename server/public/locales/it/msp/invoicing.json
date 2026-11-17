@@ -924,6 +924,23 @@
       "refusedCancelled": "Le fatture annullate non vengono sincronizzate con {{provider}}.",
       "cycleFailed": "Sincronizzazione con {{provider}} non riuscita: {{reason}} La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione.",
       "cycleFailedNoReason": "Sincronizzazione con {{provider}} non riuscita. La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione."
+    },
+    "paymentLink": {
+      "copy": "Copia link di pagamento",
+      "copied": "Link di pagamento copiato",
+      "manualCopy": "Il browser ha bloccato la copia. Copia il link di pagamento da qui:",
+      "reasons": {
+        "invoice-not-found": "Impossibile trovare questa fattura.",
+        "invoice-voided": "Questa fattura è stata annullata, quindi non ha un link di pagamento.",
+        "invoice-paid": "Questa fattura è già pagata, quindi non ha un link di pagamento.",
+        "invoice-not-finalized": "Questa fattura non è ancora stata finalizzata, quindi non ha un link di pagamento.",
+        "credit-note": "Una nota di credito non ha nulla da pagare, quindi non ha un link di pagamento.",
+        "nothing-due": "Questa fattura non ha un saldo dovuto, quindi non ha un link di pagamento.",
+        "offline-payment-method": "Questa fattura è addebitata con un metodo che non si paga online, quindi non ha un link di pagamento.",
+        "online-payments-off": "I pagamenti online non sono abilitati per questo account, quindi non c'è un link di pagamento.",
+        "no-public-origin": "Nessun indirizzo web pubblico è configurato per il portale clienti, quindi non è possibile creare un link di pagamento.",
+        "link-unavailable": "Al momento non è stato possibile creare il link di pagamento. Riprova."
+      }
     }
   },
   "templateEditor": {
@@ -1176,7 +1193,9 @@
     "errors": {
       "loadRecipients": "Impossibile caricare le informazioni sul destinatario",
       "sendFailed": "Impossibile inviare e-mail"
-    }
+    },
+    "invoiceCancelledRefusal": "Questa fattura è stata annullata, quindi non può essere inviata via e-mail.",
+    "paidReceiptNotice": "Questa fattura è pagata: l'e-mail verrà inviata come ricevuta di pagamento."
   },
   "generateTab": {
     "fields": {

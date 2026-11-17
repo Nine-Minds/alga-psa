@@ -91,7 +91,8 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
   // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
-  // the document a client receives. Existing invoices already carry real branding.
+  // the document a client receives. Existing invoices take the same Settings > Branding logo
+  // from the tenant party the invoice view model already carries; that path does not use this state.
   const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
   useEffect(() => {
     let cancelled = false;

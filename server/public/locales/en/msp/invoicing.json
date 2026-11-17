@@ -924,6 +924,23 @@
       "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
       "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
       "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
+    },
+    "paymentLink": {
+      "copy": "Copy payment link",
+      "copied": "Payment link copied",
+      "manualCopy": "Your browser blocked copying. Copy the payment link from here:",
+      "reasons": {
+        "invoice-not-found": "This invoice could not be found.",
+        "invoice-voided": "This invoice has been voided, so it has no payment link.",
+        "invoice-paid": "This invoice is already paid, so it has no payment link.",
+        "invoice-not-finalized": "This invoice has not been finalized yet, so it has no payment link.",
+        "credit-note": "A credit note has nothing to pay, so it has no payment link.",
+        "nothing-due": "This invoice has no balance due, so it has no payment link.",
+        "offline-payment-method": "This invoice is billed by a method that is not paid online, so it has no payment link.",
+        "online-payments-off": "Online payments are not enabled for this account, so there is no payment link.",
+        "no-public-origin": "No public web address is configured for the client portal, so a payment link cannot be built.",
+        "link-unavailable": "The payment link could not be created right now. Please try again."
+      }
     }
   },
   "templateEditor": {
@@ -1176,7 +1193,9 @@
     "errors": {
       "loadRecipients": "Failed to load recipient info",
       "sendFailed": "Failed to send emails"
-    }
+    },
+    "invoiceCancelledRefusal": "This invoice has been voided, so it cannot be emailed.",
+    "paidReceiptNotice": "This invoice is paid — the email will be sent as a paid receipt."
   },
   "generateTab": {
     "fields": {

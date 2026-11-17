@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -24,8 +25,10 @@ import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import CreditApplicationUI from '../CreditApplicationUI';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { getInvoicePaymentLinkAction } from '../../../actions/invoicePaymentLinkActions';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { getEffectiveTaxSourceForClient, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
@@ -130,6 +133,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   // Set once this panel voids the invoice: the listing row (invoiceSummary) is
   // the status source and stays stale until the parent reloads it.
   const [voidedHere, setVoidedHere] = useState(false);
+  const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
+  const [paymentLinkRefusal, setPaymentLinkRefusal] = useState<{ reason: string | null; message: string } | null>(null);
+  // Set when the link was built but the browser refused the clipboard write
+  // (permission policy, or no Clipboard API outside a secure context): the
+  // link is shown for manual copying instead of being lost behind an error.
+  const [paymentLinkToCopy, setPaymentLinkToCopy] = useState<string | null>(null);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
   const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
@@ -182,6 +191,36 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       setDelegateTaxError(err instanceof Error ? err.message : String(err));
     } finally {
       setDelegateTaxLoading(false);
+    }
+  };
+
+  const handleCopyPaymentLink = async () => {
+    if (!invoiceId) return;
+    setPaymentLinkBusy(true);
+    setPaymentLinkRefusal(null);
+    setPaymentLinkToCopy(null);
+    try {
+      const result = await getInvoicePaymentLinkAction(invoiceId);
+      if (isReturnedActionError(result)) {
+        setPaymentLinkRefusal({ reason: null, message: getErrorMessage(result) });
+        return;
+      }
+      if ('reason' in result) {
+        setPaymentLinkRefusal({ reason: result.reason, message: result.message });
+        return;
+      }
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+        await navigator.clipboard.writeText(result.url);
+      } catch {
+        setPaymentLinkToCopy(result.url);
+        return;
+      }
+      toast.success(t('invoicePreview.paymentLink.copied', { defaultValue: 'Payment link copied' }));
+    } catch (err) {
+      setPaymentLinkRefusal({ reason: null, message: getErrorMessage(err) });
+    } finally {
+      setPaymentLinkBusy(false);
     }
   };
 
@@ -823,6 +862,32 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           <>
             <PurchaseOrderSummaryBanner poSummary={poSummary} currencyCode={detailedInvoiceData.currencyCode} />
 
+            {paymentLinkRefusal ? (
+              <Alert variant="info" className="mb-4" id="invoice-payment-link-refusal">
+                <AlertDescription>
+                  {paymentLinkRefusal.reason
+                    ? t(`invoicePreview.paymentLink.reasons.${paymentLinkRefusal.reason}`, { defaultValue: paymentLinkRefusal.message })
+                    : paymentLinkRefusal.message}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {paymentLinkToCopy ? (
+              <Alert variant="info" className="mb-4" id="invoice-payment-link-manual-copy">
+                <AlertDescription>
+                  <Input
+                    id="invoice-payment-link-url"
+                    label={t('invoicePreview.paymentLink.manualCopy', {
+                      defaultValue: 'Your browser blocked copying. Copy the payment link from here:',
+                    })}
+                    value={paymentLinkToCopy}
+                    readOnly
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             <div className="flex flex-wrap gap-2 mb-4">
               {!isFinalized && onFinalize && (
                 <Button
@@ -897,6 +962,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                   {t('invoicePreview.actions.sendEmail', {
                     defaultValue: 'Send Email',
                   })}
+                </Button>
+              )}
+
+              {isFinalized && invoiceId && (
+                <Button
+                  id="invoice-copy-payment-link"
+                  variant="outline"
+                  onClick={handleCopyPaymentLink}
+                  disabled={isActionLoading || paymentLinkBusy}
+                  className="flex-1 whitespace-nowrap"
+                >
+                  {t('invoicePreview.paymentLink.copy', { defaultValue: 'Copy payment link' })}
                 </Button>
               )}
 

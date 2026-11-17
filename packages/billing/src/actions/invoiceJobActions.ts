@@ -208,6 +208,8 @@ export interface InvoiceEmailRecipientInfo {
   invoiceId: string;
   invoiceNumber: string;
   clientName: string;
+  /** Lowercased invoice status; the dialog uses it to say "paid receipt" / "voided". */
+  invoiceStatus: string;
 
   recipientEmail: string;
   recipientName: string;
@@ -320,6 +322,7 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         invoiceId,
         invoiceNumber: invoice.invoice_number,
         clientName: client.client_name,
+        invoiceStatus: (invoice.status ?? '').toLowerCase(),
         recipientEmail,
         recipientName,
         recipientSource,
@@ -349,13 +352,20 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   return { recipients, errors };
 });
 
+export type SendInvoiceEmailRefusalReason = 'invoice-cancelled';
+
 export interface SendInvoiceEmailResult {
   success: boolean;
   invoiceNumber: string;
   recipientEmail: string;
   error?: string;
   messageKey?: string;
+  /** Set (with `ok: false`) when the server refused to send; `error` is the sentence to show. */
+  ok?: false;
+  reason?: SendInvoiceEmailRefusalReason;
 }
+
+const INVOICE_CANCELLED_REFUSAL = 'This invoice has been voided, so it cannot be emailed.';
 
 export interface SendInvoiceEmailsResult {
   results: SendInvoiceEmailResult[];
@@ -369,16 +379,39 @@ interface InvoiceEmailTemplate {
   text_content: string;
 }
 
+// English fallback for 'invoice-receipt-email', used only if no tenant or system
+// receipt template exists in any locale.
+const PAID_RECEIPT_TEMPLATE: InvoiceEmailTemplate = {
+  subject: 'Receipt for paid invoice {{invoice.number}} from {{company.name}}',
+  html_content: `
+    <p>Dear {{recipient.name}},</p>
+    <p>Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.</p>
+    {{#if customMessage}}<p><strong>Note:</strong> {{customMessage}}</p>{{/if}}
+    <p>Best regards,<br>{{company.name}}</p>
+  `,
+  text_content: `Dear {{recipient.name}},
+
+Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.
+
+{{#if customMessage}}Note: {{customMessage}}{{/if}}
+
+Best regards,
+{{company.name}}`,
+};
+
+type InvoiceEmailTemplateName = 'invoice-email' | 'invoice-receipt-email';
+
 async function getInvoiceEmailTemplate(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  locale: string = 'en'
+  locale: string = 'en',
+  templateName: InvoiceEmailTemplateName = 'invoice-email'
 ): Promise<InvoiceEmailTemplate> {
   const db = tenantDb(knex, tenant);
   // Try tenant template in requested locale
   let template = await db.table('tenant_email_templates')
     .where({
-      name: 'invoice-email',
+      name: templateName,
       language_code: locale,
     })
     .first();
@@ -387,7 +420,7 @@ async function getInvoiceEmailTemplate(
   if (!template && locale !== 'en') {
     template = await db.table('tenant_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: 'en',
       })
       .first();
@@ -397,7 +430,7 @@ async function getInvoiceEmailTemplate(
   if (!template) {
     template = await db.table('system_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: locale,
       })
       .first();
@@ -407,13 +440,14 @@ async function getInvoiceEmailTemplate(
   if (!template && locale !== 'en') {
     template = await db.table('system_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: 'en',
       })
       .first();
   }
 
   if (!template) {
+    if (templateName === 'invoice-receipt-email') return PAID_RECEIPT_TEMPLATE;
     return {
       subject: 'Invoice {{invoice.number}} from {{company.name}}',
       html_content: `
@@ -486,6 +520,22 @@ export const sendInvoiceEmailAction = withAuth(async (
         });
         continue;
       }
+
+      // A voided invoice documents nothing. Refuse before any PDF is rendered
+      // or email logged; there is deliberately no override.
+      if ((invoice.status ?? '').toLowerCase() === 'cancelled') {
+        results.push({
+          success: false,
+          ok: false,
+          reason: 'invoice-cancelled',
+          invoiceNumber: invoice.invoice_number,
+          recipientEmail: '',
+          error: INVOICE_CANCELLED_REFUSAL,
+          messageKey: 'msp/invoicing:sendEmail.invoiceCancelledRefusal',
+        });
+        continue;
+      }
+      const isPaidReceipt = (invoice.status ?? '').toLowerCase() === 'paid';
 
       const client = await getClientById(knex, tenant, invoice.client_id);
       if (!client) {
@@ -561,7 +611,12 @@ export const sendInvoiceEmailAction = withAuth(async (
         payment_method: invoice.payment_method ?? null,
       });
 
-      const emailTemplate = await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
+      const emailTemplate = await getInvoiceEmailTemplate(
+        knex,
+        tenant,
+        recipientLocale,
+        isPaidReceipt ? 'invoice-receipt-email' : 'invoice-email',
+      );
       const templateContext = {
         invoice: {
           number: invoice.invoice_number,

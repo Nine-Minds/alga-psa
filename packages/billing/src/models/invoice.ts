@@ -27,6 +27,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { isValidInvoiceTimeSnapshot } from '../lib/billing/invoiceTimeSnapshot';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -74,11 +75,6 @@ type InvoiceClientDetailsRow = InvoiceLocationAddressColumns & {
 
 type InvoiceContactRow = {
   full_name?: string | null;
-};
-
-type InvoiceTenantClientDetailsRow = InvoiceLocationAddressColumns & {
-  client_id?: string | null;
-  client_name?: string | null;
 };
 
 type RecurringInvoiceSummaryRow = {
@@ -539,19 +535,7 @@ const Invoice = {
       },
     });
 
-    const tenantClientQuery = db.table('tenant_companies as tc');
-    db.tenantJoin(tenantClientQuery, 'clients as c', 'tc.client_id', 'c.client_id');
-    db.tenantJoin(tenantClientQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
-      type: 'left',
-      on(join) {
-        join.andOn(function () {
-          this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
-            .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
-        });
-      },
-    });
-
-    const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails, recurringInvoiceSummaryRows] = await Promise.all([
+    const [invoiceChargesRaw, client, contact, logoUrl, tenantParty, recurringInvoiceSummaryRows] = await Promise.all([
       Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId, chargeOptions),
       clientQuery
         .select(
@@ -575,24 +559,8 @@ const Invoice = {
         .where({ client_id: invoice.client_id })
         .first() as unknown as Promise<InvoiceContactRow | undefined>,
       getClientDocumentLogoUrl(invoice.client_id, tenant).catch(() => null),
-      tenantClientQuery
-        .select(
-          'tc.client_id',
-          'c.client_name',
-          'cl.address_line1',
-          'cl.address_line2',
-          'cl.address_line3',
-          'cl.city',
-          'cl.state_province',
-          'cl.postal_code',
-          'cl.country_name'
-        )
-        .where({
-          'tc.is_default': true
-        })
-        .whereNull('tc.deleted_at')
-        .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
-        .first() as unknown as Promise<InvoiceTenantClientDetailsRow | undefined>,
+      // Same tenant-party rule as the PDF path: Settings > Branding logo first.
+      fetchTenantParty(knexOrTrx, tenant),
       tenantScopedTable<RecurringInvoiceSummaryRow>(knexOrTrx, tenant, 'recurring_service_periods')
         .select(
           'service_period_start',
@@ -663,38 +631,13 @@ const Invoice = {
       clientProperties = client.properties as { logo?: string };
     }
 
-    const resolveTenantNameFallback = async (): Promise<InvoiceViewModel['tenantClient']> => {
-      const tenantRecord = await tenantScopedTable(knexOrTrx, tenant, 'tenants')
-        .select('client_name')
-        .first();
-      const fallbackName = asTrimmedString(tenantRecord?.client_name);
-      if (fallbackName.length === 0) {
-        return null;
+    const tenantClient: InvoiceViewModel['tenantClient'] = tenantParty
+      ? {
+        name: tenantParty.name,
+        address: tenantParty.address,
+        logoUrl: tenantParty.logo_url,
       }
-      return {
-        name: fallbackName,
-        address: null,
-        logoUrl: null,
-      };
-    };
-
-    let tenantClient: InvoiceViewModel['tenantClient'] = null;
-    if (tenantClientDetails?.client_id) {
-      const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
-      const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
-      const tenantClientAddress = formatLocationAddress(tenantClientDetails);
-
-      if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
-        tenantClient = {
-          name: tenantClientName.length > 0 ? tenantClientName : null,
-          address: tenantClientAddress.length > 0 ? tenantClientAddress : null,
-          logoUrl: tenantLogoUrl || null,
-        };
-      }
-    }
-    if (!tenantClient) {
-      tenantClient = await resolveTenantNameFallback();
-    }
+      : null;
 
     const recurringSummaryRows = Array.isArray(recurringInvoiceSummaryRows) ? recurringInvoiceSummaryRows : [];
     const recurringServicePeriodStarts = recurringSummaryRows
