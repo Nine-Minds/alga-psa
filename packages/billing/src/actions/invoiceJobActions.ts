@@ -379,16 +379,39 @@ interface InvoiceEmailTemplate {
   text_content: string;
 }
 
+// English fallback for 'invoice-receipt-email', used only if no tenant or system
+// receipt template exists in any locale.
+const PAID_RECEIPT_TEMPLATE: InvoiceEmailTemplate = {
+  subject: 'Receipt for paid invoice {{invoice.number}} from {{company.name}}',
+  html_content: `
+    <p>Dear {{recipient.name}},</p>
+    <p>Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.</p>
+    {{#if customMessage}}<p><strong>Note:</strong> {{customMessage}}</p>{{/if}}
+    <p>Best regards,<br>{{company.name}}</p>
+  `,
+  text_content: `Dear {{recipient.name}},
+
+Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.
+
+{{#if customMessage}}Note: {{customMessage}}{{/if}}
+
+Best regards,
+{{company.name}}`,
+};
+
+type InvoiceEmailTemplateName = 'invoice-email' | 'invoice-receipt-email';
+
 async function getInvoiceEmailTemplate(
   knex: Knex | Knex.Transaction,
   tenant: string,
-  locale: string = 'en'
+  locale: string = 'en',
+  templateName: InvoiceEmailTemplateName = 'invoice-email'
 ): Promise<InvoiceEmailTemplate> {
   const db = tenantDb(knex, tenant);
   // Try tenant template in requested locale
   let template = await db.table('tenant_email_templates')
     .where({
-      name: 'invoice-email',
+      name: templateName,
       language_code: locale,
     })
     .first();
@@ -397,7 +420,7 @@ async function getInvoiceEmailTemplate(
   if (!template && locale !== 'en') {
     template = await db.table('tenant_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: 'en',
       })
       .first();
@@ -407,7 +430,7 @@ async function getInvoiceEmailTemplate(
   if (!template) {
     template = await db.table('system_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: locale,
       })
       .first();
@@ -417,13 +440,14 @@ async function getInvoiceEmailTemplate(
   if (!template && locale !== 'en') {
     template = await db.table('system_email_templates')
       .where({
-        name: 'invoice-email',
+        name: templateName,
         language_code: 'en',
       })
       .first();
   }
 
   if (!template) {
+    if (templateName === 'invoice-receipt-email') return PAID_RECEIPT_TEMPLATE;
     return {
       subject: 'Invoice {{invoice.number}} from {{company.name}}',
       html_content: `
@@ -452,26 +476,6 @@ Best regards,
     text_content: template.text_content,
   };
 }
-
-// Receipt variant sent for an already-paid invoice (the invoice-email template
-// is written for an open invoice and asks for payment).
-const PAID_RECEIPT_TEMPLATE: InvoiceEmailTemplate = {
-  subject: 'Receipt for paid invoice {{invoice.number}} from {{company.name}}',
-  html_content: `
-    <p>Dear {{recipient.name}},</p>
-    <p>Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.</p>
-    {{#if customMessage}}<p><strong>Note:</strong> {{customMessage}}</p>{{/if}}
-    <p>Best regards,<br>{{company.name}}</p>
-  `,
-  text_content: `Dear {{recipient.name}},
-
-Invoice {{invoice.number}} for {{invoice.amount}} has been paid. Thank you! Your receipt is attached.
-
-{{#if customMessage}}Note: {{customMessage}}{{/if}}
-
-Best regards,
-{{company.name}}`,
-};
 
 export const sendInvoiceEmailAction = withAuth(async (
   user,
@@ -607,9 +611,12 @@ export const sendInvoiceEmailAction = withAuth(async (
         payment_method: invoice.payment_method ?? null,
       });
 
-      const emailTemplate = isPaidReceipt
-        ? PAID_RECEIPT_TEMPLATE
-        : await getInvoiceEmailTemplate(knex, tenant, recipientLocale);
+      const emailTemplate = await getInvoiceEmailTemplate(
+        knex,
+        tenant,
+        recipientLocale,
+        isPaidReceipt ? 'invoice-receipt-email' : 'invoice-email',
+      );
       const templateContext = {
         invoice: {
           number: invoice.invoice_number,

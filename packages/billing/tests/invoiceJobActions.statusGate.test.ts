@@ -4,6 +4,9 @@ const mocks = vi.hoisted(() => ({
   sendEmail: vi.fn(async () => ({ success: true, queued: false })),
   generateAndStore: vi.fn(async () => ({ file_id: 'file-invoice-1' })),
   invoiceStatus: 'finalized',
+  locale: 'en',
+  lookups: [] as Array<{ table: string; name: string; language_code: string }>,
+  missing: new Set<string>(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -16,13 +19,17 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   tenantDb: () => ({
-    table: () => ({
-      where: () => ({
-        first: async () => ({
-          subject: 'Invoice {{invoice.number}}',
-          html_content: '<p>Invoice {{invoice.number}}</p>',
-          text_content: 'Invoice {{invoice.number}}',
-        }),
+    table: (table: string) => ({
+      where: (cond: { name: string; language_code: string }) => ({
+        first: async () => {
+          mocks.lookups.push({ table, ...cond });
+          if (mocks.missing.has(cond.name)) return undefined;
+          return {
+            subject: `[${cond.name}/${cond.language_code}] {{invoice.number}}`,
+            html_content: `<p>${cond.name} ${cond.language_code}</p>`,
+            text_content: `${cond.name} ${cond.language_code}`,
+          };
+        },
       }),
     }),
   }),
@@ -39,7 +46,7 @@ vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: { downloadFile: vi.fn(async () => ({ buffer: Buffer.from('%PDF-test') })) },
 }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
-  resolveEmailLocale: vi.fn(async () => 'en'),
+  resolveEmailLocale: vi.fn(async () => mocks.locale),
   getTenantDefaultLocale: vi.fn(async () => 'en'),
 }));
 vi.mock('@alga-psa/shared/billingClients/clients', () => ({
@@ -77,6 +84,9 @@ describe('sendInvoiceEmailAction status gate', () => {
     mocks.sendEmail.mockClear();
     mocks.generateAndStore.mockClear();
     mocks.invoiceStatus = 'finalized';
+    mocks.locale = 'en';
+    mocks.lookups = [];
+    mocks.missing = new Set();
   });
 
   it('refuses a cancelled invoice: typed reason, readable sentence, no PDF and no email', async () => {
@@ -94,8 +104,21 @@ describe('sendInvoiceEmailAction status gate', () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it('sends a paid invoice labelled as a receipt that says it is paid', async () => {
+  it('sends a paid invoice using the receipt template in the recipient locale', async () => {
     mocks.invoiceStatus = 'paid';
+    mocks.locale = 'de';
+    const result: any = await sendInvoiceEmailAction(['invoice-1']);
+
+    expect(result).toMatchObject({ successCount: 1, failureCount: 0 });
+    expect(mocks.lookups[0]).toMatchObject({ table: 'tenant_email_templates', name: 'invoice-receipt-email', language_code: 'de' });
+    expect(mocks.lookups.every((l) => l.name === 'invoice-receipt-email')).toBe(true);
+    const sent: any = (mocks.sendEmail.mock.calls[0] as any[])[0];
+    expect(sent.subject).toBe('[invoice-receipt-email/de] INV-1');
+  });
+
+  it('falls back to the English receipt constant when no receipt template exists', async () => {
+    mocks.invoiceStatus = 'paid';
+    mocks.missing.add('invoice-receipt-email');
     const result: any = await sendInvoiceEmailAction(['invoice-1']);
 
     expect(result).toMatchObject({ successCount: 1, failureCount: 0 });
@@ -107,7 +130,7 @@ describe('sendInvoiceEmailAction status gate', () => {
   it('keeps the normal invoice message for an open invoice', async () => {
     await sendInvoiceEmailAction(['invoice-1']);
     const sent: any = (mocks.sendEmail.mock.calls[0] as any[])[0];
-    expect(sent.subject).not.toMatch(/Receipt/);
+    expect(sent.subject).toBe('[invoice-email/en] INV-1');
   });
 });
 

@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Zahlungslink kopieren",
-      "copied": "Zahlungslink kopiert"
+      "copied": "Zahlungslink kopiert",
+      "reasons": {
+        "invoice-not-found": "Diese Rechnung wurde nicht gefunden.",
+        "invoice-voided": "Diese Rechnung wurde storniert und hat daher keinen Zahlungslink.",
+        "invoice-paid": "Diese Rechnung ist bereits bezahlt und hat daher keinen Zahlungslink.",
+        "invoice-not-finalized": "Diese Rechnung wurde noch nicht finalisiert und hat daher keinen Zahlungslink.",
+        "credit-note": "Für eine Gutschrift ist nichts zu zahlen, daher gibt es keinen Zahlungslink.",
+        "nothing-due": "Diese Rechnung hat keinen offenen Betrag und daher keinen Zahlungslink.",
+        "offline-payment-method": "Diese Rechnung wird nicht über eine Online-Zahlungsart abgerechnet und hat daher keinen Zahlungslink.",
+        "online-payments-off": "Online-Zahlungen sind für dieses Konto nicht aktiviert, daher gibt es keinen Zahlungslink.",
+        "no-public-origin": "Für das Kundenportal ist keine öffentliche Webadresse konfiguriert, daher kann kein Zahlungslink erstellt werden.",
+        "link-unavailable": "Der Zahlungslink konnte gerade nicht erstellt werden. Bitte versuchen Sie es erneut."
+      }
     }
   },
   "templateEditor": {

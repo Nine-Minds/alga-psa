@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Copiar link de pagamento",
-      "copied": "Link de pagamento copiado"
+      "copied": "Link de pagamento copiado",
+      "reasons": {
+        "invoice-not-found": "Não foi possível encontrar esta fatura.",
+        "invoice-voided": "Esta fatura foi anulada e, por isso, não tem link de pagamento.",
+        "invoice-paid": "Esta fatura já está paga e, por isso, não tem link de pagamento.",
+        "invoice-not-finalized": "Esta fatura ainda não foi finalizada e, por isso, não tem link de pagamento.",
+        "credit-note": "Uma nota de crédito não tem nada a pagar e, por isso, não tem link de pagamento.",
+        "nothing-due": "Esta fatura não tem saldo devedor e, por isso, não tem link de pagamento.",
+        "offline-payment-method": "Esta fatura é cobrada por um método que não é pago online e, por isso, não tem link de pagamento.",
+        "online-payments-off": "Os pagamentos online não estão ativados para esta conta, por isso não há link de pagamento.",
+        "no-public-origin": "Não há um endereço web público configurado para o portal do cliente, por isso não é possível criar um link de pagamento.",
+        "link-unavailable": "Não foi possível criar o link de pagamento agora. Tente novamente."
+      }
     }
   },
   "templateEditor": {

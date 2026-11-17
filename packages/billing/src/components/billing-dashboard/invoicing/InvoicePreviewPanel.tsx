@@ -133,7 +133,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   // the status source and stays stale until the parent reloads it.
   const [voidedHere, setVoidedHere] = useState(false);
   const [paymentLinkBusy, setPaymentLinkBusy] = useState(false);
-  const [paymentLinkRefusal, setPaymentLinkRefusal] = useState<string | null>(null);
+  const [paymentLinkRefusal, setPaymentLinkRefusal] = useState<{ reason: string | null; message: string } | null>(null);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
   const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
@@ -196,18 +196,18 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     try {
       const result = await getInvoicePaymentLinkAction(invoiceId);
       if (isReturnedActionError(result)) {
-        setPaymentLinkRefusal(getErrorMessage(result));
+        setPaymentLinkRefusal({ reason: null, message: getErrorMessage(result) });
         return;
       }
       if ('reason' in result) {
-        setPaymentLinkRefusal(result.message);
+        setPaymentLinkRefusal({ reason: result.reason, message: result.message });
         return;
       }
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(result.url);
       toast.success(t('invoicePreview.paymentLink.copied', { defaultValue: 'Payment link copied' }));
     } catch (err) {
-      setPaymentLinkRefusal(getErrorMessage(err));
+      setPaymentLinkRefusal({ reason: null, message: getErrorMessage(err) });
     } finally {
       setPaymentLinkBusy(false);
     }
@@ -853,7 +853,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
             {paymentLinkRefusal ? (
               <Alert variant="info" className="mb-4" id="invoice-payment-link-refusal">
-                <AlertDescription>{paymentLinkRefusal}</AlertDescription>
+                <AlertDescription>
+                  {paymentLinkRefusal.reason
+                    ? t(`invoicePreview.paymentLink.reasons.${paymentLinkRefusal.reason}`, { defaultValue: paymentLinkRefusal.message })
+                    : paymentLinkRefusal.message}
+                </AlertDescription>
               </Alert>
             ) : null}
 

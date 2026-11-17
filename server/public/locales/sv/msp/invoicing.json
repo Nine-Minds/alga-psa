@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Kopiera betalningslänk",
-      "copied": "Betalningslänk kopierad"
+      "copied": "Betalningslänk kopierad",
+      "reasons": {
+        "invoice-not-found": "Fakturan hittades inte.",
+        "invoice-voided": "Fakturan har annullerats och har därför ingen betalningslänk.",
+        "invoice-paid": "Fakturan är redan betald och har därför ingen betalningslänk.",
+        "invoice-not-finalized": "Fakturan har inte slutförts ännu och har därför ingen betalningslänk.",
+        "credit-note": "En kreditnota har inget att betala och har därför ingen betalningslänk.",
+        "nothing-due": "Fakturan har inget utestående belopp och har därför ingen betalningslänk.",
+        "offline-payment-method": "Fakturan faktureras med en metod som inte betalas online och har därför ingen betalningslänk.",
+        "online-payments-off": "Onlinebetalningar är inte aktiverade för det här kontot, så det finns ingen betalningslänk.",
+        "no-public-origin": "Ingen offentlig webbadress är konfigurerad för kundportalen, så en betalningslänk kan inte skapas.",
+        "link-unavailable": "Betalningslänken kunde inte skapas just nu. Försök igen."
+      }
     }
   },
   "templateEditor": {

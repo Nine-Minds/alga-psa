@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Copy payment link",
-      "copied": "Payment link copied"
+      "copied": "Payment link copied",
+      "reasons": {
+        "invoice-not-found": "This invoice could not be found.",
+        "invoice-voided": "This invoice has been voided, so it has no payment link.",
+        "invoice-paid": "This invoice is already paid, so it has no payment link.",
+        "invoice-not-finalized": "This invoice has not been finalized yet, so it has no payment link.",
+        "credit-note": "A credit note has nothing to pay, so it has no payment link.",
+        "nothing-due": "This invoice has no balance due, so it has no payment link.",
+        "offline-payment-method": "This invoice is billed by a method that is not paid online, so it has no payment link.",
+        "online-payments-off": "Online payments are not enabled for this account, so there is no payment link.",
+        "no-public-origin": "No public web address is configured for the client portal, so a payment link cannot be built.",
+        "link-unavailable": "The payment link could not be created right now. Please try again."
+      }
     }
   },
   "templateEditor": {

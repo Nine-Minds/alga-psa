@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Betaallink kopiëren",
-      "copied": "Betaallink gekopieerd"
+      "copied": "Betaallink gekopieerd",
+      "reasons": {
+        "invoice-not-found": "Deze factuur is niet gevonden.",
+        "invoice-voided": "Deze factuur is geannuleerd en heeft daarom geen betaallink.",
+        "invoice-paid": "Deze factuur is al betaald en heeft daarom geen betaallink.",
+        "invoice-not-finalized": "Deze factuur is nog niet definitief gemaakt en heeft daarom geen betaallink.",
+        "credit-note": "Bij een creditnota is niets te betalen, dus er is geen betaallink.",
+        "nothing-due": "Deze factuur heeft geen openstaand bedrag en heeft daarom geen betaallink.",
+        "offline-payment-method": "Deze factuur wordt gefactureerd met een methode die niet online wordt betaald en heeft daarom geen betaallink.",
+        "online-payments-off": "Online betalingen zijn niet ingeschakeld voor dit account, dus er is geen betaallink.",
+        "no-public-origin": "Er is geen openbaar webadres ingesteld voor het klantenportaal, dus er kan geen betaallink worden gemaakt.",
+        "link-unavailable": "De betaallink kon nu niet worden gemaakt. Probeer het opnieuw."
+      }
     }
   },
   "templateEditor": {

@@ -927,7 +927,19 @@
     },
     "paymentLink": {
       "copy": "Copier le lien de paiement",
-      "copied": "Lien de paiement copié"
+      "copied": "Lien de paiement copié",
+      "reasons": {
+        "invoice-not-found": "Cette facture est introuvable.",
+        "invoice-voided": "Cette facture a été annulée ; elle n'a donc pas de lien de paiement.",
+        "invoice-paid": "Cette facture est déjà payée ; elle n'a donc pas de lien de paiement.",
+        "invoice-not-finalized": "Cette facture n'est pas encore finalisée ; elle n'a donc pas de lien de paiement.",
+        "credit-note": "Un avoir n'a rien à payer ; il n'a donc pas de lien de paiement.",
+        "nothing-due": "Cette facture n'a aucun solde dû ; elle n'a donc pas de lien de paiement.",
+        "offline-payment-method": "Cette facture est réglée par un moyen qui ne se paie pas en ligne ; elle n'a donc pas de lien de paiement.",
+        "online-payments-off": "Les paiements en ligne ne sont pas activés pour ce compte ; il n'y a donc pas de lien de paiement.",
+        "no-public-origin": "Aucune adresse web publique n'est configurée pour le portail client ; le lien de paiement ne peut pas être créé.",
+        "link-unavailable": "Le lien de paiement n'a pas pu être créé pour le moment. Veuillez réessayer."
+      }
     }
   },
   "templateEditor": {
