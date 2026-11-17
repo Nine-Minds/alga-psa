@@ -20,14 +20,13 @@ import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
 import { computeBalanceDue } from '../lib/balanceDue';
+// The method list lives outside this file on purpose: a 'use server' module may
+// only export async functions, and the dialog needs the real array.
+import { isManualPaymentMethod, type ManualPaymentMethod } from '../lib/payments/manualPaymentMethods';
 import {
   isNonPayableInvoiceStatus,
   recordExternalPayment,
 } from '../services/accountingSync/recordExternalPayment';
-
-/** Payment methods offered for a manually entered payment. */
-export const MANUAL_PAYMENT_METHODS = ['manual', 'check', 'bank_transfer', 'cash', 'other'] as const;
-export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
 
 export interface InvoicePaymentSummary {
   invoiceId: string;
@@ -170,7 +169,7 @@ export const recordManualInvoicePayment = withAuth(async (
   if (!Number.isFinite(amount) || amount <= 0) {
     return actionError('Enter a payment amount greater than zero.', `${KEY_PREFIX}.amountPositive`);
   }
-  if (!MANUAL_PAYMENT_METHODS.includes(input.method)) {
+  if (!isManualPaymentMethod(input.method)) {
     return actionError('Choose a payment method.', `${KEY_PREFIX}.methodRequired`);
   }
 

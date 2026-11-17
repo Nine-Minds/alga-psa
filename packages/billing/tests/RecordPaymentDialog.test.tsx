@@ -16,10 +16,11 @@ const mocks = vi.hoisted(() => ({
   translate: vi.fn(),
 }));
 
+// Only the server actions are mocked: the method list is a plain module the
+// client imports for real, because a 'use server' file cannot export it.
 vi.mock('@alga-psa/billing/actions/invoicePaymentActions', () => ({
   getInvoicePaymentSummary: mocks.getInvoicePaymentSummary,
   recordManualInvoicePayment: mocks.recordManualInvoicePayment,
-  MANUAL_PAYMENT_METHODS: ['manual', 'check', 'bank_transfer', 'cash', 'other'],
 }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -70,6 +71,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 import { RecordPaymentDialog } from '../src/components/billing-dashboard/invoicing/RecordPaymentDialog';
+import { MANUAL_PAYMENT_METHODS } from '../src/lib/payments/manualPaymentMethods';
 
 const summary = (overrides: Record<string, unknown> = {}) => ({
   invoiceId: 'inv-1',
@@ -107,6 +109,16 @@ describe('RecordPaymentDialog', () => {
     await waitFor(() => expect(mocks.recordManualInvoicePayment).toHaveBeenCalledWith(
       expect.objectContaining({ invoiceId: 'inv-1', amount: 10000, method: 'manual' }),
     ));
+  });
+
+  // The list reached the dialog as a server-action proxy while it lived in the
+  // 'use server' module, so the render died on MANUAL_PAYMENT_METHODS.map.
+  it('offers every manual payment method', async () => {
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    await screen.findByLabelText('Amount');
+    const options = Array.from(screen.getByLabelText('Payment method').querySelectorAll('option'));
+    expect(options.map((option) => option.getAttribute('value'))).toEqual([...MANUAL_PAYMENT_METHODS]);
   });
 
   it('allows a partial amount and passes the chosen method and reference', async () => {

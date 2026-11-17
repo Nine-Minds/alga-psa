@@ -22,10 +22,12 @@ import { formatCurrencyFromMinorUnits, fromMinorUnits, toMinorUnits } from '@alg
 import {
   getInvoicePaymentSummary,
   recordManualInvoicePayment,
-  MANUAL_PAYMENT_METHODS,
   type InvoicePaymentSummary,
-  type ManualPaymentMethod,
 } from '@alga-psa/billing/actions/invoicePaymentActions';
+import {
+  MANUAL_PAYMENT_METHODS,
+  type ManualPaymentMethod,
+} from '@alga-psa/billing/lib/payments/manualPaymentMethods';
 
 interface RecordPaymentDialogProps {
   isOpen: boolean;
