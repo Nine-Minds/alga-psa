@@ -633,7 +633,8 @@
       "unfinalizeSelected": "Cofnij finalizację wybranych",
       "downloadPdf": "Pobierz PDF",
       "sendEmail": "Wyślij e-mail",
-      "unfinalize": "Cofnij finalizację"
+      "unfinalize": "Cofnij finalizację",
+      "recordPayment": "Zarejestruj płatność"
     },
     "status": {
       "finalized": "Sfinalizowana"
@@ -2963,6 +2964,16 @@
       "missingField": "Brakuje wymaganego pola szablonu faktury.",
       "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}.",
       "evaluationFailed": "Powiązanie danych szablonu nie powiodło się: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Brak uprawnień: rejestrowanie płatności faktur wymaga uprawnienia do płatności faktur.",
+      "invoiceNotFound": "Nie znaleziono faktury. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "amountPositive": "Wprowadź kwotę płatności większą od zera.",
+      "methodRequired": "Wybierz metodę płatności.",
+      "invalidDate": "Wprowadź prawidłową datę płatności.",
+      "noBalanceDue": "Ta faktura nie ma kwoty do zapłaty.",
+      "statusNotPayable": "Nie można zarejestrować płatności dla faktury o statusie: {{status}}.",
+      "recordFailed": "Nie udało się zarejestrować płatności. Spróbuj ponownie."
     }
   },
   "periodTotal": {
@@ -2985,6 +2996,39 @@
     "blocked": {
       "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje.",
       "exporting": "Trwa przygotowywanie eksportu księgowego tej faktury. Poczekaj na jego zakończenie przed zmianą faktury."
+    }
+  },
+  "recordPayment": {
+    "title": "Zarejestruj płatność",
+    "titleForInvoice": "Zarejestruj płatność — {{invoiceNumber}}",
+    "loading": "Wczytywanie salda faktury...",
+    "summary": {
+      "balanceDue": "Pozostało do zapłaty",
+      "alreadyPaid": "Już zapłacono"
+    },
+    "fields": {
+      "amount": "Kwota",
+      "paymentDate": "Data płatności",
+      "method": "Metoda płatności",
+      "reference": "Numer referencyjny",
+      "notes": "Notatki"
+    },
+    "placeholders": {
+      "reference": "Numer czeku lub transakcji"
+    },
+    "methods": {
+      "manual": "Ręcznie",
+      "check": "Czek",
+      "bank_transfer": "Przelew bankowy",
+      "cash": "Gotówka",
+      "other": "Inne"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "record": "Zarejestruj płatność"
+    },
+    "toasts": {
+      "recorded": "Płatność zarejestrowana"
     }
   }
 }
