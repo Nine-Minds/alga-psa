@@ -517,9 +517,9 @@ function escapeHtml(value: string): string {
 
 const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
 const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
-const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
-const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
-const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-size:13px;font-weight:600;color:#475467;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#667085;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#1f2933;font-weight:600;word-break:break-word;';
 const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
 
 function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
