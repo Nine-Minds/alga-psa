@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -156,6 +156,26 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
         : t('recordPayment.title', { defaultValue: 'Record Payment' })}
       id="record-payment-dialog"
       className="max-w-lg"
+      footer={(
+        <div className="flex justify-end space-x-2">
+          <Button
+            id="record-payment-cancel"
+            variant="outline"
+            onClick={onClose}
+            disabled={saving}
+          >
+            {t('recordPayment.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button
+            id="record-payment-submit"
+            onClick={() => { void handleSubmit(); }}
+            disabled={!canSubmit}
+          >
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {t('recordPayment.actions.record', { defaultValue: 'Record Payment' })}
+          </Button>
+        </div>
+      )}
     >
       <DialogContent>
         {loading ? (
@@ -247,24 +267,6 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
           </div>
         )}
       </DialogContent>
-      <DialogFooter>
-        <Button
-          id="record-payment-cancel"
-          variant="outline"
-          onClick={onClose}
-          disabled={saving}
-        >
-          {t('recordPayment.actions.cancel', { defaultValue: 'Cancel' })}
-        </Button>
-        <Button
-          id="record-payment-submit"
-          onClick={() => { void handleSubmit(); }}
-          disabled={!canSubmit}
-        >
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {t('recordPayment.actions.record', { defaultValue: 'Record Payment' })}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 };
