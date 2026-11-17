@@ -681,6 +681,8 @@
             "result": "Resultado",
             "updated": "Alterado"
           },
+          "contactsFailed_one": "{{count}} contacto com falha",
+          "contactsFailed_other": "{{count}} contactos com falha",
           "empty": "Ainda não foi executada nenhuma sincronização.",
           "progress": "{{processed}} de {{total}} clientes concluídos até agora.",
           "results": {
@@ -1225,11 +1227,23 @@
           "viewDetails": "Ver detalhes"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contacto com falha",
+          "contactsFailed_other": "{{count}} contactos com falha",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "e mais {{count}}",
           "noResults": "Nenhum resultado de tenant registrado.",
+          "noticeHeading": "Notas",
+          "stages": {
+            "create": "criação",
+            "link": "associação",
+            "match": "correspondência"
+          },
           "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
+          "summaryFailed": "Contactos com falha: {{count}}",
           "summarySkipped": "Resultados de provisionamento ignorados: {{count}}",
           "tenantHeader": "Tenant: {{tenant}} · {{status}}",
-          "unknownTenant": "desconhecido"
+          "unknownTenant": "desconhecido",
+          "userUnknown": "utilizador desconhecido"
         },
         "empty": "Nenhuma execução de sincronização foi encontrada ainda.",
         "errors": {

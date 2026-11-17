@@ -138,6 +138,7 @@ describe('executeEntraSync dry-run behavior', () => {
       ambiguous: 1,
       inactivated: 0,
       skipped: 0,
+      failed: 0,
     });
     expect(result.preview?.map((identity) => identity.bucket)).toEqual([
       'needs_decision',
@@ -715,6 +716,7 @@ describe('executeEntraSync updated counter', () => {
       ambiguous: 0,
       inactivated: 0,
       skipped: 0,
+      failed: 0,
     });
   });
 
@@ -879,5 +881,139 @@ describe('executeEntraSync inactivation is inside the dry-run guard', () => {
     });
 
     expect(preview.counters).toEqual(real.counters);
+  });
+});
+
+describe('executeEntraSync continues past per-user failures', () => {
+  const base = { tenantId: 'tenant-555', clientId: 'client-555', managedTenantId: 'managed-555' };
+
+  function resetAll(): void {
+    findContactMatchesByEmailMock.mockReset();
+    queueAmbiguousContactMatchMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    previewLinkedContactChangeMock.mockReset();
+    markDisabledEntraUsersInactiveMock.mockReset();
+    markExcludedEntraUsersInactiveMock.mockReset();
+    selectLinkedEntraIdentitiesMock.mockReset();
+    reactivateExcludedEntraContactMock.mockReset();
+    reactivateExcludedEntraContactMock.mockResolvedValue(false);
+    reactivateDisabledSharedMailboxContactMock.mockReset();
+    reactivateDisabledSharedMailboxContactMock.mockResolvedValue(false);
+    resetPortalProvisioningMocks();
+  }
+
+  const matched = (id: string) => [
+    { contactNameId: id, clientId: 'client-555', email: `${id}@example.com`, fullName: id, isInactive: false },
+  ];
+
+  it('T004: a create failure for the middle user is recorded and the third user is still created', async () => {
+    resetAll();
+    findContactMatchesByEmailMock.mockResolvedValue([]);
+    createContactForEntraUserMock
+      .mockResolvedValueOnce({ action: 'created', contactNameId: 'c1' })
+      .mockRejectedValueOnce(new Error('Phone number contains unsupported characters'))
+      .mockResolvedValueOnce({ action: 'created', contactNameId: 'c3' });
+    markDisabledEntraUsersInactiveMock.mockResolvedValue(2);
+    const disabled = [{ entraTenantId: 'entra-tenant-111', entraObjectId: 'entra-object-off' }];
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      ...base,
+      users: [buildUser('a'), buildUser('b'), buildUser('c')],
+      disabledIdentities: disabled,
+    });
+
+    expect(createContactForEntraUserMock).toHaveBeenCalledTimes(3);
+    expect(result.counters.created).toBe(2);
+    expect(result.counters.failed).toBe(1);
+    expect(result.userIssues).toEqual([
+      {
+        severity: 'failure',
+        stage: 'create',
+        entraObjectId: 'entra-object-b',
+        userPrincipalName: 'b@example.com',
+        displayName: 'User b',
+        contactNameId: null,
+        message: 'Phone number contains unsupported characters',
+      },
+    ]);
+    // Inactivation after the loop still runs.
+    expect(markDisabledEntraUsersInactiveMock).toHaveBeenCalledTimes(1);
+    expect(result.counters.inactivated).toBe(2);
+  });
+
+  it('T004: a link failure is recorded at the link stage and not counted as linked', async () => {
+    resetAll();
+    findContactMatchesByEmailMock.mockResolvedValue(matched('existing'));
+    linkExistingMatchedContactMock
+      .mockRejectedValueOnce(new Error('link boom'))
+      .mockResolvedValueOnce({ action: 'linked', fieldsUpdated: false, contactNameId: 'existing' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({ ...base, users: [buildUser('a'), buildUser('b')] });
+
+    expect(result.counters).toMatchObject({ linked: 1, failed: 1, created: 0 });
+    expect(result.userIssues).toHaveLength(1);
+    expect(result.userIssues[0]).toMatchObject({
+      severity: 'failure',
+      stage: 'link',
+      entraObjectId: 'entra-object-a',
+      contactNameId: null,
+      message: 'link boom',
+    });
+  });
+
+  it('T004: a match failure is recorded at the match stage', async () => {
+    resetAll();
+    findContactMatchesByEmailMock
+      .mockRejectedValueOnce('lookup exploded')
+      .mockResolvedValueOnce([]);
+    createContactForEntraUserMock.mockResolvedValue({ action: 'created', contactNameId: 'c2' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({ ...base, users: [buildUser('a'), buildUser('b')] });
+
+    expect(result.counters).toMatchObject({ created: 1, failed: 1 });
+    expect(result.userIssues[0]).toMatchObject({ stage: 'match', message: 'lookup exploded' });
+  });
+
+  it('T004: a portal failure after the contact write carries contactNameId and the link is still counted', async () => {
+    resetAll();
+    findContactMatchesByEmailMock.mockResolvedValue(matched('existing'));
+    linkExistingMatchedContactMock.mockResolvedValue({ action: 'linked', fieldsUpdated: false, contactNameId: 'existing' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({ eligible: true });
+    handleEligibleClientPortalProvisioningMock.mockRejectedValueOnce(new Error('portal boom'));
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({ ...base, users: [buildUser('a')] });
+
+    expect(result.counters).toMatchObject({ linked: 1, failed: 1 });
+    expect(result.userIssues).toEqual([
+      expect.objectContaining({ severity: 'failure', stage: 'link', contactNameId: 'existing', message: 'portal boom' }),
+    ]);
+  });
+
+  it('T005: an over-long extension on a created user yields one phone notice and no failure', async () => {
+    resetAll();
+    findContactMatchesByEmailMock.mockResolvedValue([]);
+    createContactForEntraUserMock.mockResolvedValue({ action: 'created', contactNameId: 'c1' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      ...base,
+      users: [{ ...buildUser('a'), mobilePhone: '+14165551234;ext=12345678901' }],
+    });
+
+    expect(result.counters).toMatchObject({ created: 1, failed: 0 });
+    expect(result.userIssues).toEqual([
+      expect.objectContaining({
+        severity: 'notice',
+        stage: 'create',
+        field: 'phone_numbers',
+        contactNameId: 'c1',
+        entraObjectId: 'entra-object-a',
+      }),
+    ]);
   });
 });

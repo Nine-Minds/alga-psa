@@ -734,6 +734,11 @@ export function EntraConsole({
               {result.errorMessage}
             </span>
           ) : null}
+          {(result.failed ?? 0) > 0 ? (
+            <span className="mt-0.5 block whitespace-normal text-xs text-destructive">
+              {t('integrations.entra.console.lastRun.contactsFailed', { count: result.failed })}
+            </span>
+          ) : null}
         </div>
       ),
     },

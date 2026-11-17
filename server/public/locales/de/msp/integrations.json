@@ -681,6 +681,8 @@
             "result": "Ergebnis",
             "updated": "Geändert"
           },
+          "contactsFailed_one": "{{count}} Kontakt fehlgeschlagen",
+          "contactsFailed_other": "{{count}} Kontakte fehlgeschlagen",
           "empty": "Es wurde noch keine Synchronisierung ausgeführt.",
           "progress": "Bisher {{processed}} von {{total}} Clients erledigt.",
           "results": {
@@ -1225,11 +1227,23 @@
           "viewDetails": "Details anzeigen"
         },
         "details": {
+          "contactsFailed_one": "{{count}} Kontakt fehlgeschlagen",
+          "contactsFailed_other": "{{count}} Kontakte fehlgeschlagen",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "und {{count}} weitere",
           "noResults": "Keine Mandantenergebnisse aufgezeichnet.",
+          "noticeHeading": "Hinweise",
+          "stages": {
+            "create": "Erstellung",
+            "link": "Verknüpfung",
+            "match": "Zuordnung"
+          },
           "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
+          "summaryFailed": "Kontakte mit Fehlern: {{count}}",
           "summarySkipped": "Übersprungene Bereitstellungsergebnisse: {{count}}",
           "tenantHeader": "Mandant {{tenant}} · {{status}}",
-          "unknownTenant": "unbekannt"
+          "unknownTenant": "unbekannt",
+          "userUnknown": "unbekannter Benutzer"
         },
         "empty": "Noch keine Sync-Läufe gefunden.",
         "errors": {

@@ -1,6 +1,8 @@
-import type { EntraSyncUser } from './types';
+import logger from '@alga-psa/core/logger';
+import type { EntraSyncUser, EntraSyncUserIssue, EntraSyncUserIssueStage } from './types';
+import { buildContactFieldSyncPatch, buildEntraContactPhoneRows } from './contactFieldSync';
 import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
-import { EntraSyncResultAggregator } from './syncResultAggregator';
+import { EntraSyncResultAggregator, type EntraTenantSyncCounters } from './syncResultAggregator';
 import { findContactMatchesByEmail } from './contactMatcher';
 import {
   createContactForEntraUser,
@@ -83,14 +85,9 @@ export interface ExecuteEntraSyncInput {
 
 export interface ExecuteEntraSyncResult {
   dryRun: boolean;
-  counters: {
-    created: number;
-    linked: number;
-    updated: number;
-    ambiguous: number;
-    inactivated: number;
-    skipped: number;
-  };
+  counters: EntraTenantSyncCounters;
+  /** Per-user failures and field notices, in user order. */
+  userIssues: EntraSyncUserIssue[];
   /** Per-identity classification. Only collected on a dry run. */
   preview?: EntraSyncPreviewIdentity[];
   warnings?: string[];
@@ -120,154 +117,125 @@ function describeUser(
   };
 }
 
-export async function executeEntraSync(
-  input: ExecuteEntraSyncInput
-): Promise<ExecuteEntraSyncResult> {
-  const dryRun = Boolean(input.dryRun);
-  const counters = new EntraSyncResultAggregator();
-  const preview: EntraSyncPreviewIdentity[] | undefined = dryRun ? [] : undefined;
-  const warnings: string[] = [];
-  let excludedContactsOutOfScope = 0;
+function phoneNoticeIssues(
+  user: EntraSyncUser,
+  stage: EntraSyncUserIssueStage,
+  contactNameId: string | null
+): EntraSyncUserIssue[] {
+  return buildEntraContactPhoneRows(user).notices.map((notice) => ({
+    severity: 'notice' as const,
+    stage,
+    entraObjectId: user.entraObjectId,
+    userPrincipalName: user.userPrincipalName,
+    displayName: user.displayName,
+    contactNameId,
+    field: notice.field,
+    message: notice.message,
+  }));
+}
 
-  for (const user of input.users) {
-    const userWithEntitlement: EntraSyncUser = input.portalEntitlement
-      ? {
-          ...user,
-          clientPortalEntitlement: {
-            groupId: input.portalEntitlement.groupId,
-            membershipMode: input.portalEntitlement.membershipMode,
-            isMember: user.clientPortalEntitlement?.isMember ?? null,
-          },
-        }
-      : user;
-    const candidates = await findContactMatchesByEmail(input.tenantId, input.clientId, userWithEntitlement);
-
-    if (candidates.length > 1) {
-      counters.increment('ambiguous');
-      if (dryRun) {
-        preview?.push(describeUser(user, 'needs_decision'));
-      } else {
-        await queueAmbiguousContactMatch(
-          input.tenantId,
-          input.clientId,
-          input.managedTenantId,
-          userWithEntitlement,
-          candidates
-        );
+/**
+ * Syncs one user. Throws on any failure; the caller records it and moves on.
+ * `ctx.progress` tells the caller how far this user got before a throw.
+ * Returns the field notices for this user.
+ */
+async function syncOneEntraUser(
+  input: ExecuteEntraSyncInput,
+  user: EntraSyncUser,
+  ctx: {
+    dryRun: boolean;
+    counters: EntraSyncResultAggregator;
+    preview: EntraSyncPreviewIdentity[] | undefined;
+    progress: { stage: EntraSyncUserIssueStage; contactNameId: string | null };
+  }
+): Promise<EntraSyncUserIssue[]> {
+  const { dryRun, counters, preview } = ctx;
+  const issues: EntraSyncUserIssue[] = [];
+  const userWithEntitlement: EntraSyncUser = input.portalEntitlement
+    ? {
+        ...user,
+        clientPortalEntitlement: {
+          groupId: input.portalEntitlement.groupId,
+          membershipMode: input.portalEntitlement.membershipMode,
+          isMember: user.clientPortalEntitlement?.isMember ?? null,
+        },
       }
-      continue;
-    }
+    : user;
+  ctx.progress.stage = 'match';
+  const candidates = await findContactMatchesByEmail(input.tenantId, input.clientId, userWithEntitlement);
 
-    if (candidates.length === 1) {
-      counters.increment('linked');
-      if (dryRun) {
-        // The preview answers "would this change anything?" with the same rule
-        // the real run applies, so the counts match on unchanged data.
-        const outcome = await previewLinkedContactChange(
-          input.tenantId,
-          candidates[0],
-          user,
-          input.fieldSyncConfig
-        );
-        const wouldReactivateExcluded = await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true);
-        const wouldRecoverSharedMailbox = userWithEntitlement.mailboxKind === 'shared'
-          && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true);
-        if (outcome.fieldsWouldChange || wouldReactivateExcluded || wouldRecoverSharedMailbox) counters.increment('updated');
-        preview?.push(
-          describeUser(
-            user,
-            outcome.alreadyLinked && !outcome.fieldsWouldChange && !wouldReactivateExcluded && !wouldRecoverSharedMailbox ? 'no_change' : 'link'
-          )
-        );
-      } else {
-        const linkedContact = await linkExistingMatchedContact(
-          input.tenantId,
-          input.clientId,
-          candidates[0],
-          userWithEntitlement,
-          input.fieldSyncConfig
-        );
-        // `updated` counts contacts whose values the field-sync rules actually
-        // changed. A link that overwrote nothing is a link and nothing more.
-        const reactivatedExcluded = await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false);
-        if (linkedContact.fieldsUpdated || linkedContact.recovered || reactivatedExcluded) counters.increment('updated');
-        const eligibility = evaluateClientPortalProvisioningEligibility(
-          userWithEntitlement,
-          input.portalEntitlement
-        );
-        // A shared mailbox is never eligible for portal provisioning, including
-        // workflow-managed provisioning and existing-contact lifecycle actions.
-        if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
-          const provisioning = await handleEligibleClientPortalProvisioning(
-            {
-              tenantId: input.tenantId,
-              clientId: input.clientId,
-              managedTenantId: input.managedTenantId,
-              contactNameId: linkedContact.contactNameId,
-              defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
-            },
-            userWithEntitlement
-          );
-          if (provisioning.outcome === 'skipped_conflict') {
-            counters.increment('skipped');
-          }
-        } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
-          await publishWorkflowManagedPortalProvisioningEvent(
-            {
-              tenantId: input.tenantId,
-              clientId: input.clientId,
-              managedTenantId: input.managedTenantId,
-              contactNameId: linkedContact.contactNameId,
-              defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
-              syncRunId: input.syncRunId,
-              workflowTarget: input.portalEntitlement?.workflowTarget,
-              workflowConfig: input.portalEntitlement?.workflowConfig || null,
-            },
-            userWithEntitlement
-          );
-        } else if (userWithEntitlement.mailboxKind !== 'shared') {
-          const lifecycle = await handleIneligibleClientPortalLifecycle(
-            {
-              tenantId: input.tenantId,
-              clientId: input.clientId,
-              managedTenantId: input.managedTenantId,
-              contactNameId: linkedContact.contactNameId,
-              defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
-            },
-            userWithEntitlement,
-            eligibility,
-            {
-              deactivateOnEntitlementRemoval:
-                input.portalEntitlement?.deactivateOnEntitlementRemoval,
-            }
-          );
-          if (lifecycle.outcome === 'deactivated') {
-            counters.increment('inactivated');
-          }
-        }
-      }
-      continue;
-    }
-
-    counters.increment('created');
+  if (candidates.length > 1) {
     if (dryRun) {
-      preview?.push(describeUser(user, 'create'));
+      counters.increment('ambiguous');
+      preview?.push(describeUser(user, 'needs_decision'));
     } else {
-      const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
-      const reactivatedExcluded = createdContact.action === 'linked'
-        && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false);
-      if (createdContact.action === 'linked' && (createdContact.recovered || reactivatedExcluded)) counters.increment('updated');
+      await queueAmbiguousContactMatch(
+        input.tenantId,
+        input.clientId,
+        input.managedTenantId,
+        userWithEntitlement,
+        candidates
+      );
+      counters.increment('ambiguous');
+    }
+    return issues;
+  }
+
+  if (candidates.length === 1) {
+    ctx.progress.stage = 'link';
+    if (dryRun) {
+      counters.increment('linked');
+      // The preview answers "would this change anything?" with the same rule
+      // the real run applies, so the counts match on unchanged data.
+      const outcome = await previewLinkedContactChange(
+        input.tenantId,
+        candidates[0],
+        user,
+        input.fieldSyncConfig
+      );
+      if ('phone_numbers' in buildContactFieldSyncPatch(user, input.fieldSyncConfig)) {
+        issues.push(...phoneNoticeIssues(user, 'link', null));
+      }
+      const wouldReactivateExcluded = await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true);
+      const wouldRecoverSharedMailbox = userWithEntitlement.mailboxKind === 'shared'
+        && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true);
+      if (outcome.fieldsWouldChange || wouldReactivateExcluded || wouldRecoverSharedMailbox) counters.increment('updated');
+      preview?.push(
+        describeUser(
+          user,
+          outcome.alreadyLinked && !outcome.fieldsWouldChange && !wouldReactivateExcluded && !wouldRecoverSharedMailbox ? 'no_change' : 'link'
+        )
+      );
+    } else {
+      const linkedContact = await linkExistingMatchedContact(
+        input.tenantId,
+        input.clientId,
+        candidates[0],
+        userWithEntitlement,
+        input.fieldSyncConfig
+      );
+      ctx.progress.contactNameId = linkedContact.contactNameId;
+      counters.increment('linked');
+      if ('phone_numbers' in buildContactFieldSyncPatch(user, input.fieldSyncConfig)) {
+        issues.push(...phoneNoticeIssues(user, 'link', linkedContact.contactNameId));
+      }
+      // `updated` counts contacts whose values the field-sync rules actually
+      // changed. A link that overwrote nothing is a link and nothing more.
+      const reactivatedExcluded = await reactivateExcludedEntraContact(input.tenantId, linkedContact.contactNameId, false);
+      if (linkedContact.fieldsUpdated || linkedContact.recovered || reactivatedExcluded) counters.increment('updated');
       const eligibility = evaluateClientPortalProvisioningEligibility(
         userWithEntitlement,
         input.portalEntitlement
       );
+      // A shared mailbox is never eligible for portal provisioning, including
+      // workflow-managed provisioning and existing-contact lifecycle actions.
       if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
         const provisioning = await handleEligibleClientPortalProvisioning(
           {
             tenantId: input.tenantId,
             clientId: input.clientId,
             managedTenantId: input.managedTenantId,
-            contactNameId: createdContact.contactNameId,
+            contactNameId: linkedContact.contactNameId,
             defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
           },
           userWithEntitlement
@@ -281,7 +249,7 @@ export async function executeEntraSync(
             tenantId: input.tenantId,
             clientId: input.clientId,
             managedTenantId: input.managedTenantId,
-            contactNameId: createdContact.contactNameId,
+            contactNameId: linkedContact.contactNameId,
             defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
             syncRunId: input.syncRunId,
             workflowTarget: input.portalEntitlement?.workflowTarget,
@@ -295,7 +263,7 @@ export async function executeEntraSync(
             tenantId: input.tenantId,
             clientId: input.clientId,
             managedTenantId: input.managedTenantId,
-            contactNameId: createdContact.contactNameId,
+            contactNameId: linkedContact.contactNameId,
             defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
           },
           userWithEntitlement,
@@ -309,6 +277,117 @@ export async function executeEntraSync(
           counters.increment('inactivated');
         }
       }
+    }
+    return issues;
+  }
+
+  ctx.progress.stage = 'create';
+  if (dryRun) {
+    counters.increment('created');
+    issues.push(...phoneNoticeIssues(user, 'create', null));
+    preview?.push(describeUser(user, 'create'));
+  } else {
+    const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+    ctx.progress.contactNameId = createdContact.contactNameId;
+    counters.increment('created');
+    if (createdContact.action === 'created') {
+      issues.push(...phoneNoticeIssues(user, 'create', createdContact.contactNameId));
+    }
+    const reactivatedExcluded = createdContact.action === 'linked'
+      && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false);
+    if (createdContact.action === 'linked' && (createdContact.recovered || reactivatedExcluded)) counters.increment('updated');
+    const eligibility = evaluateClientPortalProvisioningEligibility(
+      userWithEntitlement,
+      input.portalEntitlement
+    );
+    if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.eligible) {
+      const provisioning = await handleEligibleClientPortalProvisioning(
+        {
+          tenantId: input.tenantId,
+          clientId: input.clientId,
+          managedTenantId: input.managedTenantId,
+          contactNameId: createdContact.contactNameId,
+          defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
+        },
+        userWithEntitlement
+      );
+      if (provisioning.outcome === 'skipped_conflict') {
+        counters.increment('skipped');
+      }
+    } else if (userWithEntitlement.mailboxKind !== 'shared' && eligibility.reason === 'workflow_managed') {
+      await publishWorkflowManagedPortalProvisioningEvent(
+        {
+          tenantId: input.tenantId,
+          clientId: input.clientId,
+          managedTenantId: input.managedTenantId,
+          contactNameId: createdContact.contactNameId,
+          defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
+          syncRunId: input.syncRunId,
+          workflowTarget: input.portalEntitlement?.workflowTarget,
+          workflowConfig: input.portalEntitlement?.workflowConfig || null,
+        },
+        userWithEntitlement
+      );
+    } else if (userWithEntitlement.mailboxKind !== 'shared') {
+      const lifecycle = await handleIneligibleClientPortalLifecycle(
+        {
+          tenantId: input.tenantId,
+          clientId: input.clientId,
+          managedTenantId: input.managedTenantId,
+          contactNameId: createdContact.contactNameId,
+          defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
+        },
+        userWithEntitlement,
+        eligibility,
+        {
+          deactivateOnEntitlementRemoval:
+            input.portalEntitlement?.deactivateOnEntitlementRemoval,
+        }
+      );
+      if (lifecycle.outcome === 'deactivated') {
+        counters.increment('inactivated');
+      }
+    }
+  }
+  return issues;
+}
+
+export async function executeEntraSync(
+  input: ExecuteEntraSyncInput
+): Promise<ExecuteEntraSyncResult> {
+  const dryRun = Boolean(input.dryRun);
+  const counters = new EntraSyncResultAggregator();
+  const preview: EntraSyncPreviewIdentity[] | undefined = dryRun ? [] : undefined;
+  const warnings: string[] = [];
+  const userIssues: EntraSyncUserIssue[] = [];
+  let excludedContactsOutOfScope = 0;
+
+  for (const user of input.users) {
+    const progress: { stage: EntraSyncUserIssueStage; contactNameId: string | null } = {
+      stage: 'match',
+      contactNameId: null,
+    };
+    try {
+      userIssues.push(...await syncOneEntraUser(input, user, { dryRun, counters, preview, progress }));
+    } catch (error) {
+      counters.increment('failed');
+      const message = error instanceof Error ? error.message : String(error);
+      userIssues.push({
+        severity: 'failure',
+        stage: progress.stage,
+        entraObjectId: user.entraObjectId,
+        userPrincipalName: user.userPrincipalName,
+        displayName: user.displayName,
+        contactNameId: progress.contactNameId,
+        message,
+      });
+      logger.warn('Entra sync: user failed, continuing', {
+        tenantId: input.tenantId,
+        clientId: input.clientId,
+        entraObjectId: user.entraObjectId,
+        stage: progress.stage,
+        error: message,
+      });
     }
   }
 
@@ -374,6 +453,7 @@ export async function executeEntraSync(
   return {
     dryRun,
     counters: counters.toJSON(),
+    userIssues,
     ...(warnings.length ? { warnings } : {}),
     ...(preview ? { preview } : {}),
     excludedContactsOutOfScope,
