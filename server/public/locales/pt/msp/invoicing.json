@@ -924,6 +924,10 @@
       "refusedCancelled": "Faturas anuladas ou canceladas não são sincronizadas com {{provider}}.",
       "cycleFailed": "Falha na sincronização com {{provider}}: {{reason}} A fatura não foi enviada; ela permanece na fila e será reenviada na próxima sincronização.",
       "cycleFailedNoReason": "Falha na sincronização com {{provider}}. A fatura não foi enviada; ela permanece na fila e será reenviada na próxima sincronização."
+    },
+    "paymentLink": {
+      "copy": "Copiar link de pagamento",
+      "copied": "Link de pagamento copiado"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Falha ao carregar informações do destinatário",
       "sendFailed": "Falha ao enviar e-mails"
-    }
+    },
+    "invoiceCancelledRefusal": "Esta fatura foi anulada e, por isso, não pode ser enviada por e-mail.",
+    "paidReceiptNotice": "Esta fatura está paga: o e-mail será enviado como recibo de pagamento."
   },
   "generateTab": {
     "fields": {

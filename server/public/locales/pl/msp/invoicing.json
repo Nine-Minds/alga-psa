@@ -952,6 +952,10 @@
       "refusedCancelled": "Unieważnione lub anulowane faktury nie są synchronizowane z {{provider}}.",
       "cycleFailed": "Synchronizacja z {{provider}} nie powiodła się: {{reason}} Faktura nie została wysłana; pozostaje w kolejce i zostanie ponowiona przy następnej synchronizacji.",
       "cycleFailedNoReason": "Synchronizacja z {{provider}} nie powiodła się. Faktura nie została wysłana; pozostaje w kolejce i zostanie ponowiona przy następnej synchronizacji."
+    },
+    "paymentLink": {
+      "copy": "Kopiuj link do płatności",
+      "copied": "Skopiowano link do płatności"
     }
   },
   "templateEditor": {
@@ -1228,7 +1232,9 @@
     "errors": {
       "loadRecipients": "Nie udało się załadować informacji o odbiorcy",
       "sendFailed": "Nie udało się wysłać e-maili"
-    }
+    },
+    "invoiceCancelledRefusal": "Ta faktura została anulowana, więc nie można jej wysłać e-mailem.",
+    "paidReceiptNotice": "Ta faktura jest opłacona – e-mail zostanie wysłany jako potwierdzenie zapłaty."
   },
   "generateTab": {
     "fields": {

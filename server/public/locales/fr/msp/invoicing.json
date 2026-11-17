@@ -924,6 +924,10 @@
       "refusedCancelled": "Les factures annulées ne sont pas synchronisées avec {{provider}}.",
       "cycleFailed": "Échec de la synchronisation avec {{provider}} : {{reason}} La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation.",
       "cycleFailedNoReason": "Échec de la synchronisation avec {{provider}}. La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation."
+    },
+    "paymentLink": {
+      "copy": "Copier le lien de paiement",
+      "copied": "Lien de paiement copié"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Échec du chargement des informations sur le destinataire",
       "sendFailed": "Échec de l'envoi des e-mails"
-    }
+    },
+    "invoiceCancelledRefusal": "Cette facture a été annulée ; elle ne peut pas être envoyée par e-mail.",
+    "paidReceiptNotice": "Cette facture est payée : l'e-mail sera envoyé comme reçu de paiement."
   },
   "generateTab": {
     "fields": {

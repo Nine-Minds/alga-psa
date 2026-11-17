@@ -924,6 +924,10 @@
       "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
       "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
       "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
+    },
+    "paymentLink": {
+      "copy": "Copy payment link",
+      "copied": "Payment link copied"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Failed to load recipient info",
       "sendFailed": "Failed to send emails"
-    }
+    },
+    "invoiceCancelledRefusal": "This invoice has been voided, so it cannot be emailed.",
+    "paidReceiptNotice": "This invoice is paid — the email will be sent as a paid receipt."
   },
   "generateTab": {
     "fields": {

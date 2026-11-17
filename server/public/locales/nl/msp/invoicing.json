@@ -924,6 +924,10 @@
       "refusedCancelled": "Ongeldig gemaakte of geannuleerde facturen worden niet met {{provider}} gesynchroniseerd.",
       "cycleFailed": "Synchronisatie met {{provider}} mislukt: {{reason}} De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd.",
       "cycleFailedNoReason": "Synchronisatie met {{provider}} mislukt. De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd."
+    },
+    "paymentLink": {
+      "copy": "Betaallink kopiëren",
+      "copied": "Betaallink gekopieerd"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Kan de gegevens van de ontvanger niet laden",
       "sendFailed": "Het verzenden van e-mails is niet gelukt"
-    }
+    },
+    "invoiceCancelledRefusal": "Deze factuur is geannuleerd en kan daarom niet per e-mail worden verzonden.",
+    "paidReceiptNotice": "Deze factuur is betaald: de e-mail wordt verzonden als betalingsbewijs."
   },
   "generateTab": {
     "fields": {

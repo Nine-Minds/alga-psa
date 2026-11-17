@@ -924,6 +924,10 @@
       "refusedCancelled": "Stornierte Rechnungen werden nicht mit {{provider}} synchronisiert.",
       "cycleFailed": "{{provider}}-Synchronisierung fehlgeschlagen: {{reason}} Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht.",
       "cycleFailedNoReason": "{{provider}}-Synchronisierung fehlgeschlagen. Die Rechnung wurde nicht gesendet; sie bleibt in der Warteschlange und wird bei der nächsten Synchronisierung erneut versucht."
+    },
+    "paymentLink": {
+      "copy": "Zahlungslink kopieren",
+      "copied": "Zahlungslink kopiert"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Empfängerinformationen konnten nicht geladen werden",
       "sendFailed": "E-Mails konnten nicht gesendet werden"
-    }
+    },
+    "invoiceCancelledRefusal": "Diese Rechnung wurde storniert und kann daher nicht per E-Mail versendet werden.",
+    "paidReceiptNotice": "Diese Rechnung ist bezahlt – die E-Mail wird als Zahlungsbeleg versendet."
   },
   "generateTab": {
     "fields": {

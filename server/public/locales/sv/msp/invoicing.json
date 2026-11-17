@@ -924,6 +924,10 @@
       "refusedCancelled": "Makulerade eller annullerade fakturor synkroniseras inte med {{provider}}.",
       "cycleFailed": "Synkroniseringen med {{provider}} misslyckades: {{reason}} Fakturan skickades inte; den står kvar i kön och försöks igen vid nästa synkronisering.",
       "cycleFailedNoReason": "Synkroniseringen med {{provider}} misslyckades. Fakturan skickades inte; den står kvar i kön och försöks igen vid nästa synkronisering."
+    },
+    "paymentLink": {
+      "copy": "Kopiera betalningslänk",
+      "copied": "Betalningslänk kopierad"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "Det gick inte att läsa in mottagaruppgifterna",
       "sendFailed": "Det gick inte att skicka e-postmeddelandena"
-    }
+    },
+    "invoiceCancelledRefusal": "Den här fakturan har annullerats och kan därför inte skickas med e-post.",
+    "paidReceiptNotice": "Den här fakturan är betald – e-postmeddelandet skickas som kvitto."
   },
   "generateTab": {
     "fields": {

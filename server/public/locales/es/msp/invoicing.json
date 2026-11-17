@@ -924,6 +924,10 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "ninguno"
+    },
+    "paymentLink": {
+      "copy": "Copiar enlace de pago",
+      "copied": "Enlace de pago copiado"
     }
   },
   "templateEditor": {
@@ -1176,7 +1180,9 @@
     "errors": {
       "loadRecipients": "No se pudo cargar la información del destinatario",
       "sendFailed": "No se pudieron enviar correos electrónicos"
-    }
+    },
+    "invoiceCancelledRefusal": "Esta factura ha sido anulada, por lo que no se puede enviar por correo electrónico.",
+    "paidReceiptNotice": "Esta factura está pagada: el correo se enviará como recibo de pago."
   },
   "generateTab": {
     "fields": {
