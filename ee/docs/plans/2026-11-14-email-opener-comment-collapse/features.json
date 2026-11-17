@@ -1,0 +1,198 @@
+[
+  {
+    "id": "F001",
+    "description": "CommentMetadata type gains optional opensTicket:boolean and attachmentCount:number fields",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "createCommentFromEmail accepts opensTicket:true and writes top-level metadata.opensTicket=true (outside metadata.email)",
+    "implemented": true,
+    "prdRefs": [
+      "FR1",
+      "FR2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "opensTicket:true implies tech-email suppression; opener call sites drop the separate suppressTechEmailNotification flag",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "createCommentFromEmail accepts attachmentCount and writes metadata.attachmentCount for opener comments (omitted when unknown)",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "processInboundEmailInApp new-ticket branch passes opensTicket:true and the original email's non-inline attachment count",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Workflow action create_ticket_with_initial_comment passes opensTicket:true and the attachment count",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Reply paths (in-app reply branch, create_comment_from_email, create_comment_from_parsed_email) never set opensTicket",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Backfill migration marks the opening comment on ticket_origin='inbound_email' tickets by Message-ID match against tickets.email_metadata",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Backfill fallback: tickets still unmatched get their earliest root inbound-email comment marked when created within 120s of the ticket",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Backfill marks at most one comment per ticket, is idempotent, joins on tenant (Citus co-location) and avoids now() in CASE/COALESCE",
+    "implemented": true,
+    "prdRefs": [
+      "FR7",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Shared isTicketOpenerComment(comment) predicate in packages/tickets/src/lib, tolerant of jsonb-string metadata",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "OpenerCommentRow component: mail icon, 'Opened by email from {sender}', timestamp, attachment count, 'Show original email' button",
+    "implemented": true,
+    "prdRefs": [
+      "FR9",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "OpenerCommentRow shows sender address in angle brackets when available and different from the name (MSP only; redacted for portal)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR12"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "OpenerCommentRow resolves sender from author or, for unmatched senders, getInboundSenderIdentity",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "CommentItem renders OpenerCommentRow when isTicketOpenerComment and collapsed; full comment otherwise",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Expanded opener comment renders today's full CommentItem plus a 'Hide original email' control; state is local and defaults to collapsed",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Opener row works in both CommentItem variants (default and bento compact)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Toggle is a button with aria-expanded and an action-describing label",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Replies threaded under an opener root render unchanged (thread bar, auto-collapse, drawer)",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Client portal renders the opener row from redacted metadata (no address, no original-email switcher) and expands to today's portal comment",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Mobile TicketComment type gains optional metadata; useTicketData passes it through",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Mobile CommentsSection renders a compact opener row with tap-to-expand using the existing per-comment expand state",
+    "implemented": true,
+    "prdRefs": [
+      "FR13"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "New strings added to server/public/locales/*/features/tickets.json for all shipped locales; pseudo-locales regenerated",
+    "implemented": true,
+    "prdRefs": [
+      "FR14"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "New strings added to ee/mobile/src/i18n/locales/en/tickets.json",
+    "implemented": true,
+    "prdRefs": [
+      "FR14"
+    ]
+  }
+]

@@ -611,6 +611,13 @@
       },
       "unavailable": "Este ticket no está disponible.",
       "back": "Volver a Tickets de clientes"
+    },
+    "opener": {
+      "openedBy": "Abierto por correo electrónico de {{sender}}",
+      "attachments_one": "{{count}} archivo adjunto",
+      "attachments_other": "{{count}} archivos adjuntos",
+      "show": "Mostrar correo original",
+      "hide": "Ocultar correo original"
     }
   },
   "responseState": {
