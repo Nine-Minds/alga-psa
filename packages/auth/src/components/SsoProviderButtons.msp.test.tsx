@@ -353,4 +353,87 @@ describe('MSP SSO provider buttons', () => {
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toHaveAttribute('data-preferred', 'false');
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toHaveAttribute('data-preferred', 'false');
   });
+
+  // F001 / F004 (alga-2026-0002996)
+  describe('on a custom domain', () => {
+    const CANONICAL = 'https://app.alga.test';
+
+    function stubLocation(origin: string, host: string) {
+      const assign = vi.fn();
+      Object.defineProperty(window, 'location', {
+        value: { origin, host, hostname: host.split(':')[0], href: `${origin}/auth/msp/signin`, assign },
+        configurable: true,
+      });
+      return assign;
+    }
+
+    it('F001: makes one top-level navigation to the canonical entry point instead of resolving and signing in on this host', async () => {
+      const assign = stubLocation('https://msp.acme.test', 'msp.acme.test');
+      const fetchMock = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
+      vi.stubGlobal('fetch', fetchMock as any);
+
+      render(
+        <SsoProviderButtons
+          callbackUrl="https://msp.acme.test/msp/tickets?view=mine"
+          email="Tech@Acme.test"
+          tenantHint="abcdef012345"
+          publicWorkstation
+          canonicalSsoOrigin={CANONICAL}
+        />
+      );
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      const target = new URL(assign.mock.calls[0][0] as string);
+      expect(target.origin).toBe(CANONICAL);
+      expect(target.pathname).toBe('/api/auth/msp/sso/start');
+      expect(Object.fromEntries(target.searchParams)).toEqual({
+        provider: 'google',
+        email: 'tech@acme.test',
+        domain: 'msp.acme.test',
+        return: '/msp/tickets?view=mine',
+        tenant: 'abcdef012345',
+        publicWorkstation: 'true',
+      });
+
+      // Neither the resolve call nor next-auth's signIn runs on the custom host.
+      expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/msp/sso/resolve', expect.anything());
+      expect(signInMock).not.toHaveBeenCalled();
+      expect(window.localStorage.getItem('msp_sso_last_provider')).toBe('google');
+    });
+
+    it('F001: falls back to the MSP dashboard when the callback is not on this host', async () => {
+      const assign = stubLocation('https://msp.acme.test', 'msp.acme.test');
+      vi.stubGlobal('fetch', buildFetchMock({ discoverProviders: ['azure-ad'] }) as any);
+
+      render(<SsoProviderButtons callbackUrl="https://evil.test/msp" email="tech@acme.test" canonicalSsoOrigin={CANONICAL} />);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+
+      await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+      expect(new URL(assign.mock.calls[0][0] as string).searchParams.get('return')).toBe('/msp/dashboard');
+    });
+
+    it('F004: on the canonical host itself the flow is unchanged (resolve, then signIn in place)', async () => {
+      const assign = stubLocation(CANONICAL, 'app.alga.test');
+      const fetchMock = buildFetchMock({ discoverProviders: ['azure-ad'] });
+      vi.stubGlobal('fetch', fetchMock as any);
+
+      render(<SsoProviderButtons callbackUrl="/msp/dashboard" email="tech@acme.test" canonicalSsoOrigin={CANONICAL} />);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+
+      await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+        'azure-ad',
+        { callbackUrl: '/msp/dashboard' },
+        expect.objectContaining({ state: expect.any(String) })
+      ));
+      expect(fetchMock).toHaveBeenCalledWith('/api/auth/msp/sso/resolve', expect.anything());
+      expect(assign).not.toHaveBeenCalled();
+    });
+  });
 });

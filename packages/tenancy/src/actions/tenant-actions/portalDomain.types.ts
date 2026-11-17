@@ -38,19 +38,6 @@ export interface PortalDomainStatusResponse {
    * is not forwarding the Host header. (Appliance / `direct` mode only.)
    */
   neverSeenOnHost?: boolean;
-  /**
-   * SSO redirect-URI confirmation state for MSP-serving surfaces. While `required`
-   * has entries missing from `confirmed` the status is `pending_redirect_uri`.
-   * Absent for client-portal-only domains.
-   */
-  ssoRedirectUris?: {
-    required: string[];
-    confirmed: string[];
-    missing: string[];
-    source: 'not_required' | 'operator' | 'automation' | null;
-    /** Whether the signed-in admin may confirm the URIs themselves (appliance / direct mode). */
-    canSelfConfirm: boolean;
-  };
 }
 
 export interface PortalDomainRegistrationRequest {

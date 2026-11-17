@@ -17,6 +17,8 @@ interface MspSignInProps {
   initialEmail?: string;
   /** Organization the page is scoped to by a validated `?tenant=<slug>`. */
   scopedTenant?: { slug: string; name?: string };
+  /** Canonical origin for SSO; set when the page is served on a tenant's custom domain. */
+  canonicalSsoOrigin?: string;
 }
 
 // Marketing panel. Kept as data so each entry carries its own key rather than
@@ -31,7 +33,7 @@ const FEATURES = [
   { key: 'documents', icon: FileText, defaultValue: 'Centralized Document Uploads and Storage' },
 ] as const;
 
-export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTenant }: MspSignInProps) {
+export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTenant, canonicalSsoOrigin }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -239,6 +241,7 @@ export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTena
                 initialEmail={ssoTenantRequired && providerEmail ? providerEmail : initialEmail}
                 tenantSlug={scopedTenant?.slug}
                 initialTenantRequired={ssoTenantRequired}
+                canonicalSsoOrigin={canonicalSsoOrigin}
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
               />

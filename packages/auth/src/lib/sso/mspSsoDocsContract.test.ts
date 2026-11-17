@@ -16,8 +16,12 @@ describe('MSP SSO docs and comments contracts', () => {
       path.resolve(repoRoot, 'server/src/app/api/auth/msp/sso/resolve/route.ts')
     );
 
+    // The resolution itself is shared with the canonical-host entry point (/api/auth/msp/sso/start).
+    const resolutionSource = read(path.resolve(repoRoot, 'server/src/lib/auth/mspSsoResolve.ts'));
+
     expect(routeSource).toContain('Anti-enumeration rule: every failure path must return the exact same response shape/message.');
-    expect(routeSource).toContain('Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.');
+    expect(resolutionSource).toContain('Anti-enumeration rule: every failure collapses to the same');
+    expect(resolutionSource).toContain('Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.');
   });
 
   it('T053: .env.example documents unresolved-domain MSP fallback usage for GOOGLE_OAUTH_* and MICROSOFT_OAUTH_*', () => {

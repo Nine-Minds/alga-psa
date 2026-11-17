@@ -13,7 +13,6 @@ import {
   type PortalDomainSessionOtt,
 } from '../../../../packages/auth/src/lib/PortalDomainSessionToken';
 import type { PortalDomainRecord } from 'server/src/models/PortalDomainModel';
-import type { PortalSessionTokenPayload } from '../../../../packages/auth/src/lib/session';
 import logger from '@alga-psa/core/logger';
 
 // The OTT helpers emit lifecycle events through the shared logger.
@@ -193,14 +192,6 @@ describe('PortalDomainSessionToken helpers', () => {
     updated_at: new Date(),
   };
 
-  const snapshot: PortalSessionTokenPayload = {
-    id: 'user-1',
-    email: 'user@example.com',
-    tenant: 'tenant-1',
-    user_type: 'client',
-    clientId: 'client-1',
-  };
-
   beforeEach(() => {
     state = {
       portal_domains: [{ ...activeDomain }],
@@ -222,7 +213,7 @@ describe('PortalDomainSessionToken helpers', () => {
       portalDomainId: 'domain-1',
       userId: 'user-1',
       targetDomain: 'portal.example.com',
-      userSnapshot: snapshot,
+      surface: 'client_portal',
       issuedFromHost: 'login.algapsa.com',
       returnPath: '/client-portal/dashboard',
     });
@@ -230,6 +221,7 @@ describe('PortalDomainSessionToken helpers', () => {
     expect(token).toBeDefined();
     expect(token.length).toBeGreaterThan(40);
     expect(record.metadata.targetDomain).toBe('portal.example.com');
+    expect(record.metadata.surface).toBe('client_portal');
     expect(state.portal_domain_session_otts).toHaveLength(1);
     expect(infoMock).toHaveBeenCalledWith(
       'portal_domain.ott_issued',
@@ -246,10 +238,46 @@ describe('PortalDomainSessionToken helpers', () => {
         portalDomainId: 'domain-1',
         userId: 'user-1',
         targetDomain: 'portal.example.com',
-        userSnapshot: snapshot,
+        surface: 'client_portal',
         issuedFromHost: 'login.algapsa.com',
       }),
     ).rejects.toThrow('Portal domain is not active.');
+  });
+
+  it('records the surface and login method it was issued for (F008)', async () => {
+    state.portal_domains[0].surface = 'both';
+    const { record } = await issuePortalDomainOtt({
+      tenant: 'tenant-1',
+      portalDomainId: 'domain-1',
+      userId: 'tech-1',
+      targetDomain: 'portal.example.com',
+      surface: 'msp',
+      loginMethod: 'google',
+      issuedFromHost: 'login.algapsa.com',
+      returnPath: '/msp/dashboard',
+    });
+
+    expect(record.metadata).toMatchObject({ surface: 'msp', loginMethod: 'google', returnPath: '/msp/dashboard' });
+    expect(state.portal_domain_session_otts[0].metadata).not.toHaveProperty('userSnapshot');
+  });
+
+  it.each([
+    ['client_portal', 'msp'],
+    ['msp', 'client_portal'],
+  ])('refuses issuance for a %s-only domain when the surface is %s', async (domainSurface, surface) => {
+    state.portal_domains[0].surface = domainSurface as any;
+
+    await expect(
+      issuePortalDomainOtt({
+        tenant: 'tenant-1',
+        portalDomainId: 'domain-1',
+        userId: 'user-1',
+        targetDomain: 'portal.example.com',
+        surface: surface as any,
+        issuedFromHost: 'login.algapsa.com',
+      }),
+    ).rejects.toThrow('Portal domain does not serve this surface.');
+    expect(state.portal_domain_session_otts).toHaveLength(0);
   });
 
   it('consumes a valid token exactly once', async () => {
@@ -258,7 +286,7 @@ describe('PortalDomainSessionToken helpers', () => {
       portalDomainId: 'domain-1',
       userId: 'user-1',
       targetDomain: 'portal.example.com',
-      userSnapshot: snapshot,
+      surface: 'client_portal',
       issuedFromHost: 'login.algapsa.com',
     });
 
@@ -294,7 +322,7 @@ describe('PortalDomainSessionToken helpers', () => {
       portalDomainId: 'domain-1',
       userId: 'user-1',
       targetDomain: 'portal.example.com',
-      userSnapshot: snapshot,
+      surface: 'client_portal',
       issuedFromHost: 'login.algapsa.com',
     });
 
@@ -321,7 +349,7 @@ describe('PortalDomainSessionToken helpers', () => {
       portalDomainId: 'domain-1',
       userId: 'user-1',
       targetDomain: 'portal.example.com',
-      userSnapshot: snapshot,
+      surface: 'client_portal',
       issuedFromHost: 'login.algapsa.com',
     });
     state.portal_domain_session_otts[0].expires_at = new Date(Date.now() - 1000);
@@ -332,7 +360,7 @@ describe('PortalDomainSessionToken helpers', () => {
       portalDomainId: 'domain-1',
       userId: 'user-2',
       targetDomain: 'portal.example.com',
-      userSnapshot: { ...snapshot, id: 'user-2', email: 'u2@example.com' },
+      surface: 'client_portal',
       issuedFromHost: 'login.algapsa.com',
     });
     state.portal_domain_session_otts[1].consumed_at = new Date(Date.now() - 1000);

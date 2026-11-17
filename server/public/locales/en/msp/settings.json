@@ -1584,9 +1584,7 @@
         "saveDomain": "Save Domain",
         "updateDomain": "Update Domain",
         "submitting": "Submitting…",
-        "cancelEdit": "Cancel Edit",
-        "confirmUris": "I've registered these — confirm",
-        "confirmingUris": "Confirming…"
+        "cancelEdit": "Cancel Edit"
       },
       "form": {
         "label": "Custom domain",
@@ -1624,8 +1622,7 @@
         "deploying": "Deploying",
         "active": "Active",
         "disabled": "Disabled",
-        "unknown": "Unknown",
-        "pending_redirect_uri": "Pending Redirect URIs"
+        "unknown": "Unknown"
       },
       "messages": {
         "requestSubmitted": "Custom domain request submitted.",
@@ -1637,9 +1634,7 @@
         "registerFailed": "Failed to register custom domain.",
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
-        "disableFailed": "Failed to disable custom domain.",
-        "confirmUrisFailed": "Failed to confirm redirect URIs.",
-        "urisConfirmed": "Redirect URIs confirmed."
+        "disableFailed": "Failed to disable custom domain."
       },
       "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified.",
       "surface": {
@@ -1653,15 +1648,9 @@
         },
         "descriptions": {
           "client_portal": "The domain opens your client portal. This is the default.",
-          "msp": "The domain opens the MSP (technician) app. Single sign-on redirect URIs must be registered first.",
+          "msp": "The domain opens the MSP (technician) app.",
           "both": "One domain serves both apps. Paths under /msp open the MSP app and paths under /client-portal open the client portal."
         }
-      },
-      "redirectUris": {
-        "title": "SSO redirect URIs need to be registered",
-        "description": "This domain serves the MSP app, so single sign-on will only work once the redirect URIs below are registered with your SSO provider. The domain stays pending until they are confirmed.",
-        "listLabel": "Register these redirect URIs:",
-        "contactSupport": "Ask your administrator or contact support to register and confirm these redirect URIs."
       }
     },
     "yourCompanyName": "Your Company Name",
@@ -4233,9 +4222,7 @@
       "retryOnlyAfterFailure": "Retry is only available after a failed registration.",
       "alreadyInUse": "This domain is already in use. Choose a different domain.",
       "usedByOtherSurface": "This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose \"Both\".",
-      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both.",
-      "redirectUrisHosted": "Redirect URIs for hosted domains are registered by platform support.",
-      "nothingToConfirm": "No pending SSO redirect URI confirmation for this domain."
+      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both."
     }
   },
   "common": {

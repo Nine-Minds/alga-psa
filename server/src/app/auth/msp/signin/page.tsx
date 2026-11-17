@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers.js';
+import { cookies, headers } from 'next/headers.js';
 import { redirect } from 'next/navigation';
 import { MspSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { getSession } from '@alga-psa/auth';
@@ -12,6 +12,8 @@ import { I18nWrapper } from '@alga-psa/tenancy/components';
 import { requestMspSignInLinksAction } from '../../../actions/tenantDiscoveryActions';
 import type { Metadata } from 'next';
 import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { resolveRequestHost } from '@/lib/deployment/requestHost';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -19,6 +21,24 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('auth.msp.signin.title', { defaultValue: 'MSP Sign In' }),
   };
+}
+
+/**
+ * On a tenant's custom domain MSP SSO runs on the canonical host and the session is handed
+ * back (alga-2026-0002996). Returns the canonical origin when this request is on any other
+ * host, so the SSO buttons know to navigate there; undefined on the canonical host itself.
+ */
+async function resolveCanonicalSsoOrigin(): Promise<string | undefined> {
+  try {
+    const canonical = process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
+    if (!canonical) {
+      return undefined;
+    }
+    const { hostname } = resolveRequestHost({ headers: await headers() }, resolveDeploymentCapabilities());
+    return hostname && hostname.toLowerCase() !== canonical.hostname.toLowerCase() ? canonical.origin : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export default async function MspSignInPage({
@@ -64,6 +84,7 @@ export default async function MspSignInPage({
   // I18nWrapper from rendering its bootstrap spinner and round-tripping a
   // server action for the same answer.
   const locale = await getServerLocale();
+  const canonicalSsoOrigin = await resolveCanonicalSsoOrigin();
 
   const session = await getSession();
   if (session?.user) {
@@ -75,7 +96,7 @@ export default async function MspSignInPage({
         // Session was revoked, don't redirect - show signin form
         return (
           <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-            <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} />
+            <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} canonicalSsoOrigin={canonicalSsoOrigin} />
           </I18nWrapper>
         );
       }
@@ -104,7 +125,7 @@ export default async function MspSignInPage({
   }
   return (
     <I18nWrapper portal="msp" initialLocale={locale} renderChildrenWhileLoading>
-      <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} />
+      <MspSignIn requestSignInLinks={requestMspSignInLinksAction} initialEmail={initialEmail} scopedTenant={scopedTenant} canonicalSsoOrigin={canonicalSsoOrigin} />
     </I18nWrapper>
   );
 }

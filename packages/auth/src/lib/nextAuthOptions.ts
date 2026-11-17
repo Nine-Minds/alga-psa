@@ -15,14 +15,13 @@ import {
     getSessionMaxAge,
     isSecureCookieEnvironment,
     withDevPortSuffix,
-    type PortalSessionTokenPayload,
 } from "./session";
-import { isClientUserType, isInteractiveUserType, resolveProductCode, type ProductCode } from "@alga-psa/types";
+import { isInteractiveUserType, type ProductCode } from "@alga-psa/types";
 import { assertInteractiveUser } from "./assertInteractiveUser";
-import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
+import { computeVanityRedirect, isHandoffPathname } from "./portalDomainHandoff";
+import { applySubscriptionClaims, mintSessionToken } from "./sessionTokenMinting";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
-import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
 import type {
@@ -32,6 +31,11 @@ import type {
     OAuthMappingFailure,
 } from "./sso/types";
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
+import {
+    MSP_SSO_HANDOFF_COOKIE,
+    parseAndVerifyMspSsoHandoffCookie,
+    type MspSsoHandoffPayload,
+} from "./sso/mspSsoHandoff";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import {
     buildMicrosoftSsoEmulatorProvider,
@@ -64,42 +68,9 @@ import { UserSession } from "@alga-psa/db/models/UserSession";
 import { isTokenRevokedByLoginPolicy } from "./passwordLoginGate";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
-import { getLocationFromIp } from "./geolocation";
 import { getConnection, tenantDb } from "@alga-psa/db";
-import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
-import { portalDomainServes } from "@alga-psa/shared/core/portalDomainSurface";
+import { getPortalDomainByHostname } from "./PortalDomainModel";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
-
-/**
- * Effective tier override for self-host installs. Returns the tier resolved from
- * the offline `license_state` row (essentials/pro) when present, or
- * undefined in SaaS mode so the session falls back to the Stripe plan. Non-fatal
- * on any error (e.g. an un-migrated `license_state`) — returns undefined.
- */
-async function resolveSelfHostEffectiveTier(): Promise<string | undefined> {
-    try {
-        const selfHost = resolveSelfHostTier(await getLicenseStateRow());
-        if (selfHost !== null) return selfHost.tier;
-    } catch {
-        // Non-fatal — fall through to plan-based resolution.
-    }
-    return undefined;
-}
-
-function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
-    if (!portCandidate || portCandidate.length === 0) {
-        return;
-    }
-
-    const isHttpsDefault = protocol === 'https:' && portCandidate === '443';
-    const isHttpDefault = protocol === 'http:' && portCandidate === '80';
-
-    if (isHttpsDefault || isHttpDefault) {
-        return;
-    }
-
-    url.port = portCandidate;
-}
 
 async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string): Promise<boolean> {
     let target: URL;
@@ -111,7 +82,7 @@ async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string):
         return false;
     }
 
-    if (!target.pathname.startsWith('/auth/client-portal/handoff')) {
+    if (!isHandoffPathname(target.pathname)) {
         return false;
     }
 
@@ -199,96 +170,6 @@ async function checkTrackedSession(
         await logTrackedSessionRejection('durable_session_lookup_unavailable');
         return 'unverified';
     }
-}
-
-/**
- * Fetches the tenant's plan from the database.
- * Used for both initial sign-in and throttled refresh in JWT callbacks.
- */
-interface TenantSubscriptionInfo {
-    plan?: string;
-    product_code?: ProductCode;
-    addons?: string[];
-    trial_end?: string | null;
-    subscription_status?: string | null;
-    solo_pro_trial_end?: string | null;
-}
-
-async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
-    const info = await fetchTenantSubscriptionInfo(tenantId);
-    return info.plan;
-}
-
-async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubscriptionInfo> {
-    const { getAdminConnection } = await import('@alga-psa/db/admin');
-    const knex = await getAdminConnection();
-
-    // Fetch plan from tenants table
-    const tenantRecord = await tenantDb(knex, tenantId).table('tenants')
-        .select('plan', 'product_code')
-        .first();
-
-    // Fetch active subscription status + trial info from stripe_subscriptions
-    // Use a single query to minimize DB load (this runs on every JWT refresh)
-    let trialEnd: string | null = null;
-    let subscriptionStatus: string | null = null;
-    let soloProTrialEnd: string | null = null;
-    let addOns: string[] = [];
-
-    try {
-        const subscription = await tenantDb(knex, tenantId).table('stripe_subscriptions')
-            .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
-            .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
-            .select('status', 'current_period_end', 'metadata')
-            .first();
-
-        if (subscription) {
-            subscriptionStatus = subscription.status;
-
-            // For trialing subscriptions, current_period_end is the trial end date
-            if (subscription.status === 'trialing' && subscription.current_period_end) {
-                trialEnd = new Date(subscription.current_period_end).toISOString();
-            }
-
-            const metadata = subscription.metadata || {};
-            const activeSoloProTrialEnd = metadata.solo_pro_trial === 'true' && metadata.solo_pro_trial_end
-                ? new Date(metadata.solo_pro_trial_end)
-                : null;
-            if (activeSoloProTrialEnd && activeSoloProTrialEnd.getTime() > Date.now()) {
-                soloProTrialEnd = activeSoloProTrialEnd.toISOString();
-            }
-        }
-    } catch {
-        // stripe_subscriptions table may not exist in CE or early setup — ignore
-    }
-
-    try {
-        const addOnRows = await tenantDb(knex, tenantId).table('tenant_addons')
-            .select('addon_key', 'expires_at');
-
-        addOns = addOnRows
-            .filter((row: { addon_key: string; expires_at: string | Date | null }) => {
-                if (!row.expires_at) {
-                    return true;
-                }
-
-                return new Date(row.expires_at).getTime() > Date.now();
-            })
-            .map((row: { addon_key: string }) => row.addon_key);
-    } catch {
-        // tenant_addons may not exist in CE or early setup — ignore
-    }
-
-    return {
-        plan: tenantRecord?.plan ?? undefined,
-        // Unknown or unrecognised values resolve to psa (the same rule as every
-        // other product-code read), so the session can only ever carry a known product.
-        product_code: resolveProductCode(tenantRecord?.product_code).productCode,
-        addons: addOns,
-        trial_end: trialEnd,
-        subscription_status: subscriptionStatus,
-        solo_pro_trial_end: soloProTrialEnd,
-    };
 }
 
 const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
@@ -521,167 +402,6 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
         // Avoid crashing auth if EE modules aren't available; providers will fail with a clearer error
         // when invoked via the default registry stubs.
         console.error('[auth] Failed to initialize Enterprise SSO registry', error);
-    }
-}
-
-/**
- * A custom domain a signed-in client user may be handed off to: active AND serving the client
- * portal. An MSP-only domain would land the user on the middleware surface gate, which sends
- * portal paths on that host to /auth/signin (alga-2026-0002799).
- */
-export function isClientPortalHandoffDomain(portalDomain: { status: string; surface?: unknown }): boolean {
-    return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, 'client_portal');
-}
-
-async function computeVanityRedirect({
-    url,
-    baseUrl,
-    token,
-}: {
-    url: string;
-    baseUrl: string;
-    token?: Record<string, unknown> | null;
-}): Promise<string | null> {
-    if (!token) {
-        return null;
-    }
-
-    const userType = typeof token.user_type === 'string' ? token.user_type : undefined;
-    const tenantId = token.tenant;
-
-    if (!isClientUserType(userType) || typeof tenantId !== 'string' || tenantId.length === 0) {
-        console.log('[computeVanityRedirect] token not eligible', { userType, tenantId });
-        return null;
-    }
-
-    const base = new URL(baseUrl);
-    const target = new URL(url, baseUrl);
-
-    const userIdCandidate = token.id ?? token.sub;
-    if (typeof userIdCandidate !== 'string' || userIdCandidate.length === 0) {
-        console.log('[computeVanityRedirect] missing user id', { tokenKeys: Object.keys(token) });
-        return null;
-    }
-
-    try {
-        console.log('[computeVanityRedirect] begin lookup', {
-            tenantId,
-            userIdCandidate,
-            base: baseUrl,
-            target: target.toString(),
-        });
-        const { getAdminConnection } = await import('@alga-psa/db/admin');
-        const knex = await getAdminConnection();
-
-        const isSameOrigin = target.origin === base.origin;
-
-        const fetchPortalDomainForTenant = async () => {
-            const portalDomain = await getPortalDomain(knex, tenantId);
-            if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
-                return null;
-            }
-            // Already on the tenant's own custom domain (an MSP/both domain authenticates in
-            // place, see nextauth/customHostAuth.ts): the session cookie is host-only on this
-            // host, so a handoff to ourselves would be a pointless redirect loop.
-            if (portalDomain.domain.toLowerCase() === base.host.toLowerCase()) {
-                return null;
-            }
-            return portalDomain;
-        };
-
-        const fetchPortalDomainForHost = async (hostname: string, port?: string) => {
-            const candidates = [hostname];
-            if (port && port.length > 0 && port !== '80' && port !== '443') {
-                candidates.unshift(`${hostname}:${port}`);
-            }
-
-            for (const candidate of candidates) {
-                const portalDomain = await getPortalDomainByHostname(knex, candidate);
-                if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
-                    continue;
-                }
-                if (portalDomain.tenant !== tenantId) {
-                    continue;
-                }
-                return portalDomain;
-            }
-
-            return null;
-        };
-
-        const returnPath = `${target.pathname}${target.search ?? ''}`;
-        const protocol = isSameOrigin ? base.protocol : target.protocol;
-        const portalDomain = isSameOrigin
-            ? await fetchPortalDomainForTenant()
-            : await fetchPortalDomainForHost(target.hostname, target.port);
-
-        if (!portalDomain) {
-            console.log('[computeVanityRedirect] portal domain not found', {
-                tenant: tenantId,
-                targetHost: target.hostname,
-                isSameOrigin,
-            });
-            return null;
-        }
-
-        if (!isSameOrigin && target.pathname.startsWith('/auth/client-portal/handoff')) {
-            console.log('[computeVanityRedirect] target already handoff', { target: target.toString() });
-            return null;
-        }
-
-        if (isSameOrigin) {
-            console.log('[computeVanityRedirect] same origin target', { target: target.toString() });
-            if (!target.pathname.startsWith('/client-portal')) {
-                console.log('[computeVanityRedirect] same origin but not client portal', { pathname: target.pathname });
-                return null;
-            }
-
-            if (target.pathname.startsWith('/auth/client-portal/handoff')) {
-                console.log('[computeVanityRedirect] same origin and already handoff', { target: target.toString() });
-                return null;
-            }
-        }
-
-        const userSnapshot: PortalSessionTokenPayload = {
-            id: userIdCandidate,
-            email: typeof token.email === 'string' ? token.email : undefined,
-            name: typeof token.name === 'string' ? token.name : undefined,
-            tenant: tenantId,
-            user_type: userType,
-            clientId: typeof token.clientId === 'string' ? token.clientId : undefined,
-            contactId: typeof token.contactId === 'string' ? token.contactId : undefined,
-            session_id: typeof token.session_id === 'string' ? token.session_id : undefined, // NEW: Preserve session ID
-            login_method: typeof token.login_method === 'string' ? token.login_method : undefined, // NEW: Preserve login method
-        };
-
-        const { token: ott } = await issuePortalDomainOtt({
-            tenant: portalDomain.tenant,
-            portalDomainId: portalDomain.id,
-            userId: userIdCandidate,
-            targetDomain: portalDomain.domain,
-            userSnapshot,
-            issuedFromHost: base.host,
-            returnPath,
-        });
-
-        const vanityUrl = new URL(`${protocol}//${portalDomain.domain}/auth/client-portal/handoff`);
-        const desiredPort = isSameOrigin ? base.port : target.port;
-        applyPortToVanityUrl(vanityUrl, desiredPort, protocol);
-        vanityUrl.searchParams.set('ott', ott);
-        vanityUrl.searchParams.set('return', returnPath);
-
-        console.log('[computeVanityRedirect] redirecting to vanity host', {
-            base: base.origin,
-            target: target.toString(),
-            vanity: vanityUrl.toString(),
-            tenant: tenantId,
-            user: userIdCandidate,
-        });
-
-        return vanityUrl.toString();
-    } catch (error) {
-        console.warn('Failed to prepare vanity redirect for client portal', error);
-        return null;
     }
 }
 
@@ -1201,6 +921,30 @@ async function readClientPortalSsoTenantSlug(): Promise<string | undefined> {
     } catch (error) {
         console.warn('[client-portal-sso] failed to read tenant from resolution cookie', { error });
         return undefined;
+    }
+}
+
+/**
+ * Reads and clears the cookie the canonical-host SSO entry point leaves when a sign-in began
+ * on a custom MSP domain. Always cleared once an OAuth sign-in completes, so a stale value
+ * never steers a later sign-in. Returns null when absent, expired or not validly signed.
+ */
+async function consumeMspSsoHandoffCookie(): Promise<MspSsoHandoffPayload | null> {
+    try {
+        const store = await cookies();
+        const raw = store.get(MSP_SSO_HANDOFF_COOKIE)?.value;
+        if (!raw) {
+            return null;
+        }
+        store.delete(MSP_SSO_HANDOFF_COOKIE);
+        const secret = await getMspSsoSigningSecret();
+        if (!secret) {
+            return null;
+        }
+        return parseAndVerifyMspSsoHandoffCookie({ value: raw, secret });
+    } catch (error) {
+        console.warn('[msp-sso] failed to read handoff cookie', { error });
+        return null;
     }
 }
 
@@ -2011,6 +1755,40 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
             }
 
+            if (providerId && providerId !== 'credentials') {
+                // An MSP SSO sign-in begun on a custom domain ran on the canonical host; hand
+                // the session back to that domain. computeVanityRedirect re-checks that the
+                // domain is active, serves the MSP app and belongs to this user's tenant.
+                const handoff = await consumeMspSsoHandoffCookie();
+                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+                if (handoff && canonicalBaseUrl && extendedUser?.user_type === 'internal' && extendedUser.tenant) {
+                    try {
+                        const protocol = new URL(canonicalBaseUrl).protocol;
+                        const vanityRedirect = await computeVanityRedirect({
+                            url: `${protocol}//${handoff.domain}${handoff.returnPath}`,
+                            baseUrl: canonicalBaseUrl,
+                            token: {
+                                id: extendedUser.id,
+                                email: extendedUser.email,
+                                name: extendedUser.name,
+                                tenant: extendedUser.tenant,
+                                user_type: extendedUser.user_type,
+                                login_method: providerId,
+                            },
+                        });
+                        if (vanityRedirect) {
+                            return vanityRedirect;
+                        }
+                    } catch (error) {
+                        console.warn('[signIn] failed to compute MSP custom-domain handoff', {
+                            tenant: extendedUser.tenant,
+                            domain: handoff.domain,
+                            error,
+                        });
+                    }
+                }
+            }
+
             if (extendedUser && providerId) {
                 extendedUser.loginMethod = providerId;
             }
@@ -2124,118 +1902,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                    tenant: extendedUser.tenant,
 	                    clientId: extendedUser.clientId
 	                });
-                if (!extendedUser.tenantSlug && extendedUser.tenant) {
-                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
-                }
-	                token.id = extendedUser.id;
-	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
-	                token.sub = extendedUser.id;
-	                token.email = extendedUser.email;
-	                token.name = extendedUser.name;
-	                token.username = extendedUser.username;
-	                token.image = extendedUser.image;
-	                token.proToken = extendedUser.proToken;
-                token.tenant = extendedUser.tenant;
-                token.tenantSlug = extendedUser.tenantSlug;
-	                token.user_type = extendedUser.user_type;
-	                token.clientId = extendedUser.clientId;
-	                token.contactId = extendedUser.contactId;
-                // When this token was minted by a sign-in; with `login_method` it lets the
-                // tenant login policy tell password sessions issued before a cutoff.
-                token.auth_issued_at = Date.now();
-
-                // Fetch tenant plan + subscription info on initial sign-in
-                if (extendedUser.tenant) {
-                    try {
-                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
-                        token.plan = subInfo.plan;
-                        token.product_code = subInfo.product_code;
-                        token.addons = subInfo.addons;
-                        token.trial_end = subInfo.trial_end;
-                        token.subscription_status = subInfo.subscription_status;
-                        token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
-                        token.last_plan_check = Date.now();
-                    } catch (error) {
-                        console.error('[auth] Failed to fetch tenant subscription info:', error);
-                    }
-                }
-	              }
-
-	            // NEW: Create session record on initial sign-in
-	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-	            if (user && !token.session_id) {
-	                try {
-                    const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
-                    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
-                    const deviceInfo = extendedUser.deviceInfo ?? {
-                        ip: 'unknown',
-                        userAgent: 'unknown',
-                        deviceFingerprint: 'unknown',
-                        deviceName: 'Unknown device',
-                        deviceType: 'unknown',
-                        locationData: null,
-                    };
-
-                    // Determine login method - use captured provider from signIn, or default to credentials
-                    const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
-
-                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
-                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
-                    // then reports only "missing identity claims". Name the real gap first.
-                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
-                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
-                            loginMethod,
-                            email: token.email,
-                            hasTenant: typeof token.tenant === 'string',
-                            hasUserId: typeof token.id === 'string',
-                            userType: token.user_type,
-                        });
-                    }
-
-                    const sessionId = await UserSession.create({
-                        tenant: token.tenant as string,
-                        user_id: token.id as string,
-                        ip_address: deviceInfo.ip,
-                        user_agent: deviceInfo.userAgent,
-                        device_fingerprint: deviceInfo.deviceFingerprint,
-                        device_name: deviceInfo.deviceName,
-                        device_type: deviceInfo.deviceType,
-                        location_data: deviceInfo.locationData,
-                        expires_at: expiresAt,
-                        login_method: loginMethod,
-                    });
-
-                    token.session_id = sessionId;
-                    token.login_method = loginMethod;
-
-                    // Fire-and-forget: Update location data asynchronously
-                    const ipForLocation = deviceInfo.ip;
-                    const tenantForLocation = token.tenant as string;
-                    getLocationFromIp(ipForLocation)
-                        .then((locationData) => {
-                            if (locationData) {
-                                return UserSession.updateLocation(tenantForLocation, sessionId, locationData);
-                            }
-                        })
-                        .catch((error) => {
-                            console.warn('[auth] Failed to update session location:', error);
-                        });
-
-                    // Clean up device info (don't store in token)
-                    if (extendedUser.deviceInfo) {
-                        delete extendedUser.deviceInfo;
-                    }
-                } catch (error) {
-                    console.error('[auth] Failed to create session record:', {
-                        loginMethod: token.login_method,
-                        email: token.email,
-                        tenant: token.tenant,
-                        userId: token.id,
-                        error,
-                    });
-                }
-            }
+                // Identity, tenant, plan/subscription claims and the tracked session record are
+                // minted by the same function the custom-domain handoff exchange uses.
+                await mintSessionToken({ token, user: extendedUser });
+	            }
 
             // Check durable revocation and canonical identity state on every
             // authenticated request. Missing, untracked, or mismatched sessions
@@ -2303,15 +1973,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
                 if (shouldRefreshPlan) {
                     try {
-                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
-                        token.plan = subInfo.plan;
-                        token.product_code = subInfo.product_code;
-                        token.addons = subInfo.addons;
-                        token.trial_end = subInfo.trial_end;
-                        token.subscription_status = subInfo.subscription_status;
-                        token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
-                        token.last_plan_check = now;
+                        await applySubscriptionClaims(token, token.tenant as string, now);
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
                         // Don't block on plan refresh errors

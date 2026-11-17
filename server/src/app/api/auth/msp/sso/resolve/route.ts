@@ -1,20 +1,9 @@
-import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
 import {
   MSP_SSO_DISCOVERY_COOKIE,
   MSP_SSO_GENERIC_FAILURE_MESSAGE,
   MSP_SSO_RESOLUTION_COOKIE,
   MSP_SSO_RESOLUTION_TTL_SECONDS,
-  createSignedMspSsoResolutionCookie,
-  getMspSsoSigningSecret,
-  hasAppFallbackProviderCredentials,
-  isValidResolverCallbackUrl,
-  normalizeResolverEmail,
-  parseAndVerifyMspSsoDiscoveryCookie,
-  parseResolverProvider,
-  resolveMspSsoCredentialSource,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
 import {
   CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
@@ -23,27 +12,10 @@ import {
 import {
   buildClearedPendingRememberContextCookie,
   buildPendingRememberContextCookie,
-  createPendingRememberContextCookie,
 } from '@alga-psa/auth/lib/mspRememberedEmail';
+import { getRequestIpFromHeaders, resolveMspSso } from 'server/src/lib/auth/mspSsoResolve';
 
 export const dynamic = 'force-dynamic';
-
-const resolverRateLimiter = new RateLimiterMemory({
-  points: 8,
-  duration: 60,
-  blockDuration: 5 * 60,
-});
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function getRequestIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    const first = forwardedFor.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  return 'unknown';
-}
 
 function buildGenericFailureResponse(): NextResponse {
   // Anti-enumeration rule: every failure path must return the exact same response shape/message.
@@ -87,125 +59,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       | { provider?: unknown; email?: unknown; publicWorkstation?: unknown; callbackUrl?: unknown; tenantSlug?: unknown }
       | null;
 
-    const provider = parseResolverProvider(body?.provider);
-    const email = typeof body?.email === 'string' ? normalizeResolverEmail(body.email) : '';
-    const publicWorkstation = body?.publicWorkstation === true;
-    const callbackUrl =
-      typeof body?.callbackUrl === 'string' ? body.callbackUrl.trim() : undefined;
-
-    const rawTenantSlug = body?.tenantSlug;
-    const tenantSlug =
-      typeof rawTenantSlug === 'string' && rawTenantSlug.trim() ? rawTenantSlug.trim().toLowerCase() : undefined;
-    // A slug that was supplied but is bad fails the same way as everything else.
-    if (rawTenantSlug !== undefined && rawTenantSlug !== null && rawTenantSlug !== '' && !tenantSlug) {
-      return buildGenericFailureResponse();
-    }
-
-    if (
-      !provider ||
-      !email ||
-      !EMAIL_PATTERN.test(email) ||
-      !isValidResolverCallbackUrl(callbackUrl)
-    ) {
-      return buildGenericFailureResponse();
-    }
-
-    const ip = getRequestIp(request);
-    const emailHashBucket = createHash('sha256').update(email).digest('hex').slice(0, 16);
-    const limiterKey = `${ip}:${emailHashBucket}`;
-
-    try {
-      await resolverRateLimiter.consume(limiterKey);
-    } catch {
-      return buildGenericFailureResponse();
-    }
-
-    const signingSecret = await getMspSsoSigningSecret();
-    if (!signingSecret) {
-      console.warn('[msp-sso-resolve] NEXTAUTH_SECRET not configured; unable to issue resolution cookie');
-      return buildGenericFailureResponse();
-    }
-
-    const discoveryCookieValue = request.cookies.get(MSP_SSO_DISCOVERY_COOKIE)?.value;
-    const discoveryContext = parseAndVerifyMspSsoDiscoveryCookie({
-      value: discoveryCookieValue,
-      secret: signingSecret,
+    const result = await resolveMspSso({
+      provider: body?.provider,
+      email: body?.email,
+      publicWorkstation: body?.publicWorkstation === true,
+      callbackUrl: body?.callbackUrl,
+      tenantSlug: body?.tenantSlug,
+      discoveryCookieValue: request.cookies.get(MSP_SSO_DISCOVERY_COOKIE)?.value,
+      ip: getRequestIpFromHeaders(request.headers),
     });
-
-    // Scoped sign-in: the slug names the only tenant whose user may be signed
-    // in. Resolve it here, server-side, and sign it into the cookie.
-    let scopeTenantId: string | undefined;
-    if (tenantSlug) {
-      if (!isValidTenantSlug(tenantSlug)) {
-        return buildGenericFailureResponse();
-      }
-      scopeTenantId = (await getTenantIdBySlug(tenantSlug)) ?? undefined;
-      if (!scopeTenantId) {
-        return buildGenericFailureResponse();
-      }
-    }
-
-    // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
-    const outcome = await resolveMspSsoCredentialSource({
-      provider,
-      email,
-      discovery: discoveryContext,
-    });
-    if (
-      scopeTenantId &&
-      outcome.resolved &&
-      outcome.source === 'tenant' &&
-      outcome.tenantId !== scopeTenantId
-    ) {
-      // The email's domain belongs to another tenant's IdP. A sign-in scoped to
-      // this tenant must never run through it; use the app-level provider if
-      // one exists, otherwise fail like any other unavailable source.
-      if (await hasAppFallbackProviderCredentials(provider)) {
-        outcome.source = 'app';
-        outcome.tenantId = undefined;
-      } else {
-        outcome.resolved = false;
-      }
-    }
-    if (!outcome.resolved || !outcome.source) {
-      console.info('[msp-sso-resolve] no available credential source', {
-        provider,
-        discovery: discoveryContext ? 'present' : 'missing-or-invalid',
-      });
+    if (!result.ok) {
       return buildGenericFailureResponse();
     }
-
-    const cookie = createSignedMspSsoResolutionCookie({
-      provider,
-      source: outcome.source,
-      tenantId: outcome.tenantId,
-      scopeTenantId,
-      secret: signingSecret,
-      ttlSeconds: MSP_SSO_RESOLUTION_TTL_SECONDS,
-    });
-    const pendingRememberContext = createPendingRememberContextCookie({
-      email,
-      publicWorkstation,
-      secret: signingSecret,
-    });
 
     const response = NextResponse.json({ ok: true }, { status: 200 });
     clearClientPortalSsoCookies(response);
     response.cookies.set({
       name: MSP_SSO_RESOLUTION_COOKIE,
-      value: cookie.value,
+      value: result.resolutionCookieValue,
       path: '/',
       maxAge: MSP_SSO_RESOLUTION_TTL_SECONDS,
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
-    response.cookies.set(buildPendingRememberContextCookie(pendingRememberContext.value));
-
-    console.info('[msp-sso-resolve] credential source selected', {
-      provider,
-      source: outcome.source,
-    });
+    response.cookies.set(buildPendingRememberContextCookie(result.pendingRememberContextCookieValue));
 
     return response;
   } catch (error) {

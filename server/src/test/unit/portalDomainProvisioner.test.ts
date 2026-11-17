@@ -119,7 +119,7 @@ describe('directProvisioner (appliance, trust-on-submit)', () => {
   });
 });
 
-describe('surface + SSO redirect-URI gate (alga-2026-0002799)', () => {
+describe('surface activation without a redirect-URI gate (alga-2026-0002996)', () => {
   const regInput = (surface: 'client_portal' | 'msp' | 'both', existing: any = null) => ({
     knex: fakeKnex,
     tenant: 't1',
@@ -132,68 +132,30 @@ describe('surface + SSO redirect-URI gate (alga-2026-0002799)', () => {
   const providerEnv = { GOOGLE_OAUTH_CLIENT_ID: 'id', GOOGLE_OAUTH_CLIENT_SECRET: 'secret' };
 
   beforeEach(() => {
-    delete process.env.PORTAL_DOMAIN_SSO_REDIRECT_URIS_PREREGISTERED;
     for (const key of Object.keys(providerEnv)) delete (process.env as any)[key];
     for (const key of Object.keys(tenantSecrets)) delete tenantSecrets[key];
     msSsoReady.value = false;
   });
 
-  it('direct: a TENANT-configured IdP (no platform provider) gates an msp domain and names the URI to register', async () => {
-    tenantSecrets.google_client_id = 'tenant-google-id';
-    tenantSecrets.google_client_secret = 'tenant-google-secret';
-    msSsoReady.value = true;
-    await directProvisioner.register(regInput('msp'));
-    const input = upsertPortalDomain.mock.calls[0][2];
-    expect(input.status).toBe('pending_redirect_uri');
-    expect(input.verificationDetails.sso_redirect_uris.required).toEqual([
-      'https://helpdesk.acme.com/api/auth/callback/azure-ad',
-      'https://helpdesk.acme.com/api/auth/callback/google',
-    ]);
-    // Actionable: the message names the exact URIs to paste into the provider console.
-    expect(input.statusMessage).toContain('https://helpdesk.acme.com/api/auth/callback/google');
-    expect(input.statusMessage).toContain('https://helpdesk.acme.com/api/auth/callback/azure-ad');
-    expect(input.statusMessage).toMatch(/identity provider/i);
-  });
-
-  it('temporal: a tenant-configured IdP is also required for hosted msp domains', async () => {
+  // T006: MSP SSO runs on the canonical host, so no surface waits on provider callback URIs,
+  // whatever IdPs are configured.
+  it.each(['client_portal', 'msp', 'both'] as const)('direct: a %s domain is active at once and writes no redirect-URI state', async (surface) => {
+    Object.assign(process.env, providerEnv);
     tenantSecrets.keycloak_url = 'https://kc.acme.com';
     tenantSecrets.keycloak_realm = 'acme';
     tenantSecrets.keycloak_client_id = 'alga';
     tenantSecrets.keycloak_client_secret = 'shh';
-    await temporalProvisioner.register(regInput('both'));
-    expect(upsertPortalDomain.mock.calls[0][2].verificationDetails.sso_redirect_uris.required).toEqual([
-      'https://helpdesk.acme.com/api/auth/callback/keycloak',
-    ]);
-  });
-
-  it('a client_portal-only domain is never gated, even with tenant SSO configured', async () => {
-    tenantSecrets.google_client_id = 'tenant-google-id';
-    tenantSecrets.google_client_secret = 'tenant-google-secret';
-    await directProvisioner.register(regInput('client_portal'));
-    expect(upsertPortalDomain.mock.calls[0][2].status).toBe('active');
-  });
-
-  it('direct: msp surface with SSO configured stays pending_redirect_uri until confirmed', async () => {
-    Object.assign(process.env, providerEnv);
-    await directProvisioner.register(regInput('msp'));
+    await directProvisioner.register(regInput(surface));
     const input = upsertPortalDomain.mock.calls[0][2];
-    expect(input.surface).toBe('msp');
-    expect(input.status).toBe('pending_redirect_uri');
-    expect(input.verificationDetails.sso_redirect_uris.required).toEqual([
-      'https://helpdesk.acme.com/api/auth/callback/google',
+    expect(input.surface).toBe(surface);
+    expect(input.status).toBe('active');
+    expect(Object.keys(input.verificationDetails)).toEqual([
+      'requested_domain',
+      'proxy_target_host',
+      'proxy_target_port',
+      'forward_host_header',
     ]);
-    Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
-  });
-
-  it('direct: msp surface activates when no SSO provider needs a redirect URI', async () => {
-    await directProvisioner.register(regInput('both'));
-    expect(upsertPortalDomain.mock.calls[0][2].status).toBe('active');
-  });
-
-  it('direct: pre-registered redirect URIs activate immediately', async () => {
-    Object.assign(process.env, providerEnv, { PORTAL_DOMAIN_SSO_REDIRECT_URIS_PREREGISTERED: 'true' });
-    await directProvisioner.register(regInput('msp'));
-    expect(upsertPortalDomain.mock.calls[0][2].status).toBe('active');
+    expect(input.statusMessage).not.toMatch(/redirect/i);
     Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
   });
 
@@ -202,37 +164,16 @@ describe('surface + SSO redirect-URI gate (alga-2026-0002799)', () => {
     expect(upsertPortalDomain.mock.calls[0][2].matchSurface).toBe('client_portal');
   });
 
-  it('direct: refresh activates a pending_redirect_uri row once confirmed', async () => {
-    const existing: any = {
-      id: 'pd-1',
-      domain: 'helpdesk.acme.com',
-      surface: 'msp',
-      status: 'pending_redirect_uri',
-      verificationDetails: { sso_redirect_uris: { required: ['u'], confirmed: ['u'] } },
-    };
-    await directProvisioner.refresh({ knex: fakeKnex, tenant: 't1', existing });
-    expect(updatePortalDomain.mock.calls[0][2]).toEqual({ id: 'pd-1' });
-    expect(updatePortalDomain.mock.calls[0][3].status).toBe('active');
-  });
-
-  it('direct: refresh leaves an unconfirmed pending_redirect_uri row alone', async () => {
-    const existing: any = {
-      domain: 'helpdesk.acme.com',
-      surface: 'msp',
-      status: 'pending_redirect_uri',
-      verificationDetails: { sso_redirect_uris: { required: ['u'], confirmed: [] } },
-    };
-    await directProvisioner.refresh({ knex: fakeKnex, tenant: 't1', existing });
-    expect(updatePortalDomain).not.toHaveBeenCalled();
-  });
-
-  it('temporal: passes surface to the row and the workflow and stores the redirect-URI state', async () => {
+  it('temporal: passes surface to the row and the workflow and stores only DNS verification details', async () => {
     Object.assign(process.env, providerEnv);
     await temporalProvisioner.register(regInput('msp'));
     const input = upsertPortalDomain.mock.calls[0][2];
     expect(input.surface).toBe('msp');
     expect(input.status).toBe('pending_dns');
-    expect(input.verificationDetails.sso_redirect_uris.required).toHaveLength(1);
+    expect(input.verificationDetails).toEqual({
+      expected_cname: 'abc1234.portal.alga.acme.com',
+      requested_domain: 'helpdesk.acme.com',
+    });
     expect(enqueuePortalDomainWorkflow.mock.calls[0][0].surface).toBe('msp');
     Object.keys(providerEnv).forEach((k) => delete (process.env as any)[k]);
   });

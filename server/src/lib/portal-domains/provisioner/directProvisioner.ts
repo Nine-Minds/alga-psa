@@ -1,17 +1,8 @@
 import {
   deletePortalDomain,
-  updatePortalDomain,
   upsertPortalDomain,
 } from '@/models/PortalDomainModel';
 import { clearPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
-import {
-  buildSsoRedirectUriState,
-  resolveSsoProvidersForTenant,
-  describeMissingRedirectUris,
-  evaluateSsoRedirectUriGate,
-  readSsoRedirectUriState,
-  withSsoRedirectUriState,
-} from '@/lib/portal-domains/ssoRedirectUris';
 
 import type {
   PortalDomainProvisioner,
@@ -21,6 +12,13 @@ import type {
 } from './types';
 
 const PORTAL_DOMAIN_SERVICE_PORT = 3000;
+
+function describeActiveDirectDomain(domain: string): string {
+  return (
+    `Active. Ensure ${domain} resolves to this server and that your reverse proxy ` +
+    'terminates TLS and forwards the original Host header to it.'
+  );
+}
 
 /**
  * The server's primary host, derived from NEXTAUTH_URL. Used both as the
@@ -48,9 +46,6 @@ function getAppHost(): string | null {
 export const directProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
     const { knex, tenant, domain, surface, existing } = input;
-    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
-    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
-
     const appHost = getAppHost();
     if (appHost && domain === appHost) {
       throw new Error(
@@ -58,34 +53,20 @@ export const directProvisioner: PortalDomainProvisioner = {
       );
     }
 
-    const ssoState = buildSsoRedirectUriState({
+    // Every surface goes live as soon as it is registered: SSO for the MSP app runs on the
+    // canonical host and is handed off, so no provider callback is registered per domain.
+    await upsertPortalDomain(knex, tenant, {
       domain,
       surface,
-      providers: ssoProviders,
-      previous: existing && existing.domain === domain ? readSsoRedirectUriState(existing.verificationDetails) : null,
-    });
-    const verificationDetails = withSsoRedirectUriState(
-      {
+      matchSurface: existing?.surface,
+      status: 'active',
+      statusMessage: describeActiveDirectDomain(domain),
+      verificationDetails: {
         requested_domain: domain,
         proxy_target_host: appHost,
         proxy_target_port: PORTAL_DOMAIN_SERVICE_PORT,
         forward_host_header: true,
       },
-      ssoState
-    );
-    // MSP surfaces are not activated until the SSO redirect URIs are confirmed (D3).
-    const gate = evaluateSsoRedirectUriGate(surface, verificationDetails);
-
-    await upsertPortalDomain(knex, tenant, {
-      domain,
-      surface,
-      matchSurface: existing?.surface,
-      status: gate.ok ? 'active' : 'pending_redirect_uri',
-      statusMessage: gate.ok
-        ? `Active. Ensure ${domain} resolves to this server and that your reverse proxy ` +
-          'terminates TLS and forwards the original Host header to it.'
-        : describeMissingRedirectUris(gate.missing),
-      verificationDetails,
       lastCheckedAt: new Date().toISOString(),
       certificateSecretName: null,
       lastSyncedResourceVersion: null,
@@ -94,24 +75,9 @@ export const directProvisioner: PortalDomainProvisioner = {
     return { enqueued: false };
   },
 
-  // No asynchronous provisioning to poll. The only waiting state is
-  // `pending_redirect_uri`: re-evaluate the gate (e.g. after the operator confirmed).
-  async refresh(input: ReconcileInput): Promise<void> {
-    const { knex, tenant, existing } = input;
-    if (existing.status !== 'pending_redirect_uri') {
-      return;
-    }
-    const gate = evaluateSsoRedirectUriGate(existing.surface, existing.verificationDetails);
-    if (!gate.ok) {
-      return;
-    }
-    await updatePortalDomain(knex, tenant, { id: existing.id }, {
-      status: 'active',
-      statusMessage:
-        `Active. Ensure ${existing.domain} resolves to this server and that your reverse proxy ` +
-        'terminates TLS and forwards the original Host header to it.',
-      lastCheckedAt: new Date().toISOString(),
-    });
+  // No asynchronous provisioning to poll: register goes straight to `active`.
+  async refresh(_input: ReconcileInput): Promise<void> {
+    return;
   },
 
   // No transient/failed states exist in direct mode (register goes straight to

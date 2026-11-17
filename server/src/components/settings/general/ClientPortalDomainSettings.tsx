@@ -20,7 +20,6 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import {
-  confirmPortalDomainRedirectUrisAction,
   disablePortalDomainAction,
   getPortalDomainStatusAction,
   refreshPortalDomainStatusAction,
@@ -57,7 +56,6 @@ const STATUS_BADGE_VARIANTS: Record<PortalDomainStatus, BadgeVariant> = {
   pending_certificate: 'warning',
   certificate_issuing: 'warning',
   certificate_failed: 'error',
-  pending_redirect_uri: 'warning',
   deploying: 'secondary',
   active: 'success',
   disabled: 'default',
@@ -122,7 +120,6 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [confirmingUris, setConfirmingUris] = useState(false);
   const [surfaceInput, setSurfaceInput] = useState<PortalDomainSurface>(DEFAULT_PORTAL_DOMAIN_SURFACE);
   const [portalError, setPortalError] = useState<string | null>(null);
 
@@ -246,32 +243,6 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
     }
   };
 
-  const handleConfirmRedirectUris = async () => {
-    setConfirmingUris(true);
-    try {
-      const status = await confirmPortalDomainRedirectUrisAction();
-      if (isPortalDomainActionError(status)) {
-        const message = resolveErrorMessage(status, t('clientPortal.domain.messages.confirmUrisFailed'));
-        setPortalError(message);
-        toast.error(message);
-        return;
-      }
-
-      setPortalStatus(status);
-      setDomainInput(status.domain ?? domainInput);
-      setSurfaceInput(normalizePortalDomainSurface(status.surface));
-      setPortalError(null);
-      toast.success(t('clientPortal.domain.messages.urisConfirmed'));
-    } catch (error) {
-      const message = resolveErrorMessage(error, t('clientPortal.domain.messages.confirmUrisFailed'));
-      setPortalError(message);
-      console.error('Failed to confirm SSO redirect URIs:', error);
-      toast.error(message);
-    } finally {
-      setConfirmingUris(false);
-    }
-  };
-
   const handleDisable = async () => {
     if (!portalStatus?.domain) {
       return;
@@ -322,9 +293,6 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
     value,
     label: t(`clientPortal.domain.surface.options.${value}` as const),
   }));
-  const redirectUris = portalStatus?.ssoRedirectUris;
-  const showRedirectUriPanel = portalStatus?.status === 'pending_redirect_uri';
-  const missingRedirectUris = redirectUris?.missing ?? [];
 
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
@@ -529,44 +497,6 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
                 </p>
               </div>
             </form>
-
-            {showRedirectUriPanel && (
-              <Alert variant="warning" className="text-sm" data-automation-id="client-portal-domain-redirect-uris">
-                <AlertDescription>
-                  <div className="space-y-2">
-                    <div className="font-medium">{t('clientPortal.domain.redirectUris.title')}</div>
-                    <p>{t('clientPortal.domain.redirectUris.description')}</p>
-                    {missingRedirectUris.length > 0 && (
-                      <div>
-                        <div className="text-xs font-medium">{t('clientPortal.domain.redirectUris.listLabel')}</div>
-                        <ul className="mt-1 space-y-1">
-                          {missingRedirectUris.map((uri) => (
-                            <li key={uri}>
-                              <code className="break-all rounded bg-[rgb(var(--color-border-200))] px-1 py-0.5">{uri}</code>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {redirectUris?.canSelfConfirm ? (
-                      <Button
-                        id="client-portal-domain-confirm-redirect-uris"
-                        type="button"
-                        size="sm"
-                        onClick={handleConfirmRedirectUris}
-                        disabled={submitting || refreshing || retrying || confirmingUris}
-                      >
-                        {confirmingUris
-                          ? t('clientPortal.domain.actions.confirmingUris')
-                          : t('clientPortal.domain.actions.confirmUris')}
-                      </Button>
-                    ) : (
-                      <p className="text-xs">{t('clientPortal.domain.redirectUris.contactSupport')}</p>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
 
             {showNeverSeenWarning && (
               <Alert variant="warning" className="text-sm" data-automation-id="client-portal-domain-never-seen-warning">

@@ -72,6 +72,11 @@ export interface SsoProviderButtonsProps {
   discoveryEndpoint?: string;
   resolveEndpoint?: string;
   storageKey?: string;
+  /**
+   * Origin of the canonical host (NEXTAUTH_URL). Set by the sign-in page when it is served on a
+   * tenant's custom domain: MSP SSO then runs on the canonical host (see handleSignIn).
+   */
+  canonicalSsoOrigin?: string;
 }
 
 export default function SsoProviderButtons({
@@ -85,6 +90,7 @@ export default function SsoProviderButtons({
   discoveryEndpoint,
   resolveEndpoint,
   storageKey,
+  canonicalSsoOrigin,
 }: SsoProviderButtonsProps): React.ReactElement {
   const { t } = useTranslation('common', { useSuspense: false });
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -240,6 +246,38 @@ export default function SsoProviderButtons({
     setPendingProvider(providerId);
     try {
       onError?.('');
+
+      // On a custom domain the OAuth state/PKCE cookies and the SSO resolution cookies would be
+      // host-only on the wrong host, and the provider only knows the canonical callback URI.
+      // One top-level navigation to the canonical host runs resolution and OAuth there and
+      // hands the session back to this domain.
+      if (
+        authSurface === 'msp' &&
+        canonicalSsoOrigin &&
+        typeof window !== 'undefined' &&
+        window.location.origin !== canonicalSsoOrigin
+      ) {
+        window.localStorage.setItem(effectiveStorageKey, providerId);
+        setPreferredProvider(providerId);
+        let returnPath = '/msp/dashboard';
+        try {
+          const parsed = new URL(callbackUrl, window.location.origin);
+          if (parsed.origin === window.location.origin) {
+            returnPath = `${parsed.pathname}${parsed.search}`;
+          }
+        } catch {
+          // Keep the default landing page.
+        }
+        const startUrl = new URL('/api/auth/msp/sso/start', canonicalSsoOrigin);
+        startUrl.searchParams.set('provider', providerId);
+        startUrl.searchParams.set('email', normalizedEmail);
+        startUrl.searchParams.set('domain', window.location.host);
+        startUrl.searchParams.set('return', returnPath);
+        if (tenantHint) startUrl.searchParams.set('tenant', tenantHint);
+        if (publicWorkstation) startUrl.searchParams.set('publicWorkstation', 'true');
+        window.location.assign(startUrl.toString());
+        return;
+      }
       const resolveResponse = await fetch(effectiveResolveEndpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

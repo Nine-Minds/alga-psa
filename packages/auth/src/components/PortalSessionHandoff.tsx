@@ -34,7 +34,7 @@ const exchangesByOtt = new Map<string, Promise<ExchangeOutcome>>();
 
 async function performExchange(ott: string, returnPath?: string): Promise<ExchangeOutcome> {
   try {
-    const response = await fetch('/api/client-portal/domain-session', {
+    const response = await fetch('/api/auth/domain-session', {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -51,7 +51,7 @@ async function performExchange(ott: string, returnPath?: string): Promise<Exchan
 
     return {
       ok: true,
-      redirectTo: payload?.redirectTo || '/client-portal/dashboard',
+      redirectTo: payload?.redirectTo || '/',
       canonicalHost: payload?.canonicalHost,
     };
   } catch {
@@ -79,13 +79,16 @@ export default function PortalSessionHandoff({
   const [error, setError] = useState<string | null>(null);
   const [canonicalHost, setCanonicalHost] = useState<string | null>(null);
 
+  // The handoff serves both apps; send a failed handoff back to the sign-in page of the app
+  // the user was heading for.
+  const signInPath = returnPath?.startsWith('/msp') ? '/auth/msp/signin' : '/auth/client-portal/signin';
   const canonicalLoginUrl = useMemo(() => {
     if (canonicalHost) {
-      return `https://${canonicalHost}/auth/client-portal/signin`;
+      return `https://${canonicalHost}${signInPath}`;
     }
 
     return fallbackLoginUrl;
-  }, [canonicalHost, fallbackLoginUrl]);
+  }, [canonicalHost, fallbackLoginUrl, signInPath]);
 
   useEffect(() => {
     if (!ott || ott.length === 0) {
@@ -112,7 +115,7 @@ export default function PortalSessionHandoff({
       }
 
       if (outcome.ok) {
-        router.replace(outcome.redirectTo || '/client-portal/dashboard');
+        router.replace(outcome.redirectTo || '/');
         return;
       }
 

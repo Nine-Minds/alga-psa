@@ -1584,9 +1584,7 @@
         "saveDomain": "Domain speichern",
         "updateDomain": "Domain aktualisieren",
         "submitting": "Wird gesendet…",
-        "cancelEdit": "Bearbeitung abbrechen",
-        "confirmUris": "Ich habe diese registriert – bestätigen",
-        "confirmingUris": "Wird bestätigt…"
+        "cancelEdit": "Bearbeitung abbrechen"
       },
       "form": {
         "label": "Benutzerdefinierte Domain",
@@ -1624,8 +1622,7 @@
         "deploying": "Wird bereitgestellt",
         "active": "Aktiv",
         "disabled": "Deaktiviert",
-        "unknown": "Unbekannt",
-        "pending_redirect_uri": "Redirect-URIs ausstehend"
+        "unknown": "Unbekannt"
       },
       "messages": {
         "requestSubmitted": "Anfrage für benutzerdefinierte Domain übermittelt.",
@@ -1637,9 +1634,7 @@
         "registerFailed": "Benutzerdefinierte Domain konnte nicht registriert werden.",
         "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
         "retryFailed": "Wiederholung fehlgeschlagen.",
-        "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden.",
-        "confirmUrisFailed": "Redirect-URIs konnten nicht bestätigt werden.",
-        "urisConfirmed": "Redirect-URIs bestätigt."
+        "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
       },
       "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
       "surface": {
@@ -1653,15 +1648,9 @@
         },
         "descriptions": {
           "client_portal": "Die Domain öffnet Ihr Kundenportal. Dies ist die Standardeinstellung.",
-          "msp": "Die Domain öffnet die MSP-App (Techniker-App). Die Redirect-URIs für Single Sign-on müssen zuerst registriert werden.",
+          "msp": "Die Domain öffnet die MSP-App (Techniker-App).",
           "both": "Eine Domain bedient beide Apps. Pfade unter /msp öffnen die MSP-App, Pfade unter /client-portal das Kundenportal."
         }
-      },
-      "redirectUris": {
-        "title": "SSO-Redirect-URIs müssen registriert werden",
-        "description": "Diese Domain bedient die MSP-App. Single Sign-on funktioniert erst, wenn die folgenden Redirect-URIs bei Ihrem SSO-Anbieter registriert sind. Die Domain bleibt ausstehend, bis sie bestätigt wurden.",
-        "listLabel": "Registrieren Sie diese Redirect-URIs:",
-        "contactSupport": "Bitten Sie Ihre Administratorin bzw. Ihren Administrator oder den Support, diese Redirect-URIs zu registrieren und zu bestätigen."
       }
     },
     "yourCompanyName": "Name Ihres Unternehmens",
@@ -4233,9 +4222,7 @@
       "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich.",
       "alreadyInUse": "Diese Domain wird bereits verwendet. Wählen Sie eine andere Domain.",
       "usedByOtherSurface": "Diese Domain wird bereits von einer anderen Ihrer benutzerdefinierten Domains verwendet. Um das Kundenportal und die MSP-App über eine Domain bereitzustellen, wählen Sie „Beide“.",
-      "invalidSurface": "Wählen Sie aus, was die benutzerdefinierte Domain bereitstellt: Kundenportal, MSP-App oder beides.",
-      "redirectUrisHosted": "Weiterleitungs-URIs für gehostete Domains werden vom Plattform-Support registriert.",
-      "nothingToConfirm": "Für diese Domain steht keine Bestätigung von SSO-Weiterleitungs-URIs aus."
+      "invalidSurface": "Wählen Sie aus, was die benutzerdefinierte Domain bereitstellt: Kundenportal, MSP-App oder beides."
     }
   },
   "common": {

@@ -309,7 +309,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/auth/msp/forgot-password/layout.tsx', 'Forgot Password'],
       ['server/src/app/auth/client-portal/signin/page.tsx', 'Client Portal Sign In'],
       ['server/src/app/auth/client-portal/forgot-password/layout.tsx', 'Forgot Password'],
-      ['server/src/app/auth/client-portal/handoff/page.tsx', 'Signing In'],
+      ['server/src/app/auth/handoff/page.tsx', 'Signing In'],
       ['server/src/app/auth/password-reset/confirmation/layout.tsx', 'Password Reset'],
       ['server/src/app/auth/password-reset/set-new-password/layout.tsx', 'Set New Password'],
     ] as const;
