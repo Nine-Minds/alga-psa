@@ -1,3 +1,4 @@
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
@@ -145,24 +146,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const rawSuccessRedirect = state.redirectUri || url.origin;
-    let successRedirect = rawSuccessRedirect;
+    // `state.redirectUri` was captured when the flow started (absolute, from the public
+    // base URL, or an app path). With none, stay in the app via a relative Location:
+    // the request origin is the internal upstream behind the proxy.
+    const rawSuccessRedirect = state.redirectUri;
+    if (!rawSuccessRedirect) return redirectToAppPath('/');
 
     // Prevent redirecting back to this callback endpoint, which causes a second
     // request without code/state and surfaces a false "Missing code/state" error.
+    const isAppPath = rawSuccessRedirect.startsWith('/') && !rawSuccessRedirect.startsWith('//');
     try {
-      const parsed = new URL(rawSuccessRedirect, url.origin);
+      const parsed = new URL(rawSuccessRedirect, 'http://app-path.invalid');
       if (parsed.pathname === '/api/email/oauth/imap/callback') {
         parsed.pathname = '/msp/settings/email';
         parsed.searchParams.set('imapOAuth', 'success');
         parsed.searchParams.set('providerId', state.providerId);
-        successRedirect = parsed.toString();
+        return isAppPath
+          ? redirectToAppPath(`${parsed.pathname}${parsed.search}${parsed.hash}`)
+          : NextResponse.redirect(parsed);
       }
     } catch {
       // Keep original redirect target if it cannot be parsed.
     }
 
-    return NextResponse.redirect(successRedirect);
+    return isAppPath ? redirectToAppPath(rawSuccessRedirect) : NextResponse.redirect(rawSuccessRedirect);
   } catch (error: any) {
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);

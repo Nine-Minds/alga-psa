@@ -1,3 +1,4 @@
+import { redirectToAppPath } from '@alga-psa/core/redirectToAppPath';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
@@ -39,14 +40,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const state = url.searchParams.get('state');
 
   if (!redirectParam || !state) {
-    return NextResponse.redirect(new URL('/auth/signin', url.origin), { status: 302 });
+    return redirectToAppPath('/auth/signin', { status: 302 });
   }
 
   const redirectUrl = validateRedirectUri(redirectParam);
   if (!redirectUrl) {
-    const signIn = new URL('/auth/signin', url.origin);
-    signIn.searchParams.set('error', 'invalid_redirect');
-    return NextResponse.redirect(signIn.toString(), { status: 302 });
+    return redirectToAppPath('/auth/signin?error=invalid_redirect', { status: 302 });
   }
 
   const session = await getSessionWithRevocationCheck();
@@ -57,9 +56,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const sessionId = (session as any)?.session_id as string | undefined;
 
   if (!userId || !tenantId) {
-    const signIn = new URL('/auth/signin', url.origin);
-    signIn.searchParams.set('callbackUrl', url.toString());
-    return NextResponse.redirect(signIn.toString(), { status: 302 });
+    // Path-relative callbackUrl: `url.toString()` would carry the internal origin on hosted.
+    const signIn = new URLSearchParams({ callbackUrl: `${url.pathname}${url.search}` });
+    return redirectToAppPath(`/auth/signin?${signIn.toString()}`, { status: 302 });
   }
 
   if (userType !== 'internal') {

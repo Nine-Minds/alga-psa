@@ -221,6 +221,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/capability\/testing$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/testing.ts') },
       { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
+      { find: /^@alga-psa\/core\/redirectToAppPath$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/redirectToAppPath.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/features$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/features.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },
