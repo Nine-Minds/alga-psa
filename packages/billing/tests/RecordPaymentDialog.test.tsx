@@ -83,6 +83,7 @@ const summary = (overrides: Record<string, unknown> = {}) => ({
   totalPaid: 0,
   balanceDue: 10000,
   canRecordPayment: true,
+  blockedReason: null,
   ...overrides,
 });
 
@@ -153,11 +154,38 @@ describe('RecordPaymentDialog', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('disables submit for an invoice with nothing left to pay', async () => {
-    mocks.getInvoicePaymentSummary.mockResolvedValue(summary({ status: 'paid', balanceDue: 0, totalPaid: 10000, canRecordPayment: false }));
+  // The dialog used to disable every field with no message at all, so it could
+  // open as a silent dead end (alga-2026-0003329 review).
+  it('explains a settled invoice instead of showing a dead form', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue(summary({
+      status: 'paid', balanceDue: 0, totalPaid: 10000, canRecordPayment: false, blockedReason: 'no_balance_due',
+    }));
     render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
 
-    await screen.findByLabelText('Amount');
+    expect(await screen.findByText('This invoice has no balance due.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+    expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
+  });
+
+  it('names the status when the invoice can never take a payment', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue(summary({
+      status: 'cancelled', canRecordPayment: false, blockedReason: 'status_not_payable',
+    }));
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    expect(await screen.findByText(/Cannot record a payment for an invoice with status/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+  });
+
+  it('surfaces a failed summary load rather than a disabled form', async () => {
+    mocks.getInvoicePaymentSummary.mockResolvedValue({
+      permissionError: 'Permission denied: recording invoice payments requires the invoice payment permission.',
+      messageKey: 'msp/invoicing:errors.recordPayment.permissionDenied',
+    });
+    render(<RecordPaymentDialog isOpen onClose={vi.fn()} invoiceId="inv-1" />);
+
+    expect(await screen.findByText(/Permission denied/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
     expect(screen.getByText('Record Payment').closest('button')).toBeDisabled();
   });
 });

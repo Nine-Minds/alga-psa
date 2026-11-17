@@ -275,6 +275,32 @@ describe('recordManualInvoicePayment', () => {
     expect(result.messageKey).toBe('msp/invoicing:errors.recordPayment.noBalanceDue');
     expect(payments()).toHaveLength(1);
   });
+
+  // The Finalized tab lists every invoice that is finalized OR simply not a
+  // draft, so a sent invoice with no finalization timestamp was offered the
+  // action and then refused by a finalized_at gate the dialog could not explain.
+  it('records against a non-draft invoice that has no finalization timestamp', async () => {
+    seed({ finalized_at: null });
+
+    const result: any = await recordManualInvoicePayment({
+      invoiceId: INVOICE, amount: 10000, method: 'check',
+    });
+
+    expect(result).toMatchObject({ success: true, newStatus: 'paid' });
+    expect(payments()).toHaveLength(1);
+  });
+
+  it('announces the application of the payment, not only its recording', async () => {
+    await recordManualInvoicePayment({ invoiceId: INVOICE, amount: 4000, method: 'check' });
+
+    const applied = publishWorkflowEvent.mock.calls
+      .map((call) => call[0] as any)
+      .find((event) => event.eventType === 'PAYMENT_APPLIED');
+    expect(applied).toMatchObject({
+      ctx: { actor: { actorType: 'USER', actorUserId: 'user-1' } },
+      payload: { applications: [{ invoiceId: INVOICE, amountApplied: '4000' }] },
+    });
+  });
 });
 
 describe('getInvoicePaymentSummary', () => {
@@ -299,7 +325,7 @@ describe('getInvoicePaymentSummary', () => {
     });
   });
 
-  it('reports a settled invoice as not recordable', async () => {
+  it('reports a settled invoice as not recordable, and says why', async () => {
     seed({ status: 'paid' });
     rows('invoice_payments').push({ payment_id: 'pay-old', invoice_id: INVOICE, amount: 10000 });
 
@@ -307,5 +333,23 @@ describe('getInvoicePaymentSummary', () => {
 
     expect(summary.balanceDue).toBe(0);
     expect(summary.canRecordPayment).toBe(false);
+    expect(summary.blockedReason).toBe('no_balance_due');
+  });
+
+  it('names the status as the reason a cancelled invoice is blocked', async () => {
+    seed({ status: 'cancelled' });
+
+    const summary: any = await getInvoicePaymentSummary(INVOICE);
+
+    expect(summary).toMatchObject({ canRecordPayment: false, blockedReason: 'status_not_payable' });
+  });
+
+  // A finalization timestamp is NOT part of the gate: the tab offers these rows.
+  it('reports a non-finalized, non-draft invoice as recordable', async () => {
+    seed({ finalized_at: null });
+
+    const summary: any = await getInvoicePaymentSummary(INVOICE);
+
+    expect(summary).toMatchObject({ canRecordPayment: true, blockedReason: null });
   });
 });

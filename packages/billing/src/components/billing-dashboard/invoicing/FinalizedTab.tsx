@@ -76,6 +76,19 @@ export function canRecordPaymentForStatus(status: string | null | undefined): bo
   return status !== 'draft' && status !== 'paid' && status !== 'cancelled' && status !== 'void';
 }
 
+/**
+ * Row-level gate for the Record Payment action. Mirrors what the server action
+ * answers (`getInvoicePaymentSummary`) as closely as a list row can: the same
+ * non-payable statuses, plus the part of the balance this row already knows —
+ * an invoice fully covered by credit owes nothing and must not offer the
+ * action. Prior payments are not in the row, so a row that slips through still
+ * meets an explained refusal in the dialog rather than a dead form.
+ */
+export function canRecordPaymentForInvoice(invoice: Pick<DbInvoiceViewModel, 'status' | 'total_amount' | 'credit_applied'>): boolean {
+  if (!canRecordPaymentForStatus(invoice.status)) return false;
+  return Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0) > 0;
+}
+
 const isInvoiceMutationError = (
   result: InvoiceMutationActionResult,
 ): result is Exclude<InvoiceMutationActionResult, { success: true }> => (
@@ -538,7 +551,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 <Mail className="h-4 w-4" />
                 {t('finalizedTab.actions.sendEmail', { defaultValue: 'Send Email' })}
               </DropdownMenuItem>
-              {canRecordPaymentForStatus(record.status) && (
+              {canRecordPaymentForInvoice(record) && (
                 <DropdownMenuItem
                   id={`finalized-record-payment-${record.invoice_id}`}
                   onClick={() => openRecordPaymentDialog(record)}

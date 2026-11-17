@@ -13,6 +13,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatInvoiceStatus } from '@alga-psa/ui/hooks/useInvoiceEnumOptions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -61,6 +62,7 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { locale } = useFormatters();
+  const formatInvoiceStatus = useFormatInvoiceStatus();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,7 +112,21 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
   const amountMinorUnits = amount === undefined || Number.isNaN(amount)
     ? 0
     : toMinorUnits(amount, locale, currencyCode);
-  const canSubmit = Boolean(invoiceId) && !loading && !saving && amountMinorUnits > 0 && Boolean(summary?.canRecordPayment);
+  const canRecord = Boolean(summary?.canRecordPayment);
+  const canSubmit = Boolean(invoiceId) && !loading && !saving && amountMinorUnits > 0 && canRecord;
+
+  // A disabled form with no explanation is a dead end: whenever the invoice
+  // cannot take a payment the dialog says why instead of swallowing input.
+  const blockedMessage = summary && !summary.canRecordPayment
+    ? summary.blockedReason === 'no_balance_due'
+      ? t('errors.recordPayment.noBalanceDue', {
+        defaultValue: 'This invoice has no balance due.',
+      })
+      : t('errors.recordPayment.statusNotPayable', {
+        defaultValue: 'Cannot record a payment for an invoice with status: {{status}}.',
+        status: formatInvoiceStatus(summary.status),
+      })
+    : null;
 
   const methodOptions = MANUAL_PAYMENT_METHODS.map((value) => ({
     value,
@@ -192,8 +208,14 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
         ) : (
           <div className="space-y-4">
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" id="record-payment-error">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {blockedMessage && (
+              <Alert variant="warning" id="record-payment-blocked">
+                <AlertDescription>{blockedMessage}</AlertDescription>
               </Alert>
             )}
 
@@ -218,54 +240,65 @@ export const RecordPaymentDialog: React.FC<RecordPaymentDialogProps> = ({
               </div>
             )}
 
-            <CurrencyInput
-              id="record-payment-amount"
-              label={t('recordPayment.fields.amount', { defaultValue: 'Amount' })}
-              value={amount}
-              onChange={setAmount}
-              currencyCode={currencyCode}
-              disabled={saving || !summary?.canRecordPayment}
-              required
-            />
+            {/* No form at all when nothing can be recorded — the reason above
+                stands on its own rather than fronting a row of dead fields. */}
+            {canRecord && (
+              <>
+                <CurrencyInput
+                  id="record-payment-amount"
+                  label={t('recordPayment.fields.amount', { defaultValue: 'Amount' })}
+                  value={amount}
+                  onChange={setAmount}
+                  currencyCode={currencyCode}
+                  disabled={saving}
+                  required
+                />
 
-            <DatePicker
-              id="record-payment-date"
-              label={t('recordPayment.fields.paymentDate', { defaultValue: 'Payment date' })}
-              value={paymentDate}
-              onChange={(date: Date) => setPaymentDate(date)}
-              disabled={saving || !summary?.canRecordPayment}
-            />
+                <div className="space-y-1">
+                  <label htmlFor="record-payment-date" className="block text-sm font-medium">
+                    {t('recordPayment.fields.paymentDate', { defaultValue: 'Payment date' })}
+                  </label>
+                  <DatePicker
+                    id="record-payment-date"
+                    label={t('recordPayment.fields.paymentDate', { defaultValue: 'Payment date' })}
+                    value={paymentDate}
+                    onChange={(date: Date) => setPaymentDate(date)}
+                    disabled={saving}
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <label htmlFor="record-payment-method" className="block text-sm font-medium">
-                {t('recordPayment.fields.method', { defaultValue: 'Payment method' })}
-              </label>
-              <CustomSelect
-                id="record-payment-method"
-                value={method}
-                onValueChange={(value: string) => setMethod(value as ManualPaymentMethod)}
-                options={methodOptions}
-                disabled={saving || !summary?.canRecordPayment}
-              />
-            </div>
+                <div className="space-y-1">
+                  <label htmlFor="record-payment-method" className="block text-sm font-medium">
+                    {t('recordPayment.fields.method', { defaultValue: 'Payment method' })}
+                  </label>
+                  <CustomSelect
+                    id="record-payment-method"
+                    value={method}
+                    onValueChange={(value: string) => setMethod(value as ManualPaymentMethod)}
+                    options={methodOptions}
+                    disabled={saving}
+                  />
+                </div>
 
-            <Input
-              id="record-payment-reference"
-              label={t('recordPayment.fields.reference', { defaultValue: 'Reference' })}
-              value={reference}
-              onChange={(event) => setReference(event.target.value)}
-              placeholder={t('recordPayment.placeholders.reference', { defaultValue: 'Check or transaction number' })}
-              disabled={saving || !summary?.canRecordPayment}
-            />
+                <Input
+                  id="record-payment-reference"
+                  label={t('recordPayment.fields.reference', { defaultValue: 'Reference' })}
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
+                  placeholder={t('recordPayment.placeholders.reference', { defaultValue: 'Check or transaction number' })}
+                  disabled={saving}
+                />
 
-            <TextArea
-              id="record-payment-notes"
-              label={t('recordPayment.fields.notes', { defaultValue: 'Notes' })}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              rows={3}
-              disabled={saving || !summary?.canRecordPayment}
-            />
+                <TextArea
+                  id="record-payment-notes"
+                  label={t('recordPayment.fields.notes', { defaultValue: 'Notes' })}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  rows={3}
+                  disabled={saving}
+                />
+              </>
+            )}
           </div>
         )}
       </DialogContent>

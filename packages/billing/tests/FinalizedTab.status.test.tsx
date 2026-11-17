@@ -96,6 +96,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 
 import FinalizedTab from '../src/components/billing-dashboard/invoicing/FinalizedTab';
 import {
+  canRecordPaymentForInvoice,
   canRecordPaymentForStatus,
   invoiceStatusBadgeVariant,
 } from '../src/components/billing-dashboard/invoicing/FinalizedTab';
@@ -176,5 +177,18 @@ describe('FinalizedTab status column', () => {
     for (const status of ['draft', 'paid', 'cancelled', 'void']) {
       expect(canRecordPaymentForStatus(status)).toBe(false);
     }
+  });
+
+  // The row gate must not offer an action the server action will refuse.
+  it('offers Record Payment on a row without a finalization timestamp, but not on one covered by credit', () => {
+    expect(canRecordPaymentForInvoice(invoice({ status: 'sent', finalized_at: null }) as any)).toBe(true);
+    expect(canRecordPaymentForInvoice(invoice({ status: 'sent', total_amount: 100, credit_applied: 100 }) as any)).toBe(false);
+    expect(canRecordPaymentForInvoice(invoice({ status: 'sent', total_amount: 0, credit_applied: 0 }) as any)).toBe(false);
+  });
+
+  it('keeps the action on a row the tab lists without a finalization timestamp', async () => {
+    const row = await renderWith([invoice({ invoice_id: 'inv-unfinalized', status: 'sent', finalized_at: null })]);
+
+    expect(within(row).getByText('Record Payment')).toBeInTheDocument();
   });
 });

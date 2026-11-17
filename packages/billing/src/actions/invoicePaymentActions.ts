@@ -19,7 +19,9 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { computeBalanceDue } from '../lib/balanceDue';
+import { buildExternalPaymentAppliedPayload } from '../lib/paymentRecordedEvent';
 // The method list lives outside this file on purpose: a 'use server' module may
 // only export async functions, and the dialog needs the real array.
 import { isManualPaymentMethod, type ManualPaymentMethod } from '../lib/payments/manualPaymentMethods';
@@ -27,6 +29,12 @@ import {
   isNonPayableInvoiceStatus,
   recordExternalPayment,
 } from '../services/accountingSync/recordExternalPayment';
+
+/**
+ * Why an invoice cannot take a payment right now. The dialog must always be
+ * able to say so: a form that silently refuses every input is a dead end.
+ */
+export type InvoicePaymentBlockedReason = 'status_not_payable' | 'no_balance_due';
 
 export interface InvoicePaymentSummary {
   invoiceId: string;
@@ -38,8 +46,10 @@ export interface InvoicePaymentSummary {
   creditApplied: number;
   totalPaid: number;
   balanceDue: number;
-  /** False when the invoice can never take a payment (draft/void/cancelled/settled). */
+  /** False when the invoice cannot take a payment (draft/void/cancelled/settled). */
   canRecordPayment: boolean;
+  /** Set exactly when `canRecordPayment` is false. */
+  blockedReason: InvoicePaymentBlockedReason | null;
 }
 
 export interface RecordManualInvoicePaymentInput {
@@ -67,7 +77,6 @@ type InvoiceRow = {
   total_amount: number;
   credit_applied: number | null;
   currency_code: string | null;
-  finalized_at: unknown | null;
 };
 
 const KEY_PREFIX = 'msp/invoicing:errors.recordPayment';
@@ -86,7 +95,6 @@ async function loadInvoiceSummary(
       'total_amount',
       'credit_applied',
       'currency_code',
-      'finalized_at',
     );
   if (!invoice) return null;
 
@@ -101,6 +109,14 @@ async function loadInvoiceSummary(
     totalPaid,
   });
 
+  // Status and balance only — deliberately NOT `finalized_at`. The Finalized
+  // tab lists every invoice that is finalized OR simply not a draft, and the
+  // REST recordPayment endpoint refuses nothing but cancelled, so demanding a
+  // finalization timestamp made the dialog refuse rows the tab had offered.
+  const blockedReason: InvoicePaymentBlockedReason | null = isNonPayableInvoiceStatus(invoice.status)
+    ? 'status_not_payable'
+    : balanceDue > 0 ? null : 'no_balance_due';
+
   return {
     invoiceId: invoice.invoice_id,
     invoiceNumber: invoice.invoice_number,
@@ -110,10 +126,47 @@ async function loadInvoiceSummary(
     creditApplied: Number(invoice.credit_applied ?? 0),
     totalPaid,
     balanceDue,
-    canRecordPayment: Boolean(invoice.finalized_at)
-      && !isNonPayableInvoiceStatus(invoice.status)
-      && balanceDue > 0,
+    canRecordPayment: blockedReason === null,
+    blockedReason,
   };
+}
+
+/**
+ * Announces that the recorded payment was applied to this invoice, with USER
+ * attribution. Never throws: a publish failure must not fail a payment that is
+ * already committed.
+ */
+async function publishPaymentApplied(params: {
+  tenant: string;
+  invoiceId: string;
+  paymentId: string;
+  amount: number;
+  actorUserId: string;
+}): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  try {
+    await publishWorkflowEvent({
+      eventType: 'PAYMENT_APPLIED',
+      payload: buildExternalPaymentAppliedPayload({
+        paymentId: params.paymentId,
+        appliedAt: occurredAt,
+        appliedByUserId: params.actorUserId,
+        applications: [{ invoiceId: params.invoiceId, amountApplied: params.amount }],
+      }),
+      ctx: {
+        tenantId: params.tenant,
+        occurredAt,
+        actor: { actorType: 'USER', actorUserId: params.actorUserId },
+      },
+      idempotencyKey: `payment_applied:${params.paymentId}:${params.invoiceId}`,
+    });
+  } catch (error) {
+    logger.error('[recordManualInvoicePayment] Failed to publish PAYMENT_APPLIED', {
+      tenant: params.tenant,
+      paymentId: params.paymentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 /**
@@ -180,10 +233,12 @@ export const recordManualInvoicePayment = withAuth(async (
   }
   // Drafts have no amount owed yet; recordExternalPayment refuses void/cancelled
   // too, but refusing here keeps the message specific and skips the write path.
-  if (!summary.canRecordPayment) {
-    if (summary.balanceDue <= 0 && !isNonPayableInvoiceStatus(summary.status)) {
-      return actionError('This invoice has no balance due.', `${KEY_PREFIX}.noBalanceDue`);
-    }
+  // The dialog reads the same `blockedReason` from the summary, so what it shows
+  // and what this refuses can never disagree.
+  if (summary.blockedReason === 'no_balance_due') {
+    return actionError('This invoice has no balance due.', `${KEY_PREFIX}.noBalanceDue`);
+  }
+  if (summary.blockedReason === 'status_not_payable') {
     return actionError(
       `Cannot record a payment for an invoice with status: ${summary.status}`,
       `${KEY_PREFIX}.statusNotPayable`,
@@ -197,6 +252,10 @@ export const recordManualInvoicePayment = withAuth(async (
   }
 
   const reference = input.referenceNumber?.trim() || undefined;
+  // The AR landing also queues the payment for the tenant's connected
+  // accounting realm (EE + a mapped invoice only). That is deliberate: Alga is
+  // the AR system of record here, so a cheque entered in this dialog reaches
+  // QBO/Xero the same way a Stripe settlement does.
   const result = await recordExternalPayment(knex, tenant, {
     invoiceId: input.invoiceId,
     amount,
@@ -226,6 +285,18 @@ export const recordManualInvoicePayment = withAuth(async (
     });
     return actionError(result.error ?? 'Failed to record the payment.', `${KEY_PREFIX}.recordFailed`);
   }
+
+  // recordExternalPayment publishes PAYMENT_RECORDED; the application of that
+  // payment to this invoice is a second event both other recording paths emit
+  // (PaymentService for Stripe, InvoiceService.recordPayment for REST), so the
+  // manual entry must not be the odd one out in the event stream.
+  await publishPaymentApplied({
+    tenant,
+    invoiceId: input.invoiceId,
+    paymentId: result.paymentId,
+    amount,
+    actorUserId: user.user_id,
+  });
 
   return {
     success: true,
