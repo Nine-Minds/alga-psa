@@ -2942,20 +2942,20 @@
     }
   },
   "live": {
-    "updatedOne": "1 Ticket aktualisiert",
-    "updatedMany": "{{count}} Tickets aktualisiert",
-    "newOne": "1 neues Ticket",
-    "newMany": "{{count}} neue Tickets",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 neues Ticket und 1 aktualisiertes Ticket",
-        "manyUpdated": "1 neues Ticket und {{updatedCount}} aktualisierte Tickets"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} neue Tickets und 1 aktualisiertes Ticket",
-        "manyUpdated": "{{newCount}} neue Tickets und {{updatedCount}} aktualisierte Tickets"
-      }
-    },
+    "newCount_one": "{{count}} neues Ticket",
+    "newCount_other": "{{count}} neue Tickets",
+    "updatedCount_one": "{{count}} Ticket aktualisiert",
+    "updatedCount_other": "{{count}} Tickets aktualisiert",
+    "refresh": "Liste aktualisieren",
+    "focusNew_one": "{{count}} neues Ticket wird angezeigt",
+    "focusNew_other": "{{count}} neue Tickets werden angezeigt",
+    "focusUpdated_one": "{{count}} aktualisiertes Ticket wird angezeigt",
+    "focusUpdated_other": "{{count}} aktualisierte Tickets werden angezeigt",
+    "focusNewCapped_one": "Die ersten {{count}} neuen Tickets werden angezeigt (weitere werden nicht angezeigt)",
+    "focusNewCapped_other": "Die ersten {{count}} neuen Tickets werden angezeigt (weitere werden nicht angezeigt)",
+    "focusUpdatedCapped_one": "Die ersten {{count}} aktualisierten Tickets werden angezeigt (weitere werden nicht angezeigt)",
+    "focusUpdatedCapped_other": "Die ersten {{count}} aktualisierten Tickets werden angezeigt (weitere werden nicht angezeigt)",
+    "showAll": "Alle Tickets anzeigen",
     "updatedBadge": "Aktualisiert",
     "boardActivity": "Neue Aktivität auf diesem Board"
   },

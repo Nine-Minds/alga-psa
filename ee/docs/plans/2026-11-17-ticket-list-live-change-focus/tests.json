@@ -1,0 +1,13 @@
+[
+  { "id": "T001", "description": "DB-backed: the ticket list query with where ticket_id in [a, b] returns only readable tickets among a and b, ignoring other scope filters supplied by focus mode; a ticket the caller cannot read is omitted", "implemented": false, "featureIds": ["F001", "F009"] },
+  { "id": "T002", "description": "Where validation refuses a ticket_id clause with more than 200 values", "implemented": false, "featureIds": ["F002"] },
+  { "id": "T003", "description": "matchesTicketListChange returns true/false (never null) for an event when filters carry a ticket_id clause", "implemented": false, "featureIds": ["F003"] },
+  { "id": "T004", "description": "ChangedSinceLoad: with new and updated entries, acknowledge('new') clears only new; ticketIds('updated') still returns the updated IDs; a later event is still classified against the full-list snapshot", "implemented": false, "featureIds": ["F004", "F005", "F012"] },
+  { "id": "T005", "description": "DB-backed: getTicketChangeCounts returns newTicketIds for authorized matching tickets changed by another user after the cutoff, excludes the caller's own changes, and caps at 200", "implemented": false, "featureIds": ["F006"] },
+  { "id": "T006", "description": "ChangedSinceLoad fallback snapshot exposes newTicketIds through ticketIds('new')", "implemented": false, "featureIds": ["F007"] },
+  { "id": "T007", "description": "Dashboard: clicking 'N new' fetches with only the ticket_id clause, keeps the updated count, and leaves URL, activeFilters and saved-view capture unchanged; 'Show all tickets' restores the original request", "implemented": false, "featureIds": ["F008", "F009", "F010", "F012", "F013", "F014", "F015"] },
+  { "id": "T008", "description": "Dashboard: 'Refresh list' while focused refetches with the full list's filters and clears counts", "implemented": false, "featureIds": ["F015", "F016"] },
+  { "id": "T009", "description": "Dashboard: changing a filter while focused leaves focus and applies the change to the original filters", "implemented": false, "featureIds": ["F017"] },
+  { "id": "T010", "description": "Select-all-matching while focused requests IDs with the focused filters", "implemented": false, "featureIds": ["F011"] },
+  { "id": "T011", "description": "i18n: every tickets locale file carries the new banner and focus-notice keys", "implemented": false, "featureIds": ["F018"] }
+]

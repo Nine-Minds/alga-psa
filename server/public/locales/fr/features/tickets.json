@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "1 ticket mis à jour",
-    "updatedMany": "{{count}} tickets mis à jour",
-    "newOne": "1 nouveau ticket",
-    "newMany": "{{count}} nouveaux tickets",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 nouveau ticket et 1 ticket mis à jour",
-        "manyUpdated": "1 nouveau ticket et {{updatedCount}} tickets mis à jour"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} nouveaux tickets et 1 ticket mis à jour",
-        "manyUpdated": "{{newCount}} nouveaux tickets et {{updatedCount}} tickets mis à jour"
-      }
-    },
+    "newCount_one": "{{count}} nouveau ticket",
+    "newCount_few": "{{count}} nouveaux tickets",
+    "newCount_many": "{{count}} nouveaux tickets",
+    "newCount_other": "{{count}} nouveaux tickets",
+    "updatedCount_one": "{{count}} ticket mis à jour",
+    "updatedCount_few": "{{count}} tickets mis à jour",
+    "updatedCount_many": "{{count}} tickets mis à jour",
+    "updatedCount_other": "{{count}} tickets mis à jour",
+    "refresh": "Actualiser la liste",
+    "focusNew_one": "Affichage de {{count}} nouveau ticket",
+    "focusNew_few": "Affichage de {{count}} nouveaux tickets",
+    "focusNew_many": "Affichage de {{count}} nouveaux tickets",
+    "focusNew_other": "Affichage de {{count}} nouveaux tickets",
+    "focusUpdated_one": "Affichage de {{count}} ticket mis à jour",
+    "focusUpdated_few": "Affichage de {{count}} tickets mis à jour",
+    "focusUpdated_many": "Affichage de {{count}} tickets mis à jour",
+    "focusUpdated_other": "Affichage de {{count}} tickets mis à jour",
+    "focusNewCapped_one": "Affichage des {{count}} premiers nouveaux tickets (les autres ne sont pas affichés)",
+    "focusNewCapped_few": "Affichage des {{count}} premiers nouveaux tickets (les autres ne sont pas affichés)",
+    "focusNewCapped_many": "Affichage des {{count}} premiers nouveaux tickets (les autres ne sont pas affichés)",
+    "focusNewCapped_other": "Affichage des {{count}} premiers nouveaux tickets (les autres ne sont pas affichés)",
+    "focusUpdatedCapped_one": "Affichage des {{count}} premiers tickets mis à jour (les autres ne sont pas affichés)",
+    "focusUpdatedCapped_few": "Affichage des {{count}} premiers tickets mis à jour (les autres ne sont pas affichés)",
+    "focusUpdatedCapped_many": "Affichage des {{count}} premiers tickets mis à jour (les autres ne sont pas affichés)",
+    "focusUpdatedCapped_other": "Affichage des {{count}} premiers tickets mis à jour (les autres ne sont pas affichés)",
+    "showAll": "Afficher tous les tickets",
     "updatedBadge": "Mis à jour",
     "boardActivity": "Nouvelle activité sur ce tableau"
   },

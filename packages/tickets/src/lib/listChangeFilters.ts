@@ -51,6 +51,7 @@ export function matchesTicketListChange(
   // Use the list query's codec rather than maintaining a second set of
   // board/status/assignment/date/category rules for live events.
   const record: Record<string, unknown> = {
+    ticket_id: change.ticketId,
     board_id: change.boardId,
     board_inactive: change.isBoardActive === undefined ? undefined : !change.isBoardActive,
     status_id: change.statusId,

@@ -14,11 +14,12 @@ describe('where is carried by every list surface', () => {
   it('dashboard prev/next query and export / select-all / smart-search scope include where', () => {
     const src = read('../components/TicketingDashboard.tsx');
     expect(src).toContain('encodeTicketWhere(f.where)');
-    const exportBlock = src.slice(src.indexOf('const exportFilters = useMemo'), src.indexOf('const smartSearchFilters'));
+    const exportBlock = src.slice(src.indexOf('const listFilters = useMemo'), src.indexOf('const exportFilters = useMemo'));
     expect(exportBlock).toContain('where: selectedWhere');
     expect(exportBlock).toContain('selectedWhere,');
-    // select-all and smart search both derive from exportFilters.
-    expect(src).toContain('{ ...exportFilters, searchQuery: \'\' }');
+    // export / select-all use the list's filters (or the live-change focus request); smart search derives from the list's.
+    expect(src).toContain('focus ? buildFocusedListFilters(focus, { sortBy, sortDirection }) : listFilters');
+    expect(src).toContain('{ ...listFilters, searchQuery: \'\' }');
   });
   it('SSR page parses where and passes it to the first fetch', () => {
     const src = readFileSync(resolve(__dirname, '../../../../server/src/app/msp/tickets/page.tsx'), 'utf8');

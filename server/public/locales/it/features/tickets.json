@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "1 ticket aggiornato",
-    "updatedMany": "{{count}} ticket aggiornati",
-    "newOne": "1 nuovo ticket",
-    "newMany": "{{count}} nuovi ticket",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 nuovo ticket e 1 ticket aggiornato",
-        "manyUpdated": "1 nuovo ticket e {{updatedCount}} ticket aggiornati"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} nuovi ticket e 1 ticket aggiornato",
-        "manyUpdated": "{{newCount}} nuovi ticket e {{updatedCount}} ticket aggiornati"
-      }
-    },
+    "newCount_one": "{{count}} nuovo ticket",
+    "newCount_few": "{{count}} nuovi ticket",
+    "newCount_many": "{{count}} nuovi ticket",
+    "newCount_other": "{{count}} nuovi ticket",
+    "updatedCount_one": "{{count}} ticket aggiornato",
+    "updatedCount_few": "{{count}} ticket aggiornati",
+    "updatedCount_many": "{{count}} ticket aggiornati",
+    "updatedCount_other": "{{count}} ticket aggiornati",
+    "refresh": "Aggiorna elenco",
+    "focusNew_one": "Visualizzazione di {{count}} nuovo ticket",
+    "focusNew_few": "Visualizzazione di {{count}} nuovi ticket",
+    "focusNew_many": "Visualizzazione di {{count}} nuovi ticket",
+    "focusNew_other": "Visualizzazione di {{count}} nuovi ticket",
+    "focusUpdated_one": "Visualizzazione di {{count}} ticket aggiornato",
+    "focusUpdated_few": "Visualizzazione di {{count}} ticket aggiornati",
+    "focusUpdated_many": "Visualizzazione di {{count}} ticket aggiornati",
+    "focusUpdated_other": "Visualizzazione di {{count}} ticket aggiornati",
+    "focusNewCapped_one": "Visualizzazione dei primi {{count}} nuovi ticket (gli altri non sono mostrati)",
+    "focusNewCapped_few": "Visualizzazione dei primi {{count}} nuovi ticket (gli altri non sono mostrati)",
+    "focusNewCapped_many": "Visualizzazione dei primi {{count}} nuovi ticket (gli altri non sono mostrati)",
+    "focusNewCapped_other": "Visualizzazione dei primi {{count}} nuovi ticket (gli altri non sono mostrati)",
+    "focusUpdatedCapped_one": "Visualizzazione dei primi {{count}} ticket aggiornati (gli altri non sono mostrati)",
+    "focusUpdatedCapped_few": "Visualizzazione dei primi {{count}} ticket aggiornati (gli altri non sono mostrati)",
+    "focusUpdatedCapped_many": "Visualizzazione dei primi {{count}} ticket aggiornati (gli altri non sono mostrati)",
+    "focusUpdatedCapped_other": "Visualizzazione dei primi {{count}} ticket aggiornati (gli altri non sono mostrati)",
+    "showAll": "Mostra tutti i ticket",
     "updatedBadge": "Aggiornato",
     "boardActivity": "Nuova attività in questa bacheca"
   },

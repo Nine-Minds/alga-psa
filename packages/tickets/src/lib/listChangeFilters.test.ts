@@ -65,3 +65,17 @@ describe('ticket list live change classification', () => {
   });
 
 });
+
+describe('ticket_id clause in live-change matching (T003)', () => {
+  const where = (...ids: string[]) => ({ where: { join: 'and' as const, clauses: [{ path: 'ticket_id', operator: 'in' as const, value: ids }] } });
+
+  it('returns true/false, never null, when filters carry a ticket_id clause', () => {
+    expect(matchesTicketListChange(base, where('t-1', 't-9'))).toBe(true);
+    expect(matchesTicketListChange(base, where('t-9'))).toBe(false);
+  });
+
+  it('combines with other filters', () => {
+    expect(matchesTicketListChange(base, { boardIds: ['b-1'], ...where('t-1') })).toBe(true);
+    expect(matchesTicketListChange(base, { boardIds: ['other'], ...where('t-1') })).toBe(false);
+  });
+});

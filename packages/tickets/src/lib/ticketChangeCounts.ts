@@ -1,3 +1,5 @@
+import { TICKET_WHERE_MAX_TICKET_IDS } from './ticketWhere';
+
 export interface AuthorizedTicketChangeCandidate {
   ticket_id: string;
   board_id?: string | null;
@@ -36,17 +38,19 @@ export function summarizeTicketActivityHistory(input: {
   return { activityActors, listActivityActors, latestActivityAt: latestExternalActivityAt };
 }
 
-/** Aggregate an already visibility-filtered recovery window without returning ticket identifiers. */
+/** Aggregate an already visibility-filtered recovery window. `newTicketIds` are candidates that passed
+ * authorization and the list query's matching set, so they reveal nothing the list would not show. */
 export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCandidate>(input: {
   candidates: readonly T[];
   matchingTicketIds: ReadonlySet<string>;
   loadedTicketIds: ReadonlySet<string>;
   currentUserId: string;
   since?: number;
-}): { newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string> } {
+}): { newCount: number; updatedCount: number; newTicketIds: string[]; boards: Record<string, number>; boardLatestAt: Record<string, string> } {
   const seen = new Set<string>();
   let newCount = 0;
   let updatedCount = 0;
+  const newTicketIds: string[] = [];
   const boards: Record<string, number> = {};
   const boardLatestAt: Record<string, string> = {};
   for (const ticket of input.candidates) {
@@ -59,7 +63,10 @@ export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCan
     const listActors = ticket.listActivityActors ?? ticket.activityActors;
     const hasOtherListActivity = !listActors || listActors.some(actor => actor !== input.currentUserId);
     if (inListWindow && hasOtherListActivity && input.loadedTicketIds.has(ticket.ticket_id)) updatedCount += 1;
-    else if (inListWindow && hasOtherListActivity && input.matchingTicketIds.has(ticket.ticket_id)) newCount += 1;
+    else if (inListWindow && hasOtherListActivity && input.matchingTicketIds.has(ticket.ticket_id)) {
+      newCount += 1;
+      if (newTicketIds.length < TICKET_WHERE_MAX_TICKET_IDS) newTicketIds.push(ticket.ticket_id);
+    }
     if (ticket.board_id) {
       boards[ticket.board_id] = (boards[ticket.board_id] ?? 0) + 1;
       if (ticket.latestActivityAt && (!boardLatestAt[ticket.board_id] || ticket.latestActivityAt > boardLatestAt[ticket.board_id])) {
@@ -67,5 +74,5 @@ export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCan
       }
     }
   }
-  return { newCount, updatedCount, boards, boardLatestAt };
+  return { newCount, updatedCount, newTicketIds, boards, boardLatestAt };
 }

@@ -127,7 +127,8 @@ import {
 } from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
-import { ChangedSinceLoad } from '../lib/changedSinceLoad';
+import { ChangedSinceLoad, type ChangedKind } from '../lib/changedSinceLoad';
+import { buildFocusedListFilters, type TicketListFocus } from '../lib/ticketListFocus';
 import { handleTicketListChangeForDashboard } from '../lib/liveTicketChangeWiring';
 import { useTicketListChanges } from '../hooks/useTicketListChanges';
 import type { TicketListChange } from '../lib/listChangeFilters';
@@ -187,6 +188,10 @@ interface TicketingDashboardProps {
   loadedAt: number;
   loadedFilters: Partial<ITicketListFilters>;
   onRefreshListForChanges: () => Promise<boolean>;
+  /** Replace the list with just the tickets of one changed kind (a temporary overlay, not a filter edit). */
+  onFocusOnChanges?: (kind: ChangedKind, ticketIds: string[], capped?: boolean) => Promise<boolean>;
+  /** The overlay the rows on screen belong to; null when the full list is shown. */
+  focus?: TicketListFocus | null;
   initialBoards: IBoard[];
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
@@ -353,6 +358,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   loadedAt,
   loadedFilters,
   onRefreshListForChanges,
+  onFocusOnChanges,
+  focus = null,
   initialBoards,
   initialStatuses,
   initialPriorities,
@@ -408,14 +415,29 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const recoveryRequestedRef = useRef(false);
   const recoverChangesRef = useRef<(() => void) | null>(null);
   const [, setChangeRevision] = useState(0);
+  // Change tracking always describes the *full* list. A focused load (the live-change overlay) shows other
+  // rows under other filters, so it must neither reload the tracker nor feed recovery.
+  const fullListRef = useRef({ tickets: initialTickets, loadedAt, filters: loadedFilters });
+  const acknowledgedFocusRef = useRef<TicketListFocus | null>(null);
   useLayoutEffect(() => {
+    if (focus) {
+      // Entering focus acknowledges only the clicked kind, as of the focused query's completion.
+      if (acknowledgedFocusRef.current !== focus) {
+        changeStateRef.current.acknowledge(focus.kind, loadedAt);
+        acknowledgedFocusRef.current = focus;
+        setChangeRevision(value => value + 1);
+      }
+      return;
+    }
+    acknowledgedFocusRef.current = null;
+    fullListRef.current = { tickets: initialTickets, loadedAt, filters: loadedFilters };
     changeStateRef.current.load(initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []), loadedFilters, user?.user_id ?? '', loadedAt);
     setChangeRevision(value => value + 1);
-  }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
+  }, [initialTickets, loadedAt, loadedFilters, focus, user?.user_id]);
   const receiveTicketChange = useCallback((event: TicketListChange) => {
-    handleTicketListChangeForDashboard(event, changeStateRef.current, loadedFilters.searchQuery ?? '',
+    handleTicketListChangeForDashboard(event, changeStateRef.current, fullListRef.current.filters.searchQuery ?? '',
       () => setChangeRevision(value => value + 1), () => recoverChangesRef.current?.());
-  }, [loadedFilters.searchQuery]);
+  }, []);
   const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
     if (recoveryRunningRef.current) {
       recoveryRequestedRef.current = true;
@@ -423,19 +445,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
     recoveryRunningRef.current = true;
     const requestedSnapshot = changeStateRef.current.getSnapshot();
+    const full = fullListRef.current;
     try {
       const result = await getTicketChangeCounts(
-        loadedFilters as ITicketListFilters,
-        initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
-        loadedAt,
+        full.filters as ITicketListFilters,
+        full.tickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
+        full.loadedAt,
         boardTrackingSinceRef.current,
       );
       if (isActionMessageError(result) || isActionPermissionError(result)) return;
       changeStateRef.current.setFallbackSnapshot({
-        since: loadedAt, asOf: result.asOf,
+        since: full.loadedAt, asOf: result.asOf,
         newCount: result.newCount, updatedCount: result.updatedCount, boards: result.boards,
         boardLatestAt: result.boardLatestAt,
-        updatedTicketIds: initialTickets.flatMap((ticket, index) => result.loadedChanged[index] && ticket.ticket_id ? [ticket.ticket_id] : []),
+        newTicketIds: result.newTicketIds,
+        updatedTicketIds: full.tickets.flatMap((ticket, index) => result.loadedChanged[index] && ticket.ticket_id ? [ticket.ticket_id] : []),
       }, requestedSnapshot.generation);
       setChangeRevision(value => value + 1);
     } catch (error) {
@@ -447,20 +471,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         recoverChangesRef.current?.();
       }
     }
-  }, [loadedAt, loadedFilters, initialTickets]);
-  recoverChangesRef.current = () => { void recoverTicketChanges(loadedAt); };
+  }, []);
+  recoverChangesRef.current = () => { void recoverTicketChanges(fullListRef.current.loadedAt); };
   useTicketListChanges(user?.tenant, receiveTicketChange, {
     onUnavailable: recoverTicketChanges,
     onRecovered: recoverTicketChanges,
   });
   useEffect(() => {
-    if (changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
-  }, [loadedAt, loadedFilters, recoverTicketChanges]);
+    if (!focus && changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
+  }, [loadedAt, loadedFilters, focus, recoverTicketChanges]);
   const changeCounts = changeStateRef.current.getCounts();
   const changedBoardIds = changeStateRef.current.boards();
   const refreshChangedTickets = useCallback(async () => {
     await onRefreshListForChanges();
   }, [onRefreshListForChanges]);
+  const focusChangedTickets = useCallback(async (kind: ChangedKind) => {
+    const ids = changeStateRef.current.ticketIds(kind);
+    // Nothing identifiable to show (e.g. only a capped remainder is left): the full list is the answer.
+    if (!onFocusOnChanges || ids.length === 0) { await onRefreshListForChanges(); return; }
+    const counts = changeStateRef.current.getCounts();
+    await onFocusOnChanges(kind, ids, (kind === 'new' ? counts.newCount : counts.updatedCount) > ids.length);
+  }, [onFocusOnChanges, onRefreshListForChanges]);
   // The server offers the responsibility column, filter and seat views; the capability is the client's own kill
   // switch over them, so a closed capability shows none of the seat list UI whatever the payload carries.
   const { enabled: seatServed } = useCapability('co-managed-seat');
@@ -1406,7 +1437,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
   }, []);
 
-  const exportFilters = useMemo((): ITicketListFilters => ({
+  const listFilters = useMemo((): ITicketListFilters => ({
     boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
     excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
     statusId: selectedStatus,
@@ -1438,9 +1469,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
   ]);
+  // Select-all-matching, bulk actions and export act on what is shown, so while the live-change overlay is
+  // up they use its request instead of the list's own filters.
+  const exportFilters = useMemo((): ITicketListFilters => (
+    focus ? buildFocusedListFilters(focus, { sortBy, sortDirection }) : listFilters
+  ), [focus, listFilters, sortBy, sortDirection]);
 
   // Smart search runs over the chips alone; the typed text is the Jev query.
-  const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...exportFilters, searchQuery: '' }), [exportFilters]);
+  const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...listFilters, searchQuery: '' }), [listFilters]);
   const smartSearchFiltersKey = useMemo(() => JSON.stringify(smartSearchFilters), [smartSearchFilters]);
   const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;
 
@@ -2644,20 +2680,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       {listCallout}
       <ListCard>
         {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
-          <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
-            className="chip-primary mb-3 w-full rounded-md px-3 py-2 text-left text-sm font-medium hover:underline disabled:opacity-60"
+          <div id="ticket-list-changes" className="chip-primary mb-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-md px-3 py-1 text-sm font-medium"
             aria-live="polite">
-            {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
-              ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,
-                  changeCounts.newCount === 1
-                    ? changeCounts.updatedCount === 1 ? '1 new ticket and 1 updated ticket' : '1 new ticket and {{updatedCount}} updated tickets'
-                    : changeCounts.updatedCount === 1 ? '{{newCount}} new tickets and 1 updated ticket' : '{{newCount}} new tickets and {{updatedCount}} updated tickets', changeCounts)
-              : changeCounts.newCount > 0
-                ? t(changeCounts.newCount === 1 ? 'live.newOne' : 'live.newMany',
-                    changeCounts.newCount === 1 ? '1 new ticket' : '{{count}} new tickets', { count: changeCounts.newCount })
-                : t(changeCounts.updatedCount === 1 ? 'live.updatedOne' : 'live.updatedMany',
-                    changeCounts.updatedCount === 1 ? '1 ticket updated' : '{{count}} tickets updated', { count: changeCounts.updatedCount })}
-          </button>
+            {changeCounts.newCount > 0 && (
+              <Button id="ticket-list-changes-new" type="button" variant="link" size="xs" onClick={() => void focusChangedTickets('new')} disabled={isLoadingMore}>
+                {t('live.newCount', { count: changeCounts.newCount, defaultValue: changeCounts.newCount === 1 ? '{{count}} new ticket' : '{{count}} new tickets' })}
+              </Button>
+            )}
+            {changeCounts.updatedCount > 0 && (
+              <Button id="ticket-list-changes-updated" type="button" variant="link" size="xs" onClick={() => void focusChangedTickets('updated')} disabled={isLoadingMore}>
+                {t('live.updatedCount', { count: changeCounts.updatedCount, defaultValue: changeCounts.updatedCount === 1 ? '{{count}} ticket updated' : '{{count}} tickets updated' })}
+              </Button>
+            )}
+            <Button id="ticket-list-changes-refresh" type="button" variant="link" size="xs" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}>
+              {t('live.refresh', 'Refresh list')}
+            </Button>
+          </div>
         )}
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
@@ -2675,6 +2713,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <ListToolbarSurface density={densityClasses}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
+              {focus && (
+                <div id="ticket-list-focus-notice" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" role="status">
+                  <span>
+                    {t(`live.${focus.kind === 'new' ? 'focusNew' : 'focusUpdated'}${focus.capped ? 'Capped' : ''}`, {
+                      count: totalCount,
+                      defaultValue: focus.capped
+                        ? (focus.kind === 'new' ? 'Showing the first {{count}} new tickets (more are not shown)' : 'Showing the first {{count}} updated tickets (more are not shown)')
+                        : (focus.kind === 'new' ? 'Showing {{count}} new tickets' : 'Showing {{count}} updated tickets'),
+                    })}
+                  </span>
+                  <Button id="ticket-list-focus-show-all" type="button" variant="link" size="xs" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}>
+                    {t('live.showAll', 'Show all tickets')}
+                  </Button>
+                </div>
+              )}
               {/* Candidate #1: always-visible search + Filters toggle + density */}
               <ListToolbarRow>
                 <ListToolbarSearchInput

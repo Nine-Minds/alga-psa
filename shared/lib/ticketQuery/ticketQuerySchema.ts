@@ -256,6 +256,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       description_folded: computed('description_folded', nowIso),
       from_service_request: computed('from_service_request', nowIso),
       service_request_definition_id: computed('service_request_definition_id', nowIso),
+      ticket_id: uuidColumn('ticket_id', ['in']),
       board_id: uuidColumn('board_id'),
       status_id: uuidColumn('status_id'),
       priority_id: uuidColumn('priority_id'),

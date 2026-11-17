@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "1 ticket bijgewerkt",
-    "updatedMany": "{{count}} tickets bijgewerkt",
-    "newOne": "1 nieuw ticket",
-    "newMany": "{{count}} nieuwe tickets",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 nieuw ticket en 1 bijgewerkt ticket",
-        "manyUpdated": "1 nieuw ticket en {{updatedCount}} bijgewerkte tickets"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} nieuwe tickets en 1 bijgewerkt ticket",
-        "manyUpdated": "{{newCount}} nieuwe tickets en {{updatedCount}} bijgewerkte tickets"
-      }
-    },
+    "newCount_one": "{{count}} nieuw ticket",
+    "newCount_few": "{{count}} nieuwe tickets",
+    "newCount_many": "{{count}} nieuwe tickets",
+    "newCount_other": "{{count}} nieuwe tickets",
+    "updatedCount_one": "{{count}} ticket bijgewerkt",
+    "updatedCount_few": "{{count}} tickets bijgewerkt",
+    "updatedCount_many": "{{count}} tickets bijgewerkt",
+    "updatedCount_other": "{{count}} tickets bijgewerkt",
+    "refresh": "Lijst vernieuwen",
+    "focusNew_one": "{{count}} nieuw ticket wordt getoond",
+    "focusNew_few": "{{count}} nieuwe tickets worden getoond",
+    "focusNew_many": "{{count}} nieuwe tickets worden getoond",
+    "focusNew_other": "{{count}} nieuwe tickets worden getoond",
+    "focusUpdated_one": "{{count}} bijgewerkt ticket wordt getoond",
+    "focusUpdated_few": "{{count}} bijgewerkte tickets worden getoond",
+    "focusUpdated_many": "{{count}} bijgewerkte tickets worden getoond",
+    "focusUpdated_other": "{{count}} bijgewerkte tickets worden getoond",
+    "focusNewCapped_one": "De eerste {{count}} nieuwe tickets worden getoond (meer worden niet getoond)",
+    "focusNewCapped_few": "De eerste {{count}} nieuwe tickets worden getoond (meer worden niet getoond)",
+    "focusNewCapped_many": "De eerste {{count}} nieuwe tickets worden getoond (meer worden niet getoond)",
+    "focusNewCapped_other": "De eerste {{count}} nieuwe tickets worden getoond (meer worden niet getoond)",
+    "focusUpdatedCapped_one": "De eerste {{count}} bijgewerkte tickets worden getoond (meer worden niet getoond)",
+    "focusUpdatedCapped_few": "De eerste {{count}} bijgewerkte tickets worden getoond (meer worden niet getoond)",
+    "focusUpdatedCapped_many": "De eerste {{count}} bijgewerkte tickets worden getoond (meer worden niet getoond)",
+    "focusUpdatedCapped_other": "De eerste {{count}} bijgewerkte tickets worden getoond (meer worden niet getoond)",
+    "showAll": "Alle tickets tonen",
     "updatedBadge": "Bijgewerkt",
     "boardActivity": "Nieuwe activiteit op dit bord"
   },

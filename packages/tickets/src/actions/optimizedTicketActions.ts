@@ -2467,9 +2467,9 @@ export const getAllMatchingTicketIds = withAuth(async (
   });
 });
 
-/** Counts-only recovery for changes missed while the tenant live room was
- * unavailable. Ticket ids and rows remain server-side; authorization is the
- * same per-record kernel used by the list path. */
+/** Counts recovery for changes missed while the tenant live room was
+ * unavailable. Returns ids (capped) only for new tickets that passed the same
+ * per-record authorization and list-matching set as the list path. */
 export const getTicketChangeCounts = withAuth(async (
   user,
   { tenant },
@@ -2477,7 +2477,7 @@ export const getTicketChangeCounts = withAuth(async (
   loadedTicketIds: string[],
   since: number,
   boardSince: number = since,
-): Promise<{ asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string>; loadedChanged: boolean[] } | TicketActionError> => {
+): Promise<{ asOf: number; newCount: number; updatedCount: number; newTicketIds: string[]; boards: Record<string, number>; boardLatestAt: Record<string, string>; loadedChanged: boolean[] } | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async trx => {
     try {
@@ -2535,8 +2535,8 @@ export const getTicketChangeCounts = withAuth(async (
         });
         return { ...ticket, ...history };
       });
-      // Flags refer only to ids supplied in the loaded page. Recovery never
-      // returns new ticket rows or identifiers, but can restore their badges.
+      // Flags refer only to ids supplied in the loaded page. Recovery returns
+      // new ticket ids (capped) only after authorization and list matching.
       const changedLoaded = new Set(activityCandidates.filter(ticket =>
         ticket.latestActivityAt && Date.parse(ticket.latestActivityAt) > since &&
         ticket.listActivityActors?.some(actor => actor !== user.user_id)

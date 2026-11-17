@@ -131,3 +131,69 @@ describe('ChangedSinceLoad', () => {
   });
 
 });
+
+describe('ChangedSinceLoad focus support (T004, T006)', () => {
+  const T0 = Date.parse('2026-01-01T00:00:00Z');
+  const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+  it('acknowledge(kind) clears only that kind; ticketIds still lists the other; later events classify against the full list', () => {
+    const state = new ChangedSinceLoad();
+    state.load(['loaded'], { boardId: 'board-a', boardFilterState: 'all' }, 'me', T0);
+    state.record(event('n1', '2026-01-01T00:01:00Z', 'created'));
+    state.record(event('n2', '2026-01-01T00:01:10Z', 'created'));
+    state.record(event('loaded', '2026-01-01T00:01:20Z'));
+    expect(state.ticketIds('new').sort()).toEqual(['n1', 'n2']);
+    expect(state.ticketIds('updated')).toEqual(['loaded']);
+
+    state.acknowledge('new', Date.parse('2026-01-01T00:02:00Z'));
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 1 });
+    expect(state.ticketIds('new')).toEqual([]);
+    expect(state.ticketIds('updated')).toEqual(['loaded']);
+
+    // The snapshot is still the full list: 'loaded' is on it (updated), a new absent ticket is new.
+    expect(state.getSnapshot().ticketIds.has('loaded')).toBe(true);
+    expect(state.record(event('n3', '2026-01-01T00:03:00Z', 'created'))).toBe(true);
+    expect(state.record(event('loaded', '2026-01-01T00:03:10Z'))).toBe(true);
+    expect(state.getCounts()).toEqual({ newCount: 1, updatedCount: 1 });
+  });
+
+  it('acknowledge keeps events newer than the boundary', () => {
+    const state = new ChangedSinceLoad();
+    state.load([], { boardId: 'board-a', boardFilterState: 'all' }, 'me', T0);
+    state.record(event('early', '2026-01-01T00:01:00Z', 'created'));
+    state.record(event('late', '2026-01-01T00:05:00Z', 'created'));
+    state.acknowledge('new', Date.parse('2026-01-01T00:02:00Z'));
+    expect(state.ticketIds('new')).toEqual(['late']);
+  });
+
+  it('exposes recovery newTicketIds through ticketIds("new") and drops acknowledged ids on the next recovery', () => {
+    const state = new ChangedSinceLoad();
+    state.load(['loaded'], {}, 'me', T0);
+    const snapshot = (extra = {}) => ({
+      since: T0, asOf: T0 + 60_000, newCount: 2, updatedCount: 1, boards: {},
+      newTicketIds: ['n1', 'n2'], updatedTicketIds: ['loaded'], ...extra,
+    });
+    expect(state.setFallbackSnapshot(snapshot())).toBe(true);
+    expect(state.ticketIds('new')).toEqual(['n1', 'n2']);
+    expect(state.ticketIds('updated')).toEqual(['loaded']);
+
+    state.acknowledge('new', T0 + 70_000);
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 1 });
+    expect(state.ticketIds('updated')).toEqual(['loaded']);
+
+    // A later recovery (same changes, server still reports them) must not resurrect the acknowledged ids.
+    state.setFallbackSnapshot(snapshot({ asOf: T0 + 80_000 }));
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 1 });
+    expect(state.ticketIds('new')).toEqual([]);
+  });
+
+  it('keeps the uncapped remainder of a capped recovery count after acknowledging the listed ids', () => {
+    const state = new ChangedSinceLoad();
+    state.load([], {}, 'me', T0);
+    const ids = Array.from({ length: 200 }, (_, i) => uuid(i));
+    state.setFallbackSnapshot({ since: T0, asOf: T0 + 1000, newCount: 250, updatedCount: 0, boards: {}, newTicketIds: ids });
+    expect(state.ticketIds('new')).toHaveLength(200);
+    state.acknowledge('new', T0 + 2000);
+    expect(state.getCounts().newCount).toBe(50);
+  });
+});

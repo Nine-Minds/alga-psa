@@ -31,6 +31,8 @@ import {
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import { decodeTicketWhere, encodeTicketWhere } from '../lib/ticketWhereUrl';
+import { buildFocusedListFilters, createTicketListFocus, type TicketListFocus } from '../lib/ticketListFocus';
+import type { ChangedKind } from '../lib/changedSinceLoad';
 import {
   DEFAULT_TICKET_LIST_SORT_KEY,
   isTicketListSortKey,
@@ -267,6 +269,20 @@ export default function TicketingDashboardContainer({
   const [sortBy, setSortBy] = useState<string>(defaultSortBy);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
 
+  // Live-change focus: a temporary "show exactly these tickets" overlay. It lives beside activeFilters and
+  // is never written to the URL, saved views or the dirty-view baseline. `focusRef` is what the next
+  // request is built from (a filter edit clears it at once); `focus` is what the rows on screen are.
+  const [focus, setFocus] = useState<TicketListFocus | null>(null);
+  const focusRef = useRef<TicketListFocus | null>(null);
+  const shownFocusRef = useRef<TicketListFocus | null>(null);
+  // The page the full list was on when focus began, restored when focus ends without an edit.
+  const fullListPageRef = useRef<number | null>(null);
+  const commitFocus = useCallback((next: TicketListFocus | null) => {
+    focusRef.current = next;
+    shownFocusRef.current = next;
+    setFocus(next);
+  }, []);
+
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     return {
       statusId: initialStatusId,
@@ -290,6 +306,8 @@ export default function TicketingDashboardContainer({
 
   // Sync state when consolidatedData changes (e.g., from router.refresh())
   useEffect(() => {
+    // The server's rows are the full list, so any focus overlay is over.
+    commitFocus(null);
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
     setLoadedAt(consolidatedData.loadedAt ?? Date.now());
@@ -304,7 +322,7 @@ export default function TicketingDashboardContainer({
     // unsettled (so its finally never runs). The refresh itself delivers fresh
     // data here, so clear the loading spinner — otherwise it hangs forever.
     setIsLoading(false);
-  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection]);
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection, commitFocus]);
 
   const {
     value: storedPageSize,
@@ -479,7 +497,8 @@ export default function TicketingDashboardContainer({
     filters: Partial<ITicketListFilters>,
     page: number,
     pageSize: number,
-    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc'; preserveOnError?: boolean }
+    /** `focus`: the overlay to request; omitted means the current one, null the full list. */
+    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc'; preserveOnError?: boolean; focus?: TicketListFocus | null }
   ): Promise<boolean> => {
     console.log('[Container] fetchTickets called with:', { filters, page, pageSize });
     if (!currentUser) {
@@ -487,13 +506,17 @@ export default function TicketingDashboardContainer({
       return false;
     }
     const requestId = ++latestFetchRequestIdRef.current;
+    const requestFocus = overrides && 'focus' in overrides ? overrides.focus ?? null : focusRef.current;
     setIsLoading(true);
     try {
       const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
       const effectiveSortDirection: 'asc' | 'desc' =
         overrides?.sortDirection ?? filters.sortDirection ?? sortDirection ?? 'desc';
 
-      const currentFiltersWithDefaults: ITicketListFilters = {
+      // LEVERAGE: friction list-request-builder — the list request is assembled inline here and again for export/select-all in the dashboard; focus had to bypass the inline defaults block and be mirrored in both places.
+      const currentFiltersWithDefaults: ITicketListFilters = requestFocus
+        ? buildFocusedListFilters(requestFocus, { sortBy: effectiveSortBy, sortDirection: effectiveSortDirection })
+        : {
         boardId: filters.boardId || undefined,
         boardIds: filters.boardIds && filters.boardIds.length > 0 ? filters.boardIds : undefined,
         excludeBoardIds: filters.excludeBoardIds && filters.excludeBoardIds.length > 0 ? filters.excludeBoardIds : undefined,
@@ -538,11 +561,14 @@ export default function TicketingDashboardContainer({
         // Pass the payload through unflattened: handleError prefers a returned
         // user-safe actionError over the fallback, but only for that channel.
         handleError(result, t('errors.fetchTickets', 'Failed to fetch tickets'));
-        if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+        if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); commitFocus(requestFocus); }
+        else focusRef.current = shownFocusRef.current;
         return false;
       }
 
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
+      // One batch: the rows, the request they answer and the overlay they belong to change together.
+      commitFocus(requestFocus);
       setTickets(result.tickets);
       setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
       setLoadedFilters(currentFiltersWithDefaults);
@@ -563,7 +589,8 @@ export default function TicketingDashboardContainer({
         return false;
       }
       handleError(error, t('errors.fetchTickets', 'Failed to fetch tickets'));
-      if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+      if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); commitFocus(requestFocus); }
+      else focusRef.current = shownFocusRef.current;
       return false;
     } finally {
       // Clear loading only if this is still the latest request. A superseded
@@ -573,7 +600,7 @@ export default function TicketingDashboardContainer({
         setIsLoading(false);
       }
     }
-  }, [allowSlaStatusFilter, currentUser, sortBy, sortDirection, t]);
+  }, [allowSlaStatusFilter, commitFocus, currentUser, sortBy, sortDirection, t]);
 
   // Refs to avoid putting activeFilters/fetchTickets in the storedPageSize effect deps.
   // These values are needed when the effect fires, but changes to them should NOT re-trigger it.
@@ -581,10 +608,29 @@ export default function TicketingDashboardContainer({
   activeFiltersRef.current = activeFilters;
   const fetchTicketsRef = useRef(fetchTickets);
   fetchTicketsRef.current = fetchTickets;
-  const refreshListForChanges = useCallback(
-    () => fetchTickets(activeFiltersRef.current, currentPage, pageSize, { preserveOnError: true }),
-    [currentPage, fetchTickets, pageSize]
-  );
+  // Reloads the full list with its own filters (never the focused request on screen), returning to the
+  // page it was on. Banner "Refresh list" and the notice's "Show all tickets" both land here.
+  const refreshListForChanges = useCallback(async () => {
+    const page = focusRef.current ? fullListPageRef.current ?? 1 : currentPage;
+    const ok = await fetchTickets(activeFiltersRef.current, page, pageSize, { preserveOnError: true, focus: null });
+    if (ok) {
+      fullListPageRef.current = null;
+      setCurrentPage(page);
+    }
+    return ok;
+  }, [currentPage, fetchTickets, pageSize]);
+  // Replaces the list with just the tickets of one changed kind. Filters stay as they are on screen's
+  // controls; the overlay is not combined with them.
+  const focusOnChanges = useCallback(async (kind: ChangedKind, ticketIds: string[], capped?: boolean) => {
+    const next = createTicketListFocus(kind, ticketIds, capped ? ticketIds.length + 1 : ticketIds.length);
+    const enteringFrom = focusRef.current ? null : currentPage;
+    const ok = await fetchTickets(activeFiltersRef.current, 1, pageSize, { preserveOnError: true, focus: next });
+    if (ok) {
+      if (enteringFrom !== null) fullListPageRef.current = enteringFrom;
+      setCurrentPage(1);
+    }
+    return ok;
+  }, [currentPage, fetchTickets, pageSize]);
 
   // ── Board-level view configuration ──────────────────────────────────────────
   //
@@ -784,9 +830,11 @@ export default function TicketingDashboardContainer({
         : parsed.filters.boardId ?? null;
       applyBoardViewPresentationRef.current(restoredBoardId);
       lastAppliedSearchRef.current = normalizedSearch;
+      focusRef.current = null;
       await fetchTickets(parsed.filters, parsed.page, parsed.pageSize, {
         sortBy: parsed.sortBy,
         sortDirection: parsed.sortDirection,
+        focus: null,
       });
     } finally {
       isSyncingFromHistoryRef.current = false;
@@ -884,7 +932,8 @@ export default function TicketingDashboardContainer({
 
   const handlePageChange = useCallback(async (newPage: number) => {
     setCurrentPage(newPage);
-    updateURLWithFilters(activeFilters, newPage, pageSize);
+    // A focused page is not a page of the list the URL describes.
+    if (!focusRef.current) updateURLWithFilters(activeFilters, newPage, pageSize);
     await fetchTickets(activeFilters, newPage, pageSize);
   }, [fetchTickets, activeFilters, pageSize, updateURLWithFilters]);
 
@@ -919,6 +968,10 @@ export default function TicketingDashboardContainer({
       if (!hasRealChange) return;
     }
 
+    // Editing the list while focused first leaves focus: the edit applies to the full list's filters,
+    // and no other request may be built from the overlay in the meantime.
+    focusRef.current = null;
+    fullListPageRef.current = null;
     setCurrentPage(1);
     let mergedFilters: Partial<ITicketListFilters> = {
       ...activeFiltersRef.current,
@@ -1135,9 +1188,12 @@ export default function TicketingDashboardContainer({
     // (ownsUrl below) so there is never a second, competing history write for
     // the server action to race.
     updateURLWithFilters(next.filters, 1, next.pageSize, 'replace', meta.viewId);
+    focusRef.current = null;
+    fullListPageRef.current = null;
     void fetchTicketsRef.current(next.filters, 1, next.pageSize, {
       sortBy: nextSortBy,
       sortDirection: nextSortDirection,
+      focus: null,
     });
   }, [pageSize, setStoredPageSize, updateURLWithFilters]);
 
@@ -1169,6 +1225,8 @@ export default function TicketingDashboardContainer({
       loadedAt={loadedAt}
       loadedFilters={loadedFilters}
       onRefreshListForChanges={refreshListForChanges}
+      onFocusOnChanges={focusOnChanges}
+      focus={focus}
       initialBoards={initialBoardsForDashboard}
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}

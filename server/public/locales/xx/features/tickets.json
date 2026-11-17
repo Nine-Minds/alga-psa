@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "⟦1 ŧīƈķḗŧ ŭƥḓȧŧḗḓ⟧",
-    "updatedMany": "⟦{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ⟧",
-    "newOne": "⟦1 ƞḗẇ ŧīƈķḗŧ⟧",
-    "newMany": "⟦{{count}} ƞḗẇ ŧīƈķḗŧş⟧",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "⟦1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ⟧",
-        "manyUpdated": "⟦1 ƞḗẇ ŧīƈķḗŧ ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧"
-      },
-      "manyNew": {
-        "oneUpdated": "⟦{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ 1 ŭƥḓȧŧḗḓ ŧīƈķḗŧ⟧",
-        "manyUpdated": "⟦{{newCount}} ƞḗẇ ŧīƈķḗŧş ȧƞḓ {{updatedCount}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧"
-      }
-    },
+    "newCount_one": "⟦{{count}} ƞḗẇ ŧīƈķḗŧ⟧",
+    "newCount_few": "⟦{{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "newCount_many": "⟦{{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "newCount_other": "⟦{{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "updatedCount_one": "⟦{{count}} ŧīƈķḗŧ ŭƥḓȧŧḗḓ⟧",
+    "updatedCount_few": "⟦{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ⟧",
+    "updatedCount_many": "⟦{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ⟧",
+    "updatedCount_other": "⟦{{count}} ŧīƈķḗŧş ŭƥḓȧŧḗḓ⟧",
+    "refresh": "⟦Řḗƒřḗşħ ŀīşŧ⟧",
+    "focusNew_one": "⟦Şħȯẇīƞɠ {{count}} ƞḗẇ ŧīƈķḗŧ⟧",
+    "focusNew_few": "⟦Şħȯẇīƞɠ {{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "focusNew_many": "⟦Şħȯẇīƞɠ {{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "focusNew_other": "⟦Şħȯẇīƞɠ {{count}} ƞḗẇ ŧīƈķḗŧş⟧",
+    "focusUpdated_one": "⟦Şħȯẇīƞɠ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧ⟧",
+    "focusUpdated_few": "⟦Şħȯẇīƞɠ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧",
+    "focusUpdated_many": "⟦Şħȯẇīƞɠ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧",
+    "focusUpdated_other": "⟦Şħȯẇīƞɠ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧",
+    "focusNewCapped_one": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ƞḗẇ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusNewCapped_few": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ƞḗẇ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusNewCapped_many": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ƞḗẇ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusNewCapped_other": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ƞḗẇ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusUpdatedCapped_one": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusUpdatedCapped_few": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusUpdatedCapped_many": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "focusUpdatedCapped_other": "⟦Şħȯẇīƞɠ ŧħḗ ƒīřşŧ {{count}} ŭƥḓȧŧḗḓ ŧīƈķḗŧş (ḿȯřḗ ȧřḗ ƞȯŧ şħȯẇƞ)⟧",
+    "showAll": "⟦Şħȯẇ ȧŀŀ ŧīƈķḗŧş⟧",
     "updatedBadge": "⟦Ŭƥḓȧŧḗḓ⟧",
     "boardActivity": "⟦Ƞḗẇ ȧƈŧīṽīŧẏ ȯƞ ŧħīş ƀȯȧřḓ⟧"
   },

@@ -442,6 +442,11 @@ const CASES: MatrixCase[] = [
   { id: 'contact-locations-any-of-warehouse', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'contact-locations-none-of-warehouse-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['T2', 'T3', 'T4'] },
   { id: 'contact-locations-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['T2', 'T4'] },
+  // Live-change focus: `ticket_id in [...]` is a plain column clause of the list query.
+  { id: 'ticket-id-in-two', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: [f.ticketIds.T1, f.ticketIds.T4] }] } }), individual: ['T1', 'T4'], bundled: ['T1', 'T4'] },
+  { id: 'ticket-id-in-closed-and-inactive-board-tickets', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: [f.ticketIds.T2, f.ticketIds.T3] }] } }), individual: ['T2', 'T3'], bundled: ['T2', 'T3'] },
+  { id: 'ticket-id-in-unknown-id-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: [uuidv4()] }] } }), individual: [], bundled: [] },
+  { id: 'ticket-id-in-narrowed-by-another-clause', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: [f.ticketIds.T1, f.ticketIds.T2] }, { path: 'status_closed', operator: 'equals', value: true }] } }), individual: ['T2'], bundled: ['T2'] },
   { id: 'contact-locations-other-tenant-location-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [foreign.locationId] }] } }), individual: [], bundled: [] },
 ];
 
@@ -501,6 +506,41 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
       seen.push(...result.tickets.map((row) => idToName.get(row.ticket_id) as TicketName));
     }
     expect([...seen].sort()).toEqual(['CH1', 'CH2', 'M', 'T1', 'T2']);
+  });
+
+  // T001: the focus request is `ticket_id in [...]` alone (see buildFocusedListFilters), so it ignores
+  // the open-only default, the active-board default and the bundled view, but never widens read access.
+  it('T001: a focus-shaped request returns the listed tickets regardless of status, board state or bundling', async () => {
+    const focusRequest = (ids: string[]): ITicketListFilters => ({
+      statusId: TICKET_STATUS_FILTER_ALL, priorityId: 'all', searchQuery: '', boardFilterState: 'all', showOpenOnly: false,
+      bundleView: 'individual', sortBy: 'entered_at', sortDirection: 'desc',
+      where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: ids }] },
+    });
+    const result = await names(focusRequest([fx.ticketIds.T2, fx.ticketIds.T3, fx.ticketIds.CH1]));
+    expect(result.names).toEqual(['CH1', 'T2', 'T3']);
+    expect(result.total).toBe(3);
+  });
+
+  it('T001: a ticket the caller cannot read is omitted from a ticket_id request', async () => {
+    const clientUserId = uuidv4();
+    await db('users').insert({
+      tenant: fx.tenantId, user_id: clientUserId, username: `focus-${clientUserId.slice(0, 8)}`,
+      hashed_password: 'not-used', email: `focus-${clientUserId.slice(0, 8)}@example.com`,
+      first_name: 'Focus', last_name: 'Portal', user_type: 'client', is_inactive: false,
+    });
+    // A client-portal user of client one never sees client two's T2, even when asked for it by id.
+    authMocks.user = { user_id: clientUserId, user_type: 'client', clientId: fx.c1, tenant: fx.tenantId };
+    try {
+      const result = await names({
+        ...base, bundleView: 'individual',
+        where: { join: 'and', clauses: [{ path: 'ticket_id', operator: 'in', value: [fx.ticketIds.T1, fx.ticketIds.T2] }] },
+      });
+      expect(result.names).not.toContain('T2');
+      expect(result.names.every((name) => name === 'T1')).toBe(true);
+      expect(result.total).toBe(result.names.length);
+    } finally {
+      authMocks.user = { user_id: fx.actorId, user_type: 'internal', tenant: fx.tenantId };
+    }
   });
 
   it('assignedToMe matches assignee, additional agent and team member, and is bypassed with project:read', async () => {

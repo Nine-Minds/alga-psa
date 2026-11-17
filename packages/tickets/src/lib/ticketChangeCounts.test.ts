@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { TICKET_WHERE_MAX_TICKET_IDS } from './ticketWhere';
 import { countAuthorizedTicketChanges, summarizeTicketActivityHistory } from './ticketChangeCounts';
 
 describe('authorized ticket change recovery counts', () => {
@@ -15,7 +16,7 @@ describe('authorized ticket change recovery counts', () => {
       loadedTicketIds: new Set(['loaded']),
       currentUserId: 'me',
     });
-    expect(result).toEqual({ newCount: 1, updatedCount: 1, boards: { 'board-x': 1, 'board-y': 1, 'board-z': 1 }, boardLatestAt: {} });
+    expect(result).toEqual({ newCount: 1, updatedCount: 1, newTicketIds: ['new-y'], boards: { 'board-x': 1, 'board-y': 1, 'board-z': 1 }, boardLatestAt: {} });
   });
 
   it('uses individual ticket and comment actors so email-only comments survive an unchanged ticket timestamp', () => {
@@ -28,7 +29,7 @@ describe('authorized ticket change recovery counts', () => {
       loadedTicketIds: new Set(),
       currentUserId: 'me',
     });
-    expect(result).toEqual({ newCount: 1, updatedCount: 0, boards: { 'board-mail': 1 }, boardLatestAt: { 'board-mail': '2026-11-02T12:00:00Z' } });
+    expect(result).toEqual({ newCount: 1, updatedCount: 0, newTicketIds: ['email-reply'], boards: { 'board-mail': 1 }, boardLatestAt: { 'board-mail': '2026-11-02T12:00:00Z' } });
   });
   it('keeps other-board history across refreshes without counting it in the new list window', () => {
     const result = countAuthorizedTicketChanges({
@@ -58,7 +59,7 @@ describe('authorized ticket change recovery counts', () => {
       since: Date.parse('2026-11-02T12:00:00Z'),
     });
 
-    expect(result).toEqual({ newCount: 0, updatedCount: 1, boards: { 'board-a': 1 }, boardLatestAt: { 'board-a': '2026-11-02T12:01:00.000Z' } });
+    expect(result).toEqual({ newCount: 0, updatedCount: 1, newTicketIds: [], boards: { 'board-a': 1 }, boardLatestAt: { 'board-a': '2026-11-02T12:01:00.000Z' } });
   });
 
   it('excludes activity history containing only viewer edits', () => {
@@ -72,7 +73,23 @@ describe('authorized ticket change recovery counts', () => {
       since: Date.parse('2026-11-02T12:00:00Z'),
     });
 
-    expect(result).toEqual({ newCount: 0, updatedCount: 0, boards: {}, boardLatestAt: {} });
+    expect(result).toEqual({ newCount: 0, updatedCount: 0, newTicketIds: [], boards: {}, boardLatestAt: {} });
   });
 
+});
+
+describe('newTicketIds (T005 unit half)', () => {
+  it('lists new ids in order, excluding own changes, and caps at the shared limit while counting all', () => {
+    const candidates = Array.from({ length: TICKET_WHERE_MAX_TICKET_IDS + 5 }, (_, i) => ({ ticket_id: `t-${i}`, updated_by: 'other' }));
+    const result = countAuthorizedTicketChanges({
+      candidates: [...candidates, { ticket_id: 'mine', updated_by: 'me' }],
+      matchingTicketIds: new Set([...candidates.map(c => c.ticket_id), 'mine']),
+      loadedTicketIds: new Set(),
+      currentUserId: 'me',
+    });
+    expect(result.newCount).toBe(TICKET_WHERE_MAX_TICKET_IDS + 5);
+    expect(result.newTicketIds).toHaveLength(TICKET_WHERE_MAX_TICKET_IDS);
+    expect(result.newTicketIds[0]).toBe('t-0');
+    expect(result.newTicketIds).not.toContain('mine');
+  });
 });

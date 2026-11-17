@@ -5,6 +5,14 @@ import { ticketQuerySchema } from './ticketQuerySchema';
 
 /** Wire/storage shape of `ITicketListFilters.where`: a flat `and` group of clauses on known paths. */
 export const TICKET_WHERE_MAX_CLAUSES = 50;
+/** Most values a `ticket_id in [...]` clause may carry (live-change focus; also caps `newTicketIds`). */
+export const TICKET_WHERE_MAX_TICKET_IDS = 200;
+
+/** Message for a `ticket_id` clause carrying more than TICKET_WHERE_MAX_TICKET_IDS values, else null. */
+export const ticketIdClauseIssue = (clause: PredicateClause): string | null =>
+  clause.path === 'ticket_id' && Array.isArray(clause.value) && clause.value.length > TICKET_WHERE_MAX_TICKET_IDS
+    ? `A ticket_id clause may list at most ${TICKET_WHERE_MAX_TICKET_IDS} values`
+    : null;
 
 /**
  * Ticket `where` is one flat `and` group in storage, URLs and the toolbar. The predicate model
@@ -20,6 +28,8 @@ export const ticketWhereSchema: z.ZodType<PredicateGroup> = z
     group.clauses.forEach((clause, index) => {
       const issue = validateClause(ticketQuerySchema, clause);
       if (issue) ctx.addIssue({ code: 'custom', path: ['clauses', index], message: issue.message });
+      const valueIssue = !isPredicateGroup(clause) ? ticketIdClauseIssue(clause as PredicateClause) : null;
+      if (valueIssue) ctx.addIssue({ code: 'custom', path: ['clauses', index], message: valueIssue });
     });
   }) as z.ZodType<PredicateGroup>;
 
@@ -58,7 +68,7 @@ export function sanitizeTicketWhere(
   const kept: PredicateClause[] = [];
   for (const candidate of rawClauses.slice(0, TICKET_WHERE_MAX_CLAUSES)) {
     const parsed = predicateClauseSchema.safeParse(candidate);
-    if (!parsed.success || validateClause(ticketQuerySchema, parsed.data)) {
+    if (!parsed.success || validateClause(ticketQuerySchema, parsed.data) || ticketIdClauseIssue(parsed.data)) {
       note('where');
       continue;
     }

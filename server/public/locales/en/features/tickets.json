@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "1 ticket updated",
-    "updatedMany": "{{count}} tickets updated",
-    "newOne": "1 new ticket",
-    "newMany": "{{count}} new tickets",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 new ticket and 1 updated ticket",
-        "manyUpdated": "1 new ticket and {{updatedCount}} updated tickets"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} new tickets and 1 updated ticket",
-        "manyUpdated": "{{newCount}} new tickets and {{updatedCount}} updated tickets"
-      }
-    },
+    "newCount_one": "{{count}} new ticket",
+    "newCount_few": "{{count}} new tickets",
+    "newCount_many": "{{count}} new tickets",
+    "newCount_other": "{{count}} new tickets",
+    "updatedCount_one": "{{count}} ticket updated",
+    "updatedCount_few": "{{count}} tickets updated",
+    "updatedCount_many": "{{count}} tickets updated",
+    "updatedCount_other": "{{count}} tickets updated",
+    "refresh": "Refresh list",
+    "focusNew_one": "Showing {{count}} new ticket",
+    "focusNew_few": "Showing {{count}} new tickets",
+    "focusNew_many": "Showing {{count}} new tickets",
+    "focusNew_other": "Showing {{count}} new tickets",
+    "focusUpdated_one": "Showing {{count}} updated ticket",
+    "focusUpdated_few": "Showing {{count}} updated tickets",
+    "focusUpdated_many": "Showing {{count}} updated tickets",
+    "focusUpdated_other": "Showing {{count}} updated tickets",
+    "focusNewCapped_one": "Showing the first {{count}} new tickets (more are not shown)",
+    "focusNewCapped_few": "Showing the first {{count}} new tickets (more are not shown)",
+    "focusNewCapped_many": "Showing the first {{count}} new tickets (more are not shown)",
+    "focusNewCapped_other": "Showing the first {{count}} new tickets (more are not shown)",
+    "focusUpdatedCapped_one": "Showing the first {{count}} updated tickets (more are not shown)",
+    "focusUpdatedCapped_few": "Showing the first {{count}} updated tickets (more are not shown)",
+    "focusUpdatedCapped_many": "Showing the first {{count}} updated tickets (more are not shown)",
+    "focusUpdatedCapped_other": "Showing the first {{count}} updated tickets (more are not shown)",
+    "showAll": "Show all tickets",
     "updatedBadge": "Updated",
     "boardActivity": "New activity on this board"
   },

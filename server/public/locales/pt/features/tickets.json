@@ -3088,20 +3088,32 @@
     }
   },
   "live": {
-    "updatedOne": "1 chamado atualizado",
-    "updatedMany": "{{count}} chamados atualizados",
-    "newOne": "1 novo chamado",
-    "newMany": "{{count}} novos chamados",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 novo chamado e 1 chamado atualizado",
-        "manyUpdated": "1 novo chamado e {{updatedCount}} chamados atualizados"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} novos chamados e 1 chamado atualizado",
-        "manyUpdated": "{{newCount}} novos chamados e {{updatedCount}} chamados atualizados"
-      }
-    },
+    "newCount_one": "{{count}} novo chamado",
+    "newCount_few": "{{count}} novos chamados",
+    "newCount_many": "{{count}} novos chamados",
+    "newCount_other": "{{count}} novos chamados",
+    "updatedCount_one": "{{count}} chamado atualizado",
+    "updatedCount_few": "{{count}} chamados atualizados",
+    "updatedCount_many": "{{count}} chamados atualizados",
+    "updatedCount_other": "{{count}} chamados atualizados",
+    "refresh": "Atualizar lista",
+    "focusNew_one": "Mostrando {{count}} novo chamado",
+    "focusNew_few": "Mostrando {{count}} novos chamados",
+    "focusNew_many": "Mostrando {{count}} novos chamados",
+    "focusNew_other": "Mostrando {{count}} novos chamados",
+    "focusUpdated_one": "Mostrando {{count}} chamado atualizado",
+    "focusUpdated_few": "Mostrando {{count}} chamados atualizados",
+    "focusUpdated_many": "Mostrando {{count}} chamados atualizados",
+    "focusUpdated_other": "Mostrando {{count}} chamados atualizados",
+    "focusNewCapped_one": "Mostrando os primeiros {{count}} novos chamados (há mais não exibidos)",
+    "focusNewCapped_few": "Mostrando os primeiros {{count}} novos chamados (há mais não exibidos)",
+    "focusNewCapped_many": "Mostrando os primeiros {{count}} novos chamados (há mais não exibidos)",
+    "focusNewCapped_other": "Mostrando os primeiros {{count}} novos chamados (há mais não exibidos)",
+    "focusUpdatedCapped_one": "Mostrando os primeiros {{count}} chamados atualizados (há mais não exibidos)",
+    "focusUpdatedCapped_few": "Mostrando os primeiros {{count}} chamados atualizados (há mais não exibidos)",
+    "focusUpdatedCapped_many": "Mostrando os primeiros {{count}} chamados atualizados (há mais não exibidos)",
+    "focusUpdatedCapped_other": "Mostrando os primeiros {{count}} chamados atualizados (há mais não exibidos)",
+    "showAll": "Mostrar todos os chamados",
     "updatedBadge": "Atualizado",
     "boardActivity": "Nova atividade neste quadro"
   },

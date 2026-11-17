@@ -1,0 +1,20 @@
+[
+  { "id": "F001", "description": "Ticket query schema exposes ticket_id as a uuid column supporting the 'in' operator", "implemented": false, "prdRefs": ["Ticket ID as a query field"] },
+  { "id": "F002", "description": "The ticket where validator rejects or trims a ticket_id clause with more than 200 values", "implemented": false, "prdRefs": ["Ticket ID as a query field"] },
+  { "id": "F003", "description": "matchesTicketListChange evaluates ticket_id clauses using the event's ticketId", "implemented": false, "prdRefs": ["Ticket ID as a query field"] },
+  { "id": "F004", "description": "ChangedSinceLoad.ticketIds(kind) returns tracked new or updated ticket IDs from live entries and the fallback snapshot", "implemented": false, "prdRefs": ["Change tracking stays on the full list"] },
+  { "id": "F005", "description": "ChangedSinceLoad.acknowledge(kind, at) clears only that kind's entries up to the given time", "implemented": false, "prdRefs": ["Change tracking stays on the full list"] },
+  { "id": "F006", "description": "countAuthorizedTicketChanges and getTicketChangeCounts return newTicketIds, capped at 200", "implemented": false, "prdRefs": ["Counts-only recovery must return new-ticket IDs"] },
+  { "id": "F007", "description": "The fallback snapshot stores newTicketIds and ticketIds('new') returns them during counts-only recovery", "implemented": false, "prdRefs": ["Counts-only recovery must return new-ticket IDs"] },
+  { "id": "F008", "description": "The container holds a focus overlay {kind, ticketIds} separate from activeFilters", "implemented": false, "prdRefs": ["Focus is a temporary overlay, not a filter edit"] },
+  { "id": "F009", "description": "While focused, the list request is the ticket_id clause alone with boardFilterState 'all' and individual bundles, keeping sort and page size", "implemented": false, "prdRefs": ["Focus is a temporary overlay, not a filter edit"] },
+  { "id": "F010", "description": "The focus overlay is never written to the URL, saved views or the dirty-view baseline", "implemented": false, "prdRefs": ["Focus is a temporary overlay, not a filter edit"] },
+  { "id": "F011", "description": "Select-all-matching, bulk actions and export use the focused request while focus is active", "implemented": false, "prdRefs": ["Focus is a temporary overlay, not a filter edit"] },
+  { "id": "F012", "description": "Focused loads do not call ChangedSinceLoad.load(); entering focus acknowledges only the clicked kind", "implemented": false, "prdRefs": ["Change tracking stays on the full list"] },
+  { "id": "F013", "description": "Banner shows separate 'N new tickets', 'N tickets updated' and 'Refresh list' controls built from standard components", "implemented": false, "prdRefs": ["Banner"] },
+  { "id": "F014", "description": "Toolbar focus notice shows 'Showing N new/updated tickets' (with a capped variant) and a 'Show all tickets' action", "implemented": false, "prdRefs": ["Banner", "Leaving focus"] },
+  { "id": "F015", "description": "'Show all tickets' and 'Refresh list' drop focus and refetch the full list with its original filters; Refresh clears counts", "implemented": false, "prdRefs": ["Leaving focus"] },
+  { "id": "F016", "description": "refreshListForChanges uses the full list's filters rather than the focused request", "implemented": false, "prdRefs": ["Leaving focus"] },
+  { "id": "F017", "description": "Editing filters, board tab or search while focused leaves focus and applies the edit to the full list's filters", "implemented": false, "prdRefs": ["Leaving focus"] },
+  { "id": "F018", "description": "New and changed banner/notice strings exist in every tickets locale file and the xx/yy pseudo-locales are regenerated", "implemented": false, "prdRefs": ["Banner"] }
+]

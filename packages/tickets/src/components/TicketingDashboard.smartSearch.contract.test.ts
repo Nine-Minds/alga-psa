@@ -41,7 +41,8 @@ describe('ticketing dashboard smart search wiring contract', () => {
   });
 
   it('scores the chip filters only and offers a rerun when they change', () => {
-    expect(source).toContain("const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...exportFilters, searchQuery: '' }), [exportFilters]);");
+    // Smart search scores the list's own chips, not the live-change focus overlay (that overlay replaces the chips).
+    expect(source).toContain("const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...listFilters, searchQuery: '' }), [listFilters]);");
     expect(source).toContain('const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;');
     expect(source).toContain('scopeStale={smartSearchFiltersStale}');
     expect(source).toContain('onRerun={rerunSmartSearch}');

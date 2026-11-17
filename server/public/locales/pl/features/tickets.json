@@ -3096,20 +3096,32 @@
     }
   },
   "live": {
-    "updatedOne": "Zaktualizowano 1 zgłoszenie",
-    "updatedMany": "Zaktualizowano {{count}} zgłoszeń",
-    "newOne": "1 nowe zgłoszenie",
-    "newMany": "{{count}} nowych zgłoszeń",
-    "both": {
-      "oneNew": {
-        "oneUpdated": "1 nowe zgłoszenie i 1 zaktualizowane zgłoszenie",
-        "manyUpdated": "1 nowe zgłoszenie i {{updatedCount}} zaktualizowanych zgłoszeń"
-      },
-      "manyNew": {
-        "oneUpdated": "{{newCount}} nowych zgłoszeń i 1 zaktualizowane zgłoszenie",
-        "manyUpdated": "{{newCount}} nowych zgłoszeń i {{updatedCount}} zaktualizowanych zgłoszeń"
-      }
-    },
+    "newCount_one": "{{count}} nowe zgłoszenie",
+    "newCount_few": "{{count}} nowe zgłoszenia",
+    "newCount_many": "{{count}} nowych zgłoszeń",
+    "newCount_other": "{{count}} nowych zgłoszeń",
+    "updatedCount_one": "Zaktualizowano {{count}} zgłoszenie",
+    "updatedCount_few": "Zaktualizowano {{count}} zgłoszenia",
+    "updatedCount_many": "Zaktualizowano {{count}} zgłoszeń",
+    "updatedCount_other": "Zaktualizowano {{count}} zgłoszeń",
+    "refresh": "Odśwież listę",
+    "focusNew_one": "Wyświetlono {{count}} nowe zgłoszenie",
+    "focusNew_few": "Wyświetlono {{count}} nowe zgłoszenia",
+    "focusNew_many": "Wyświetlono {{count}} nowych zgłoszeń",
+    "focusNew_other": "Wyświetlono {{count}} nowych zgłoszeń",
+    "focusUpdated_one": "Wyświetlono {{count}} zaktualizowane zgłoszenie",
+    "focusUpdated_few": "Wyświetlono {{count}} zaktualizowane zgłoszenia",
+    "focusUpdated_many": "Wyświetlono {{count}} zaktualizowanych zgłoszeń",
+    "focusUpdated_other": "Wyświetlono {{count}} zaktualizowanych zgłoszeń",
+    "focusNewCapped_one": "Wyświetlono pierwsze {{count}} nowych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusNewCapped_few": "Wyświetlono pierwsze {{count}} nowych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusNewCapped_many": "Wyświetlono pierwsze {{count}} nowych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusNewCapped_other": "Wyświetlono pierwsze {{count}} nowych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusUpdatedCapped_one": "Wyświetlono pierwsze {{count}} zaktualizowanych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusUpdatedCapped_few": "Wyświetlono pierwsze {{count}} zaktualizowanych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusUpdatedCapped_many": "Wyświetlono pierwsze {{count}} zaktualizowanych zgłoszeń (pozostałe nie są wyświetlane)",
+    "focusUpdatedCapped_other": "Wyświetlono pierwsze {{count}} zaktualizowanych zgłoszeń (pozostałe nie są wyświetlane)",
+    "showAll": "Pokaż wszystkie zgłoszenia",
     "updatedBadge": "Zaktualizowano",
     "boardActivity": "Nowa aktywność na tej tablicy"
   },
