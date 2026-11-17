@@ -1225,8 +1225,8 @@
           "viewDetails": "Ver detalhes"
         },
         "details": {
-          "contactsFailed_one": "{{count}} contacto com falha",
-          "contactsFailed_other": "{{count}} contactos com falha",
+          "contactsFailed_one": "{{count}} contato com falha",
+          "contactsFailed_other": "{{count}} contatos com falha",
           "failureEntry": "{{user}} ({{stage}}): {{message}}",
           "moreFailures": "e mais {{count}}",
           "noResults": "Nenhum resultado de tenant registrado.",
@@ -1237,11 +1237,11 @@
             "match": "correspondência"
           },
           "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
-          "summaryFailed": "Contactos com falha: {{count}}",
+          "summaryFailed": "Contatos com falha: {{count}}",
           "summarySkipped": "Resultados de provisionamento ignorados: {{count}}",
           "tenantHeader": "Tenant: {{tenant}} · {{status}}",
           "unknownTenant": "desconhecido",
-          "userUnknown": "utilizador desconhecido"
+          "userUnknown": "usuário desconhecido"
         },
         "empty": "Nenhuma execução de sincronização foi encontrada ainda.",
         "errors": {
