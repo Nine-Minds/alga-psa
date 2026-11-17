@@ -944,8 +944,10 @@ describe('tab chrome ink', () => {
  *
  * Per-file ceilings live in ./themeContract.paletteBaseline.ts, which is the
  * same mechanism as LITERAL_BASELINE and externalised only for its size. There
- * is deliberately no themed-file gate here: two of the five sky sites named no
- * token at all and would have slipped straight through one.
+ * is deliberately no themed-file gate here: layer 5 only judges a file that
+ * names three tokens, and two of the five sky sites would have slipped straight
+ * through that bar — BoardTabStrip named no token at all, TicketProperties
+ * exactly one.
  * ------------------------------------------------------------------------- */
 
 /** The `.ts` files Tailwind's content list compiles; everything else is `.tsx`. */
