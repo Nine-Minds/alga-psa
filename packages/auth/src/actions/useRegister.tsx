@@ -6,7 +6,7 @@ import User from '@alga-psa/db/models/user';
 import Tenant from '@alga-psa/db/models/tenant';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import { IUserRegister, IUserWithRoles, IRoleWithPermissions, isInteractiveUserType } from '@alga-psa/types';
+import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@alga-psa/types';
 
 import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
@@ -16,6 +16,13 @@ import { isValidEmail } from '@alga-psa/validation';
 import { getAuthEmailRegistry } from '../lib/emailRegistry';
 import { buildPasswordResetLink } from '../lib/portalDomain';
 import { resolvePasswordResetOrigin } from '../lib/resetLinkOrigin';
+import { checkPasswordResetLimit } from '../lib/security/rateLimiting';
+import { getActiveClientPortalDomainForTenant } from '../lib/portalDomainTenant';
+import {
+  resolveResetSubjects,
+  resolveResetSubjectFromToken,
+  type ResolvedResetSubject,
+} from '../lib/passwordReset';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';
@@ -80,21 +87,16 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
 export async function getAccountInfoFromToken(token: string, portal: string) {
   try {
     const { t } = await getServerTranslation(undefined, 'client-portal');
-    const { errorType, userInfo } = await getInfoFromToken(token);
-    if (errorType || !userInfo) {
+    const resolved = await resolveResetSubjectFromToken(token);
+    if (!resolved) {
       return null;
     }
-    
-    // Get the user from database to get full name
-    if (!isInteractiveUserType(userInfo.user_type)) {
-      return null;
-    }
-    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
-    
+    const { subject, user } = resolved;
+
     return {
-      name: dbUser ? `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || dbUser.username : userInfo.username || t('auth.registration.user'),
-      email: userInfo.email || '',
-      username: dbUser?.username || userInfo.username || userInfo.email || '',
+      name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || t('auth.registration.user'),
+      email: subject.email,
+      username: user.username || subject.email,
       accountType: portal === 'client' ? t('auth.registration.clientPortalUser') : t('auth.registration.mspUser')
     };
   } catch (error) {
@@ -104,49 +106,49 @@ export async function getAccountInfoFromToken(token: string, portal: string) {
 }
 
 export async function setNewPassword(password: string, token: string): Promise<boolean> {
-  const { errorType, userInfo } = await getInfoFromToken(token);
-  if (errorType) {
-    logger.error(`Error decoding token: ${errorType}`);
+  const resolved = await resolveResetSubjectFromToken(token);
+  if (!resolved) {
+    logger.error('Refusing password set: reset token does not name a valid user');
     return false;
   }
-  if (userInfo && userInfo.email) {
-    const hashedPassword = await hashPassword(password);
-    
-    // The token must name an interactive user type; there is no untyped lookup.
-    if (!isInteractiveUserType(userInfo.user_type)) {
-      logger.error(`Refusing password set for [ ${userInfo.email} ]: token has no interactive user_type`);
-      return false;
-    }
-    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
+  const { subject, user } = resolved;
 
-    if (!dbUser || !isInteractiveUserType(dbUser.user_type)) {
-      logger.error(`User [ ${userInfo.email} ] with type [ ${userInfo.user_type || 'any'} ] not found in the database`);
-      return false;
-    }
-
-    // Tenant login policy: a token minted before SSO was required must not set a password afterwards.
-    const { isPasswordResetPermitted } = await import('../lib/passwordLoginGate');
-    if (!(await isPasswordResetPermitted(dbUser, 'password_reset_complete'))) {
-      return false;
-    }
-
-    await User.updatePassword(dbUser.user_id, dbUser.tenant, hashedPassword);
-    logger.info(`Password updated successfully for User [ ${userInfo.email} ] type [ ${dbUser.user_type} ] id [ ${dbUser.user_id} ]`);
-    return true;
+  // Tenant login policy: a token minted before SSO was required must not set a password afterwards.
+  const { isPasswordResetPermitted } = await import('../lib/passwordLoginGate');
+  if (!(await isPasswordResetPermitted(user, 'password_reset_complete'))) {
+    return false;
   }
-  return false;
+
+  const hashedPassword = await hashPassword(password);
+  await User.updatePassword(subject.user_id, subject.tenant, hashedPassword);
+  logger.info(`Password updated successfully for User [ ${subject.email} ] type [ ${subject.user_type} ] id [ ${subject.user_id} ] tenant [ ${subject.tenant} ]`);
+  return true;
+}
+
+export interface RecoverPasswordOptions {
+  /** Vanity client-portal host the request arrived on. */
+  portalDomain?: string;
+  /** Public organization slug (scoped MSP sign-in). */
+  tenantSlug?: string;
 }
 
 export async function recoverPassword(
   email: string,
   portal: 'msp' | 'client' = 'msp',
-  portalDomain?: string
+  options: RecoverPasswordOptions | string = {}
 ): Promise<boolean> {
+  // A bare string is the portal domain (the form existing callers use).
+  const { portalDomain, tenantSlug }: RecoverPasswordOptions =
+    typeof options === 'string' ? { portalDomain: options } : options ?? {};
   // Normalize the address once; validation, lookup, token payload, recipient,
   // and logging all share this value.
   const normalizedEmail = email.trim().toLowerCase();
   // For MSP portal, look for 'internal' users; for client portal, look for 'client' users
   const userType = portal === 'msp' ? 'internal' : 'client';
+
+  // Every outcome below resolves to the same generic success value: an
+  // unauthenticated requester must never learn whether an account exists, how
+  // many organizations it spans, or whether delivery succeeded.
 
   // Invalid format is indistinguishable from an unknown address: finish with
   // the generic success result without a lookup or send attempt.
@@ -155,27 +157,54 @@ export async function recoverPassword(
     return true;
   }
 
-  logger.debug('Checking if email exists for portal type', { portal, userType });
-
-  let matchedTenant: string | undefined;
   try {
-    const userInfo = await User.findUserByEmailAndType(normalizedEmail, userType);
+    // One budget per mailbox per request, shared with tenant discovery, spent
+    // before any lookup and independent of whether an account exists. A request
+    // that fans out to several tenants still costs one.
+    const limit = await checkPasswordResetLimit(normalizedEmail);
+    if (!limit.success) {
+      logger.info('Password recovery skipped: rate limited', { portal, userType });
+      return true;
+    }
 
-    // Only a matched, active user of the requested portal type may produce a
-    // token or send attempt. Unknown and inactive users resolve to the same
-    // generic success result and never mint a token or write an email log.
-    if (!userInfo || userInfo.is_inactive) {
+    logger.debug('Resolving password reset subjects', { portal, userType });
+    const subjects = await resolveResetSubjects(normalizedEmail, userType, { portalDomain, tenantSlug });
+    if (subjects.length === 0) {
       logger.debug('Password recovery skipped: no active matching user', { portal, userType });
       return true;
     }
-    matchedTenant = userInfo.tenant;
 
+    // Each subject is answered for by its own tenant, independently: a refusal or
+    // failure for one never suppresses the others.
+    for (const resolved of subjects) {
+      await sendResetForSubject(resolved, { portal, portalDomain, onlySubject: subjects.length === 1 });
+    }
+    return true;
+  } catch (error) {
+    // Resolution failures resolve to the same public success value. Operators
+    // observe failures through structured application logs.
+    logger.error('password_recovery_send_failed', {
+      portal,
+      userType,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return true;
+  }
+}
+
+async function sendResetForSubject(
+  { subject, user }: ResolvedResetSubject,
+  context: { portal: 'msp' | 'client'; portalDomain?: string; onlySubject: boolean }
+): Promise<void> {
+  const { portal } = context;
+  const userType = subject.user_type;
+  try {
     // Tenant login policy: with SSO required, internal non-break-glass users get no
     // reset email. Same generic success result as an unknown address.
     const { isPasswordResetPermitted } = await import('../lib/passwordLoginGate');
-    if (!(await isPasswordResetPermitted(userInfo, 'password_reset_request'))) {
+    if (!(await isPasswordResetPermitted(user, 'password_reset_request'))) {
       logger.debug('Password recovery skipped: SSO is required for this user', { portal, userType });
-      return true;
+      return;
     }
 
     // Provider readiness is decided by the send path, not by an environment
@@ -193,38 +222,48 @@ export async function recoverPassword(
       logger.error('password_recovery_send_refused', {
         portal,
         userType,
-        tenant: userInfo.tenant,
+        tenant: subject.tenant,
         error:
           'No trusted public origin configured for password-reset links. ' +
           'Set NEXT_PUBLIC_BASE_URL (or NEXTAUTH_URL, or HOST) to the public ' +
           'application URL; the reset email was not sent.'
       });
-      return true;
+      return;
     }
 
     const recoverToken = await createToken({
       username: '',
-      email: normalizedEmail,
+      email: subject.email,
       password: '',
       clientName: '',
-      user_type: userType  // Include the correct user type in token
+      user_type: subject.user_type,
+      tenant: subject.tenant,
+      user_id: subject.user_id
     });
+
+    // The set-password page is branded by the portal domain in the link: this
+    // tenant's own domain when it has one (so a fan-out email names its sender's
+    // portal), otherwise the requested host when it is the only candidate.
+    const ownDomain = portal === 'client'
+      ? await getActiveClientPortalDomainForTenant(subject.tenant, context.portalDomain)
+      : null;
+    const linkDomain = ownDomain ?? (context.onlySubject ? context.portalDomain : undefined);
 
     const resetLink = buildPasswordResetLink(
       resetOrigin,
       recoverToken,
       portal,
-      portalDomain
+      linkDomain
     );
 
     const { t } = await getServerTranslation(undefined, 'client-portal');
     // Use the proper sendPasswordResetEmail function which respects language hierarchy
     await getAuthEmailRegistry().sendPasswordResetEmail({
-      email: normalizedEmail,
-      userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username || normalizedEmail,
+      email: subject.email,
+      userName: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || subject.email,
       resetLink,
       expirationTime: t('auth.registration.resetExpiration'),
-      tenant: userInfo.tenant,
+      tenant: subject.tenant,
       supportEmail: 'support@algapsa.com',
       clientName: 'AlgaPSA'
     });
@@ -232,23 +271,19 @@ export async function recoverPassword(
     logger.info('Password recovery email sent successfully', {
       portal,
       userType,
-      tenant: userInfo.tenant,
-      email: normalizedEmail
+      tenant: subject.tenant,
+      email: subject.email
     });
-    return true;
   } catch (error) {
-    // All lookup, token, and send failures resolve to the same public success
-    // value: an unauthenticated requester must never learn whether an account
-    // exists or whether delivery succeeded. Operators observe failures through
-    // structured application logs and the Email Log. The token and reset URL
-    // are never logged.
+    // Token, link and send failures stay out of the public result. Operators
+    // observe them through structured logs and the Email Log. The token and
+    // reset URL are never logged.
     logger.error('password_recovery_send_failed', {
       portal,
       userType,
-      tenant: matchedTenant,
+      tenant: subject.tenant,
       error: error instanceof Error ? error.message : String(error)
     });
-    return true;
   }
 }
 

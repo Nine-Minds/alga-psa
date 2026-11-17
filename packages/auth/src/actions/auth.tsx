@@ -11,6 +11,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
 import { normalizeLoginEmail } from '../lib/security/loginEmail';
 import { resolveSignInUser, TenantRequiredResolutionError } from '../lib/signInUserResolution';
+import { resolveTenantFromPortalDomain } from '../lib/portalDomainTenant';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
@@ -39,40 +40,6 @@ async function triggerInactiveLoginWinback(user: IUser): Promise<void> {
     }
 
     await hook({ tenantId: user.tenant });
-}
-
-/** Tenant that owns an active portal domain, or null. */
-async function resolveTenantFromPortalDomain(portalDomain: string): Promise<string | null> {
-    const normalized = portalDomain.trim().toLowerCase();
-    if (!normalized) {
-        return null;
-    }
-
-    try {
-        const { getAdminConnection } = await import('@alga-psa/db/admin');
-        const { getPortalDomainByHostname } = await import('../lib/PortalDomainModel');
-        const knex = await getAdminConnection();
-
-        const candidates = normalized.includes(':')
-            ? [normalized, normalized.replace(/:\d+$/, '')]
-            : [normalized];
-
-        for (const candidate of candidates) {
-            const record = await getPortalDomainByHostname(knex, candidate);
-            if (record?.status === 'active') {
-                return record.tenant;
-            }
-        }
-
-        logger.warn('[authenticateUser] No active portal domain for host', { portalDomain: normalized });
-        return null;
-    } catch (error) {
-        logger.warn('[authenticateUser] Failed to resolve tenant from portal domain', {
-            portalDomain: normalized,
-            error: error instanceof Error ? error.message : 'Unknown error',
-        });
-        return null;
-    }
 }
 
 /**
