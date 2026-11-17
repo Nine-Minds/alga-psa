@@ -389,6 +389,29 @@ describe('InvoiceEmailHandler', () => {
       expect(mocks.sendInvoiceEmail.mock.calls[0][0].to.email).toBe('billing@acme.test');
     });
 
+    it('refuses a cancelled invoice: no PDF, no email, job fails with a readable reason', async () => {
+      mocks.dbRows.invoice = buildInvoice({ status: 'cancelled' });
+
+      await expect(InvoiceEmailHandler.handle('pg-1', buildJobData())).rejects.toThrow(/voided, so it cannot be emailed/);
+
+      expect(mocks.generateAndStore).not.toHaveBeenCalled();
+      expect(mocks.sendInvoiceEmail).not.toHaveBeenCalled();
+      expect(mocks.publishGeneratedDocumentsToClient).not.toHaveBeenCalled();
+      expect(mocks.updateJobStatus).toHaveBeenCalledWith('job-service-1', JobStatus.Failed, expect.objectContaining({
+        error: expect.stringContaining('voided'),
+      }));
+    });
+
+    it('still sends a paid invoice and an autopay/replenishment-style open invoice unchanged', async () => {
+      for (const status of ['paid', 'sent', 'open']) {
+        mocks.sendInvoiceEmail.mockClear();
+        mocks.createJobDetail.mockResolvedValueOnce('pdf-detail-1').mockResolvedValueOnce('email-detail-1');
+        mocks.dbRows.invoice = buildInvoice({ status });
+        await InvoiceEmailHandler.handle('pg-1', buildJobData());
+        expect(mocks.sendInvoiceEmail).toHaveBeenCalledTimes(1);
+      }
+    });
+
     it('should not request a payment link for paid invoices', async () => {
       mocks.dbRows.invoice = buildInvoice({ status: 'paid' });
       mocks.getInvoiceEmailLinkContext.mockResolvedValue({});

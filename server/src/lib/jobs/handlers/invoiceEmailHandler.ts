@@ -132,6 +132,13 @@ export class InvoiceEmailHandler {
             throw new Error(`Failed to get details for Invoice ID ${invoiceId}`);
           }
 
+          // A job can be queued without passing through the MSP send action, so
+          // this is the last gate: a voided invoice is never emailed. Gates on
+          // `cancelled` only; paid and autopay/replenishment sends are unchanged.
+          if (String(invoice.status ?? '').toLowerCase() === 'cancelled') {
+            throw new Error(`Invoice #${invoice.invoice_number} has been voided, so it cannot be emailed.`);
+          }
+
           const client = await getClientRow(tenantId, invoice.client_id);
           if (!client) {
             throw new Error(`Client not found for Invoice #${invoice.invoice_number}`);

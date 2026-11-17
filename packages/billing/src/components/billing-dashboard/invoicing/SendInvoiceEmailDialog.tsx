@@ -97,7 +97,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
   };
 
   const handleSend = async () => {
-    const validRecipients = recipients.filter(r => r.recipientEmail);
+    const validRecipients = recipients.filter(r => r.recipientEmail && r.invoiceStatus !== 'cancelled');
     if (validRecipients.length === 0) {
       toast.error(t('sendEmail.toasts.noValidRecipients', { defaultValue: 'No valid recipients found' }));
       return;
@@ -134,6 +134,17 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         onSuccess?.();
         onClose();
       } else if (result.successCount === 0) {
+        // A server refusal carries its own readable sentence; show it, not a generic failure.
+        const refusal = result.results.find((r) => r.reason === 'invoice-cancelled');
+        if (refusal) {
+          toast.error(
+            t('sendEmail.invoiceCancelledRefusal', {
+              defaultValue: 'This invoice has been voided, so it cannot be emailed.',
+            }),
+            { id: toastId },
+          );
+          return;
+        }
         toast.error(t('sendEmail.toasts.sentFailure', {
           count: result.failureCount,
           defaultValue:
@@ -158,8 +169,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     }
   };
 
-  const validRecipientCount = recipients.filter(r => r.recipientEmail).length;
-  const invalidRecipientCount = recipients.filter(r => !r.recipientEmail).length;
+  const validRecipientCount = recipients.filter(r => r.recipientEmail && r.invoiceStatus !== 'cancelled').length;
+  const invalidRecipientCount = recipients.filter(r => !r.recipientEmail && r.invoiceStatus !== 'cancelled').length;
   const resolvedFromEmail = senderId === DEFAULT_SENDER_SELECTION
     ? effectiveSenderAddress || recipients[0]?.fromEmail
     : senders.find(sender => sender.sender_id === senderId)?.email_address || recipients[0]?.fromEmail;
@@ -287,7 +298,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                 <div
                   key={recipient.invoiceId}
                   className={`border rounded-lg p-4 ${
-                    recipient.recipientEmail
+                    recipient.recipientEmail && recipient.invoiceStatus !== 'cancelled'
                       ? 'border-[rgb(var(--color-border-200))] bg-card'
                       : 'border-warning/30 bg-warning/10'
                   }`}
@@ -331,7 +342,16 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                       ) : null}
 
                       {/* Recipient */}
-                      {recipient.recipientEmail ? (
+                      {recipient.invoiceStatus === 'cancelled' ? (
+                        <div className="flex items-center gap-2 text-sm text-warning">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>
+                            {t('sendEmail.invoiceCancelledRefusal', {
+                              defaultValue: 'This invoice has been voided, so it cannot be emailed.',
+                            })}
+                          </span>
+                        </div>
+                      ) : recipient.recipientEmail ? (
                         <div className="flex items-center gap-2 text-sm">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{recipient.recipientName}</span>
@@ -350,6 +370,17 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
                           </span>
                         </div>
                       )}
+
+                      {recipient.invoiceStatus === 'paid' ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>
+                            {t('sendEmail.paidReceiptNotice', {
+                              defaultValue: 'This invoice is paid — the email will be sent as a paid receipt.',
+                            })}
+                          </span>
+                        </div>
+                      ) : null}
 
                       {/* Due Date */}
                       {recipient.dueDate && (
