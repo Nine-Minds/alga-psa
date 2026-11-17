@@ -27,6 +27,7 @@ export async function renewMicrosoftCalendarWebhooks(
 
     const successful = results.filter(r => r.success);
     const failed = results.filter(r => !r.success);
+    const recreated = successful.filter(r => r.action === 'recreated');
 
     logger.info('[CalendarWebhookMaintenance] Microsoft webhook renewal completed', {
       tenantId,
@@ -35,8 +36,14 @@ export async function renewMicrosoftCalendarWebhooks(
       failed: failed.length,
       actions: {
         renewed: successful.filter(r => r.action === 'renewed').length,
-        recreated: successful.filter(r => r.action === 'recreated').length,
+        recreated: recreated.length,
         failed: failed.length
+      },
+      catchUp: {
+        providersAttempted: recreated.length,
+        changesApplied: recreated.reduce((sum, r) => sum + (r.catchUp?.changesApplied ?? 0), 0),
+        changesFailed: recreated.reduce((sum, r) => sum + (r.catchUp?.changesFailed ?? 0), 0),
+        providersCatchUpFailed: recreated.filter(r => r.catchUp?.error).length
       }
     });
 

@@ -91,5 +91,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
     expect(eeSource).toContain('CalendarWebhookMaintenanceService');
     expect(eeSource).toContain('GoogleCalendarAdapter');
     expect(eeSource).toContain('CalendarProviderService');
+    // The per-tenant totals log reports the catch-up after a recreated subscription.
+    expect(eeSource).toContain('changesApplied');
   });
 });

@@ -33,6 +33,8 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'cleanup-webhook-deliveries', cron: '*/15 * * * *' },
   { jobName: 'cleanup-inbound-email-quarantine', cron: '30 2 * * *' },
   { jobName: 'verify-google-calendar-pubsub', cron: '15 * * * *' },
+  // EE-only: the CE catalog (ceMaintenanceSchedules.ts) deliberately omits the calendar jobs.
+  { jobName: 'renew-microsoft-calendar-webhooks', cron: '*/30 * * * *' },
   { jobName: 'renew-google-gmail-watch', cron: '*/30 * * * *' },
   { jobName: 'renew-teams-meeting-artifact-subscriptions', cron: '*/30 * * * *' },
   { jobName: 'renew-telephony-call-subscriptions', cron: '*/30 * * * *' },

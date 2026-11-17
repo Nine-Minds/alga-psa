@@ -152,8 +152,8 @@ await scheduler.scheduleRecurringJob('daily-report', '0 0 * * *', {});
 | `kb-article-import` | Parse staged KB files into articles | 10 min |
 | `reconcile-bucket-usage` | Reconcile usage records | default |
 | `cleanup-temporary-workflow-forms` | Clean up temporary forms | default |
-| `renew-microsoft-calendar-webhooks` | Renew MS calendar subscriptions | default |
-| `verify-google-calendar-pubsub` | Verify Google calendar setup | default |
+| `renew-microsoft-calendar-webhooks` | Renew MS calendar subscriptions (EE maintenance fan-out job, every 30 min, 180 min look-ahead, tenants with an active Outlook calendar provider); recreates an expired subscription and catches up the missed changes | default |
+| `verify-google-calendar-pubsub` | Verify Google calendar setup (EE maintenance fan-out job, hourly, tenants with an active Google calendar provider) | default |
 | `cleanup-ai-session-keys` | Clean up AI sessions (EE only) | default |
 | `createClientContractLineCycles` | Create billing cycles | default |
 | `createNextTimePeriods` | Create time periods | default |

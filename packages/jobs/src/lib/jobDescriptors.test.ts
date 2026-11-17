@@ -31,7 +31,7 @@ vi.mock('./handlers/processRenewalQueueHandler', () => ({ processRenewalQueueHan
 vi.mock('./handlers/dateTriggerScanHandler', () => ({ createDateTriggerScanHandler: vi.fn() }));
 vi.mock('./handlers/autoCloseTicketsHandler', () => ({ autoCloseTicketsHandler: vi.fn() }));
 vi.mock('./handlers/searchReconcileHandler', () => ({ SEARCH_RECONCILE_JOB_NAME: 'stub:SEARCH_RECONCILE_JOB_NAME', searchReconcileHandler: vi.fn() }));
-vi.mock('./handlers/calendarWebhookMaintenanceHandler', () => ({ verifyGoogleCalendarProvisioning: vi.fn() }));
+vi.mock('./handlers/calendarWebhookMaintenanceHandler', () => ({ renewMicrosoftCalendarWebhooks: vi.fn(), verifyGoogleCalendarProvisioning: vi.fn() }));
 vi.mock('./handlers/googleGmailWatchRenewalHandler', () => ({ renewGoogleGmailWatchSubscriptions: vi.fn() }));
 vi.mock('./handlers/teamsMeetingArtifactWebhookHandler', () => ({ renewTeamsMeetingArtifactSubscriptions: vi.fn() }));
 vi.mock('./handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: vi.fn() }));
@@ -77,6 +77,8 @@ describe('jobDescriptors', () => {
     const [first] = listMaintenanceJobNames();
     expect(() => defineJob({ name: first, scope: 'system', run: async () => undefined })).toThrow('native maintenance job');
     expect(() => defineJob({ name: 'sla-timer', scope: 'system', run: async () => undefined })).toThrow('native maintenance job');
+    // The Microsoft calendar renewal is a native fan-out job, so defineJob cannot take its name.
+    expect(() => defineJob({ name: 'renew-microsoft-calendar-webhooks', scope: 'tenant', run: async () => undefined })).toThrow('native maintenance job');
     expect(listJobDescriptorNames()).toEqual([]);
   });
 

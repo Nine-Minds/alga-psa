@@ -25,7 +25,7 @@ import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandle
 import { createDateTriggerScanHandler, type DateWorkflowLauncher } from './handlers/dateTriggerScanHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
 import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/searchReconcileHandler';
-import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
+import { renewMicrosoftCalendarWebhooks, verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions } from './handlers/googleGmailWatchRenewalHandler';
 import { renewTeamsMeetingArtifactSubscriptions } from './handlers/teamsMeetingArtifactWebhookHandler';
 import { renewTelephonyCallSubscriptions } from './handlers/telephonyCallNotificationHandler';
@@ -46,6 +46,7 @@ import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHand
 import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRetryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
+const MICROSOFT_CALENDAR_RENEWAL_LOOKAHEAD_MINUTES = 180;
 let enterpriseDateWorkflowLauncher: DateWorkflowLauncher | undefined;
 
 /** Inject the EE workflow launcher from server startup; this package stays CE-safe. */
@@ -110,6 +111,18 @@ const tenantsWithInboundEmail: TenantSelector = (db) => db
   .where('is_active', true)
   .distinct('tenant');
 
+// Calendar maintenance only has work for tenants that have an active provider of that type.
+// The provider_type values mirror the CalendarProviderType literals in the EE calendar package,
+// which this CE package cannot import.
+const tenantsWithActiveCalendarProvider = (providerType: 'google' | 'microsoft'): TenantSelector => (db) => db
+  .unscoped<{ tenant: string }>('calendar_providers', `maintenance fanout narrows ${providerType} calendar maintenance to tenants with an active ${providerType} calendar provider`)
+  .where('provider_type', providerType)
+  .where('is_active', true)
+  .distinct('tenant');
+
+const tenantsWithActiveGoogleCalendar = tenantsWithActiveCalendarProvider('google');
+const tenantsWithActiveMicrosoftCalendar = tenantsWithActiveCalendarProvider('microsoft');
+
 // 'teams-phone' mirrors TEAMS_PHONE_PROVIDER in @alga-psa/ee-microsoft-teams, which this CE package cannot import.
 const tenantsWithActiveTeamsPhone: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows telephony renewals to tenants with an active Teams Phone provider')
@@ -158,7 +171,10 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },
-  'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }) },
+  'verify-google-calendar-pubsub': { scope: 'tenant', run: (tenantId) => verifyGoogleCalendarProvisioning({ tenantId }), tenants: tenantsWithActiveGoogleCalendar },
+  // Graph calendar subscriptions last ~60h, so this has to run well inside that. The 180 minute
+  // look-ahead is the handler's default, passed explicitly so the cadence and window read together.
+  'renew-microsoft-calendar-webhooks': { scope: 'tenant', run: (tenantId) => renewMicrosoftCalendarWebhooks({ tenantId, lookAheadMinutes: MICROSOFT_CALENDAR_RENEWAL_LOOKAHEAD_MINUTES }), tenants: tenantsWithActiveMicrosoftCalendar },
   'renew-google-gmail-watch': { scope: 'tenant', run: (tenantId) => renewGoogleGmailWatchSubscriptions({ tenantId }) },
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }), tenants: tenantsWithActiveTeams },
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },

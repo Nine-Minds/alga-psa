@@ -3,6 +3,7 @@ import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
+import { MicrosoftDeltaSyncService } from './MicrosoftDeltaSyncService';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -21,13 +22,32 @@ interface RenewalResult {
   action: 'renewed' | 'recreated' | 'failed' | 'skipped';
   newExpiration?: string;
   error?: string;
+  /** Recreated subscriptions only: changes applied by the catch-up delta sync. */
+  catchUp?: {
+    changesApplied: number;
+    changesFailed: number;
+    /** Set when the catch-up could not run; the stored deltaLink is untouched, so the next notification replays the gap. */
+    error?: string;
+  };
+}
+
+/**
+ * True when Graph says the subscription does not exist: HTTP 404, or the Graph
+ * error code `ResourceNotFound`. Deliberately not a message match: an unrelated
+ * failure whose text happens to contain "404" must not recreate a subscription.
+ * The adapter's wrapped errors carry `status` and `code`; raw axios errors carry
+ * `response.status` and `response.data.error.code`.
+ */
+export function isResourceNotFoundError(error: any): boolean {
+  const status = error?.response?.status ?? error?.status ?? error?.statusCode;
+  if (status === 404) return true;
+  const code = error?.response?.data?.error?.code ?? error?.responseBody?.error?.code ?? error?.code;
+  return code === 'ResourceNotFound';
 }
 
 export class CalendarWebhookMaintenanceService {
   
-  constructor() {
-    // No setup needed for logger
-  }
+  constructor(private readonly deltaSync: MicrosoftDeltaSyncService = new MicrosoftDeltaSyncService()) {}
 
   /**
    * Main entry point to renew Microsoft webhook subscriptions
@@ -327,12 +347,15 @@ export class CalendarWebhookMaintenanceService {
         });
       }
 
+      const catchUp = await this.catchUpAfterRecreate(config);
+
       return {
         providerId: config.id,
         tenant: config.tenant,
         success: true,
         action: 'recreated',
-        newExpiration
+        newExpiration,
+        catchUp
       };
     } catch (error: any) {
       logger.error(`Failed to recreate subscription for ${config.id}`, error);
@@ -341,16 +364,35 @@ export class CalendarWebhookMaintenanceService {
   }
 
   /**
-   * Check if error is a 404 ResourceNotFound error
+   * Pull the changes made in Outlook while the subscription was dead. Runs only
+   * after a recreate; the provider is reloaded because registration (and the
+   * token refresh before it) persisted fresh state the hydrated candidate lacks.
+   * A catch-up failure does not undo the recreate: the subscription is live and
+   * the stored deltaLink only advances after a successful fetch, so the next
+   * notification replays the same gap.
    */
+  private async catchUpAfterRecreate(config: CalendarProviderConfig): Promise<NonNullable<RenewalResult['catchUp']>> {
+    try {
+      const fresh = await new CalendarProviderService().getProvider(config.id, config.tenant, {
+        includeSecrets: true
+      });
+      if (!fresh) {
+        throw new Error('Provider no longer exists');
+      }
+      const result = await this.deltaSync.syncProviderDelta(fresh);
+      return { changesApplied: result.success, changesFailed: result.failed };
+    } catch (error: any) {
+      logger.warn(`Catch-up delta sync failed for ${config.id} after recreating its subscription`, {
+        providerId: config.id,
+        tenant: config.tenant,
+        error: error?.message || error
+      });
+      return { changesApplied: 0, changesFailed: 0, error: error?.message || String(error) };
+    }
+  }
+
   private isResourceNotFoundError(error: any): boolean {
-    // Check for Graph API 404 structure
-    if (error?.response?.status === 404) return true;
-    if (error?.code === 'ResourceNotFound') return true;
-    if (error?.message?.includes('ResourceNotFound')) return true;
-    if (error?.message?.includes('Subscription not found')) return true;
-    if (error?.message?.includes('404')) return true;
-    return false;
+    return isResourceNotFoundError(error);
   }
 
   /**
