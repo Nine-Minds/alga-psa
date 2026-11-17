@@ -16,6 +16,7 @@ import type {
   IOpportunitySuggestion,
   IOpportunityStep,
   IQuote,
+  OpportunityCheckpoint,
   OpportunityListFilters,
   OpportunitySuggestionStatus,
   IWorkQueue,
@@ -29,8 +30,11 @@ import {
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
   completeOpportunityStepCore,
+  amendDeclaration,
   correctEvidence,
+  declarationContentFromInput,
   declareStage,
+  declareStageFromStep,
   getOpportunityDetail,
   onQuoteAccepted,
   onQuoteSent,
@@ -54,6 +58,7 @@ import {
   ValidationError,
 } from '../middleware/apiMiddleware';
 import type {
+  AmendOpportunityDeclarationApi,
   CompleteOpportunityActionApi,
   CompleteOpportunityStepApi,
   CorrectOpportunityEvidenceApi,
@@ -74,6 +79,11 @@ function throwOpportunityApiError(error: unknown): never {
 
   // Matched by name: a cited source that is not this deal's is a client error.
   if (error.name === 'OpportunityEvidenceRefError') throw new ValidationError(error.message);
+  // An unreached checkpoint is a state conflict; an unamendable one or too many sources is a bad request.
+  if (error.name === 'OpportunityDeclarationError') {
+    if ((error as { code?: string }).code === 'checkpoint_not_reached') throw new ConflictError(error.message);
+    throw new ValidationError(error.message);
+  }
 
   if ([
     'Opportunity not found',
@@ -250,7 +260,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
         data,
       );
       if (data.checkpoint && data.checkpoint !== 'won') {
-        await declareStage(
+        await declareStageFromStep(
           trx,
           context.tenant,
           opportunityId,
@@ -313,9 +323,20 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       .select('opportunity_id')
       .first();
     if (!opportunity) throw new NotFoundError('Opportunity not found');
-    return db.table('opportunity_evidence')
+    const evidence = await db.table('opportunity_evidence')
       .where({ opportunity_id: id })
-      .orderBy('recorded_at', 'asc') as Promise<IOpportunityEvidence[]>;
+      .orderBy('recorded_at', 'asc') as IOpportunityEvidence[];
+    const citationRows = evidence.length === 0
+      ? []
+      : await db.table('opportunity_evidence_citations')
+        .whereIn('evidence_id', evidence.map((item) => item.evidence_id))
+        .orderBy('position', 'asc') as Array<{ evidence_id: string; ref_type: 'interaction' | 'document'; ref_id: string }>;
+    return evidence.map((item) => ({
+      ...item,
+      citations: citationRows
+        .filter((row) => row.evidence_id === item.evidence_id)
+        .map((row) => ({ type: row.ref_type, id: row.ref_id })),
+    }));
   }
 
   async create(data: CreateOpportunityApi, context: ServiceContext): Promise<IOpportunity> {
@@ -461,7 +482,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       id,
       stage,
       context.userId,
-      data.detail,
+      declarationContentFromInput(data),
     )).catch(throwOpportunityApiError);
   }
 
@@ -597,9 +618,24 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       id,
       data.checkpoint,
       context.userId,
-      data.detail,
-      // Optional citation; omitted keeps the call shape existing consumers get.
-      data.refType != null && data.refId != null ? { type: data.refType, id: data.refId } as { type: 'interaction' | 'document'; id: string } : undefined,
+      declarationContentFromInput(data),
+    )).catch(throwOpportunityApiError);
+  }
+
+  async amendDeclaration(
+    id: string,
+    checkpoint: OpportunityCheckpoint,
+    data: AmendOpportunityDeclarationApi,
+    context: ServiceContext,
+  ): Promise<IOpportunity> {
+    const knex = await this.getDbForContext(context);
+    return withTransaction(knex, (trx) => amendDeclaration(
+      trx,
+      context.tenant,
+      id,
+      checkpoint,
+      context.userId,
+      declarationContentFromInput(data),
     )).catch(throwOpportunityApiError);
   }
 

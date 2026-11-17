@@ -73038,7 +73038,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/stage",
     "displayName": "Set opportunity stage",
     "summary": "Set opportunity stage",
-    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose. detail and citations (interaction or document sources of this opportunity) set the declaration note and sources; omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -73087,6 +73087,40 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
+        "refType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "refId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         }
       },
       "required": [
@@ -73347,7 +73381,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "List opportunity evidence",
     "summary": "List opportunity evidence",
-    "description": "Lists append-only evidence and corrected records in recorded order.",
+    "description": "Lists append-only evidence and corrected records in recorded order, with the sources each declaration cites.",
     "tags": [
       "Opportunities v1"
     ],
@@ -73402,7 +73436,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}/evidence",
     "displayName": "Record declared evidence",
     "summary": "Record declared evidence",
-    "description": "Records the declared qualified checkpoint only.",
+    "description": "Declares a stage (identified through verbal) with an optional note (detail) and citations of interactions or documents attached to this opportunity. Omitted fields keep an existing declaration. refType and refId are shorthand for one citation and are refused with 400 beside citations.",
     "tags": [
       "Opportunities v1"
     ],
@@ -73450,6 +73484,26 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        },
         "refType": {
           "type": [
             "string",
@@ -73468,6 +73522,106 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "checkpoint"
       ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id_declarations_checkpoint",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}/declarations/{checkpoint}",
+    "displayName": "Edit stage declaration",
+    "summary": "Edit stage declaration",
+    "description": "Replaces the note (detail) and sources (citations) of the declaration for a reached checkpoint (qualified, assessment, proposed or verbal) without moving the deal and without publishing a stage-changed event. Omitted fields keep their current value; null detail or an empty citations array clears it. Works on closed opportunities. An unreached checkpoint answers 409; won answers 400.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "checkpoint",
+        "in": "path",
+        "required": true,
+        "description": "The stage checkpoint whose declaration is edited. won is refused.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won"
+          ],
+          "description": "The stage checkpoint whose declaration is edited. won is refused."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          }
+        }
+      }
     },
     "responseBodySchema": {
       "type": "object",

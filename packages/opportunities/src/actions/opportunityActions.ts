@@ -1,14 +1,15 @@
 'use server';
 
 import type { Knex } from 'knex';
+import { z } from 'zod';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
-import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityListFilters } from '@alga-psa/types';
-import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, recordDeclaredEvidenceSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
+import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityCheckpoint, OpportunityListFilters } from '@alga-psa/types';
+import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, recordDeclaredEvidenceSchema, declarationCitationSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
 import { OpportunityModel } from '../models/opportunityModel';
-import { OPPORTUNITY_REF_REFUSAL, OpportunityEvidenceRefError, correctEvidence, declareStage, recordEvidence, type DeclarationRef } from '../lib/stageEngine';
+import { OPPORTUNITY_REF_REFUSAL, OpportunityDeclarationError, OpportunityEvidenceRefError, amendDeclaration, correctEvidence, declareStage, recordEvidence, type DeclarationContent, type DeclarationRef } from '../lib/stageEngine';
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
 import { buildOpportunityCreatedPayload, buildOpportunityStageChangedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
@@ -106,33 +107,61 @@ export const completeNextAction = withAuth(async (user, { tenant }, opportunityI
   ));
 });
 
+/** The engine's typed refusals are already user-facing; anything else propagates. */
+function mapDeclarationError(error: unknown): never {
+  if (error instanceof OpportunityEvidenceRefError) throw new Error(OPPORTUNITY_REF_REFUSAL);
+  if (error instanceof OpportunityDeclarationError) throw new Error(error.message);
+  throw error;
+}
+
+const declarationContentInputSchema = z.object({
+  note: z.string().nullable().optional(),
+  citations: z.array(declarationCitationSchema).optional(),
+}).optional();
+
+function toDeclarationContent(input: unknown): DeclarationContent | undefined {
+  const parsed = declarationContentInputSchema.parse(input);
+  if (!parsed) return undefined;
+  // Unsupported types reach the engine on purpose: its guard refuses them.
+  return { note: parsed.note, citations: parsed.citations as DeclarationRef[] | undefined };
+}
+
 export const declareOpportunityStage = withAuth(async (
   user,
   { tenant },
   opportunityId: string,
   stage: 'identified' | 'qualified' | 'assessment' | 'proposed' | 'verbal',
-  detail?: string,
-  refType?: string | null,
-  refId?: string | null,
+  content?: DeclarationContent,
 ): Promise<IOpportunity> => {
   await requirePermission(user, 'update');
-  const data = recordDeclaredEvidenceSchema.parse({ checkpoint: stage, detail, refType, refId });
+  const checkpoint = recordDeclaredEvidenceSchema.shape.checkpoint.parse(stage);
+  const declaration = toDeclarationContent(content);
   const { knex } = await createTenantKnex();
   try {
-    return await withTransaction(knex, (trx) => declareStage(
-      trx,
-      tenant,
-      opportunityId,
-      data.checkpoint,
-      actorId(user),
-      data.detail,
-      // Unsupported types reach the engine on purpose: its guard refuses them.
-      data.refType != null && data.refId != null ? { type: data.refType, id: data.refId } as DeclarationRef : null,
-    ));
+    return await withTransaction(knex, (trx) => declareStage(trx, tenant, opportunityId, checkpoint, actorId(user), declaration));
   } catch (error) {
-    // The engine's typed refusal is already user-facing; anything else propagates.
-    if (error instanceof OpportunityEvidenceRefError) throw new Error(OPPORTUNITY_REF_REFUSAL);
-    throw error;
+    return mapDeclarationError(error);
+  }
+});
+
+/**
+ * Edits the note and sources of a reached stage's declaration. The deal does
+ * not change stage and no stage-changed event is published.
+ */
+export const amendOpportunityDeclaration = withAuth(async (
+  user,
+  { tenant },
+  opportunityId: string,
+  checkpoint: Exclude<OpportunityCheckpoint, 'won'>,
+  content: DeclarationContent,
+): Promise<IOpportunity> => {
+  await requirePermission(user, 'update');
+  const declaration = toDeclarationContent(content) ?? {};
+  const { knex } = await createTenantKnex();
+  try {
+    return await withTransaction(knex, (trx) => amendDeclaration(trx, tenant, opportunityId, checkpoint, actorId(user), declaration));
+  } catch (error) {
+    return mapDeclarationError(error);
   }
 });
 
@@ -146,7 +175,7 @@ export const declareQualified = withAuth(async (user, { tenant }, opportunityId:
     opportunityId,
     'qualified',
     actorId(user),
-    detail || 'Decision-maker and budget conversation confirmed',
+    { note: detail || 'Decision-maker and budget conversation confirmed' },
   ));
 });
 
