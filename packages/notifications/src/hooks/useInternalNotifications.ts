@@ -241,6 +241,10 @@ export function useInternalNotifications(
           url,
           name: `notification-signals:${tenant}:${userId}`,
           document: ydoc,
+          // The server's onAuthenticate hook makes it wait for an Auth protocol
+          // message, which the provider only sends when `token` is set. The URL
+          // parameter stays: the signal validator re-checks ?token= per room.
+          token: access.token,
           parameters: { token: access.token },
           connect: false,
           onConnect: () => {

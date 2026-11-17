@@ -66,6 +66,9 @@ describe('CollaborativeEditor room name', () => {
     );
 
     expect(createYjsProvider).toHaveBeenCalledWith('document:tenant-abc:doc-123', {
+      // Non-empty token so the provider sends the Auth protocol message the
+      // server requires; document rooms themselves are gated by tenantId.
+      token: 'user-1',
       parameters: {
         tenantId: 'tenant-abc',
         userId: 'user-1',

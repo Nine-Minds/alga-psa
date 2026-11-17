@@ -33,6 +33,11 @@ const waitForSync = (provider: HocuspocusProvider, timeoutMs = SYNC_TIMEOUT_MS) 
 export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: string) => {
   const roomName = `document:${tenant}:${documentId}`;
   const { provider, ydoc } = createYjsProvider(roomName, {
+    // The server's onAuthenticate hook makes it wait for an Auth protocol
+    // message, which the provider only sends when `token` is set. Document
+    // rooms are gated by the tenantId URL parameter, so the value itself
+    // is not verified there; any non-empty string satisfies the handshake.
+    token: user.user_id,
     parameters: {
       tenantId: tenant,
       userId: user.user_id,

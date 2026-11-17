@@ -36,6 +36,9 @@ it('uses authenticated signal rooms and ignores all Yjs notification content and
   const provider = mocks.providers[0];
   expect(provider.options.name).toBe(`notification-signals:${tenant}:${userId}`);
   expect(provider.options.parameters).toEqual({ token: 'signed-token' });
+  // The server requires an Auth protocol message, which the provider only
+  // sends when the `token` option (not just the URL parameter) is set.
+  expect(provider.options.token).toBe('signed-token');
   expect(provider.options.document.getMap('notifications').get('data')).toBeUndefined();
   act(() => {
     provider.options.document.getMap('notifications').set('data', [{ message: 'Stale shared secret' }]);
@@ -85,6 +88,8 @@ it('rotates the token about 15s before it expires (~285s for a 300s token) and r
     await act(async () => { await vi.advanceTimersByTimeAsync(3_000); });
     await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mocks.providers.at(-1).options.parameters).toEqual({ token: 't2' }));
+    // Rotated providers must carry the new token in the Auth option too.
+    expect(mocks.providers.at(-1).options.token).toBe('t2');
   } finally { vi.useRealTimers(); }
 });
 
