@@ -74,9 +74,15 @@ cares, but the class of bug does (it also hides `wait`-free failure reporting an
 
 `ee/appliance/control-plane/Dockerfile`: add `tini` to the runtime `apk add` and set
 `ENTRYPOINT ["/sbin/tini", "--"]` (Alpine's tini installs to `/sbin/tini`, verified; the existing `CMD` is unchanged). tini runs as PID 1, so node is a
-normal child, and every orphaned grandchild is reaped. One line of package, one line of ENTRYPOINT,
-and no script change — deliberately *not* "make the entrypoint wait", which would serialise startup
-behind a 5 s-delayed repair and still leaves node as PID 1 for anyone else's orphans.
+normal child, and every orphaned process is reaped.
+
+tini alone is not enough (found while preparing the human review): the background jobs are not
+orphans. They are children of the entrypoint shell, and `exec node` turns that shell into node, so
+node stays their parent and never waits for them; the review container showed the finished storage
+reconcile as a defunct `bash` under node with tini as PID 1. The entrypoint therefore starts each job
+through `run_detached` (fork twice), which orphans it so it is re-parented to tini and reaped. This is
+still deliberately *not* "make the entrypoint wait", which would serialise startup behind a 5 s-delayed
+repair.
 
 ### Change 3 — what deliberately does NOT change
 
