@@ -10,8 +10,11 @@ import {
   RequestLocalAuthorizationCache,
   clientResolvers,
   createAuthorizationKernel,
+  evaluateRelationshipTemplate,
   parentVisibleViaChildClients,
+  type AuthorizationEvaluationInput,
   type AuthorizationRecord,
+  type MutationGuardResult,
   type RelationshipRule,
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
@@ -63,8 +66,31 @@ function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
     return [];
   }
 
-  return [{ template: 'own' }, { template: 'same_client' }];
+  return [{ template: 'own' }, { template: 'same_client' }, { template: 'readable_via_published_parent' }];
 }
+
+/**
+ * `readable_via_published_parent` is a read rule only. The kernel's mutation path starts from "the subject can read
+ * the record", so without this guard a document readable solely through its published parent would also pass an
+ * update/delete decision. Refused unless the subject holds the document by `own` or `same_client`.
+ */
+const refuseMutationGrantedOnlyByPublishedParent = (input: AuthorizationEvaluationInput): MutationGuardResult => {
+  const viaParentOnly =
+    evaluateRelationshipTemplate('readable_via_published_parent', input) &&
+    !evaluateRelationshipTemplate('own', input) &&
+    !evaluateRelationshipTemplate('same_client', input);
+  return viaParentOnly
+    ? {
+        allowed: false,
+        reasons: [{
+          stage: 'mutation',
+          sourceType: 'builtin',
+          code: 'document_published_parent_read_only',
+          message: 'A document readable only through its published parent article cannot be modified.',
+        }],
+      }
+    : { allowed: true, reasons: [] };
+};
 
 async function resolveDocumentAuthorizationRecords(
   trx: Knex.Transaction,
@@ -96,6 +122,7 @@ async function resolveDocumentAuthorizationRecords(
   const quoteIds = new Set<string>();
   const invoiceIds = new Set<string>();
   const salesOrderIds = new Set<string>();
+  const parentDocumentIds = new Set<string>();
 
   const scopedDb = tenantDb(trx, tenant);
   for (const association of associations) {
@@ -120,7 +147,20 @@ async function resolveDocumentAuthorizationRecords(
     if (association.entity_type === 'sales_order') {
       salesOrderIds.add(association.entity_id);
     }
+    if (association.entity_type === 'document') {
+      parentDocumentIds.add(association.entity_id);
+    }
   }
+
+  // Parents that are a published KB article readable by clients: their children (embedded images) are too.
+  const publishedParentRows = parentDocumentIds.size > 0
+    ? await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ status: 'published' })
+        .whereIn('audience', ['client', 'public'])
+        .whereIn('document_id', Array.from(parentDocumentIds))
+        .select<{ document_id: string }[]>('document_id')
+    : [];
+  const publishedParentIds = new Set(publishedParentRows.map((row) => row.document_id));
 
   const [
     contactClientRows,
@@ -282,6 +322,10 @@ async function resolveDocumentAuthorizationRecords(
       clientId,
       teamIds: Array.from(new Set(teamAssociations.map((association) => association.entity_id))),
       is_client_visible: document.is_client_visible === true,
+      // True when a `document` association points at a published client/public KB article (readable_via_published_parent).
+      readableViaPublishedParent: documentAssociations.some(
+        (association) => association.entity_type === 'document' && publishedParentIds.has(association.entity_id)
+      ),
       // The tickets the document is attached to, for the seat resolver's record guards. A ticket that no longer
       // exists is not listed, as the SQL facet (`applyAttachedTickets`) joins to tickets.
       attachedTickets: ticketAssociations.flatMap((association) => ticketClientById.has(association.entity_id)
@@ -349,6 +393,7 @@ export async function authorizeAndRedactDocumentsForAction<T extends IDocument>(
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
+      mutationGuards: [refuseMutationGrantedOnlyByPublishedParent],
     }),
     bundleProvider: createBundleNarrowingProvider(trx),
     rbacEvaluator: async () => true,
@@ -515,6 +560,22 @@ export function createDocumentRelationshipSqlAdapter(options: DocumentSqlAdapter
         else this_.whereExists(attached);
       };
       exists(quantifier === 'every')(builder);
+    },
+    applyReadableViaPublishedParent(builder) {
+      // SQL facet of resolveDocumentAuthorizationRecords' publishedParentIds; both joins are tenant-matched.
+      builder.whereExists(function publishedParent(this: Knex.QueryBuilder) {
+        this.select(this.client.raw('1'))
+          .from('document_associations as scope_parent')
+          .join('kb_articles as scope_kb', function articleJoin(this: Knex.JoinClause) {
+            this.on('scope_kb.tenant', 'scope_parent.tenant').andOn('scope_kb.document_id', 'scope_parent.entity_id');
+          })
+          .whereRaw('?? = ??', ['scope_parent.tenant', `${d}.tenant`])
+          .whereRaw('?? = ??', ['scope_parent.document_id', `${d}.document_id`])
+          .where('scope_parent.entity_type', 'document')
+          .where('scope_kb.status', 'published')
+          .whereIn('scope_kb.audience', ['client', 'public'])
+          .where(`${d}.is_client_visible`, true);
+      });
     },
     applyClients: parentVisibleViaChildClients(
       { table: 'document_associations', parentKeyColumn: 'document_id', alias: 'scope_da' },

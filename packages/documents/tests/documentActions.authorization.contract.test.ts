@@ -11,7 +11,7 @@ describe('document authorization kernel wiring contracts', () => {
 
   it('T015: preserves own/same-client/client-visible baseline semantics with premium narrowing overlays', () => {
     expect(source).toContain("function getDocumentBuiltinRelationshipRules(user: IUser)");
-    expect(source).toContain("return [{ template: 'own' }, { template: 'same_client' }];");
+    expect(source).toContain("return [{ template: 'own' }, { template: 'same_client' }, { template: 'readable_via_published_parent' }];");
     expect(source).toContain("const selectedClientIds = user.clientId ? [user.clientId] : undefined;");
     expect(source).toContain("const deniedByClientVisibility =");
     expect(source).toContain("user.user_type === 'client' && !isOwnedBySubject && !isClientVisible");
