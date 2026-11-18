@@ -22,7 +22,7 @@ exports.up = async function up(knex) {
   }
 
   await knex.raw(`
-    CREATE INDEX IF NOT EXISTS service_prices_price_book_idx
+    CREATE INDEX CONCURRENTLY IF NOT EXISTS service_prices_price_book_idx
     ON ${TABLE} (tenant, price_book_id)
     WHERE price_book_id IS NOT NULL
   `);
