@@ -176,6 +176,20 @@ describe('buildEntraAttentionItems', () => {
     expect(items.find((item) => item.id === 'schedule-off')?.severity).toBe('info');
   });
 
+  it('explains the review queue by the kind of item an operator will find there', () => {
+    const detail = (reviewQueueCount: number, reviewQueueConflictCount?: number) =>
+      buildEntraAttentionItems({ ...base, reviewQueueCount, reviewQueueConflictCount })
+        .find((item) => item.id === 'review-queue')?.detailKey;
+
+    // Only ambiguous matches (or a caller that does not count conflicts): the original explanation.
+    expect(detail(3)).toBe('integrations.entra.console.attention.reviewQueueDetail');
+    expect(detail(3, 0)).toBe('integrations.entra.console.attention.reviewQueueDetail');
+    // Every item was skipped because its email belongs to a contact at another client:
+    // "two contacts share one email" would send the operator looking for a duplicate that is not there.
+    expect(detail(4, 4)).toBe('integrations.entra.console.attention.reviewQueueDetailConflict');
+    expect(detail(5, 2)).toBe('integrations.entra.console.attention.reviewQueueDetailMixed');
+  });
+
   it('names the reason the connection failed instead of only that it did', () => {
     const items = buildEntraAttentionItems({
       ...base,

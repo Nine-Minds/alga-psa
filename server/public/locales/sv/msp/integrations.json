@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identiteter väntar på ett beslut.",
           "reviewQueueAtLeast": "Minst {{count}} identiteter väntar på ett beslut.",
           "reviewQueueDetail": "Minst två kontakter delar en Microsoft-e-postadress. Inget händer med dem förrän du har gjort ett val.",
+          "reviewQueueDetailConflict": "Deras e-postadress tillhör redan en kontakt hos en annan kund, så de hoppades över. Länka eller avfärda var och en.",
+          "reviewQueueDetailMixed": "Vissa delar en Microsoft-e-postadress med flera kontakter. Andra använder en adress som redan tillhör en kontakt hos en annan kund. Inget händer med dem förrän du väljer.",
           "reviewQueueOne": "{{count}} identitet väntar på ett beslut.",
           "scheduleNotApplied": "Automatisk synkronisering är aktiverad, men schemat har aldrig tillämpats.",
           "scheduleNotAppliedDetail": "Inget körs automatiskt förrän det har tillämpats. Spara schemat igen för att försöka på nytt.",

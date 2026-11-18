@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identità attendono una decisione.",
           "reviewQueueAtLeast": "Almeno {{count}} identità attendono una decisione.",
           "reviewQueueDetail": "Due o più contatti condividono la stessa e-mail Microsoft: non succede nulla finché non scegli.",
+          "reviewQueueDetailConflict": "La loro email appartiene già a un contatto di un altro cliente, quindi sono state saltate. Collega o ignora ciascuna.",
+          "reviewQueueDetailMixed": "Alcune condividono un'email Microsoft con più contatti. Altre usano un'email che appartiene già a un contatto di un altro cliente. Non succede nulla finché non scegli.",
           "reviewQueueOne": "{{count}} identità è in attesa di una decisione.",
           "scheduleNotApplied": "La sincronizzazione automatica è attiva, ma la pianificazione non è mai stata applicata.",
           "scheduleNotAppliedDetail": "Fino ad allora non verrà eseguito nulla da solo. Salva di nuovo la pianificazione per riprovare.",

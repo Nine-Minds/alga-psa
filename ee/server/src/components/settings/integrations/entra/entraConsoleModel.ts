@@ -93,7 +93,20 @@ export interface BuildEntraAttentionInput {
   reviewQueueCount: number;
   /** The queue read came back full, so the count is a floor, not a total. */
   reviewQueueAtLimit?: boolean;
+  /**
+   * How many of the queued identities were skipped because their email already
+   * belongs to a contact at another client (or at none). The queue holds two kinds
+   * of item and the explanation has to fit the kind an operator will find there.
+   */
+  reviewQueueConflictCount?: number;
   schedule: EntraSyncScheduleSettings | null;
+}
+
+function reviewQueueDetailKey(queued: number, conflicts: number): string {
+  if (conflicts <= 0) return 'integrations.entra.console.attention.reviewQueueDetail';
+  return conflicts >= queued
+    ? 'integrations.entra.console.attention.reviewQueueDetailConflict'
+    : 'integrations.entra.console.attention.reviewQueueDetailMixed';
 }
 
 /**
@@ -189,7 +202,7 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
         : input.reviewQueueCount === 1
           ? 'integrations.entra.console.attention.reviewQueueOne'
           : 'integrations.entra.console.attention.reviewQueue',
-      detailKey: 'integrations.entra.console.attention.reviewQueueDetail',
+      detailKey: reviewQueueDetailKey(input.reviewQueueCount, input.reviewQueueConflictCount ?? 0),
       actionKey: 'integrations.entra.console.attention.actions.review',
       values: { count: input.reviewQueueCount },
       tab: 'review-queue',

@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identités attendent une décision.",
           "reviewQueueAtLeast": "Au moins {{count}} identités attendent une décision.",
           "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
+          "reviewQueueDetailConflict": "Leur adresse e-mail appartient déjà à un contact chez un autre client : elles ont donc été ignorées. Liez ou ignorez chacune d'elles.",
+          "reviewQueueDetailMixed": "Certaines partagent une même adresse Microsoft avec plusieurs contacts. D'autres utilisent une adresse qui appartient déjà à un contact chez un autre client. Rien ne leur arrive tant que vous n'avez pas choisi.",
           "reviewQueueOne": "{{count}} identité attend une décision.",
           "scheduleNotApplied": "La synchronisation automatique est activée, mais la planification n'a jamais été appliquée.",
           "scheduleNotAppliedDetail": "D'ici là, rien ne s'exécutera tout seul. Enregistrez à nouveau la planification pour réessayer.",

@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
           "reviewQueueAtLeast": "Minstens {{count}} identiteiten wachten op een beslissing.",
           "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
+          "reviewQueueDetailConflict": "Hun e-mailadres hoort al bij een contactpersoon van een andere klant, dus ze zijn overgeslagen. Koppel of negeer elk ervan.",
+          "reviewQueueDetailMixed": "Sommige delen één Microsoft-e-mailadres met meerdere contactpersonen. Andere gebruiken een e-mailadres dat al bij een contactpersoon van een andere klant hoort. Er gebeurt niets mee totdat u kiest.",
           "reviewQueueOne": "{{count}} identiteit wacht op een beslissing.",
           "scheduleNotApplied": "Automatische synchronisatie staat aan, maar het schema is nooit toegepast.",
           "scheduleNotAppliedDetail": "Tot die tijd draait er niets vanzelf. Sla het schema opnieuw op om het te herhalen.",

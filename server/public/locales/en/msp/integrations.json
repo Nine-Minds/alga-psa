@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identities are waiting for a decision.",
           "reviewQueueAtLeast": "At least {{count}} identities are waiting for a decision.",
           "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
+          "reviewQueueDetailConflict": "Their email already belongs to a contact at another client, so they were skipped. Link or dismiss each one.",
+          "reviewQueueDetailMixed": "Some share one Microsoft email with several contacts. Others use an email that already belongs to a contact at another client. Nothing happens to them until you choose.",
           "reviewQueueOne": "{{count}} identity is waiting for a decision.",
           "scheduleNotApplied": "Automatic sync is on, but the schedule was never applied.",
           "scheduleNotAppliedDetail": "Nothing will run on its own until it is. Save the schedule again to retry.",
@@ -795,7 +797,7 @@
         "buckets": {
           "conflict": {
             "description": "The email already belongs to a contact at another client (or at none), so the sync will not link it. These land in the review queue.",
-            "label": "Email belongs to another client"
+            "label": "Email at another client"
           },
           "create": {
             "description": "No contact in this client matches the email, so one would be created.",

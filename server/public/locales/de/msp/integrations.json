@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} Identitäten warten auf eine Entscheidung.",
           "reviewQueueAtLeast": "Mindestens {{count}} Identitäten warten auf eine Entscheidung.",
           "reviewQueueDetail": "Zwei oder mehr Kontakte teilen sich eine Microsoft-E-Mail; bis Sie entscheiden, passiert mit ihnen nichts.",
+          "reviewQueueDetailConflict": "Ihre E-Mail gehört bereits einem Kontakt bei einem anderen Kunden, daher wurden sie übersprungen. Verknüpfen oder verwerfen Sie jede Identität.",
+          "reviewQueueDetailMixed": "Einige teilen sich eine Microsoft-E-Mail mit mehreren Kontakten. Bei anderen gehört die E-Mail bereits einem Kontakt bei einem anderen Kunden. Bis Sie entscheiden, passiert mit ihnen nichts.",
           "reviewQueueOne": "{{count}} Identität wartet auf eine Entscheidung.",
           "scheduleNotApplied": "Die automatische Synchronisierung ist aktiv, aber der Zeitplan wurde nie übernommen.",
           "scheduleNotAppliedDetail": "Bis dahin läuft nichts von selbst. Speichern Sie den Zeitplan erneut.",

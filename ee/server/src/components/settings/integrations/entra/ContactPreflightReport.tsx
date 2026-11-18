@@ -172,7 +172,10 @@ export function ContactPreflightReport({
                     className={`h-2.5 w-2.5 flex-shrink-0 rounded-sm ${BUCKET_DOT_CLASSES[bucketId]}`}
                     aria-hidden="true"
                   />
-                  <span className="truncate">{t(BUCKET_LABEL_KEYS[bucketId])}</span>
+                  {/* The column is fixed-width; a label that does not fit is still readable on hover. */}
+                  <span className="truncate" title={t(BUCKET_LABEL_KEYS[bucketId])}>
+                    {t(BUCKET_LABEL_KEYS[bucketId])}
+                  </span>
                 </span>
                 <Progress
                   value={percent}

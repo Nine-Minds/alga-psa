@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identidades aguardam uma decisão.",
           "reviewQueueAtLeast": "Pelo menos {{count}} identidades aguardam uma decisão.",
           "reviewQueueDetail": "Dois ou mais contatos compartilham o mesmo email da Microsoft. Nenhum deles será alterado até você escolher.",
+          "reviewQueueDetailConflict": "O email delas já pertence a um contato de outro cliente, por isso foram ignoradas. Vincule ou dispense cada uma.",
+          "reviewQueueDetailMixed": "Algumas compartilham o mesmo email da Microsoft com vários contatos. Outras usam um email que já pertence a um contato de outro cliente. Nenhuma delas será alterada até você escolher.",
           "reviewQueueOne": "{{count}} identidade aguarda uma decisão.",
           "scheduleNotApplied": "A sincronização automática está ativada, mas o agendamento ainda não foi aplicado.",
           "scheduleNotAppliedDetail": "Até lá, nada será executado automaticamente. Salve o agendamento novamente para tentar de novo.",

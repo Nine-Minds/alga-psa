@@ -575,6 +575,8 @@
           "reviewQueue": "{{count}} tożsamości czeka na decyzję.",
           "reviewQueueAtLeast": "Co najmniej {{count}} tożsamości czeka na decyzję.",
           "reviewQueueDetail": "Dwa lub więcej kontaktów ma ten sam e-mail Microsoft, więc nic się z nimi nie dzieje, dopóki nie wybierzesz.",
+          "reviewQueueDetailConflict": "Ich adres e-mail należy już do kontaktu w innej firmie, więc zostały pominięte. Połącz lub odrzuć każdą z nich.",
+          "reviewQueueDetailMixed": "Niektóre mają ten sam adres e-mail Microsoft co kilka kontaktów. Inne używają adresu, który należy już do kontaktu w innej firmie. Nic się z nimi nie stanie, dopóki nie wybierzesz.",
           "reviewQueueOne": "{{count}} tożsamość czeka na decyzję.",
           "scheduleNotApplied": "Synchronizacja automatyczna jest włączona, ale harmonogram nigdy nie został zastosowany.",
           "scheduleNotAppliedDetail": "Do tego czasu nic nie uruchomi się samo. Zapisz harmonogram ponownie, aby spróbować jeszcze raz.",

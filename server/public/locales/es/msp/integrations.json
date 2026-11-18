@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identidades esperan una decisión.",
           "reviewQueueAtLeast": "Al menos {{count}} identidades esperan una decisión.",
           "reviewQueueDetail": "Dos o más contactos comparten un correo de Microsoft, así que no les pasa nada hasta que usted elija.",
+          "reviewQueueDetailConflict": "Su correo ya pertenece a un contacto de otro cliente, por lo que se omitieron. Vincule o descarte cada una.",
+          "reviewQueueDetailMixed": "Algunas comparten un correo de Microsoft con varios contactos. Otras usan un correo que ya pertenece a un contacto de otro cliente. No se hará nada con ellas hasta que usted decida.",
           "reviewQueueOne": "{{count}} identidad espera una decisión.",
           "scheduleNotApplied": "La sincronización automática está activada, pero la programación nunca se aplicó.",
           "scheduleNotAppliedDetail": "Hasta entonces no se ejecutará nada solo. Guarde la programación de nuevo para reintentarlo.",
