@@ -371,6 +371,7 @@
     },
     "placeholders": {
       "allBoards": "Alle Boards",
+      "loadingOptions": "Wird geladen…",
       "allStatuses": "Alle Status",
       "allProjects": "Alle Projekte",
       "allPriorities": "Alle Prioritäten",
