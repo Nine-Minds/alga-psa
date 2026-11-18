@@ -61,6 +61,7 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
   CONTACT_MISSING_EMAIL: 'contactPortalTab.toast.errors.contactMissingEmail',
   CONTACT_INVALID_EMAIL: 'contactPortalTab.toast.errors.contactInvalidEmail',
   USER_EXISTS_FOR_CONTACT: 'contactPortalTab.toast.errors.userExistsForContact',
+  PORTAL_USER_ALREADY_EXISTS: 'contactPortalTab.toast.errors.portalUserAlreadyExists',
   NO_DEFAULT_CLIENT: 'contactPortalTab.toast.errors.noDefaultClient',
   NO_DEFAULT_LOCATION: 'contactPortalTab.toast.errors.noDefaultLocation',
   NO_LOCATION_EMAIL: 'contactPortalTab.toast.errors.noLocationEmail',
