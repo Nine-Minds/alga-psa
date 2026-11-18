@@ -4625,7 +4625,6 @@
       "title": "Numeração de ativos",
       "description": "Uma sequência única para todo o locatário é formatada com o prefixo de cada cliente. A prévia e a impressão não atribuem números. Números emitidos e abandonados deixam lacunas e nunca são reutilizados.",
       "clientPrefixes": "Prefixos dos clientes",
-      "noPrefix": "Sem prefixo",
       "prefixSaved": "Prefixo do cliente salvo",
       "uniquenessEnabled": "A exclusividade das etiquetas de ativos está ativa",
       "legacyAudit": "Auditoria de etiquetas existentes",
@@ -4639,7 +4638,25 @@
       "continuationReview": "A revisão dos dados existentes examinou {{scanned}} etiquetas salvas; {{numeric}} têm sufixos numéricos. O maior sufixo é {{maximum}}; revise um valor inicial de {{next}}. Isto é apenas uma recomendação. Insira e salve acima o valor de continuação aprovado; esta revisão não consome nenhum valor da sequência.",
       "continuationExamples": "Exemplos: {{examples}}",
       "blankTag": "(etiqueta vazia)",
-      "normalizedTag": "Normalizada: {{tag}}"
+      "normalizedTag": "Normalizada: {{tag}}",
+      "loadFailed": "Não foi possível carregar as configurações de numeração de ativos",
+      "readOnly": "Você pode visualizar a numeração de ativos. Para alterá-la, é necessária permissão para atualizar as configurações do sistema.",
+      "columns": {
+        "client": "Cliente",
+        "prefix": "Prefixo"
+      },
+      "addPrefix": "Adicionar prefixo",
+      "addPrefixTitle": "Adicionar prefixo do cliente",
+      "editPrefixTitle": "Editar prefixo do cliente",
+      "prefixHelp": "Até 10 letras, dígitos ou hífens.",
+      "edit": "Editar",
+      "remove": "Remover",
+      "removeTitle": "Remover prefixo?",
+      "removeMessage": "Remover o prefixo de {{client}}? Os novos números de ativo deste cliente não terão prefixo. As etiquetas existentes não são alteradas.",
+      "prefixRemoved": "Prefixo do cliente removido",
+      "noPrefixes": "Nenhum prefixo de cliente ainda.",
+      "openMenu": "Abrir menu",
+      "inactive": "Inativo"
     }
   }
 }

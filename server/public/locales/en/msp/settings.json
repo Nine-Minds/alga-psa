@@ -4625,7 +4625,6 @@
       "title": "Asset numbering",
       "description": "One tenant-wide sequence is formatted with each client’s prefix. Previewing and printing do not allocate numbers. Abandoned issued numbers leave gaps and are never reused.",
       "clientPrefixes": "Client prefixes",
-      "noPrefix": "No prefix",
       "prefixSaved": "Client prefix saved",
       "uniquenessEnabled": "Asset tag uniqueness is active",
       "legacyAudit": "Legacy tag audit",
@@ -4639,7 +4638,25 @@
       "continuationReview": "Legacy review scanned {{scanned}} stored tags; {{numeric}} have numeric suffixes. The highest suffix is {{maximum}}; review a starting value of {{next}}. This is an advisory only. Enter and save the approved continuation value above; no sequence value is consumed by this review.",
       "continuationExamples": "Examples: {{examples}}",
       "blankTag": "(blank tag)",
-      "normalizedTag": "Normalized: {{tag}}"
+      "normalizedTag": "Normalized: {{tag}}",
+      "loadFailed": "Could not load asset numbering settings",
+      "readOnly": "You can view asset numbering. Changing it requires permission to update system settings.",
+      "columns": {
+        "client": "Client",
+        "prefix": "Prefix"
+      },
+      "addPrefix": "Add prefix",
+      "addPrefixTitle": "Add client prefix",
+      "editPrefixTitle": "Edit client prefix",
+      "prefixHelp": "Up to 10 letters, digits, or hyphens.",
+      "edit": "Edit",
+      "remove": "Remove",
+      "removeTitle": "Remove prefix?",
+      "removeMessage": "Remove the prefix for {{client}}? New asset numbers for this client will have no prefix. Existing tags are not changed.",
+      "prefixRemoved": "Client prefix removed",
+      "noPrefixes": "No client prefixes yet.",
+      "openMenu": "Open menu",
+      "inactive": "Inactive"
     }
   }
 }
