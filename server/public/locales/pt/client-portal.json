@@ -298,7 +298,9 @@
         "noLocationEmail": "A localização do cliente não possui email de contato configurado.",
         "baseUrlNotConfigured": "A URL base do aplicativo não está configurada.",
         "invitationNotFound": "Convite não encontrado.",
-        "revokeFailed": "Falha ao revogar o convite. Por favor, tente novamente."
+        "revokeFailed": "Falha ao revogar o convite. Por favor, tente novamente.",
+        "batchLimitExceeded": "Contatos demais em uma única solicitação. Convide menos contatos por vez.",
+        "noTargetsSelected": "Selecione pelo menos um contato para convidar."
       }
     },
     "features": {

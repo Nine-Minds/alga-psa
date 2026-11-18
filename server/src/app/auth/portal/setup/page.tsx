@@ -43,7 +43,9 @@ const PORTAL_ERROR_CODE_KEYS: Record<PortalInvitationErrorCode, string> = {
   NO_LOCATION_EMAIL: 'auth.portalSetup.errors.noLocationEmail',
   BASE_URL_NOT_CONFIGURED: 'auth.portalSetup.errors.baseUrlNotConfigured',
   INVITATION_NOT_FOUND: 'auth.portalSetup.errors.invitationNotFound',
-  REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed'
+  REVOKE_FAILED: 'auth.portalSetup.errors.revokeFailed',
+  BATCH_LIMIT_EXCEEDED: 'auth.portalSetup.errors.batchLimitExceeded',
+  NO_TARGETS_SELECTED: 'auth.portalSetup.errors.noTargetsSelected'
 };
 
 interface ContactInfo {
