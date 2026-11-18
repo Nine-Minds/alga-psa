@@ -5,6 +5,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { formatISO } from 'date-fns';
 import { workedMinutes } from '@alga-psa/core';
+import { billableMinutesOf, operationalTimeEntriesOnly } from '@alga-psa/types';
+import { resolveSeatViewerOperationalOnly } from '@alga-psa/shared/lib/humanWork/seatTimeScope';
 import type {
   IUser,
   TimeSheetStatus,
@@ -23,6 +25,7 @@ import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
 import { tableHasColumn, resolveViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { delegateToTimeSource } from '../lib/timeSource';
+import { resolveTimeEntryReadScope } from '../lib/timeEntryAuthorizationSql';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -36,6 +39,7 @@ interface RawRow {
   end_time: Date;
   work_date: Date | string | null;
   billable_duration: number | string | null;
+  billing_mode: string | null;
   notes: string | null;
   approval_status: TimeSheetStatus;
   service_id: string | null;
@@ -81,7 +85,12 @@ export async function fetchTimeEntriesForTicketCore(
   }
 
   const scopedDb = tenantDb(db, tenant);
+  // Entries of clients the reader may not see are not entries they can read: they are neither listed nor counted.
+  const readScope = await resolveTimeEntryReadScope(db, tenant, user);
   const query = scopedDb.table('time_entries');
+  readScope.apply(query);
+  // A seat technician sees operational time only: the MSP's commercial entries are not read, so no entry, total or count can carry them.
+  if (await resolveSeatViewerOperationalOnly(db, tenant, user, ticketId)) operationalTimeEntriesOnly(query);
   scopedDb.tenantJoin(query, 'users', 'time_entries.user_id', 'users.user_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'service_catalog', 'time_entries.service_id', 'service_catalog.service_id', { type: 'left' });
 
@@ -98,6 +107,7 @@ export async function fetchTimeEntriesForTicketCore(
       'time_entries.end_time',
       'time_entries.work_date',
       'time_entries.billable_duration',
+      'time_entries.billing_mode',
       'time_entries.notes',
       'time_entries.approval_status',
       'time_entries.service_id',
@@ -122,6 +132,7 @@ export async function fetchTimeEntriesForTicketCore(
 
   const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
 
+  // LEVERAGE: pattern authorization-subject-resolution — time-entry ticket reads hand-build a subject with no roles or teams; the shared resolver (packages/authorization/src/subject) already builds this subject, and S2 left this site to its own slice.
   const subject: AuthorizationSubject = {
     tenant,
     userId: user.user_id,
@@ -156,7 +167,7 @@ export async function fetchTimeEntriesForTicketCore(
   for (const row of rows) {
     const isOwn = row.user_id === user.user_id;
     // Billing value stays on the entry; totals below are worked time.
-    const minutes = Number(row.billable_duration) || 0;
+    const minutes = billableMinutesOf(row);
     const worked = workedMinutes(row);
 
     if (isOwn) {
@@ -237,7 +248,7 @@ export const fetchTimeEntriesForTicket = withAuth(async (
     // extra, and when the source does not serve it the ORIGINAL error is rethrown untouched (same class, message, capability).
     // LEVERAGE: friction product-guard-not-time-source-aware — assertPsaOnlyTenantAccess knows nothing about time sources; the guard should consult the registry itself.
     try {
-      await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+      await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: user.user_id }, 'scheduling_time_actions');
     } catch (denied) {
       if (!(denied instanceof ProductAccessError)) throw denied;
       const served = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: 'ticket', workItemId: ticketId },

@@ -2,6 +2,21 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin
+
+**Affected endpoints:** `POST /api/v1/users`, `PUT /api/v1/users/{id}` (deactivation), `DELETE /api/v1/users/{id}`, and `POST|PUT|DELETE /api/v1/users/{id}/roles`
+
+A tenant could previously lock itself out by removing roles, deactivating or deleting users until no active MSP Admin was left, or leave a user with zero roles. Two invariants are now enforced on every write path (UI server actions, the shared user and role services, the `User` model and the REST API), checked inside the caller's transaction under a per-tenant advisory lock so concurrent requests cannot race past them:
+
+- **Every interactive user keeps at least one role.** A change that would leave an internal or client user with no roles is refused with `400` (`A user must keep at least one role. …`). This includes a role replacement with an empty `role_ids`.
+- **The tenant keeps at least one active internal user with the built-in MSP Admin role.** Removing that role from, deactivating, or deleting the last such user is refused with `409` (`A tenant must keep at least one active MSP Admin user.`). Bulk deactivation counts the other users in the same request as already gone, so deactivating every admin at once is also refused.
+
+**Changes:**
+
+- `role_ids` is now **required** on `POST /api/v1/users` and must contain at least one role id; omitting it or sending `[]` returns `400`. Integrations that created a user and assigned roles in a second call must send the roles on create.
+- To change a user's only role, assign the new role first and then remove the old one, or replace the set in one `PUT /users/{id}/roles` call with a non-empty `role_ids`.
+- To hand MSP Admin to someone else, grant it to the new admin before removing it from, deactivating, or deleting the old one.
+
 ## 2026-11-03 — Ticket templates over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/templates`, `GET|PUT|DELETE /api/v1/tickets/templates/{templateId}`, `POST /api/v1/tickets/templates/{templateId}/instantiate`

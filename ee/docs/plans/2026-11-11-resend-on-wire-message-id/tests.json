@@ -1,0 +1,60 @@
+[
+  {
+    "id": "T001",
+    "description": "Reconciliation operation: sets rfc_message_id for the row matching tenant + provider_message_id, stores generatedRfcMessageId, is a no-op when repeated, keeps the first on-wire id when given a different one, and does not touch another tenant's row with the same provider_message_id.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "After reconciliation, the next ticket and comment-thread notification builds In-Reply-To/References from on-wire ids, with no generated id that was replaced left in the chain.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "ResendEmailProvider: returns the on-wire id as rfcMessageId when Resend supplies it; returns a successful result with no rfcMessageId when the id is null or the fetch fails; POST /emails is called exactly once in both cases.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Resend webhook: a signed email.sent with message_id reconciles the matching log row; an event without message_id changes nothing; an unsigned event changes nothing; delivered/bounced/complained events still publish their workflow events.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Round trip: a Resend-sent ticket notification followed by an inbound reply with no reply token whose In-Reply-To is the amazonses on-wire id lands on the ticket; the same holds when the reply names the generated id, and when the stored and inbound ids differ only in brackets or domain case.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F001"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Backfill: updates resend rows that Resend returns, leaves rows it does not return, and a second run makes no changes.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Existing SMTP SES test for resolveSesOnWireMessageId and its logged rfc_message_id still passes against the shared contract.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  }
+]

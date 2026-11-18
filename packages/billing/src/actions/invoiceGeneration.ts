@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use server'
 
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { tenantDb, withTransaction, resolveTenantToday } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { requireTenantId } from '@alga-psa/db';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
@@ -1569,7 +1569,7 @@ async function previewInvoiceTotalAfterDiscounts(
   currencyCode: string,
 ): Promise<number> {
   const adjustments = await previewAutomaticInvoiceDiscounts(
-    knex, tenant, clientId, charges, Temporal.Now.plainDateISO().toString(),
+    knex, tenant, clientId, charges, (await resolveTenantToday(knex, tenant)).toString(),
   );
   const tax = await calculatePreviewTaxAfterDiscounts(
     charges,
@@ -2269,7 +2269,11 @@ async function adaptToWasmViewModel(
 
   const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
-    issueDate: toISODate(Temporal.Now.plainDateISO()),
+    issueDate: toISODate(
+      tenant
+        ? await resolveTenantToday((await createTenantKnex(tenant)).knex, tenant)
+        : Temporal.Now.plainDateISO(),
+    ),
     dueDate: dueDate,
     currencyCode: billingResult.currency_code || 'USD',
     poNumber,
@@ -2508,7 +2512,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
-  const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
+  const previewInvoiceDate = (await resolveTenantToday(knex, tenant)).toString();
   // Same resolution as generation: the profile's terms and payment method,
   // inheriting the client's field by field.
   const previewBillingIdentity = await resolveEffectiveBillingIdentity(
@@ -4038,9 +4042,9 @@ export async function createInvoiceFromBillingResultImpl(
   // `invoice_date` (and the due date computed from it) is the invoice's "today".
   // The calendar month-end close passes `options.invoiceDate` — the tenant-local
   // final calendar day its eligibility gate approved — so the draft is stamped on
-  // the billing calendar. Every other caller omits it and this stays exactly the
-  // server-host calendar date it has always been.
-  const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
+  // the billing calendar. Every other caller omits it and gets the tenant-local
+  // calendar date (never the server host's UTC date). `knex` may be a transaction.
+  const currentDate = options.invoiceDate ?? (await resolveTenantToday(knex, tenant)).toString();
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 

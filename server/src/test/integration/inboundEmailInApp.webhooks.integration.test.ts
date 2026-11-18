@@ -30,6 +30,41 @@ const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
   queueDepth: 1,
 }));
 let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
+/**
+ * In-memory provider. Inbound artifacts are written through the ingest pipeline's write session
+ * (beginWrite / writePart / completeWrite), so the session collects the parts and hands the whole
+ * body to `storageUploadMock` on complete, keeping the assertions written against `upload`.
+ */
+function fakeStorageProvider() {
+  const sessions = new Map<string, { path: string; mime?: string; parts: Map<number, Buffer> }>();
+  const toBuffer = async (part: any): Promise<Buffer> => {
+    if (Buffer.isBuffer(part)) return part;
+    const chunks: Buffer[] = [];
+    for await (const chunk of part) chunks.push(Buffer.from(chunk));
+    return Buffer.concat(chunks);
+  };
+  return {
+    upload: (...args: any[]) => storageUploadMock(...args),
+    beginWrite: async (path: string, options: { mimeType?: string } = {}) => {
+      const uploadId = `fake-${sessions.size + 1}-${path}`;
+      sessions.set(uploadId, { path, mime: options.mimeType, parts: new Map() });
+      return { provider: 'fake', path, uploadId };
+    },
+    writePart: async (handle: { uploadId: string }, partNumber: number, part: any, size: number) => {
+      sessions.get(handle.uploadId)!.parts.set(partNumber, await toBuffer(part));
+      return { partNumber, etag: `p${partNumber}`, size };
+    },
+    completeWrite: async (handle: { uploadId: string }) => {
+      const session = sessions.get(handle.uploadId)!;
+      sessions.delete(handle.uploadId);
+      const body = Buffer.concat([...session.parts.entries()].sort(([a], [b]) => a - b).map(([, b]) => b));
+      return storageUploadMock(body, session.path, { mime_type: session.mime });
+    },
+    abortWrite: async (handle: { uploadId: string }) => {
+      sessions.delete(handle.uploadId);
+    },
+  };
+}
 let inboundReplyAckDeciderDecideMock = vi.fn(async () => ({
   decision: 'NOT_ACK',
   source: 'default',
@@ -148,9 +183,7 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
 
 vi.mock('@alga-psa/storage', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));
@@ -158,9 +191,7 @@ vi.mock('@alga-psa/storage', () => ({
 // The artifact orchestrator imports the subpath directly.
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
-    createProvider: vi.fn(async () => ({
-      upload: (...args: any[]) => storageUploadMock(...args),
-    })),
+    createProvider: vi.fn(async () => fakeStorageProvider()),
   },
   generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
 }));
@@ -3259,6 +3290,99 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
     expect(comments).toHaveLength(0);
+  });
+
+  it('quarantine surfacing: unauthorized_thread_header_sender records a ticket-linked row, dedupes redelivery, and throttles notifications per window', async () => {
+    const providerId = uuidv4();
+    const mailbox = `helpdesk-quarantine-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+    cleanup.push(async () => {
+      await tenantTable('inbound_email_quarantine').where({ provider_id: providerId }).delete();
+      await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    const internalEmail = `quarantine-tech-${uuidv4().slice(0, 6)}@example.com`;
+    const { ticketId, originalMessageId } = await seedIntraOrgThreadFixture({ internalEmail });
+    const messageId = `<reply-quarantine-${uuidv4()}@mail>`;
+    const longSubject = `Re: ${'very long subject '.repeat(30)}`;
+    const deliver = () => processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: messageId,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: internalEmail, name: 'Forged Sender' },
+        to: [{ email: mailbox, name: 'Helpdesk' }],
+        subject: longSubject,
+        inReplyTo: originalMessageId,
+        references: [originalMessageId],
+        body: { text: 'Must never be stored.', html: undefined },
+        attachments: [],
+        headers: { 'X-MS-Exchange-Organization-AuthAs': 'Internal' },
+      } as any,
+    });
+
+    const first = await deliver();
+    expect(first.outcome).toBe('quarantined');
+    expect(first.diagnostics?.threading.failureReason ?? 'quarantined').toBe('quarantined');
+
+    const rows = await tenantTable('inbound_email_quarantine').where({ provider_id: providerId });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      reason: 'unauthorized_thread_header_sender',
+      matched_by: 'thread_headers',
+      ticket_id: ticketId,
+      mailbox,
+      sender: internalEmail,
+      status: 'open',
+    });
+    expect(rows[0].ticket_number).toMatch(/^INTRAORG-/);
+    expect(rows[0].subject.length).toBeLessThanOrEqual(200);
+    expect(rows[0].message_id_hash).toMatch(/^[0-9a-f]{64}$/);
+    // No body or header column exists at all.
+    expect(Object.keys(rows[0])).not.toContain('body');
+    expect(JSON.stringify(rows[0])).not.toContain('Must never be stored');
+
+    // The reason column is unconstrained: a reason added to QUARANTINE_REASONS later persists with no migration.
+    await expect(tenantTable('inbound_email_quarantine').insert({
+      tenant: tenantId, id: uuidv4(), provider_id: providerId, mailbox, sender: internalEmail, subject: 's',
+      received_at: db.fn.now(), reason: 'some_future_reason', matched_by: null, ticket_id: ticketId,
+      message_id_hash: 'f'.repeat(64), status: 'open',
+    })).resolves.toBeDefined();
+    await tenantTable('inbound_email_quarantine').where({ message_id_hash: 'f'.repeat(64) }).delete();
+
+    // Redelivery of the same Message-ID must not create a second row.
+    const second = await deliver();
+    expect(second.outcome).toBe('quarantined');
+    expect(await tenantTable('inbound_email_quarantine').where({ provider_id: providerId })).toHaveLength(1);
+
+    // Notification throttle: one claim per (tenant, mailbox, reason) per 15-minute window.
+    const { claimQuarantineNotificationWindow } = await import('../../services/email/inboundQuarantineNotificationService');
+    const claim = (id: string, reason = 'unauthorized_thread_header_sender') =>
+      claimQuarantineNotificationWindow(db, { tenant: tenantId, quarantineId: id, providerId, reason: reason as any });
+    expect(await claim(rows[0].id)).toBe(true);
+
+    const siblingId = uuidv4();
+    const insertSibling = (id: string, reason: string) => tenantTable('inbound_email_quarantine').insert({
+      tenant: tenantId, id, provider_id: providerId, mailbox, sender: internalEmail, subject: 's',
+      received_at: db.fn.now(), reason, matched_by: 'thread_headers', ticket_id: ticketId,
+      message_id_hash: uuidv4().replace(/-/g, '').padEnd(64, '0'), status: 'open',
+    });
+    await insertSibling(siblingId, 'unauthorized_thread_header_sender');
+    expect(await claim(siblingId)).toBe(false); // same reason inside the window
+    const otherReasonId = uuidv4();
+    await insertSibling(otherReasonId, 'co_managed_token_refused');
+    expect(await claim(otherReasonId, 'co_managed_token_refused')).toBe(true); // different reason is its own window
+
+    await tenantTable('inbound_email_quarantine')
+      .where({ id: rows[0].id })
+      .update({ notified_at: db.raw("now() - interval '16 minutes'") });
+    expect(await claim(siblingId)).toBe(true); // window elapsed
   });
 
   it('Internal reply (Microsoft): a verified list rewrite alone does not grant an internal identity', async () => {

@@ -832,6 +832,7 @@
     },
     "apiKeys": {
       "internalOnly": "Autorisation refusée : la gestion des clés d'API est réservée aux utilisateurs internes",
+      "notAvailableForAccount": "Les clés d'API ne sont pas disponibles pour ce compte.",
       "configInternalOnly": "Autorisation refusée : la configuration des clés d'API est réservée aux utilisateurs internes",
       "invalidExpiration": "Choisissez une date d'expiration valide pour cette clé d'API.",
       "notFound": "Clé d'API introuvable.",

@@ -13,6 +13,13 @@ const testState = vi.hoisted(() => ({
   createContactMock: vi.fn(),
   updateContactMock: vi.fn(),
   getContactByIdMock: vi.fn(),
+  assertRecordCreateAllowedMock: vi.fn(),
+}));
+
+// The client-scope create gate needs a real connection; its decisions are covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  assertRecordCreateAllowed: testState.assertRecordCreateAllowedMock,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -115,6 +122,7 @@ function makeTrx(config: {
 describe('contact CSV import action contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    testState.assertRecordCreateAllowedMock.mockResolvedValue(undefined);
     testState.createTenantKnexMock.mockResolvedValue({ knex: {}, tenant: testState.tenant });
     testState.withTransactionMock.mockImplementation(async (_knexLike: any, callback: (trx: any) => Promise<unknown>) =>
       callback(testState.trx)
@@ -205,6 +213,25 @@ describe('contact CSV import action contract', () => {
       testState.tenant,
       testState.trx,
     );
+  });
+
+  it('refuses a row whose client the create gate rejects, without calling the model', async () => {
+    testState.trx = makeTrx({});
+    const { RecordCreateDeniedError } = await vi.importActual<any>('@alga-psa/authorization/recordCreateAuthorization');
+    testState.assertRecordCreateAllowedMock.mockRejectedValueOnce(new RecordCreateDeniedError('contact', 'contact'));
+
+    const results = await importContactsFromCSV([{
+      full_name: 'Out Of Scope Contact',
+      email: 'outside@example.com',
+    } as any], false);
+
+    expect(testState.assertRecordCreateAllowedMock).toHaveBeenCalledWith(
+      testState.trx,
+      expect.objectContaining({ tenant: testState.tenant, resourceType: 'contact' }),
+      'contact',
+    );
+    expect(results[0]).toMatchObject({ success: false });
+    expect(testState.createContactMock).not.toHaveBeenCalled();
   });
 
   it('rejects spreadsheet scientific notation without calling the model', async () => {

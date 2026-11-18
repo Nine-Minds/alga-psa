@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
@@ -100,6 +101,12 @@ function createQueryBuilder(rows: Row[], tableName: string) {
         const value = row[normalizeColumn(column)];
         return value === undefined ? true : !values.includes(value);
       });
+      return builder;
+    }),
+    whereRaw: vi.fn((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      resultRows = resultRows.filter(commercialOnly);
       return builder;
     }),
     modify: vi.fn((callback: (qb: any) => void) => {
@@ -293,6 +300,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  resolveTenantToday: async () => (await import('@js-temporal/polyfill')).Temporal.Now.plainDateISO('UTC'),
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => conn(t).where({ tenant }),
     scoped: (t: string) => conn(t),

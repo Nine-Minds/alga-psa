@@ -165,6 +165,11 @@
           "cancelled": "Cita cancelada: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "No se pudo procesar esta solicitud. Póngase en contacto con su proveedor de servicios para obtener ayuda."
+        }
+      },
       "algadeskEmptyHint": "Cuando los tickets se actualicen, los verá aquí."
     },
     "devices": {
@@ -1169,6 +1174,10 @@
       "recordInvalid": "Uno de los registros del grupo de visibilidad seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
+    },
+    "roles": {
+      "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
     }
   }
 }

@@ -25,6 +25,12 @@ import {
 import {
   assertInboundAuthPauseNotifierRegistered,
 } from "@alga-psa/shared/services/email/inboundAuthPauseNotifier";
+import {
+  assertInboundQuarantineNotifierRegistered,
+} from "@alga-psa/shared/services/email/inboundQuarantine";
+import {
+  registerInboundQuarantineEventPublisher,
+} from "@alga-psa/shared/services/email/inboundQuarantineEventNotifier";
 
 // Load environment variables
 dotenv.config();
@@ -203,6 +209,10 @@ async function main(): Promise<void> {
     // the admin notifications (same hand-off as MAINTENANCE_JOB_REQUESTED).
     registerInboundAuthPauseEventPublisher();
     assertInboundAuthPauseNotifierRegistered("ee/temporal-workflows/worker");
+
+    // Same hand-off for quarantined inbound email (row persisted in-process).
+    registerInboundQuarantineEventPublisher();
+    assertInboundQuarantineNotifierRegistered("ee/temporal-workflows/worker");
 
     // CM L0c: install the co-managed write-admission resolver. Fails open: an image
     // whose co-managed packages do not resolve must still boot and write.

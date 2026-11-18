@@ -39,6 +39,14 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: async () => [],
 }));
 
+// The client read scope has its own DB test (T012); here the subject is not client-restricted.
+vi.mock('../lib/timeEntryAuthorizationSql', () => ({
+  resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined }),
+}));
+// The seat time scope has its own DB suite (coManagedSeatTimeProjection.db.test.ts); here the reader is MSP staff.
+vi.mock('@alga-psa/shared/lib/humanWork/seatTimeScope', () => ({
+  resolveSeatViewerOperationalOnly: vi.fn(async () => false),
+}));
 vi.mock('./timeEntryDelegationAuth', () => ({
   resolveManagedSubjectUserIds: async () => [],
 }));

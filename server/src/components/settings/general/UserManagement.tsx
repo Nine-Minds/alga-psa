@@ -4,6 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
+import SeatTechnicianUsers from './SeatTechnicianUsers';
+import { useCapability } from '@alga-psa/ui/hooks';
+import { listCoManagedSeatTechniciansAction, type CoManagedSeatTechnicianListing } from '@/lib/actions/coManagedSeatActions';
 import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { addUser } from '@alga-psa/users/actions/user-actions/userActions';
@@ -153,6 +156,11 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  // Seat technicians are listed apart from staff only while the seat capability is open; closed, this screen is unchanged.
+  const seatCapability = useCapability('co-managed-seat');
+  const seatsListed = portalType === 'msp' && (seatCapability.enabled || seatCapability.admitted);
+  const [seatListings, setSeatListings] = useState<Record<string, CoManagedSeatTechnicianListing> | null>(null);
+  const [seatListingsFailed, setSeatListingsFailed] = useState(false);
   const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [fieldErrors, setFieldErrors] = useState<{
     first_name: string[];
@@ -372,6 +380,24 @@ const UserManagement = (): React.JSX.Element => {
       minute: '2-digit'
     });
 
+  const fetchSeatListings = async (): Promise<void> => {
+    try {
+      const listings = await listCoManagedSeatTechniciansAction();
+      setSeatListings(Object.fromEntries(listings.map((listing) => [listing.userId, listing])));
+      setSeatListingsFailed(false);
+    } catch (err) {
+      // The screen falls back to the single list it had before rather than staying empty.
+      console.error('Error fetching seat technicians:', err);
+      setSeatListings(null);
+      setSeatListingsFailed(true);
+    }
+  };
+
+  useEffect(() => {
+    if (seatsListed) void fetchSeatListings();
+    else { setSeatListings(null); setSeatListingsFailed(false); }
+  }, [seatsListed]);
+
   const fetchUsers = async (): Promise<void> => {
     try {
       const fetchedUsers = await getAllUsers(true);
@@ -461,6 +487,14 @@ const fetchContacts = async (): Promise<void> => {
 
     return isStatusMatch && isNameMatch;
   });
+
+  // MSP staff are the users without a live seat; seat technicians are listed in their own section.
+  const seatsSplit = seatsListed && seatListings !== null;
+  // The staff list waits for the split, so seat technicians never flash up as staff.
+  const seatsPending = seatsListed && seatListings === null && !seatListingsFailed;
+  const staffUsers = seatsSplit ? users.filter(user => !seatListings[user.user_id]) : users;
+  const staffFilteredUsers = seatsSplit ? filteredUsers.filter(user => !seatListings[user.user_id]) : filteredUsers;
+  const seatTechnicianUsers = seatsSplit ? filteredUsers.filter(user => seatListings[user.user_id]) : [];
 
   const handleCreateUser = async () => {
     try {
@@ -1132,7 +1166,7 @@ const fetchContacts = async (): Promise<void> => {
               </TabsList>
               <TabsContent value="list">
                 <p className="text-sm text-muted-foreground mt-3 mb-4">{t('users.tabs.listDescription')}</p>
-                {loading ? (
+                {loading || seatsPending ? (
                   <div className="flex items-center justify-center py-8">
                     <LoadingIndicator
                       layout="stacked"
@@ -1141,12 +1175,17 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                 ) : (
-                  <UserList
-                    users={filteredUsers}
-                    onUpdate={fetchUsers}
-                    onDeleteSuccess={handleDeleteSuccess}
-                    selectedClientId={null}
-                  />
+                  <>
+                    <UserList
+                      users={staffFilteredUsers}
+                      onUpdate={fetchUsers}
+                      onDeleteSuccess={handleDeleteSuccess}
+                      selectedClientId={null}
+                    />
+                    {seatTechnicianUsers.length > 0 && seatListings && (
+                      <SeatTechnicianUsers users={seatTechnicianUsers} listings={seatListings} />
+                    )}
+                  </>
                 )}
               </TabsContent>
               <TabsContent value="org">
@@ -1161,7 +1200,7 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                 ) : (
                   <OrgChart
-                    users={users.filter(u =>
+                    users={staffUsers.filter(u =>
                       filterStatus === 'all' ||
                       (filterStatus === 'active' && !u.is_inactive) ||
                       (filterStatus === 'inactive' && u.is_inactive)

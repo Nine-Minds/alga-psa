@@ -86,7 +86,10 @@ describe('authorization bundle action tenant-scoped query contract', () => {
     expect(assignmentsSection).toContain("tenantScopedTable(knex, tenant, 'api_keys')");
     expect(assignmentsSection).toContain("tenantScopedTable(knex, tenant, 'api_keys as ak')");
     expect(simulationOptionsSection).toContain("tenantScopedTable(knex, tenant, 'users')");
-    expect(simulationOptionsSection).toContain("tenantScopedTable(knex, tenant, 'tickets')");
+    // The ticket list is the shared reader (tenantDb inside), which seat effective access also uses.
+    expect(simulationOptionsSection).toContain('listSimulationTicketOptions(knex, tenant, input.search)');
+    expect(readFileSync(path.resolve(import.meta.dirname, '../../../../../packages/authorization/src/bundles/simulationTickets.ts'), 'utf8'))
+      .toContain("tenantDb(knex, tenant).table('tickets')");
     expect(simulationOptionsSection).toContain("tenantScopedTable(knex, tenant, 'documents')");
     expect(simulationOptionsSection).toContain("tenantScopedTable(knex, tenant, 'time_entries')");
     expect(simulationOptionsSection).toContain("tenantScopedTable(knex, tenant, 'projects')");

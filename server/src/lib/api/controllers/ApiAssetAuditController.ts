@@ -87,8 +87,12 @@ export class ApiAssetAuditController {
       return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const { page = 1, limit = 25, client_id } = validation.data;
-    const result = await this.auditService.list({ page, limit, client_id }, this.serviceContext(context));
+    const { page = 1, limit = 25, client_id, location_id, no_location, status, started_from, started_to } =
+      validation.data;
+    const result = await this.auditService.list(
+      { page, limit, client_id, location_id, no_location, status, started_from, started_to },
+      this.serviceContext(context),
+    );
     return createPaginatedResponse(result.data, { page, limit, total: result.total });
   }
 

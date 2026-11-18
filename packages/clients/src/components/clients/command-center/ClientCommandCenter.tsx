@@ -406,6 +406,9 @@ export default function ClientCommandCenter({
               // Only when Equipment holds the header action — otherwise the
               // header already opens Assets and the footer link would duplicate it.
               onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
+              // Only when the Audits tab is registered — it is gated on
+              // asset:read, so without it the link would lead to a refusal.
+              onOpenAudits={tabIds.has('audits') ? focusOpener('audits') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
               className={SPAN_HALF}
               t={t}

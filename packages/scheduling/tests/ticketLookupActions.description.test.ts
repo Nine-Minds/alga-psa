@@ -22,6 +22,9 @@ vi.mock('@alga-psa/auth', () => ({
     action({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
+// The read narrowing has its own coverage (T013); this suite is about the description.
+vi.mock('../src/lib/ticketReadNarrowing', () => ({ narrowTicketsToReadable: async () => undefined }));
+
 import { getSchedulingTicketById } from '../src/actions/ticketLookupActions';
 
 describe('getSchedulingTicketById description', () => {

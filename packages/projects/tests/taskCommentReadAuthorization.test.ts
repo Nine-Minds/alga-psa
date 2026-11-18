@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   listTaskCommentsWithDb: vi.fn(),
+  createProjectActionDecider: vi.fn(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -29,7 +30,8 @@ vi.mock('../src/models/project', () => ({
   default: { getById: async (_t: unknown, _tenant: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../src/lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async () => true,
+  // withTaskCommentAccess decides the task's project record through the action decider.
+  createProjectActionDecider: mocks.createProjectActionDecider,
 }));
 vi.mock('../src/lib/taskComments/taskCommentService', () => ({
   countTaskCommentsBatchWithDb: vi.fn(),
@@ -46,6 +48,8 @@ describe('getTaskComments read authorization', () => {
   beforeEach(() => {
     mocks.hasPermission.mockReset();
     mocks.listTaskCommentsWithDb.mockReset();
+    mocks.createProjectActionDecider.mockReset();
+    mocks.createProjectActionDecider.mockResolvedValue(async () => ({ allowed: true, redactedFields: [], governed: false }));
   });
 
   it('returns a permission error and never reads comments without project_task:read', async () => {
@@ -66,6 +70,19 @@ describe('getTaskComments read authorization', () => {
     const result = await (getTaskComments as any)('task-1');
 
     expect(mocks.hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'project_task', 'read', expect.anything());
+    expect(mocks.createProjectActionDecider).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.objectContaining({ user_id: 'user-1' }), 'read');
     expect(result).toEqual(comments);
+  });
+
+  it('never reads comments when the project record decision denies the caller', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.createProjectActionDecider.mockResolvedValue(async () => ({ allowed: false, redactedFields: [], governed: false }));
+    mocks.listTaskCommentsWithDb.mockResolvedValue([{ task_comment_id: 'c1', note: 'hidden' }]);
+
+    const result = await (getTaskComments as any)('task-1');
+
+    // A project the caller may not read is indistinguishable from a missing task.
+    expect(result).toMatchObject({ messageKey: 'projects:errors.comment.taskNotFound' });
+    expect(mocks.listTaskCommentsWithDb).not.toHaveBeenCalled();
   });
 });

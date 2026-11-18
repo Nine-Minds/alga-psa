@@ -30,6 +30,7 @@ async function openWithTriggerAt(left: number, width: number) {
       value=""
       onChange={vi.fn()}
       dropdownMode="overlay"
+      overlayMinWidth={288}
       loadOptions={async () => ({ options: [{ value: 'one', label: 'CF3195 Beta Logistics' }], total: 1 })}
       debounceMs={0}
     />,
@@ -68,6 +69,7 @@ describe('AsyncSearchableSelect overlay width', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 });
     const overlay = await openWithTriggerAt(900, 90);
     expect(overlay.style.width).toBe('288px');
-    expect(overlay.style.left).toBe(`${1000 - 288 - 8}px`);
+    // Right-aligned to the trigger (990) with the 16px viewport margin respected.
+    expect(overlay.style.left).toBe(`${990 - 288}px`);
   });
 });

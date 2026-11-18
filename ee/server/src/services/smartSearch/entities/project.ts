@@ -25,7 +25,8 @@ import {
 } from '@alga-psa/co-managed/projectFieldMask';
 import { authorizeProjectIdsWithRedactions, loadProjectListItemsByIds } from '@alga-psa/projects/actions/projectActions';
 import type { ProjectSmartSearchRowMetadata, ProjectSmartSearchScope } from '@alga-psa/projects/lib/smartProjectSearch/types';
-import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { aclPredicateSql, type SearchAclPrincipal } from '@alga-psa/search/acl';
+import { resolveSearchPrincipal } from '@alga-psa/search/runAppSearch';
 import type { IProject, IUserWithRoles } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -264,20 +265,21 @@ async function loadVisibleCommentRows(
     .whereIn('ph.project_id', projectIds)
     .select('pt.tenant', 'ph.project_id', trx.raw('pt.task_id::text as task_key'))
     .as('tk');
-  const query = db.table('app_search_index as si');
-  db.tenantJoinSubquery(query, taskKeys, 'si.parent_id', 'tk.task_key', {
-    rootTenantColumn: 'si.tenant',
+  // LEVERAGE: friction search-acl-alias — aclPredicateSql's board clause assumes the index is aliased `s`; every reader must match it.
+  const query = db.table('app_search_index as s');
+  db.tenantJoinSubquery(query, taskKeys, 's.parent_id', 'tk.task_key', {
+    rootTenantColumn: 's.tenant',
     joinedTenantColumn: 'tk.tenant',
   });
   const ranked = query
-    .where('si.object_type', 'project_task_comment')
+    .where('s.object_type', 'project_task_comment')
     .whereRaw(acl.sql, acl.bindings)
     .select(
       'tk.project_id',
-      'si.title as task_name',
-      'si.body',
-      'si.source_updated_at',
-      trx.raw('ROW_NUMBER() OVER (PARTITION BY tk.project_id ORDER BY si.source_updated_at DESC) AS rn')
+      's.title as task_name',
+      's.body',
+      's.source_updated_at',
+      trx.raw('ROW_NUMBER() OVER (PARTITION BY tk.project_id ORDER BY s.source_updated_at DESC) AS rn')
     )
     .as('ranked');
 
@@ -313,7 +315,7 @@ export async function loadProjectCandidates(
   if (projectIds.length === 0) {
     return [];
   }
-  const principal = await resolveSearchAclPrincipal(trx, user);
+  const principal = await resolveSearchPrincipal(trx, tenant, user);
   const coManaged = await isCoManagedProjectPolicy(trx, tenant);
 
   // Projects can carry different redaction sets; each set is read with its own masked projection and

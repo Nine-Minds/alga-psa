@@ -10,7 +10,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
+import { ITicketListItem, ITicketListFilters, ITicketListViewSummary, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
@@ -115,6 +115,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   const filters: Partial<ITicketListFilters> = foldLegacyClientId({
     boardId: params.get('boardId') || undefined,
     where: decodedWhere.where,
+    listView: params.get('listView') || undefined,
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
@@ -180,7 +181,14 @@ interface TicketingDashboardContainerProps {
     options: TicketFormOptions;
     tickets: ITicketListItem[];
     totalCount: number;
+    loadedAt?: number;
     metadata?: TicketListMetadata;
+    /** Named views the caller's list offers, with their counts. Present only for a principal that has views. */
+    views?: ITicketListViewSummary[];
+    /** The reader is offered the responsibility column and filter (the seat shape is released and the reader is MSP staff). */
+    seatResponsibilityOffered?: boolean;
+    /** The handoff the reader may start on selected tickets (MSP staff: to client IT; a seat technician: to the MSP). Absent: none. */
+    seatHandoffDirection?: 'client_it' | 'msp';
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
@@ -247,7 +255,12 @@ export default function TicketingDashboardContainer({
   const emptyMetadata: TicketListMetadata = { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} };
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
+  const [loadedAt, setLoadedAt] = useState(() => consolidatedData.loadedAt ?? Date.now());
+  const [loadedFilters, setLoadedFilters] = useState<Partial<ITicketListFilters>>(initialFilters ?? {});
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
+  const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
+  const [seatHandoffDirection, setSeatHandoffDirection] = useState<'client_it' | 'msp' | undefined>(consolidatedData.seatHandoffDirection);
   const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -278,6 +291,10 @@ export default function TicketingDashboardContainer({
   useEffect(() => {
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
+    setLoadedAt(consolidatedData.loadedAt ?? Date.now());
+    setNamedViews(consolidatedData.views);
+    setSeatResponsibilityOffered(consolidatedData.seatResponsibilityOffered === true);
+    setSeatHandoffDirection(consolidatedData.seatHandoffDirection);
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }
@@ -286,7 +303,7 @@ export default function TicketingDashboardContainer({
     // unsettled (so its finally never runs). The refresh itself delivers fresh
     // data here, so clear the loading spinner — otherwise it hangs forever.
     setIsLoading(false);
-  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata, consolidatedData.views, consolidatedData.seatResponsibilityOffered, consolidatedData.seatHandoffDirection]);
 
   const {
     value: storedPageSize,
@@ -399,6 +416,7 @@ export default function TicketingDashboardContainer({
     }
     const whereParam = encodeTicketWhere(filters.where);
     if (whereParam) params.set('where', whereParam);
+    if (filters.listView) params.set('listView', filters.listView);
     if (filters.sortBy && filters.sortBy !== 'entered_at') {
       params.set('sortBy', filters.sortBy);
     }
@@ -460,12 +478,12 @@ export default function TicketingDashboardContainer({
     filters: Partial<ITicketListFilters>,
     page: number,
     pageSize: number,
-    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc' }
-  ) => {
+    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc'; preserveOnError?: boolean }
+  ): Promise<boolean> => {
     console.log('[Container] fetchTickets called with:', { filters, page, pageSize });
     if (!currentUser) {
       toast.error(t('errors.performActionAuthRequired', 'You must be logged in to perform this action'));
-      return;
+      return false;
     }
     const requestId = ++latestFetchRequestIdRef.current;
     setIsLoading(true);
@@ -500,6 +518,7 @@ export default function TicketingDashboardContainer({
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled',
+        listView: filters.listView || undefined,
         where: filters.where && filters.where.clauses.length > 0 ? filters.where : undefined,
       };
 
@@ -511,35 +530,40 @@ export default function TicketingDashboardContainer({
       );
 
       if (requestId !== latestFetchRequestIdRef.current) {
-        return;
+        return false;
       }
 
       if (isReturnedActionError(result)) {
         // Pass the payload through unflattened: handleError prefers a returned
         // user-safe actionError over the fallback, but only for that channel.
         handleError(result, t('errors.fetchTickets', 'Failed to fetch tickets'));
-        setTickets([]);
-        setTotalCount(0);
-        return;
+        if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+        return false;
       }
 
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
+      setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
+      setLoadedFilters(currentFiltersWithDefaults);
       setTotalCount(result.totalCount);
+      setNamedViews(result.views);
+      setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);
+      setSeatHandoffDirection(result.seatHandoffDirection);
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
+      return true;
       // Note: callers are responsible for setting activeFilters, sortBy, sortDirection
       // before calling fetchTickets. Setting them here would create new object references
       // that cascade through dependencies and cause re-render loops.
 
     } catch (error) {
       if (requestId !== latestFetchRequestIdRef.current) {
-        return;
+        return false;
       }
       handleError(error, t('errors.fetchTickets', 'Failed to fetch tickets'));
-      setTickets([]);
-      setTotalCount(0);
+      if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+      return false;
     } finally {
       // Clear loading only if this is still the latest request. A superseded
       // (older) fetch must not flip the spinner off while a newer one is in
@@ -556,6 +580,10 @@ export default function TicketingDashboardContainer({
   activeFiltersRef.current = activeFilters;
   const fetchTicketsRef = useRef(fetchTickets);
   fetchTicketsRef.current = fetchTickets;
+  const refreshListForChanges = useCallback(
+    () => fetchTickets(activeFiltersRef.current, currentPage, pageSize, { preserveOnError: true }),
+    [currentPage, fetchTickets, pageSize]
+  );
 
   // ── Board-level view configuration ──────────────────────────────────────────
   //
@@ -1137,6 +1165,9 @@ export default function TicketingDashboardContainer({
       <TicketingDashboard
       id="ticketing-dashboard"
       initialTickets={tickets}
+      loadedAt={loadedAt}
+      loadedFilters={loadedFilters}
+      onRefreshListForChanges={refreshListForChanges}
       initialBoards={initialBoardsForDashboard}
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}
@@ -1146,6 +1177,9 @@ export default function TicketingDashboardContainer({
       clientTagDefinitions={effectiveOptions.clientTagDefinitions}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}
+      namedViews={namedViews}
+      seatResponsibilityOffered={seatResponsibilityOffered}
+      seatHandoffDirection={seatHandoffDirection}
       currentPage={currentPage}
       pageSize={pageSize}
       onPageChange={handlePageChange}

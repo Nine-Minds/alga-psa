@@ -22,6 +22,16 @@
       "import": "./dist/providerSecrets.js",
       "require": "./dist/providerSecrets.cjs"
     },
+    "./reconcileOnWireMessageId": {
+      "types": "./src/reconcileOnWireMessageId.ts",
+      "import": "./dist/reconcileOnWireMessageId.js",
+      "require": "./dist/reconcileOnWireMessageId.cjs"
+    },
+    "./backfillResendOnWireMessageIds": {
+      "types": "./src/backfillResendOnWireMessageIds.ts",
+      "import": "./dist/backfillResendOnWireMessageIds.js",
+      "require": "./dist/backfillResendOnWireMessageIds.cjs"
+    },
     "./branding": {
       "types": "./src/branding/index.ts",
       "import": "./dist/branding/index.js",

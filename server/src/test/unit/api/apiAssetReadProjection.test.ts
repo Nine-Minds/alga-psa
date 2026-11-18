@@ -7,7 +7,18 @@ vi.mock('@/lib/productAccess', () => ({ getTenantProduct: vi.fn(async () => 'psa
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn(() => 'allowed') }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({ authorizeApiResourceRead: vi.fn(async () => state.decision) }));
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: vi.fn(async () => state.decision),
+    authorizeMutation: vi.fn(async () => state.decision),
+  })),
+}));
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: vi.fn(async (_knex, { tenant, user }) => ({
+    tenant, userId: user.user_id, userType: 'internal', roleIds: [], teamIds: [], managedUserIds: [], portfolioClientIds: [],
+  })),
+}));
 vi.mock('@/lib/api/services/AssetService', () => ({ AssetService: class { getAuthorizationRecord = async () => state.asset; getWithDetails = async () => state.asset; } }));
 
 import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
@@ -23,7 +34,7 @@ describe('asset get response projection', () => {
   it('applies authorization redactions and preserves Date JSON serialization', async () => {
     const response = await new ApiAssetController().getById(request(), { id: 'a1' });
     const body = await response.json();
-    expect(body.data).not.toHaveProperty('client_name');
+    expect(body.data.client_name).toBeNull();
     expect(body.data.created_at).toBe('2026-01-02T03:04:05.000Z');
   });
 
@@ -43,7 +54,7 @@ describe('asset get response projection', () => {
     const response = await new ApiAssetController().getById(request(), { id: 'a1' });
     const { data } = await response.json();
     for (const field of ['client', 'client_name', 'vendor_name', 'contact_name', 'warranty_status']) {
-      expect(data).not.toHaveProperty(field);
+      expect(data[field]).toBeNull();
     }
   });
 });

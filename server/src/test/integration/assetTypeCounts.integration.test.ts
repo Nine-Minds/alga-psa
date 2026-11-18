@@ -477,6 +477,55 @@ describe('listAssets filtered type counts', () => {
     }
   });
 
+  it('retains field redactions through pagination and derived client enrichment', async () => {
+    const redactedUserId = await seedUser(fixture.tenantId);
+    await assignAssetReadBundle(fixture.tenantId, redactedUserId, 'selected_clients', {
+      selectedClientIds: [fixture.clientA],
+      redactedFields: ['name', 'client_name'],
+    });
+    const params = { client_id: fixture.clientA, page: 2, limit: 2, sort_by: 'name', sort_direction: 'asc' } as const;
+    const unrestricted = await list(params);
+    expect(unrestricted.assets).toHaveLength(2);
+    expect(unrestricted.assets.every((asset) => asset.name && asset.client?.client_name)).toBe(true);
+
+    actionAuth.userId = redactedUserId;
+    const queries: string[] = [];
+    const recordQuery = (query: { sql: string }) => queries.push(query.sql);
+    db.on('query', recordQuery);
+    try {
+      const result = await list(params);
+      expect(result.assets.map((asset) => asset.asset_id)).toEqual(unrestricted.assets.map((asset) => asset.asset_id));
+      expect(result.total).toBe(unrestricted.total);
+      expect(result.asset_type_counts).toEqual(unrestricted.asset_type_counts);
+      for (const asset of result.assets) {
+        expect(asset).not.toHaveProperty('name');
+        expect(asset).not.toHaveProperty('client_name');
+        expect(asset).not.toHaveProperty('client');
+      }
+      expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(1);
+    } finally {
+      db.off('query', recordQuery);
+      actionAuth.userId = fixture.userId;
+    }
+  });
+
+  it.each(['asset_id', 'asset_tag'])('excludes assets with redacted %s from rows, totals and facets', async (field) => {
+    const redactedUserId = await seedUser(fixture.tenantId);
+    await assignAssetReadBundle(fixture.tenantId, redactedUserId, 'selected_clients', {
+      selectedClientIds: [fixture.clientA],
+      redactedFields: [field],
+    });
+    actionAuth.userId = redactedUserId;
+    try {
+      const result = await list({ limit: 2 });
+      expect(result.assets).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.asset_type_counts).toEqual({});
+    } finally {
+      actionAuth.userId = fixture.userId;
+    }
+  });
+
   it('evaluates association-based rules for each asset in the batch', async () => {
     const assignedUserId = await seedUser(fixture.tenantId);
     await assignAssetReadBundle(fixture.tenantId, assignedUserId, 'assigned', {});
@@ -624,7 +673,12 @@ describe('listAssets filtered type counts', () => {
       expect(result.total).toBe(69);
       expect(result.asset_type_counts).toEqual({ workstation: 69, server: 68 });
       expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(3);
-      expect(queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql))).toHaveLength(1);
+      // The tenant-scope probe (exists over published assignments) runs once per
+      // request; the bundle assignment load itself runs once for the whole scan.
+      const assignmentQueries = queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql));
+      const scopeProbes = assignmentQueries.filter((sql) => /^select exists\(/i.test(sql));
+      expect(scopeProbes).toHaveLength(1);
+      expect(assignmentQueries.filter((sql) => !scopeProbes.includes(sql))).toHaveLength(1);
       const countQueries = queries.filter((sql) => /count\("assets"\."asset_id"\).*from "assets"/i.test(sql));
       expect(countQueries.length).toBeGreaterThan(0);
       expect(countQueries.length).toBeLessThanOrEqual(3);

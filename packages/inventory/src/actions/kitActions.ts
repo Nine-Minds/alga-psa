@@ -20,6 +20,7 @@ import {
   resolveCatalogUnitForUpdate,
   type TenantUnitSelection,
 } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { lockTenantBilling } from '@alga-psa/shared/billingClients/billingMutationLock';
 import { unitOfMeasureVocabulary } from '@alga-psa/core/unitOfMeasure';
 
 /** Kits default to the "Kit" business label (Rec 20 C62). */
@@ -606,6 +607,8 @@ export const createKitProduct = withAuth(
 
       const { knex: db } = await createTenantKnex();
       const serviceId = await withTransaction(db, async (trx: Knex.Transaction) => {
+        // A kit's catalog price must not change under an invoice run that already read it.
+        await lockTenantBilling(trx, tenant);
         const type = await trx('service_types')
           .where({ tenant, id: input.custom_service_type_id })
           .first();
@@ -689,6 +692,7 @@ export const updateKitProduct = withAuth(
 
       const { knex: db } = await createTenantKnex();
       await withTransaction(db, async (trx: Knex.Transaction) => {
+        await lockTenantBilling(trx, tenant);
         await assertIsKit(trx, tenant, kitServiceId);
         const current = await trx('service_catalog as sc')
           .join('product_inventory_settings as pis', function () {

@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
@@ -111,7 +112,7 @@ interface UserRole {
 }
 
 export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
-  const { t } = useTranslation('msp/contacts');
+  const { t } = useTranslation(['msp/contacts', 'msp/settings']);
 
   const translatePortalInvitationError = (
     result: { error?: string; errorCode?: PortalInvitationErrorCode },
@@ -838,21 +839,44 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   {/* Display current roles */}
                   <div className="space-y-2">
                     {userRoles.length > 0 ? (
-                      userRoles.map((role) => (
-                        <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span className="text-sm">{role.role_name}</span>
+                      userRoles.map((role) => {
+                        // The server refuses to leave a user with no role; don't offer it.
+                        const isOnlyRole = userRoles.length === 1;
+                        const removeButton = (
                           <Button
                             id="remove-permission-button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemoveRole(role.role_id)}
+                            onClick={(e) => {
+                              if (isOnlyRole) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
+                              }
+                              handleRemoveRole(role.role_id);
+                            }}
                             disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
-                            className="text-red-500 hover:text-red-600"
+                            aria-disabled={isOnlyRole || undefined}
+                            className={`text-red-500 hover:text-red-600${isOnlyRole ? ' cursor-not-allowed opacity-50' : ''}`}
                           >
                             {t('common.actions.remove', { defaultValue: 'Remove' })}
                           </Button>
-                        </div>
-                      ))
+                        );
+                        return (
+                          <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-sm">{role.role_name}</span>
+                            {isOnlyRole
+                              ? (
+                                <Tooltip content={t('msp/settings:errors.roles.lastRole', {
+                                  defaultValue: 'A user must keep at least one role. Assign another role first, then remove this one.'
+                                })}>
+                                  {removeButton}
+                                </Tooltip>
+                              )
+                              : removeButton}
+                          </div>
+                        );
+                      })
                     ) : (
                       <p className="text-sm text-muted-foreground">{t('contactPortalTab.roles.none', { defaultValue: 'No roles assigned' })}</p>
                     )}

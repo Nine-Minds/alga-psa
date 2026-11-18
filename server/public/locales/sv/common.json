@@ -56,7 +56,6 @@
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
     "dismiss": "Stäng",
-
     "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}. Teckna prenumerationen igen för att behålla Pro.",
     "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats. Teckna prenumerationen igen för att behålla Pro.",
     "subscriptionLapsed": "Du använder nu den kostnadsfria utgåvan. Teckna prenumerationen igen för att återställa Pro.",
@@ -70,13 +69,12 @@
     "paymentFailedEndedEnding": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro förblir aktivt till {{date}}. Prenumerera igen för att behålla Pro.",
     "paymentFailedEndedEndingNoDate": "Din Pro-prenumeration har upphört — betalningen misslyckades. Prenumerera igen för att behålla Pro.",
     "updatePaymentMethod": "Uppdatera betalningsmetod",
-"licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
     "licenseExpiresIn_many": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
     "trialDaysRemaining_few": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
     "trialDaysRemaining_many": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
     "trialExpiresIn_few": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
     "trialExpiresIn_many": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna."
-
   },
   "nav": {
     "dashboard": "Översikt",
@@ -140,6 +138,7 @@
     "completing": "Slutför…",
     "more": "Mer",
     "closeDialog": "Stäng dialogruta",
+    "insertField": "Infoga fält",
     "clearSearch": "Rensa sökning"
   },
   "upgradePrompt": {
@@ -294,7 +293,8 @@
       "textTooLong": "Taggtexten är för lång (högst 50 tecken)",
       "textInvalidCharacters": "Taggtexten innehåller ogiltiga tecken",
       "backgroundColorInvalid": "Ogiltigt format för bakgrundsfärg. Ange en giltig hexadecimal färgkod (t.ex. #FF0000)",
-      "textColorInvalid": "Ogiltigt format för textfärg. Ange en giltig hexadecimal färgkod (t.ex. #FFFFFF)"
+      "textColorInvalid": "Ogiltigt format för textfärg. Ange en giltig hexadecimal färgkod (t.ex. #FFFFFF)",
+      "creationRestricted": "Du kan bara använda taggar som redan finns."
     }
   },
   "fields": {
@@ -928,6 +928,7 @@
       "pending": "Väntande",
       "error": "Det gick inte att ladda upp dokumentet",
       "fileError": "Det gick inte att ladda upp filen",
+      "fileTooLarge": "Den här filen är {{size}}. Den nuvarande gränsen är {{limit}} per fil.",
       "associatedEntityTypeLabel": "Koppla till",
       "noAssociation": "Ingen koppling",
       "selectAssociatedEntityError": "Välj en entitet att koppla till innan du laddar upp.",
@@ -939,7 +940,16 @@
       "emptyDropMessage": "Inga filer togs emot. Spara bilagan eller e-postmeddelandet på datorn och dra sedan den sparade filen hit eller använd ”Bläddra bland filer”.",
       "uploadInProgress": "En uppladdning pågår redan. Vänta tills den är klar innan du lägger till fler filer.",
       "refreshFailed": "Dina filer laddades upp, men dokumentlistan kunde inte uppdateras. Ladda om sidan för att se dem.",
-      "clearResults": "Rensa resultat"
+      "clearResults": "Rensa resultat",
+      "typeNotAllowed": "Den här filtypen tillåts inte. Välj en annan fil.",
+      "permissionDenied": "Du har inte behörighet att ladda upp dokument här.",
+      "networkFailed": "Anslutningen bröts och uppladdningen kunde inte återupptas. Kontrollera anslutningen och försök igen.",
+      "sessionGone": "Den här uppladdningen gick ut innan den blev klar. Starta den igen.",
+      "cancelled": "Avbruten",
+      "cancelUpload": "Avbryt uppladdning",
+      "tryAgain": "Försök igen",
+      "progress": "{{committed}} av {{total}}",
+      "progressLabel": "Uppladdningsförlopp för {{name}}"
     },
     "folders": {
       "root": "Rot",
@@ -1858,6 +1868,9 @@
       },
       "newTag": {
         "placeholder": "Ny tagg"
+      },
+      "existingTag": {
+        "placeholder": "Befintlig tagg"
       }
     },
     "actions": {

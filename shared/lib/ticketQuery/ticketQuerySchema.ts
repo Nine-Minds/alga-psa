@@ -181,6 +181,31 @@ const COMPUTED_RESOLVERS = (() => {
       ],
     };
   },
+
+  /**
+   * `seat_responsibility equals client_it|msp`: who is responsible for a ticket of a client in a live
+   * co-managed seat arrangement (`co_managed_seat_ticket_work`, see seatTicketWork). A ticket with no
+   * work row is the MSP's. A work row written under an earlier arrangement does not count: under the
+   * client's current arrangement the ticket starts with the MSP. A ticket whose client has no live
+   * arrangement has no responsibility, so it matches neither value.
+   */
+  seat_responsibility: (alias, value) => {
+    const live = `EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+        AND __sa.client_id = ?? AND __sa.state = 'active'`;
+    const clientIt = `EXISTS (SELECT 1 FROM co_managed_seat_ticket_work AS __sw WHERE __sw.tenant = ??
+        AND __sw.ticket_id = ?? AND __sw.responsibility = 'client_it'
+        AND EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+          AND __sa.arrangement_id = __sw.arrangement_id AND __sa.client_id = ?? AND __sa.state = 'active'))`;
+    const itBindings = [`${alias}.tenant`, `${alias}.ticket_id`, `${alias}.tenant`, `${alias}.client_id`];
+    switch (scalar(value)) {
+      case 'client_it':
+        return { sql: clientIt, bindings: itBindings };
+      case 'msp':
+        return { sql: `${live}) AND NOT ${clientIt}`, bindings: [`${alias}.tenant`, `${alias}.client_id`, ...itBindings] };
+      default:
+        return { sql: 'FALSE', bindings: [] };
+    }
+  },
   } satisfies Record<string, Resolver>;
 })();
 
@@ -198,6 +223,7 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   category: { type: 'uuid', operators: ['in', 'not_in'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
+  seat_responsibility: { type: 'string', operators: ['equals'] },
 };
 
 export const TICKET_COMPUTED_ATTRIBUTES = Object.keys(COMPUTED_RESOLVERS) as TicketComputedAttributeName[];
@@ -249,6 +275,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       category: computed('category', nowIso),
       sla_state: computed('sla_state', nowIso),
       involves_user: computed('involves_user', nowIso),
+      seat_responsibility: computed('seat_responsibility', nowIso),
     },
     relations: {
       client: {

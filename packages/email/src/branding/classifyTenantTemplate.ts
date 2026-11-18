@@ -24,6 +24,42 @@ export interface ClassifyTenantTemplateInput {
   systemRow: ClassifiableTemplate;
   /** The token map the apply flow last wrote, if any. */
   appliedPalette?: EmailPaletteTokens | null;
+  /**
+   * The stock row of the template this one's tenant rows were copied from, same language.
+   * When a client template is split off a shared one, each tenant's shared row is copied to the
+   * client name. A copy of a row the branding tool wrote is still nothing the tenant typed.
+   */
+  copiedFromSystemRow?: ClassifiableTemplate | null;
+}
+
+/** Client template name -> the template its tenant rows were copied from at a split. */
+export type CopiedFromTemplates = Readonly<Record<string, string>>;
+
+/** The stock row a `(name, language)` tenant row may be a copy of, if its template was split off another. */
+export function copiedFromSystemRowFor<T extends { name: string; language_code: string }>(
+  systemRows: readonly T[],
+  copiedFrom: CopiedFromTemplates | null | undefined,
+  name: string,
+  language: string,
+): T | null {
+  const sourceName = copiedFrom?.[name];
+  if (!sourceName) return null;
+  return systemRows.find((row) => row.name === sourceName && row.language_code === language) ?? null;
+}
+
+/** Does the row equal this stock template with the applied palette substituted, subject included? */
+function equalsBrandedStock(
+  tenantRow: ClassifiableTemplate,
+  stockRow: ClassifiableTemplate,
+  appliedPalette: EmailPaletteTokens | null | undefined,
+): boolean {
+  // With no palette applied yet the expected HTML is the stock template itself.
+  const expectedHtml = appliedPalette
+    ? applyEmailPalette(stockRow.html_content, STOCK_EMAIL_PALETTE, appliedPalette)
+    : stockRow.html_content;
+  return tenantRow.subject === stockRow.subject
+    && (tenantRow.html_content === expectedHtml
+      || withoutBrandAssets(tenantRow.html_content) === withoutBrandAssets(expectedHtml));
 }
 
 /**
@@ -63,6 +99,11 @@ export function classifyTenantTemplate(input: ClassifyTenantTemplateInput): Tena
     || withoutBrandAssets(tenantRow.html_content) === withoutBrandAssets(expectedHtml);
 
   if (htmlMatches && subjectMatches) return { state: 'branded', differs: [] };
+
+  // An untouched copy of the template this one was split from: still the tool's own row.
+  if (input.copiedFromSystemRow && equalsBrandedStock(tenantRow, input.copiedFromSystemRow, appliedPalette)) {
+    return { state: 'branded', differs: [], copyOfSplitSource: true };
+  }
 
   const carriesStock = containsEmailPaletteTokens(tenantRow.html_content, STOCK_EMAIL_PALETTE);
   const carriesApplied = appliedPalette

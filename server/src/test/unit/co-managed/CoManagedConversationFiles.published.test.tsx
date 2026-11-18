@@ -5,7 +5,7 @@ import { act, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({ onPublished: null as null | (() => void) }));
-vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: true }) }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: true }), useServedCapabilities: () => new Set(['co-managed']) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('@/components/co-managed/attachmentFileStager', () => ({ registerCoManagedAttachmentStager: () => undefined }));
 vi.mock('@/components/co-managed/SharedCommentAttachmentPicker', () => ({ default: () => null }));

@@ -333,6 +333,16 @@
       "addLocation": "+ Add location",
       "fromTemplate": "+ From template"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remove this location?",
+        "message": "This location still has {{count}} line item(s). Choose what happens to them.",
+        "moveOption": "Move these items to {{location}}",
+        "ungroupOption": "Keep these items and stop grouping by location",
+        "deleteOption": "Delete these items",
+        "confirm": "Remove location"
+      }
+    },
     "clientFacing": {
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
@@ -588,10 +598,13 @@
       "groupHeading": "Location {{index}}",
       "pickerPlaceholder": "Select a location",
       "unassigned": "Items without a location are listed here until one is chosen.",
+      "quoteWide": "Quote-wide",
+      "quoteWideHint": "Discounts apply across the quote, so they are not tied to a location.",
       "removeGroup": "Remove location",
       "subtotal": "Location subtotal",
       "addLocationButton": "+ Add location",
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
+      "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
     }
   },

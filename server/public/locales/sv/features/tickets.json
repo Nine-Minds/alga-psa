@@ -555,6 +555,7 @@
       "requester": "Beställare",
       "sharedIt": "Delad IT",
       "organizationPrivate": "Privat för organisationen",
+      "private": "Privat",
       "placeholder": "Vem kan se detta?",
       "required": "Välj vem som kan se kommentaren innan du publicerar den."
     },
@@ -735,6 +736,13 @@
     "boardTabs": {
       "all": "Alla ärenden"
     },
+    "seatViews": {
+      "clientIt": "Kundens IT",
+      "msp": "Hos MSP",
+      "unassigned": "Ej tilldelade",
+      "all": "Alla",
+      "empty": "Inga ärenden i {{view}} just nu."
+    },
     "boardHeader": {
       "open": "Öppna",
       "overdue": "Försenade",
@@ -755,6 +763,11 @@
       "saveFailed": "Det gick inte att spara standardvyn",
       "reset": "Återställ till organisationens standardinställning",
       "resetFailed": "Det gick inte att återställa vyn"
+    },
+    "responsibility": {
+      "column": "Ansvarig",
+      "all": "Alla ansvar",
+      "filter": "Ansvar"
     }
   },
   "bulk": {
@@ -978,6 +991,19 @@
       "partialFailure": "Det gick inte att uppdatera prioritet för vissa ärenden",
       "failure": "Det gick inte att uppdatera prioritet för de markerade ärendena",
       "failedHeading": "Det gick inte att uppdatera prioritet för följande ärenden:"
+    },
+    "handoff": {
+      "unknownTicket": "Ärende",
+      "rowNotLoaded": "Ärendets aktuella status är inte inläst. Öppna dess sida i listan och försök igen.",
+      "partialFailure": "Vissa ärenden kunde inte överlämnas",
+      "failure": "Det gick inte att överlämna de valda ärendena",
+      "failedItemsHeading": "Följande ärenden kunde inte överlämnas:",
+      "success_one": "{{count}} ärende överlämnat",
+      "success_other": "{{count}} ärenden överlämnade",
+      "promptToClientIt_one": "Kundens IT blir ansvarig för det här ärendet. Anteckningen delas med kundens tekniker. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToClientIt_other": "Kundens IT blir ansvarig för vart och ett av de här {{count}} ärendena. Anteckningen delas med kundens tekniker. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToMsp_one": "MSP blir ansvarig för det här ärendet. Anteckningen delas med MSP. Ett ärende som inte kan överlämnas lämnas oförändrat.",
+      "promptToMsp_other": "MSP blir ansvarig för vart och ett av de här {{count}} ärendena. Anteckningen delas med MSP. Ett ärende som inte kan överlämnas lämnas oförändrat."
     }
   },
   "quickAdd": {
@@ -1162,6 +1188,7 @@
     "keepEditing": "Fortsätt redigera",
     "statusRequiresSelection": "Välj en status för den nya tavlan innan du sparar.",
     "notAssigned": "Inte tilldelat",
+    "clientItGroup": "Kundens IT",
     "additionalAgentsTooltip": "Ytterligare handläggare:",
     "loading": "Läser in…",
     "tagsCannotBeManaged": "Taggar kan inte hanteras",
@@ -1778,6 +1805,23 @@
     },
     "comment": {
       "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Skriv en delad anteckning till kundens IT innan du lämnar över ärendet.",
+      "ticketNotFound": "Det här ärendet är inte längre tillgängligt.",
+      "noArrangement": "Ärendets kund har inte längre ett avtal om samförvaltade platser.",
+      "operationConflict": "Den här överlämningen startades med andra uppgifter. Försök igen.",
+      "changed": "Ärendet har lämnats över eller tilldelats om. Uppdatera ärendet innan du försöker igen.",
+      "alreadyResponsible": "Kundens IT är redan ansvarig för det här ärendet. Uppdatera ärendet för att se aktuellt läge.",
+      "actorNotAllowed": "Du kan inte lämna över det här ärendet till kundens IT.",
+      "boardOutOfScope": "Ärendets tavla delas inte med kundens IT, så det kan inte lämnas över.",
+      "technicianNotAvailable": "Den valda teknikern är inte längre tillgänglig för den här kunden. Välj en annan eller lämna ärendet utan tilldelning.",
+      "unavailable": "Att lämna över ärenden till kundens IT är inte tillgängligt.",
+      "invalidHandoffToMsp": "Skriv en delad anteckning till MSP innan du överlämnar ärendet.",
+      "alreadyResponsibleMsp": "MSP ansvarar redan för det här ärendet. Uppdatera ärendet för att se aktuell status.",
+      "actorNotAllowedMsp": "Du kan inte överlämna det här ärendet till MSP.",
+      "unavailableMsp": "Det går inte att överlämna ärenden till MSP.",
+      "unexpected": "Ärendet kunde inte överlämnas. Uppdatera listan för att se hur det står till och försök igen."
     }
   },
   "ticketSection": {
@@ -1959,6 +2003,18 @@
   "integration": {
     "loadTicketFailed": "Det gick inte att läsa in ärendet",
     "noUserSession": "Ingen användarsession hittades"
+  },
+  "seatEffort": {
+    "title": "Insats",
+    "clientIt": "Kundens IT",
+    "msp": "MSP",
+    "combined": "Kombinerat",
+    "yours": "Din tid",
+    "columns": {
+      "date": "Datum",
+      "duration": "Varaktighet",
+      "notes": "Anteckningar"
+    }
   },
   "bento": {
     "hero": {
@@ -2245,7 +2301,9 @@
       "builtInGroup": "Inbyggda system",
       "customGroup": "Anpassade system",
       "urlPreview": "Öppnar:",
-      "urlPreviewIncomplete": "Fyll i fälten ovan för att förhandsgranska länken."
+      "urlPreviewIncomplete": "Fyll i fälten ovan för att förhandsgranska länken.",
+      "title": "Titel",
+      "titlePlaceholder": "Valfritt, t.ex. artikelns namn"
     },
     "errors": {
       "ticketNotFound": "Ärendet hittades inte",
@@ -2657,7 +2715,8 @@
       "details": "Mall",
       "ticket": "Ärende",
       "checklist": "Checklista",
-      "customFields": "Anpassade fält"
+      "customFields": "Anpassade fält",
+      "links": "Dokumentationslänkar"
     },
     "fields": {
       "name": "Mallnamn",
@@ -2712,13 +2771,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ärendemallar är inte tillgängliga",
       "subcategoryNeedsCategory": "En underkategori kräver en kategori",
-      "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först."
+      "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först.",
+      "duplicateLink": "Den här mallen har redan den dokumentationslänken."
     },
     "usage": {
       "schedules": "Används av {{count}} scheman",
       "paused": "pausad",
       "tickets": "{{count}} ärenden skapade från mallen",
       "scheduleThis": "Schemalägg den här mallen…"
+    },
+    "links": {
+      "help": "Kopieras som referenser till varje ärende som skapas från den här mallen. Senare ändringar i mallen ändrar inte befintliga ärenden.",
+      "empty": "Inga dokumentationslänkar.",
+      "add": "Lägg till länk",
+      "remove": "Ta bort länk",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ner",
+      "dialogTitle": "Lägg till dokumentationslänk",
+      "pickFromHudu": "Välj från Hudu",
+      "huduPickerTitle": "Välj en Hudu-artikel",
+      "huduSearch": "Sök i Hudu-artiklar...",
+      "huduLoading": "Läser in Hudu-artiklar...",
+      "huduDisconnected": "Hudu är inte anslutet. Du kan ändå lägga till en länk genom att ange dess uppgifter.",
+      "huduError": "Det gick inte att nå Hudu. Försök igen senare.",
+      "huduEmpty": "Inga Hudu-artiklar hittades.",
+      "huduSelect": "Välj",
+      "huduPrev": "Föregående",
+      "huduNext": "Nästa"
     }
   },
   "enums": {
@@ -2865,6 +2944,24 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "live": {
+    "updatedOne": "1 ärende uppdaterat",
+    "updatedMany": "{{count}} ärenden uppdaterade",
+    "newOne": "1 nytt ärende",
+    "newMany": "{{count}} nya ärenden",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nytt ärende och 1 uppdaterat ärende",
+        "manyUpdated": "1 nytt ärende och {{updatedCount}} uppdaterade ärenden"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nya ärenden och 1 uppdaterat ärende",
+        "manyUpdated": "{{newCount}} nya ärenden och {{updatedCount}} uppdaterade ärenden"
+      }
+    },
+    "updatedBadge": "Uppdaterat",
+    "boardActivity": "Ny aktivitet på den här tavlan"
   },
   "batchDuplicate": {
     "title": "Duplicera #{{number}} för kontakter",
@@ -3126,5 +3223,21 @@
   "statusChange": {
     "title": "Uppdatera ärendestatus",
     "message": "Vill du ändra status från ”{{from}}” till ”{{to}}”?"
+  },
+  "seatResponsibility": {
+    "clientIt": "Kundens IT",
+    "msp": "MSP",
+    "label": "Ansvarig",
+    "chipTitle": "Vem som ansvarar för det här ärendet",
+    "handToClientIt": "Lämna över till kundens IT",
+    "handedToClientIt": "Överlämnat till kundens IT",
+    "handing": "Lämnar över…",
+    "handPrompt": "Kundens IT blir ansvarig för det här ärendet och dina SLA-timers pausas tills det kommer tillbaka. Anteckningen delas med kundens tekniker.",
+    "noteLabel": "Delad anteckning till kundens IT",
+    "technicianLabel": "Tekniker (valfritt)",
+    "technicianPlaceholder": "Valfri tekniker hos den här kunden",
+    "technicianNone": "Lämna tilldelad person oförändrad",
+    "handToMsp": "Överlämna till MSP",
+    "noteLabelMsp": "Delad anteckning till MSP"
   }
 }

@@ -308,6 +308,36 @@
       "expiresPrefix": "Expires:",
       "revoke": "Revoke",
       "revoking": "Revoking..."
+    },
+    "seatTechnicians": {
+      "title": "Seat technicians",
+      "description": "People who work in your PSA through a client's co-managed seat. They do not count toward your licensed users.",
+      "clientUnavailable": "Client not available",
+      "effectiveAccess": "Effective access",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "client": "Client",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "state": {
+        "active": "Active",
+        "invited": "Invitation pending"
+      },
+      "dialog": {
+        "title": "Effective access for {{name}}",
+        "help": "Choose a ticket to see whether this seat technician can read it, and why.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Select a ticket...",
+        "checking": "Checking access...",
+        "allowed": "{{name}} can read this ticket.",
+        "denied": "{{name}} cannot read this ticket.",
+        "noReasons": "No further detail was reported.",
+        "error": "Could not check access. Try again.",
+        "close": "Close",
+        "unavailable": "Effective access cannot be checked for this ticket in this edition or setup."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Email template variable reference",
       "panelTitle": "Template variables",
+      "mspOnly": "MSP only",
+      "clientSafeHelp": "Sent to clients. MSP-only variables are not available.",
       "inferredContract": "Not currently sent. This contract is inferred from the template.",
       "empty": "No matching variables.",
       "example": "Example:",
@@ -3033,7 +3065,8 @@
         "preparingPreview": "Preparing preview…",
         "linking": "Linking accounts…",
         "unlinking": "Unlinking accounts…",
-        "bulkLabel": "Bulk SSO actions {{location}}"
+        "bulkLabel": "Bulk SSO actions {{location}}",
+        "disabledSelectUsers": "Select at least one user first."
       },
       "table": {
         "email": "Email",
@@ -4123,7 +4156,9 @@
       "missingFieldNamed": "Missing required user role field: {{field}}.",
       "nameRequired": "Role name is required.",
       "builtInRename": "Built-in roles cannot be renamed.",
-      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal.",
+      "lastMspAdmin": "A tenant must keep at least one active MSP Admin user.",
+      "lastRole": "A user must keep at least one role. Assign another role first, then remove this one."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",

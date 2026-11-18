@@ -1011,6 +1011,11 @@ beforeAll(async () => {
   ({ registerTicketEmailSubscriber } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber'));
   ({ registerProjectEmailSubscriber } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber'));
   ({ ServerEventPublisher } = await import('@alga-psa/event-bus'));
+  // These tenants hold no co-managed seat arrangement, so the seat gate decides the recipient
+  // boundary is closed and no seat row is read (the mocked database has no seat tables). The
+  // boundary itself is covered against the real schema by seatNotificationAudience.integration.test.ts.
+  const { registerCapabilityParticipation } = await import('@alga-psa/core/capability');
+  registerCapabilityParticipation('co-managed-seat', async () => []);
 });
 
 beforeEach(() => {
@@ -1337,6 +1342,7 @@ describe('ticket email subscriber reply markers', () => {
 
   it('processes ticket comment events with comment markers', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+    seedTemplate('ticket-comment-added-client', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1393,6 +1399,7 @@ describe('ticket email subscriber sender routing context', () => {
 
   it('passes ticket routing context when a legacy display name is configured without a custom From address', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+    seedTemplate('ticket-comment-added-client', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1450,6 +1457,7 @@ describe('ticket email subscriber sender routing context', () => {
 
   it('defers entirely to default resolution when neither a ticketing From address nor a display name is configured', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+    seedTemplate('ticket-comment-added-client', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -1696,6 +1704,7 @@ describe('ticket email subscriber deduplication', () => {
 
   it('T076: sends one ticket comment email per recipient with distinct reply tokens', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
+    seedTemplate('ticket-comment-added-client', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
     const ticketId = randomUUID();
@@ -2019,6 +2028,11 @@ describe('ticket email subscriber rich text formatting', () => {
   it('renders rich text comment content as HTML instead of JSON', async () => {
     seedTemplate(
       'ticket-comment-added',
+      'New Comment {{ticket.title}}',
+      '<div class="comment">{{comment.content}}</div>',
+    );
+    seedTemplate(
+      'ticket-comment-added-client',
       'New Comment {{ticket.title}}',
       '<div class="comment">{{comment.content}}</div>',
     );
