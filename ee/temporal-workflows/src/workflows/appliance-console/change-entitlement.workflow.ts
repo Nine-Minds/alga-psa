@@ -1,9 +1,10 @@
 import { c4, stripe, fail, isCompSubscriptionId } from './proxies';
-import type { ChangeEntitlementArgs, ChangeEntitlementResult } from './types';
+import type { ChangeEntitlementArgs, ChangeEntitlementResult, SeatChangeBilling } from './types';
 
 /**
- * Seat change. `billed` changes Stripe first, then records the result on the
- * C4 entitlement so licensing never runs ahead of billing. `comp` writes C4
+ * Seat change. `billed` changes Stripe first (billed exactly like the customer
+ * portal and hosted seat changes — see planSeatChange), then records the result
+ * on the C4 entitlement so licensing never runs ahead of billing. `comp` writes C4
  * only and leaves Stripe as is (the console shows the resulting mismatch).
  * The appliance picks the change up on its next check-in or manual refresh.
  */
@@ -15,6 +16,7 @@ export async function applianceChangeEntitlementWorkflow(args: ChangeEntitlement
   // null = unlimited (comp only), number = exact.
   let seats: number | null = args.seats;
   let stripeUpdated = false;
+  let billing: SeatChangeBilling | undefined;
 
   if (args.mode === 'billed') {
     if (ent.kind === 'comp' || isCompSubscriptionId(ent.stripe_sub_id)) {
@@ -24,13 +26,13 @@ export async function applianceChangeEntitlementWorkflow(args: ChangeEntitlement
     const changed = await stripe.stripeUpdateSeatQuantity({
       stripeSubId: ent.stripe_sub_id,
       seats,
-      proration: args.proration,
     });
     seats = changed.seats;
+    billing = changed.billing;
     stripeUpdated = true;
   }
 
   const updated = await c4.c4UpdateTenantEntitlement({ tenantId: args.tenantId, seats });
 
-  return { mode: args.mode, seats: updated.seats, stripe_updated: stripeUpdated };
+  return { mode: args.mode, seats: updated.seats, stripe_updated: stripeUpdated, ...(billing ? { billing } : {}) };
 }

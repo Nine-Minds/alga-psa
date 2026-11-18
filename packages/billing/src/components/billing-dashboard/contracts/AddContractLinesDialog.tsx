@@ -22,6 +22,7 @@ interface AddContractLinesDialogProps {
   onClose: () => void;
   contractId: string;
   onAdd: () => Promise<void>;
+  currencyCode: string;
 }
 
 export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
@@ -29,6 +30,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
   onClose,
   contractId,
   onAdd,
+  currencyCode,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const [isAdding, setIsAdding] = useState(false);
@@ -126,6 +128,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           )}
           <ContractLinePresetPicker
             selection={presetSelection}
+            currencyCode={currencyCode}
             typeFilterId="preset-type-filter"
             resetFiltersId="clear-contract-line-filters"
             filtersClassName="flex flex-wrap items-center gap-2 shrink-0"

@@ -35,6 +35,7 @@ interface CapturedCalls {
   conflicts: string[];
   merges: Row[];
   updates: Array<{ table: string; filter: Row | null; payload: Row }>;
+  deletes: Array<{ table: string; filter: Row | null; count: number }>;
 }
 
 function rowMatches(row: Row, filter: Row | null): boolean {
@@ -49,15 +50,28 @@ function rowMatches(row: Row, filter: Row | null): boolean {
  * leak in the assertions.
  */
 function createFakeKnex(rows: Row[]) {
-  const calls: CapturedCalls = { wheres: [], inserts: [], conflicts: [], merges: [], updates: [] };
+  const calls: CapturedCalls = { wheres: [], inserts: [], conflicts: [], merges: [], updates: [], deletes: [] };
 
   const knex = ((table: string) => {
     let filter: Row | null = null;
     const builder = {
       where(condition: Row) {
-        filter = condition;
+        // Accumulates like knex: tenant scope + row scope are both applied.
+        filter = { ...(filter ?? {}), ...condition };
         calls.wheres.push({ table, filter: condition });
         return builder;
+      },
+      orderBy() {
+        return builder;
+      },
+      select() {
+        return Promise.resolve(rows.filter((row) => rowMatches(row, filter)));
+      },
+      async delete() {
+        const matched = rows.filter((row) => rowMatches(row, filter));
+        calls.deletes.push({ table, filter, count: matched.length });
+        for (const row of matched) rows.splice(rows.indexOf(row), 1);
+        return matched.length;
       },
       async first() {
         return rows.find((row) => rowMatches(row, filter));
@@ -235,7 +249,7 @@ describe('upsertPortalDomain', () => {
     expect(payload.canonical_host).toBe('tenant-.portal.algapsa.com');
     expect(payload.status).toBe('pending_dns');
     expect(payload.verification_method).toBe('cname');
-    expect(calls.conflicts).toEqual(['tenant']);
+    expect(calls.conflicts).toEqual([['tenant', 'surface']]);
 
     expect(result.tenant).toBe('tenant-a');
     expect(result.domain).toBe('custom.tenant-a.example');
@@ -249,14 +263,14 @@ describe('updatePortalDomain', () => {
     const rowB = tenantBRecord();
     const { knex, calls } = createFakeKnex([rowA, rowB]);
 
-    const result = await updatePortalDomain(knex, 'tenant-a', {
+    const result = await updatePortalDomain(knex, 'tenant-a', { id: 'pd-1' }, {
       status: 'disabled',
       statusMessage: 'turned off',
       domain: ' NEW.Tenant-A.Example ',
     });
 
     expect(calls.updates).toHaveLength(1);
-    expect(calls.updates[0]!.filter).toEqual({ tenant: 'tenant-a' });
+    expect(calls.updates[0]!.filter).toEqual({ tenant: 'tenant-a', id: 'pd-1' });
     expect(calls.updates[0]!.payload).toMatchObject({
       status: 'disabled',
       status_message: 'turned off',
@@ -273,7 +287,7 @@ describe('updatePortalDomain', () => {
   it('does not include unspecified fields in the update payload', async () => {
     const { knex, calls } = createFakeKnex([tenantARecord()]);
 
-    await updatePortalDomain(knex, 'tenant-a', { status: 'verifying_dns' });
+    await updatePortalDomain(knex, 'tenant-a', { id: 'pd-1' }, { status: 'verifying_dns' });
 
     const payload = calls.updates[0]!.payload;
     expect(Object.keys(payload).sort()).toEqual(['status', 'updated_at']);
@@ -282,6 +296,45 @@ describe('updatePortalDomain', () => {
   it('returns null when no row exists for the tenant', async () => {
     const { knex } = createFakeKnex([tenantBRecord()]);
 
-    await expect(updatePortalDomain(knex, 'tenant-a', { status: 'disabled' })).resolves.toBeNull();
+    await expect(updatePortalDomain(knex, 'tenant-a', { id: 'pd-1' }, { status: 'disabled' })).resolves.toBeNull();
+  });
+
+  // alga-2026-0002799: a tenant may own one row per surface; a write must hit exactly one.
+  it('updates only the targeted row when the tenant owns several (by id and by surface)', async () => {
+    const portalRow: Row = { ...tenantARecord(), id: 'pd-portal', surface: 'client_portal' };
+    const mspRow: Row = { ...tenantARecord(), id: 'pd-msp', domain: 'helpdesk.tenant-a.example', surface: 'msp' };
+    const { knex, calls } = createFakeKnex([portalRow, mspRow]);
+
+    await updatePortalDomain(knex, 'tenant-a', { id: 'pd-msp' }, { status: 'disabled' });
+    expect(mspRow.status).toBe('disabled');
+    expect(portalRow.status).toBe('active');
+
+    await updatePortalDomain(knex, 'tenant-a', { surface: 'client_portal' }, { statusMessage: 'portal only' });
+    expect(portalRow.status_message).toBe('portal only');
+    expect(mspRow.status_message).toBe('all good');
+    expect(calls.updates.map((u) => u.filter)).toEqual([
+      { tenant: 'tenant-a', id: 'pd-msp' },
+      { tenant: 'tenant-a', surface: 'client_portal' },
+    ]);
+  });
+
+  it('refuses a write that does not name a single row', async () => {
+    const portalRow: Row = { ...tenantARecord(), id: 'pd-portal', surface: 'client_portal' };
+    const mspRow: Row = { ...tenantARecord(), id: 'pd-msp', surface: 'msp' };
+    const { knex, calls } = createFakeKnex([portalRow, mspRow]);
+
+    await expect(updatePortalDomain(knex, 'tenant-a', {} as any, { status: 'disabled' })).rejects.toThrow(/single row/);
+    await expect(updatePortalDomain(knex, 'tenant-a', { surface: 'bogus' } as any, { status: 'disabled' })).rejects.toThrow(/single row/);
+    expect(calls.updates).toHaveLength(0);
+    expect(portalRow.status).toBe('active');
+    expect(mspRow.status).toBe('active');
+  });
+
+  it('cannot reach another tenant\'s row even by its id', async () => {
+    const rowB = tenantBRecord();
+    const { knex } = createFakeKnex([tenantARecord(), rowB]);
+
+    await expect(updatePortalDomain(knex, 'tenant-a', { id: rowB.id as string }, { status: 'disabled' })).resolves.toBeNull();
+    expect(rowB.status).toBe('active');
   });
 });

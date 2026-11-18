@@ -4,6 +4,7 @@ import type { NormalizedRmmAlertEvent, RmmAlertRuleActions } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { createTicketForAlert, type CreatedAlertTicket } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
+import { readPersistedRmmAlertDetails } from './metadata';
 
 export interface CreateTicketForAlertIdArgs {
   tenantId: string;
@@ -67,10 +68,19 @@ export async function createTicketForAlertId(
   }
 
   const rawMetadata = typeof alert.metadata === 'string' ? safeParse(alert.metadata) : alert.metadata;
+  const metadataRecord =
+    rawMetadata && typeof rawMetadata === 'object' ? (rawMetadata as Record<string, unknown>) : null;
+  // Datto stores the raw alert, which names its site under alertSourceInfo
+  // rather than a top-level organizationId.
+  const datto = metadataRecord?.alertSourceInfo;
+  const dattoSiteUid =
+    datto && typeof datto === 'object' ? (datto as Record<string, unknown>).siteUid : null;
   const externalOrgId =
-    rawMetadata && typeof rawMetadata === 'object' && 'organizationId' in rawMetadata
-      ? String((rawMetadata as Record<string, unknown>).organizationId)
-      : null;
+    metadataRecord && 'organizationId' in metadataRecord
+      ? String(metadataRecord.organizationId)
+      : dattoSiteUid != null && String(dattoSiteUid).trim()
+        ? String(dattoSiteUid).trim()
+        : null;
   if (externalOrgId) {
     const orgMapping = await db.table('rmm_organization_mappings')
       .where({
@@ -99,6 +109,7 @@ export async function createTicketForAlertId(
     sourceType: alert.source_type,
     severity: alert.severity,
     message: alert.message,
+    details: readPersistedRmmAlertDetails(metadataRecord) ?? providerDetailsFallback(alert.provider, metadataRecord),
     deviceName: alert.device_name,
     externalOrganizationId: externalOrgId,
     occurredAt: toIso(alert.triggered_at) ?? new Date().toISOString(),
@@ -130,6 +141,19 @@ export async function createTicketForAlertId(
   });
 
   return created;
+}
+
+function providerDetailsFallback(provider: NormalizedRmmAlertEvent['provider'], metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null;
+  const data = metadata.data && typeof metadata.data === 'object' ? metadata.data as Record<string, unknown> : null;
+  const candidate = provider === 'levelio'
+    ? (typeof data?.payload === 'string' ? data.payload : metadata.payload)
+    : provider === 'datto'
+      ? metadata.diagnostics
+      : provider === 'tacticalrmm'
+        ? metadata.description
+        : metadata.subject;
+  return typeof candidate === 'string' ? candidate : null;
 }
 
 function safeParse(value: string): unknown {

@@ -14,6 +14,7 @@ describe('CE migrated flow kernel contracts', () => {
     const documentAuthorizationSource = readSource('shared/lib/documentAuthorization.ts');
     const timeSource = readSource('packages/scheduling/src/actions/timeEntryDelegationAuth.ts');
     const projectSource = readSource('packages/projects/src/actions/projectActions.ts');
+    const projectAuthorizationSource = readSource('packages/projects/src/lib/projectReadAuthorization.ts');
     const assetSource = readSource('packages/assets/src/actions/assetActions.ts');
     const billingSource = readSource('packages/billing/src/actions/quoteActions.ts');
 
@@ -30,8 +31,12 @@ describe('CE migrated flow kernel contracts', () => {
     expect(timeSource).toContain('createAuthorizationKernel({');
     expect(timeSource).toContain('assertCanActOnBehalf(');
 
-    expect(projectSource).toContain('BuiltinAuthorizationKernelProvider');
-    expect(projectSource).toContain('createAuthorizationKernel({');
+    // Project read authorization is shared by project, task, staging and export
+    // actions, so the kernel lives one layer below the action as well.
+    expect(projectSource).toContain("from '../lib/projectReadAuthorization'");
+    expect(projectSource).toContain('createProjectReadAuthorizer(');
+    expect(projectAuthorizationSource).toContain('BuiltinAuthorizationKernelProvider');
+    expect(projectAuthorizationSource).toContain('createAuthorizationKernel({');
 
     expect(assetSource).toContain('BuiltinAuthorizationKernelProvider');
     expect(assetSource).toContain('createAuthorizationKernel({');

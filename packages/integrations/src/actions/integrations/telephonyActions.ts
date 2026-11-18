@@ -3,6 +3,7 @@
 import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
 import { contactSuppressedTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
@@ -58,14 +59,6 @@ export interface TelephonyLinkableTicket {
   ticketNumber: string | null;
   title: string;
   statusName: string | null;
-}
-
-export interface TelephonyResolutionTarget {
-  contactId: string | null;
-  clientId: string | null;
-  label: string;
-  sublabel: string | null;
-  clientType?: IClient['client_type'];
 }
 
 export interface TelephonyOverview {
@@ -751,6 +744,7 @@ async function runThreecxAdminMutation(
   user: unknown,
   tenant: string,
   mutate: (ee: typeof import('@alga-psa/ee-threecx/lib')) => Promise<unknown>,
+  actionId: string,
 ): Promise<ThreecxMutationResult> {
   const gate = await requireManageableProvider(user, tenant, '3cx');
   if ('error' in gate) {
@@ -761,7 +755,25 @@ async function runThreecxAdminMutation(
     await mutate(ee);
     return { success: true };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    const message = error instanceof Error ? error.message : String(error);
+    // The PBX client already wrote the primary error line (status, excerpt,
+    // capability) for PBX failures; this line adds the action id at warn.
+    // Anything else has no earlier line, so it is the primary one.
+    const pbxFailure = error instanceof Error && error.name === 'ThreecxPbxError';
+    const details = {
+      tenantId: tenant,
+      actionId,
+      status: pbxFailure ? (error as any).status : undefined,
+      bodyExcerpt: pbxFailure ? (error as any).body : undefined,
+      capability: pbxFailure ? (error as any).capability : undefined,
+      error: message,
+    };
+    if (pbxFailure) {
+      logger.warn('[3CX] Admin action failed', details);
+    } else {
+      logger.error('[3CX] Admin action failed', details);
+    }
+    return { success: false, error: message };
   }
 }
 
@@ -770,43 +782,43 @@ export const saveThreecxPbxCredentials = withAuth(async (
   { tenant },
   input: { baseUrl: string; clientId: string; clientSecret?: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.saveThreecxPbxCredentials(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.saveThreecxPbxCredentials(tenant, input), 'saveThreecxPbxCredentials'));
 
 export const testThreecxPbxConnection = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.testThreecxPbxConnection(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.testThreecxPbxConnection(tenant), 'testThreecxPbxConnection'));
 
 export const clearThreecxPbxCredentials = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.clearThreecxPbxCredentials(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.clearThreecxPbxCredentials(tenant), 'clearThreecxPbxCredentials'));
 
 export const syncThreecxExtensions = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.syncThreecxExtensions(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.syncThreecxExtensions(tenant), 'syncThreecxExtensions'));
 
 export const setThreecxExtensionUser = withAuth(async (
   user,
   { tenant },
   input: { dn: string; userId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxExtensionUser(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxExtensionUser(tenant, input), 'setThreecxExtensionUser'));
 
 export const setThreecxCallHistoryImport = withAuth(async (
   user,
   { tenant },
   input: { enabled: boolean; lookbackDays?: number },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxCallHistoryImport(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxCallHistoryImport(tenant, input), 'setThreecxCallHistoryImport'));
 
 export const setThreecxPhonebookSync = withAuth(async (
   user,
   { tenant },
   input: { enabled: boolean; schedule: 'daily' | 'hourly' },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxPhonebookSync(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.setThreecxPhonebookSync(tenant, input), 'setThreecxPhonebookSync'));
 
 export const runThreecxPhonebookPush = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.pushThreecxPhonebook(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.pushThreecxPhonebook(tenant), 'pushThreecxPhonebook'));
 
 export const runThreecxPhonebookImport = withAuth(async (user, { tenant }): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.importThreecxPhonebook(tenant)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.importThreecxPhonebook(tenant), 'importThreecxPhonebook'));
 
 export type ThreecxContactQueueItem = Awaited<
   ReturnType<typeof import('@alga-psa/ee-threecx/lib').listThreecxContactQueue>
@@ -833,21 +845,21 @@ export const mapThreecxContactToClient = withAuth(async (
   { tenant },
   input: { contactId: string; clientId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.mapThreecxContactToClient(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.mapThreecxContactToClient(tenant, input), 'mapThreecxContactToClient'));
 
 export const completeThreecxPendingContact = withAuth(async (
   user,
   { tenant },
   input: { pendingId: string; firstName: string; lastName: string; email: string; number: string; clientId: string | null },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.completeThreecxPendingContact(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.completeThreecxPendingContact(tenant, input), 'completeThreecxPendingContact'));
 
 export const dismissThreecxPendingContact = withAuth(async (
   user,
   { tenant },
   input: { pendingId: string },
 ): Promise<ThreecxMutationResult> =>
-  runThreecxAdminMutation(user, tenant, (ee) => ee.dismissThreecxPendingContact(tenant, input)));
+  runThreecxAdminMutation(user, tenant, (ee) => ee.dismissThreecxPendingContact(tenant, input), 'dismissThreecxPendingContact'));
 
 /**
  * Click-to-call through the PBX. The call always originates from the caller's
@@ -1063,86 +1075,6 @@ export const resolveTelephonyCall = withAuth(async (
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
-});
-
-/**
- * Attribution targets for a call the ladder could not place. Unmatched calls
- * carry no candidates by definition (that is what unmatched means), so the
- * queue needs a searchable picker or those calls are a dead end — and while
- * contact numbers are unnormalized that is the common case, not the rare one.
- */
-export const listTelephonyResolutionTargets = withAuth(async (
-  user,
-  { tenant },
-  input: { search?: string; clientsOnly?: boolean } = {},
-): Promise<{ success: boolean; error?: string; targets: TelephonyResolutionTarget[] }> => {
-  const availability = await getTelephonyAvailability({ tenantId: tenant });
-  if (availability.enabled === false) {
-    return { success: false, error: availability.message, targets: [] };
-  }
-
-  const { knex } = await createTenantKnex(tenant);
-  const [canReadContacts, canReadClients] = await Promise.all([
-    hasPermission(user as any, 'contact', 'read', knex),
-    hasPermission(user as any, 'client', 'read', knex),
-  ]);
-
-  if (!canReadContacts && !canReadClients) {
-    return { success: false, error: 'Permission denied: Cannot read contacts or clients', targets: [] };
-  }
-  if (input.clientsOnly && !canReadClients) {
-    return { success: false, error: 'Permission denied: Cannot read clients', targets: [] };
-  }
-
-  const search = (input.search ?? '').trim();
-  const like = `%${search.replace(/[%_]/g, (match) => `\\${match}`)}%`;
-  const db = tenantDb(knex, tenant);
-  const targets: TelephonyResolutionTarget[] = [];
-
-  if (canReadContacts && !input.clientsOnly) {
-    const contactQuery = db.table('contacts as c');
-    db.tenantJoin(contactQuery, 'clients as cl', 'c.client_id', 'cl.client_id', { type: 'left' });
-    if (search) {
-      contactQuery.where('c.full_name', 'ilike', like);
-    }
-    const contacts = await contactQuery
-      .where('c.is_inactive', false)
-      .select('c.contact_name_id', 'c.full_name', 'c.client_id', 'cl.client_name')
-      .orderBy('c.full_name', 'asc')
-      .limit(20);
-
-    targets.push(...contacts.map((row: any) => ({
-      contactId: row.contact_name_id,
-      clientId: row.client_id ?? null,
-      label: row.full_name ?? '',
-      sublabel: row.client_name ?? null,
-    })));
-  }
-
-  if (canReadClients) {
-    const clientQuery = db.table('clients');
-    if (search) {
-      clientQuery.where('client_name', 'ilike', like);
-    }
-    const orderedClientQuery = clientQuery
-      .where('is_inactive', false)
-      .select('client_id', 'client_name', 'client_type')
-      .orderBy('client_name', 'asc');
-    // The standard ClientPicker searches locally, so its dedicated load needs
-    // the complete active-client set. The combined contact/client search keeps
-    // its bounded result list for existing callers.
-    const clients = await (input.clientsOnly ? orderedClientQuery : orderedClientQuery.limit(20));
-
-    targets.push(...clients.map((row: any) => ({
-      contactId: null,
-      clientId: row.client_id,
-      label: row.client_name ?? '',
-      sublabel: null,
-      ...(row.client_type ? { clientType: row.client_type } : {}),
-    })));
-  }
-
-  return { success: true, targets };
 });
 
 /**

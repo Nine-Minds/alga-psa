@@ -127,14 +127,28 @@ describe('ContractTemplateDetail i18n wiring contract', () => {
     const billingTimingKeyChecks = [
       'contractLineEdit.sections.billingTiming',
       'contractLineEdit.fields.billingTimingQuestion',
-      'contractLineEdit.timingOptions.arrears',
-      'contractLineEdit.timingOptions.advance',
       'contractLineEdit.timingDescriptions.arrears',
       'contractLineEdit.timingDescriptions.advance',
+      'billingTimingField.nonFixedHelp',
     ];
 
     for (const key of billingTimingKeyChecks) {
       expectTCall(lineEditSource, key);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+
+    // Template detail shows Hourly/Usage timing as read-only arrears via BillingTimingField,
+    // which owns the option and help keys.
+    expect(templateSource).toContain('<BillingTimingField');
+    const timingSource = read('../../src/components/billing-dashboard/contracts/BillingTimingField.tsx');
+    for (const key of [
+      'billingTimingField.arrears',
+      'billingTimingField.nonFixedHelp',
+      'billingTimingField.fixedHelp',
+      'billingTimingField.options.arrears',
+      'billingTimingField.options.advance',
+    ]) {
+      expectTCall(timingSource, key);
       expect(getLeaf(en, key)).toBeDefined();
     }
   });

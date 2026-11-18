@@ -3,6 +3,12 @@ import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
+import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  CommentAudienceError, admitInternalReaderAudienceSql, isCommentAudience, nativeReplyAudience, nativeThreadAudience,
+  type CommentAudienceReader, type InternalReaderIdentity,
+} from '@alga-psa/shared/lib/commentAudience';
+import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -12,8 +18,71 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+const QUALIFIED_AUTHOR_FIELDS = ['actor_reference_id', 'actor_display_name', 'actor_organization_name'] as const;
+
+/** Native writers never name a foreign author; only an admitted collaboration command may. */
+function assertNoQualifiedAuthorFields(comment: object): void {
+  if (QUALIFIED_AUTHOR_FIELDS.some(field => (comment as Record<string, unknown>)[field] != null)) {
+    throw new Error('Qualified comment authors require a collaboration command');
+  }
+}
+
+/** Internal command context, never part of a browser-supplied comment DTO. */
+export interface CommentCollaborationContext {
+  ticketId: string;
+  /** Tenant of the acting user: the owner (a local author) or the co-managing MSP (a foreign author). */
+  actorTenant: string;
+  actorUserId: string;
+  /** Required exactly when actorTenant is not the comment's owning tenant. */
+  actorReferenceId?: string;
+  /** Rechecks session/deadline/policy inside the transaction. */
+  assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
+}
+
+/**
+ * The attribution columns for a collaboration comment: none for an owner-local
+ * author, the saved reference snapshot for a foreign one. A foreign author never
+ * occupies a local user_id, and its identity is read from the owner-local
+ * collaboration_actor_references row, not from the command.
+ */
+async function collaborationAttribution(trx: Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>,
+  context: CommentCollaborationContext) {
+  if (!trx.isTransaction || comment.ticket_id !== context.ticketId || comment.author_type !== 'internal' || comment.contact_id != null ||
+      comment.is_resolution || (comment as any).is_system_generated) throw new Error('Invalid collaboration comment context');
+  await context.assertWriteAuthority(trx);
+  if (context.actorTenant === tenant) {
+    if (context.actorReferenceId || comment.user_id !== context.actorUserId) throw new Error('Invalid local collaboration author');
+    const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: context.actorUserId, user_type: 'internal', is_inactive: false }).forShare().first('user_id');
+    if (!user) throw new Error('Invalid local collaboration author');
+    return {};
+  }
+  if (comment.user_id != null || !context.actorReferenceId) throw new Error('Invalid foreign collaboration author');
+  const reference = await tenantScopedTable<{ actor_reference_id: string; actor_tenant: string; actor_user_id: string; display_name: string; organization_name: string }>(trx, 'collaboration_actor_references', tenant)
+    .where({ actor_reference_id: context.actorReferenceId, actor_tenant: context.actorTenant, actor_user_id: context.actorUserId }).forShare().first();
+  if (!reference) throw new Error('Invalid foreign collaboration author');
+  return { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };
+}
+
+/**
+ * Thread audience for a collaboration command. The command must name it. A foreign MSP
+ * author may speak to the requester or to both IT teams, never to the owner's private
+ * audience; the audience must agree with the visibility flag.
+ */
+function collaborationThreadAudience(isInternal: boolean, audience: string | undefined, context: CommentCollaborationContext, tenant: string) {
+  if (!isCommentAudience(audience) || isInternal !== (audience !== 'requester')) throw new CommentAudienceError();
+  if (context.actorTenant !== tenant && audience === 'organization_private') throw new CommentAudienceError();
+  return { collaboration_audience: audience };
+}
+
 const Comment = {
-  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string): Promise<IComment[]> => {
+  /**
+   * `internalReader` is the internal user the comments are read for: their id, or the user row
+   * the request loaded. Named, the read keeps only the audiences that user's organization may see
+   * (MSP staff: all of them; a seat technician: never a private note), in the same statement.
+   * Omitted, the read is unfiltered (system callers). A loaded row that says no seat assignment
+   * binds the user adds nothing to the statement.
+   */
+  getAllbyTicketId: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, ticket_id: string, internalReader?: InternalReaderIdentity): Promise<IComment[]> => {
     try {
       // Read-time bundle provenance lives here, in the shared read layer, so
       // every MSP path that lists a ticket's comments — the initial
@@ -33,6 +102,8 @@ const Comment = {
       scopedConn.tenantJoin(commentsQuery, 'comments as src', 'bm.source_comment_id', 'src.comment_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
       scopedConn.tenantJoin(commentsQuery, 'tickets as mt', 'src.ticket_id', 'mt.ticket_id', { type: 'left', rootTenantColumn: 'comments.tenant' });
 
+      const audience = internalReader ? admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReader) : null;
+      if (audience) commentsQuery.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
       const comments = await commentsQuery
         .where('comments.ticket_id', ticket_id)
         .orderBy('comments.created_at', 'asc');
@@ -59,12 +130,15 @@ const Comment = {
     }
   },
 
-  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<IComment | undefined> => {
+  /** `internalReader`: as in `getAllbyTicketId`; a comment that reader may not see is not found. */
+  get: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, internalReader?: InternalReaderIdentity): Promise<IComment | undefined> => {
     try {
-      const comment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
+      const query = tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comments.*')
-        .where('comments.comment_id', id)
-        .first();
+        .where('comments.comment_id', id);
+      const audience = internalReader ? admitInternalReaderAudienceSql(knexOrTrx, tenant, internalReader) : null;
+      if (audience) query.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
+      const comment = await query.first();
       return comment;
     } catch (error) {
       console.error(`Error getting comment with id ${id}:`, error);
@@ -73,9 +147,24 @@ const Comment = {
   },
 
   /** Owns a transaction when given a plain connection: attachment claims take row locks with the insert. */
-  insert: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>): Promise<string> => withTransaction(knexOrTrx, async (trx) => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<string> =>
+    (await Comment.insertRecord(knexOrTrx, tenant, comment, collaboration, audienceAuthor)).comment_id!,
+
+  /** Return the stored, normalized row for callers that publish it in the same transaction. */
+  /**
+   * `audienceAuthor` is the author's organization when the entry point admits seat principals
+   * (see `NativeCommentAuthor`); omitted, the author is whoever `author_type` has always implied.
+   */
+  insertRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>, collaboration?: CommentCollaborationContext,
+    audienceAuthor?: CommentAudienceReader | null): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       logger.info('Inserting comment:', comment);
+
+      assertNoQualifiedAuthorFields(comment);
+      if (collaboration && !knexOrTrx.isTransaction) throw new Error('Collaboration comments require the owning transaction');
+      // Resolved only for a collaboration command; a native insert runs no extra query.
+      const attribution = collaboration ? await collaborationAttribution(trx, tenant, comment, collaboration) : {};
 
       // Ensure author_type is valid
       if (!['internal', 'client', 'unknown'].includes(comment.author_type)) {
@@ -83,20 +172,34 @@ const Comment = {
       }
 
       // Validate user_id is present for non-unknown authors
-      if (comment.author_type !== 'unknown' && !comment.user_id) {
+      if (comment.author_type !== 'unknown' && !comment.user_id && !collaboration) {
         throw new Error('user_id is required for internal and client authors');
       }
 
       // First verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', tenant)
+        const user = await tenantScopedTable<{ user_type: string | null }>(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
 
         if (user) {
-          // Ensure author_type matches user_type
-          comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+          // Ensure author_type matches user_type. The comments.author_type enum is
+          // internal|client|unknown: a non-interactive (service) user is MSP-side, so it is
+          // stored as 'internal' and distinguished at read time via users.user_type.
+          comment.author_type = isMspPrincipalUserType(user.user_type) ? 'internal' : 'client';
+
+          // CE rule (R5.9): a non-interactive author can only write internal comments.
+          // Unspecified visibility defaults to internal; an explicit public comment is refused
+          // before anything is stored (a licensed human via act-as is required for that).
+          if (!isInteractiveUserType(user.user_type)) {
+            if (comment.is_internal === false) {
+              throw new HumanWorkOwnerRequiredError('is_internal');
+            }
+            if (comment.is_internal == null) {
+              comment.is_internal = true;
+            }
+          }
         }
       }
 
@@ -105,10 +208,14 @@ const Comment = {
       }
 
       const now = new Date().toISOString();
-      const parentCommentId = comment.parent_comment_id || null;
-      const isReply = Boolean(parentCommentId);
+      let parentCommentId = comment.parent_comment_id || null;
+      let isReply = Boolean(parentCommentId);
       let commentId = comment.comment_id;
       let threadId = comment.thread_id;
+      // Write intent only: audience lives on the thread, never on a comments row.
+      const requestedAudience = comment.collaboration_audience ?? undefined;
+      delete (comment as { collaboration_audience?: unknown }).collaboration_audience;
+      delete (comment as { audience?: unknown }).audience;
 
       if (isReply) {
         const parent = await tenantDb(trx, tenant)
@@ -123,7 +230,8 @@ const Comment = {
             'parent.ticket_id',
             'parent.thread_id',
             'parent.deleted_at',
-            'thread.is_internal as thread_is_internal'
+            'thread.is_internal as thread_is_internal',
+            'thread.collaboration_audience as thread_audience'
           )
           .where('parent.comment_id', parentCommentId)
           .first();
@@ -141,21 +249,48 @@ const Comment = {
         }
 
         const threadIsInternal = Boolean(parent.thread_is_internal);
-        if (comment.is_internal == null) {
-          comment.is_internal = threadIsInternal;
-        } else if (Boolean(comment.is_internal) !== threadIsInternal) {
-          throw new Error('Reply visibility must match the thread root visibility');
+        if (threadIsInternal && comment.author_type === 'client') {
+          // D1 (alga-2026-0002798): a client author can never create an internal
+          // comment, and a public comment cannot live in an internal thread. Store
+          // a top-level public comment in a fresh public thread instead of
+          // inheriting (or rejecting on) the internal thread's visibility.
+          // LEVERAGE: pattern non-internal-author-visibility-guard — duplicated in shared/models/ticketModel.ts (createComment); extract a shared visibility resolver.
+          comment.is_internal = false;
+          parentCommentId = null;
+          isReply = false;
+          threadId = undefined; // never reuse the internal thread id
+        } else {
+          if (comment.is_internal == null) {
+            comment.is_internal = threadIsInternal;
+          } else if (Boolean(comment.is_internal) !== threadIsInternal) {
+            throw new Error('Reply visibility must match the thread root visibility');
+          }
+          threadId = parent.thread_id;
+          // Replies inherit the thread's audience; legacy threads cost nothing extra.
+          await nativeReplyAudience(trx, tenant,
+            { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+            { isInternal: comment.is_internal, audience: requestedAudience, author: audienceAuthor, ticketId: comment.ticket_id });
         }
+      }
 
+      if (isReply) {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         commentId = commentId || idsResult.rows?.[0]?.comment_id;
-        threadId = parent.thread_id;
       } else {
         const idsResult = await trx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
         const generatedIds = idsResult.rows?.[0];
         commentId = commentId || generatedIds?.comment_id;
         threadId = threadId || generatedIds?.thread_id;
 
+        // {} with zero SQL for internal notes, plain authors and PSA tenants; fails closed in a
+        // co-managed workspace when staff post a requester-visible comment without an audience.
+        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+        const threadAudience = collaboration
+          ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
+          : await nativeThreadAudience(trx, tenant, {
+              isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: requestedAudience,
+              author: audienceAuthor, ticketId: comment.ticket_id,
+            });
         await tenantScopedTable(trx, 'comment_threads', tenant).insert({
           tenant,
           thread_id: threadId,
@@ -163,6 +298,7 @@ const Comment = {
           project_task_id: null,
           root_comment_id: commentId,
           is_internal: Boolean(comment.is_internal),
+          ...threadAudience,
           reply_count: 0,
           last_activity_at: now,
           created_at: now,
@@ -178,6 +314,7 @@ const Comment = {
       const result = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .insert({
           ...comment,
+          ...attribution,
           comment_id: commentId,
           thread_id: threadId,
           parent_comment_id: parentCommentId,
@@ -187,7 +324,7 @@ const Comment = {
           is_system_generated: Boolean((comment as any).is_system_generated),
           markdown_content: comment.markdown_content || '[No markdown content]',
         })
-        .returning('comment_id');
+        .returning('*');
 
       const inserted = result[0] as any;
       if (!inserted || !inserted.comment_id) {
@@ -203,19 +340,19 @@ const Comment = {
           });
       }
 
-      await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id!);
-      return inserted.comment_id as string;
+      await reconcileCommentAttachments(trx, tenant, inserted.comment_id, comment.user_id ?? collaboration?.actorUserId!);
+      return inserted as IComment;
     } catch (error) {
       logger.error('Error inserting comment:', error);
       throw error;
     }
   }),
 
-  update: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
+  update: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<IComment> => withTransaction(knexOrTrx, async (trx) => {
     try {
       // Get existing comment first
       const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-        .select('*')
+        .select('comment_id', 'parent_comment_id', 'thread_id', 'user_id')
         .where('comment_id', id)
         .first();
 
@@ -223,16 +360,19 @@ const Comment = {
         throw new Error(`Comment with id ${id} not found`);
       }
 
+      // No foreign-authored comment exists in L2 (no comments.actor_reference_id column; see L4a), so no author-column read here.
+      assertNoQualifiedAuthorFields(comment);
+
       // If user_id is being updated, verify user exists and get their type
       if (comment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', tenant)
+        const user = await tenantScopedTable<{ user_type: string | null }>(trx, 'users', tenant)
           .select('user_type')
           .where('user_id', comment.user_id)
           .first();
 
         if (user) {
           // Ensure author_type matches user_type
-          comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
+          comment.author_type = isMspPrincipalUserType(user.user_type) ? 'internal' : 'client';
         } else {
           comment.author_type = 'unknown';
         }
@@ -258,6 +398,9 @@ const Comment = {
       // bundle_mirror_source is read-time provenance from ticket_bundle_mirrors,
       // not a comments column; strip it so a smuggled payload can never be written.
       delete (updateData as { bundle_mirror_source?: unknown }).bundle_mirror_source;
+      // Audience lives on the thread; a native text edit can never relabel it.
+      delete (updateData as { collaboration_audience?: unknown }).collaboration_audience;
+      delete (updateData as { audience?: unknown }).audience;
 
       logger.info('Updating comment with data:', {
         ...updateData,
@@ -265,10 +408,13 @@ const Comment = {
         markdown_content_length: updateData.markdown_content ? updateData.markdown_content.length : 0,
       });
 
-      await tenantScopedTable<IComment>(trx, 'comments', tenant)
+      const [updated] = await tenantScopedTable<IComment>(trx, 'comments', tenant)
         .where('comment_id', id)
-        .update(updateData);
+        .update(updateData)
+        .returning('*');
+      if (!updated) throw new Error(`Comment with id ${id} not found`);
       if (comment.note !== undefined) await reconcileCommentAttachments(trx, tenant, id, actorId || existingComment.user_id!);
+      return updated;
     } catch (error) {
       console.error(`Error updating comment with id ${id}:`, error);
       throw error;
@@ -276,15 +422,15 @@ const Comment = {
   }),
 
   delete: (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
-    try {
-      const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-        .select('comment_id', 'parent_comment_id', 'thread_id')
-        .where('comment_id', id)
-        .first();
+    const existing = await Comment.get(trx, tenant, id);
+    if (existing) await Comment.deleteRecord(trx, tenant, existing);
+  }),
 
-      if (!existingComment) {
-        return;
-      }
+  /** Delete a row already loaded by the command, retaining thread/attachment semantics. */
+  deleteRecord: (knexOrTrx: Knex | Knex.Transaction, tenant: string, existingComment: IComment): Promise<void> => withTransaction(knexOrTrx, async (trx) => {
+    const id = existingComment.comment_id;
+    try {
+      if (existingComment.tenant !== tenant || !id) throw new Error('Invalid comment identity');
 
       await withdrawCommentAttachments(trx, tenant, id);
 

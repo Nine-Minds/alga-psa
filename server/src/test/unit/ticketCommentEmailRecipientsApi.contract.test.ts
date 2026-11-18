@@ -37,7 +37,7 @@ describe('createTicketCommentSchema cc/bcc', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.errors.some((issue) => issue.path[0] === 'cc')).toBe(true);
+      expect(result.error.issues.some((issue) => issue.path[0] === 'cc')).toBe(true);
     }
   });
 
@@ -49,7 +49,7 @@ describe('createTicketCommentSchema cc/bcc', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.errors.some((issue) =>
+      expect(result.error.issues.some((issue) =>
         issue.path[0] === 'cc' && /internal note/i.test(issue.message)
       )).toBe(true);
     }

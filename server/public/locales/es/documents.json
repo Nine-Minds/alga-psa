@@ -14,6 +14,7 @@
       "semiAnnually": "Semestral"
     },
     "cadenceTotal": "Total {{cadence}}",
+    "currency": "Moneda",
     "date": "Fecha",
     "description": "Descripción",
     "discounts": "Descuentos",
@@ -28,6 +29,7 @@
     "invoiceTitle": "FACTURA",
     "issueDate": "Fecha de emisión",
     "locationSubtotal": "Subtotal por ubicación",
+    "unassignedLocation": "Toda la cotización",
     "monthly": "Mensual",
     "monthlyItems": "Artículos mensuales",
     "monthlyTotal": "Total mensual",
@@ -55,11 +57,26 @@
     "product": "Producto",
     "projectPhase": "Fase del proyecto",
     "qty": "Cant.",
+    "quoteAcceptance": {
+      "title": "Cotización aceptada",
+      "signedBy": "Firmado por",
+      "email": "Correo electrónico",
+      "jobTitle": "Cargo",
+      "acceptedOn": "Aceptado el",
+      "method": "Método",
+      "ipAddress": "Dirección IP",
+      "methods": {
+        "emailLink": "Enlace por correo",
+        "portal": "Portal del cliente",
+        "msp": "Registrado por el MSP"
+      }
+    },
     "quoteNumber": "Cotización n.º",
     "quoteTitle": "COTIZACIÓN",
     "rate": "Tarifa",
     "recurring": "Recurrente",
     "service": "Servicio",
+    "servicePeriod": "Período de servicio",
     "shipDate": "Fecha de envío",
     "shipTo": "Enviar a",
     "shipped": "Enviado",
@@ -67,6 +84,7 @@
     "sku": "SKU",
     "source": "Origen",
     "subtotal": "Subtotal",
+    "subtotalBeforeDiscounts": "Subtotal antes de descuentos",
     "tax": "Impuesto",
     "termsAndConditions": "Términos y condiciones",
     "ticket": "Ticket",
@@ -83,16 +101,47 @@
       "noLineItems": "No hay artículos",
       "noMonthlyItems": "No hay artículos mensuales",
       "noOneTimeItems": "No hay artículos únicos",
-      "noPhasesDefined": "No hay fases definidas"
+      "noPhasesDefined": "No hay fases definidas",
+      "noItemsInBox": "Esta caja está vacía"
     },
     "note": {
       "billedTimePortalDetail": "Contacte con su proveedor para obtener un desglose del tiempo facturado.",
       "pickedBy": "Surtido por: ____________________     Fecha: ____________",
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
-      "thankYouForOrder": "Gracias por su pedido."
+      "thankYouForOrder": "Gracias por su pedido.",
+      "checkedBy": "Verificado por: ____________________     Fecha: ____________",
+      "releasedBy": "Liberado por: ____________________     Firma: ____________________     Fecha: ____________"
     },
     "serialNumbers": "Números de serie",
-    "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento."
+    "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento.",
+    "stagingManifestTitle": "MANIFIESTO DE EMBALAJE",
+    "boxNumber": "Caja n.º",
+    "project": "Proyecto",
+    "client": "Cliente",
+    "task": "Tarea",
+    "status": "Estado",
+    "sealedOn": "Sellada",
+    "sealedBy": "Sellada por",
+    "location": "Ubicación",
+    "checked": "Verificado",
+    "item": "Artículo",
+    "skuOrTag": "SKU / etiqueta",
+    "serialNumber": "Número de serie",
+    "owner": "Propietario",
+    "ownerMsp": "MSP",
+    "ownerClient": "Cliente",
+    "statusOpen": "Abierta",
+    "statusSealed": "Sellada",
+    "rmaReturnSlipTitle": "ALBARÁN DE DEVOLUCIÓN RMA",
+    "device": "Dispositivo",
+    "vendor": "Proveedor",
+    "vendorReference": "Referencia del proveedor",
+    "asset": "Activo",
+    "assetTag": "Etiqueta del activo",
+    "replacementSerial": "Número de serie del reemplazo",
+    "shipping": "Envío",
+    "returnBy": "Devolver antes de",
+    "returnShipTo": "Enviar devolución a"
   },
   "errors": {
     "permissions": {
@@ -131,6 +180,7 @@
     "upload": {
       "fileRequired": "Elija un archivo antes de subirlo.",
       "typeNotAllowed": "Este tipo de archivo no está permitido.",
+      "contentMismatch": "El contenido de este archivo no coincide con su tipo de archivo, por lo que no se ha subido. Compruebe que ha elegido el archivo correcto.",
       "sessionRequired": "Se requiere su sesión para subir documentos. Inicie sesión de nuevo."
     }
   },

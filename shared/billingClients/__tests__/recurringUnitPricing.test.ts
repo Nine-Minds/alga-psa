@@ -25,6 +25,15 @@ describe('resolveRecurringUnitKind', () => {
     ).toBeNull();
     expect(isRecurringUnitCapable({ configurationType: 'Hourly' })).toBe(false);
   });
+
+  it('keeps a catalog product a product even when its stored basis is unit (alga-2026-0002714)', () => {
+    expect(
+      resolveRecurringUnitKind({ configurationType: 'Fixed', pricingBasis: 'unit', itemKind: 'product' }),
+    ).toBe('product');
+    expect(
+      resolveRecurringUnitKind({ configurationType: 'Fixed', pricingBasis: 'unit', itemKind: 'service' }),
+    ).toBe('service');
+  });
 });
 
 describe('resolveRecurringUnitBaseline', () => {

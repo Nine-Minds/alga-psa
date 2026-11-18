@@ -1,6 +1,6 @@
 /**
- * [relationshipId] API Routes
- * Path: /api/v1/assets/relationships/[relationshipId]
+ * Delete an asset relationship by its schema-backed composite endpoint identity.
+ * Path: /api/v1/assets/relationships/[parentAssetId]:[childAssetId]
  */
 
 import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';

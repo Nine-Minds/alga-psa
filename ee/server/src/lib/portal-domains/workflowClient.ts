@@ -1,6 +1,7 @@
 export interface PortalDomainWorkflowParams {
   tenantId: string;
   portalDomainId: string;
+  surface?: 'client_portal' | 'msp' | 'both';
   trigger?: 'register' | 'refresh' | 'disable';
 }
 

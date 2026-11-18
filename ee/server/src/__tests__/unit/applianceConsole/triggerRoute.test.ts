@@ -192,7 +192,8 @@ describe('action input validation', () => {
     expect(() => parseChangeEntitlement({ seats: 5, reason: 'r' }, TENANT, base)).toThrow(/mode is required/);
     expect(() => parseChangeEntitlement({ mode: 'comp', reason: 'r' }, TENANT, base)).toThrow(/seats is required/);
     const billed = parseChangeEntitlement({ mode: 'billed', seats: '7', reason: 'r' }, TENANT, base);
-    expect(billed).toMatchObject({ mode: 'billed', seats: 7, proration: 'create_prorations' });
+    expect(billed).toMatchObject({ mode: 'billed', seats: 7 });
+    expect(billed).not.toHaveProperty('proration');
     expect(billed).not.toHaveProperty('tier');
     // seats: null is an explicit "unlimited", only meaningful without billing.
     expect(parseChangeEntitlement({ mode: 'comp', seats: null, reason: 'r' }, TENANT, base)).toMatchObject({ seats: null });

@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} alteração não salva",
-    "unsavedChanges_other": "{{count}} alterações não salvas"
+    "unsavedChanges_other": "{{count}} alterações não salvas",
+    "unsavedChanges_few": "{{count}} alterações não salvas",
+    "unsavedChanges_many": "{{count}} alterações não salvas"
   },
   "page": {
     "title": "Configurações de administrador"
@@ -34,7 +36,8 @@
     "keyboardShortcuts": "Atalhos de teclado",
     "opportunities": "Oportunidades",
     "mcpServer": "Servidor MCP",
-    "settingsFallback": "Configurações"
+    "settingsFallback": "Configurações",
+    "tags": "Etiquetas"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",
@@ -305,6 +308,36 @@
       "expiresPrefix": "Expira:",
       "revoke": "Revogar",
       "revoking": "Revogando..."
+    },
+    "seatTechnicians": {
+      "title": "Técnicos de assento",
+      "description": "Pessoas que trabalham no seu PSA por meio do assento cogerenciado de um cliente. Elas não contam para os seus usuários licenciados.",
+      "clientUnavailable": "Cliente indisponível",
+      "effectiveAccess": "Acesso efetivo",
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "client": "Cliente",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "state": {
+        "active": "Ativo",
+        "invited": "Convite pendente"
+      },
+      "dialog": {
+        "title": "Acesso efetivo de {{name}}",
+        "help": "Escolha um ticket para ver se este técnico de assento pode lê-lo e por quê.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecionar um ticket...",
+        "checking": "Verificando o acesso...",
+        "allowed": "{{name}} pode ler este ticket.",
+        "denied": "{{name}} não pode ler este ticket.",
+        "noReasons": "Nenhum detalhe adicional foi informado.",
+        "error": "Não foi possível verificar o acesso. Tente novamente.",
+        "close": "Fechar",
+        "unavailable": "O acesso efetivo não pode ser verificado para este ticket nesta edição ou configuração."
+      }
     }
   },
   "userDetails": {
@@ -411,17 +444,21 @@
       "cancel": "Cancelar",
       "delete": "Excluir",
       "placeholder": "Digite o novo nome da equipe",
+      "descriptionPlaceholder": "Digite uma descrição opcional da equipe",
       "selectManager": "Selecione um gerente"
     },
     "details": {
       "loading": "Carregando detalhes da equipe...",
       "notFound": "Nenhuma equipe encontrada",
+      "noDescription": "Sem descrição",
       "fields": {
         "teamLead": "Líder de equipe",
+        "description": "Descrição",
         "addMember": "Adicionar membro"
       },
       "placeholders": {
         "teamName": "Digite o nome da equipe",
+        "description": "Digite a descrição da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
         "selectUserToAdd": "Selecione um usuário para adicionar",
         "noTeamLead": "Não atribuído"
@@ -433,8 +470,10 @@
         "discard": "Descartar",
         "saveChanges": "Salvar alterações",
         "saveName": "Salvar nome",
+        "saveDescription": "Salvar descrição",
         "cancel": "Cancelar",
         "editName": "Editar nome",
+        "editDescription": "Editar descrição",
         "remove": "Remover"
       },
       "table": {
@@ -448,7 +487,9 @@
       },
       "leadName": "Líder: {{name}}",
       "memberCount_one": "Membro {{count}}",
-      "memberCount_other": "Membros {{count}}"
+      "memberCount_other": "Membros {{count}}",
+      "memberCount_few": "Membros {{count}}",
+      "memberCount_many": "Membros {{count}}"
     },
     "messages": {
       "error": {
@@ -457,6 +498,7 @@
         "createFailed": "Falha ao criar equipe: {{error}}",
         "deleteFailed": "Falha ao excluir equipe",
         "updateName": "Falha ao atualizar o nome da equipe",
+        "updateDescription": "Falha ao atualizar a descrição da equipe",
         "saveChanges": "Falha ao salvar as alterações. Por favor, tente novamente."
       }
     }
@@ -706,7 +748,8 @@
         "skipItem": "Ignorar este item",
         "importNewName": "Importar com nome diferente:",
         "importWithOrder": "Importar com pedido {{order}}",
-        "importWithResolutions": "Importar com resoluções"
+        "importWithResolutions": "Importar com resoluções",
+        "removesIntro": "Excluir este quadro também remove:"
       },
       "importTable": {
         "active": "Ativo"
@@ -775,7 +818,9 @@
           "deleteFailed": "Falha ao excluir o quadro",
           "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
-          "updateDefaultFailed": "Falha ao atualizar o quadro padrão"
+          "updateDefaultFailed": "Falha ao atualizar o quadro padrão",
+          "hasEmailSenderRoute": "Não é possível excluir o quadro: ele tem uma rota de remetente de saída dedicada. Limpe primeiro o remetente de tickets no editor do quadro.",
+          "referencedByAutomations": "Não é possível excluir o quadro: outras configurações ainda apontam para ele. Direcione-as para outro quadro ou remova-as primeiro."
         }
       },
       "closeRules": {
@@ -801,6 +846,9 @@
         "inactivityDaysLabel": "Dias de inatividade",
         "warningDaysLabel": "Avisar dias antes de fechar",
         "warningDaysPlaceholder": "Sem aviso",
+        "suppressContactNotificationsLabel": "Não notificar o cliente",
+        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
+        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores",
         "ruleEnabledLabel": "Habilitado",
         "removeRule": "Remover",
         "messages": {
@@ -809,10 +857,7 @@
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
           "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade",
           "autoCloseSuppressionInvalid": "As notificações de agentes e observadores só podem ser ignoradas quando as notificações do cliente forem ignoradas."
-        },
-        "suppressContactNotificationsLabel": "Não notificar o cliente",
-        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
-        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores"
+        }
       },
       "editor": {
         "sections": {
@@ -836,11 +881,15 @@
           "notificationsRecipients": "Notificar",
           "notificationsRecipientsPlaceholder": "Selecione usuários e equipes...",
           "notificationsRecipientsHelp": "Os membros da equipe são consultados a cada envio de notificação.",
+          "notificationsEmails": "Endereços de e-mail",
+          "notificationsEmailsPlaceholder": "Adicione uma lista de distribuição ou caixa de correio compartilhada...",
+          "notificationsEmailsHelp": "Estes endereços recebem todos os detalhes de cada ticket correspondente deste quadro, mesmo que não sejam usuários Alga e sem nenhuma verificação de permissões. Use para listas de distribuição que você controla. Para notificar uma pessoa com conta Alga, selecione-a acima.",
+          "notificationsEmailInvalid": "Corrija ou remova os endereços de e-mail inválidos nas regras de notificação.",
           "notificationsDefaultWatchers": "Observadores padrão",
           "notificationsDefaultWatchersPlaceholder": "Selecione usuários...",
           "notificationsDefaultWatchersHelp": "Adicionados à lista de observadores de cada novo ticket neste quadro e notificados de todas as atualizações posteriores.",
           "notificationsTriggerRequired": "Cada regra de notificação precisa de pelo menos um gatilho: a criação de um ticket ou um status.",
-          "notificationsRecipientRequired": "Cada regra de notificação precisa de pelo menos um usuário ou equipe para notificar.",
+          "notificationsRecipientRequired": "Cada regra de notificação precisa de pelo menos um usuário, equipe ou endereço de e-mail para notificar.",
           "notificationsFetchFailed": "Falha ao carregar as configurações de notificação",
           "notificationsStatusRemapFailed": "O quadro foi criado, mas o status de uma regra de notificação não pôde ser associado ao novo quadro. Adicione as regras de notificação novamente.",
           "inbound": "E-mail e respostas recebidas",
@@ -881,14 +930,56 @@
       "empty": "Nenhum quadro encontrado.",
       "searchPlaceholder": "Pesquisar quadros…",
       "emailSender": {
-        "useDefault": "Usar padrão do chamado",
-        "duplicateRoute": "Esta rota de remetente já existe.",
-        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente.",
         "label": "Remetente de saída",
         "inboundWarning": "Este remetente é usado para e-mails enviados sobre tickets. As configurações de e-mail recebido não são alteradas.",
         "displayName": "Nome de exibição",
         "save": "Guardar remetente",
-        "saved": "Remetente guardado"
+        "saved": "Remetente guardado",
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente."
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorias",
+        "categories_few": "categorias",
+        "categories_many": "categorias",
+        "statuses_one": "status de ticket",
+        "statuses_other": "status de ticket",
+        "statuses_few": "status de ticket",
+        "statuses_many": "status de ticket",
+        "autoCloseRules_one": "regra de fechamento automático",
+        "autoCloseRules_other": "regras de fechamento automático",
+        "autoCloseRules_few": "regras de fechamento automático",
+        "autoCloseRules_many": "regras de fechamento automático",
+        "notificationRules_one": "regra de notificação",
+        "notificationRules_other": "regras de notificação",
+        "notificationRules_few": "regras de notificação",
+        "notificationRules_many": "regras de notificação",
+        "portalVisibility_one": "atribuição de visibilidade no portal do cliente",
+        "portalVisibility_other": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_few": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_many": "atribuições de visibilidade no portal do cliente",
+        "emailSenderRoutes_one": "rota de remetente de saída",
+        "emailSenderRoutes_other": "rotas de remetente de saída",
+        "emailSenderRoutes_few": "rotas de remetente de saída",
+        "emailSenderRoutes_many": "rotas de remetente de saída",
+        "ticketTemplates_one": "modelo de ticket",
+        "ticketTemplates_other": "modelos de ticket",
+        "ticketTemplates_few": "modelos de ticket",
+        "ticketTemplates_many": "modelos de ticket",
+        "recurringTickets_one": "agenda de tickets recorrentes",
+        "recurringTickets_other": "agendas de tickets recorrentes",
+        "recurringTickets_few": "agendas de tickets recorrentes",
+        "recurringTickets_many": "agendas de tickets recorrentes",
+        "checklistRules_one": "regra de aplicação de lista de verificação",
+        "checklistRules_other": "regras de aplicação de lista de verificação",
+        "checklistRules_few": "regras de aplicação de lista de verificação",
+        "checklistRules_many": "regras de aplicação de lista de verificação",
+        "cannedResponses_one": "resposta pronta do quadro",
+        "cannedResponses_other": "respostas prontas do quadro",
+        "cannedResponses_few": "respostas prontas do quadro",
+        "cannedResponses_many": "respostas prontas do quadro"
       }
     },
     "priorities": {
@@ -980,7 +1071,8 @@
         "description": "Descrição",
         "items": "Unid",
         "status": "Status",
-        "actions": "Ações"
+        "actions": "Ações",
+        "scope": "Disponível para"
       },
       "statusLabels": {
         "active": "Ativo",
@@ -998,7 +1090,9 @@
         "down": "Abaixo",
         "remove": "Remover",
         "addItem": "Adicionar item",
-        "addRule": "Adicionar regra"
+        "addRule": "Adicionar regra",
+        "duplicateToClient": "Duplicar para cliente…",
+        "duplicate": "Duplicar"
       },
       "fields": {
         "name": {
@@ -1020,13 +1114,48 @@
         },
         "rules": {
           "label": "Regras de aplicação automática",
-          "help": "O modelo é aplicado automaticamente a novos tickets que correspondam a qualquer uma dessas regras. Deixe um campo como \"Qualquer\" para corresponder a todos os valores.",
+          "help": "Um modelo é aplicado a um novo ticket quando ele corresponde a qualquer uma de suas regras. Uma regra só corresponde quando o ticket atende a todos os filtros definidos. Deixe um filtro vazio para ignorá-lo.",
           "empty": "Sem regras de aplicação automática. Este modelo ainda pode ser aplicado aos tickets manualmente.",
           "board": "Quadro",
           "category": "Categoria",
           "subcategory": "Subcategoria",
           "priority": "Prioridade",
-          "any": "Qualquer"
+          "any": "Qualquer",
+          "appliesToAll": "Aplica-se a todos os tickets",
+          "appliesToAllClientTickets": "Aplica-se a todos os tickets de {{client}}",
+          "clients": "Clientes",
+          "clientsAny": "Qualquer cliente",
+          "clientsFixedByTemplate": "Apenas {{client}} (definido pelo cliente do modelo)",
+          "clientsAddAnother": "Adicionar outro cliente",
+          "removeClient": "Remover {{name}}",
+          "origins": "Origem do ticket",
+          "originsAny": "Qualquer origem",
+          "fromServiceRequest": "Somente tickets de uma solicitação de serviço",
+          "anyServiceRequest": "Qualquer solicitação de serviço",
+          "keywords": "Palavras-chave",
+          "keywordsPlaceholder": "Digite uma palavra ou frase e pressione Enter",
+          "keywordsHelp": "Partes de palavras também correspondem, então \"onboard\" encontra \"onboarding\". Maiúsculas e minúsculas são ignoradas.",
+          "removeKeyword": "Remover {{keyword}}",
+          "keywordMode": "Correspondência",
+          "keywordModeAny": "Qualquer palavra-chave",
+          "keywordModeAll": "Todas as palavras-chave",
+          "keywordTarget": "Procurar em",
+          "keywordTargetBoth": "Título e descrição",
+          "keywordTargetTitle": "Título",
+          "keywordTargetDescription": "Descrição",
+          "originLabels": {
+            "internal": "Criado pela equipe",
+            "client_portal": "Portal do cliente",
+            "inbound_email": "E-mail recebido",
+            "api": "API",
+            "recurring": "Agendamento recorrente"
+          },
+          "clientScopedWarning": "Este modelo está limitado a {{client}}: estas regras só se aplicam a tickets de {{client}}."
+        },
+        "availableTo": {
+          "label": "Disponível para",
+          "clear": "Todos os clientes",
+          "help": "Deixe em Todos os clientes para oferecer este modelo em qualquer ticket, ou escolha um cliente para limitá-lo aos tickets dele."
         }
       },
       "dialog": {
@@ -1034,13 +1163,17 @@
         "editTemplate": "Editar modelo de lista de verificação",
         "createFirstHelp": "Crie o modelo primeiro e, em seguida, adicione itens da lista de verificação e aplique regras automaticamente.",
         "deleteTitle": "Excluir modelo de lista de verificação",
-        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas."
+        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas.",
+        "duplicateTitle": "Duplicar para cliente",
+        "duplicateHelp": "Copie \"{{name}}\" e seus itens para um novo modelo limitado a um cliente. A cópia é independente: alterações posteriores em um dos modelos não afetam o outro.",
+        "duplicateClientPlaceholder": "Selecione um cliente"
       },
       "messages": {
         "success": {
           "created": "Modelo de lista de verificação criado com sucesso",
           "updated": "Modelo de lista de verificação atualizado com sucesso",
-          "deleted": "Modelo de lista de verificação excluído com sucesso"
+          "deleted": "Modelo de lista de verificação excluído com sucesso",
+          "duplicated": "Modelo de checklist duplicado para o cliente"
         },
         "error": {
           "fetchFailed": "Falha ao buscar modelos de lista de verificação",
@@ -1050,8 +1183,67 @@
           "deleteFailed": "Falha ao excluir modelo de lista de verificação",
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
-          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática",
+          "duplicateFailed": "Falha ao duplicar o modelo de checklist"
         }
+      },
+      "scope": {
+        "allClients": "Todos os clientes",
+        "unknownClient": "Cliente desconhecido"
+      },
+      "filter": {
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "clear": "Limpar filtro"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Quadro",
+          "category_id": "Categoria",
+          "subcategory_id": "Subcategoria",
+          "priority_id": "Prioridade",
+          "client_id": "Cliente",
+          "client_tags": "Tags do cliente",
+          "contact_tags": "Tags do contato",
+          "location_id": "Localização",
+          "contact_locations": "Localização do solicitante",
+          "ticket_origin": "Origem do chamado",
+          "title_folded": "Título",
+          "description_folded": "Descrição",
+          "from_service_request": "De solicitação de serviço",
+          "service_request_definition_id": "Solicitação de serviço"
+        },
+        "operators": {
+          "equals": "É igual a",
+          "not_equals": "É diferente de",
+          "in": "Contém qualquer um de",
+          "not_in": "Não contém nenhum de",
+          "contains": "Contém",
+          "starts_with": "Começa com",
+          "ends_with": "Termina com",
+          "not_contains": "Não contém",
+          "not_starts_with": "Não começa com",
+          "not_ends_with": "Não termina com",
+          "is_empty": "Está vazio",
+          "is_not_empty": "Não está vazio"
+        },
+        "conditions": "Condições",
+        "match": "Corresponder a",
+        "and": "Todas as condições",
+        "or": "Qualquer condição",
+        "field": "Campo",
+        "operator": "Condição",
+        "value": "Valor",
+        "yes": "Sim",
+        "no": "Não",
+        "advanced": "Esta regra contém condições agrupadas ou avançadas e é somente leitura neste editor.",
+        "add": "Adicionar condição",
+        "save": "Salvar condições",
+        "enabled": "Ativada",
+        "matchesAll": "Corresponde a todos os chamados no escopo do modelo.",
+        "matchesNone": "Não corresponde a nenhum chamado.",
+        "tagsFailed": "Não foi possível carregar as opções de tags. As seleções salvas foram preservadas.",
+        "retry": "Tentar novamente"
       }
     },
     "externalSystems": {
@@ -1139,7 +1331,9 @@
         "success": {
           "deleted": "Tipo de interação excluído",
           "imported_one": "Tipo de interação {{count}} importado",
-          "imported_other": "Tipos de interação {{count}} importados"
+          "imported_other": "Tipos de interação {{count}} importados",
+          "imported_few": "Tipos de interação {{count}} importados",
+          "imported_many": "Tipos de interação {{count}} importados"
         },
         "error": {
           "fetchFailed": "Falha ao buscar tipos de interação",
@@ -1390,7 +1584,9 @@
         "saveDomain": "Salvar domínio",
         "updateDomain": "Atualizar domínio",
         "submitting": "Enviando…",
-        "cancelEdit": "Cancelar edição"
+        "cancelEdit": "Cancelar edição",
+        "confirmUris": "Já os registrei — confirmar",
+        "confirmingUris": "Confirmando…"
       },
       "form": {
         "label": "Domínio personalizado",
@@ -1428,7 +1624,8 @@
         "deploying": "Implantando",
         "active": "Ativo",
         "disabled": "Desabilitado",
-        "unknown": "Desconhecido"
+        "unknown": "Desconhecido",
+        "pending_redirect_uri": "URIs de redirecionamento pendentes"
       },
       "messages": {
         "requestSubmitted": "Solicitação de domínio personalizado enviada.",
@@ -1440,9 +1637,32 @@
         "registerFailed": "Falha ao registrar o domínio personalizado.",
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
-        "disableFailed": "Falha ao desativar o domínio personalizado."
+        "disableFailed": "Falha ao desativar o domínio personalizado.",
+        "confirmUrisFailed": "Falha ao confirmar os URIs de redirecionamento.",
+        "urisConfirmed": "URIs de redirecionamento confirmados."
       },
-      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "surface": {
+        "label": "Atende",
+        "current": "Atende: {{value}}",
+        "updatingSurface": "Salvar mudará o aplicativo atendido por este domínio e reiniciará o provisionamento.",
+        "options": {
+          "client_portal": "Portal do cliente",
+          "msp": "Aplicativo MSP",
+          "both": "Ambos"
+        },
+        "descriptions": {
+          "client_portal": "O domínio abre o portal do cliente. Este é o padrão.",
+          "msp": "O domínio abre o aplicativo MSP (técnicos). Os URIs de redirecionamento do login único precisam ser registrados antes.",
+          "both": "Um domínio atende os dois aplicativos. Caminhos em /msp abrem o aplicativo MSP e caminhos em /client-portal abrem o portal do cliente."
+        }
+      },
+      "redirectUris": {
+        "title": "Os URIs de redirecionamento de SSO precisam ser registrados",
+        "description": "Este domínio atende o aplicativo MSP, então o login único só funcionará depois que os URIs de redirecionamento abaixo forem registrados no seu provedor de SSO. O domínio fica pendente até a confirmação.",
+        "listLabel": "Registre estes URIs de redirecionamento:",
+        "contactSupport": "Peça ao administrador ou entre em contato com o suporte para registrar e confirmar estes URIs de redirecionamento."
+      }
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
@@ -1668,10 +1888,15 @@
         "label": "Habilitar notificações",
         "description": "Habilite ou desabilite todas as notificações para este locatário"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Iniciar chamados com \"Não notificar o cliente\" marcado",
+        "description": "Comentários, alterações de status e de contato e encerramentos de chamados começam sem notificações ao cliente. Os agentes podem desmarcar a caixa para notificar o cliente em uma ação individual."
+      },
       "loading": "Carregando configurações de notificação...",
       "loadError": "Falha ao carregar configurações",
       "save": "Salvar alterações",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "saveError": "Falha ao salvar as configurações de notificação"
     },
     "emailTemplatesUi": {
       "preview": {
@@ -1687,7 +1912,8 @@
         "loading": "Carregando modelos de e-mail...",
         "templateCount": "({{templateCount}} modelos)",
         "usingCustom": "Usando modelo personalizado",
-        "usingStandard": "Usando modelo padrão"
+        "usingStandard": "Usando modelo padrão",
+        "notCurrentlySent": "Não enviado no momento"
       },
       "columns": {
         "name": "Nome",
@@ -1711,7 +1937,8 @@
         "close": "Fechar",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "save": "Salvar"
+        "save": "Salvar",
+        "variableReference": "Referência de variáveis"
       },
       "description": "Cada tipo de evento tem um modelo padrão que pode ser personalizado. Você pode usar o modelo padrão ou criar uma versão personalizada.",
       "filter": {
@@ -1734,7 +1961,8 @@
         "notAvailable": "N/D"
       },
       "edit": {
-        "title": "Editar modelo personalizado: {{name}}"
+        "title": "Editar modelo personalizado: {{name}}",
+        "variableSuggestions": "Sugestões de variáveis do modelo"
       },
       "languages": {
         "en": "Inglês",
@@ -1744,7 +1972,8 @@
         "nl": "Holandês",
         "it": "Italiano",
         "pl": "Polonês",
-        "pt": "Português"
+        "pt": "Português",
+        "sv": "Sueco"
       }
     },
     "emailBranding": {
@@ -1955,6 +2184,50 @@
     "emailTemplates": {
       "editor": {
         "inlineLogoHint": "O seu logótipo é incorporado na mensagem no momento do envio. Mantenha a referência src=\"cid:{{cid}}\" como está — substituí-la por um URL obriga os destinatários a autorizar primeiro a transferência da imagem."
+      }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Inserir no cursor",
+        "guide": "Leia o guia completo",
+        "copy": "Copiar {{path}}"
+      },
+      "insertHelp": "Selecione uma variável para inseri-la.",
+      "availableHelp": "Variáveis disponíveis para este modelo.",
+      "fields": {
+        "search": {
+          "placeholder": "Pesquisar variáveis"
+        },
+        "globalSearch": {
+          "placeholder": "Pesquisar caminhos, descrições e conceitos"
+        },
+        "category": {
+          "all": "Todas as áreas"
+        }
+      },
+      "title": "Referência de variáveis de modelos de email",
+      "panelTitle": "Variáveis do modelo",
+      "mspOnly": "Somente MSP",
+      "clientSafeHelp": "Enviado aos clientes. Variáveis somente para MSP não estão disponíveis.",
+      "inferredContract": "Não é enviado atualmente. Este contrato é inferido a partir do modelo.",
+      "empty": "Nenhuma variável correspondente.",
+      "example": "Exemplo:",
+      "usedBy": "Usado por {{templates}}",
+      "description": "Encontre os dados disponíveis para cada modelo de email do sistema. Copie o token Handlebars exato para um modelo personalizado.",
+      "enums": {
+        "categories": {
+          "appointments": "Compromissos",
+          "auth": "Autenticação",
+          "billing": "Faturamento",
+          "quotes": "Cotações",
+          "invoices": "Faturas",
+          "opportunities": "Oportunidades",
+          "projects": "Projetos",
+          "sla": "SLA",
+          "surveys": "Pesquisas",
+          "tickets": "Tickets",
+          "time": "Tempo"
+        }
       }
     }
   },
@@ -2265,11 +2538,15 @@
         "samples_other": "{{sample}} · {{count}} registros",
         "noSample": "Sem exemplo",
         "missingRequired": "Campos obrigatórios não associados: {{fields}}",
-        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem."
+        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem.",
+        "samples_few": "{{sample}} · {{count}} registros",
+        "samples_many": "{{sample}} · {{count}} registros"
       },
       "actions": {
         "back": "Voltar para migrações",
-        "upload": "Enviar pacote"
+        "upload": "Enviar pacote",
+        "close": "Fechar",
+        "cancel": "Cancelar"
       },
       "errors": {
         "noImportableRecords": "Este pacote não continha registros importáveis.",
@@ -2282,10 +2559,48 @@
         "storageRejected": "O servidor rejeitou este upload. Peça ao administrador para verificar a configuração de tipos de arquivo do armazenamento.",
         "spreadsheetFailed": "Não foi possível importar a planilha. Tente novamente.",
         "uploadFailed": "Não foi possível enviar o pacote. Tente novamente.",
-        "unknown": "O upload falhou. Tente novamente."
+        "unknown": "O upload falhou. Tente novamente.",
+        "loadJobs": "Não foi possível carregar os trabalhos de migração.",
+        "loadJob": "Não foi possível carregar o trabalho de migração.",
+        "jobNotFound": "Trabalho de migração não encontrado."
       },
       "preflight": {
-        "title": "Verificação prévia"
+        "title": "Verificação prévia",
+        "description": "Uma simulação que valida cada registro preparado em relação a este tenant e à sua configuração. A verificação prévia não cria nada.",
+        "errors": {
+          "loadReport": "Não foi possível carregar o relatório da verificação prévia.",
+          "runFailed": "Não foi possível executar a verificação prévia.",
+          "startMigration": "Não foi possível iniciar a migração.",
+          "downloadCsv": "Não foi possível baixar o CSV da verificação prévia.",
+          "downloadJson": "Não foi possível baixar o JSON da verificação prévia."
+        },
+        "running": "Verificação prévia em execução…",
+        "runAgain": "Executar a verificação prévia novamente",
+        "run": "Executar verificação prévia",
+        "empty": "Nenhuma verificação prévia foi executada para esta configuração. Execute a verificação prévia para ver o plano por entidade e eventuais problemas.",
+        "plan": "Plano",
+        "preflightedAt": "Verificação prévia realizada em {{timestamp}}",
+        "downloadCsv": "Baixar CSV",
+        "downloadJson": "Baixar JSON",
+        "columns": {
+          "entity": "Entidade",
+          "staged": "Preparados",
+          "toCreate": "A criar",
+          "toSkip": "A ignorar (já migrados)",
+          "blocked": "Bloqueados"
+        },
+        "noStagedRecords": "Nenhum registro foi preparado a partir do pacote.",
+        "blockingIssues": "Problemas impeditivos ({{count}})",
+        "warnings": "Avisos ({{count}})",
+        "blockedWithIssues_one": "A migração não pode ser executada: {{count}} problema impeditivo precisa ser resolvido primeiro.",
+        "blockedWithIssues_other": "A migração não pode ser executada: {{count}} problemas impeditivos precisam ser resolvidos primeiro.",
+        "blockedNoPreflight": "A migração só pode ser executada após uma verificação prévia sem problemas impeditivos.",
+        "needsConfiguration": "A migração poderá ser executada assim que a configuração salva passar pela verificação prévia.",
+        "starting": "Iniciando…",
+        "runMigration": "Executar migração",
+        "recordsAffected_one": "{{count}} registro afetado",
+        "recordsAffected_other": "{{count}} registros afetados",
+        "sampleRecords": "Exemplos de registros:"
       },
       "run": {
         "queued": "Migração na fila",
@@ -2302,7 +2617,153 @@
         "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
         "claimedBySamePackage": "Já migrado por este pacote",
         "claimedByOtherPackage": "Já migrado por {{file}}",
-        "claimedByExistingEntity": "Corresponde a uma entidade existente"
+        "claimedByExistingEntity": "Corresponde a uma entidade existente",
+        "matchedBySku": "Associado a um produto existente por SKU",
+        "title": "Resultados",
+        "errors": {
+          "loadSummary": "Não foi possível carregar o resumo dos resultados.",
+          "loadRecords": "Não foi possível carregar os registros de resultados.",
+          "downloadCsv": "Não foi possível baixar o CSV dos resultados."
+        },
+        "actions": {
+          "created": "Criado",
+          "skipped": "Ignorado",
+          "failed": "Falhou"
+        },
+        "counts": {
+          "created": "criados",
+          "skipped": "ignorados",
+          "failed": "com falha"
+        },
+        "finishedAt": "Concluído em {{timestamp}}.",
+        "noLongerRunning": "O trabalho não está mais em execução.",
+        "preparing": "Preparando…",
+        "downloadCsv": "Baixar CSV dos resultados",
+        "failedLabel": "A migração falhou:",
+        "cancelled": "A migração foi cancelada em um ponto de controle. Os registros aplicados antes do cancelamento foram mantidos e estão listados abaixo.",
+        "noRecordsWritten": "Nenhum registro de resultado foi gravado para este trabalho.",
+        "noRecordsMatch": "Nenhum registro de resultado corresponde a estes filtros.",
+        "columns": {
+          "entity": "Entidade",
+          "sourceRecord": "Registro de origem",
+          "action": "Ação",
+          "result": "Resultado",
+          "at": "Data e hora"
+        },
+        "filters": {
+          "allEntities": "Todas as entidades",
+          "allActions": "Todas as ações"
+        },
+        "unknownError": "Erro desconhecido",
+        "recordLimitNotice": "Exibindo os primeiros {{count}} registros correspondentes. Baixe o CSV dos resultados para obter a lista completa."
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produtos (catálogo / lista de preços)",
+          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)",
+          "assets": "Ativos (importação legada de ativos)",
+          "organizations": "Organizações",
+          "locations": "Locais",
+          "contacts": "Contatos",
+          "tickets": "Tickets",
+          "ticketComments": "Comentários de tickets"
+        },
+        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome.",
+        "headersHint": "Os cabeçalhos canônicos são reconhecidos automaticamente. Outras colunas podem ser mapeadas para campos personalizados do tipo de ativo na etapa de configuração. Os contatos aceitam nomes comuns de colunas, como Name, First Name, Last Name, Email, Phone, Title e Client; nomes legados de ativos, como Asset Name, Asset Type e Serial Number, são preservados no fluxo AMP."
+      },
+      "configure": {
+        "products": {
+          "title": "Produtos",
+          "serviceType": "Tipo de serviço para novos produtos",
+          "serviceTypePlaceholder": "Selecione um tipo de serviço",
+          "serviceTypeHelp": "Produtos cujo SKU já existe são associados e mantidos sem alterações; apenas produtos novos são arquivados neste tipo de serviço."
+        },
+        "title": "Configurar a migração",
+        "description": "Mapeie os dados de referência do pacote para este tenant. A verificação prévia valida cada mapeamento antes de permitir a execução.",
+        "errors": {
+          "loadOptions": "Não foi possível carregar as opções de configuração.",
+          "save": "Não foi possível salvar a configuração.",
+          "optionsUnavailable": "As opções de configuração estão indisponíveis."
+        },
+        "clientPlaceholder": "Selecione um cliente",
+        "mappingPlaceholder": "Selecione um mapeamento",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Quadro",
+          "boardPlaceholder": "Selecione um quadro",
+          "defaultRequester": "Cliente solicitante padrão",
+          "defaultRequesterHelp": "Usado quando não é possível identificar a organização de um ticket.",
+          "defaultAssignee": "Responsável padrão",
+          "defaultAssigneePlaceholder": "Deixar tickets sem responsável"
+        },
+        "statusMapping": {
+          "title": "Mapeamento de status",
+          "description": "Cada nome de status no pacote deve ser mapeado para um status de ticket neste tenant.",
+          "empty": "Os tickets do pacote não têm nomes de status."
+        },
+        "priorityMapping": {
+          "title": "Mapeamento de prioridades",
+          "description": "Cada nome de prioridade no pacote deve ser mapeado para uma prioridade neste tenant.",
+          "empty": "Os tickets do pacote não têm nomes de prioridades."
+        },
+        "assets": {
+          "title": "Ativos"
+        },
+        "assetTypeMapping": {
+          "title": "Mapeamento de tipos de ativo",
+          "description": "Cada nome de tipo de ativo no pacote deve ser mapeado para um tipo de ativo neste tenant.",
+          "empty": "Os ativos do pacote não têm nomes de tipos de ativo."
+        },
+        "general": {
+          "title": "Geral",
+          "defaultClient": "Cliente padrão para registros órfãos",
+          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente.",
+          "clearDefaultClient": "Limpar"
+        },
+        "saved": "Configuração salva. Execute a verificação prévia para validá-la em relação aos registros preparados.",
+        "saving": "Salvando…",
+        "save": "Salvar configuração"
+      },
+      "home": {
+        "title": "Migrações",
+        "description": "Traga dados de outro PSA para o Alga enviando um pacote AMP ou uma planilha CSV/XLSX. Cada arquivo enviado passa por inspeção, configuração e verificação prévia antes que qualquer registro seja criado.",
+        "columns": {
+          "package": "Pacote",
+          "sourceSystem": "Sistema de origem",
+          "state": "Estado",
+          "progress": "Progresso",
+          "created": "Criado"
+        },
+        "empty": {
+          "title": "Nenhuma migração ainda",
+          "descriptionPrefix": "Um pacote de migração do Alga (",
+          "descriptionSuffix": ") é um arquivo portátil e validado com organizações, locais, contatos, tickets, comentários e ativos exportados de outro sistema. Envie um pacote para inspecionar seu conteúdo, mapear seus dados de referência para este tenant e executar uma importação com verificação prévia que pode ser repetida com segurança.",
+          "docsLink": "Ler a referência do pacote AMP"
+        }
+      },
+      "upload": {
+        "title": "Enviar pacote de migração",
+        "tooLarge": "Os pacotes de migração devem ter no máximo {{megabytes}} MB.",
+        "fileLabel": "Pacote ou planilha",
+        "fileHint": "AMP (.amp) ou CSV/XLSX, até {{megabytes}} MB. As planilhas são convertidas em um pacote AMP antes da preparação dos registros; nada é importado até você executar a migração.",
+        "entityLabel": "Os registros da planilha representam",
+        "rejected": "O pacote foi rejeitado e nenhum registro foi preparado. Corrija estes problemas no pacote de origem e envie-o novamente:",
+        "stagedWithDiagnostics": "Os registros do pacote foram preparados, mas alguns dados de origem precisam de atenção antes de executar a importação:",
+        "continueToConfigure": "Continuar para a configuração",
+        "uploading": "Enviando…",
+        "submit": "Enviar"
+      },
+      "detail": {
+        "source": "Origem: {{system}}",
+        "sourceNotDeclared": "Sistema de origem não informado",
+        "producer": "Produtor: {{producer}}",
+        "uploaded": "Enviado em {{timestamp}}",
+        "lifecycleAria": "Ciclo de vida da migração",
+        "inspecting": "O pacote está sendo inspecionado e seus registros estão sendo preparados",
+        "packageSuffix": "(pacote {{packageId}})",
+        "inspectingRefresh": ". Esta visualização é atualizada automaticamente.",
+        "rejectedBody": "Este pacote foi rejeitado durante a inspeção; nenhum registro foi preparado e nada será importado dele. Corrija o pacote no sistema de origem e envie um novo.",
+        "rejectionDetails": "Detalhes da rejeição"
       }
     },
     "jobDetails": {
@@ -2383,7 +2844,16 @@
   },
   "policyManagement": {
     "title": "Gerenciamento de políticas",
-    "upgradeDescription": "O gerenciamento de políticas é um recurso Pro. Faça upgrade para acessar controles avançados de políticas."
+    "upgradeDescription": "O gerenciamento de políticas é um recurso Pro. Faça upgrade para acessar controles avançados de políticas.",
+    "bundleLibrary": {
+      "title": "Biblioteca de pacotes de autorização",
+      "upgradeDescription": "O gerenciamento avançado de pacotes de autorização está disponível no Pro. Faça o upgrade para configurar pacotes que restringem permissões para funções, equipes, usuários e chaves de API.",
+      "protectionsDescription": "As proteções de autorização integradas permanecem ativas mesmo quando os controles avançados configuráveis não estão disponíveis nesta edição ou plano."
+    },
+    "proFeature": {
+      "title": "Recurso Pro",
+      "description": "O gerenciamento de políticas requer o Pro. Faça upgrade para acessar este recurso."
+    }
   },
   "roleManagement": {
     "title": "Gerenciar funções",
@@ -2528,7 +2998,9 @@
         "noSessions": "Nenhuma sessão ativa encontrada"
       },
       "subtitle_one": "Sessão ativa {{sessionCount}} entre usuário {{userCount}}",
-      "subtitle_other": "Sessões ativas {{sessionCount}} entre usuários {{userCount}}"
+      "subtitle_other": "Sessões ativas {{sessionCount}} entre usuários {{userCount}}",
+      "subtitle_few": "Sessões ativas {{sessionCount}} entre usuários {{userCount}}",
+      "subtitle_many": "Sessões ativas {{sessionCount}} entre usuários {{userCount}}"
     }
   },
   "ssoBulk": {
@@ -2594,7 +3066,8 @@
         "preparingPreview": "Preparando visualização…",
         "linking": "Vinculando contas…",
         "unlinking": "Desvinculando contas…",
-        "bulkLabel": "Ações de SSO em massa {{location}}"
+        "bulkLabel": "Ações de SSO em massa {{location}}",
+        "disabledSelectUsers": "Selecione primeiro pelo menos um usuário."
       },
       "table": {
         "email": "E-mail",
@@ -2621,7 +3094,9 @@
         "unlinkedCount": "Contas {{count}} desvinculadas via {{provider}}.",
         "previewUnlink_one": "Visualização pronta. Desvincularemos o usuário selecionado {{count}}.",
         "previewUnlink_other": "Visualização pronta. Desvincularemos os usuários selecionados do {{count}}.",
-        "previewLink": "Visualização pronta. Revise o resumo antes de vincular contas."
+        "previewLink": "Visualização pronta. Revise o resumo antes de vincular contas.",
+        "previewUnlink_few": "Visualização pronta. Desvincularemos os usuários selecionados do {{count}}.",
+        "previewUnlink_many": "Visualização pronta. Desvincularemos os usuários selecionados do {{count}}."
       },
       "results": {
         "completeTitle": "Tarefa concluída",
@@ -2636,12 +3111,16 @@
         "wouldLink": "Gostaria de vincular",
         "alreadyUnlinked": "Já desvinculado",
         "alreadyLinked": "Já vinculado",
-        "skippedInactive": "Ignorado (inativo)"
+        "skippedInactive": "Ignorado (inativo)",
+        "processed_few": "Usuários {{count}} processados.",
+        "processed_many": "Usuários {{count}} processados."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "Usuários {{count}} selecionados.",
+      "selected_many": "Usuários {{count}} selecionados."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "Quando ativado, os usuários gerenciados pelo provisionamento do Entra são desativados quando perdem o direito de acesso concedido pelo grupo.",
@@ -2657,6 +3136,10 @@
       "modeTitle": "Modo de provisionamento do Entra para o portal do cliente",
       "modeWorkflowManaged": "Gerenciado por fluxo de trabalho",
       "workflowManagedInfo": "O modo gerenciado por fluxo de trabalho publica apenas eventos de acesso do Entra. O fluxo de trabalho selecionado é responsável pelo provisionamento de usuários no portal do cliente, pela atribuição de funções, pelos convites e pelas alterações no ciclo de vida."
+    },
+    "proFeature": {
+      "title": "Atribuição em massa de login único",
+      "description": "Este recurso está disponível no Pro. Faça upgrade para gerenciar atribuições de SSO do Google Workspace e Microsoft 365 diretamente na página de configurações de Segurança."
     }
   },
   "profile": {
@@ -2742,7 +3225,8 @@
     "rmmEnterpriseNote": "As integrações RMM estão disponíveis no Pro.",
     "categoryHeading": "Integrações {{label}}",
     "loading": {
-      "payments": "Carregando configurações de pagamento..."
+      "payments": "Carregando configurações de pagamento...",
+      "hudu": "Carregando configurações da integração com o Hudu..."
     },
     "categories": {
       "accounting": {
@@ -2834,13 +3318,19 @@
         "name": "Telefonia",
         "description": "Registre chamadas como interações, reconheça quem liga e transforme uma chamada em chamado"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} requer o complemento {{addOnName}}",
+      "manageAddOns": "Gerenciar complementos",
+      "entraDescription": "Adquira o complemento Enterprise para ativar o Microsoft Entra Sync, incluindo descoberta de tenants, mapeamento de clientes, sincronização de contatos e fluxos de trabalho de reconciliação."
     }
   },
   "orgChart": {
     "emptyState": "Nenhum usuário disponível.",
     "roles": {
       "client": "Usuário cliente",
-      "internal": "Usuário Interno"
+      "internal": "Usuário Interno",
+      "service": "Conta de serviço"
     },
     "badge": {
       "inactive": "Inativo"
@@ -2850,6 +3340,54 @@
     "messages": {
       "adminLocked": "As permissões da função de administrador não podem ser modificadas",
       "permissionsUpdated": "Permissões atualizadas com sucesso"
+    },
+    "title": "Gerenciar permissões",
+    "description": "Configure permissões de acesso para diferentes funções e recursos",
+    "selectPrompt": "Selecione uma função ou um recurso para gerenciar as permissões",
+    "unsavedChanges": "Você tem alterações não salvas",
+    "adminLockedTooltip": "As permissões da função de administrador são definidas pelo sistema e não podem ser alteradas",
+    "none": "Nenhuma",
+    "actionCount_one": "{{count}} ação",
+    "actionCount_other": "{{count}} ações",
+    "views": {
+      "clientPortal": "Portal do cliente"
+    },
+    "filters": {
+      "allResources": "Todos os recursos",
+      "allRoles": "Todas as funções",
+      "selectRole": "Selecione uma função",
+      "filterByResource": "Filtrar por recurso"
+    },
+    "columns": {
+      "resource": "Recurso",
+      "role": "Função",
+      "create": "Criar",
+      "read": "Ler",
+      "update": "Atualizar",
+      "delete": "Excluir",
+      "specialActions": "Ações especiais"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando..."
+    },
+    "confirm": {
+      "title": "Confirmar alterações de permissões",
+      "message": "Tem certeza de que deseja salvar estas alterações de permissões?",
+      "confirmLabel": "Salvar alterações"
+    },
+    "stats": {
+      "empty": "Selecione uma função ou um recurso para visualizar as permissões",
+      "rolesForResource_one": "{{count}} função para {{resource}}",
+      "rolesForResource_other": "{{count}} funções para {{resource}}",
+      "resourcesAndPermissions": "{{count}} recursos • {{assigned}}/{{total}} permissões"
+    },
+    "errors": {
+      "fetchPermissions": "Não foi possível carregar as permissões",
+      "fetchRoles": "Não foi possível carregar as funções",
+      "fetchRolePermissions": "Não foi possível carregar as permissões da função",
+      "savePermissions": "Não foi possível salvar as permissões"
     }
   },
   "sla": {
@@ -2905,7 +3443,9 @@
         "overallCompliance": "Conformidade geral",
         "pausedSla": "tickets com SLA pausado",
         "ticketsTracked_one": "{{count}} ticket monitorado",
-        "ticketsTracked_other": "{{count}} tickets monitorados"
+        "ticketsTracked_other": "{{count}} tickets monitorados",
+        "ticketsTracked_few": "{{count}} tickets monitorados",
+        "ticketsTracked_many": "{{count}} tickets monitorados"
       },
       "recentBreaches": {
         "empty": "Nenhum descumprimento do SLA no período selecionado",
@@ -2948,7 +3488,9 @@
         "responseTrackingDisabled": "Monitoramento do estado da resposta desativado",
         "responseTrackingEnabled": "Monitoramento do estado da resposta ativado",
         "statusesUpdated_one": "{{count}} configuração de status atualizada",
-        "statusesUpdated_other": "{{count}} configurações de status atualizadas"
+        "statusesUpdated_other": "{{count}} configurações de status atualizadas",
+        "statusesUpdated_few": "{{count}} configurações de status atualizadas",
+        "statusesUpdated_many": "{{count}} configurações de status atualizadas"
       },
       "perStatus": {
         "description": "Configure quais status de ticket devem pausar o temporizador de SLA. Quando um ticket é movido para um status com pausa ativada, o temporizador de SLA para até que o ticket seja movido para outro status.",
@@ -2960,7 +3502,9 @@
         "resetChanges": "Redefinir alterações",
         "saveChanges": "Salvar alterações",
         "saving": "Salvando...",
-        "title": "Configuração de pausa por status"
+        "title": "Configuração de pausa por status",
+        "modifiedCount_few": "{{count}} status modificados",
+        "modifiedCount_many": "{{count}} status modificados"
       },
       "retry": "Tentar novamente"
     },
@@ -3003,7 +3547,9 @@
         "selectAll": "Selecionar tudo",
         "selectAllVisible": "Selecionar todos os itens visíveis",
         "selectedCount_one": "{{count}} selecionado",
-        "selectedCount_other": "{{count}} selecionados"
+        "selectedCount_other": "{{count}} selecionados",
+        "selectedCount_few": "{{count}} selecionados",
+        "selectedCount_many": "{{count}} selecionados"
       },
       "targets": {
         "always": "O tempo todo (ignorar o horário comercial)",
@@ -3096,7 +3642,13 @@
         "usageClients_one": "Cliente: {{names}}",
         "usageClients_other": "Clientes: {{names}}",
         "usageTickets_one": "{{count}} ticket de suporte",
-        "usageTickets_other": "{{count}} tickets de suporte"
+        "usageTickets_other": "{{count}} tickets de suporte",
+        "usageBoards_few": "Quadros: {{names}}",
+        "usageBoards_many": "Quadros: {{names}}",
+        "usageClients_few": "Clientes: {{names}}",
+        "usageClients_many": "Clientes: {{names}}",
+        "usageTickets_few": "{{count}} tickets de suporte",
+        "usageTickets_many": "{{count}} tickets de suporte"
       },
       "description": "Gerencie políticas de acordo de nível de serviço que definem metas de tempo de resposta e resolução",
       "empty": "Nenhuma política de SLA encontrada. Clique em \"Adicionar política\" para criar a primeira.",
@@ -3124,6 +3676,91 @@
         "timerPaused": "Temporizador de SLA: pausado"
       },
       "unknown": "Desconhecido"
+    },
+    "businessHours": {
+      "title": "Agendas do horário comercial",
+      "description": "Defina quando sua equipe de suporte está disponível para os cálculos de SLA",
+      "loading": "Carregando agendas do horário comercial...",
+      "default": "Padrão",
+      "recurring": "Recorrente",
+      "openMenu": "Abrir menu",
+      "workingHours": "Horário de trabalho",
+      "dailyHours": "Horários diários",
+      "closed": "Fechado",
+      "alwaysOpen": "Esta é uma agenda 24/7 - disponível o dia todo, todos os dias.",
+      "holidays": "Feriados",
+      "noHolidays": "Nenhum feriado definido para esta agenda.",
+      "timezoneLabel": "Fuso horário: {{timezone}}",
+      "days": {
+        "0": "Domingo",
+        "1": "Segunda-feira",
+        "2": "Terça-feira",
+        "3": "Quarta-feira",
+        "4": "Quinta-feira",
+        "5": "Sexta-feira",
+        "6": "Sábado"
+      },
+      "columns": {
+        "name": "Nome",
+        "timezone": "Fuso horário",
+        "actions": "Ações",
+        "holidayName": "Nome do feriado",
+        "date": "Data",
+        "day": "Dia",
+        "enabled": "Habilitado",
+        "startTime": "Hora de início",
+        "endTime": "Hora de término"
+      },
+      "empty": {
+        "title": "Nenhuma agenda do horário comercial",
+        "description": "Crie sua primeira agenda do horário comercial para começar a calcular os tempos de SLA."
+      },
+      "actions": {
+        "edit": "Editar",
+        "viewDetails": "Ver detalhes",
+        "delete": "Excluir",
+        "cancel": "Cancelar",
+        "close": "Fechar",
+        "create": "Criar",
+        "update": "Atualizar",
+        "saving": "Salvando...",
+        "adding": "Adicionando...",
+        "createDefault": "Criar agenda padrão",
+        "createCustom": "Criar agenda personalizada",
+        "addSchedule": "Adicionar agenda",
+        "addHoliday": "Adicionar feriado"
+      },
+      "fields": {
+        "scheduleName": "Nome da agenda *",
+        "scheduleNamePlaceholder": "Ex.: Horário comercial padrão",
+        "timezone": "Fuso horário *",
+        "is24x7": "Agenda 24/7 (sempre disponível)",
+        "isDefault": "Definir como agenda padrão",
+        "holidayName": "Nome do feriado *",
+        "holidayNamePlaceholder": "Ex.: Natal",
+        "holidayDate": "Data *",
+        "holidayDatePlaceholder": "Selecione a data",
+        "isRecurring": "Repetir anualmente"
+      },
+      "dialog": {
+        "editTitle": "Editar agenda",
+        "createTitle": "Criar agenda",
+        "deleteScheduleTitle": "Excluir agenda",
+        "deleteScheduleMessage": "Tem certeza de que deseja excluir \"{{name}}\"? Isso também excluirá todos os feriados associados. Esta ação não pode ser desfeita.",
+        "deleteHolidayTitle": "Excluir feriado",
+        "deleteHolidayMessage": "Tem certeza de que deseja excluir \"{{name}}\"? Esta ação não pode ser desfeita."
+      },
+      "errors": {
+        "loadSchedules": "Não foi possível carregar as agendas do horário comercial",
+        "loadScheduleDetails": "Não foi possível carregar os detalhes da agenda",
+        "nameRequired": "O nome da agenda é obrigatório",
+        "invalidTimeRange": "Intervalo de horário inválido para {{day}}: a hora de término deve ser posterior à hora de início",
+        "saveSchedule": "Não foi possível salvar a agenda",
+        "deleteSchedule": "Não foi possível excluir a agenda",
+        "createDefaultSchedule": "Não foi possível criar a agenda padrão",
+        "addHoliday": "Não foi possível adicionar o feriado",
+        "deleteHoliday": "Não foi possível excluir o feriado"
+      }
     }
   },
   "clientPortalLanguage": {
@@ -3257,7 +3894,7 @@
       "platformManaged": "Gerenciado pelo AlgaPSA — nenhuma configuração é necessária. Conecte um agente a um deles na etapa 2.",
       "addAnother": "Adicionar outro provedor",
       "advancedOptions": "Opções avançadas",
-      "googleNoSetup": "O Google não exige configuração. Os agentes fazem login com o ID da conta de serviço do Google.",
+      "googleSetup": "Os agentes entram com um token de ID de conta de serviço do Google. Somente o público-alvo abaixo precisa corresponder à forma como eles o solicitam.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3271,9 +3908,14 @@
       "fields": {
         "provider": "Provedor",
         "entraTenantId": "ID do tenant do Entra",
-        "audienceOptional": "Público-alvo (opcional)",
         "audience": "Público-alvo",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": {
+          "microsoft": "O ID do aplicativo (cliente) do registro de aplicativo do Entra para o qual seus agentes solicitam tokens. Os agentes solicitam o escopo api://<esse ID>/.default.",
+          "google": "Os agentes devem solicitar o token de ID do Google exatamente com este público-alvo. Preenchemos a URL MCP deste servidor, que é a escolha habitual.",
+          "custom": "O identificador de API ou recurso configurado no seu provedor (por exemplo, um identificador de API do Auth0). Ele deve corresponder exatamente à declaração aud nos tokens dos agentes. A URL MCP deste servidor é uma boa escolha."
+        },
+        "audienceWhy": "Tokens que seu provedor emitiu para outros aplicativos não serão aceitos aqui.",
         "subjectClaimHelp": "Deixe em branco, a menos que seu provedor indique o contrário.",
         "issuer": "Emissor",
         "jwksUri": "URL das chaves de assinatura"
@@ -3387,6 +4029,36 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "loading": "Carregando…",
+    "downloadHosts": {
+      "title": "Hosts de download permitidos",
+      "intro": "Quando um documento é anexado por URL, o AlgaPSA só o baixa dos hosts listados aqui. Isso vale para qualquer um que anexe documentos, incluindo agentes de IA, clientes de API e a API REST. Prefira hosts específicos de um bucket, como acme-uploads.s3.us-east-1.amazonaws.com, a hosts genéricos.",
+      "readOnly": "Você pode visualizar esta lista. Para alterá-la, é necessária a permissão \"Gerenciar hosts de download\".",
+      "builtIn": "Integrado",
+      "empty": "Nenhum host personalizado ainda.",
+      "add": "Adicionar host",
+      "addTitle": "Adicionar host de download permitido",
+      "remove": "Remover",
+      "removeTitle": "Remover host?",
+      "removeMessage": "Os downloads de {{host}} deixarão de funcionar até que ele seja adicionado novamente.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Um nome de host, ou *.example.com para permitir todos os subdomínios.",
+        "note": "Observação (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usado para",
+        "allowed": "Permitido",
+        "note": "Observação",
+        "addedBy": "Adicionado por",
+        "addedOn": "Adicionado em"
+      },
+      "errors": {
+        "load": "Não foi possível carregar os hosts de download permitidos.",
+        "save": "Não foi possível salvar a alteração."
+      }
     }
   },
   "errors": {
@@ -3485,7 +4157,9 @@
       "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}.",
       "nameRequired": "O nome da função é obrigatório.",
       "builtInRename": "Funções integradas não podem ser renomeadas.",
-      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal."
+      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal.",
+      "lastMspAdmin": "Um tenant deve manter pelo menos um usuário MSP Admin ativo.",
+      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta."
     },
     "secrets": {
       "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
@@ -3557,10 +4231,415 @@
       "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
       "notApplianceHost": "Escolha um domínio diferente do host principal deste servidor. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
-      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
+      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha.",
+      "alreadyInUse": "Este domínio já está em uso. Escolha outro domínio.",
+      "usedByOtherSurface": "Este domínio já é usado por outro dos seus domínios personalizados. Para servir o portal do cliente e o aplicativo MSP a partir de um único domínio, escolha \"Ambos\".",
+      "invalidSurface": "Escolha o que o domínio personalizado serve: portal do cliente, aplicativo MSP ou ambos.",
+      "redirectUrisHosted": "Os URIs de redirecionamento de domínios hospedados são registrados pelo suporte da plataforma.",
+      "nothingToConfirm": "Não há confirmação de URI de redirecionamento SSO pendente para este domínio."
     }
   },
   "common": {
-    "saving": "A guardar…"
+    "saving": "A guardar…",
+    "cancel": "Cancelar"
+  },
+  "loginPolicy": {
+    "title": "Política de início de sessão",
+    "description": "Controle como a equipa e os utilizadores do portal do cliente podem iniciar sessão, com palavra-passe ou início de sessão único. Estas regras são aplicadas no servidor.",
+    "requireSso": {
+      "title": "Exigir início de sessão único para a equipa do MSP",
+      "body": "Os utilizadores internos têm de iniciar sessão com Google, Microsoft ou o seu fornecedor Keycloak. O início de sessão com palavra-passe e a redefinição de palavra-passe ficam bloqueados, exceto para os administradores de emergência abaixo.",
+      "signOutWarning": "Ao ativar «Exigir início de sessão único», todos os utilizadores internos que iniciaram sessão com palavra-passe são desligados, exceto os administradores de emergência. Ativar um requisito de dois fatores não desliga ninguém; aplica-se no próximo início de sessão."
+    },
+    "require2faInternal": {
+      "title": "Exigir autenticação de dois fatores no início de sessão com palavra-passe da equipa do MSP",
+      "body": "À equipa sem autenticador será pedido que configure um no próximo início de sessão."
+    },
+    "require2faClient": {
+      "title": "Exigir autenticação de dois fatores no início de sessão com palavra-passe do portal do cliente",
+      "body": "Aos utilizadores do portal do cliente sem autenticador será pedido que configurem um no próximo início de sessão. O requisito de início de sessão único nunca se aplica aos utilizadores do portal do cliente."
+    },
+    "knownDeviceSkip": {
+      "title": "Permitir que dispositivos conhecidos dispensem o código",
+      "body": "Aos utilizadores que confiaram num dispositivo não é pedido código nesse dispositivo. Os administradores de emergência precisam sempre de um código."
+    },
+    "breakGlass": {
+      "title": "Administradores de emergência",
+      "body": "Estes administradores podem continuar a iniciar sessão com palavra-passe quando o início de sessão único é exigido. Têm de ser administradores ativos com a autenticação de dois fatores ativada e precisam sempre de um código.",
+      "noEligible": "Sem administradores elegíveis. Um administrador tem de estar ativo e ter a autenticação de dois fatores ativada.",
+      "noLongerEligible": "Já não é elegível.",
+      "remove": "Remover",
+      "reasons": {
+        "no_two_factor": "A autenticação de dois fatores foi redefinida ou está em falta.",
+        "inactive": "O usuário está desativado.",
+        "not_admin": "O usuário não é mais administrador.",
+        "not_internal": "O usuário não é um usuário interno.",
+        "not_found": "O usuário não existe mais."
+      }
+    },
+    "clientPortalSso": {
+      "title": "Opções de início de sessão do portal do cliente",
+      "body": "Escolha que fornecedores de início de sessão único aparecem na página de início de sessão do portal do cliente. Só são listados os fornecedores com que a sua organização pode iniciar sessão. O início de sessão com palavra-passe não é afetado.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Não há fornecedores de início de sessão único configurados para a sua organização. Configure um nas definições de início de sessão único para o oferecer no portal do cliente."
+    },
+    "guard": {
+      "sso_provider_required": "Configure pelo menos um fornecedor de início de sessão único antes de o exigir.",
+      "break_glass_required": "Selecione pelo menos um administrador de emergência antes de exigir o início de sessão único.",
+      "break_glass_invalid_user": "Os utilizadores de emergência têm de ser administradores ativos com a autenticação de dois fatores ativada.",
+      "client_portal_sso_provider_invalid": "Escolha apenas fornecedores de início de sessão único suportados."
+    },
+    "errors": {
+      "load": "Não foi possível carregar a política de início de sessão.",
+      "save": "Não foi possível guardar a política de início de sessão."
+    }
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Recursos principais",
+        "description": "Recursos essenciais para as operações diárias"
+      },
+      "ui": {
+        "title": "Interface do usuário",
+        "description": "Novos recursos e melhorias na interface"
+      },
+      "ai": {
+        "title": "Recursos de IA",
+        "description": "Recursos baseados em inteligência artificial"
+      },
+      "integrations": {
+        "title": "Integrações",
+        "description": "Integrações com serviços de terceiros"
+      },
+      "performance": {
+        "title": "Desempenho",
+        "description": "Recursos de otimização de desempenho"
+      },
+      "experimental": {
+        "title": "Experimental",
+        "description": "Recursos inovadores em desenvolvimento"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Automação de tickets",
+        "description": "Atribua e encaminhe tickets automaticamente com base em regras"
+      },
+      "enable_time_tracking": {
+        "title": "Controle de tempo",
+        "description": "Registre o tempo gasto em tickets e projetos"
+      },
+      "enable_billing": {
+        "title": "Sistema de faturamento",
+        "description": "Geração de faturas e acompanhamento de pagamentos"
+      },
+      "new_ticket_ui": {
+        "title": "Nova interface de tickets",
+        "description": "Interface redesenhada para criação e gerenciamento de tickets"
+      },
+      "new_dashboard_layout": {
+        "title": "Painel moderno",
+        "description": "Novo painel com widgets personalizáveis"
+      },
+      "ai_ticket_suggestions": {
+        "title": "Sugestões de tickets com IA",
+        "description": "Categorização de tickets e sugestões de prioridade com IA"
+      },
+      "enable_ai_time_tracking": {
+        "title": "Controle de tempo com IA",
+        "description": "Registre o tempo automaticamente com base na atividade"
+      },
+      "enable_predictive_analytics": {
+        "title": "Análise preditiva",
+        "description": "Preveja o volume de tickets e as necessidades de recursos"
+      },
+      "enable_slack_integration": {
+        "title": "Integração com Slack",
+        "description": "Envie notificações e atualizações para o Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Integre com o Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Sincronização com Jira",
+        "description": "Sincronize tickets com issues do Jira"
+      },
+      "enable_query_caching": {
+        "title": "Cache de consultas",
+        "description": "Armazene consultas ao banco de dados em cache para respostas mais rápidas"
+      },
+      "enable_lazy_loading": {
+        "title": "Carregamento sob demanda",
+        "description": "Carregue conteúdo conforme necessário para melhorar o desempenho"
+      },
+      "enable_websocket_updates": {
+        "title": "Atualizações em tempo real",
+        "description": "Use WebSockets para atualizações instantâneas"
+      },
+      "enable_voice_commands": {
+        "title": "Comandos de voz",
+        "description": "Controle o aplicativo com comandos de voz"
+      },
+      "beta_mobile_app": {
+        "title": "Aplicativo móvel beta",
+        "description": "Acesso à versão beta do aplicativo móvel"
+      }
+    },
+    "enums": {
+      "stable": "Estável",
+      "beta": "Beta",
+      "experimental": "Experimental"
+    },
+    "loading": "Carregando sinalizadores de recursos...",
+    "title": "Sinalizadores de recursos",
+    "description": "Ative ou desative recursos em todo o aplicativo. Alguns recursos podem exigir uma reinicialização.",
+    "unsaved": "Você tem alterações não salvas. Clique em Salvar para aplicá-las.",
+    "requiresRestart": "Requer reinicialização",
+    "errors": {
+      "loadFailed": "Erro ao carregar sinalizadores de recursos: {{message}}"
+    },
+    "dependencies": "Requer: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Configurações de idioma do portal do cliente",
+    "description": "Configure as opções de idioma disponíveis para seus clientes",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Idioma padrão",
+        "help": "Este idioma será usado para novos clientes e quando nenhuma preferência estiver definida"
+      },
+      "availableLanguages": {
+        "label": "Idiomas disponíveis",
+        "help": "Selecione os idiomas que os clientes podem escolher"
+      }
+    },
+    "defaultSuffix": "(padrão)",
+    "preview": {
+      "title": "Prévia",
+      "defaultLanguage": "Idioma padrão:",
+      "availableLanguages": "Idiomas disponíveis:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Configurações salvas com sucesso"
+      }
+    },
+    "errors": {
+      "saveFailed": "Falha ao salvar as configurações"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Inglês",
+      "fr": "Francês",
+      "es": "Espanhol",
+      "de": "Alemão",
+      "nl": "Holandês",
+      "it": "Italiano",
+      "pl": "Polonês",
+      "pt": "Português (Brasil)",
+      "sv": "Sueco",
+      "xx": "Pseudoidioma (xx)",
+      "yy": "Pseudoidioma (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Estatísticas de uso",
+        "enabledDescription": "Habilitado - Envia dados anônimos de uso para ajudar a melhorar o produto",
+        "disabledDescription": "Desabilitado - Envia dados anônimos de uso para ajudar a melhorar o produto"
+      }
+    },
+    "environmentHelp": "As estatísticas de uso são controladas pela variável de ambiente {{variable}}. Entre em contato com o administrador do sistema para modificar esta configuração.",
+    "sections": {
+      "collectedData": {
+        "title": "Quais dados são coletados",
+        "featureUsage": "Padrões de uso dos recursos (sem dados pessoais)",
+        "errorReports": "Relatórios de erros para depuração",
+        "performance": "Métricas de desempenho",
+        "configuration": "Configuração do sistema (anonimizada)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importar status padrão",
+      "description": "Selecione os status padrão que deseja importar",
+      "selectAll": "Selecionar tudo ({{selected}}/{{total}})",
+      "closed": "Fechado",
+      "default": "Padrão",
+      "empty": "Nenhum status padrão disponível para importação",
+      "importSelected": "Importar selecionados ({{count}})"
+    }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Serviço"
+    },
+    "keyReveal": {
+      "copySuccess": "Chave de API copiada para a área de transferência!",
+      "copyFailed": "Falha ao copiar a chave de API para a área de transferência",
+      "downloadFailed": "Falha ao baixar a chave de API",
+      "title": "Chave de API gerada",
+      "warning": "Copie sua chave de API agora. Por motivos de segurança, ela não será mostrada novamente.",
+      "rotationNote": "A chave anterior continua funcionando por mais 5 minutos para que você possa fazer a troca.",
+      "copy": "Copiar para a área de transferência",
+      "download": "Baixar como .txt",
+      "done": "Concluído"
+    },
+    "dialog": {
+      "nameRequired": "Um nome é obrigatório",
+      "rateLimitInvalid": "Informe os dois valores de limite de taxa, dentro dos máximos exibidos, ou deixe ambos vazios.",
+      "saveFailed": "Falha ao salvar o principal de serviço",
+      "editTitle": "Editar principal de serviço",
+      "createTitle": "Novo principal de serviço",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "name": "Nome",
+      "description": "Descrição",
+      "roles": "Funções",
+      "allowActAs": "Permitir agir em nome de um usuário",
+      "rateLimit": "Substituição do limite de taxa (opcional)",
+      "rateLimitBurst": "Tamanho do burst (máx. {{max}})",
+      "rateLimitRefill": "Requisições por minuto (máx. {{max}})",
+      "allowActAsHelp": "Quando ativada, esta opção permite que as requisições atuem como um usuário interno ativo. Cada ação deve ser permitida tanto para o principal de serviço quanto para esse usuário."
+    },
+    "keys": {
+      "loadFailed": "Falha ao carregar as chaves",
+      "issueFailed": "Falha ao criar a chave de API",
+      "revokeFailed": "Falha ao revogar a chave de API",
+      "columns": {
+        "description": "Descrição",
+        "status": "Status",
+        "lastUsed": "Último uso",
+        "expires": "Expira"
+      },
+      "noDescription": "Sem descrição",
+      "status": {
+        "active": "Ativa",
+        "inactive": "Inativa"
+      },
+      "never": "Nunca",
+      "noExpiry": "Sem expiração",
+      "rotate": "Rotacionar",
+      "revoke": "Revogar",
+      "title": "Chaves de API de {{name}}",
+      "descriptionLabel": "Descrição da chave",
+      "create": "Criar chave",
+      "revokeTitle": "Revogar a chave de API?",
+      "revokeMessage": "Tudo que usa esta chave deixa de funcionar imediatamente."
+    },
+    "columns": {
+      "actions": "Ações",
+      "name": "Nome",
+      "status": "Status",
+      "active": "Ativo",
+      "roles": "Funções",
+      "keys": "Chaves ativas",
+      "lastUsed": "Último uso",
+      "createdBy": "Criado por",
+      "kind": "Tipo",
+      "allowActAs": "Atuar como"
+    },
+    "loadFailed": "Falha ao carregar os principais de serviço",
+    "toggleFailed": "Falha ao atualizar o principal de serviço",
+    "delete": {
+      "archived": "Principal de serviço arquivado. Seu histórico é mantido para que a atividade passada ainda mostre seu nome.",
+      "deleted": "Principal de serviço excluído.",
+      "failed": "Falha ao excluir o principal de serviço",
+      "title": "Excluir o principal de serviço?",
+      "message": "Suas chaves de API deixam de funcionar. Se tiver histórico, ele é arquivado em vez de removido."
+    },
+    "status": {
+      "inactive": "Inativo",
+      "active": "Ativo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "keys": "Chaves",
+      "deactivate": "Desativar",
+      "delete": "Excluir",
+      "new": "Novo principal de serviço"
+    },
+    "featureName": "Principais de serviço",
+    "title": "Principais de serviço",
+    "description": "Identidades não humanas com funções e chaves de API próprias para integrações e agentes.",
+    "usage": {
+      "header": "{{used}} de {{limit}} principais de serviço",
+      "availableOnPro": "Disponível no Pro",
+      "row": "{{used}} de {{limit}}",
+      "label": "Principais de serviço",
+      "seatNote": "Os principais de serviço não consomem licenças de usuário.",
+      "settingsLink": "Definições das contas de serviço",
+      "blockedAccess": "O acesso à API e ao MCP é bloqueado abaixo do Pro.",
+      "blockedCount": "{{used}} principais ativos bloqueados pelo plano"
+    },
+    "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou exclua um para adicionar outro.",
+    "mcp": {
+      "sharedLimit": "Os agentes MCP contam para o limite de principais de serviço: {{used}} de {{limit}} em uso.",
+      "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou remova um para adicionar um agente.",
+      "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza.",
+      "sharedLimitBlocked": "Os agentes MCP contam para o limite partilhado de principais de serviço: {{used}} de {{limit}}; os registos ativos estão bloqueados pelo plano."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agente MCP"
+    },
+    "seatNote": "Os principais de serviço não consomem licenças de usuário.",
+    "blockedAccess": "O acesso à API e ao MCP dos principais de serviço é bloqueado imediatamente abaixo do Pro. Os registos existentes continuam disponíveis para limpeza."
+  },
+  "tagDisplay": {
+    "title": "Exibir nos chips",
+    "subtitle": "Tags exibidas ao lado de contatos e clientes em listas de tickets, cabeçalhos de tickets e seletores.",
+    "loading": "Carregando…",
+    "description": "Escolha quais tags aparecem como selos ao lado de contatos e clientes e em que ordem. Uma lista sem tags não mostra selos para esse público.",
+    "contacts": "Contatos",
+    "clients": "Clientes",
+    "audienceInternal": "Usuários internos",
+    "audienceClient": "Portal do cliente",
+    "clientNote": "Começa vazia. As tags listadas aqui ficam visíveis para os próprios usuários do cliente no portal do cliente.",
+    "noneSelected": "Nenhuma tag exibida.",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "remove": "Remover",
+    "addTag": "Adicionar uma tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Voltar às configurações de email",
+      "title": "Provedores de email e identidade",
+      "description": "Registre seu próprio aplicativo do Google ou da Microsoft para emails recebidos e login da equipe. Essas credenciais pertencem ao seu espaço de trabalho."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numeração de ativos",
+      "description": "Uma sequência única para todo o locatário é formatada com o prefixo de cada cliente. A prévia e a impressão não atribuem números. Números emitidos e abandonados deixam lacunas e nunca são reutilizados.",
+      "clientPrefixes": "Prefixos dos clientes",
+      "noPrefix": "Sem prefixo",
+      "prefixSaved": "Prefixo do cliente salvo",
+      "uniquenessEnabled": "A exclusividade das etiquetas de ativos está ativa",
+      "legacyAudit": "Auditoria de etiquetas existentes",
+      "legacyAuditHelp": "As etiquetas existentes são preservadas. Resolva duplicatas editando as etiquetas dos ativos afetados; revise as etiquetas vazias sem alterá-las se estiverem vazias intencionalmente.",
+      "reconciliationNote": "Nota de conciliação manual",
+      "markReviewed": "Marcar como revisado",
+      "noLegacyIssues": "Nenhuma etiqueta vazia ou duplicada foi encontrada durante a migração.",
+      "activate": "Ativar etiquetas de ativos exclusivas",
+      "saveFailed": "Não foi possível salvar o prefixo",
+      "activationFailed": "Resolva as etiquetas duplicadas antes da ativação",
+      "continuationReview": "A revisão dos dados existentes examinou {{scanned}} etiquetas salvas; {{numeric}} têm sufixos numéricos. O maior sufixo é {{maximum}}; revise um valor inicial de {{next}}. Isto é apenas uma recomendação. Insira e salve acima o valor de continuação aprovado; esta revisão não consome nenhum valor da sequência.",
+      "continuationExamples": "Exemplos: {{examples}}",
+      "blankTag": "(etiqueta vazia)",
+      "normalizedTag": "Normalizada: {{tag}}"
+    }
   }
 }

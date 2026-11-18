@@ -68,37 +68,85 @@ function guardActive(sub: Stripe.Subscription): void {
   }
 }
 
-export type ProrationBehavior = 'create_prorations' | 'none';
-
 export interface StripeUpdateSeatQuantityInput {
   stripeSubId: string;
   seats: number;
-  proration: ProrationBehavior;
 }
+
+/**
+ * How a seat change was billed. One rule for every surface that changes
+ * appliance seats (customer portal in nm-store, this console), matching the
+ * hosted seat-change rule in alga-psa StripeService:
+ *   - charged_now: increase on a live subscription — the prorated amount is
+ *     invoiced and collected immediately; a failed charge rejects the change
+ *   - trial: any change while trialing — in place, no charge
+ *   - credited_next_invoice: decrease — the unused remainder is credited on
+ *     the next invoice
+ *   - unchanged: same count, Stripe not touched
+ */
+export type SeatChangeBilling = 'charged_now' | 'trial' | 'credited_next_invoice' | 'unchanged';
 
 export interface StripeSeatChangeResult {
   stripeSubId: string;
   itemId: string;
   priceId: string;
   seats: number;
+  billing: SeatChangeBilling;
 }
 
-/** Change the per-seat quantity (with or without proration). */
+export interface SeatChangePlan {
+  billing: SeatChangeBilling;
+  params: Pick<Stripe.SubscriptionUpdateParams, 'proration_behavior' | 'payment_behavior'>;
+}
+
+/** Pure billing decision for a seat change. */
+export function planSeatChange(status: Stripe.Subscription.Status, current: number, next: number): SeatChangePlan {
+  if (next === current) return { billing: 'unchanged', params: {} };
+  if (status === 'trialing') return { billing: 'trial', params: { proration_behavior: 'none' } };
+  if (next > current) {
+    return {
+      billing: 'charged_now',
+      params: { proration_behavior: 'always_invoice', payment_behavior: 'error_if_incomplete' },
+    };
+  }
+  return { billing: 'credited_next_invoice', params: { proration_behavior: 'create_prorations' } };
+}
+
+function isPaymentFailure(err: unknown): err is { type?: string; code?: string; decline_code?: string } {
+  const e = err as { type?: string; code?: string; decline_code?: string } | null;
+  return !!e && (e.type === 'StripeCardError' || !!e.decline_code || /^(invoice_)?payment_intent_/.test(e.code ?? ''));
+}
+
+/** Change the per-seat quantity, billed per `planSeatChange`. */
 export async function stripeUpdateSeatQuantity(input: StripeUpdateSeatQuantityInput): Promise<StripeSeatChangeResult> {
   const stripe = getStripe();
   logger().info('stripeUpdateSeatQuantity', { stripeSubId: input.stripeSubId, seats: input.seats });
   const sub = await stripe.subscriptions.retrieve(input.stripeSubId);
   guardActive(sub);
   const item = requirePerSeatItem(sub);
-  if (item.quantity === input.seats) {
-    return { stripeSubId: sub.id, itemId: item.id, priceId: item.price.id, seats: input.seats };
+  const plan = planSeatChange(sub.status, item.quantity ?? 0, input.seats);
+  if (plan.billing === 'unchanged') {
+    return { stripeSubId: sub.id, itemId: item.id, priceId: item.price.id, seats: input.seats, billing: plan.billing };
   }
-  const updated = await stripe.subscriptions.update(sub.id, {
-    items: [{ id: item.id, quantity: input.seats }],
-    proration_behavior: input.proration,
-  });
+  let updated: Stripe.Subscription;
+  try {
+    updated = await stripe.subscriptions.update(sub.id, {
+      items: [{ id: item.id, quantity: input.seats }],
+      ...plan.params,
+    });
+  } catch (err) {
+    // error_if_incomplete: the immediate charge failed and Stripe rolled the
+    // update back. Not retryable — the payment method has to change first.
+    if (isPaymentFailure(err)) {
+      throw ApplicationFailure.nonRetryable(
+        `Payment for the added seats failed (${err.code ?? err.decline_code ?? 'card error'}); Stripe left the subscription unchanged`,
+        'seat_payment_failed',
+      );
+    }
+    throw err;
+  }
   const after = findPerSeatItem(updated) ?? item;
-  return { stripeSubId: updated.id, itemId: after.id, priceId: after.price.id, seats: after.quantity ?? input.seats };
+  return { stripeSubId: updated.id, itemId: after.id, priceId: after.price.id, seats: after.quantity ?? input.seats, billing: plan.billing };
 }
 
 export type PauseCollectionBehavior = 'void' | 'keep_as_draft' | 'mark_uncollectible';

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { ASSET_RMM_ERROR_RESPONSE_SOURCE } from '@alga-psa/authorization/recordProjection';
+import { reprojectUnderDecision, type AuthorizedProjection } from 'server/src/lib/api/controllers/authorizationKernel';
 
 type RmmRouteError = {
   message: string;
@@ -30,6 +32,10 @@ const EXPECTED_RMM_MESSAGES: Array<[match: string, response: RmmRouteError]> = [
     status: 404,
     message: 'This asset is no longer mapped to a Tactical RMM agent.',
   }],
+  ['Asset is not mapped to a Datto RMM device', {
+    status: 404,
+    message: 'This asset is no longer mapped to a Datto RMM device.',
+  }],
   ['Device actions are not available for', {
     status: 501,
     message: 'Device actions are not available for this RMM provider.',
@@ -37,6 +43,14 @@ const EXPECTED_RMM_MESSAGES: Array<[match: string, response: RmmRouteError]> = [
   ['No active Tactical RMM integration found', {
     status: 409,
     message: 'No active Tactical RMM integration is configured.',
+  }],
+  ['No active Datto RMM integration found', {
+    status: 409,
+    message: 'No active Datto RMM integration is configured.',
+  }],
+  ['Permission denied: Cannot execute RMM commands', {
+    status: 403,
+    message: 'You do not have permission to run RMM commands.',
   }],
   ['Permission denied', {
     status: 403,
@@ -78,6 +92,15 @@ export function rmmRouteErrorFrom(error: unknown): RmmRouteError | null {
   return expected?.[1] ?? null;
 }
 
-export function rmmErrorResponse(error: RmmRouteError): NextResponse {
-  return NextResponse.json({ error: error.message }, { status: error.status });
+export function rmmErrorResponse(
+  error: RmmRouteError,
+  assetProjection?: AuthorizedProjection<Record<string, any>>,
+): NextResponse {
+  const projected = assetProjection
+    ? reprojectUnderDecision(assetProjection, { error: error.message }, ASSET_RMM_ERROR_RESPONSE_SOURCE)
+    : null;
+  const message = assetProjection
+    ? projected?.error ?? 'The RMM operation could not be completed.'
+    : error.message;
+  return NextResponse.json({ error: message }, { status: error.status });
 }

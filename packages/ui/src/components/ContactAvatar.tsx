@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import EntityAvatar, { EntityAvatarProps } from './EntityAvatar';
 
 interface ContactAvatarProps {
@@ -25,6 +28,8 @@ const ContactAvatar = ({
   size = 'md',
   className,
 }: ContactAvatarProps) => {
+  const { t } = useTranslation('common');
+
   return (
     <EntityAvatar
       entityId={contactId}
@@ -33,7 +38,7 @@ const ContactAvatar = ({
       size={size}
       className={className}
       getInitials={getContactInitials}
-      altText={`${contactName || 'Contact'} avatar`}
+      altText={contactName ? t('contactAvatar.alt', { name: contactName, defaultValue: `${contactName} avatar` }) : t('contactAvatar.defaultAlt', 'Contact avatar')}
     />
   );
 };

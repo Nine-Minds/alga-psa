@@ -1,35 +1,18 @@
 import { z } from 'zod';
 
 import { WebhookDeliveryQueue, type WebhookDeliveryPayload } from './WebhookDeliveryQueue';
+import { WEBHOOK_EVENT_NAMES } from './eventRegistry';
 import { webhookModel, type WebhookDeliveryRecord } from './webhookModel';
 
-export const SUPPORTED_WEBHOOK_EVENTS = [
-  'ticket.created',
-  'ticket.updated',
-  'ticket.assigned',
-  'ticket.status_changed',
-  'ticket.closed',
-  'ticket.comment.added',
-  'ticket.response_state_changed',
-  'project.created',
-  'project.updated',
-  'project.status_changed',
-  'project.assigned',
-  'project.closed',
-  'project.completed',
-  'project.task.created',
-  'project.task.updated',
-  'project.task.status_changed',
-  'project.task.assigned',
-  'project.task.completed',
-] as const;
+/** Derived from the single event registry; do not list events here. */
+export const SUPPORTED_WEBHOOK_EVENTS = WEBHOOK_EVENT_NAMES;
 
 export const deliveryEnvelopeSchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.string().guid(),
   event_type: z.enum(SUPPORTED_WEBHOOK_EVENTS),
   occurred_at: z.string().datetime(),
-  tenant_id: z.string().uuid(),
-  data: z.unknown(),
+  tenant_id: z.string().guid(),
+  data: z.unknown().optional(),
 });
 
 export const RETRY_FAILED_DEFAULT_LIMIT = 500;

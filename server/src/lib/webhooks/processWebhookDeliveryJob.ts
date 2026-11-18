@@ -1,3 +1,5 @@
+import { withWebhookDeliveryReceipt } from './deliveryReceipt';
+import { getConnection } from '@/lib/db/db';
 import crypto from 'node:crypto';
 
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
@@ -39,6 +41,10 @@ export type WebhookEnvelope<TPayload = WebhookDeliveryJob['payload']> = {
 export async function processWebhookDeliveryJob(
   job: WebhookDeliveryJob,
 ): Promise<WebhookDeliveryProcessResult> {
+  return withWebhookDeliveryReceipt(await getConnection(job.tenantId), job, () => deliverWebhookJob(job));
+}
+
+async function deliverWebhookJob(job: WebhookDeliveryJob): Promise<WebhookDeliveryProcessResult> {
   const webhook = await webhookModel.getById(job.webhookId, job.tenantId);
   if (!webhook || !webhook.isActive) {
     return {

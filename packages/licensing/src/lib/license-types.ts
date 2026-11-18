@@ -24,6 +24,10 @@ export interface LicenseClaims {
    * re-sign (or the License page's "Refresh license now").
    */
   seats?: number;
+  /** Purchased customer-technician capacity. Absent means zero, never unlimited.
+   * Valid only for the sponsoring tenant identified by `aud`; separate from MSP seats.
+   */
+  co_managed_seats?: number;
   /** Issued-at (seconds since epoch) */
   iat: number;
   /** Expiry (seconds since epoch) */
@@ -47,7 +51,15 @@ export type LicenseVerifyFailReason =
 /** Result of verifyLicense(). */
 export type LicenseVerifyResult =
   | { valid: true; claims: LicenseClaims }
-  | { valid: false; reason: LicenseVerifyFailReason };
+  | {
+      valid: false;
+      reason: LicenseVerifyFailReason;
+      /**
+       * Only on `reason: 'expired'`: the (signature-verified) token's `exp`, in
+       * unix seconds, so callers can say when a lapsed license ended.
+       */
+      expiredAt?: number;
+    };
 
 /**
  * Type guard for a failed verification result (the member carrying `reason`).
@@ -56,6 +68,6 @@ export type LicenseVerifyResult =
  */
 export function isLicenseVerifyFailure(
   result: LicenseVerifyResult,
-): result is { valid: false; reason: LicenseVerifyFailReason } {
+): result is { valid: false; reason: LicenseVerifyFailReason; expiredAt?: number } {
   return !result.valid;
 }

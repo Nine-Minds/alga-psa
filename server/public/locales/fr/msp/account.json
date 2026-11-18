@@ -427,5 +427,12 @@
       "loading": "Chargement…",
       "loadMore": "Charger plus"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Les fonctionnalités de gestion de compte et de facturation sont disponibles dans Pro pour les déploiements hébergés.",
+    "selfHostedDescription": "La Community Edition auto-hébergée offre un nombre illimité d’utilisateurs, sans restrictions de licence ni facturation."
+  },
+  "page": {
+    "title": "Gestion du compte"
   }
 }

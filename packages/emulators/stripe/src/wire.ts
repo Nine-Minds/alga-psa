@@ -12,6 +12,11 @@ const OPERATIONS = [
   'customers.retrieve',
   'checkout.sessions.create',
   'checkout.sessions.retrieve',
+  'webhook_endpoints.create',
+  'webhook_endpoints.retrieve',
+  'webhook_endpoints.update',
+  'webhook_endpoints.delete',
+  'webhook_endpoints.list',
 ] as const;
 
 const KNOWN_ERROR_TYPES = new Set([
@@ -64,6 +69,18 @@ function sessionResponse(core: StripeEmulatorCore, session: StripeCheckoutSessio
   return { ...session };
 }
 
+/** Form-encoded `enabled_events[0]=…` arrives as an array (or index-keyed object). */
+function stringList(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  const raw = Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [value];
+  return raw.map(String);
+}
+
+function optionalBoolean(value: unknown): boolean | undefined {
+  if (value === undefined) return undefined;
+  return value === true || value === 'true';
+}
+
 function formatMoney(cents: number, currency: string): string {
   return `${currency.toUpperCase()} ${(cents / 100).toFixed(2)}`;
 }
@@ -106,7 +123,8 @@ function hostedDeclinePage(session: StripeCheckoutSession, message: string): str
 }
 
 /**
- * Stripe-shaped vendor surface: the /v1 API (customers + checkout sessions)
+ * Stripe-shaped vendor surface: the /v1 API (customers, checkout sessions,
+ * subscriptions, webhook endpoints)
  * and the browser-facing simulated Checkout page with Pay / Decline / Cancel
  * controls. Point STRIPE_API_BASE_URL at the /v1 origin.
  */
@@ -131,6 +149,7 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
       throw new StripeWireError(400, 'Missing required param: email.');
     }
     res.json(core.createCustomer({
+      id: typeof body.id === 'string' ? body.id : undefined,
       email,
       name: typeof body.name === 'string' ? body.name : undefined,
       metadata: (body.metadata ?? {}) as Record<string, string>,
@@ -150,12 +169,16 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
 
     const session = core.createCheckoutSession(
       {
-        mode: 'payment',
+        mode: body.mode === 'subscription' ? 'subscription' : 'payment',
         customer: typeof body.customer === 'string' ? body.customer : undefined,
         line_items: lineItems,
-        success_url: typeof body.success_url === 'string' ? body.success_url : '',
+        success_url: typeof body.success_url === 'string' ? body.success_url : undefined,
         cancel_url: typeof body.cancel_url === 'string' ? body.cancel_url : undefined,
+        return_url: typeof body.return_url === 'string' ? body.return_url : undefined,
+        ui_mode: typeof body.ui_mode === 'string' ? body.ui_mode : undefined,
         metadata,
+        subscription_data: body.subscription_data && typeof body.subscription_data === 'object'
+          ? { metadata: (body.subscription_data.metadata ?? {}) as Record<string, string> } : undefined,
         expires_at: typeof body.expires_at === 'number' ? body.expires_at : undefined,
         currency: body.currency !== undefined ? String(body.currency) : undefined,
         amount: body.amount !== undefined ? Number(body.amount) : undefined,
@@ -165,10 +188,60 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.status(200).json(session);
   }));
 
+  v1.get('/products/:id', route((req, res) => {
+    res.json(core.getProduct(String(req.params.id)));
+  }));
+
+  v1.get('/prices/:id', route((req, res) => {
+    res.json(core.getPrice(String(req.params.id)));
+  }));
+
+  v1.get('/subscriptions', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    res.json(core.listSubscriptions(customer, status));
+  }));
+
+  v1.get('/subscriptions/:id', route((req, res) => {
+    res.json(core.getSubscription(String(req.params.id)));
+  }));
+
+  v1.post('/subscriptions/:id', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    const item = Array.isArray(body.items) ? body.items[0] : undefined;
+    res.json(core.updateSubscription(String(req.params.id), {
+      itemId: item && typeof item.id === 'string' ? item.id : undefined,
+      quantity: item && item.quantity !== undefined ? Number(item.quantity) : undefined,
+      cancelAtPeriodEnd: body.cancel_at_period_end !== undefined ? Boolean(body.cancel_at_period_end) : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+    }));
+  }));
+
+  v1.delete('/subscriptions/:id', route((req, res) => {
+    res.json(core.cancelSubscription(String(req.params.id)));
+  }));
+
+  v1.post('/invoices/create_preview', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    const details = body.subscription_details && typeof body.subscription_details === 'object' ? body.subscription_details : {};
+    const item = Array.isArray(details.items) ? details.items[0] : undefined;
+    res.json(core.createInvoicePreview({
+      customer: typeof body.customer === 'string' ? body.customer : '',
+      subscription: typeof body.subscription === 'string' ? body.subscription : undefined,
+      quantity: item && item.quantity !== undefined ? Number(item.quantity) : undefined,
+      cancelAt: typeof details.cancel_at === 'number' ? details.cancel_at : undefined,
+    }));
+  }));
+
   v1.get('/checkout/sessions/:id', route((req, res) => {
     checkFault(core, 'checkout.sessions.retrieve');
     const session = core.getCheckoutSession(String(req.params.id));
     res.json(sessionResponse(core, session, req.query.expand ?? (req.query as Record<string, unknown>)['expand[]']));
+  }));
+
+  v1.get('/checkout/sessions', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    res.json(core.listCheckoutSessions(customer));
   }));
 
   v1.post('/checkout/sessions/:id/expire', route(async (req, res) => {
@@ -180,6 +253,47 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     // reconciliation on the application side never learns of the expiry.
     await deliverEvent(core, event, env);
     res.json(core.getCheckoutSession(sessionId));
+  }));
+
+  // ── Webhook endpoints ─────────────────────────────────────────────────────
+
+  v1.post('/webhook_endpoints', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.create');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.createWebhookEndpoint({
+      url: typeof body.url === 'string' ? body.url : '',
+      enabled_events: stringList(body.enabled_events) ?? [],
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+      api_version: typeof body.api_version === 'string' ? body.api_version : undefined,
+    }));
+  }));
+
+  v1.get('/webhook_endpoints', route((_req, res) => {
+    checkFault(core, 'webhook_endpoints.list');
+    res.json(core.listWebhookEndpoints());
+  }));
+
+  v1.get('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.retrieve');
+    res.json(core.getWebhookEndpoint(String(req.params.id)));
+  }));
+
+  v1.post('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.update');
+    const body = (req.body ?? {}) as Record<string, any>;
+    res.json(core.updateWebhookEndpoint(String(req.params.id), {
+      url: typeof body.url === 'string' ? body.url : undefined,
+      enabled_events: stringList(body.enabled_events),
+      disabled: optionalBoolean(body.disabled),
+      description: typeof body.description === 'string' ? body.description : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+    }));
+  }));
+
+  v1.delete('/webhook_endpoints/:id', route((req, res) => {
+    checkFault(core, 'webhook_endpoints.delete');
+    res.json(core.deleteWebhookEndpoint(String(req.params.id)));
   }));
 
   // ── Browser-facing simulated Checkout ────────────────────────────────────

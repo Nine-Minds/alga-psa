@@ -2,10 +2,9 @@
 
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, resolveTenantToday } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { Temporal } from '@js-temporal/polyfill';
 import type {
   IHourBlock,
   IHourBlockAllocation,
@@ -20,6 +19,7 @@ import {
   getContractLineCoverageForClient,
   getContractLineCoverageRowsForClient,
   classifyContractLineCoverageForWindow,
+  computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateInvoiceNumber } from './invoiceGeneration';
@@ -27,6 +27,7 @@ import { getDueDate } from './billingAndTax';
 import { getInitialInvoiceTaxSource } from './taxSourceActions';
 import * as invoiceService from '../services/invoiceService';
 import { TaxService } from '../services/taxService';
+import { createPendingHourBlockForInvoiceCharge } from '../services/pendingHourBlockService';
 import {
   actionError,
   getErrorMessage,
@@ -183,6 +184,11 @@ export interface CreateHourBlockPurchaseInvoiceInternalInput {
   service: DbRow;
   currencyCode: string;
   dueDate: string;
+  /**
+   * Invoice date (YYYY-MM-DD) the due date was derived from. When absent, the
+   * tenant-local today is resolved inside the transaction.
+   */
+  invoiceDate?: string;
   taxSource: unknown;
   invoiceNumber: string;
   createdBy: string | null;
@@ -211,6 +217,7 @@ export async function createHourBlockPurchaseInvoiceInternal(
     service,
     currencyCode,
     dueDate,
+    invoiceDate,
     taxSource,
     invoiceNumber,
     createdBy,
@@ -218,14 +225,13 @@ export async function createHourBlockPurchaseInvoiceInternal(
   } = input;
   const sessionLike = { user: { id: createdBy } };
   const invoiceId = uuidv4();
-  const blockId = uuidv4();
   const totalMinutes = Math.round(hours * 60);
   const purchaseAmount = Math.round(hours * hourlyRate);
   const invoice = {
     invoice_id: invoiceId,
     tenant,
     client_id: clientId,
-    invoice_date: Temporal.Now.plainDateISO().toString(),
+    invoice_date: invoiceDate ?? (await resolveTenantToday(trx, tenant)).toString(),
     due_date: dueDate,
     invoice_number: invoiceNumber,
     status: 'draft',
@@ -264,27 +270,23 @@ export async function createHourBlockPurchaseInvoiceInternal(
     .first();
   if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
 
-  await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
-    block_id: blockId,
+  const { blockId } = await createPendingHourBlockForInvoiceCharge(trx, {
     tenant,
-    client_id: clientId,
-    service_id: serviceId,
-    total_minutes: totalMinutes,
-    remaining_minutes: totalMinutes,
-    hourly_rate: Math.round(hourlyRate),
-    purchase_amount: purchaseAmount,
-    currency_code: currencyCode,
-    status: 'pending',
-    purchased_at: null,
-    expiration_date: toCalendarDateString(expirationDate),
-    source_invoice_id: invoiceId,
-    source_invoice_charge_id: purchaseLine.item_id,
-    replenishment_bucket_usage_id: replenishmentBucketUsageId ?? null,
-    source_type: 'purchase',
-    created_by: createdBy,
-    notes: notes?.trim() || null,
+    clientId,
+    serviceId,
+    minutes: totalMinutes,
+    hourlyRate,
+    purchaseAmount,
+    currencyCode,
+    invoiceId,
+    invoiceChargeId: purchaseLine.item_id,
+    expirationDate,
+    scopeServiceIds,
+    sourceType: 'purchase',
+    replenishmentBucketUsageId,
+    createdBy,
+    notes,
   });
-  await resolveScopeServiceIds(trx, tenant, blockId, scopeServiceIds);
   return { invoiceId, blockId, invoiceNumber };
 }
 
@@ -326,7 +328,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
       }
 
       const currencyCode = client.default_currency_code || 'USD';
-      const currentDate = Temporal.Now.plainDateISO().toString();
+      const currentDate = (await resolveTenantToday(trx, tenant)).toString();
       const dueDate = await getDueDate(clientId, currentDate);
       if (isActionError(dueDate)) throw new Error(getErrorMessage(dueDate));
       const taxSource = await getInitialInvoiceTaxSource(clientId);
@@ -346,6 +348,7 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         service,
         currencyCode,
         dueDate,
+        invoiceDate: currentDate,
         taxSource,
         invoiceNumber: await generateInvoiceNumber(),
         createdBy: user.user_id,
@@ -355,6 +358,15 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
     return result;
   });
 });
+
+const CONTRACT_BLOCK_VOID_MESSAGE =
+  'Contract prepaid blocks cannot be voided here; void or delete the invoice that issued the block';
+const CONTRACT_BLOCK_GRANT_MESSAGE =
+  'Contract prepaid blocks cannot be granted; they are issued by invoicing the Prepaid Block contract line';
+
+function isContractIssuedBlock(block: { source_type?: string | null; contract_line_id?: string | null }): boolean {
+  return block.source_type === 'contract' || block.contract_line_id != null;
+}
 
 /**
  * Mints an hour block directly — no invoice (comped hours / PSA migrations).
@@ -370,6 +382,11 @@ export const grantHourBlock = withAuth(async (
       throw new Error('Permission denied: Cannot grant hour blocks');
     }
     const { clientId, serviceId, hours, hourlyRate, expirationDate, scopeServiceIds, reason, notes } = input;
+    // Grants mint ad-hoc blocks only; contract blocks are issued by invoicing.
+    const contractOwnership = input as { contractLineId?: unknown; contract_line_id?: unknown };
+    if (contractOwnership.contractLineId != null || contractOwnership.contract_line_id != null) {
+      throw new Error(CONTRACT_BLOCK_GRANT_MESSAGE);
+    }
     if (!clientId) throw new Error('Client ID is required');
     if (!Number.isFinite(hours) || hours <= 0) throw new Error('Block hours must be greater than zero');
     if (hourlyRate != null && (!Number.isFinite(hourlyRate) || hourlyRate < 0)) {
@@ -385,6 +402,14 @@ export const grantHourBlock = withAuth(async (
         .where({ client_id: clientId, tenant })
         .first();
       if (!client) throw new Error('Client not found');
+
+      const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+        .where({ service_id: serviceId, tenant })
+        .first();
+      if (!service) throw new Error(`Service ${serviceId} not found`);
+      if (service.billing_method !== 'hourly') {
+        throw new Error('Hour blocks can only be granted for hourly services');
+      }
 
       const blockId = uuidv4();
       const now = new Date().toISOString();
@@ -620,6 +645,9 @@ export const voidHourBlock = withAuth(async (
         .forUpdate()
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
+      if (isContractIssuedBlock(block)) {
+        throw new Error(CONTRACT_BLOCK_VOID_MESSAGE);
+      }
       if (block.status !== 'pending' && block.status !== 'active') {
         throw new Error('Only pending or active hour blocks can be voided');
       }
@@ -724,6 +752,9 @@ export const listHourBlocks = withAuth(async (
       const blocksQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blocksQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
       scopedDb.tenantJoin(blocksQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
+      // Contract-issued blocks (contract_line_id set) show their owning contract in the Source column.
+      scopedDb.tenantJoin(blocksQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blocksQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await blocksQuery
         .where({ 'hb.client_id': clientId })
         .select(
@@ -731,6 +762,8 @@ export const listHourBlocks = withAuth(async (
           'sc.service_name as service_name',
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
           trx.raw('(hb.first_allocated_at IS NOT NULL) as has_allocations'),
         )
         .orderBy('hb.purchased_at', 'asc')
@@ -776,7 +809,8 @@ export const listHourBlocks = withAuth(async (
           scope_services: scopesByBlock.get(row.block_id) ?? [],
           has_allocations: Boolean(row.has_allocations),
           expiration_date: toCalendarDateString(row.expiration_date),
-          remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
+          valid_from: toCalendarDateString(row.valid_from),
+          remaining_value: computeRemainingBlockValueMinor({ remaining_minutes: row.remaining_minutes, hourly_rate: row.hourly_rate }),
         };
         if (coverageRows && isCoverageEligibleBlock(row)) {
           // Same window rule as the single-block helper: tenant today .. expiry
@@ -787,6 +821,9 @@ export const listHourBlocks = withAuth(async (
               from: coverageRows.window.from,
               to: (block.expiration_date as string | null) ?? coverageRows.defaultTo,
             },
+            // A Prepaid Block line's own block draws from that line's time:
+            // never warn that the issuing line's time "will not draw" it.
+            excludeContractLineId: (row.contract_line_id as string | null) ?? null,
           });
         }
         return block;
@@ -820,6 +857,8 @@ export const getHourBlockDetail = withAuth(async (
       const blockQuery = scopedDb.table('hour_blocks as hb') as Knex.QueryBuilder;
       scopedDb.tenantJoin(blockQuery, 'invoices as inv', 'hb.source_invoice_id', 'inv.invoice_id', { type: 'left' });
       scopedDb.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      scopedDb.tenantJoin(blockQuery, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const block = await blockQuery
         .where({ 'hb.block_id': blockId })
         .select(
@@ -827,6 +866,8 @@ export const getHourBlockDetail = withAuth(async (
           'inv.invoice_number as invoice_number',
           'inv.status as invoice_status',
           'sc.service_name as service_name',
+          'ct.contract_name as contract_name',
+          'cl.contract_line_name as contract_line_name',
         )
         .first();
       if (!block) throw new Error(`Hour block with ID ${blockId} not found`);
@@ -880,6 +921,8 @@ export const getHourBlockDetail = withAuth(async (
             block.service_id,
           ),
           expirationDate: toCalendarDateString(block.expiration_date),
+          // The issuing line's time draws its own block; do not warn about it.
+          excludeContractLineId: (block.contract_line_id as string | null) ?? null,
         });
       }
 
@@ -887,7 +930,8 @@ export const getHourBlockDetail = withAuth(async (
         block: {
           ...block,
           expiration_date: toCalendarDateString(block.expiration_date),
-          remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
+          valid_from: toCalendarDateString(block.valid_from),
+          remaining_value: computeRemainingBlockValueMinor(block),
           ...(contractCoverage ? { contract_coverage: contractCoverage } : {}),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],
@@ -913,6 +957,6 @@ export const getAvailableHourBlockMinutesForClient = withAuth(async (
       throw new Error('Permission denied: Cannot read hour blocks');
     }
     const { knex } = await createTenantKnex();
-    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId);
+    return getAvailableHourBlockMinutes(knex, tenant, clientId, serviceId, { adhocOnly: true });
   });
 });

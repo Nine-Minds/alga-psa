@@ -12,6 +12,7 @@ import os from "os";
 
 import { getAdminConnection, retryOnAdminReadOnly } from "@alga-psa/db/admin.js";
 import { tenantDb } from "@alga-psa/db";
+import { evaluateSsoRedirectUriGate } from "@alga-psa/shared/core/portalDomainSurface.js";
 
 import type {
   PortalDomainActivityRecord,
@@ -121,6 +122,7 @@ const ACTIVE_RECONCILE_STATUSES = new Set([
   "certificate_issuing",
   "certificate_failed",
   "deploying",
+  "pending_redirect_uri",
   "active",
 ]);
 
@@ -220,13 +222,16 @@ async function getConnection(): Promise<Knex> {
 
 export async function loadPortalDomain(args: {
   portalDomainId: string;
+  tenantId: string;
 }): Promise<PortalDomainActivityRecord | null> {
   const knex = await getConnection();
-  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
+  // Tenant AND row scoped: a workflow only ever sees its own tenant's row.
+  const record = await tenantDb(knex, args.tenantId)
+    .table<PortalDomainActivityRecord>(TABLE_NAME)
     .where({ id: args.portalDomainId })
     .first();
 
-  return record || null;
+  return (record as PortalDomainActivityRecord | undefined) || null;
 }
 
 export async function markPortalDomainStatus(
@@ -249,7 +254,7 @@ export async function markPortalDomainStatus(
         updates.verification_details = args.verificationDetails;
       }
 
-      await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
+      await tenantDb(knex, args.tenantId).table(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
     },
     { logLabel: 'markPortalDomainStatus' }
   );
@@ -544,7 +549,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
       await retryOnAdminReadOnly(
         async () => {
           const k = await getConnection();
-          await k(TABLE_NAME).where({ id: manifest.record.id }).update({
+          await tenantDb(k, manifest.record.tenant).table(TABLE_NAME).where({ id: manifest.record.id }).update({
             certificate_secret_name: manifest.secretName,
             last_synced_resource_version: null,
             updated_at: k.fn.now(),
@@ -563,25 +568,26 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  const cleanupIds = rows
-    .filter(
-      (row) =>
-        row.status === "disabled" &&
-        (row.certificate_secret_name || row.last_synced_resource_version),
-    )
-    .map((row) => row.id);
+  const cleanupRows = rows.filter(
+    (row) =>
+      row.status === "disabled" &&
+      (row.certificate_secret_name || row.last_synced_resource_version),
+  );
 
-  if (cleanupIds.length > 0) {
+  if (cleanupRows.length > 0) {
     try {
       await retryOnAdminReadOnly(
         async () => {
           const k = await getConnection();
-          await k(TABLE_NAME).whereIn("id", cleanupIds).update({
-            certificate_secret_name: null,
-            last_synced_resource_version: null,
-            updated_at: k.fn.now(),
-            last_checked_at: k.fn.now(),
-          });
+          // Each row is addressed by (tenant, id); the surface is never touched here.
+          for (const row of cleanupRows) {
+            await tenantDb(k, row.tenant).table(TABLE_NAME).where({ id: row.id }).update({
+              certificate_secret_name: null,
+              last_synced_resource_version: null,
+              updated_at: k.fn.now(),
+              last_checked_at: k.fn.now(),
+            });
+          }
         },
         { logLabel: 'portal-domain:cleanupDisabled' }
       );
@@ -633,13 +639,14 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
   return { success: true, appliedCount };
 }
 
-export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
+export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string; tenantId: string }): Promise<PortalDomainStatusSnapshot | null> {
   const knex = await getConnection();
   const record = await withTransientRetry(
     () =>
-      knex<PortalDomainActivityRecord>(TABLE_NAME)
+      tenantDb(knex, args.tenantId)
+        .table<PortalDomainActivityRecord>(TABLE_NAME)
         .where({ id: args.portalDomainId })
-        .first(),
+        .first() as Promise<PortalDomainActivityRecord | undefined>,
     { attempts: 3, delayMs: 1000 }
   );
 
@@ -647,7 +654,7 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'pending_redirect_uri']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
   }
@@ -709,8 +716,16 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     );
 
       if (gatewayExists && virtualServiceExists) {
-        nextStatus = 'active';
-        nextMessage = 'Your domain is live and protected by HTTPS.';
+        const redirectGate = evaluateSsoRedirectUriGate(record.surface, record.verification_details);
+        if (redirectGate.ok) {
+          nextStatus = 'active';
+          nextMessage = 'Your domain is live and protected by HTTPS.';
+        } else {
+          nextStatus = 'pending_redirect_uri';
+          nextMessage = redirectGate.missing.length > 0
+            ? `HTTPS is ready. Register these SSO redirect URIs with your identity provider(s) to finish activation: ${redirectGate.missing.join(', ')}`
+            : 'HTTPS is ready, but the SSO redirect URI state for this domain could not be confirmed. Confirm the redirect URIs to finish activation.';
+        }
       } else {
         nextStatus = 'deploying';
         nextMessage = 'SSL is ready. Finishing the domain routing setup...';
@@ -736,6 +751,7 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
   if (nextStatus !== record.status || nextMessage !== currentMessage) {
     await markPortalDomainStatus({
       portalDomainId: record.id,
+      tenantId: record.tenant,
       status: nextStatus,
       statusMessage: nextMessage,
     });

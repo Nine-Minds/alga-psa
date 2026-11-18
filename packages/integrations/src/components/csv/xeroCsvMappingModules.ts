@@ -20,7 +20,8 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { getIntegrationClients } from '../../actions/clientLookupActions';
+import { createClientAlgaSearch } from '../accounting-mappings/clientAlgaSearch';
+import type { AccountingMappingAlgaSearch } from '../accounting-mappings/types';
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
   DISCOUNT_MAPPING_ENTITY_TYPE
@@ -52,21 +53,26 @@ function throwIfActionError(value: unknown): void {
   }
 }
 
-export function createXeroCsvMappingModules(t?: TFn): AccountingMappingModule[] {
+export function createXeroCsvMappingModules(
+  t?: TFn,
+  clients: AccountingMappingAlgaSearch = createClientAlgaSearch(undefined)
+): AccountingMappingModule[] {
   const tab = (key: string, fallback: string) =>
     t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
-    createClientModule(tab('clients', 'Clients')),
+    createClientModule(tab('clients', 'Clients'), clients),
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
     createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 
-function createClientModule(tabLabel: string): AccountingMappingModule {
+function createClientModule(tabLabel: string, clients: AccountingMappingAlgaSearch): AccountingMappingModule {
   return {
+    algaSearch: clients,
     id: 'xero-csv-client-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'client',
     externalEntityType: 'Contact',
     labels: {
@@ -107,7 +113,8 @@ function createClientModule(tabLabel: string): AccountingMappingModule {
       return loadMappings<IClient>({
         context,
         algaEntityType: 'client',
-        loadAlgaEntities: async () => getIntegrationClients(true),
+        // Clients are searched on the server (algaSearch); the engine names the mapped ones.
+        loadAlgaEntities: async () => [],
         mapAlga: (client) => ({
           id: client.client_id,
           name: client.client_name
@@ -134,6 +141,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-service-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'service',
     externalEntityType: 'Item',
     overridesKey: 'itemMappingOverrides',
@@ -214,6 +222,7 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-discount-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
     externalEntityType: 'Item',
     labels: {
@@ -273,6 +282,7 @@ function createTaxCodeModule(tabLabel: string): AccountingMappingModule {
   return {
     id: 'xero-csv-tax-code-mappings',
     adapterType: ADAPTER_TYPE,
+    manualExternalEntry: true,
     algaEntityType: 'tax_code',
     externalEntityType: 'TaxType',
     labels: {

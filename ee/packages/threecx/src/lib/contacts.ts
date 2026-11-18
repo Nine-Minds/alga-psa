@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ContactModel, type CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildContactCreatedPayload } from '@alga-psa/workflow-streams';
 import { THREECX_PROVIDER } from './providerState';
@@ -157,28 +158,27 @@ async function createContactRecord(tenantId: string, input: CreateContactRecordI
   const created = await withTransaction(tenantId, (trx) => ContactModel.createContact(createInput, tenantId, trx));
 
   const clientId = created.client_id;
-  if (typeof clientId === 'string' && clientId) {
-    const occurredAt = created.created_at ?? new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'CONTACT_CREATED',
-      payload: buildContactCreatedPayload({
-        contactId: created.contact_name_id,
-        clientId,
-        fullName: created.full_name,
-        email: created.email || undefined,
-        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-        primaryEmailType: created.primary_email_type ?? null,
-        additionalEmailAddresses: created.additional_email_addresses ?? [],
-        phoneNumbers: created.phone_numbers,
-        defaultPhoneNumber: created.default_phone_number || undefined,
-        defaultPhoneType: created.default_phone_type || undefined,
-        createdAt: occurredAt,
-      }),
-      ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
-      idempotencyKey: `contact_created:${created.contact_name_id}`,
-    });
-  }
+  // Client-less contacts emit too: the webhook layer carries client_id only when present.
+  const occurredAt = created.created_at ?? new Date().toISOString();
+  await publishWorkflowEvent({
+    eventType: 'CONTACT_CREATED',
+    payload: buildContactCreatedPayload({
+      contactId: created.contact_name_id,
+      clientId,
+      fullName: created.full_name,
+      email: created.email || undefined,
+      primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+      primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+      primaryEmailType: created.primary_email_type ?? null,
+      additionalEmailAddresses: created.additional_email_addresses ?? [],
+      phoneNumbers: created.phone_numbers,
+      defaultPhoneNumber: created.default_phone_number || undefined,
+      defaultPhoneType: created.default_phone_type || undefined,
+      createdAt: occurredAt,
+    }),
+    ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
+    idempotencyKey: `contact_created:${created.contact_name_id}`,
+  });
 
   return created;
 }
@@ -444,10 +444,15 @@ export async function mapThreecxContactToClient(
 
   if (input.clientId) {
     await assertClientExists(db, input.clientId);
-    await db
-      .table('contacts')
-      .where({ contact_name_id: input.contactId })
-      .update({ client_id: input.clientId, updated_at: knex.fn.now() });
+    const clientId = input.clientId;
+    await withTransaction(knex, (trx) =>
+      trackContactUpdates(trx, tenantId, [input.contactId], ['client_id'], () =>
+        tenantDb(trx, tenantId)
+          .table('contacts')
+          .where({ contact_name_id: input.contactId })
+          .update({ client_id: clientId, updated_at: trx.fn.now() })
+      )
+    );
   }
 
   await queueRowsQuery(db, THREECX_CONTACT_ORIGIN_ENTITY_TYPE).where({ alga_entity_id: input.contactId }).delete();

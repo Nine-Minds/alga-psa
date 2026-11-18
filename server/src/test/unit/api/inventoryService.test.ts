@@ -79,7 +79,24 @@ class FakeQuery implements PromiseLike<Row[]> {
   }
 
   where(arg1: any, arg2?: any) {
-    if (typeof arg1 === 'function') return this;
+    if (typeof arg1 === 'function') {
+      const conditions: Array<(row: Row) => boolean> = [];
+      const predicate: any = {
+        whereRaw: () => predicate,
+        orWhereRaw: () => predicate,
+        where: (column: string, value: unknown) => {
+          conditions.push(row => row[column.split('.').pop()!] === value);
+          return predicate;
+        },
+        orWhere: (column: string, value: unknown) => {
+          conditions.push(row => row[column.split('.').pop()!] === value);
+          return predicate;
+        },
+      };
+      arg1(predicate);
+      this.rows = this.rows.filter(row => conditions.some(condition => condition(row)));
+      return this;
+    }
     if (typeof arg1 === 'object') {
       for (const [key, value] of Object.entries(arg1)) {
         const field = key.split('.').pop()!;
@@ -160,6 +177,80 @@ describe('InventoryService', () => {
     if (result.type === 'multi') {
       expect(result.matches.map((match) => match.kind)).toEqual(['product', 'unit']);
     }
+  });
+
+  describe('asset visibility (alga-2026-0002683 B2)', () => {
+    const productRow = {
+      service_id: SERVICE_ID,
+      service_name: 'Switch',
+      sku: 'SW-1',
+      barcode: null,
+      unit_of_measure: 'each',
+      item_kind: 'product',
+      is_serialized: false,
+      track_stock: true,
+    };
+    const unitRow = { ...productRow, unit_id: UNIT_ID, serial_number: 'SW-1', status: 'in_stock', location_id: LOCATION_ID };
+    const assetRow = (id: string) => ({
+      asset_id: id,
+      asset_tag: null,
+      name: `Asset ${id}`,
+      serial_number: 'SW-1',
+      asset_type: 'workstation',
+      status: 'active',
+      client_id: 'client-1',
+    });
+    const readable = (...ids: string[]) => async (_trx: unknown, _authorizationRecords: any[], summaries: any[]) =>
+      summaries.filter((row) => ids.includes(row.asset_id));
+
+    it('returns no assets when the visibility argument is omitted', async () => {
+      const service = new InventoryService();
+      const assetOnly = await service.lookup('SW-1', context(makeDb({ 'assets as a': [assetRow('a1')] })));
+      expect(assetOnly.type).toBe('none');
+      expect(JSON.stringify(assetOnly)).not.toContain('a1');
+
+      const withProduct = await service.lookup('SW-1', context(makeDb({
+        'service_catalog as sc': [productRow],
+        'assets as a': [assetRow('a1')],
+      })));
+      expect(withProduct.type).toBe('product');
+    });
+
+    it('collapses multi to a single type when the only asset is removed', async () => {
+      const service = new InventoryService();
+      const db = makeDb({ 'service_catalog as sc': [productRow], 'assets as a': [assetRow('a1')] });
+      const kept = await service.lookup('SW-1', context(db), readable('a1'));
+      expect(kept.type).toBe('multi');
+      const dropped = await service.lookup('SW-1', context(db), readable());
+      expect(dropped.type).toBe('product');
+    });
+
+    it('collapses multi to unit, and an asset-only result to none, when assets are removed', async () => {
+      const service = new InventoryService();
+      const unitDb = makeDb({ 'stock_units as su': [unitRow], 'assets as a': [assetRow('a1')] });
+      expect((await service.lookup('SW-1', context(unitDb), readable())).type).toBe('unit');
+      const assetDb = makeDb({ 'assets as a': [assetRow('a1')] });
+      expect((await service.lookup('SW-1', context(assetDb), readable('a1'))).type).toBe('asset');
+      expect((await service.lookup('SW-1', context(assetDb), readable())).type).toBe('none');
+    });
+
+    it('keeps readable assets when only some are removed', async () => {
+      const service = new InventoryService();
+      const db = makeDb({ 'service_catalog as sc': [productRow], 'assets as a': [assetRow('a1'), assetRow('a2')] });
+      const result = await service.lookup('SW-1', context(db), readable('a2'));
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.matches.map((m) => m.kind)).toEqual(['product', 'asset']);
+      }
+    });
+  });
+
+  it('C3: getUnit queries by the caller tenant and returns null for another tenant\'s unit (REST 404)', async () => {
+    mocks.queryUnitDetail.mockResolvedValue(null);
+    const service = new InventoryService();
+    const result = await service.getUnit(UNIT_ID, context(makeDb({})));
+    expect(result).toBeNull();
+    expect(mocks.queryUnitDetail).toHaveBeenCalledWith(expect.anything(), TENANT, UNIT_ID);
   });
 
   it('T020: matches MAC case-insensitively while ignoring separators', async () => {
@@ -280,5 +371,154 @@ describe('InventoryService', () => {
       reason: '',
     }, context(makeDb({})))).rejects.toMatchObject({ statusCode: 400 });
     expect(mocks.adjustStockCore).not.toHaveBeenCalled();
+  });
+});
+
+describe('InventoryService lookup applies asset projections to final output and matches', () => {
+  beforeEach(() => {
+    mocks.queryStockLevelsForProduct.mockResolvedValue([]);
+  });
+
+  const asset = {
+    asset_id: 'asset-1',
+    name: 'Visible PC',
+    serial_number: 'PRIVATE-SERIAL-4938',
+    asset_tag: 'PUBLIC-TAG',
+    asset_type: 'workstation',
+    status: 'active',
+    client_id: 'client-1',
+    client_name: 'Visible Client',
+    warranty_end_date: '2099-11-02T12:00:00Z',
+  };
+
+  const db = () => makeDb({ 'assets as a': [asset] });
+  const authorizeWithRedactions = async (redactions: string[]) => {
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/authorization/recordProjectionDescriptors');
+    const policy = createRecordProjectionPolicy(redactions, ASSET_RECORD_SOURCE);
+    return async (_trx: unknown, _authorizationRecords: any[], summaries: any[]) => summaries
+      .map(row => policy.project(row, ASSET_RECORD_SOURCE))
+      .filter(row => row !== null);
+  };
+
+  it('keeps visible serial and derived warranty status for an authorized match', async () => {
+    const result = await new InventoryService().lookup(
+      asset.serial_number,
+      context(db()),
+      await authorizeWithRedactions([]),
+    );
+
+    expect(result).toMatchObject({
+      type: 'asset',
+      asset: { name: asset.name, serial_number: asset.serial_number, warranty_status: 'active' },
+    });
+  });
+
+  it.each(['warranty_status', 'assets.warranty_status', 'fields.assets.warranty_status'])(
+    'does not regenerate derived warranty status hidden by %s', async (alias) => {
+      const result = await new InventoryService().lookup(
+        asset.asset_tag,
+        context(db()),
+        await authorizeWithRedactions([alias]),
+      );
+
+      expect(result.type).toBe('asset');
+      expect((result as any).asset.warranty_status ?? null).toBeNull();
+    },
+  );
+
+  it('does not confirm a match made only by a hidden serial number', async () => {
+    const result = await new InventoryService().lookup(
+      asset.serial_number,
+      context(db()),
+      await authorizeWithRedactions(['assets.serial_number']),
+    );
+
+    expect(result.type).toBe('none');
+  });
+
+  it('preserves independent product and unit matches when the asset serial is hidden', async () => {
+    const authorize = await authorizeWithRedactions(['assets.serial_number']);
+    const productResult = await new InventoryService().lookup(
+      asset.serial_number,
+      context(makeDb({
+        'assets as a': [asset],
+        'service_catalog as sc': [{
+          service_id: SERVICE_ID,
+          service_name: 'Catalog Product',
+          sku: asset.serial_number,
+          barcode: null,
+          item_kind: 'product',
+        }],
+      })),
+      authorize,
+    );
+    const unitResult = await new InventoryService().lookup(
+      asset.serial_number,
+      context(makeDb({
+        'assets as a': [asset],
+        'service_catalog as sc': [{
+          service_id: SERVICE_ID,
+          service_name: 'Stock Unit Product',
+          sku: 'OTHER-SKU',
+          barcode: null,
+          item_kind: 'product',
+          is_serialized: true,
+        }],
+        'stock_units as su': [{
+          unit_id: UNIT_ID,
+          service_id: SERVICE_ID,
+          serial_number: asset.serial_number,
+          status: 'in_stock',
+          asset_id: null,
+        }],
+      })),
+      authorize,
+    );
+
+    expect(productResult.type).toBe('product');
+    expect(unitResult.type).toBe('unit');
+  });
+
+  it('still matches by a visible tag when the serial number is hidden', async () => {
+    const result = await new InventoryService().lookup(
+      asset.asset_tag,
+      context(db()),
+      await authorizeWithRedactions(['assets.serial_number']),
+    );
+
+    expect(result).toMatchObject({
+      type: 'asset',
+      asset: { name: asset.name, asset_tag: asset.asset_tag },
+    });
+    expect((result as any).asset).not.toHaveProperty('serial_number');
+  });
+
+  it('keeps raw authorization context separate from the projected response summary', async () => {
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/authorization/recordProjectionDescriptors');
+    const policy = createRecordProjectionPolicy(['assets.client_id'], ASSET_RECORD_SOURCE);
+    let observedAuthorizationRecord: any;
+    let observedResponseSummary: any;
+    const authorize: any = async (_trx: unknown, records: any[], summaries: any[]) => {
+      observedAuthorizationRecord = records[0];
+      observedResponseSummary = summaries[0];
+      return summaries.map((summary) => policy.project(summary, ASSET_RECORD_SOURCE)).filter(Boolean);
+    };
+
+    const result = await new InventoryService().lookup(asset.asset_tag, context(db()), authorize);
+
+    expect(observedAuthorizationRecord.client_id).toBe(asset.client_id);
+    expect(observedResponseSummary.client_id).toBe(asset.client_id);
+    expect(result.type).toBe('asset');
+    expect((result as any).asset).not.toHaveProperty('client_id');
+  });
+
+  it('does not turn a nonmatching scan into an asset match', async () => {
+    const result = await new InventoryService().lookup(
+      'NONMATCH-4938',
+      context(db()),
+      await authorizeWithRedactions([]),
+    );
+
+    expect(result.type).toBe('none');
   });
 });

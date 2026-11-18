@@ -6,6 +6,17 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import type { CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+import {
+  insertChecklistItemsReplacingTemplates,
+} from '@alga-psa/shared/lib/ticketChecklists';
 
 /** Shape returned to the create-ticket form to prefill a duplicate. */
 export interface TicketDuplicateSource {
@@ -25,6 +36,17 @@ export interface TicketDuplicateSource {
   itil_urgency: number | null;
   assigned_to: string | null;
   assigned_team_id: string | null;
+  /**
+   * Display names for the ids above, resolved server-side in the same tenant-scoped load.
+   * `null` when the id is null OR the referenced row could not be found; callers must treat
+   * "id set, name null" as unresolved and say so rather than guess.
+   */
+  board_name: string | null;
+  category_name: string | null;
+  subcategory_name: string | null;
+  priority_name: string | null;
+  assignee_name: string | null;
+  assigned_team_name: string | null;
   additional_agents: { user_id: string; first_name: string | null; last_name: string | null }[];
   tags: {
     tag_id: string;
@@ -73,94 +95,32 @@ export function countDuplicableCustomFields(attributes: unknown): number {
   return picked.custom_fields ? Object.keys(picked.custom_fields as Record<string, unknown>).length : 0;
 }
 
+/**
+ * The create-input fields that make a ticket a duplicate: provenance plus the
+ * attributes allowlist. Single and batch Duplicate both spread this, so the copy
+ * set is defined once.
+ */
+export function duplicateCreateInputPatch(source: {
+  ticket_id: string;
+  attributes?: unknown;
+}): Pick<CreateTicketInput, 'duplicated_from_ticket_id' | 'attributes'> {
+  return {
+    duplicated_from_ticket_id: source.ticket_id,
+    attributes: pickDuplicableAttributes(source.attributes),
+  };
+}
+
 interface CopyChecklistParams {
   sourceTicketId: string;
   targetTicketId: string;
   userId: string;
 }
 
-/** A checklist row to be written onto a new ticket, whatever its origin (source ticket or ticket template). */
-export interface ChecklistItemToInsert {
-  item_name: string;
-  description: string | null;
-  is_required: boolean;
-  assigned_to: string | null;
-  /** `ticket_checklist_items.source` ('manual' | 'template'). */
-  source: string;
-  /** Checklist template this item came from; drives the replacement rule below. */
-  template_id: string | null;
-}
-
-interface InsertChecklistParams {
-  targetTicketId: string;
-  items: readonly ChecklistItemToInsert[];
-  userId: string;
-}
-
-/**
- * Appends `items` onto the target ticket, unchecked (Duplicate D8, Ticket template D4).
- *
- * `TicketModel.createTicket` has already auto-applied matching templates onto
- * the target inside the same transaction. For every checklist template the
- * incoming items carry, those items win: the target's freshly applied rows for
- * that template are deleted before the items go in. `template_id` is kept so the
- * template's idempotency key still suppresses a later re-apply. Templates that
- * newly match and are not carried stay as auto-applied, and the incoming items
- * are ordered after them.
- *
- * Shared by Duplicate (items loaded from the source ticket) and
- * create-from-ticket-template (items loaded from the template), so the rule is
- * implemented once. Returns the number of items inserted.
- */
-// LEVERAGE: pattern tenant-scoped-table-helper — tenantScopedTable is redefined in nearly every tickets module; this site calls tenantDb(trx, tenant).table(...) directly instead of adding another copy
-export async function insertChecklistItemsReplacingTemplates(
-  trx: Knex.Transaction,
-  tenant: string,
-  { targetTicketId, items, userId }: InsertChecklistParams
-): Promise<number> {
-  if (!items.length) {
-    return 0;
-  }
-  const db = tenantDb(trx, tenant);
-
-  const templateIds = Array.from(
-    new Set(items.map((item) => item.template_id).filter((id): id is string => Boolean(id)))
-  );
-  if (templateIds.length) {
-    await db
-      .table('ticket_checklist_items')
-      .where({ ticket_id: targetTicketId })
-      .whereIn('template_id', templateIds)
-      .delete();
-  }
-
-  const maxOrder = await db
-    .table('ticket_checklist_items')
-    .where({ ticket_id: targetTicketId })
-    .max('order_number as max')
-    .first();
-  const baseOrder = Number(maxOrder?.max ?? -1) + 1;
-
-  await db.table('ticket_checklist_items').insert(
-    items.map((item, index) => ({
-      tenant,
-      ticket_id: targetTicketId,
-      item_name: item.item_name,
-      description: item.description ?? null,
-      assigned_to: item.assigned_to ?? null,
-      is_required: item.is_required,
-      order_number: baseOrder + index,
-      source: item.source,
-      template_id: item.template_id ?? null,
-      completed: false,
-      completed_by: null,
-      completed_at: null,
-      created_by: userId,
-    }))
-  );
-
-  return items.length;
-}
+export {
+  insertChecklistItemsReplacingTemplates,
+  type ChecklistItemToInsert,
+  type InsertChecklistParams,
+} from '@alga-psa/shared/lib/ticketChecklists';
 
 /**
  * Copies the source ticket's checklist onto the target, unchecked (D8): loads the
@@ -187,4 +147,76 @@ export async function copyChecklistFromSource(
     userId,
     items: sourceItems,
   });
+}
+
+interface RecordDuplicateCopyParams {
+  source: { ticket_id: string; ticket_number: string; attributes?: unknown };
+  targetTicketId: string;
+  targetTicketNumber: string;
+  actorUserId: string;
+  copyChecklist: boolean;
+  /** Groups the copies made by one batch request; omitted for single Duplicate. */
+  batchId?: string;
+}
+
+/**
+ * Writes everything that makes a freshly created ticket a duplicate, inside the
+ * caller's transaction: the checklist copy (when requested), then the
+ * `TICKET_DUPLICATED_FROM` row on the copy and `TICKET_DUPLICATED_TO` on the source.
+ * Must run after the ticket is created, so templates auto-applied by
+ * `TicketModel.createTicket` are already in place for `copyChecklistFromSource`.
+ */
+export async function recordDuplicateCopy(
+  trx: Knex.Transaction,
+  tenant: string,
+  { source, targetTicketId, targetTicketNumber, actorUserId, copyChecklist, batchId }: RecordDuplicateCopyParams
+): Promise<{ checklistItemsCopied: number }> {
+  const checklistItemsCopied = copyChecklist
+    ? await copyChecklistFromSource(trx, tenant, {
+        sourceTicketId: source.ticket_id,
+        targetTicketId,
+        userId: actorUserId,
+      })
+    : 0;
+
+  const batchDetail = batchId ? { batch_id: batchId } : {};
+
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: targetTicketId,
+    eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_FROM,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: targetTicketId,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: actorUserId,
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    details: {
+      source_ticket_id: source.ticket_id,
+      source_ticket_number: source.ticket_number,
+      checklist_items_copied: checklistItemsCopied,
+      custom_fields_copied: countDuplicableCustomFields(source.attributes),
+      ...batchDetail,
+    },
+  });
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: source.ticket_id,
+    eventType: TICKET_ACTIVITY_EVENT.DUPLICATED_TO,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: source.ticket_id,
+    actor: {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: actorUserId,
+    },
+    source: TICKET_ACTIVITY_SOURCE.UI,
+    details: {
+      duplicate_ticket_id: targetTicketId,
+      duplicate_ticket_number: targetTicketNumber,
+      ...batchDetail,
+    },
+  });
+
+  return { checklistItemsCopied };
 }

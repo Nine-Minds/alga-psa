@@ -4,6 +4,7 @@ import { devtools } from 'zustand/middleware';
 import {
   DEFAULT_INVOICE_PRINT_SETTINGS,
   resolveTemplatePrintSettings,
+  type CustomPageSize,
   type TemplatePrintSettings,
   type TemplateTransformOperation,
 } from '@alga-psa/types';
@@ -46,7 +47,7 @@ export type DesignerComponentType =
   | 'custom-total'
   | 'image'
   | 'logo'
-  | 'qr'
+  | 'barcode'
   | 'dynamic-table'
   | 'signature'
   | 'action-button'
@@ -128,6 +129,9 @@ export interface DesignerNodeStyle {
   fontStyle?: string;
   lineHeight?: string | number;
   textAlign?: CssTextAlign;
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
 
   // Non-container layout-like style declarations that can be attached directly
   // to nodes such as fields in template AST inline styles.
@@ -254,7 +258,8 @@ interface DesignerState {
   ) => void;
   /** `index` places the preset's top-level blocks at that position in `parentId` (default: the end). */
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string, index?: number) => void;
-  applyPrintSettings: (settings: Partial<TemplatePrintSettings>) => void;
+  /** `customPageSize: null` clears a custom size and returns to the preset paper. */
+  applyPrintSettings: (settings: Partial<Omit<TemplatePrintSettings, 'customPageSize'>> & { customPageSize?: CustomPageSize | null }) => void;
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
@@ -315,7 +320,7 @@ const generateId = () => generateUUID();
 
 // Media frames need a concrete box; spacers exist to occupy a fixed height.
 // Everything else is laid out by its parent's flow and sized by its content.
-const FIXED_FRAME_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'qr']);
+const FIXED_FRAME_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'barcode']);
 
 export const collectLayerNames = (nodes: DesignerNode[]): Set<string> =>
   new Set(
@@ -476,16 +481,20 @@ const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
 
 const applyResolvedPrintSettingsToNodes = (
   nodes: DesignerNode[],
-  settings: Partial<TemplatePrintSettings>
+  settings: Partial<Omit<TemplatePrintSettings, 'customPageSize'>> & { customPageSize?: CustomPageSize | null }
 ): DesignerNode[] => {
   const current = resolveCurrentWorkspacePrintSettings(nodes);
+  const nextCustomPageSize =
+    settings.customPageSize === null ? undefined : settings.customPageSize ?? current.customPageSize;
   const resolved = resolveTemplatePrintSettings({
     printSettings: {
       paperPreset: settings.paperPreset ?? current.paperPreset,
       marginMm: typeof settings.marginMm === 'number' ? settings.marginMm : current.marginMm,
+      ...(nextCustomPageSize ? { customPageSize: nextCustomPageSize } : {}),
     },
   });
   if (
+    JSON.stringify(current.customPageSize ?? null) === JSON.stringify(resolved.customPageSize ?? null) &&
     current.paperPreset === resolved.paperPreset &&
     current.marginMm === resolved.marginMm &&
     current.pageWidthPx === resolved.pageWidthPx &&
@@ -505,6 +514,7 @@ const applyResolvedPrintSettingsToNodes = (
       printSettings: {
         paperPreset: resolved.paperPreset,
         marginMm: resolved.marginMm,
+        ...(resolved.customPageSize ? { customPageSize: resolved.customPageSize } : {}),
       },
     };
     const style = {

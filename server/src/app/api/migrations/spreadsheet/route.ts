@@ -16,10 +16,11 @@ import {
   migrationUploadErrorCode,
 } from '@/lib/migrations/migrationUploadErrors';
 import { spreadsheetImportNamespace } from '@/lib/migrations/spreadsheetNamespace';
+import { resolveConfiguredTenantCurrency } from '@alga-psa/inventory/lib/tenantCurrency';
 import { AMP_MAX_PACKAGE_BYTES } from '../upload/route';
 
 export const runtime = 'nodejs';
-const ENTITY_TYPES = new Set(['organizations', 'locations', 'contacts', 'tickets', 'ticket_comments', 'assets']);
+const ENTITY_TYPES = new Set(['organizations', 'locations', 'contacts', 'tickets', 'ticket_comments', 'assets', 'products', 'vendor_products']);
 
 /** Streams both the browser upload and the converted AMP artifact; request
  * payloads are never materialized as File.arrayBuffer() or a Buffer. */
@@ -50,8 +51,13 @@ export async function POST(request: Request) {
       const { convertSpreadsheets, inferSpreadsheetMapping } = await import('@alga-psa/migration-connectors/csv');
       const mapping = await inferSpreadsheetMapping(inputPath, entityType as never);
       if (Object.keys(mapping).length === 0) throw new Error('AMP_SPREADSHEET_NO_RECOGNIZED_HEADERS');
+      // Money cells are parsed to minor units with the exponent of the row's currency;
+      // a blank currency cell uses the tenant currency (never a hardcoded default), and
+      // the assumption is recorded so the applier can verify it at apply time.
+      const { knex: currencyKnex } = await createTenantKnex(user.tenant);
+      const defaultCurrency = (await resolveConfiguredTenantCurrency(currencyKnex, user.tenant)) ?? undefined;
       const namespace = spreadsheetImportNamespace(user.tenant, sourceDigest.digest('hex'));
-      const conversion = await convertSpreadsheets({ outputPath, namespace, sourceSystem: 'csv-upload', files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
+      const conversion = await convertSpreadsheets({ outputPath, namespace, sourceSystem: 'csv-upload', defaultCurrency, files: [{ entityType: entityType as never, path: inputPath, mapping }] }, directory);
       if (!MigrationStager.hasImportableRecords(outputPath)) throw new Error('AMP_PACKAGE_NO_IMPORTABLE_RECORDS');
       const { size: packageSize } = await stat(outputPath);
       const digest = createHash('sha256'); const storageInput = new PassThrough();

@@ -1,8 +1,10 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { randomUUID } from 'node:crypto';
 
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -14,22 +16,29 @@ import {
   IContractWithClient,
   IContractLineMapping,
 } from '@alga-psa/types';
+import type { ContractBillingTrace } from '@alga-psa/types';
+import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { validateDiscountInput, type DiscountAuthoringInput } from '../lib/billing/discountAuthoring';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
-import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildContractRecordCreatedPayload, buildContractRecordUpdatedPayload } from '@alga-psa/workflow-streams';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractRecordCreatedPayload } from '@alga-psa/workflow-streams';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  assertMspContractBillingPermission as assertBillingPermission,
+  assertContractLineMutationAuthorized,
+  ContractScopeError,
+} from '../lib/billing/contractAuthorization';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -43,7 +52,10 @@ import {
   DetailedContractLine,
 } from '../repositories/contractLineRepository';
 import { newSupportReference } from '../lib/supportReference';
+import { ContractUpdateError, updateContractHeaderWithEvents } from '../lib/contractUpdate';
+import { ContractDeletionError, deleteContractWithEvents } from '../lib/contractDeletion';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 type ContractActionError = ActionMessageError | ActionPermissionError;
@@ -55,16 +67,20 @@ class ContractActionDomainError extends Error {
   }
 }
 
-function contractActionErrorFrom(error: unknown): ContractActionError | null {
-  if (error instanceof ContractActionDomainError) {
+function contractActionErrorFrom(error: unknown, permissionMessageKey?: string): ContractActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
+  if (error instanceof ContractActionDomainError || error instanceof ContractScopeError) {
     if (error.message.startsWith('Permission denied:')) {
-      return permissionError(error.message);
+      return permissionError(error.message, permissionMessageKey);
     }
     return actionError(error.message);
   }
 
   if (error instanceof Error && error.message.startsWith('Permission denied:')) {
-    return permissionError(error.message);
+    return permissionError(error.message, permissionMessageKey);
   }
 
   if (error instanceof Error) {
@@ -105,8 +121,6 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
   return null;
 }
 
-const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
-
 function tenantScopedTable(
   conn: TenantScopedKnex,
   tenant: string,
@@ -120,20 +134,6 @@ function maybeUserActor(user: any) {
   if (typeof userId !== 'string' || userId.length === 0) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
 }
-
-const assertBillingPermission = async (
-  user: unknown,
-  action: 'read' | 'create' | 'update' | 'delete',
-  context: string,
-): Promise<void> => {
-  if (isBypassEnabled()) {
-    return;
-  }
-
-  if (!await hasPermission(user as any, 'billing', action)) {
-    throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
-  }
-};
 
 const assertNoSystemManagedIdentityMutation = (
   payload: Record<string, unknown>,
@@ -226,10 +226,9 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
-  // currency_code removed from templates - templates are now currency-neutral
-  // When converting to contract, we use USD as default. Actual contract currency
-  // is set from client's default_currency_code when creating a real contract.
-  currency_code: 'USD',
+  // The template's base currency. A contract created from it takes the client's
+  // currency, not this one.
+  currency_code: template.currency_code,
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -259,16 +258,9 @@ async function attachContractClientLogos(
   }));
 }
 
-async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contractId: string): Promise<boolean> {
-  const template = await tenantScopedTable(knex, tenant, 'contract_templates')
-    .where({ template_id: contractId })
-    .first();
-  return Boolean(template);
-}
-
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAll(knex, tenant);
@@ -284,7 +276,7 @@ export const getContracts = withAuth(async (user, { tenant }): Promise<IContract
 
 export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const templates = await ContractTemplateModel.getAll(tenant);
@@ -301,7 +293,7 @@ export const getContractTemplates = withAuth(async (user, { tenant }): Promise<I
 
 export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const rows = await Contract.getAllWithClients(knex, tenant);
@@ -318,7 +310,7 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
 
 export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const facade = tenantDb(knex, tenant);
@@ -355,7 +347,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
 
 export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | ContractActionError | null> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const contract = await Contract.getById(knex, tenant, contractId);
@@ -381,7 +373,7 @@ export const getContractById = withAuth(async (user, { tenant }, contractId: str
 
 export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract line mappings');
+    await assertBillingPermission(user, tenant, 'read', 'view contract line mappings');
     const { knex } = await createTenantKnex();
     return fetchContractLineMappings(knex, tenant, contractId);
   } catch (error) {
@@ -396,7 +388,7 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
 
 export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<DetailedContractLine[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view detailed contract lines');
+    await assertBillingPermission(user, tenant, 'read', 'view detailed contract lines');
     const { knex } = await createTenantKnex();
     return fetchDetailedContractLines(knex, tenant, contractId);
   } catch (error) {
@@ -419,24 +411,23 @@ export const addContractLine = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'create');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'create', 'modify contract lines');
 
     return knex.transaction((trx: Knex.Transaction) =>
       repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+        // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
         await syncRecurringServicePeriodsForContractLine(trx, {
           tenant,
           contractLineId: mapping.contract_line_id,
           sourceRunPrefix: 'contract_add_line',
         });
+        await syncPrepaidBlockIssuancesForContractLine(trx, tenant, mapping.contract_line_id);
         return mapping;
       })
     );
   } catch (error) {
     console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -448,15 +439,12 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
 
     await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
   } catch (error) {
     console.error(`Error removing contract line ${contractLineId} from contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -474,23 +462,21 @@ export const updateContractLineAssociation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
-
-    const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
-    await knex.transaction(async (trx) => {
+    return await knex.transaction(async (trx) => {
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
+      const updated = await repoUpdateContractLine(trx, tenant, contractId, contractLineId, updateData);
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_association_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
+      return updated;
     });
-    return updated;
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -514,22 +500,20 @@ export const updateContractLineRate = withAuth(async (
       return actionError('Rate must be zero or greater.');
     }
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
-
     await knex.transaction(async (trx) => {
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
       await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_rate_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.modifyLines');
     if (expected) {
       return expected;
     }
@@ -539,7 +523,7 @@ export const updateContractLineRate = withAuth(async (
 
 export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'check contract line associations');
+    await assertBillingPermission(user, tenant, 'read', 'check contract line associations');
     const { knex } = await createTenantKnex();
 
     return repoIsContractLineAttached(knex, tenant, contractId, contractLineId);
@@ -561,7 +545,7 @@ export const createContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    await assertBillingPermission(user, 'create', 'create billing contracts');
+    await assertBillingPermission(user, tenant, 'create', 'create billing contracts');
     assertNoSystemManagedIdentityMutation(contractData as Record<string, unknown>, 'create');
     const {
       tenant: _ignoredTenant,
@@ -606,7 +590,7 @@ export const updateContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    await assertBillingPermission(user, 'update', 'update billing contracts');
+    await assertBillingPermission(user, tenant, 'update', 'update billing contracts');
     assertNoSystemManagedIdentityMutation(updateData as Record<string, unknown>, 'update');
 
     // Attempt to load standard contract first; fall back to template
@@ -628,8 +612,8 @@ export const updateContract = withAuth(async (
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      // currency_code removed from templates - templates are now currency-neutral
-      // Currency is inherited from the client when a contract is created
+      // The base currency is not changed here: relabelling goes through
+      // updateContractTemplateCurrency, which also guards the per-currency price sets.
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
@@ -656,77 +640,15 @@ export const updateContract = withAuth(async (
       return mapTemplateToContract(updatedTemplate);
     }
 
-    if (currentContract.is_system_managed_default === true) {
-      throw new ContractActionDomainError(
-        'System-managed default contracts are attribution-only; contract authoring and lifecycle edits are disabled.',
-      );
-    }
-
-    // Special handling for expired contracts
-    if (currentContract.status === 'expired') {
-      // If trying to manually change status of an expired contract (not through end date logic)
-      if (updateData.status && updateData.status !== 'expired') {
-        throw new ContractActionDomainError('Cannot manually change the status of an expired contract. To reactivate, extend the contract end date.');
+    try {
+      return await updateContractHeaderWithEvents(knex, tenant, currentContract, updateData, user.user_id);
+    } catch (error) {
+      // Rule refusals are expected domain errors, surfaced to the UI as messages.
+      if (error instanceof ContractUpdateError) {
+        throw new ContractActionDomainError(error.message);
       }
-
-      // Check if end dates are being updated on client contracts
-      // We'll check this after the client contract updates below
-      // For now, remove the status from updateData if it's expired (we'll handle it automatically)
-      if (updateData.status === 'expired') {
-        delete updateData.status; // Don't update status, we'll determine it based on end dates
-      }
-    } else {
-      // Prevent manual setting of expired status on non-expired contracts
-      if (updateData.status === 'expired') {
-        throw new ContractActionDomainError('Cannot manually set contract to expired. Contracts are automatically expired when their end date passes.');
-      }
+      throw error;
     }
-
-    // If trying to set contract to draft, check if it has invoices
-    if (updateData.status === 'draft') {
-      const hasInvoices = await Contract.hasInvoices(knex, tenant, contractId);
-      if (hasInvoices) {
-        throw new ContractActionDomainError('Cannot set contract to draft because it has associated invoices. Contracts with invoices cannot be set to draft.');
-      }
-    }
-
-    const {
-      tenant: _ignoredTenant,
-      is_system_managed_default: _ignoredSystemManagedMarker,
-      owner_client_id: _ignoredOwnerClientId,
-      ...safeUpdateData
-    } = updateData as any;
-    const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
-    const occurredAt = updated.updated_at ?? new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'CONTRACT_UPDATED',
-      payload: buildContractRecordUpdatedPayload({
-        contractId,
-        ownerClientId: updated.owner_client_id,
-        userId: user.user_id,
-        occurredAt: new Date(occurredAt).toISOString(),
-        status: updated.status,
-        patch: safeUpdateData,
-        before: currentContract as unknown as Record<string, unknown>,
-        after: updated as unknown as Record<string, unknown>,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_updated:${contractId}:${occurredAt}`,
-    });
-
-    // After updating, check if an expired contract should be reactivated based on end dates
-    if (currentContract.status === 'expired') {
-      await Contract.checkAndReactivateExpiredContract(knex, tenant, contractId);
-      // Re-fetch the contract to get the potentially updated status
-      const reactivatedContract = await Contract.getById(knex, tenant, contractId);
-      return reactivatedContract!;
-    }
-
-    return updated;
   } catch (error) {
     console.error('Error updating contract:', error);
     const expected = contractActionErrorFrom(error);
@@ -738,6 +660,7 @@ export const updateContract = withAuth(async (
 });
 
 export const checkContractHasInvoices = withAuth(async (user, { tenant }, contractId: string): Promise<boolean> => {
+  await assertBillingPermission(user, tenant, 'read', 'check contract invoices');
   const { knex } = await createTenantKnex();
 
   return await Contract.hasInvoices(knex, tenant, contractId);
@@ -747,74 +670,22 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
   const { knex } = await createTenantKnex();
 
   try {
-    const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-    if (!isBypass) {
-      const canDeleteBilling = await hasPermission(user, 'billing', 'delete');
-      if (!canDeleteBilling) {
-        return permissionError('Permission denied: Cannot delete billing contracts', 'msp/contracts:errors.permissions.deleteContracts');
+    await assertBillingPermission(user, tenant, 'delete', 'delete billing contracts');
+
+    // Template branch, system-managed refusal, invoice guard, transactional delete and the
+    // post-commit events are shared with the REST API (DELETE /api/v1/contracts/{id}).
+    try {
+      await deleteContractWithEvents(knex, tenant, contractId, user.user_id);
+    } catch (error) {
+      // NOT_FOUND / SYSTEM_MANAGED are domain refusals; HAS_INVOICES keeps its message so
+      // contractActionErrorFrom maps it to the localized "has invoices" error.
+      if (error instanceof ContractDeletionError && error.code !== 'HAS_INVOICES') {
+        throw new ContractActionDomainError(error.message);
       }
+      throw error;
     }
-
-    const templateExists = await isTemplateContract(knex, tenant, contractId);
-    if (templateExists) {
-      await ContractTemplateModel.delete(contractId, tenant);
-      return;
-    }
-
-    // LEVERAGE: friction contract-delete-owns-transaction — Contract.delete issues ~15
-    // statements but leaves the transaction to its caller, so every caller must remember
-    // to wrap it or a mid-way failure orphans the contract header.
-    // Everything commits together or rolls back; events are published only after commit.
-    const clientContracts = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const currentContract = await Contract.getById(trx, tenant, contractId);
-      if (currentContract?.is_system_managed_default === true) {
-        throw new ContractActionDomainError('System-managed default contracts cannot be deleted manually');
-      }
-
-      const rows = await tenantScopedTable(trx, tenant, 'client_contracts')
-        .where({ contract_id: contractId })
-        .select('client_contract_id', 'client_id');
-
-      await Contract.delete(trx, tenant, contractId);
-      return rows;
-    });
-    const occurredAt = new Date().toISOString();
-
-    for (const clientContract of clientContracts) {
-      await publishNonCatalogWorkflowEvent({
-        eventType: 'CLIENT_CONTRACT_DELETED',
-        payload: {
-          clientContractId: clientContract.client_contract_id,
-          contractId,
-          clientId: clientContract.client_id,
-          userId: user.user_id,
-          timestamp: occurredAt,
-        },
-        ctx: {
-          tenantId: tenant,
-          occurredAt,
-          actor: maybeUserActor(user),
-        },
-        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
-      });
-    }
-
-    await publishNonCatalogWorkflowEvent({
-      eventType: 'CONTRACT_DELETED',
-      payload: {
-        contractId,
-        userId: user.user_id,
-        timestamp: occurredAt,
-      },
-      ctx: {
-        tenantId: tenant,
-        occurredAt,
-        actor: maybeUserActor(user),
-      },
-      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
-    });
   } catch (error) {
-    const expected = contractActionErrorFrom(error);
+    const expected = contractActionErrorFrom(error, 'msp/contracts:errors.permissions.deleteContracts');
     if (expected) {
       console.error('Error deleting contract:', error);
       return expected;
@@ -833,7 +704,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
 
 export const getContractLinesForContract = withAuth(async (user, { tenant }, contractId: string): Promise<any[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract lines');
+    await assertBillingPermission(user, tenant, 'read', 'view contract lines');
     const { knex } = await createTenantKnex();
 
     return await Contract.getContractLines(knex, tenant, contractId);
@@ -859,7 +730,7 @@ export interface IContractSummary {
 
 export const getContractSummary = withAuth(async (user, { tenant }, contractId: string): Promise<IContractSummary | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract summary');
+    await assertBillingPermission(user, tenant, 'read', 'view contract summary');
     const { knex } = await createTenantKnex();
 
     const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
@@ -909,8 +780,12 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }));
 
     const totalAssignments = assignments.length;
+    const tenantToday = await getTenantLocalToday(knex, tenant);
+    // Summary "active clients" counts only assignments billing now: 'scheduled' (future start) is
+    // neither active nor draft, so it is not counted until its start date.
     const activeAssignments = assignments.filter((assignment) =>
       deriveClientContractStatus({
+        now: tenantToday,
         isActive: Boolean(assignment.is_active),
         startDate: assignment.start_date,
         endDate: assignment.end_date,
@@ -958,7 +833,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
 
 export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract assignments');
+    await assertBillingPermission(user, tenant, 'read', 'view contract assignments');
     const { knex } = await createTenantKnex();
 
     const selection = [
@@ -1002,6 +877,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
+    const tenantToday = await getTenantLocalToday(knex, tenant);
     return rows.map((row: any) => {
       const renewalMode =
         row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -1045,6 +921,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         billing_profile_id: row.billing_profile_id ?? null,
         billing_profile_name: row.billing_profile_name ?? null,
         assignment_status: deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.is_active),
           startDate: row.start_date,
           endDate: row.end_date,
@@ -1091,13 +968,28 @@ export interface IContractLineOverview {
   contract_line_id: string;
   contract_line_name: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
+  display_kind?: string;
   billing_frequency: string;
+  /** Effective timing (Hourly/Usage always resolve to arrears); never the raw column. */
+  billing_timing: 'advance' | 'arrears';
   base_rate: number | null;  // For fixed lines - in cents
+  /**
+   * Effective recurring amount of one billing period (cents) for a Fixed line
+   * that holds product members, computed by the shared contract valuation so
+   * the header can never disagree with the contract total. A zero line rate is
+   * a historical placeholder, not a price, so `base_rate` must not be printed
+   * for such a line. Null when the line has no product members (the line's own
+   * `base_rate` is then the amount) and for templates.
+   */
+  recurring_amount: number | null;
   display_order: number;
   services: {
     service_id: string;
     service_name: string;
     billing_method: string;
+    /** Catalog item kind ('product' members are billed quantity x rate, never as a bundle share). */
+    item_kind: string | null;
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
@@ -1142,6 +1034,11 @@ export interface IContractOverview {
   currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
   /** Owning client for contract-backed overviews (null for templates); lets usage deep links prefill the client filter. */
   clientId: string | null;
+  /**
+   * Which billing profile(s) bill this contract, its payment terms, and where
+   * each value comes from. Resolved live (never stored); null for templates.
+   */
+  billingTrace: ContractBillingTrace | null;
 }
 
 /**
@@ -1149,7 +1046,7 @@ export interface IContractOverview {
  */
 export const getContractOverview = withAuth(async (user, { tenant }, contractId: string): Promise<IContractOverview | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract overview');
+    await assertBillingPermission(user, tenant, 'read', 'view contract overview');
     const { knex } = await createTenantKnex();
 
     // Check if this is a template contract
@@ -1159,8 +1056,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     const isTemplate = Boolean(templateRecord);
 
-    // Get currency code - templates default to USD, contracts have their own currency
-    let currencyCode = 'USD';
+    // Templates carry their own base currency; contracts have theirs.
+    let currencyCode = templateRecord?.currency_code ?? 'USD';
     let clientId: string | null = null;
     if (!isTemplate) {
       const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
@@ -1188,6 +1085,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'ctl.template_line_name as contract_line_name',
           'ctl.line_type as contract_line_type',
           'ctl.billing_frequency',
+          'ctl.billing_timing',
           'ctl.display_order',
           'tfc.base_rate'
         ])
@@ -1204,6 +1102,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'ctls.service_id',
             's.service_name',
             's.billing_method',
+            's.item_kind',
             'ctls.custom_rate',
             'ctls.quantity'
           ]);
@@ -1232,7 +1131,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
@@ -1242,6 +1143,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1276,6 +1178,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'cl.contract_line_name',
           'cl.contract_line_type',
           'cl.billing_frequency',
+          'cl.billing_timing',
           'cl.display_order',
           'cl.custom_rate as base_rate'
         ])
@@ -1389,10 +1292,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         const catalogRateByConfig = new Map<string, number | null>();
         const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          const isProduct = itemKindByService.get(config.service_id) === 'product';
+          // A product is always quantity x rate (the engine never reads its
+          // pricing_basis), and its fixed base_rate is never a unit rate.
+          const unitValued = isProduct || fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
           if (!unitValued) return false;
           return catalogPolicyConfigIds.has(config.config_id)
-            || (fixed?.base_rate == null && config.custom_rate == null);
+            || ((isProduct || fixed?.base_rate == null) && config.custom_rate == null);
         });
         if (inheritingUnitConfigs.length > 0) {
           const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
@@ -1434,18 +1340,22 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
             const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
-            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
+            const isProduct = svc.item_kind === 'product';
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit || isProduct;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1464,13 +1374,23 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 ? null
                 : catalogRateByConfig.has(config?.config_id)
                   ? catalogRateByConfig.get(config?.config_id) ?? null
-                  : (semantics?.base_rate != null
+                  : (semantics?.base_rate != null && !isProduct
                       ? Number(semantics.base_rate)
                       : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
           })
         });
       }
+    }
+
+    // Derived label kind so the overview labels Prepaid Block lines correctly.
+    const overviewDisplayKinds = await (isTemplate ? resolveTemplateLineDisplayKinds : resolveContractLineDisplayKinds)(
+      knex,
+      tenant,
+      contractLines.map((line) => ({ contract_line_id: line.contract_line_id, contract_line_type: line.contract_line_type })),
+    );
+    for (const line of contractLines) {
+      line.display_kind = overviewDisplayKinds.get(line.contract_line_id) ?? line.contract_line_type;
     }
 
     // Calculate totals
@@ -1483,13 +1403,26 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !isTemplate) {
+    // A cadence Prepaid Block lives on an Hourly line but bills a fixed fee every period, so a
+    // contract with only such lines still has a fixed monthly value.
+    const contractValues = !isTemplate && (hasFixedServices || hasHourlyServices)
+      ? await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId])
+      : null;
+    if (contractValues && (hasFixedServices || contractValues.get(contractId)?.hasCadencePrepaidBlock)) {
       // Real contracts use the canonical shared valuation so the overview,
       // contract reports, and the summary MRR cannot disagree: unit-priced
       // lines are quantity × unit rate (revision-aware), bundles keep their
       // line rate, and every line is cadence-normalized.
-      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
+      // A Fixed line holding product members is billed quantity x rate, so
+      // its header amount comes from the same valuation as the total (a line
+      // `custom_rate` of 0 is a legacy placeholder and must not be printed).
+      const linePeriodCents = contractValues.get(contractId)?.linePeriodCentsByLine;
+      for (const line of contractLines) {
+        if (line.contract_line_type !== 'Fixed') continue;
+        if (!line.services.some((service) => service.item_kind === 'product')) continue;
+        line.recurring_amount = linePeriodCents?.get(line.contract_line_id) ?? null;
+      }
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
       // template-line normalization. Per-seat members add quantity × default
@@ -1522,7 +1455,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       hasHourlyServices,
       hasUsageServices,
       currencyCode,
-      clientId
+      clientId,
+      // Same engine functions the invoice uses; a template has no client to bill.
+      billingTrace: isTemplate
+        ? null
+        : await loadContractBillingTrace(knex, tenant, {
+            contractId,
+          }),
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

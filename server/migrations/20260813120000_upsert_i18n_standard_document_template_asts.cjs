@@ -34,6 +34,8 @@ const LABEL_KEYS = {
   Tax: 'labels.tax',
   Total: 'labels.total',
   'PO #': 'labels.poNumber',
+  Currency: 'labels.currency',
+  'Service Period': 'labels.servicePeriod',
   Monthly: 'labels.monthly',
   'Monthly Total': 'labels.monthlyTotal',
   'One-time': 'labels.oneTime',

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The client-scope create gate needs a real connection; it is covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined), isRecordCreateDeniedError: () => false }));
+
 const hoisted = vi.hoisted(() => ({
   addInteractionMock: vi.fn(),
   publishEventMock: vi.fn(),
@@ -19,6 +22,12 @@ vi.mock('@alga-psa/shared/models/scheduleEntry', () => ({
     delete: hoisted.scheduleEntryDeleteMock,
     getByWorkItem: hoisted.scheduleEntryGetByWorkItemMock,
   },
+}));
+
+// The human-work guard is covered against a real database in T043; the fake trx here has no users table.
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
 }));
 
 vi.mock('../models/interactions', () => ({
@@ -330,21 +339,21 @@ describe('interactionCreateHelper', () => {
 
   describe('resolveScheduleAssignees', () => {
     it('defaults to the creator when nobody was requested', () => {
-      expect(resolveScheduleAssignees('user-1')).toEqual(['user-1']);
-      expect(resolveScheduleAssignees('user-1', [])).toEqual(['user-1']);
-      expect(resolveScheduleAssignees('user-1', ['', '  '])).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', undefined, 'internal')).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', [], 'internal')).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', ['', '  '], 'internal')).toEqual(['user-1']);
     });
 
     it('keeps the requested users, de-duplicated and in order', () => {
-      expect(resolveScheduleAssignees('user-1', ['user-2', 'user-3', 'user-2'])).toEqual(['user-2', 'user-3']);
+      expect(resolveScheduleAssignees('user-1', ['user-2', 'user-3', 'user-2'], 'internal')).toEqual(['user-2', 'user-3']);
     });
 
     it('does not add the creator to an explicit list', () => {
-      expect(resolveScheduleAssignees('user-1', ['user-2'])).toEqual(['user-2']);
+      expect(resolveScheduleAssignees('user-1', ['user-2'], 'internal')).toEqual(['user-2']);
     });
 
     it('trims the ids it hands to the schedule', () => {
-      expect(resolveScheduleAssignees('user-1', [' user-2 ', 'user-2'])).toEqual(['user-2']);
+      expect(resolveScheduleAssignees('user-1', [' user-2 ', 'user-2'], 'internal')).toEqual(['user-2']);
     });
   });
 

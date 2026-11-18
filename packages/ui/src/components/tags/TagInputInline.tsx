@@ -8,6 +8,7 @@ import { ITag } from '@alga-psa/types';
 import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
 import { useTheme } from 'next-themes';
 import { tagInputSizeConfig, type TagSize } from './tagSizeConfig';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagInputInlineProps {
   id?: string;
@@ -17,6 +18,8 @@ interface TagInputInlineProps {
   placeholder?: string;
   className?: string;
   size?: TagSize;
+  /** False for a caller who may apply existing tags only: typed text that names no existing tag is not offered as a new one. */
+  allowCreate?: boolean;
 }
 
 export const TagInputInline: React.FC<TagInputInlineProps> = ({
@@ -24,10 +27,12 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   existingTags,
   currentTags,
   onAddTag,
-  placeholder = 'Add tag...',
+  placeholder,
   className = '',
-  size = 'md'
+  size = 'md',
+  allowCreate = true
 }) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -44,6 +49,10 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
     }
   }, [isEditing]);
 
+  const namesExistingTag = (text: string) =>
+    existingTags.some((tag) => tag.tag_text.toLowerCase() === text.trim().toLowerCase());
+  const canSubmit = allowCreate || namesExistingTag(inputValue);
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -57,7 +66,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
   const handleSave = async (tagText?: string) => {
     const textToSave = tagText || inputValue.trim();
     console.log('TagInputInline handleSave called with:', textToSave);
-    if (!textToSave || isSaving) return;
+    if (!textToSave || isSaving || (!allowCreate && !namesExistingTag(textToSave))) return;
 
     setIsSaving(true);
     try {
@@ -128,7 +137,7 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           onKeyDown={handleKeyPress}
           onBlur={handleBlur}
           className={`rounded-l-md border-0 ${sizeConfig.inputClass}`}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t(allowCreate ? 'tags.fields.tags.placeholder' : 'tags.fields.existingTag.placeholder')}
           autoComplete="off"
           containerClassName="m-0"
         />
@@ -136,12 +145,12 @@ export const TagInputInline: React.FC<TagInputInlineProps> = ({
           id={`${id}-save`}
           type="button"
           onClick={() => handleSave()}
-          disabled={isSaving || !inputValue.trim()}
+          disabled={isSaving || !inputValue.trim() || !canSubmit}
           className={`rounded-r-md font-medium border-0 ${sizeConfig.saveClass}`}
-          variant={isSaving || !inputValue.trim() ? "outline" : "default"}
+          variant={isSaving || !inputValue.trim() || !canSubmit ? "outline" : "default"}
           size={size === 'sm' ? "xs" : "sm"}
         >
-          {isSaving ? '...' : 'Save'}
+          {isSaving ? t('tags.actions.saving') : t('actions.save')}
         </Button>
       </div>
       

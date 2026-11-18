@@ -95,6 +95,7 @@ describe('Workflow run launcher', () => {
 
     getWorkflowByIdMock.mockResolvedValue({
       workflow_id: 'workflow-1',
+      tenant: 'tenant-1',
       is_paused: false,
       concurrency_limit: null,
       payload_schema_ref: null
@@ -161,7 +162,8 @@ describe('Workflow run launcher', () => {
       expect.objectContaining({
         temporal_workflow_id: 'workflow-runtime-v2:run:run-started',
         temporal_run_id: 'temporal-run-1'
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -251,7 +253,8 @@ describe('Workflow run launcher', () => {
       expect.objectContaining({
         temporal_workflow_id: 'workflow-runtime-v2:run:run-created',
         temporal_run_id: 'temporal-run-1'
-      })
+      }),
+      'tenant-1'
     );
   });
 
@@ -277,7 +280,8 @@ describe('Workflow run launcher', () => {
           message: 'temporal unavailable',
           stage: 'launch'
         })
-      })
+      }),
+      'tenant-1'
     );
   });
 

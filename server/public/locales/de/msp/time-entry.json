@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Zeiteintrag hinzufügen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Anzeigen",
@@ -127,12 +132,16 @@
       "billable": "Abrechnungsfähig",
       "notes": "Notizen",
       "deleteTimeEntry": "Zeiteintrag löschen",
-      "unsavedChanges": "Nicht gespeicherte Änderungen"
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "contractLine": "Vertragsposition",
+      "operational": "Operativ – nicht abgerechnet"
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",
+      "searchServices": "Dienste suchen...",
       "selectDate": "Datum auswählen",
-      "addNotes": "Notizen hinzufügen"
+      "addNotes": "Notizen hinzufügen",
+      "selectContractLine": "Vertragsposition auswählen"
     },
     "validation": {
       "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen",
@@ -150,6 +159,10 @@
       "task": "Standard aus Aufgabe",
       "phase": "Standard aus Phase",
       "project": "Standard aus Projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Keine Position - später zuordnen",
+      "noServicesFound": "Keine Dienste gefunden"
     }
   },
   "workItemPicker": {
@@ -275,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Kommentare werden geladen...",
     "placeholder": "Kommentar hinzufügen...",
     "responsePlaceholder": "Reagieren Sie auf die gewünschten Änderungen...",
     "respondToChanges": "Reagieren Sie auf Änderungen"
@@ -350,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Stundenzetteltabelle",
+    "deleteWorkItem": {
+      "title": "Arbeitselement löschen",
+      "message": "Dadurch werden alle Zeiteinträge für dieses Arbeitselement dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "bundled": "Gebündelt",
+    "bundledTo": "Gebündelt → {{ticketNumber}}",
+    "addEntryForCell": "Zeiteintrag für {{workItem}} am {{date}} hinzufügen",
+    "saveTimeEntry": "Zeiteintrag speichern",
+    "weeklyTotal": "Wochensumme",
     "empty": {
       "title": "Keine Arbeitselemente auf Ihrem Stundenzettel",
       "description": "Fügen Sie ein neues Arbeitselement hinzu, um die Zeiterfassung für diese Woche zu starten.",
@@ -396,7 +420,7 @@
     "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird an den systemverwalteten Standardvertrag weitergeleitet.",
     "contract": "Vertrag: {{name}}",
     "defaultContract": "Systemverwalteter Standardvertrag",
-    "multipleLines": "Mehrere Vertragszeilen verfügbar – Standardauswahl verwenden"
+    "multipleEligible": "Für dieses Datum kommen mehrere Vertragspositionen infrage. Wählen Sie eine Vertragsposition, um die Zuordnung zu speichern."
   },
   "billableLegend": {
     "title": "Abrechnungsfähige Legende",
@@ -412,6 +436,9 @@
     "viewEntryDetails": "Eintragsdetails anzeigen"
   },
   "messages": {
+    "saveEntryFailed": "Zeiteintrag konnte nicht gespeichert werden",
+    "updateTaskFailed": "Aufgabe konnte nicht aktualisiert werden",
+    "deleteWorkItemFailed": "Arbeitselement konnte nicht gelöscht werden",
     "serviceRequired": "Bitte wählen Sie einen Dienst, bevor Sie Zeiteinträge speichern",
     "invalidService": "Ungültiger Dienst ausgewählt",
     "taxRegionRequired": "Bitte wählen Sie eine Steuerregion für steuerpflichtige Dienste",
@@ -513,7 +540,8 @@
     "entryMissingPeriod": "Dem Stundenzettel dieses Eintrags fehlt der Zeitraum und er kann nicht geöffnet werden.",
     "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
     "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
-    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Vorschläge",
@@ -538,7 +566,14 @@
       "checklistChanged": "Checkliste geändert",
       "linksChanged": "Links geändert",
       "updated": "aktualisiert"
-    }
+    },
+    "activitySummary_few": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})",
+    "activitySummary_many": "erste Aktivität {{first}} · letzte {{last}} · {{count}} Aktionen ({{kinds}})"
+  },
+  "timeSheet": {
+    "reflectionLabel": "Stundenzettelverwaltung",
+    "delegationDisabledPrefix": "Die delegierte Zeiterfassung ist derzeit deaktiviert. Aktivieren Sie das Feature-Flag",
+    "delegationDisabledSuffix": "um die Stundenzettel anderer Benutzer zu bearbeiten."
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} in {{count}} Abschnitt erfasst (pausiert {{paused}})",
@@ -557,6 +592,8 @@
       "confirm": "Weiter",
       "cancel": "Abbrechen"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})",
+    "pausedNotice_many": "{{active}} in {{count}} Abschnitten erfasst (pausiert {{paused}})"
   }
 }

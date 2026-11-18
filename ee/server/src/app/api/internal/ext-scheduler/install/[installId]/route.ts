@@ -79,7 +79,7 @@ const baseSchema = z.object({
 });
 
 const getSchema = baseSchema.extend({
-  scheduleId: z.string().uuid(),
+  scheduleId: z.string().guid(),
 });
 
 const createSchema = baseSchema.extend({
@@ -92,7 +92,7 @@ const createSchema = baseSchema.extend({
 });
 
 const updateSchema = baseSchema.extend({
-  scheduleId: z.string().uuid(),
+  scheduleId: z.string().guid(),
   endpoint: z.string().min(1).max(256).optional(),
   cron: z.string().min(1).max(128).optional(),
   timezone: z.string().max(64).optional(),
@@ -102,7 +102,7 @@ const updateSchema = baseSchema.extend({
 });
 
 const deleteSchema = baseSchema.extend({
-  scheduleId: z.string().uuid(),
+  scheduleId: z.string().guid(),
 });
 
 function getStatusForErrorCode(code: string): number {

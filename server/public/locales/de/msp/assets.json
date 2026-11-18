@@ -38,6 +38,38 @@
       "offline": "Offline",
       "overdue": "Überfällig",
       "unknown": "Unbekannt"
+    },
+    "rmaStatus": {
+      "open": "Offen",
+      "awaiting_return": "Warten auf Rücksendung",
+      "returned": "Zurückgegeben",
+      "sent_to_vendor": "An Lieferant gesendet",
+      "replacement_received": "Ersatz erhalten",
+      "replacement_deployed": "Ersatz bereitgestellt",
+      "dead_unit_owed": "Defektgerät ausstehend",
+      "dead_unit_returned": "Defektgerät zurückgegeben",
+      "replaced": "Ersetzt",
+      "credited": "Gutgeschrieben",
+      "charged": "Berechnet",
+      "closed": "Geschlossen",
+      "warranty_review": "Garantieprüfung",
+      "repaired": "Repariert"
+    },
+    "assetAuditStatus": {
+      "in_progress": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "cancelled": "Abgebrochen"
+    },
+    "assetAuditResult": {
+      "expected": "Erwartet",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet"
+    },
+    "assetAuditMethod": {
+      "scan": "Scan",
+      "manual": "Manuell",
+      "register": "Vor Ort erfasst"
     }
   },
   "assetAlertsSection": {
@@ -178,7 +210,24 @@
         "managed": "RMM Verwaltet",
         "unmanaged": "Nicht verwaltet"
       },
-      "allGroups": "Alle Gruppen"
+      "allGroups": "Alle Gruppen",
+      "ownership": {
+        "any": "Beliebiger Eigentümer",
+        "client": "Im Kundeneigentum",
+        "msp": "Im MSP-Eigentum"
+      },
+      "custody": {
+        "any": "Beliebige Verwahrung",
+        "inCustody": "In MSP-Verwahrung",
+        "notInCustody": "Nicht in MSP-Verwahrung"
+      },
+      "audit": {
+        "any": "Beliebiges Inventurergebnis",
+        "present": "Letzte Inventur: vorhanden",
+        "missing": "Letzte Inventur: fehlend",
+        "never": "Noch keine Inventur",
+        "stale": "Seit 90 Tagen keine Inventur"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -232,7 +281,9 @@
         "setLocation": "Standort festlegen",
         "setStatus": "Status festlegen",
         "assignContact": "Kontakt zuweisen",
-        "addToGroup": "Zu Gruppe hinzufügen"
+        "addToGroup": "Zu Gruppe hinzufügen",
+        "printLabels": "Etiketten drucken",
+        "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
       },
       "actions": {
         "apply": "Anwenden",
@@ -349,7 +400,9 @@
       "location": "Standort",
       "purchaseDate": "Kaufdatum",
       "warrantyEnd": "Garantieende",
-      "notProvided": "Nicht bereitgestellt"
+      "notProvided": "Nicht bereitgestellt",
+      "lastAudited": "Letzte Inventur",
+      "neverAudited": "Noch keine Inventur"
     },
     "info": {
       "client": "Kunde",
@@ -432,7 +485,9 @@
       "rebootDevice": "Gerät neu starten",
       "rebooting": "Neustart läuft...",
       "editAsset": "Asset bearbeiten",
-      "deleteAsset": "Asset löschen"
+      "deleteAsset": "Asset löschen",
+      "printLabel": "Asset-Etikett drucken",
+      "printPage": "Seite drucken"
     },
     "values": {
       "unknownClient": "Unbekannter Kunde"
@@ -649,7 +704,8 @@
       "vendor": "Lieferant",
       "purchaseCost": "Kaufpreis",
       "orderNumber": "Bestellnr.",
-      "billingProfile": "Abrechnungsprofil"
+      "billingProfile": "Abrechnungsprofil",
+      "ownership": "Eigentum"
     },
     "placeholders": {
       "loadingClients": "Kunden werden geladen…",
@@ -704,6 +760,18 @@
     "additionalFields": "Zusätzliche Felder",
     "help": {
       "assignedTo": "Im Kundenportal sehen Personen mit eingeschränkter Sichtbarkeit dieses Gerät nur, wenn es ihnen oder einer ihnen unterstellten Person zugewiesen ist."
+    },
+    "ownership": {
+      "client": "Im Kundeneigentum",
+      "msp": "Im MSP-Eigentum"
+    },
+    "create": {
+      "success": "Asset {{tag}} erstellt",
+      "autoTag": "Nächsten automatischen Tag zuweisen",
+      "preview": "Vorschau des nächsten Tags: {{tag}} (die Vorschau reserviert keine Nummer)",
+      "selectClient": "Kunden für die Vorschau auswählen",
+      "addAnother": "Speichern und weiteres Asset hinzufügen",
+      "submit": "Asset erstellen"
     }
   },
   "assetFormClient": {
@@ -807,24 +875,6 @@
     "links": {
       "title": "Fernzugriffslinks",
       "description": "URL-Vorlagen für ScreenConnect und andere Fernwartungstools konfigurieren.",
-      "errors": {
-        "load": "Fernzugriffslinks konnten nicht geladen werden.",
-        "save": "Fernzugriffslink konnte nicht gespeichert werden.",
-        "delete": "Fernzugriffslink konnte nicht gelöscht werden.",
-        "templateHttp": "Die Vorlage muss mit http:// oder https:// und einem direkten Hostnamen beginnen.",
-        "templatePlaceholder": "Die Vorlage enthält einen nicht unterstützten Platzhalter.",
-        "templateUrl": "Die Vorlage muss eine gültige http- oder https-URL ergeben.",
-        "required": "Eine Beschriftung und eine URL-Vorlage sind erforderlich.",
-        "partialDelete": "{{count}} ausgewählte Links konnten nicht gelöscht werden."
-      },
-      "noneAvailable": "Keine Fernzugriffsoptionen verfügbar.",
-      "confirmDeleteTitle": "Fernzugriffslink löschen?",
-      "confirmDeleteMessage": "Möchten Sie „{{label}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-      "openMenu": "Menü öffnen",
-      "selectLabel": "{{label}} auswählen",
-      "confirmBulkDeleteTitle": "Ausgewählte Links löschen?",
-      "confirmBulkDeleteMessage": "{{count}} ausgewählte Fernzugriffslinks löschen?",
-      "selectedCount": "{{count}} ausgewählt",
       "add": "Link hinzufügen",
       "empty": "Keine Fernzugriffslinks konfiguriert.",
       "edit": "Bearbeiten",
@@ -835,11 +885,30 @@
       "save": "Speichern",
       "label": "Schaltflächenbeschriftung",
       "template": "URL-Vorlage",
-      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie den Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2 .ninjarmm.com.",
+      "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
+      "errors": {
+        "load": "Fernzugriffslinks konnten nicht geladen werden.",
+        "save": "Fernzugriffslink konnte nicht gespeichert werden.",
+        "delete": "Fernzugriffslink konnte nicht gelöscht werden.",
+        "templateHttp": "Die Vorlage muss mit http:// oder https:// und einem direkten Hostnamen beginnen.",
+        "templatePlaceholder": "Die Vorlage enthält einen nicht unterstützten Platzhalter.",
+        "templateUrl": "Die Vorlage muss eine gültige http- oder https-URL ergeben.",
+        "required": "Eine Beschriftung und eine URL-Vorlage sind erforderlich.",
+        "partialDelete": "{{count}} ausgewählte Links konnten nicht gelöscht werden."
+      },
       "loading": "Fernzugriffsoptionen werden geladen…",
+      "noneAvailable": "Keine Fernzugriffsoptionen verfügbar.",
       "unavailable": "Für dieses Asset nicht verfügbar",
+      "confirmDeleteTitle": "Fernzugriffslink löschen?",
+      "confirmDeleteMessage": "Möchten Sie „{{label}}“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
       "actions": "Aktionen",
-      "selectAll": "Alle Links auswählen"
+      "openMenu": "Menü öffnen",
+      "selectLabel": "{{label}} auswählen",
+      "selectAll": "Alle Links auswählen",
+      "confirmBulkDeleteTitle": "Ausgewählte Links löschen?",
+      "confirmBulkDeleteMessage": "{{count}} ausgewählte Fernzugriffslinks löschen?",
+      "selectedCount": "{{count}} ausgewählt"
     }
   },
   "assetListErrors": {
@@ -914,11 +983,6 @@
       "assetTag": "Asset-Tag",
       "type": "Typ",
       "status": "Status"
-    },
-    "assetStatuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Wartung"
     },
     "assetTypes": {
       "workstation": "Arbeitsplatz",
@@ -1026,7 +1090,11 @@
       "manufacturer": "Hersteller",
       "vendor": "Lieferant",
       "purchaseCost": "Kaufpreis",
-      "orderNumber": "Bestellnr."
+      "orderNumber": "Bestellnr.",
+      "ownership": "Eigentum",
+      "autoAssetTag": "Automatisch zuweisen",
+      "assetTagPreviewLoading": "Wählen Sie einen Kunden, um den nächsten Tag als Vorschau anzuzeigen",
+      "previewNotReserved": "Nur Vorschau; Zuweisung beim Speichern"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -1149,7 +1217,8 @@
       "unknown": "Unbekannt",
       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
       "memoryUsed": "({{size}}GB verwendet)",
-      "freeStorage": "{{size}} GB frei"
+      "freeStorage": "{{size}} GB frei",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Keine Hardwaredaten verfügbar",
     "emptyStorage": "Keine Speicherlaufwerke erkannt"
@@ -1260,7 +1329,10 @@
       "frequency": "Häufigkeit *",
       "interval": "Intervall *",
       "nextMaintenanceDate": "Nächster Wartungstermin *",
-      "active": "Aktiv"
+      "active": "Aktiv",
+      "recurrenceUnit": "Einheit *",
+      "onWeekdays": "An Wochentagen (optional)",
+      "onDayOfMonth": "Am Monatstag (optional)"
     },
     "placeholders": {
       "scheduleName": "z. B. monatliche Serverwartung",
@@ -1275,7 +1347,8 @@
       "weekly": "Wöchentlich",
       "monthly": "Monatlich",
       "quarterly": "Vierteljährlich",
-      "yearly": "Jährlich"
+      "yearly": "Jährlich",
+      "custom": "Benutzerdefiniert"
     },
     "errors": {
       "scheduleNameRequired": "Zeitplanname ist erforderlich",
@@ -1284,6 +1357,18 @@
       "nextMaintenanceRequired": "Der nächste Wartungstermin ist erforderlich",
       "frequencyIntervalMin": "Das Frequenzintervall muss mindestens 1 betragen",
       "saveFailed": "Fehler beim Erstellen des Wartungsplans"
+    },
+    "recurrenceUnits": {
+      "days": "Tage",
+      "weeks": "Wochen",
+      "months": "Monate",
+      "years": "Jahre"
+    },
+    "dayOfMonthOptions": {
+      "any": "Beliebiger Tag"
+    },
+    "hints": {
+      "selectors": "Ohne Auswahl wird ab dem Abschlussdatum wiederholt."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1335,6 +1420,36 @@
         "yearly_other": "Jahre",
         "yearly_few": "Jahre",
         "yearly_many": "Jahre"
+      },
+      "customUnconfigured": "Benutzerdefiniert (nicht konfiguriert)",
+      "onWeekdays": "{{cadence}} am {{days}}",
+      "onDaysOfMonth": "{{cadence}} am Tag {{days}}",
+      "weekdays": {
+        "sun": "So",
+        "mon": "Mo",
+        "tue": "Di",
+        "wed": "Mi",
+        "thu": "Do",
+        "fri": "Fr",
+        "sat": "Sa"
+      },
+      "customUnits": {
+        "days_one": "Tag",
+        "days_other": "Tage",
+        "days_few": "Tage",
+        "days_many": "Tage",
+        "weeks_one": "Woche",
+        "weeks_other": "Wochen",
+        "weeks_few": "Wochen",
+        "weeks_many": "Wochen",
+        "months_one": "Monat",
+        "months_other": "Monate",
+        "months_few": "Monate",
+        "months_many": "Monate",
+        "years_one": "Jahr",
+        "years_other": "Jahre",
+        "years_few": "Jahre",
+        "years_many": "Jahre"
       }
     },
     "status": {
@@ -1368,7 +1483,182 @@
   "maintenanceCommandCenter": {
     "title": "Wartungsleitstelle",
     "description": "Der nächste Fälligkeitstermin richtet sich nach dem tatsächlichen Abschlussdatum.",
-    "assetsLink": "Assets"
+    "assetsLink": "Assets",
+    "notRecorded": "Nicht erfasst",
+    "system": "System",
+    "checklist": {
+      "complete": "Erledigt",
+      "incomplete": "Nicht erledigt"
+    },
+    "weekdays": {
+      "0": "So",
+      "1": "Mo",
+      "2": "Di",
+      "3": "Mi",
+      "4": "Do",
+      "5": "Fr",
+      "6": "Sa"
+    },
+    "cadence": {
+      "custom": "Benutzerdefiniert",
+      "customSchedule": "Benutzerdefinierter Zeitplan",
+      "everyUnit": "Einmal pro {{unit}}",
+      "everyCountUnit": "Alle {{count}} {{unit}}",
+      "onDays": "{{base}} am {{days}}",
+      "onDatesOfMonth": "{{base}} am {{dates}}",
+      "frequency": {
+        "daily": "Täglich",
+        "weekly": "Wöchentlich",
+        "monthly": "Monatlich",
+        "quarterly": "Vierteljährlich",
+        "yearly": "Jährlich"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} T. überfällig",
+      "dueToday": "heute fällig",
+      "inDays": "in {{count}} T."
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "refresh": "Aktualisieren",
+      "newPlan": "Neuer Wartungsplan",
+      "skip": "Überspringen",
+      "skipTooltip": "Mit Pflichtangabe eines Grundes überspringen — der Plan rückt zum nächsten Wartungstermin vor",
+      "complete": "Wartung abschließen",
+      "createTicket": "Ticket erstellen",
+      "openTicket": "Ticket öffnen ↗",
+      "pausePlan": "Plan pausieren"
+    },
+    "assetPicker": {
+      "title": "Asset auswählen",
+      "searchPlaceholder": "Nach Name, Tag oder Seriennummer suchen",
+      "loading": "Assets werden geladen…",
+      "loadFailed": "Assets konnten nicht geladen werden.",
+      "empty": "Keine Assets gefunden.",
+      "showingFirst": "Die ersten {{shown}} von {{total}} werden angezeigt — grenzen Sie Ihre Suche ein."
+    },
+    "kpi": {
+      "overdue": "Überfällig",
+      "dueToday": "Heute fällig",
+      "upcoming7d": "Nächste 7 Tage",
+      "openTickets": "Offene Tickets",
+      "compliance90d": "Termintreue (90 Tage)",
+      "clickToFilter": "Zum Filtern klicken",
+      "allClear": "Alles im grünen Bereich",
+      "quietWeek": "Ruhige Woche steht bevor",
+      "linkedToOccurrences": "Mit Wartungsterminen verknüpft",
+      "onTimeCompletion": "Fristgerechter Abschluss"
+    },
+    "tabs": {
+      "queue": "Arbeitsliste",
+      "plans": "Planliste",
+      "history": "Verlauf"
+    },
+    "filters": {
+      "searchPlaceholder": "Pläne, Assets oder Kunden suchen",
+      "actionable": "Zu erledigen",
+      "allStatuses": "Alle Status",
+      "completed": "Abgeschlossen",
+      "skipped": "Übersprungen",
+      "button": "Filter",
+      "allClients": "Alle Kunden",
+      "allAssetTypes": "Alle Asset-Typen",
+      "allPlanTypes": "Alle Plantypen",
+      "due": "Fällig",
+      "clearAll": "Alle zurücksetzen",
+      "done": "Fertig",
+      "clientChip": "Kunde"
+    },
+    "viewMode": {
+      "list": "Liste",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Zu erledigende Wartungstermine",
+      "plansTitle": "Aktive Planliste (mit Wartungsterminen)",
+      "loading": "Wartungen werden geladen…",
+      "empty": "Keine Wartungstermine entsprechen diesen Filtern.",
+      "emptyFiltered": "Keine Wartungstermine entsprechen diesen Filtern. Entfernen Sie einen Filter oder erweitern Sie den Fälligkeitszeitraum.",
+      "emptyHistory": "Abgeschlossene und übersprungene Wartungstermine erscheinen hier, sobald die Wartung abgeschlossen ist.",
+      "emptyPlans": "Offene Wartungstermine erscheinen hier, sobald die Zeitpläne neue Arbeit erzeugen.",
+      "clearBeyond": "Außer diesen {{count}} Einträgen ist die Arbeitsliste leer — erweitern Sie den Fälligkeitszeitraum oder prüfen Sie die Planliste.",
+      "allCaughtUp": "Alles erledigt",
+      "nextDueIn": "— nächste Fälligkeit in {{count}} T.",
+      "shownCount": "{{shown}} angezeigt · {{open}} offen ·",
+      "inHistory": "{{count}} im Verlauf",
+      "itemCount_one": "· {{count}} Eintrag",
+      "itemCount_other": "· {{count}} Einträge",
+      "overdueCount": "{{count}} überfällig",
+      "ticketChip": "Ticket"
+    },
+    "miniMonth": {
+      "atAGlance": "{{month}} auf einen Blick",
+      "overdue": "überfällig",
+      "today": "heute",
+      "upcoming": "anstehend"
+    },
+    "calendar": {
+      "dueCount": "{{count}} fällig",
+      "today": "Heute",
+      "moreCount": "+{{count}} weitere",
+      "legend": "Legende",
+      "scheduled": "Geplant"
+    },
+    "fields": {
+      "asset": "Asset",
+      "type": "Typ",
+      "cadence": "Intervall",
+      "nextDue": "Nächste Fälligkeit",
+      "lastDone": "Zuletzt durchgeführt",
+      "assignee": "Zugewiesen an",
+      "createdBy": "Erstellt von",
+      "linkedTicket": "Verknüpftes Ticket"
+    },
+    "detail": {
+      "noSelection": "Kein Wartungstermin ausgewählt",
+      "noSelectionHint": "Wählen Sie einen Wartungstermin aus der Arbeitsliste aus, um das zugehörige Asset, den Plan, das verknüpfte Ticket und die Aktionen zur Durchführung zu sehen — oder setzen Sie die Filter zurück, um weitere Arbeit anzuzeigen.",
+      "unassignedClient": "Kein Kunde zugewiesen",
+      "dueSuffix": "· fällig am {{date}}",
+      "nextDueTooltip": "Die nächste Fälligkeit wird ab dem tatsächlichen Abschlussdatum berechnet.",
+      "never": "Nie",
+      "unassigned": "Nicht zugewiesen",
+      "assignViaTicket": "Über Ticket zuweisen",
+      "ticketClosed": "Geschlossen",
+      "ticketOpen": "Offen",
+      "noTicketYet": "Noch keines",
+      "execution": "Durchführung",
+      "noChecklistPrefix": "Dieser Plan hat keine Checkliste —",
+      "addStepsLink": "fügen Sie beim Asset Schritte hinzu,",
+      "noChecklistSuffix": "um Technikern eine Anleitung zu geben.",
+      "timeline": "Zeitverlauf"
+    },
+    "timeline": {
+      "created": "Wartungstermin erstellt",
+      "ticketLinked": "Ticket verknüpft — {{ticket}}",
+      "dueRepeats": "Fällig — Wiederholung: {{cadence}}",
+      "completedBy": "Abgeschlossen von {{name}}{{notes}}",
+      "skippedBy": "Übersprungen von {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Abschlussnachweis",
+      "performed": "Durchgeführt am:",
+      "performedBy": "Durchgeführt von:",
+      "notes": "Notizen:",
+      "checklist": "Checkliste:",
+      "skipTitle": "Nachweis des Überspringens",
+      "reason": "Grund:",
+      "closedBy": "Geschlossen von:",
+      "closed": "Geschlossen am:"
+    },
+    "skip": {
+      "title": "Wartung überspringen",
+      "reason": "Grund"
+    },
+    "ticket": {
+      "title": "Wartung: {{plan}}",
+      "description": "Wartung ({{type}}) fällig am {{date}}. Wartungstermin: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1467,6 +1757,8 @@
       "installDate": "Installationsdatum"
     },
     "empty": "Es wurde keine Software gefunden, die Ihrer Suche entspricht.",
+    "noInventory": "Für dieses Gerät wurde noch kein Softwareinventar erfasst.",
+    "loadError": "Das Softwareinventar konnte nicht geladen werden.",
     "totalItems": "Gesamtzahl der Artikel: {{count}}",
     "values": {
       "unknown": "Unbekannt"
@@ -1503,13 +1795,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Vermutlich {{contact}}",
-      "mapDialogDescription": "„{{user}}“ wird für diese RMM-Organisation gespeichert.",
-      "mapDialogTitle": "Angemeldeten Benutzer einem Kontakt zuordnen",
-      "mapFailed": "Die Zuordnung konnte nicht gespeichert werden.",
-      "mapToContact": "Kontakt zuordnen…"
-    },
     "health": "Zustand",
     "security": "Sicherheit",
     "openTickets": "Offene Tickets",
@@ -1559,6 +1844,13 @@
     "lastDone": "Zuletzt erledigt",
     "noMaintenance": "Nichts geplant.",
     "docsHint": "Anhänge und Zugangsdaten für dieses Asset.",
+    "rmmUser": {
+      "looksLike": "· Vermutlich {{contact}}",
+      "mapDialogDescription": "„{{user}}“ wird für diese RMM-Organisation gespeichert.",
+      "mapDialogTitle": "Angemeldeten Benutzer einem Kontakt zuordnen",
+      "mapFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+      "mapToContact": "Kontakt zuordnen…"
+    },
     "manufacturer": "Hersteller",
     "model": "Modell",
     "vendor": "Lieferant",
@@ -1572,7 +1864,8 @@
     "assignDialogTitle": "Dieses Asset zuweisen",
     "sharedWorkspace": "Gemeinsamer Arbeitsplatz",
     "sharedWorkspaceValue": "{{name}} · {{count}} Personen",
-    "billingProfile": "Abrechnungsprofil"
+    "billingProfile": "Abrechnungsprofil",
+    "lastAudited": "Letzte Inventur"
   },
   "assetTimeline": {
     "title": "Verlauf",
@@ -1602,7 +1895,11 @@
       "aGroup": "einer Gruppe",
       "autoAssignedFrom": "Automatisch {{contact}} zugewiesen über {{provider}}",
       "groupLocationMoved": "Mit {{group}} nach {{location}} verschoben",
-      "groupLocationCleared": "Standort mit {{group}} entfernt"
+      "groupLocationCleared": "Standort mit {{group}} entfernt",
+      "audit": "Inventur",
+      "auditPresent": "Inventur: vorhanden",
+      "auditMissing": "Inventur: fehlend",
+      "auditMethod": "Markierungsmethode: {{method}}"
     },
     "changeTypes": {
       "created": "Erstellt",
@@ -1612,6 +1909,30 @@
       "rmm_linked": "RMM verknüpft",
       "hardware_upgrade": "Hardware aufgerüstet",
       "warranty_updated": "Garantie aktualisiert"
+    },
+    "custody": {
+      "unknownPlace": "einem unbekannten Standort",
+      "ticket": "Ticket {{ticket}}",
+      "receivedBack": "Zurückerhalten an {{place}}",
+      "received": "In Verwahrung genommen an {{place}}",
+      "moved": "Verschoben von {{from}} nach {{to}}",
+      "movedTo": "Verschoben nach {{to}}",
+      "handedOff": "Übergeben von {{from}} an {{to}}",
+      "handedOffTo": "Übergeben an {{to}}",
+      "aColleague": "einen Kollegen",
+      "shipped": "Versendet an {{counterparty}}",
+      "shippedVendor": "An Lieferanten versendet",
+      "returnedTo": "An Kunden zurückgegeben ({{counterparty}})",
+      "returned": "An Kunden zurückgegeben",
+      "updated": "Verwahrungsdetails aktualisiert",
+      "fields": {
+        "purpose": "Zweck",
+        "next_action_party": "nächste Aktion",
+        "next_action_note": "Notiz zur nächsten Aktion",
+        "follow_up_on": "Wiedervorlagedatum",
+        "condition_note": "Zustand",
+        "accessories": "Zubehör"
+      }
     }
   },
   "assetSignals": {
@@ -1671,7 +1992,10 @@
       "updateAssets": "Zugriff verweigert: Assets können nicht aktualisiert werden"
     },
     "asset": {
+      "tagAlreadyExists": "Dieses Asset-Tag wird bereits verwendet oder ist reserviert. Scannen Sie es, um das vorhandene Asset zu finden, oder geben Sie ein anderes Tag ein.",
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "ticketNotFound": "Ticket nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "alreadyLinkedToTicket": "Dieses Asset ist bereits mit dem Ticket verknüpft.",
       "clientNotFound": "Kunde nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceNotFound": "Wartungsplan nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "maintenanceMismatch": "Dieser Wartungsdatensatz passt nicht zum ausgewählten Asset. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -1715,12 +2039,43 @@
     "loading": "Wird geladen...",
     "remove": "Asset entfernen"
   },
+  "inventoryProvenance": {
+    "title": "Bestandsherkunft",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Seriennummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ursprünglicher Kundenauftrag"
+      },
+      "delivered": {
+        "label": "Geliefert"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-Verlauf"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Asset-Formular wird geladen..."
+    }
+  },
   "assetStatuses": {
     "active": "Aktiv",
     "in_stock": "Auf Lager",
     "maintenance": "In Wartung",
     "inactive": "Inaktiv",
-    "retired": "Ausgemustert"
+    "retired": "Ausgemustert",
+    "held_by_msp": "Vom MSP verwahrt"
   },
   "assetStatusKinds": {
     "deployable": "Einsetzbar",
@@ -1812,5 +2167,330 @@
       "createFailed": "Die Gruppe konnte nicht erstellt werden.",
       "addFailed": "Die ausgewählten Assets konnten nicht hinzugefügt werden."
     }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparatur",
+      "warranty_evaluation": "Garantieprüfung",
+      "loaner_prep": "Leihgerät vorbereiten",
+      "staging": "Einsatzvorbereitung"
+    },
+    "party": {
+      "msp": "Wir (MSP)",
+      "client": "Kunde",
+      "vendor": "Lieferant"
+    },
+    "fields": {
+      "location": "Standort",
+      "keepLocation": "Aktuellen Standort beibehalten",
+      "selectLocation": "Standort auswählen",
+      "bin": "Fach oder Regal",
+      "binPlaceholder": "z. B. Regal B3",
+      "purpose": "Zweck",
+      "nextActionParty": "Nächste Aktion liegt bei",
+      "followUpOn": "Wiedervorlage am",
+      "followUpPlaceholder": "Datum auswählen",
+      "nextActionNote": "Notiz zur nächsten Aktion",
+      "internalNote": "Intern. Wird nie auf einem Etikett gedruckt oder dem Kunden angezeigt.",
+      "conditionNote": "Zustand",
+      "conditionPlaceholder": "Kratzer, fehlende Schrauben, Schäden bei Ankunft",
+      "accessories": "Erhaltenes Zubehör",
+      "accessoryPlaceholder": "z. B. Netzteil",
+      "accessoryQuantity": "Menge",
+      "removeAccessory": "Zubehör entfernen",
+      "addAccessory": "Zubehör hinzufügen",
+      "note": "Notiz (optional)"
+    },
+    "errors": {
+      "generic": "Etwas ist schiefgelaufen."
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "saving": "Speichern...",
+      "move": "Verschieben",
+      "handOff": "Übergeben",
+      "ship": "An Lieferanten versenden",
+      "receiveBack": "Zurücknehmen",
+      "returnToClient": "An Kunden zurückgeben",
+      "edit": "Details bearbeiten",
+      "receiveIntoCustody": "In Verwahrung nehmen"
+    },
+    "move": {
+      "title": "Equipment verschieben",
+      "submit": "Verschieben",
+      "toLocation": "Verschieben nach"
+    },
+    "handOff": {
+      "title": "An Kollegen übergeben",
+      "submit": "Übergeben",
+      "newHolder": "Neuer Verwalter",
+      "selectHolder": "Person auswählen"
+    },
+    "ship": {
+      "title": "An Lieferanten versenden",
+      "description": "Der Artikel verlässt das Büro. Er bleibt in Verwahrung und wird als beim Lieferanten angezeigt.",
+      "submit": "Versenden",
+      "counterparty": "Lieferant oder Spediteur",
+      "counterpartyPlaceholder": "z. B. Dell RMA-Depot"
+    },
+    "receiveBack": {
+      "title": "Vom Lieferanten zurücknehmen",
+      "submit": "Zurücknehmen",
+      "holder": "Verwalter (Standard: Sie)",
+      "me": "Ich"
+    },
+    "return": {
+      "title": "An Kunden zurückgeben",
+      "description": "Damit endet die Verwahrung. Der Artikel wird nicht mehr als in Verwahrung geführt.",
+      "submit": "An Kunden zurückgeben",
+      "collectedBy": "Abgeholt von (optional)"
+    },
+    "edit": {
+      "title": "Verwahrungsdetails bearbeiten",
+      "submit": "Speichern"
+    },
+    "open": {
+      "title": "In Verwahrung nehmen",
+      "description": "Erfassen Sie, dass der MSP dieses Equipment nun verwahrt. Dadurch werden weder Lagerbestand angelegt noch die Abrechnung berührt.",
+      "submit": "Annehmen",
+      "holder": "Verwalter (Standard: Sie)"
+    },
+    "card": {
+      "withVendor": "Beim Lieferanten",
+      "title": "Verwahrung",
+      "location": "Standort",
+      "holder": "Verwalter",
+      "purpose": "Zweck",
+      "nextAction": "Nächste Aktion",
+      "followUp": "Wiedervorlage",
+      "overdue": "überfällig",
+      "daysHeld": "Tage in Verwahrung",
+      "ticket": "Ticket",
+      "openTicket": "Ticket öffnen",
+      "condition": "Zustand",
+      "accessories": "Zubehör",
+      "notInCustody": "Derzeit nicht in Verwahrung des MSP.",
+      "hideHistory": "Verwahrungsverlauf ausblenden",
+      "showHistoryWithPast": "Verwahrungsverlauf ({{count}} frühere Vorgänge)",
+      "showHistory": "Verwahrungsverlauf",
+      "noEvents": "Keine Verwahrungsereignisse erfasst."
+    },
+    "state": {
+      "with_vendor": "Beim Lieferanten",
+      "in_office": "Im Büro"
+    },
+    "badge": {
+      "withVendor": "Beim Lieferanten",
+      "inOfficeAt": "Im Büro - {{location}}",
+      "inOffice": "Im Büro"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Asset",
+        "client": "Kunde",
+        "location": "Standort",
+        "holder": "Verwalter",
+        "purpose": "Zweck",
+        "nextAction": "Nächste Aktion",
+        "followUp": "Wiedervorlage",
+        "daysHeld": "Tage in Verwahrung",
+        "ticket": "Ticket",
+        "actions": "Aktionen"
+      },
+      "openMenu": "Menü öffnen",
+      "tabs": {
+        "all_open": "Alle offenen",
+        "in_office": "Im Büro",
+        "waiting_on_vendor": "Wartet auf Lieferanten",
+        "waiting_on_client": "Wartet auf Kunden",
+        "overdue": "Überfällig"
+      },
+      "title": "Equipment in Verwahrung",
+      "filters": {
+        "client": "Kunde",
+        "allLocations": "Alle Standorte",
+        "holder": "Verwalter",
+        "allPurposes": "Alle Zwecke",
+        "mine": "Meine"
+      },
+      "empty": "In dieser Ansicht befindet sich kein Equipment in Verwahrung."
+    },
+    "receiveEquipment": {
+      "button": "Equipment annehmen",
+      "title": "Equipment annehmen",
+      "description": "Erfassen Sie Kundenequipment, das für dieses Ticket abgegeben wurde. Dadurch werden weder Lagerbestand angelegt noch Abrechnung oder Zeit berührt.",
+      "submit": "Annehmen",
+      "modeExisting": "Vorhandenes Asset",
+      "modeNew": "Neuer Artikel",
+      "search": "Kunden-Assets durchsuchen",
+      "asset": "Asset",
+      "assetPlaceholder": "Asset auswählen",
+      "fields": {
+        "name": "Name",
+        "type": "Typ",
+        "manufacturer": "Hersteller",
+        "model": "Modell",
+        "serial": "Seriennummer",
+        "assetTag": "Asset-Tag (optional)"
+      },
+      "photos": "Fotos (optional)",
+      "photosHint": "Fotos werden an dieses Ticket angehängt und sind für den Kunden nicht sichtbar.",
+      "doneTitle": "Equipment angenommen",
+      "doneBody": "{{name}} ({{tag}}) befindet sich jetzt in MSP-Verwahrung.",
+      "printLabel": "Asset-Etikett drucken",
+      "openAsset": "Asset öffnen",
+      "close": "Schließen",
+      "inCustodyOption": "{{asset}} — In Verwahrung: {{location}}"
+    },
+    "photos": {
+      "limit": "Bis zu 20 Fotos, insgesamt 10 MB. Fotos sind für Kunden nicht sichtbar.",
+      "tooLarge": "Wählen Sie höchstens 20 Fotos mit insgesamt maximal 10 MB aus."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garantie",
+      "warrantyEnd": "Garantie endet",
+      "expired": "Abgelaufen",
+      "expiringSoon": "Läuft bald ab",
+      "vendor": "Lieferant",
+      "ownership": "Eigentum",
+      "ownershipMsp": "Im Besitz des MSP",
+      "ownershipClient": "Im Besitz des Kunden",
+      "claims": "Garantieansprüche",
+      "noClaims": "Noch keine Garantieansprüche.",
+      "openRma": "RMA eröffnen",
+      "startClaim": "Garantieanspruch starten"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Standortinventuren",
+    "startAudit": "Inventur starten",
+    "noLocation": "Kein Standort",
+    "loading": "Inventuren werden geladen…",
+    "empty": "Noch keine Standortinventuren in dieser Ansicht.",
+    "columns": {
+      "audit": "Inventur",
+      "client": "Kunde",
+      "location": "Standort",
+      "status": "Status",
+      "startedBy": "Gestartet von",
+      "started": "Gestartet",
+      "completed": "Abgeschlossen",
+      "expected": "Erwartet",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet"
+    },
+    "filters": {
+      "client": "Kunde",
+      "allLocations": "Alle Standorte",
+      "allStatuses": "Alle Status",
+      "started": "Gestartet"
+    },
+    "stats": {
+      "expected": "erwartet",
+      "present": "vorhanden",
+      "missing": "fehlend",
+      "remaining": "verbleibend",
+      "unexpected": "unerwartet"
+    },
+    "segments": {
+      "remaining": "Verbleibend",
+      "present": "Vorhanden",
+      "missing": "Fehlend",
+      "unexpected": "Unerwartet",
+      "all": "Alle"
+    },
+    "start": {
+      "title": "Standortinventur starten",
+      "client": "Kunde",
+      "clientPlaceholder": "Kunden auswählen",
+      "location": "Standort",
+      "locationHint": "„Kein Standort“ umfasst die Geräte des Kunden, für die kein Standort hinterlegt ist.",
+      "statuses": "Einbezogene Asset-Status",
+      "statusesHint": "Ohne Statusauswahl werden alle Status einbezogen.",
+      "statusesLoading": "Status werden geladen…",
+      "notes": "Notizen",
+      "notesPlaceholder": "Zweck dieser Begehung (optional)",
+      "pickClient": "Wählen Sie einen Kunden aus, um den Umfang der Inventur zu sehen.",
+      "counting": "Einbezogene Geräte werden gezählt…",
+      "countUnavailable": "Die Geräteanzahl ist derzeit nicht verfügbar.",
+      "expected_one": "In diesem Umfang wird 1 Gerät erwartet",
+      "expected_other": "In diesem Umfang werden {{count}} Geräte erwartet",
+      "submit": "Inventur starten",
+      "starting": "Wird gestartet…"
+    },
+    "detail": {
+      "reference": "Inventur",
+      "untitledClient": "Kunde",
+      "location": "Standort",
+      "startedBy": "Gestartet von",
+      "started": "Gestartet",
+      "completed": "Abgeschlossen",
+      "scopeStatuses": "Einbezogene Status",
+      "allStatuses": "Alle Status",
+      "notes": "Notizen",
+      "exportCsv": "CSV exportieren",
+      "exportStarted": "CSV-Export gestartet.",
+      "exportEmpty": "In dieser Ansicht gibt es nichts zu exportieren.",
+      "addUnexpected": "Unerwartetes Asset hinzufügen",
+      "addUnexpectedHint": "Ein vor Ort gefundenes Gerät außerhalb des Umfangs dieser Inventur wird als unerwartet erfasst, niemals als erwartet.",
+      "addUnexpectedPlaceholder": "Asset suchen…",
+      "addUnexpectedEmpty": "Keine weiteren Assets für diesen Kunden.",
+      "complete": "Inventur abschließen",
+      "completeConfirm_one": "1 nicht markiertes Gerät wird als fehlend erfasst.",
+      "completeConfirm_other": "{{count}} nicht markierte Geräte werden als fehlend erfasst.",
+      "cancelAudit": "Inventur abbrechen",
+      "cancelConfirm": "Die Inventur wird abgebrochen und es werden keine Änderungen an den Assets gespeichert. Dies kann nicht rückgängig gemacht werden.",
+      "keepAudit": "Inventur fortsetzen"
+    },
+    "items": {
+      "columns": {
+        "asset": "Asset",
+        "type": "Typ",
+        "serial": "Seriennummer / Tag",
+        "result": "Ergebnis",
+        "method": "Methode",
+        "markedBy": "Markiert von",
+        "markedAt": "Markiert am",
+        "actions": "Aktionen"
+      },
+      "searchPlaceholder": "Nach Name, Tag oder Seriennummer suchen",
+      "empty": "Keine Assets in dieser Ansicht.",
+      "markPresent": "Als vorhanden markieren",
+      "undoMark": "Rückgängig",
+      "createTicket": "Ticket erstellen",
+      "ticketTitle": "Bei Standortinventur fehlend: {{asset}}",
+      "ticketDescription": "Bei der am {{date}} gestarteten Standortinventur nicht gefunden."
+    }
+  },
+  "scanLookup": {
+    "title": "Asset-Tag scannen",
+    "input": "Tag scannen oder eingeben",
+    "loading": "Suche läuft…",
+    "find": "Asset suchen",
+    "ambiguous": "Mehrere sichtbare Assets haben diesen Tag. Bitten Sie einen Administrator, die doppelten Tags zu bereinigen.",
+    "notFound": "Kein sichtbares Asset stimmt genau mit diesem Tag überein.",
+    "failed": "Dieser Tag konnte nicht gesucht werden. Prüfen Sie Ihre Zugriffsrechte und versuchen Sie es erneut."
+  },
+  "fullIntake": {
+    "title": "Asset hinzufügen",
+    "description": "Wählen Sie eine Mandantennummer oder behalten Sie einen bereits gedruckten Tag bei.",
+    "back": "Zurück zu Assets"
+  },
+  "labelFirstIntake": {
+    "start": "Erfassung per Etikett",
+    "title": "Erfassung per Etikett starten",
+    "help": "Erstellen Sie einen dauerhaften Asset-Datensatz mit Mindestangaben und drucken Sie zwei Exemplare seines Etiketts. Scannen Sie später eines davon, um denselben Datensatz zu vervollständigen.",
+    "client": "Kunde",
+    "clientRequired": "Wählen Sie einen Kunden, um fortzufahren.",
+    "createFailed": "Der Erfassungsdatensatz konnte nicht erstellt werden.",
+    "name": "Kurzbeschreibung (optional)",
+    "creating": "Wird erstellt…",
+    "createPrint": "Erstellen und Etikettenpaar drucken"
   }
 }

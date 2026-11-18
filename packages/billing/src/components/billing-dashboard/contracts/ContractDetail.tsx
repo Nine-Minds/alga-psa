@@ -51,9 +51,7 @@ import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQuerie
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
-import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
-import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
+import { AssignmentBillingProfileField } from './AssignmentBillingProfileField';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
@@ -62,7 +60,8 @@ import PricingSchedules from './PricingSchedules';
 import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate, toCalendarDisplayDate } from '@alga-psa/core';
+import { currencyFractionDigits, displayCurrencySymbol } from '@alga-psa/core/formatters';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -83,6 +82,23 @@ interface ContractSimulatorProps {
 
 // Dynamic import for the contract simulator (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
+// A component, not inline JSX, so the dynamic() loading copy can reach
+// useTranslation from module scope.
+function ContractSimulatorSkeleton() {
+  const { t } = useTranslation('msp/contracts');
+  return (
+    <Card>
+      <CardContent className="py-8">
+        <LoadingIndicator
+          layout="stacked"
+          text={t('contractDetail.simulatorLoading', { defaultValue: 'Loading simulator...' })}
+          spinnerProps={{ size: 'sm' }}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 const ContractSimulator = dynamic(
   () =>
     import('@product/billing/entry').then(
@@ -91,50 +107,62 @@ const ContractSimulator = dynamic(
           .ContractSimulator
     ),
   {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <LoadingIndicator
-            layout="stacked"
-            text="Loading simulator..."
-            spinnerProps={{ size: 'sm' }}
-          />
-        </CardContent>
-      </Card>
-    ),
+    loading: () => <ContractSimulatorSkeleton />,
     ssr: false,
   }
 );
 
-const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
-
-const formatDate = (value?: string | Date | null): string => {
-  if (!value) {
-    return '—';
-  }
-
-  try {
-    const plainDate = toPlainDate(value);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return '—';
-  }
-};
 
 const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
 };
 
+// Single source of truth for how an assignment is shaped when it enters the editor.
+// Used both to seed edit state and as the baseline the dirty check compares against,
+// so opening the editor without changing anything compares equal.
+const normalizeAssignmentForEdit = (
+  source: IContractAssignmentSummary
+): IContractAssignmentSummary => ({
+  ...source,
+  start_date: source.start_date ? toISODate(toPlainDate(source.start_date)) : null,
+  end_date: source.end_date ? toISODate(toPlainDate(source.end_date)) : null,
+  use_tenant_renewal_defaults:
+    typeof source.use_tenant_renewal_defaults === 'boolean'
+      ? source.use_tenant_renewal_defaults
+      : true,
+  renewal_mode: normalizeRenewalMode(source.renewal_mode) ?? 'manual',
+  notice_period_days:
+    Number.isInteger(source.notice_period_days) && Number(source.notice_period_days) >= 0
+      ? Number(source.notice_period_days)
+      : undefined,
+  renewal_term_months:
+    Number.isInteger(source.renewal_term_months) && Number(source.renewal_term_months) > 0
+      ? Number(source.renewal_term_months)
+      : undefined,
+  renewal_ticket_board_id: source.renewal_ticket_board_id ?? null,
+  renewal_ticket_status_id: source.renewal_ticket_status_id ?? null,
+});
+
+const assignmentsDiffer = (
+  first: IContractAssignmentSummary,
+  second: IContractAssignmentSummary
+): boolean => {
+  const a = first as unknown as Record<string, unknown>;
+  const b = second as unknown as Record<string, unknown>;
+  return Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).some(
+    (key) => (a[key] ?? null) !== (b[key] ?? null)
+  );
+};
+
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
-  const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-  const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  const symbol = formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
-  return { fractionDigits, symbol };
+  // The product's own glyph, so a ZAR contract shows "R" and not Intl's "ZAR".
+  return {
+    fractionDigits: currencyFractionDigits(currencyCode),
+    symbol: displayCurrencySymbol(currencyCode),
+  };
 }
 
 interface ContractDetailProps {
@@ -175,77 +203,6 @@ const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawer
   );
 };
 
-interface AssignmentBillingProfileFieldProps {
-  clientContractId: string;
-  clientId: string;
-  billingProfileId: string | null;
-  billingProfileName: string | null;
-  isEditing: boolean;
-  onChange: (billingProfileId: string | null) => void;
-}
-
-/**
- * The billing profile a client assignment bills, on the contract itself.
- *
- * A contract raised against a merged-in client bills that client's profile, and
- * this is the screen where an operator comes back to check or change it. The
- * hook lives in its own component because the assignments are rendered in a
- * map — and it keeps the D6 invisibility rule: a single-profile client sees
- * nothing here at all.
- */
-const AssignmentBillingProfileField: React.FC<AssignmentBillingProfileFieldProps> = ({
-  clientContractId,
-  clientId,
-  billingProfileId,
-  billingProfileName,
-  isEditing,
-  onChange,
-}) => {
-  const { t } = useTranslation('msp/contracts');
-  const { profiles, isSegmented } = useClientBillingProfiles(clientId || null, loadBillingProfiles);
-
-  if (!isSegmented) {
-    return null;
-  }
-
-  const selectedName = billingProfileId
-    ? profiles.find((profile) => profile.billing_profile_id === billingProfileId)?.name
-      ?? billingProfileName
-    : null;
-
-  return (
-    <div>
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-        {t('contractDetail.clientAssignment.billingProfile', { defaultValue: 'Billing Profile' })}
-      </Label>
-      {isEditing ? (
-        <div className="mt-1 w-full md:w-72">
-          <BillingProfilePicker
-            id={`assignment-billing-profile-${clientContractId}`}
-            clientId={clientId || null}
-            loadProfiles={loadBillingProfiles}
-            value={billingProfileId}
-            onChange={onChange}
-            label={t('contractDetail.clientAssignment.billingProfileLabel', {
-              defaultValue: 'Assignment billing profile',
-            })}
-            unassignedLabel={t('contractDetail.clientAssignment.billingProfileNone', {
-              defaultValue: "Use the client's default profile",
-            })}
-          />
-        </div>
-      ) : (
-        <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-          {selectedName
-            ?? t('contractDetail.clientAssignment.billingProfileNone', {
-              defaultValue: "Use the client's default profile",
-            })}
-        </p>
-      )}
-    </div>
-  );
-};
-
 const ContractDetail: React.FC<ContractDetailProps> = ({
   resolvedContractId,
   resolvedClientContractId,
@@ -254,7 +211,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate: formatInstant } = useFormatters();
+  // Calendar days (assignment/invoice dates in timestamp columns) are pinned with
+  // toCalendarDisplayDate; created_at/updated_at are true instants and use formatInstant.
+  const formatDate = (value?: string | Date | null): string => {
+    const displayDate = toCalendarDisplayDate(value);
+    return displayDate ? formatInstant(displayDate, { dateStyle: 'medium' }) : '—';
+  };
+  const formatTimestamp = (value?: string | Date | null): string =>
+    value ? formatInstant(value, { dateStyle: 'medium' }) : '—';
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -266,7 +231,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
-  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  const urlFocusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  // Overview "Edit"/"View details" request: focus a line and (unless read-only) open it in edit mode.
+  // Held in state, not the URL, so the edit intent is one-shot and never survives a reload.
+  const [lineFocusRequest, setLineFocusRequest] = useState<{ lineId: string; edit: boolean; seq: number } | null>(null);
+  const focusedContractLineId = lineFocusRequest?.lineId ?? urlFocusedContractLineId;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
@@ -313,6 +282,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
+  // Normalised form values captured at initialisation; the dirty check compares against these.
+  const [formBaseline, setFormBaseline] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    billingFrequency: string;
+  } | null>(null);
+  // Per-assignment baseline overrides (e.g. a stale renewal status cleared on load).
+  const [assignmentBaselineOverrides, setAssignmentBaselineOverrides] = useState<
+    Record<string, IContractAssignmentSummary>
+  >({});
 
   // Assignment editing state
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -331,10 +311,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const currencyMeta = useMemo(() => {
     const currencyCode = contract?.currency_code ?? 'USD';
-    const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
-    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-    const symbol =
-      formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? currencyCode;
+    const { fractionDigits, symbol } = getCurrencyMeta(currencyCode);
 
     return {
       currencyCode,
@@ -369,6 +346,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     primaryAssignment?.use_tenant_renewal_defaults !== false;
   const formatStatusLabel = useCallback((status?: string) => {
     if (status === 'active') return t('status.active', { defaultValue: 'Active' });
+    if (status === 'scheduled') return t('status.scheduled', { defaultValue: 'Scheduled' });
     if (status === 'terminated') return t('status.terminated', { defaultValue: 'Terminated' });
     if (status === 'expired') return t('status.expired', { defaultValue: 'Expired' });
     return t('status.draft', { defaultValue: 'Draft' });
@@ -494,7 +472,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         setRenewalTicketBoards(
           boards.map((board) => ({
             value: board.board_id ?? '',
-            label: board.board_name ?? 'Unnamed board',
+            label: board.board_name ?? t('contractDetail.unnamedBoard', { defaultValue: 'Unnamed board' }),
           }))
         );
       } catch (loadError) {
@@ -560,6 +538,26 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             },
           };
         });
+
+        // Clearing a stale status is a load-time normalisation, not a user edit:
+        // apply it to the baseline too so it does not register as unsaved.
+        setAssignmentBaselineOverrides((current) => {
+          if (!editingAssignmentId) {
+            return current;
+          }
+          const original = assignments.find((a) => a.client_contract_id === editingAssignmentId);
+          const baseline = current[editingAssignmentId] ?? (original ? normalizeAssignmentForEdit(original) : null);
+          if (
+            !baseline?.renewal_ticket_status_id ||
+            statuses.some((status: IStatus) => status.status_id === baseline.renewal_ticket_status_id)
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            [editingAssignmentId]: { ...baseline, renewal_ticket_status_id: null },
+          };
+        });
       } catch (loadError) {
         if (!active) {
           return;
@@ -598,18 +596,29 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       return false;
     }
 
-    // Check contract field changes
-    const contractChanged =
-      editContractName !== contract.contract_name ||
-      editDescription !== (contract.contract_description ?? '') ||
-      (!isLiveClientContract && editStatus !== contract.status) ||
-      editBillingFrequency !== contract.billing_frequency;
+    if (!formBaseline) {
+      return false;
+    }
 
-    // Check assignment changes
-    const assignmentsChanged = Object.keys(editAssignments).length > 0;
+    // Check contract field changes against the normalised baseline
+    const contractChanged =
+      editContractName !== formBaseline.name ||
+      editDescription !== formBaseline.description ||
+      (!isLiveClientContract && editStatus !== formBaseline.status) ||
+      editBillingFrequency !== formBaseline.billingFrequency;
+
+    // An assignment is dirty only when it differs from its normalised original
+    const assignmentsChanged = Object.entries(editAssignments).some(([assignmentId, edited]) => {
+      const original = assignments.find((a) => a.client_contract_id === assignmentId);
+      if (!original) {
+        return true;
+      }
+      const baseline = assignmentBaselineOverrides[assignmentId] ?? normalizeAssignmentForEdit(original);
+      return assignmentsDiffer(normalizeAssignmentForEdit(edited), baseline);
+    });
 
     return contractChanged || assignmentsChanged;
-  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized, isLiveClientContract]);
+  }, [contract, formBaseline, assignments, assignmentBaselineOverrides, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized, isLiveClientContract]);
 
   useEffect(() => {
     if (contractId || clientContractId) {
@@ -633,6 +642,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         setEditDescription(contract.contract_description ?? '');
         setEditStatus(contract.status);
         setEditBillingFrequency(contract.billing_frequency);
+        setFormBaseline({
+          name: contract.contract_name,
+          description: contract.contract_description ?? '',
+          status: contract.status,
+          billingFrequency: contract.billing_frequency,
+        });
         setIsFormInitialized(true);
       });
     }
@@ -642,6 +657,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setIsLoading(true);
     setError(null);
     setIsFormInitialized(false);
+    setFormBaseline(null);
+    setAssignmentBaselineOverrides({});
     setEditAssignments({});
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
@@ -662,7 +679,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       const detailContractId = selectedClientContract?.contract_id ?? contractId;
 
       if (!detailContractId) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -697,7 +714,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       }
 
       if (!contractData) {
-        setError('Contract not found');
+        setError(t('contractDetail.notFound', { defaultValue: 'Contract not found' }));
         setContract(null);
         setSummary(null);
         setAssignments([]);
@@ -711,7 +728,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setDocuments(documentsData);
     } catch (err) {
       console.error('Error loading contract details:', err);
-      setError('Failed to load contract');
+      setError(t('contractDetail.loadFailed', { defaultValue: 'Failed to load contract' }));
     } finally {
       setIsLoading(false);
     }
@@ -750,7 +767,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setInvoiceTemplates(templates);
     } catch (err) {
       console.error('Error loading contract invoices:', err);
-      setInvoiceError('Failed to load invoices for this contract assignment.');
+      setInvoiceError(t('contractDetail.invoicesLoadFailed', { defaultValue: 'Failed to load invoices for this contract assignment.' }));
     } finally {
       setIsLoadingInvoices(false);
     }
@@ -775,7 +792,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       router.push('/msp/billing?tab=client-contracts');
     } catch (err) {
       console.error('Error deleting contract:', err);
-      setError('Failed to delete contract');
+      setError(t('contractDetail.deleteFailed', { defaultValue: 'Failed to delete contract' }));
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -817,7 +834,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
   const handleOpenClientDrawer = async (clientId: string) => {
     openDrawer(
-      <div className="p-4 text-sm text-gray-600">Loading…</div>,
+      <div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.loading', { defaultValue: 'Loading…' })}</div>,
       undefined,
       undefined,
       '900px'
@@ -829,7 +846,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         return;
       }
       if (!clientData) {
-        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">{t('contractDetail.clientDrawer.notFound', { defaultValue: 'Client not found.' })}</div>);
         return;
       }
       replaceDrawer(
@@ -844,7 +861,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                   variant="outline"
                   onClick={() => window.open(`/msp/clients/${clientData.client_id}`, '_blank', 'noopener,noreferrer')}
                 >
-                  Open Client
+                  {t('contractDetail.clientDrawer.openClient', { defaultValue: 'Open Client' })}
                 </Button>
               </div>
             ),
@@ -853,7 +870,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       );
     } catch (error) {
       console.error('Error fetching client details:', error);
-      replaceDrawer(<div className="p-4 text-sm text-red-600">Failed to load client details.</div>);
+      replaceDrawer(<div className="p-4 text-sm text-red-600">{t('contractDetail.clientDrawer.loadFailed', { defaultValue: 'Failed to load client details.' })}</div>);
     }
   };
 
@@ -872,7 +889,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setEditDescription(contract.contract_description ?? '');
       setEditStatus(contract.status);
       setEditBillingFrequency(contract.billing_frequency);
+      setFormBaseline({
+        name: contract.contract_name,
+        description: contract.contract_description ?? '',
+        status: contract.status,
+        billingFrequency: contract.billing_frequency,
+      });
     }
+    setAssignmentBaselineOverrides({});
     setEditAssignments({});
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
@@ -949,8 +973,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       // Update any edited assignments
       for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
-        const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-        if (!originalAssignment) continue;
+        const rawOriginalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
+        if (!rawOriginalAssignment) continue;
+        // Compare against the normalised original (same baseline as the dirty check)
+        // so a no-op editor session sends nothing.
+        const originalAssignment =
+          assignmentBaselineOverrides[assignmentId] ?? normalizeAssignmentForEdit(rawOriginalAssignment);
 
         // Build update payload with only changed fields
         const updatePayload: any = {
@@ -1039,26 +1067,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     // Use edited data if it exists, otherwise use original assignment data
     const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
-    const normalizedData: IContractAssignmentSummary = {
-      ...dataToEdit,
-      start_date: dataToEdit.start_date ? toISODate(toPlainDate(dataToEdit.start_date)) : null,
-      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null,
-      use_tenant_renewal_defaults:
-        typeof dataToEdit.use_tenant_renewal_defaults === 'boolean'
-          ? dataToEdit.use_tenant_renewal_defaults
-          : true,
-      renewal_mode: normalizeRenewalMode(dataToEdit.renewal_mode) ?? 'manual',
-      notice_period_days:
-        Number.isInteger(dataToEdit.notice_period_days) && Number(dataToEdit.notice_period_days) >= 0
-          ? Number(dataToEdit.notice_period_days)
-          : undefined,
-      renewal_term_months:
-        Number.isInteger(dataToEdit.renewal_term_months) && Number(dataToEdit.renewal_term_months) > 0
-          ? Number(dataToEdit.renewal_term_months)
-          : undefined,
-      renewal_ticket_board_id: dataToEdit.renewal_ticket_board_id ?? null,
-      renewal_ticket_status_id: dataToEdit.renewal_ticket_status_id ?? null,
-    };
+    const normalizedData = normalizeAssignmentForEdit(dataToEdit);
 
     // Save a snapshot of the data at the start of this edit session
     setPreEditSnapshot({ ...normalizedData });
@@ -1396,7 +1405,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || 'Contract not found'}
+            {error || t('contractDetail.notFound', { defaultValue: 'Contract not found' })}
           </AlertDescription>
         </Alert>
       </div>
@@ -1414,7 +1423,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           className="gap-2 self-start"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Contracts
+          {t('contractDetail.backToContracts', { defaultValue: 'Back to Contracts' })}
         </Button>
         <ContractHeader contract={contract} summary={summary} liveStatus={primaryAssignmentStatus} />
         {sourceQuote ? (
@@ -1425,7 +1434,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               size="sm"
               onClick={() => router.push(`/msp/billing?tab=quotes&quoteId=${sourceQuote.quote_id}`)}
             >
-              View Source Quote {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
+              {t('contractDetail.viewSourceQuote', { defaultValue: 'View Source Quote' })} {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
         ) : null}
@@ -1740,6 +1749,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                               variant={
                                 primaryAssignmentStatus === 'active'
                                   ? 'success'
+                                  : primaryAssignmentStatus === 'scheduled'
+                                    ? 'info'
                                   : primaryAssignmentStatus === 'terminated'
                                     ? 'warning'
                                     : primaryAssignmentStatus === 'expired'
@@ -1754,6 +1765,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 defaultValue: 'Live client status is controlled by the assignment lifecycle below.',
                               })}
                             </p>
+                            {primaryAssignmentStatus === 'scheduled' && (
+                              // Already active, so there is no "Set to Active" here; explain the start date.
+                              <p id="contract-scheduled-start-note" className="text-xs text-muted-foreground">
+                                {t('contractDetail.headerCard.scheduledExplanation', {
+                                  defaultValue: 'This contract is active and begins billing on {{date}}.',
+                                  date: formatDate(primaryAssignment?.start_date),
+                                })}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <>
@@ -1809,11 +1829,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
-                      <span className="font-medium">{formatDate(contract.created_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
-                      <span className="font-medium">{formatDate(contract.updated_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">
@@ -1934,6 +1954,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </span>
                           <Badge variant={
                             primaryAssignmentStatus === 'active' ? 'success' :
+                            primaryAssignmentStatus === 'scheduled' ? 'info' :
                             primaryAssignmentStatus === 'terminated' ? 'warning' :
                             primaryAssignmentStatus === 'expired' ? 'error' :
                             'default-muted'
@@ -1994,6 +2015,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <ContractOverview
                   contractId={contractId}
                   onNavigateToLines={() => handleTabChange('lines')}
+                  onEditLine={(lineId) => {
+                    setLineFocusRequest((prev) => ({ lineId, edit: !isSystemManagedDefault, seq: (prev?.seq ?? 0) + 1 }));
+                    handleTabChange('lines');
+                  }}
+                  isReadOnly={isSystemManagedDefault}
                 />
               ) : null}
 
@@ -2675,7 +2701,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            startDate={primaryAssignment?.start_date ? toISODate(toPlainDate(primaryAssignment.start_date)) : null}
             focusContractLineId={focusedContractLineId}
+            editIntentLineId={lineFocusRequest?.edit ? lineFocusRequest.lineId : null}
+            onEditIntentConsumed={() => setLineFocusRequest((current) => (current ? { ...current, edit: false } : current))}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

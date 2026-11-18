@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDateISO } from '../../../../../test-utils/dateUtils';
@@ -14,7 +14,8 @@ import {
   setLineProvenance,
   updateCatalogPrice,
   setupClientTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 import {
   previewServicePriceChange,
@@ -117,7 +118,7 @@ describe('Catalog price resolution – fixed path', () => {
   async function linkMemberToCatalog(contractLineId: string): Promise<void> {
     await context.db.raw(
       `UPDATE contract_line_service_fixed_config AS clsfc
-       SET base_rate = NULL, rate_provenance = 'inherited'
+       SET base_rate = NULL, base_rate_basis = NULL, rate_provenance = 'inherited'
        FROM contract_line_service_configuration AS clsc
        WHERE clsc.config_id = clsfc.config_id
          AND clsc.tenant = clsfc.tenant
@@ -243,7 +244,7 @@ describe('Catalog price resolution – fixed path', () => {
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
 
     expect(result).not.toBeNull();
     expect(result!.subtotal).toBe(12000);
@@ -295,7 +296,7 @@ describe('Catalog price resolution – fixed path', () => {
         .update({ custom_rate: 10000, rate_provenance: null });
       await context.db.raw(
         `UPDATE contract_line_service_fixed_config AS clsfc
-         SET base_rate = 10000, rate_provenance = NULL
+         SET base_rate = 10000, base_rate_basis = 'share', rate_provenance = NULL
          FROM contract_line_service_configuration AS clsc
          WHERE clsc.config_id = clsfc.config_id
            AND clsc.tenant = clsfc.tenant
@@ -318,7 +319,7 @@ describe('Catalog price resolution – fixed path', () => {
         period_start_date: JAN_START,
         period_end_date: FEB_START
       }, 'billing_cycle_id');
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       if (!result || !(result as { invoice_id?: string }).invoice_id) {
         throw new Error(`invoice generation failed for ${clientId}: ${JSON.stringify(result)}`);
       }
@@ -410,7 +411,7 @@ describe('Catalog price resolution – fixed path', () => {
       period_end_date: endDate
     }, 'billing_cycle_id');
 
-    const result = await generateInvoice(billingCycleId);
+    const result = await generateInvoiceForCycle(billingCycleId);
     expect(result).not.toBeNull();
     return result!;
   }
@@ -461,6 +462,27 @@ describe('Catalog price resolution – fixed path', () => {
       .toISOString()
       .slice(0, 10);
   }
+
+  it('deferred revenue reads a stored member base_rate through its basis: a share as-is, a per-unit rate x quantity', async () => {
+    const { serviceId, contractLineId } = await seedInheritedLine('Basis Service', 10000, JAN_START);
+    const config = await context.db('contract_line_service_configuration')
+      .where({ tenant: context.tenantId, contract_line_id: contractLineId, service_id: serviceId })
+      .first('config_id');
+    await context.db('contract_line_service_configuration')
+      .where({ tenant: context.tenantId, config_id: config.config_id })
+      .update({ quantity: 3 });
+    const key = `${contractLineId}\u0000${serviceId}`;
+    const setFixed = (base_rate: number, base_rate_basis: 'share' | 'per_unit') =>
+      context.db('contract_line_service_fixed_config')
+        .where({ tenant: context.tenantId, config_id: config.config_id })
+        .update({ base_rate, base_rate_basis, rate_provenance: 'custom' });
+
+    await setFixed(675, 'share');
+    expect((await loadFixedConfigBaseRates(context.db, context.tenantId)).get(key)).toBe(675);
+
+    await setFixed(225, 'per_unit');
+    expect((await loadFixedConfigBaseRates(context.db, context.tenantId)).get(key)).toBe(675);
+  });
 
   it('T1: an inherited line follows a catalog price change on the next period', async () => {
     const { serviceId, contractLineId } = await seedInheritedLine('T1 Service', 10000, JAN_START);
@@ -575,7 +597,7 @@ describe('Catalog price resolution – fixed path', () => {
     // is cleared and the line reports Standard while billing the old number.
     await context.db.raw(
       `UPDATE contract_line_service_fixed_config AS clsfc
-       SET base_rate = 4500, rate_provenance = 'custom'
+       SET base_rate = 4500, base_rate_basis = 'share', rate_provenance = 'custom'
        FROM contract_line_service_configuration AS clsc
        WHERE clsc.config_id = clsfc.config_id
          AND clsc.tenant = clsfc.tenant
@@ -982,7 +1004,7 @@ describe('Catalog price resolution – fixed path', () => {
         },
         'billing_cycle_id',
       );
-      const february = await generateInvoice(billingCycleId);
+      const february = await generateInvoiceForCycle(billingCycleId);
       if (!february) {
         throw new Error(`invoice generation failed for ${shape.name}`);
       }

@@ -6,6 +6,14 @@ import type { IInteraction, IScheduleEntry } from '@alga-psa/types';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInteractionLoggedPayload, buildScheduleEntryCreatedPayload } from '@alga-psa/workflow-streams';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
+import {
+  assertHumanWorkAssignee,
+  assertHumanWorkOwner,
+} from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
+import { isLicensedUserType } from '@alga-psa/types';
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { SubjectUserInput } from '@alga-psa/authorization/subject';
 import InteractionModel from '../models/interactions';
 
 type InteractionInput = Partial<IInteraction> & {
@@ -18,6 +26,8 @@ export interface CreateInteractionRecordParams {
   tenant: string;
   trx: Knex.Transaction;
   interactionData: InteractionInput;
+  /** The calling user. When the interaction owner is that user, ownership was defaulted to the caller. */
+  user?: unknown;
 }
 
 export interface PublishInteractionSideEffectsParams {
@@ -28,7 +38,6 @@ export interface PublishInteractionSideEffectsParams {
 }
 
 export interface CreateInteractionWithSideEffectsParams extends CreateInteractionRecordParams {
-  user?: unknown;
   changedFields?: string[];
 }
 
@@ -108,9 +117,19 @@ export async function createInteractionRecord({
   tenant,
   trx,
   interactionData,
+  user,
 }: CreateInteractionRecordParams): Promise<IInteraction> {
   if (!interactionData.user_id) {
     throw new Error('User ID is missing');
+  }
+
+  // Human-work guard: an interaction is owned by a licensed user. An owner defaulted to the
+  // calling user fails with HumanWorkOwnerRequiredError; an explicit other owner is validated
+  // as an assignee.
+  if ((user as { user_id?: string } | undefined)?.user_id === interactionData.user_id) {
+    await assertHumanWorkOwner(trx, tenant, interactionData.user_id, 'user_id');
+  } else {
+    await assertHumanWorkAssignee(trx, tenant, [interactionData.user_id], { kind: 'unscoped', surface: 'interaction' });
   }
 
   if (!interactionData.client_id && !interactionData.contact_name_id) {
@@ -130,6 +149,16 @@ export async function createInteractionRecord({
 
   if (!resolvedClientId) {
     throw new Error('Interactions must be linked to a client');
+  }
+
+  // A signed-in caller may only log an interaction for a client in their scope. System callers pass no user.
+  if (user) {
+    await assertRecordCreateAllowed(trx, {
+      tenant,
+      user: user as SubjectUserInput,
+      resourceType: 'interaction',
+      record: { clientId: resolvedClientId, ownerUserId: interactionData.user_id },
+    }, 'interaction');
   }
 
   const { interaction_id: _ignoredInteractionId, ...insertData } = interactionData;
@@ -254,13 +283,22 @@ export function resolveInteractionWindow(
  * creator when nothing was requested. Callers must gate `user_schedule:update` before
  * booking anyone other than the creator.
  */
-export function resolveScheduleAssignees(currentUserId: string, requested?: string[] | null): string[] {
+export function resolveScheduleAssignees(
+  currentUserId: string,
+  requested: string[] | null | undefined,
+  callerUserType: string | null | undefined,
+): string[] {
   const unique = Array.from(new Set(
     (requested ?? [])
       .map((id) => (typeof id === 'string' ? id.trim() : ''))
       .filter((id) => id.length > 0),
   ));
-  return unique.length > 0 ? unique : [currentUserId];
+  if (unique.length > 0) return unique;
+  // Never default a calendar to a caller who is not a licensed user (e.g. a service principal).
+  if (!isLicensedUserType(callerUserType)) {
+    throw new HumanWorkOwnerRequiredError('assignees');
+  }
+  return [currentUserId];
 }
 
 export interface CreateInteractionScheduleEntryParams {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appendFileSync } from 'node:fs';
 import path from 'node:path';
+import { isClientUserType } from '@alga-psa/types';
 
 import { filterRequestHeaders, getTimeoutMs, pathnameFromParts } from '../shared/gateway-utils';
 import { getInstallConfig } from './install-config';
@@ -240,7 +241,7 @@ async function handle(
 
     const userInfo = await getUserInfoFromAuth(req);
     if (access.principal.kind === 'client') {
-      if (!userInfo || userInfo.user_type !== 'client') {
+      if (!userInfo || !isClientUserType(userInfo.user_type)) {
         return applyCorsHeaders(json(403, { error: 'forbidden' }), corsOrigin);
       }
       userInfo.client_id = access.principal.clientId;

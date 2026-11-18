@@ -5,7 +5,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityType,
-  IClient,
   IPriority,
   IStatus,
   ITag,
@@ -18,6 +17,7 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { SearchInput } from "@alga-psa/ui/components/SearchInput";
 import { StringDateRangePicker, parseLocalYMD, formatLocalYMD } from "@alga-psa/ui/components/DateRangePicker";
 import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
+import { useClientPickerSearch } from "@alga-psa/ui/context";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption, TreeSelectMode } from "@alga-psa/ui/components/TreeSelect";
 import { TagFilter } from "@alga-psa/ui/components";
@@ -33,7 +33,6 @@ interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
   priorities?: IPriority[];
-  clients?: IClient[];
   projects?: ProjectWithPhases[];
   boards?: Array<{ board_id?: string; board_name?: string }>;
   ticketStatuses?: IStatus[];
@@ -72,7 +71,6 @@ export function ActivitiesTableFilters({
   filters,
   onChange,
   priorities = [],
-  clients = [],
   projects = [],
   boards = [],
   ticketStatuses = [],
@@ -86,9 +84,9 @@ export function ActivitiesTableFilters({
     { value: ActivityType.TICKET, label: t('filters.activityTypeOptions.ticket', { defaultValue: 'Tickets' }) },
     { value: ActivityType.WORKFLOW_TASK, label: t('filters.activityTypeOptions.workflowTask', { defaultValue: 'Workflow Tasks' }) },
   ];
-  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(
-    filters.priorityIds?.[0] || 'all'
-  );
+  // Derived from props so it follows filters that change from outside (view switches, late
+  // preference hydration) instead of going stale as seeded-once local state.
+  const selectedPriorityId = filters.priorityIds?.[0] ?? 'all';
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
@@ -102,12 +100,14 @@ export function ActivitiesTableFilters({
   const isPriorityFilterAvailable =
     selectedTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(selectedTypes[0]);
   const hasPriorityFilter = isPriorityFilterAvailable && priorities.length > 0;
-  const hasClientFilter = clients.length > 0;
+  // The client filter searches on the server through the searcher the MSP shell supplies; without one
+  // (no provider mounted) the filter is hidden rather than loading a client list.
+  const { searchClients } = useClientPickerSearch();
+  const hasClientFilter = Boolean(searchClients);
 
   // -------- Handlers -------------------------------------------------------
 
   const handleReset = useCallback(() => {
-    setSelectedPriorityId('all');
     onChange({
       types: DEFAULT_TABLE_TYPES,
       isClosed: false,
@@ -146,7 +146,6 @@ export function ActivitiesTableFilters({
       const stillFilterable =
         newTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(newTypes[0]);
       if (!stillFilterable) {
-        setSelectedPriorityId('all');
         delete next.priorityIds;
       }
 
@@ -157,7 +156,6 @@ export function ActivitiesTableFilters({
 
   const handlePriorityChange = useCallback(
     (value: string) => {
-      setSelectedPriorityId(value);
       const next: ActivityFiltersType = {
         ...filters,
         priorityIds: value && value !== 'all' ? [value] : undefined,
@@ -688,7 +686,6 @@ export function ActivitiesTableFilters({
             </Label>
             <ClientPicker
               id="activities-client-picker"
-              clients={clients}
               selectedClientId={filters.clientId || null}
               onSelect={handleClientChange}
               filterState={clientFilterState}

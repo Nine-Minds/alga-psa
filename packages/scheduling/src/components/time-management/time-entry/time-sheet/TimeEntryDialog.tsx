@@ -14,7 +14,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet, isServiceOptionalForWorkItem } from '../../../../actions/timeEntryActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { 
   ITimeEntry, 
@@ -27,7 +27,8 @@ import { IExtendedWorkItem } from '@alga-psa/types';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
-import { validateTimeEntry } from './utils';
+import { contractLineFieldsForWrite, validateTimeEntry } from './utils';
+import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 import { TimeEntrySaveRejectedError } from '../../../../lib/timeEntrySaveAdapter';
 import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
@@ -99,6 +100,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
   const getProjectTaskPaymentWarning = useSchedulingCrossFeatureOptional()?.getProjectTaskPaymentWarning;
+  // Mode the server resolved for the viewer. Operational (seat technician): no commercial read is made.
+  const operationalMode = useTimeEntryMode() === 'operational';
   const {
     entries,
     services,
@@ -120,11 +123,23 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const [closeConfirmation, setCloseConfirmation] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasProjectPaymentWarning, setHasProjectPaymentWarning] = useState(false);
+  // Asked of the registered time source; the drawer never inspects tenant identity. Until answered, a service is required.
+  const [serviceOptional, setServiceOptional] = useState(false);
+
+  useEffect(() => {
+    let stale = false;
+    setServiceOptional(false);
+    if (!isOpen || !workItem.work_item_id || operationalMode) return;
+    isServiceOptionalForWorkItem(workItem.type, workItem.work_item_id)
+      .then(answer => { if (!stale) setServiceOptional(answer === true); })
+      .catch(() => { if (!stale) setServiceOptional(false); });
+    return () => { stale = true; };
+  }, [isOpen, workItem.type, workItem.work_item_id, operationalMode]);
 
   useEffect(() => {
     let stale = false;
 
-    if (!isOpen || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
+    if (!isOpen || operationalMode || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
       setHasProjectPaymentWarning(false);
       return () => {
         stale = true;
@@ -143,7 +158,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     return () => {
       stale = true;
     };
-  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning]);
+  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning, operationalMode]);
 
   // Initialize a single-entry form whenever the dialog opens.
   useEffect(() => {
@@ -172,12 +187,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
 
     const isAdHoc = workItem.type === 'ad_hoc';
 
-    if (!entry.service_id?.trim()) {
+    // No service is only allowed when the time source said so; the entry is then operational and carries no billable minutes.
+    const isOperational = operationalMode || (serviceOptional && !entry.service_id?.trim());
+
+    if (!isOperational && !entry.service_id?.trim()) {
       toast.error(t('messages.serviceRequired'));
       return;
     }
 
-    if (!isAdHoc) {
+    if (!isAdHoc && !isOperational) {
       const selectedService = services.find(s => s.id === entry.service_id);
       if (!selectedService) {
         toast.error(t('messages.invalidService'));
@@ -198,7 +216,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     try {
       setIsSaving(true);
       const { isNew, isDirty, tempId, ...cleanedEntry } = entry;
-      const durationToSend = isAdHoc ? 0 : entry.billable_duration;
+      const durationToSend = isAdHoc || isOperational ? 0 : entry.billable_duration;
 
       const timeEntry = {
         ...cleanedEntry,
@@ -212,8 +230,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         updated_at: formatISO(new Date()),
         notes: entry.notes || '',
         approval_status: 'DRAFT' as TimeSheetStatus,
-        service_id: entry.service_id || undefined,
-        tax_region: entry.tax_region || undefined,
+        // Operational mode never sends a commercial field; the server would reject one.
+        ...(operationalMode
+          ? { service_id: undefined, tax_region: undefined, tax_rate_id: undefined, contract_line_id: undefined, contract_line_source: undefined }
+          : {
+            service_id: entry.service_id || undefined,
+            tax_region: entry.tax_region || undefined,
+            // Never echo a server-resolved (auto_*) line back: see contractLineFieldsForWrite.
+            ...contractLineFieldsForWrite(entry, 'resave'),
+          }),
       };
 
       await onSave(timeEntry);
@@ -245,7 +270,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } finally {
       setIsSaving(false);
     }
-  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem, workTimeZone]);
+  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, operationalMode, serviceOptional, services, timeSheetId, workItem, workTimeZone]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {
@@ -420,6 +445,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             date={date}
             workTimeZone={workTimeZone}
             isNewEntry={!hasExistingEntry}
+            serviceOptional={serviceOptional}
           />
         </div>
       ) : null}

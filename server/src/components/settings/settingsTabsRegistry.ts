@@ -36,6 +36,7 @@ export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'teams', labelKey: 'tabs.teams', title: 'Teams' },
   { id: 'language', labelKey: 'tabs.language', title: 'Language', hasOwnRoute: true },
   { id: 'ticketing', labelKey: 'tabs.ticketing', title: 'Ticketing' },
+  { id: 'tags', labelKey: 'tabs.tags', title: 'Tags', hasOwnRoute: true },
   { id: 'projects', labelKey: 'tabs.projects', title: 'Projects', hasOwnRoute: true },
   { id: 'assets', labelKey: 'settings.assetTypes.tab', title: 'Assets', hasOwnRoute: true },
   { id: 'interactions', labelKey: 'tabs.interactions', title: 'Interactions', hasOwnRoute: true },

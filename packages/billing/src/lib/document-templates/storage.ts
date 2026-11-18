@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
-import type { TemplateAst } from '@alga-psa/types';
+import type { LabelClass, TemplateAst } from '@alga-psa/types';
 
 import { type DocumentType, getDocumentTypeRegistryEntry } from './registry';
 import type { DocumentTemplateRef } from './resolution';
+import { labelClassOfCustomTemplate, labelClassOfStandardCode } from '../label-template-ast/labelTemplates';
 
 const CUSTOM_TABLE = 'document_templates';
 const ASSIGNMENT_TABLE = 'document_template_assignments';
@@ -26,6 +27,8 @@ export interface DocumentTemplateListItem {
   code: string | null;
   templateAst: TemplateAst;
   is_default: boolean;
+  /** `work-tag` only: the label class this template prints; `is_default` is then per class. */
+  labelClass?: LabelClass;
 }
 
 interface AssignmentRow {
@@ -54,17 +57,36 @@ export async function listDocumentTemplates(
     .where({ tenant, document_type: documentType })
     .orderBy('name')) as CustomDocumentTemplateRow[];
 
-  return [
-    ...standards,
-    ...customs.map((row) => ({
-      template_id: row.template_id,
-      name: row.name,
-      source: 'custom' as const,
-      code: null,
-      templateAst: row.templateAst,
-      is_default: row.is_default,
-    })),
-  ];
+  const customItems: DocumentTemplateListItem[] = customs.map((row) => ({
+    template_id: row.template_id,
+    name: row.name,
+    source: 'custom' as const,
+    code: null,
+    templateAst: row.templateAst,
+    is_default: row.is_default,
+  }));
+
+  if (documentType !== 'work-tag') return [...standards, ...customItems];
+
+  // Label templates: defaults are per label class (label_class assignments), never tenant-wide.
+  const assignments = (await knex(ASSIGNMENT_TABLE)
+    .where({ tenant, document_type: 'work-tag', scope_type: 'label_class' })
+    .whereNull('scope_id')) as Array<AssignmentRow & { scope_key: string | null }>;
+  const classed = [...standards, ...customItems].map((item) => {
+    const labelClass =
+      item.source === 'standard'
+        ? labelClassOfStandardCode(item.code ?? '') ?? undefined
+        : labelClassOfCustomTemplate(item.templateAst);
+    const isDefault = assignments.some(
+      (a) =>
+        a.scope_key === labelClass &&
+        (item.source === 'standard'
+          ? a.template_source === 'standard' && a.standard_template_code === item.code
+          : a.template_source === 'custom' && a.template_id === item.template_id),
+    );
+    return { ...item, labelClass, is_default: isDefault };
+  });
+  return classed;
 }
 
 export async function getCustomDocumentTemplate(
@@ -162,6 +184,22 @@ export async function fetchClientOverrideTemplate(
   return assignmentToTemplate(knex, tenant, documentType, assignment);
 }
 
+/**
+ * The tenant's default template for one label class of the `work-tag` document type, or null when none
+ * is assigned (the caller then falls back to the class's standard template).
+ */
+export async function fetchLabelClassDefaultTemplate(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  labelClass: LabelClass,
+): Promise<DocumentTemplateRef | null> {
+  const assignment = await knex(ASSIGNMENT_TABLE)
+    .where({ tenant, document_type: 'work-tag', scope_type: 'label_class', scope_key: labelClass })
+    .whereNull('scope_id')
+    .first<AssignmentRow>();
+  return assignmentToTemplate(knex, tenant, 'work-tag', assignment);
+}
+
 export type SetDefaultPayload =
   | { templateSource: 'standard'; standardTemplateCode: string }
   | { templateSource: 'custom'; templateId: string };
@@ -171,12 +209,17 @@ export async function setDefaultAssignment(
   trx: Knex.Transaction,
   tenant: string,
   documentType: DocumentType,
-  scope: { scopeType: 'tenant'; scopeId: null } | { scopeType: 'client'; scopeId: string },
+  scope:
+    | { scopeType: 'tenant'; scopeId: null }
+    | { scopeType: 'client'; scopeId: string }
+    | { scopeType: 'label_class'; scopeKey: LabelClass },
   payload: SetDefaultPayload,
   createdBy?: string | null,
 ): Promise<void> {
   const base = trx(ASSIGNMENT_TABLE).where({ tenant, document_type: documentType, scope_type: scope.scopeType });
-  if (scope.scopeId === null) {
+  if (scope.scopeType === 'label_class') {
+    await base.clone().whereNull('scope_id').where({ scope_key: scope.scopeKey }).del();
+  } else if (scope.scopeId === null) {
     await base.clone().whereNull('scope_id').del();
   } else {
     await base.clone().where({ scope_id: scope.scopeId }).del();
@@ -186,7 +229,9 @@ export async function setDefaultAssignment(
     tenant,
     document_type: documentType,
     scope_type: scope.scopeType,
-    scope_id: scope.scopeId,
+    scope_id: scope.scopeType === 'label_class' ? null : scope.scopeId,
+    // LEVERAGE: friction document-template-scope — scopes beyond tenant/client are bolted on via scope_key
+    scope_key: scope.scopeType === 'label_class' ? scope.scopeKey : null,
     template_source: payload.templateSource,
     standard_template_code: payload.templateSource === 'standard' ? payload.standardTemplateCode : null,
     template_id: payload.templateSource === 'custom' ? payload.templateId : null,

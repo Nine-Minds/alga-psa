@@ -7,6 +7,7 @@ import TimeEntryEditForm from './time-sheet/TimeEntryEditForm';
 import TimeEntryReadOnly from './time-sheet/TimeEntryReadOnly';
 import { ITimeEntryWithNew, TimeInputs, Service } from './time-sheet/types';
 import { TaxRegion } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TimeEntryListProps {
   id: string;
@@ -49,6 +50,8 @@ const TimeEntryList = memo(function TimeEntryList({
   savingEntryIndex,
   disableSaveActions
 }: TimeEntryListProps) {
+  const { t } = useTranslation('msp/time-entry');
+
   return (
     <div className="space-y-4">
       {entries.map((entry, index): React.JSX.Element => (
@@ -96,7 +99,7 @@ const TimeEntryList = memo(function TimeEntryList({
           disabled={editingIndex !== null && entries[editingIndex]?.isNew}
         >
           <Plus className="h-4 w-4" />
-          Add Entry
+          {t('timeEntryList.actions.addEntry')}
         </Button>
       )}
     </div>

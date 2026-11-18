@@ -23,6 +23,11 @@ function createMockDb() {
         );
         return builder;
       },
+      // Prepaid Block owner lookup (alga-2026-0002695): where(...).whereNotNull(...).select(...)
+      whereNotNull(column: string) {
+        filteredRows = filteredRows.filter((row) => row[column] != null);
+        return builder;
+      },
       async first() {
         return filteredRows[0] ?? null;
       },
@@ -90,6 +95,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   withTransaction: mocks.withTransaction,
   createTenantKnex: mocks.createTenantKnex,
+  writeInvoiceAudit: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -98,7 +104,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
-  applyCreditToInvoice: mocks.applyCreditToInvoice,
+  applyCreditToInvoiceInternal: mocks.applyCreditToInvoice,
   resolveCreditExpirationDate: vi.fn(async () => undefined),
   resolveCreditDrawdownPolicy: vi.fn(async () => ({
     autoApplyEnabled: true,

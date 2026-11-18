@@ -20,11 +20,23 @@ schemas, and the Hudu import mapping.
 - Location management (free-text `location` field and structured `location_id` FK to `client_locations`)
 - Warranty tracking
 - Client association
-- Tenant-managed status registry (`asset_statuses` table): each status has a lifecycle kind (`active`, `inactive`, or `maintenance`), a display label, and a sort order; built-in statuses can be renamed and reordered; RMM sync no longer overwrites a manually set status
-- Procurement tracking: `manufacturer`, `model`, `vendor_id`, `purchase_cost` (with `purchase_cost_currency`), `order_number` — populated from RMM hardware data where available, editable manually
-- Contact assignment with full history (`asset_assignments` table): record who is responsible for or in possession of each device; every assign/unassign is stored
-- RMM signed-in-user matching to client contacts by email, username, or name — with per-organization suggest/auto-assign mode (`signedInUserMappings`, `autoAssignFromSignedInUser`)
-- Asset grouping into bundles (single owner, travels as a unit) or shared workspaces (location + member contacts) via `asset_groups` and `asset_group_members` tables
+- Tenant-managed status registry (`asset_statuses`): each status has a slug, a label, a kind (`deployable`, `pending`, `undeployable`, or `archived`), a display order, and an active flag. Five built-ins are seeded (`active`, `in_stock`, `maintenance`, `inactive`, `retired`) and can be renamed and reordered; a status still in use cannot be archived. RMM sync sets a status only on create (and `retired` on device deletion), so manual statuses are not overwritten
+- Procurement tracking: `manufacturer`, `model`, `vendor_id`, `purchase_cost` (integer minor units) with `purchase_cost_currency`, and `order_number`; existing RMM assets were backfilled from their hardware data
+- Contact assignment with history (`asset_assignments`): every assign and unassign is kept, with the acting users, a `source`, and an optional note
+- RMM signed-in-user matching to client contacts (explicit mapping, then email, then username, then full name), controlled per RMM organization by `rmm_organization_mappings.contact_assignment_mode` (`off`, `suggest` — the default — or `auto`)
+- Asset groups (`asset_groups`) per client, of kind `bundle` or `shared_workspace`; members in `asset_group_members` (an asset belongs to at most one group) and owner/user contacts in `asset_group_contacts`
+
+### Asset Tags and Numbering
+
+The `asset_tag` is the physical identifier printed on an asset's label. It is kept separate from the serial number and from integration identities (RMM device IDs and external entity mappings), which never become the printed tag.
+
+- **Automatic numbering.** When an asset is created without a tag, the tag is allocated from one tenant-wide `ASSET` sequence (`next_number`, default: no prefix, 5 digits, starting at 1) and formatted with the client's optional asset prefix in front (`formatAssetTag` in `shared/services/assetNumbering.ts`). There are no per-client counters. The allocator skips any sequence value whose formatted tag is already used or claimed, and issued numbers are never reused, so abandoned numbers leave gaps.
+- **Client prefixes.** `clients.asset_prefix` holds up to 10 letters, digits, or hyphens, stored uppercase and unique per tenant. A prefix applies only when a tag is allocated; changing a client's prefix, or moving an asset to another client, never renumbers existing tags.
+- **Manual tags.** A supplied tag is kept as entered. Tags are compared in normalized form (leading/trailing spaces trimmed, ASCII letters uppercased) and must be unique in the tenant. Each tag is held by a row in `asset_tag_claims`, keyed by `(tenant, normalized_tag)`; a conflicting create or tag edit fails with `ASSET_TAG_CONFLICT` (HTTP 409 from the REST API).
+- **Previews and reservations.** Previews read the next value without consuming it, and printing labels never allocates numbers. A durable reservation (`asset_number_reservations`, 15-minute expiry) claims a tag for a printed label; expiry is bookkeeping only, and the claim is never released for reuse, so a printed label can still be scanned and committed to its asset.
+- **One write path.** Manual creation (quick add, full add at `/msp/assets/new`, label-first intake), the REST API, CSV import, inventory delivery, ticket equipment intake, Hudu import, inbound webhook upserts, and RMM ingestion (shared ingestion, NinjaOne, Tactical RMM, Level) all prepare the asset's identity through `prepareAssetIdentity`. Integrations allocate a tag for newly discovered devices and do not change the tag of an existing asset on resync. CSV import uses only an explicitly mapped asset-tag column; it no longer falls back to the serial number or a row identifier.
+- **Label-first intake and scan lookup.** Label-first intake creates a minimal `unknown`-type asset for a client with the next tag and opens the asset label dialog. Asset labels print two adjacent copies per asset by default (configurable from 1 to 10). The dashboard's tag lookup normalizes the scanned value, opens the single visible matching asset, reports ambiguity when more than one visible asset matches, and completes a printed reservation by creating its asset.
+- **Legacy tags and activation.** The migration preserves all existing tags and records blank tags and every member of a duplicate group in `asset_tag_audit`. Administrators reconcile duplicates under **Settings → Assets → Asset numbering**, mark audit rows reviewed with a note, and select **Activate unique asset tags**. Activation refuses unreviewed duplicates, remaining duplicate tags, and tags held by a pending printed label; it keeps intentionally blank legacy records. See [Asset numbering rollout](../asset-numbering-rollout.md) for deployment order and enforcement details.
 
 ### Location Linking
 
@@ -84,20 +96,19 @@ CREATE TABLE assets (
     tenant UUID NOT NULL REFERENCES tenants,
     asset_id UUID DEFAULT gen_random_uuid() NOT NULL,
     type_id UUID NOT NULL,
-    client_id UUID NOT NULL,
-    asset_tag TEXT NOT NULL,
+    client_id UUID NOT NULL, -- Client association
+    asset_tag TEXT NOT NULL,      -- Physical label; normalized copy in asset_tag_normalized
     serial_number TEXT,
     name TEXT NOT NULL,
-    status_id UUID,                  -- FK to asset_statuses; replaces the old free-text status column
+    status TEXT NOT NULL,         -- Slug of a row in asset_statuses
     location TEXT,
-    location_id UUID,                -- Optional FK to client_locations; validated against the asset's client
+    location_id UUID,            -- Optional FK to client_locations; validated against the asset's client
     purchase_date DATE,
     warranty_end_date DATE,
-    -- Procurement fields
-    manufacturer TEXT,               -- Hardware maker; synced from RMM system_info where available
-    model TEXT,                      -- Device model; synced from RMM system_info where available
-    vendor_id UUID,                  -- FK to vendors table
-    purchase_cost NUMERIC(12,2),
+    manufacturer TEXT,
+    model TEXT,
+    vendor_id UUID,
+    purchase_cost BIGINT,         -- Minor units
     purchase_cost_currency TEXT,
     order_number TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -106,22 +117,26 @@ CREATE TABLE assets (
     FOREIGN KEY (tenant, type_id) REFERENCES asset_types(tenant, type_id),
     FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id),
     FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id),
-    FOREIGN KEY (tenant, status_id) REFERENCES asset_statuses(tenant, status_id)
+    FOREIGN KEY (tenant, vendor_id) REFERENCES vendors(tenant, vendor_id)
 );
 ```
 
-### Asset Statuses (Tenant-Managed)
+### Asset Statuses
 ```sql
 CREATE TABLE asset_statuses (
     tenant UUID NOT NULL REFERENCES tenants,
     status_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    slug TEXT NOT NULL,
     label TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('active', 'inactive', 'maintenance')),
+    kind TEXT NOT NULL DEFAULT 'deployable'
+        CHECK (kind IN ('deployable', 'pending', 'undeployable', 'archived')),
     is_builtin BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     display_order INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (tenant, status_id)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, status_id),
+    UNIQUE (tenant, slug)
 );
 ```
 
@@ -131,41 +146,54 @@ CREATE TABLE asset_assignments (
     tenant UUID NOT NULL REFERENCES tenants,
     assignment_id UUID DEFAULT gen_random_uuid() NOT NULL,
     asset_id UUID NOT NULL,
-    contact_id UUID NOT NULL,
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    unassigned_at TIMESTAMP WITH TIME ZONE,
-    notes TEXT,
-    created_by UUID NOT NULL,
-    PRIMARY KEY (tenant, assignment_id),
-    FOREIGN KEY (tenant, asset_id) REFERENCES assets(tenant, asset_id) ON DELETE CASCADE,
-    FOREIGN KEY (tenant, contact_id) REFERENCES contacts(tenant, contact_id),
-    FOREIGN KEY (tenant, created_by) REFERENCES users(tenant, user_id)
+    contact_name_id UUID NOT NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    assigned_by_user_id UUID,
+    unassigned_at TIMESTAMP WITH TIME ZONE,   -- NULL while the assignment is open
+    unassigned_by_user_id UUID,
+    source TEXT NOT NULL DEFAULT 'manual'
+        CHECK (source IN ('manual', 'api', 'rmm', 'bundle', 'import', 'merge', 'system')),
+    note TEXT,
+    PRIMARY KEY (tenant, assignment_id)
 );
 ```
 
-### Asset Groups and Members
+### Asset Groups
 ```sql
 CREATE TABLE asset_groups (
     tenant UUID NOT NULL REFERENCES tenants,
     group_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    client_id UUID NOT NULL,
     name TEXT NOT NULL,
-    group_type TEXT NOT NULL CHECK (group_type IN ('bundle', 'workspace')),
-    owner_contact_id UUID,           -- For bundles: the single owner
-    location_id UUID,                -- For workspaces: the shared location
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    kind TEXT NOT NULL DEFAULT 'bundle' CHECK (kind IN ('bundle', 'shared_workspace')),
+    location_id UUID,
+    description TEXT,
+    created_by UUID,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant, group_id),
-    FOREIGN KEY (tenant, owner_contact_id) REFERENCES contacts(tenant, contact_id),
-    FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id)
+    FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id)
 );
 
 CREATE TABLE asset_group_members (
     tenant UUID NOT NULL REFERENCES tenants,
     group_id UUID NOT NULL,
     asset_id UUID NOT NULL,
+    added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    added_by UUID,
     PRIMARY KEY (tenant, group_id, asset_id),
-    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE,
-    FOREIGN KEY (tenant, asset_id) REFERENCES assets(tenant, asset_id) ON DELETE CASCADE
+    UNIQUE (tenant, asset_id),                -- An asset is in at most one group
+    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE
+);
+
+CREATE TABLE asset_group_contacts (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID NOT NULL,
+    contact_name_id UUID NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('owner', 'user')),
+    added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, group_id, contact_name_id),
+    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE
 );
 ```
 
@@ -311,23 +339,10 @@ CREATE TABLE asset_history (
   - Set location ✓
   - Delete ✓
 - Tenant-managed asset statuses ✓
-  - Status registry CRUD with display_order ✓
-  - Built-in status protection ✓
-  - RMM sync no longer overwrites manual status ✓
 - Procurement fields ✓
-  - manufacturer, model, vendor_id, purchase_cost, order_number ✓
-  - RMM hardware/system_info backfill ✓
-- Contact assignment ✓
-  - asset_assignments history table ✓
-  - Assign/unassign actions and REST API ✓
-  - Portal and mobile (read-only) ✓
-- RMM signed-in-user matching ✓
-  - Match by email/username/name to client contacts ✓
-  - Per-organization suggest/auto-assign mode ✓
-- Asset groups ✓
-  - Bundles (single owner) ✓
-  - Shared workspaces (location + member contacts) ✓
-  - REST API and bulk assignment ✓
+- Contact assignment history ✓
+- RMM signed-in-user matching (off / suggest / auto per organization) ✓
+- Asset groups (bundles and shared workspaces) ✓
 - Advanced reporting
   - Custom report builder
   - Dashboard integration

@@ -4,6 +4,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
 import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
 import { settlePrepaidReplenishmentInvoice } from '../prepaidReplenishmentSettlement';
+import logger from '@alga-psa/core/logger';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import type { PaymentRecordedSource } from '@alga-psa/event-schemas';
+import { buildExternalPaymentRecordedPayload } from '../../lib/paymentRecordedEvent';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -19,23 +23,9 @@ import { settlePrepaidReplenishmentInvoice } from '../prepaidReplenishmentSettle
  * their entry points.
  */
 
-export interface InvoiceBalanceInputs {
-  /** Invoice total in cents */
-  totalAmount: number;
-  /** Credit applied to the invoice in cents */
-  creditApplied: number;
-  /** Net payments recorded against the invoice in cents */
-  totalPaid: number;
-}
-
-/**
- * Amount still owed on an invoice, in cents. Invoice totals are immutable
- * (credit reshape): the document total stays gross and what is owed is
- * derived from credits applied plus net payments.
- */
-export function computeBalanceDue(inputs: InvoiceBalanceInputs): number {
-  return Math.round(inputs.totalAmount) - Math.round(inputs.creditApplied) - Math.round(inputs.totalPaid);
-}
+import { computeBalanceDue } from '../../lib/balanceDue';
+export { computeBalanceDue };
+export type { InvoiceBalanceInputs } from '../../lib/balanceDue';
 
 export interface ExternalPaymentInput {
   invoiceId: string;
@@ -65,6 +55,13 @@ export interface ExternalPaymentInput {
    * a replaced allocation legitimately re-applies under the reversed one's reference.
    */
   dedupeByReference?: boolean;
+  /**
+   * Explicit provenance carried on the PAYMENT_RECORDED event. Consumers (the
+   * confirmation email) allow-list on it, so an omitted value is never sent.
+   */
+  source?: PaymentRecordedSource;
+  /** Provider-side id (e.g. Stripe PaymentIntent) surfaced as gatewayTransactionId on the event. */
+  gatewayTransactionId?: string;
 }
 
 export interface ExternalPaymentResult {
@@ -162,6 +159,55 @@ async function insertTransaction(
   });
 }
 
+/**
+ * Publishes PAYMENT_RECORDED for a newly inserted payment. Called only after the
+ * recording transaction has committed and only for a real insert (never for
+ * alreadyRecorded / dedupe hits / failures).
+ *
+ * When the caller handed us an open transaction (the accounting-sync applier),
+ * our `knex.transaction` is only a savepoint and the outer commit has not
+ * happened yet, so publishing here could announce a payment that later rolls
+ * back. Those callers are imports from an external ledger, never customer
+ * notifications, so the event is not published for them.
+ *
+ * Never throws: a publish failure must not fail the payment action.
+ */
+async function publishPaymentRecorded(
+  knex: Knex,
+  tenantId: string,
+  input: ExternalPaymentInput,
+  recorded: { paymentId: string; clientId: string; currency: string }
+): Promise<void> {
+  if ((knex as { isTransaction?: boolean }).isTransaction) {
+    return;
+  }
+  const occurredAt = new Date().toISOString();
+  try {
+    await publishWorkflowEvent({
+      eventType: 'PAYMENT_RECORDED',
+      payload: buildExternalPaymentRecordedPayload({
+        paymentId: recorded.paymentId,
+        clientId: recorded.clientId,
+        receivedAt: occurredAt,
+        amount: input.amount,
+        currency: recorded.currency,
+        method: input.provider,
+        gatewayTransactionId: input.gatewayTransactionId ?? input.referenceNumber,
+        // Omitted source stays omitted: consumers default-deny.
+        source: input.source,
+      }),
+      ctx: { tenantId, occurredAt, actor: { actorType: 'SYSTEM' } },
+      idempotencyKey: `payment_recorded:${recorded.paymentId}`,
+    });
+  } catch (error) {
+    logger.error('[recordExternalPayment] Failed to publish PAYMENT_RECORDED', {
+      tenantId,
+      paymentId: recorded.paymentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function recordExternalPayment(
   knex: Knex,
   tenantId: string,
@@ -248,6 +294,12 @@ export async function recordExternalPayment(
   if (alreadyRecorded) {
     return { success: true, paymentRecorded: false, paymentId, newStatus, totalPaid, clientId: invoice.client_id, alreadyRecorded: true };
   }
+
+  await publishPaymentRecorded(knex, tenantId, input, {
+    paymentId,
+    clientId: invoice.client_id,
+    currency: paymentCurrency,
+  });
 
   // Fire-and-forget: push the payment to QBO on the next sync cycle.
   // Must never throw — a producer failure must not fail the payment action.

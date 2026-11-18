@@ -1,7 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { validateAudienceReferences } from './definitionAudience';
 import { publishServiceRequestDefinition, type ServiceRequestDefinitionVersionRecord } from './definitionPublishing';
 import { validateBasicFormSchema } from './basicFormBuilder';
+import { SERVICE_REQUEST_EXECUTION_MODES } from './domain';
+import { findUnknownServiceRequestTemplateTokens } from './ticketTextTemplate';
 import {
   getServiceRequestExecutionProvider,
   getServiceRequestFormBehaviorProvider,
@@ -24,6 +27,7 @@ interface ServiceRequestDefinitionForValidation {
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience: unknown;
 }
 
 export async function validateServiceRequestDefinitionForPublish(
@@ -78,6 +82,22 @@ export async function validateServiceRequestDefinitionForPublish(
       errors.push(...(validation.errors ?? []).map((error) => `Execution: ${error}`));
     }
     warnings.push(...(validation.warnings ?? []).map((warning) => `Execution: ${warning}`));
+
+    // Only publish validation has the form schema, so placeholder checks live here, not in validateConfig.
+    const createsTicket =
+      executionProvider.executionMode === SERVICE_REQUEST_EXECUTION_MODES.TICKET_ONLY ||
+      executionProvider.executionMode === SERVICE_REQUEST_EXECUTION_MODES.TICKET_PLUS_WORKFLOW;
+    if (createsTicket) {
+      const executionConfig = definition.execution_config ?? {};
+      for (const [configKey, label] of [['titleTemplate', 'Ticket subject'], ['descriptionPrefix', 'Description prefix']] as const) {
+        const template = executionConfig[configKey];
+        if (typeof template !== 'string') continue;
+        const unknown = findUnknownServiceRequestTemplateTokens(template, definition.form_schema);
+        if (unknown.length > 0) {
+          errors.push(`Execution: ${label} uses unknown field(s): ${unknown.map((token) => `{{${token}}}`).join(', ')}`);
+        }
+      }
+    }
   }
 
   const formBehaviorProvider = getServiceRequestFormBehaviorProvider(definition.form_behavior_provider);
@@ -91,6 +111,7 @@ export async function validateServiceRequestDefinitionForPublish(
     warnings.push(...(validation.warnings ?? []).map((warning) => `Form behavior: ${warning}`));
   }
 
+  // LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
   const visibilityProvider = getServiceRequestVisibilityProvider(definition.visibility_provider);
   if (!visibilityProvider) {
     errors.push(`Unknown visibility provider: ${definition.visibility_provider}`);
@@ -100,6 +121,11 @@ export async function validateServiceRequestDefinitionForPublish(
       errors.push(...(validation.errors ?? []).map((error) => `Visibility: ${error}`));
     }
     warnings.push(...(validation.warnings ?? []).map((warning) => `Visibility: ${warning}`));
+  }
+
+  errors.push(...(await validateAudienceReferences(knex, tenant, definition.audience)).map((error) => `Visibility: ${error}`));
+  if ((definition.audience as { join?: string; clauses?: unknown[] })?.join === 'or' && (definition.audience as { clauses?: unknown[] }).clauses?.length === 0) {
+    warnings.push('Visibility: Nobody can access this service request');
   }
 
   return {

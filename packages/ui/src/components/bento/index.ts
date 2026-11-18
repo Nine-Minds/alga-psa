@@ -3,8 +3,11 @@ export {
   BentoTileAddButton,
   BentoTileEmpty,
   BentoTileEmptyAction,
+  BentoTileEmptyScope,
+  BentoCollapseEmptyTiles,
   BentoTileSkeleton,
 } from './BentoTile';
+export { BentoBoard, type BentoBoardTile, type BentoBoardTier } from './BentoBoard';
 export {
   BentoChip,
   BentoDateChip,

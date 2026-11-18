@@ -6,7 +6,9 @@ import {
   normalizePreferredPaymentMethod,
   type PaymentTerms,
   type PreferredPaymentMethod,
+  DEFAULT_PAYMENT_TERMS,
 } from './paymentPreferences';
+import { readTenantDefaultPaymentTerms } from './tenantPaymentTerms';
 
 /**
  * A billing profile's effective billing settings, with client fallback (F087).
@@ -21,6 +23,8 @@ import {
  * inheriting the client's bill-to name, delivery method, and payment terms —
  * an all-or-nothing switch would silently blank the rest.
  */
+
+export type PaymentTermsSource = 'profile' | 'client' | 'tenant' | 'system';
 
 export interface EffectiveBillingIdentity {
   billingProfileId: string;
@@ -39,10 +43,13 @@ export interface EffectiveBillingIdentity {
   invoiceTemplateId: string | null;
   billingCycle: string | null;
   /**
-   * A known terms key, or null when neither the profile nor the client holds
-   * one. Legacy free-text values count as "not set" rather than as an override.
+   * The terms this profile bills under: profile, then client, then the tenant
+   * default, then `DEFAULT_PAYMENT_TERMS`. Never null. Legacy free-text values
+   * count as "not set" rather than as an override.
    */
-  paymentTerms: PaymentTerms | null;
+  paymentTerms: PaymentTerms;
+  /** Which tier `paymentTerms` came from. 'system' = no tenant default either. */
+  paymentTermsSource: PaymentTermsSource;
   /**
    * How this profile pays, as a known method key, or null when neither the
    * profile nor the client holds one (the client column is legacy free text
@@ -99,12 +106,13 @@ export async function resolveEffectiveBillingIdentity(
   const resolvedProfileId =
     billingProfileId ?? (await ensureClientDefaultBillingProfile(knex, tenant, clientId));
 
-  const [profile, client] = await Promise.all([
+  const [profile, client, tenantDefaultTerms] = await Promise.all([
     db
       .table('client_billing_profiles')
       .where({ billing_profile_id: resolvedProfileId })
       .first(...PROFILE_COLUMNS),
     db.table('clients').where({ client_id: clientId }).first(...CLIENT_COLUMNS),
+    readTenantDefaultPaymentTerms(knex, tenant),
   ]);
 
   if (!profile) {
@@ -122,6 +130,17 @@ export async function resolveEffectiveBillingIdentity(
     }
     return clientValue;
   };
+
+  const profileTerms = normalizePaymentTerms(profile.payment_terms);
+  const clientTerms = normalizePaymentTerms(client.payment_terms);
+  const inheritedTerms: PaymentTerms = clientTerms ?? tenantDefaultTerms ?? DEFAULT_PAYMENT_TERMS;
+  const paymentTermsSource: PaymentTermsSource = profileTerms
+    ? 'profile'
+    : clientTerms
+      ? 'client'
+      : tenantDefaultTerms
+        ? 'tenant'
+        : 'system';
 
   return {
     billingProfileId: resolvedProfileId,
@@ -159,11 +178,10 @@ export async function resolveEffectiveBillingIdentity(
     // Normalized before inheriting: a profile holding legacy free text must
     // not count as an override, and neither value may reach due-date
     // calculation or an invoice snapshot unrecognized.
-    paymentTerms: inherit(
-      'payment_terms',
-      normalizePaymentTerms(profile.payment_terms),
-      normalizePaymentTerms(client.payment_terms),
-    ),
+    // Profile → client → tenant default → system default. Normalized first: a
+    // profile holding legacy free text must not count as an override.
+    paymentTerms: inherit('payment_terms', profileTerms, inheritedTerms),
+    paymentTermsSource,
     preferredPaymentMethod: inherit(
       'preferred_payment_method',
       normalizePreferredPaymentMethod(profile.preferred_payment_method),

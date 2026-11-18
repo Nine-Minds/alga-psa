@@ -131,6 +131,8 @@ describe('contractReportActions summary service-period basis', () => {
         return buildThenableQuery([]);
       }
       if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
+      // The cadence-block pass reads each line's prepaid block configuration; none here.
+      if (table === 'contract_line_prepaid_blocks') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
 

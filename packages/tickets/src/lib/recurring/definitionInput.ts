@@ -6,86 +6,48 @@ import {
   recurrenceRuleSchema,
 } from '@alga-psa/shared/lib/recurrence';
 import { recurringTicketOverridesSchema } from './effectiveFields';
-import { findUnknownTitleTokens, RECURRING_TITLE_TOKENS } from './titleTemplate';
 
 /**
  * Input schemas for the recurring-ticket actions (plan §4.9). Kept out of the `'use server'` module
  * because a server-action file may only export async functions, and the editor reuses them for
  * client-side checks.
  */
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 const timeString = z.string().refine(isValidTimeString, 'Expected a time in HH:MM format');
 
 export const OPEN_PREVIOUS_POLICIES = ['always_create', 'skip'] as const;
 export type OpenPreviousPolicy = (typeof OPEN_PREVIOUS_POLICIES)[number];
 
-export const titleTemplateSchema = z
-  .string()
-  .trim()
-  .min(1, 'Title is required')
-  .max(500)
-  .superRefine((template, ctx) => {
-    const unknown = findUnknownTitleTokens(template);
-    if (unknown.length > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Unknown title token${unknown.length > 1 ? 's' : ''} ${unknown
-          .map((token) => `{{${token}}}`)
-          .join(', ')}. Available tokens: ${RECURRING_TITLE_TOKENS.map((token) => `{{${token}}}`).join(', ')}`,
-        params: {
-          messageKey: 'features/tickets:recurring.errors.unknownTitleTokens',
-          messageParams: {
-            tokens: unknown.map((token) => `{{${token}}}`).join(', '),
-            available: RECURRING_TITLE_TOKENS.map((token) => `{{${token}}}`).join(', '),
-          },
-        },
-      });
-    }
-  });
-
-/** BlockNote document, the same JSON the quick-add ticket dialog serializes. */
-const blockNoteSchema = z.array(z.record(z.string(), z.unknown()));
-
-// LEVERAGE: pattern ticket-template-fields — the title/description/board/category/priority/tags/checklist group is also carried by ticket_templates (lib/ticketTemplates.ts); a definition should reference a ticket template instead of embedding its own copy
+/**
+ * A recurring ticket definition is "when, for whom, how dispatched". What the ticket looks like is the
+ * ticket template it points at (R1): the content fields (title, description, tags, checklist, ...)
+ * are rejected here, not ignored. Board, priority and category can be overridden for this schedule.
+ */
 export const recurringTicketDefinitionInputSchema = z
   .object({
-    name: z.string().trim().min(1, 'Name is required').max(200),
-    is_active: z.boolean().default(true),
+    name: z.string().trim().min(1, 'Name is required').max(200).describe('Name of the schedule, for example "Apple APNs certificate renewal". It is not the ticket title; the title comes from the ticket template.'),
+    is_active: z.boolean().default(true).describe('Whether the schedule generates tickets. A definition only generates tickets for the clients added to it. Default true.'),
 
-    title_template: titleTemplateSchema,
-    description: blockNoteSchema.nullable().default(null),
-    board_id: uuid,
-    status_id: uuid.nullable().default(null),
-    priority_id: uuid,
-    category_id: uuid.nullable().default(null),
-    subcategory_id: uuid.nullable().default(null),
-    assigned_to: uuid.nullable().default(null),
-    assigned_team_id: uuid.nullable().default(null),
-    additional_agent_ids: z.array(uuid).default([]),
-    tags: z.array(z.string().trim().min(1).max(100)).max(50).default([]),
-    checklist_template_id: uuid.nullable().default(null),
+    ticket_template_id: uuid.describe('Ticket template this schedule creates tickets from: it supplies the title, description, checklist, tags and default board, priority and category. Create one with POST /api/v1/tickets/templates first.'),
+    overrides: recurringTicketOverridesSchema.default({}).describe('Overrides of the template for the whole schedule: board, priority, category and assignment groups. Each group present replaces that group of template fields; absent groups inherit. Default {}.'),
+
+    // Dispatch
+    status_id: uuid.nullable().default(null).describe('Status for created tickets; must belong to the effective board. Null uses the board default.'),
+    assigned_to: uuid.nullable().default(null).describe('User created tickets are assigned to. Null leaves them unassigned.'),
+    assigned_team_id: uuid.nullable().default(null).describe('Team created tickets are assigned to. Null for none.'),
+    additional_agent_ids: z.array(uuid).default([]).describe('Additional agent user UUIDs on created tickets. Default [].'),
 
     recurrence: recurrenceRuleSchema,
-    start_date: dateStringSchema,
-    create_time: timeString.default('08:00'),
-    due_time: timeString.default('17:00'),
-    lead_days: z.number().int().min(0).max(365).default(0),
-    non_business_day_policy: nonBusinessDayPolicySchema.default('keep'),
+    start_date: dateStringSchema.describe('First date the schedule can fall on, YYYY-MM-DD. For a yearly rule this is the first year it is due.'),
+    create_time: timeString.default('08:00').describe('Wall-clock time (HH:MM, tenant time zone) the ticket is created on its create date. Default 08:00.'),
+    due_time: timeString.default('17:00').describe('Wall-clock time (HH:MM, tenant time zone) on the due date the ticket is due. Default 17:00.'),
+    lead_days: z.number().int().min(0).max(365).default(0).describe('How many days before the due date the ticket is created. 30 creates it a month ahead. Default 0.'),
+    non_business_day_policy: nonBusinessDayPolicySchema.default('keep').describe("When the due date is not a business day: 'keep' it, move to the 'previous' business day, or the 'next' one. Default keep."),
 
-    open_previous_policy: z.enum(OPEN_PREVIOUS_POLICIES).default('always_create'),
-    notify_client_on_create: z.boolean().default(false),
+    open_previous_policy: z.enum(OPEN_PREVIOUS_POLICIES).default('always_create').describe("'always_create' makes a new ticket even if the previous one is still open; 'skip' skips the occurrence while one is open. Default always_create."),
+    notify_client_on_create: z.boolean().default(false).describe('Send the usual new-ticket notification to the client contact when a ticket is created. Default false.'),
   })
-  .strict()
-  .superRefine((input, ctx) => {
-    if (input.subcategory_id && !input.category_id) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['subcategory_id'],
-        message: 'A subcategory requires a category',
-        params: { messageKey: 'features/tickets:recurring.errors.subcategoryNeedsCategory' },
-      });
-    }
-  });
+  .strict();
 
 export type RecurringTicketDefinitionInput = z.input<typeof recurringTicketDefinitionInputSchema>;
 export type ParsedRecurringTicketDefinitionInput = z.output<typeof recurringTicketDefinitionInputSchema>;
@@ -93,12 +55,16 @@ export type ParsedRecurringTicketDefinitionInput = z.output<typeof recurringTick
 /** Draft schedule used for the unsaved "next 5 due dates" preview. */
 export const recurringSchedulePreviewInputSchema = z
   .object({
+    /** When given, the preview also renders this template's title for the first occurrence. */
+    ticket_template_id: uuid.nullable().optional().describe('Optional ticket template UUID; when given the response includes its title rendered for the first occurrence.'),
+    /** Client name to render `{{client}}` with in the sample title. */
+    sample_client_name: z.string().max(200).nullable().optional().describe('Client name used to render {{client}} in the sample title.'),
     recurrence: recurrenceRuleSchema,
-    start_date: dateStringSchema,
-    create_time: timeString,
-    due_time: timeString,
-    lead_days: z.number().int().min(0).max(365),
-    non_business_day_policy: nonBusinessDayPolicySchema,
+    start_date: dateStringSchema.describe('First date the schedule can fall on, YYYY-MM-DD.'),
+    create_time: timeString.describe('Wall-clock create time, HH:MM, tenant time zone.'),
+    due_time: timeString.describe('Wall-clock due time, HH:MM, tenant time zone.'),
+    lead_days: z.number().int().min(0).max(365).describe('Days before the due date the ticket is created.'),
+    non_business_day_policy: nonBusinessDayPolicySchema.describe("'keep', 'previous' or 'next' business day when the due date is not a business day."),
   })
   .strict();
 
@@ -106,10 +72,10 @@ export type RecurringSchedulePreviewInput = z.infer<typeof recurringSchedulePrev
 
 export const recurringTicketClientUpdateSchema = z
   .object({
-    overrides: recurringTicketOverridesSchema,
-    contact_id: uuid.nullable(),
-    location_id: uuid.nullable(),
-    asset_ids: z.array(uuid).max(500),
+    overrides: recurringTicketOverridesSchema.describe('Overrides for this client only, layered on top of the definition overrides. Send {} to clear.'),
+    contact_id: uuid.nullable().describe('Requester contact for this client\'s tickets; must belong to the client. Null to clear.'),
+    location_id: uuid.nullable().describe('Client location for its tickets; must belong to the client. Null to clear.'),
+    asset_ids: z.array(uuid).max(500).describe('Assets linked to each created ticket; each must belong to the client. [] to clear.'),
   })
   .strict();
 

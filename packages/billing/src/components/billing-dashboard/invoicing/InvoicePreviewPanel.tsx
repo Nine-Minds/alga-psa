@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
+import InvoiceHistorySection from './InvoiceHistorySection';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
@@ -26,6 +27,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
+import { getEffectiveTaxSourceForClient, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
@@ -41,9 +43,11 @@ import {
 import {
   queueInvoiceSync,
   runAccountingSyncNow,
+  getInvoiceSyncOutcome,
   resolveAccountingDriftReExport,
   resolveAccountingDriftAccept,
 } from '../../../actions/accountingSyncActions';
+import { isInvoiceSyncBlockedStatus } from '../../../lib/invoiceSyncEligibility';
 
 interface InvoicePreviewPanelProps {
   invoiceId: string | null;
@@ -75,6 +79,8 @@ interface InvoicePreviewPanelProps {
   invoiceTotal?: number;
   /** Called after a credit is applied so the parent can refresh its list. */
   onCreditApplied?: () => Promise<void> | void;
+  /** Called after the invoice is voided here so the parent can refresh its list. */
+  onInvoiceVoided?: () => Promise<void> | void;
 }
 
 const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
@@ -96,7 +102,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   invoiceSummary = null,
   clientId = null,
   invoiceTotal = 0,
-  onCreditApplied
+  onCreditApplied,
+  onInvoiceVoided
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
@@ -115,22 +122,77 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [draftInvoiceEditorSummary, setDraftInvoiceEditorSummary] = useState<DraftInvoiceDetailsSummary | null>(draftInvoiceSummary);
   const [highlightedAnchor, setHighlightedAnchor] = useState<string | null>(null);
   const [syncActionLoading, setSyncActionLoading] = useState(false);
-  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [syncActionFeedback, setSyncActionFeedback] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voidLoading, setVoidLoading] = useState(false);
+  // Set once this panel voids the invoice: the listing row (invoiceSummary) is
+  // the status source and stays stale until the parent reloads it.
+  const [voidedHere, setVoidedHere] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
+  const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
+  const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
+  const [delegateTaxError, setDelegateTaxError] = useState<string | null>(null);
+  const [delegateTaxLoading, setDelegateTaxLoading] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const previewInvoiceIdentityRef = React.useRef(invoiceId);
   const isReturnedActionError = (value: unknown) =>
     isActionMessageError(value) || isActionPermissionError(value);
+
+  // Whether this client's invoices are meant to take their tax from the
+  // accounting system; decides if a finalized internal-tax invoice offers the
+  // switch to delegation.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isFinalized || !clientId || readOnly) {
+      setClientDelegatesTax(false);
+      return () => { cancelled = true; };
+    }
+    getEffectiveTaxSourceForClient(clientId)
+      .then((result) => {
+        if (cancelled) return;
+        setClientDelegatesTax(!isReturnedActionError(result) && result.taxSource === 'external');
+      })
+      .catch(() => {
+        if (!cancelled) setClientDelegatesTax(false);
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, isFinalized, readOnly]);
+
+  const handleDelegateTaxConfirm = async () => {
+    if (!invoiceId) return;
+    setDelegateTaxLoading(true);
+    setDelegateTaxError(null);
+    try {
+      const result = await updateInvoiceTaxSource(invoiceId, 'pending_external');
+      if (isReturnedActionError(result)) {
+        setDelegateTaxError(getErrorMessage(result));
+        return;
+      }
+      if (!result.success) {
+        setDelegateTaxError(result.error);
+        return;
+      }
+      setTaxSource('pending_external');
+      setDelegateTaxDialogOpen(false);
+      setPreviewRefreshCounter((prev) => prev + 1);
+    } catch (err) {
+      setDelegateTaxError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDelegateTaxLoading(false);
+    }
+  };
 
   // QBO sync status for this invoice
   const syncIds = invoiceId ? [invoiceId] : [];
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
   const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
+  const invoiceStatus = voidedHere
+    ? 'cancelled'
+    : invoiceSummary?.status ?? (detailedInvoiceData as any)?.status ?? null;
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -412,7 +474,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       }
       setVoidDialogOpen(false);
       setVoidReason('');
+      setVoidedHere(true);
+      setSyncActionFeedback(null);
       setPreviewRefreshCounter((c) => c + 1);
+      await onInvoiceVoided?.();
     } catch (err) {
       setVoidError(err instanceof Error ? err.message : 'Failed to void invoice.');
     } finally {
@@ -542,12 +607,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         )}
 
         {syncActionFeedback && (
-          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : 'destructive'} className="mb-4">
+          <Alert variant={syncActionFeedback.type === 'success' ? 'success' : syncActionFeedback.type === 'warning' ? 'warning' : 'destructive'} className="mb-4">
             <AlertDescription className="text-sm">{syncActionFeedback.message}</AlertDescription>
           </Alert>
         )}
 
-        {!syncHidden && invoiceId && syncStatus && (
+        {!syncHidden && invoiceId && syncStatus && !isInvoiceSyncBlockedStatus(invoiceStatus) && (
           <div className="flex flex-wrap gap-2 mb-4">
             <Button
               id="invoice-sync-now-button"
@@ -558,12 +623,93 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 if (!invoiceId) return;
                 setSyncActionLoading(true);
                 setSyncActionFeedback(null);
+                const provider = syncProviderLabel;
                 try {
-                  await queueInvoiceSync(invoiceId);
-                  await runAccountingSyncNow();
-                  setSyncActionFeedback({ type: 'success', message: `Invoice queued for ${syncProviderLabel} sync.` });
+                  const selection = syncStatus.provider
+                    ? { preferredAdapterType: syncStatus.provider === 'xero' ? 'xero' as const : 'quickbooks_online' as const }
+                    : undefined;
+                  const queued = await queueInvoiceSync(invoiceId, selection);
+                  if (isReturnedActionError(queued)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(queued) });
+                    return;
+                  }
+                  if (!queued.queued || !queued.opId) {
+                    const refusal: Record<string, string> = {
+                      not_found: t('invoicePreview.syncFeedback.refusedNotFound', { defaultValue: 'Invoice not found.' }),
+                      paid: t('invoicePreview.syncFeedback.refusedPaid', { provider, defaultValue: 'Paid invoices are not synced to {{provider}}.' }),
+                      cancelled: t('invoicePreview.syncFeedback.refusedCancelled', { provider, defaultValue: 'Voided or cancelled invoices are not synced to {{provider}}.' }),
+                    };
+                    setSyncActionFeedback({
+                      type: 'error',
+                      message: (queued.reason && refusal[queued.reason]) ?? queued.error ?? t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' })
+                    });
+                    return;
+                  }
+                  const cycle = await runAccountingSyncNow(selection);
+                  if (isReturnedActionError(cycle)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(cycle) });
+                    return;
+                  }
+                  if (!cycle.ran) {
+                    setSyncActionFeedback({
+                      type: 'warning',
+                      message: cycle.error
+                        ? t('invoicePreview.syncFeedback.notRun', { provider, reason: cycle.error, defaultValue: '{{provider}} sync did not run: {{reason}}' })
+                        : t('invoicePreview.syncFeedback.notRunNoReason', { provider, defaultValue: '{{provider}} sync did not run.' })
+                    });
+                    return;
+                  }
+                  const result = await getInvoiceSyncOutcome(invoiceId, queued.opId);
+                  if (isReturnedActionError(result)) {
+                    setSyncActionFeedback({ type: 'error', message: getErrorMessage(result) });
+                    return;
+                  }
+                  // The cycle ran but stopped before this invoice was processed
+                  // (provider unreachable, auth expired, inbound failure): report
+                  // that failure rather than a neutral "not processed yet".
+                  if (
+                    (result.outcome === 'pending' || result.outcome === 'unknown') &&
+                    (cycle.status === 'failed' || cycle.status === 'aborted')
+                  ) {
+                    setSyncActionFeedback({
+                      type: 'error',
+                      message: cycle.error
+                        ? t('invoicePreview.syncFeedback.cycleFailed', { provider, reason: cycle.error, defaultValue: '{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.' })
+                        : t('invoicePreview.syncFeedback.cycleFailedNoReason', { provider, defaultValue: '{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync.' })
+                    });
+                    return;
+                  }
+                  switch (result.outcome) {
+                    case 'synced':
+                      setSyncActionFeedback({ type: 'success', message: t('invoicePreview.syncFeedback.synced', { provider, defaultValue: 'Invoice synced to {{provider}}.' }) });
+                      break;
+                    case 'failed':
+                      setSyncActionFeedback({
+                        type: 'error',
+                        message: result.reason
+                          ? t('invoicePreview.syncFeedback.failed', { provider, reason: result.reason, defaultValue: '{{provider}} sync failed: {{reason}}' })
+                          : t('invoicePreview.syncFeedback.failedNoReason', { provider, defaultValue: '{{provider}} sync failed. Check the Errored ops list on the accounting integration page.' })
+                      });
+                      break;
+                    case 'skipped':
+                      setSyncActionFeedback({
+                        type: 'warning',
+                        message: result.reason
+                          ? t('invoicePreview.syncFeedback.skipped', { provider, reason: result.reason, defaultValue: 'Invoice was skipped and not sent to {{provider}}: {{reason}}' })
+                          : t('invoicePreview.syncFeedback.skippedNoReason', { provider, defaultValue: 'Invoice was skipped and not sent to {{provider}}.' })
+                      });
+                      break;
+                    case 'pending':
+                      setSyncActionFeedback({ type: 'warning', message: t('invoicePreview.syncFeedback.pending', { provider, defaultValue: 'Invoice is queued for {{provider}} sync; it has not been processed yet.' }) });
+                      break;
+                    default:
+                      setSyncActionFeedback({ type: 'warning', message: t('invoicePreview.syncFeedback.unknown', { provider, defaultValue: 'Could not determine whether the invoice was synced to {{provider}}.' }) });
+                  }
                 } catch (err) {
-                  setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
+                  setSyncActionFeedback({
+                    type: 'error',
+                    message: t('invoicePreview.syncFeedback.error', { error: err instanceof Error ? err.message : String(err), defaultValue: 'Sync failed: {{error}}' })
+                  });
                 } finally {
                   setSyncActionLoading(false);
                 }
@@ -658,6 +804,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
+        ) : null}
+
+        {!readOnly && invoiceId ? (
+          <InvoiceHistorySection invoiceId={invoiceId} refreshKey={previewRefreshCounter} />
         ) : null}
 
         {isLoading ? (
@@ -778,6 +928,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
 
+            {!readOnly && isFinalized && clientDelegatesTax && taxSource === 'internal'
+              && syncStatus?.state !== 'synced' && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+                <Button
+                  id="invoice-delegate-tax-button"
+                  variant="secondary"
+                  onClick={() => {
+                    setDelegateTaxError(null);
+                    setDelegateTaxDialogOpen(true);
+                  }}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  {t('invoicePreview.actions.delegateTax', { defaultValue: 'Use accounting system tax' })}
+                </Button>
+              )}
+
             {!readOnly && isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
                 <Button
                   id="invoice-void-button"
@@ -816,6 +982,47 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 />
               </Dialog>
             )}
+
+            <Dialog
+              id="delegate-tax-dialog"
+              isOpen={delegateTaxDialogOpen}
+              onClose={() => setDelegateTaxDialogOpen(false)}
+              title={t('invoicePreview.delegateTaxDialog.title', { defaultValue: 'Use accounting system tax' })}
+            >
+              <div className="space-y-4 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('invoicePreview.delegateTaxDialog.description', {
+                    defaultValue:
+                      'The accounting system will calculate tax for this invoice on its next export, and AlgaPSA will then replace the tax and total with that result. Numbers, lines, prices and recorded payments stay as they are.',
+                  })}
+                </p>
+                {delegateTaxError && (
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-sm">{delegateTaxError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    id="delegate-tax-cancel-button"
+                    variant="outline"
+                    onClick={() => setDelegateTaxDialogOpen(false)}
+                    disabled={delegateTaxLoading}
+                  >
+                    {t('invoicePreview.delegateTaxDialog.cancel', { defaultValue: 'Cancel' })}
+                  </Button>
+                  <Button
+                    id="delegate-tax-confirm-button"
+                    variant="default"
+                    onClick={handleDelegateTaxConfirm}
+                    disabled={delegateTaxLoading}
+                  >
+                    {delegateTaxLoading
+                      ? t('invoicePreview.delegateTaxDialog.switching', { defaultValue: 'Switching...' })
+                      : t('invoicePreview.delegateTaxDialog.confirm', { defaultValue: 'Switch to accounting system tax' })}
+                  </Button>
+                </div>
+              </div>
+            </Dialog>
 
             <Dialog
               id="void-invoice-dialog"

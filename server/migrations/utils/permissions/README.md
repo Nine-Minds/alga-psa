@@ -26,8 +26,13 @@ directly, and callers always pass a Knex instance plus an explicit tenant id.
   and it never touches anything outside the catalog.
 - **Custom roles are invisible.** A role is a grant target only when its exact
   `(role_name, msp, client)` identity is in `DEFAULT_ROLES`. Zero or multiple
-  matches for a required role fails the tenant transaction with an actionable
-  error — roles are never created or guessed here.
+  matches for a *required* role (MSP `Admin` and client-portal `Admin`, the two
+  the product protects from deletion and renaming) fails the tenant transaction
+  with an actionable error — roles are never created or guessed here. Any other
+  default role the tenant deleted or renamed is reported as unresolved and
+  receives no grants; the permission rows and the remaining roles' grants are
+  still applied, so one missing `Technician` or client `User` role never stalls
+  a rollout for the whole tenant.
 - **MSP Admin** receives every MSP-scoped catalog permission for its product.
   Other default roles receive only the keys declared on each catalog entry.
 - **Dual scope.** A permission with `msp` *and* `client` is addressable from both

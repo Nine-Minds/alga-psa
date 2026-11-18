@@ -33,6 +33,12 @@ export interface AmpExportResult {
  * ids on re-import — the identity ledger treats them as opaque source keys),
  * reference data travels as names, and the output validates against the same
  * SDK validator every other producer uses.
+ *
+ * `products` and `vendor_products` are deliberately NOT exported: they are
+ * import-only entities (distributor price lists, catalog seeds). An export
+ * would have to choose between catalog rows and per-currency price rows, and
+ * round-tripping them through the SKU-match semantics would be lossy. Exclusion
+ * is explicit here so a reader does not mistake the omission for an oversight.
  */
 export class AmpExportService {
   constructor(

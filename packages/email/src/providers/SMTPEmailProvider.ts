@@ -4,6 +4,7 @@
 
 import nodemailer, { type Transporter } from 'nodemailer';
 import logger from '@alga-psa/core/logger';
+import { onWireMessageIdFields } from '../onWireMessageId';
 import {
   IEmailProvider,
   EmailMessage,
@@ -61,6 +62,25 @@ export function buildSmtpTransportOptions(config: Record<string, any>): {
   return { options, secure, requireTLS, authConfigured };
 }
 
+
+/**
+ * Amazon SES's SMTP interface discards the Message-ID we put on the message and
+ * stamps its own `<id@email.amazonses.com>` (us-east-1; other regions use
+ * `<id@{region}.amazonses.com>`). The id is only reported in the final reply line,
+ * `250 Ok <id>`. Recipients reply to the on-wire id, so that is the id inbound
+ * threading must be able to match (alga-2026-0002798).
+ */
+export function resolveSesOnWireMessageId(host: string | undefined, response: unknown): string | null {
+  const region = /^email-smtp(?:-fips)?\.([a-z0-9-]+)\.amazonaws\.com$/i.exec(host?.trim() ?? '')?.[1]?.toLowerCase();
+  if (!region || typeof response !== 'string') {
+    return null;
+  }
+  const sesId = /^250 Ok ([A-Za-z0-9-]+)\s*$/.exec(response.trim())?.[1];
+  if (!sesId) {
+    return null;
+  }
+  return `<${sesId}@${region === 'us-east-1' ? 'email' : region}.amazonses.com>`;
+}
 
 export class SMTPEmailProvider implements IEmailProvider {
   public readonly providerId: string;
@@ -129,17 +149,25 @@ export class SMTPEmailProvider implements IEmailProvider {
         tenantId
       });
 
+      // Prefer the on-wire id when the relay rewrote ours (Amazon SES SMTP).
+      // Shared on-wire contract (onWireMessageId.ts): rfcMessageId = on-wire id,
+      // metadata.generatedRfcMessageId = the id we generated.
+      const sesMessageId = resolveSesOnWireMessageId(this.config.host, result.response);
+      const onWire = onWireMessageIdFields(result.messageId, sesMessageId);
+
       return {
         success: true,
         messageId: result.messageId,
         providerMessageId: result.messageId,
-        rfcMessageId: result.messageId,
+        rfcMessageId: onWire.rfcMessageId ?? result.messageId,
         providerId: this.providerId,
         providerType: this.providerType,
         sentAt: new Date(),
         metadata: {
           response: result.response,
-          envelope: result.envelope
+          envelope: result.envelope,
+          ...onWire.metadata,
+          ...(onWire.metadata && sesMessageId ? { sesMessageId } : {})
         }
       };
     } catch (error: any) {

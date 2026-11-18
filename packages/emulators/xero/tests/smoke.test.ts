@@ -287,6 +287,55 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(missing.Contacts).toHaveLength(0);
   });
 
+  it('models the PO-suffixed export: plain InvoiceNumber, PO in Reference, upsert by InvoiceNumber, no rename on InvoiceID update', async () => {
+    const contactId = ((await (
+      await fetch(api(`/Contacts?where=${encodeURIComponent('Name=="Acme Rockets"')}`), { headers: authed() })
+    ).json()) as any).Contacts[0].ContactID;
+    const post = async (invoice: Record<string, unknown>) => {
+      const response = await fetch(api('/Invoices'), {
+        method: 'POST',
+        headers: authed(),
+        body: JSON.stringify({
+          Invoices: [{
+            Type: 'ACCREC',
+            Contact: { ContactID: contactId },
+            LineAmountTypes: 'Exclusive',
+            LineItems: [{ Description: 'Managed services', Quantity: 1, UnitAmount: 150, LineAmount: 150 }],
+            ...invoice,
+          }],
+        }),
+      });
+      expect(response.status).toBe(200);
+      return ((await response.json()) as any).Invoices[0];
+    };
+    const list = async () =>
+      ((await (await fetch(`${control}/control/xero/state/invoices`)).json()) as any).result as any[];
+
+    // Create: InvoiceNumber is returned exactly as sent, Reference carries the PO.
+    const created = await post({ InvoiceNumber: 'INV-000123', Reference: 'INV-000123 | PO 4567' });
+    expect(created.InvoiceNumber).toBe('INV-000123');
+    expect(created.Reference).toBe('INV-000123 | PO 4567');
+    const countAfterCreate = (await list()).length;
+
+    // Re-export by InvoiceID (no InvoiceNumber sent): neither renamed nor duplicated.
+    const reexported = await post({ InvoiceID: created.InvoiceID, Reference: 'INV-000123 | PO 4567' });
+    expect(reexported.InvoiceID).toBe(created.InvoiceID);
+    expect(reexported.InvoiceNumber).toBe('INV-000123');
+    expect(await list()).toHaveLength(countAfterCreate);
+
+    // POST without InvoiceID but with an existing InvoiceNumber upserts that invoice.
+    const upserted = await post({ InvoiceNumber: 'INV-000123', Reference: 'INV-000123 | PO 9999' });
+    expect(upserted.InvoiceID).toBe(created.InvoiceID);
+    expect(upserted.Reference).toBe('INV-000123 | PO 9999');
+    expect(await list()).toHaveLength(countAfterCreate);
+
+    // Absent InvoiceNumber is auto-numbered; the sent number is never invented from Reference.
+    const auto = await post({ Reference: 'no number | PO 1' });
+    expect(auto.InvoiceNumber).toMatch(/^INV-\d{4}$/);
+    expect(auto.InvoiceNumber).not.toBe(auto.Reference);
+    expect(await list()).toHaveLength(countAfterCreate + 1);
+  });
+
   it('rejects a line whose LineAmount does not match Quantity × UnitAmount, like api.xero.com', async () => {
     const contactId = ((await (
       await fetch(api(`/Contacts?where=${encodeURIComponent('Name=="Acme Rockets"')}`), { headers: authed() })

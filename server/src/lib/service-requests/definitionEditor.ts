@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { cleanAudienceReferences } from './definitionAudience';
 import {
   listServiceRequestExecutionProviders,
   listServiceRequestFormBehaviorProviders,
@@ -35,6 +37,8 @@ export interface ServiceRequestDefinitionEditorData {
     formBehaviorConfig: Record<string, unknown>;
     visibilityProvider: string;
     visibilityConfig: Record<string, unknown>;
+    audience: PredicateGroup;
+    removedAudienceReferences: string[];
     availableExecutionProviders: Array<{
       key: string;
       displayName: string;
@@ -77,6 +81,7 @@ interface ServiceRequestDefinitionEditorRow {
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience: PredicateGroup;
   updated_at: Date;
 }
 
@@ -142,6 +147,8 @@ export async function getServiceRequestDefinitionEditorData(
       .first<ServiceRequestPublishedVersionRow>(),
   ]);
 
+  const cleanedAudience = await cleanAudienceReferences(knex, tenant, definition.audience);
+
   const workflowProviderKeys = new Set(['workflow-only', 'ticket-plus-workflow']);
   const availableExecutionProviderKeys = new Set(
     availableExecutionProviders.map((provider) => provider.key)
@@ -181,6 +188,8 @@ export async function getServiceRequestDefinitionEditorData(
       formBehaviorConfig: definition.form_behavior_config,
       visibilityProvider: definition.visibility_provider,
       visibilityConfig: definition.visibility_config,
+      audience: cleanedAudience.audience,
+      removedAudienceReferences: cleanedAudience.removed,
       availableExecutionProviders,
       availableFormBehaviorProviders,
       availableVisibilityProviders,

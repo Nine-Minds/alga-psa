@@ -5,6 +5,10 @@ export const isEnterprise =
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
+import { resolveFlagTargeting } from './featureFlagTargeting';
+
+export { flagTargetingEnvName, resolveFlagTargeting } from './featureFlagTargeting';
+
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 
 function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -37,10 +41,15 @@ export interface FeatureFlagContext {
   tenantId?: string;
 }
 
+/** Keeps an evaluated false distinct from a fallback used after flag evaluation failed. */
+export type FeatureFlagEvaluation =
+  | { status: 'evaluated'; enabled: boolean }
+  | { status: 'unavailable'; enabled: boolean };
+
 type FeatureFlagChecker = (
   flagKey: string,
   context: FeatureFlagContext,
-) => Promise<boolean>;
+) => Promise<boolean | FeatureFlagEvaluation>;
 
 const FEATURE_FLAG_CHECKER_KEY = Symbol.for('alga.core.featureFlagChecker');
 
@@ -52,15 +61,34 @@ export function registerFeatureFlagChecker(checker: FeatureFlagChecker): void {
   (globalThis as FeatureFlagCheckerRegistry)[FEATURE_FLAG_CHECKER_KEY] = checker;
 }
 
+export async function evaluateFeatureFlag(
+  flagKey: string,
+  context: FeatureFlagContext = {},
+): Promise<FeatureFlagEvaluation> {
+  // Flag-agnostic tenant targeting (see featureFlagTargeting.ts). Authoritative
+  // for a targeted flag, including over the global disable override.
+  const targeted = resolveFlagTargeting(flagKey, context.tenantId);
+  if (targeted !== null) return { status: 'evaluated', enabled: targeted };
+
+  if (featureFlagsAreDisabled()) {
+    return { status: 'evaluated', enabled: true };
+  }
+
+  const checker = (globalThis as FeatureFlagCheckerRegistry)[FEATURE_FLAG_CHECKER_KEY];
+  if (!checker) return { status: 'unavailable', enabled: false };
+  try {
+    const result = await checker(flagKey, context);
+    if (typeof result === 'boolean') return { status: 'evaluated', enabled: result };
+    if (result?.status === 'evaluated' || result?.status === 'unavailable') return result;
+    return { status: 'unavailable', enabled: false };
+  } catch {
+    return { status: 'unavailable', enabled: false };
+  }
+}
+
 export async function isFeatureFlagEnabled(
   flagKey: string,
   context: FeatureFlagContext = {},
 ): Promise<boolean> {
-  if (featureFlagsAreDisabled()) {
-    return true;
-  }
-
-  const checker = (globalThis as FeatureFlagCheckerRegistry)[FEATURE_FLAG_CHECKER_KEY];
-  if (!checker) return false;
-  return checker(flagKey, context);
+  return (await evaluateFeatureFlag(flagKey, context)).enabled;
 }

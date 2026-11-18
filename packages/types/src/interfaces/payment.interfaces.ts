@@ -441,13 +441,48 @@ export interface PaymentSettings {
   defaultProvider?: string;
   /** Whether to send payment confirmation emails */
   sendPaymentConfirmations: boolean;
-  /** Number of hours before payment links expire (default: 168 = 7 days) */
+  /**
+   * Lifetime in hours of the durable `/pay/<token>` link carried by invoice emails
+   * (default: 168 = 7 days; 1-720). This is NOT the Stripe Checkout Session
+   * lifetime, which is a fixed 24h provider limit: each click on the durable link
+   * mints (or reuses) a fresh Checkout Session.
+   */
   paymentLinkExpirationHours: number;
   autopayEnabled: boolean;
   autopayChargeTiming: 'on_finalize' | 'on_due_date';
   autopayRetryDays: number[];
   autopayConsentText: string;
   autopayConsentTextVersion: string;
+}
+
+/** Preset lifetimes (hours) offered for the durable payment link. Shared by every settings UI. */
+export const PAYMENT_LINK_EXPIRATION_OPTIONS_HOURS = [24, 48, 72, 168, 336, 720] as const;
+export const PAYMENT_LINK_EXPIRATION_MIN_HOURS = 1;
+export const PAYMENT_LINK_EXPIRATION_MAX_HOURS = 720;
+
+/** True only for integers within [MIN, MAX] hours. */
+export function isValidPaymentLinkExpirationHours(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= PAYMENT_LINK_EXPIRATION_MIN_HOURS &&
+    value <= PAYMENT_LINK_EXPIRATION_MAX_HOURS
+  );
+}
+
+/**
+ * Server-side validation of an incoming settings payload. Returns an error
+ * message, or null when valid. UI bounds are advisory; callers that persist
+ * settings must enforce this.
+ */
+export function validatePaymentSettingsInput(settings: Partial<PaymentSettings> | null | undefined): string | null {
+  if (
+    settings?.paymentLinkExpirationHours !== undefined &&
+    !isValidPaymentLinkExpirationHours(settings.paymentLinkExpirationHours)
+  ) {
+    return `Payment link expiration must be a whole number of hours between ${PAYMENT_LINK_EXPIRATION_MIN_HOURS} and ${PAYMENT_LINK_EXPIRATION_MAX_HOURS}`;
+  }
+  return null;
 }
 
 /**

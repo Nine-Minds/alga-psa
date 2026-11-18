@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCippConnectionView,
   buildEntraAttentionItems,
   buildEntraRunHistoryCsv,
   entraRunResultOutcome,
@@ -240,6 +241,12 @@ describe('entraRunResultOutcome', () => {
     expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0 })).toBe('done');
   });
 
+  it('T008: a completed client with failed contacts is a warning outcome, not Done', () => {
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0, failed: 2 })).toBe('partial');
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0, failed: 0 })).toBe('done');
+    expect(entraRunResultOutcome({ status: 'failed', failed: 2 })).toBe('failed');
+  });
+
   it('puts the clients that need a person at the top', () => {
     const sorted = sortEntraRunResultsWorstFirst([
       { id: 'done', status: 'completed', ambiguous: 0 },
@@ -358,5 +365,38 @@ describe('buildEntraRunHistoryCsv', () => {
 
     expect(csv).toContain('preview');
     expect(csv).toContain('"Contoso, Inc."');
+  });
+});
+
+describe('buildCippConnectionView', () => {
+  it('is null for anything but a CIPP connection', () => {
+    expect(buildCippConnectionView('direct', { cippBaseUrl: 'https://x' })).toBeNull();
+    expect(buildCippConnectionView(null, null)).toBeNull();
+  });
+
+  it('flags only a stored legacy key as legacy', () => {
+    expect(buildCippConnectionView('cipp', { cippAuthType: 'legacy_api_token' })?.isLegacy).toBe(true);
+    expect(buildCippConnectionView('cipp', { cippAuthType: 'api_client' })?.isLegacy).toBe(false);
+    // Unreadable credentials say nothing about the auth type; do not guess.
+    expect(buildCippConnectionView('cipp', { cippAuthType: null })?.isLegacy).toBe(false);
+    expect(buildCippConnectionView('cipp', {})?.authType).toBeNull();
+  });
+
+  it('exposes identifiers only', () => {
+    const view = buildCippConnectionView('cipp', {
+      cippBaseUrl: 'https://cipp-api.example.net',
+      cippAuthType: 'api_client',
+      cippClientId: 'c',
+      cippDirectoryId: 't',
+      clientSecret: 'must-not-pass',
+    } as never);
+    expect(view).toEqual({
+      authType: 'api_client',
+      isLegacy: false,
+      apiUrl: 'https://cipp-api.example.net/api',
+      clientId: 'c',
+      tenantId: 't',
+    });
+    expect(JSON.stringify(view)).not.toContain('must-not-pass');
   });
 });

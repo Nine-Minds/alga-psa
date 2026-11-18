@@ -16,8 +16,29 @@ function stockUnitsWithNames(trx: Knex.Transaction, tenant: string) {
     .leftJoin('service_catalog as sc', function () {
       this.on('su.service_id', '=', 'sc.service_id').andOn('su.tenant', '=', 'sc.tenant');
     })
+    // Who an `allocated` unit is claimed by: a sales order or a project's staging (C6).
+    .leftJoin('sales_order_lines as asol', function () {
+      this.on('su.allocated_so_line_id', '=', 'asol.so_line_id').andOn('su.tenant', '=', 'asol.tenant');
+    })
+    .leftJoin('sales_orders as aso', function () {
+      this.on('asol.so_id', '=', 'aso.so_id').andOn('asol.tenant', '=', 'aso.tenant');
+    })
+    .leftJoin('project_staging_lines as apsl', function () {
+      this.on('su.allocated_staging_line_id', '=', 'apsl.staging_line_id').andOn('su.tenant', '=', 'apsl.tenant');
+    })
+    .leftJoin('projects as ap', function () {
+      this.on('apsl.project_id', '=', 'ap.project_id').andOn('apsl.tenant', '=', 'ap.tenant');
+    })
     .where({ 'su.tenant': tenant })
-    .select('su.*', 'sl.name as location_name', 'c.client_name', 'sc.service_name as product_name');
+    .select(
+      'su.*',
+      'sl.name as location_name',
+      'c.client_name',
+      'sc.service_name as product_name',
+      'aso.so_number as allocated_so_number',
+      'ap.project_id as allocated_project_id',
+      'ap.project_number as allocated_project_number',
+    );
 }
 
 export async function queryStockUnits(

@@ -19,7 +19,7 @@ import { getConnection } from '@/lib/db/db';
  */
 
 const postSchema = z.object({
-  mutedUserId: z.string().uuid(),
+  mutedUserId: z.string().guid(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }

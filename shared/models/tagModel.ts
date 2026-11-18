@@ -24,20 +24,20 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 // Core tag validation schema
 export const tagFormSchema = z.object({
   tag_text: z.string().min(1, 'Tag text is required').max(50, 'Tag text too long (max 50 characters)'),
-  tagged_id: z.string().uuid('Tagged ID must be a valid UUID'),
+  tagged_id: z.string().guid('Tagged ID must be a valid UUID'),
   tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article', 'opportunity']),
-  board_id: z.string().uuid().optional().nullable(),
+  board_id: z.string().guid().optional().nullable(),
   background_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable(),
   text_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable()
 });
 
 // Tag definition schema
 export const tagDefinitionSchema = z.object({
-  tag_id: z.string().uuid(),
-  tenant: z.string().uuid(),
+  tag_id: z.string().guid(),
+  tenant: z.string().guid(),
   tag_text: z.string(),
   tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article', 'opportunity']),
-  board_id: z.string().uuid().nullable(),
+  board_id: z.string().guid().nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
   created_at: z.string()
@@ -45,12 +45,12 @@ export const tagDefinitionSchema = z.object({
 
 // Tag mapping schema
 export const tagMappingSchema = z.object({
-  mapping_id: z.string().uuid(),
-  tenant: z.string().uuid(),
-  tag_id: z.string().uuid(),
-  tagged_id: z.string().uuid(),
+  mapping_id: z.string().guid(),
+  tenant: z.string().guid(),
+  tag_id: z.string().guid(),
+  tagged_id: z.string().guid(),
   tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article', 'opportunity']),
-  created_by: z.string().uuid().nullable(),
+  created_by: z.string().guid().nullable(),
   created_at: z.string()
 });
 
@@ -127,7 +127,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;

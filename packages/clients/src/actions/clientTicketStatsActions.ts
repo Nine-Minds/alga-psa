@@ -3,13 +3,15 @@
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createTicketReadScope } from '@alga-psa/authorization/ticketScopeAuthorization';
 
 export interface ClientTicketStats {
   openTicketCount: number;
 }
 
 /**
- * Open ticket counts for every client in the tenant, in one grouped query.
+ * Open ticket counts for the given clients (the visible page), in one grouped query.
  *
  * Feeds the client grid cards, which render immediately and fill the count in
  * when it lands — the same out-of-band pattern the board tab strip uses for
@@ -22,30 +24,40 @@ export interface ClientTicketStats {
  * production tickets (545/2261, all in the same direction — ticket says open,
  * status says closed), so filtering on it roughly doubles the count.
  *
+ * Counted over the tickets the caller may read (the ticket list's own read narrowing, applied to this
+ * query), so a client-restricted user's card number equals the rows their ticket list returns for it.
+ *
  * Only clients with at least one open ticket get an entry. The card hides the
  * row when there is no count, so absent and zero mean the same thing here and
- * a tenant-wide LEFT JOIN to seed zeroes would buy nothing.
+ * a LEFT JOIN to seed zeroes for the page would buy nothing.
  */
 export const getClientOpenTicketCounts = withAuth(
-  async (user, { tenant }): Promise<Record<string, number>> => {
+  async (user, { tenant }, clientIds: string[]): Promise<Record<string, number>> => {
     if (!(await hasPermission(user, 'ticket', 'read'))) {
       // Not an error: a user without ticket access sees cards without counts.
+      return {};
+    }
+
+    const ids = Array.from(new Set(clientIds ?? []));
+    if (ids.length === 0) {
       return {};
     }
 
     const { knex: db } = await createTenantKnex();
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = await trx('tickets as t')
+      const readable = await createTicketReadScope(trx, tenant, user as IUserWithRoles);
+      const query = trx('tickets as t')
         .leftJoin('statuses as s', function joinStatuses() {
           this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
         })
         .where('t.tenant', tenant)
-        .whereNotNull('t.client_id')
+        .whereIn('t.client_id', ids)
         .whereRaw('s.is_closed IS NOT TRUE')
         .groupBy('t.client_id')
         .select('t.client_id')
         .select(trx.raw('COUNT(*)::int as open_count'));
+      const rows = await readable.apply(query, 't');
 
       const counts: Record<string, number> = {};
       for (const row of rows as Array<{ client_id: string; open_count: number }>) {

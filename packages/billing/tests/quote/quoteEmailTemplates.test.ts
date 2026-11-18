@@ -1,12 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IQuote } from '@alga-psa/types';
 
-vi.mock('@alga-psa/core/lib/formatters', () => ({
+vi.mock('@alga-psa/core/formatters', () => ({
   formatCurrency: (value: number, locale: string, currency: string) =>
     new Intl.NumberFormat(locale || 'en-US', { style: 'currency', currency: currency || 'USD' }).format(value),
 }));
 
 import {
+  formatQuoteDate,
   buildQuoteSentEmailTemplate,
   buildQuoteReminderEmailTemplate,
   buildQuoteAcceptedConfirmationEmailTemplate,
@@ -150,6 +151,7 @@ describe('quote-email-templates', () => {
         companyName: 'Acme Corp',
       });
       expect(html).toContain('March 15, 2026');
+      expect(html).toContain('$10,000.00');
     });
 
     it('T262: accepted confirmation shows N/A when accepted_at is missing', () => {
@@ -159,5 +161,71 @@ describe('quote-email-templates', () => {
       });
       expect(html).toContain('N/A');
     });
+  });
+});
+
+describe('formatQuoteDate calendar-day stability (alga-2026-0002724)', () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it.each(['UTC', 'America/Los_Angeles', 'Pacific/Auckland'])(
+    'renders a date-only valid_until as the same day under TZ=%s',
+    (tz) => {
+      process.env.TZ = tz;
+      expect(formatQuoteDate('2026-10-29', 'en')).toBe('October 29, 2026');
+      expect(formatQuoteDate('2026-10-29T00:00:00.000Z', 'en')).toBe('October 29, 2026');
+      expect(formatQuoteDate('2026-10-29', 'es')).toBe('29 de octubre de 2026');
+    },
+  );
+
+  it('returns N/A for empty or invalid values', () => {
+    expect(formatQuoteDate(null)).toBe('N/A');
+    expect(formatQuoteDate('not-a-date')).toBe('N/A');
+  });
+
+  it('omits the portal link cleanly when none is available', () => {
+    const { html, text } = buildQuoteSentEmailTemplate({ quote: baseQuote, companyName: 'Acme' });
+    expect(html).not.toContain('client portal');
+    expect(text).not.toContain('Review online');
+  });
+});
+
+describe('quote review link in fallback builders', () => {
+  const input = { quote: baseQuote, companyName: 'Acme MSP', portalLink: 'https://portal.example.com/q', };
+  const review = 'https://app.example.com/quote/tok';
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: review link is the primary CTA and the portal link is secondary after it', (_n, build) => {
+    const out = build({ ...input, quoteReviewLink: review, hasPortalAccess: true });
+    expect(out.html).toContain(`<a href="${review}"`);
+    expect(out.html).toContain('Review and approve quote');
+    expect(out.html.indexOf(review)).toBeLessThan(out.html.indexOf(input.portalLink));
+    expect(out.text.indexOf(review)).toBeLessThan(out.text.indexOf(input.portalLink));
+  });
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: portal link omitted without portal access', (_n, build) => {
+    const out = build({ ...input, quoteReviewLink: review, hasPortalAccess: false });
+    expect(out.html).toContain(review);
+    expect(out.html).not.toContain(input.portalLink);
+    expect(out.text).not.toContain(input.portalLink);
+  });
+
+  it.each([
+    ['sent', buildQuoteSentEmailTemplate],
+    ['reminder', buildQuoteReminderEmailTemplate],
+  ])('%s: without a review link the output is unchanged (portal link only, hasPortalAccess ignored)', (_n, build) => {
+    const plain = build(input);
+    expect(build({ ...input, hasPortalAccess: false })).toEqual(plain);
+    expect(plain.html).toContain(input.portalLink);
+    expect(plain.html).not.toMatch(/Review and approve|quote\//);
+    expect(plain.text).toContain(`Review online: ${input.portalLink}`);
   });
 });

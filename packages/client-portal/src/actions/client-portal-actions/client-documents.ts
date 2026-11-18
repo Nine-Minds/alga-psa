@@ -3,6 +3,7 @@
 import { applyPublicCommentAttachmentFilter } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { getMeaningfulBlockContentMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { IDocument, IFolderNode } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
@@ -58,7 +59,7 @@ export const getClientDocuments = withAuth(
   ): Promise<PaginatedClientDocuments | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -170,7 +171,7 @@ export const getClientDocumentFolders = withAuth(
   async (user, { tenant }): Promise<IFolderNode[] | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 
@@ -240,7 +241,7 @@ export const downloadClientDocument = withAuth(
   async (user, { tenant }, documentId: string): Promise<IDocument | ClientPortalActionError> => {
     try {
       // Enforce client portal access only
-      if (user.user_type !== 'client') {
+      if (!isClientUserType(user.user_type)) {
         throw new Error('Access denied: Client portal actions are restricted to client users');
       }
 

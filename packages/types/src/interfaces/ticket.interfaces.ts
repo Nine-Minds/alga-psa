@@ -1,6 +1,7 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
-import { ITaggable } from './tag.interfaces';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { ITaggable, type IDisplayTag } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
@@ -55,6 +56,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_by: string | null;
   closed_by: string | null;
   assigned_to: string | null;
+  /** Display name of the assignee, when supplied with the ticket (for example an
+   * assignee disclosed by name only, or one no longer offered for assignment). */
+  assigned_to_name?: string | null;
   assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
   /** When the ticket entered its current status (maintained on every status change). */
@@ -63,7 +67,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   closed_at: string | null;  // Changed from Date to string
   /** Denormalized close flag kept in sync with the selected status. */
   is_closed?: boolean;
-  due_date?: string;         // Optional due date for the ticket
+  due_date?: string | null;         // Optional due date for the ticket
   /** Source ticket this one was duplicated from (create-only provenance, no FK). */
   duplicated_from_ticket_id?: string | null;
   /** Display-only: number of the source ticket, joined on read. */
@@ -73,7 +77,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   /** Display-only: name of the source template, joined on read. */
   created_from_template_name?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
-  priority_id?: string; // Used for both custom and ITIL priorities (unified system)
+  priority_id?: string | null; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
   location?: IClientLocation; // For populated location data
   // ITIL-specific fields (for priority calculation)
@@ -99,7 +103,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   external_links?: IExternalEntityLink[];
 }
 
-export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'contact' | 'email_sender' | 'system';
+export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'service' | 'contact' | 'email_sender' | 'system';
 
 export interface ITicketLatestActivityActor {
   kind: TicketLatestActivityActorKind;
@@ -107,6 +111,16 @@ export interface ITicketLatestActivityActor {
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
+  /**
+   * Who is responsible for the ticket: set only on lists whose reader is offered responsibility
+   * (`seatResponsibilityOffered`), and only for a ticket of a client in a live seat arrangement.
+   */
+  seat_responsibility?: 'client_it' | 'msp' | null;
+  /**
+   * The revision a handoff of this ticket must name (`seatHandoffDirection` lists): set with `seat_responsibility`, for a
+   * ticket of a client in a live seat arrangement. Zero until the ticket's first handoff.
+   */
+  seat_responsibility_revision?: number;
   status_id: string | null;
   priority_id: string | null;
   board_id: string | null;
@@ -122,6 +136,12 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** The ticket's own location, for the optional Location column (off by default). */
+  ticket_location_name?: string | null;
+  /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
+  contact_tags?: IDisplayTag[];
+  /** Chip tags for the client, already filtered to the caller's audience by the display rules. */
+  client_tags?: IDisplayTag[];
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
@@ -135,6 +155,22 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   latest_activity_at?: string | null;
   // Who produced the activity shown in latest_activity_at; null when nobody can be named.
   latest_activity_actor?: ITicketLatestActivityActor | null;
+}
+
+/**
+ * Sentinel stored in `ITicketListFilters.assignedToIds` meaning "the viewing user". It is kept as-is in
+ * URLs, saved views and board default views, and resolved to the viewer's id only when the filter
+ * compiles to SQL (`ticketFiltersToPredicates`, from `context.userId`).
+ */
+export const TICKET_ASSIGNEE_ME = 'me';
+
+/** One named view of the ticket list, with the number of rows its filter returns under the current filters. */
+export interface ITicketListViewSummary {
+  key: string;
+  /** i18n key (features/tickets namespace) and its English default. */
+  labelKey: string;
+  defaultLabel: string;
+  count: number;
 }
 
 export interface ITicketListFilters {
@@ -152,10 +188,13 @@ export interface ITicketListFilters {
   boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
-  assignedToIds?: string[];        // Array of user IDs to filter by
+  assignedToIds?: string[];        // User IDs to filter by, or the TICKET_ASSIGNEE_ME ('me') sentinel for the viewing user (assigned_to only)
   assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
-  assignedToMe?: boolean;          // Restrict to tickets where caller is assignee (incl. additional agents + team membership). Server bypasses for project:read admins.
+  // NOT the assignee filter's "Me" (see TICKET_ASSIGNEE_ME in assignedToIds). This is the task-link picker's
+  // "involves me" scope: caller is the assignee, an additional agent, or a member of the assigned team.
+  // Bypassed (no-op) for callers holding project:read.
+  assignedToMe?: boolean;
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
   dueDateFrom?: string;            // ISO date string for custom range start
@@ -165,6 +204,16 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Key of a named view the caller's list offers (see `ITicketListViewSummary`). The server resolves it against
+   * the views the caller is entitled to; a key it does not offer is ignored.
+   */
+  listView?: string;
+  /**
+   * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
+   * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.
+   */
+  where?: PredicateGroup;
 }
 
 export interface IPriority extends TenantEntity {

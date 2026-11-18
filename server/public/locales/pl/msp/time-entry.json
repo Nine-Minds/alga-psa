@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Dodaj wpis czasu"
+    }
+  },
   "common": {
     "actions": {
       "view": "Zobacz",
@@ -127,12 +132,16 @@
       "billable": "Płatne",
       "notes": "Notatki",
       "deleteTimeEntry": "Usuń wpis czasu",
-      "unsavedChanges": "Niezapisane zmiany"
+      "unsavedChanges": "Niezapisane zmiany",
+      "contractLine": "Pozycja kontraktu",
+      "operational": "Operacyjny – nie rozliczany"
     },
     "placeholders": {
       "selectService": "Wybierz usługę",
+      "searchServices": "Wyszukaj usługi...",
       "selectDate": "Wybierz datę",
-      "addNotes": "Dodaj notatki"
+      "addNotes": "Dodaj notatki",
+      "selectContractLine": "Wybierz pozycję kontraktu"
     },
     "validation": {
       "startBeforeEnd": "Czas rozpoczęcia musi być wcześniejszy niż czas zakończenia",
@@ -150,6 +159,10 @@
       "task": "Domyślnie z zadania",
       "phase": "Domyślnie z fazy",
       "project": "Domyślnie z projektu"
+    },
+    "options": {
+      "resolveContractLineLater": "Brak pozycji - rozstrzygnij później",
+      "noServicesFound": "Nie znaleziono usług"
     }
   },
   "workItemPicker": {
@@ -275,6 +288,7 @@
     }
   },
   "comments": {
+    "loading": "Ładowanie komentarzy...",
     "placeholder": "Dodaj komentarz...",
     "responsePlaceholder": "Odpowiedz na żądane zmiany...",
     "respondToChanges": "Reaguj na zmiany"
@@ -350,6 +364,16 @@
     }
   },
   "timeSheetTable": {
+    "reflectionLabel": "Tabela danych arkusza czasu pracy",
+    "deleteWorkItem": {
+      "title": "Usuń element pracy",
+      "message": "Spowoduje to trwałe usunięcie wszystkich wpisów czasu dla tego elementu pracy. Tej akcji nie można cofnąć."
+    },
+    "bundled": "W pakiecie",
+    "bundledTo": "W pakiecie → {{ticketNumber}}",
+    "addEntryForCell": "Dodaj wpis czasu dla {{workItem}} w dniu {{date}}",
+    "saveTimeEntry": "Zapisz wpis czasu",
+    "weeklyTotal": "Suma tygodniowa",
     "empty": {
       "title": "Brak elementów pracy w arkuszu czasu pracy",
       "description": "Dodaj nowy element pracy, aby rozpocząć śledzenie czasu w tym tygodniu.",
@@ -396,7 +420,7 @@
     "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas zostanie przekierowany do domyślnej umowy zarządzanej przez system.",
     "contract": "Kontrakt: {{name}}",
     "defaultContract": "Domyślna umowa zarządzana przez system",
-    "multipleLines": "Dostępnych jest wiele linii kontraktu - przy użyciu wyboru domyślnego"
+    "multipleEligible": "Dla tej daty kwalifikuje się wiele pozycji kontraktu. Wybierz pozycję kontraktu, aby zapisać przypisanie."
   },
   "billableLegend": {
     "title": "Legenda płatna",
@@ -412,6 +436,9 @@
     "viewEntryDetails": "Zobacz szczegóły wpisu"
   },
   "messages": {
+    "saveEntryFailed": "Nie udało się zapisać wpisu czasu",
+    "updateTaskFailed": "Nie udało się zaktualizować zadania",
+    "deleteWorkItemFailed": "Nie udało się usunąć elementu pracy",
     "serviceRequired": "Wybierz usługę przed zapisaniem wpisów czasu",
     "invalidService": "Nieprawidłowa wybrana usługa",
     "taxRegionRequired": "Wybierz region podatkowy dla usług opodatkowanych",
@@ -513,7 +540,8 @@
     "entryMissingPeriod": "W arkuszu czasu tego wpisu brakuje okresu i nie można go otworzyć.",
     "noPeriods": "Nie skonfigurowano jeszcze okresów czasu, więc nie można rejestrować czasu. Poproś administratora o utworzenie okresów czasu w Ustawienia → Ewidencja czasu.",
     "noEditablePeriods": "Wszystkie arkusze czasu są przesłane lub zatwierdzone, więc nie ma dnia, do którego można dodać czas. Poproś osobę zatwierdzającą o ponowne otwarcie arkusza lub administratora o dodanie okresu.",
-    "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie."
+    "prepareFailed": "Wystąpił błąd podczas przygotowywania wpisu czasu. Spróbuj ponownie.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugestie",
@@ -541,6 +569,11 @@
       "linksChanged": "zmieniono łącza",
       "updated": "zaktualizowano"
     }
+  },
+  "timeSheet": {
+    "reflectionLabel": "Zarządzanie arkuszami czasu pracy",
+    "delegationDisabledPrefix": "Delegowane wprowadzanie czasu jest obecnie wyłączone. Włącz flagę funkcji",
+    "delegationDisabledSuffix": "aby edytować arkusze czasu pracy innych użytkowników."
   },
   "stopwatch": {
     "pausedNotice_one": "Zarejestrowano {{active}} w {{count}} segmencie (wstrzymanie: {{paused}})",

@@ -54,6 +54,7 @@
     "taxBreakdown": "Momsspecifikation",
     "manualInvoice": "Manuell faktura",
     "credits": "Krediteringar",
+    "currency": "Valuta",
     "financialArtifactSummary": "Faktura som endast avser finansiella transaktioner. Återkommande tjänsteperioder visas bara på detaljrader för återkommande tjänster.",
     "servicePeriod": "Tjänsteperiod",
     "servicePeriods": "Tjänsteperioder",
@@ -202,6 +203,7 @@
       "exclude": "Uteslut",
       "excluded": "Utesluten",
       "fallbackTitle": "Offert {{id}}",
+      "unnumberedTitle": "Offert",
       "include": "Inkludera",
       "included": "Inkluderad",
       "lineItems": "Offertrader",
@@ -212,6 +214,7 @@
       "optionalLockedHint": "Valen av tillval låses när offerten inte längre väntar på ditt svar.",
       "optionalToggleHint": "Markera eller avmarkera tillval för att förhandsgranska offertens totalsumma med dina val innan du svarar.",
       "poNumber": "Inköpsordernummer",
+      "previewUnavailable": "Ingen liveförhandsvisning finns för den här offerten, så de visade summorna är de sparade summorna. Ditt val skickas ändå när du godkänner.",
       "quoteDate": "Offertdatum",
       "readyToRespond": "Redo att svara?",
       "reject": "Avböj",
@@ -221,7 +224,6 @@
       "rejectQuote": "Avböj offert",
       "rejectedBanner": "Offerten har avböjts.",
       "rejectedBannerWithReason": "Offerten har avböjts: {{reason}}",
-      "savingSelections": "Sparar valda tillval…",
       "scopeOfWork": "Arbetets omfattning",
       "submitting": "Skickar in…",
       "subtotal": "Delsumma",
@@ -229,6 +231,79 @@
       "termsAndConditions": "Allmänna villkor",
       "total": "Totalt",
       "validUntil": "Giltig till"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Offert godkänd",
+        "body": "Tack. Ditt godkännande har registrerats och vi har underrättats."
+      },
+      "rejected": {
+        "title": "Offert avvisad",
+        "body": "Ditt svar har registrerats och vi har underrättats."
+      },
+      "already": {
+        "title": "Den här offerten har redan besvarats",
+        "accepted": "Den här offerten godkändes den {{date}}.",
+        "rejected": "Den här offerten avvisades den {{date}}."
+      },
+      "changed": {
+        "title": "Den här offerten har ändrats",
+        "body": "Den här offerten har ändrats sedan du öppnade den. Kontakta oss."
+      },
+      "optionalItems": "Valfria poster",
+      "optionalHint": "Välj de valfria poster du vill ha. Ditt val skickas när du godkänner.",
+      "subtotal": "Delsumma",
+      "tax": "Skatt",
+      "total": "Totalt",
+      "fullName": "Fullständigt namn",
+      "titleOptional": "Titel (valfritt)",
+      "agreementVersion": "Avtalsversion {{version}}",
+      "accept": "Godkänn offert",
+      "reject": "Avvisa offert",
+      "submitting": "Skickar...",
+      "rejectTitle": "Avvisa offert",
+      "rejectHint": "Berätta vad som behöver ändras. Vi kan komma att revidera och skicka om offerten.",
+      "rejectConfirm": "Avvisa",
+      "cancel": "Avbryt",
+      "errors": {
+        "generic": "Något gick fel. Försök igen.",
+        "nameRequired": "Ange ditt fullständiga namn.",
+        "agreementRequired": "Bekräfta avtalet för att godkänna den här offerten.",
+        "agreementOutdated": "Avtalstexten har uppdaterats. Ladda om sidan och försök igen.",
+        "commentRequired": "Lägg till en kort kommentar innan du avvisar den här offerten.",
+        "tooLong": "En av dina uppgifter är för lång.",
+        "reload": "Ladda om den här sidan och försök igen."
+      }
+    },
+    "public": {
+      "metaTitle": "Granska offert",
+      "notice": {
+        "accepted": "Den här offerten har godkänts. Den visas här som underlag.",
+        "declined": "Den här offerten har avslagits. Den visas här som underlag.",
+        "converted": "Den här offerten har godkänts och genomförs. Den visas här som underlag.",
+        "readOnly": "Det här är en skrivskyddad vy av din offert."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Den här länken är inte tillgänglig",
+          "body": "Länken kan vara felskriven eller inte längre aktiv."
+        },
+        "expired": {
+          "title": "Den här länken har gått ut",
+          "body": "Av säkerhetsskäl slutar offertlänkar fungera efter en tid."
+        },
+        "superseded": {
+          "title": "Den här offerten har ersatts",
+          "body": "En nyare version har skickats. Använd länken i det senaste e-postmeddelandet."
+        },
+        "decided": {
+          "title": "Den här offerten har redan avgjorts",
+          "body": "Ett svar har redan registrerats, så den kan inte längre öppnas via den här länken."
+        },
+        "help": "Behöver du hjälp? Svara på e-postmeddelandet där du fick den här länken.",
+        "signIn": "Logga in på kundportalen",
+        "signInHint": "Har du redan ett konto i kundportalen?"
+      }
     }
   },
   "quoteForm": {
@@ -360,7 +435,8 @@
     "contractLineType": {
       "Fixed": "Fast",
       "Hourly": "Per timme",
-      "Usage": "Förbrukningsbaserad"
+      "Usage": "Förbrukningsbaserad",
+      "PrepaidBlock": "Förbetalt block"
     },
     "quoteStatus": {
       "draft": "Utkast",
@@ -407,6 +483,13 @@
       "pending": "Fakturor som väntar på godkännande eller ytterligare behandling",
       "prepayment": "Fakturor för förskottsbetalning eller deposition",
       "partially_applied": "Fakturor med avräknade delbetalningar"
+    },
+    "billingPeriod": {
+      "weekly": "per vecka",
+      "monthly": "per månad",
+      "quarterly": "per kvartal",
+      "semi-annually": "per halvår",
+      "annually": "per år"
     }
   },
   "credits": {
@@ -442,6 +525,35 @@
     "hoursLeft": "{{hours}} h kvar",
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
-    "timeEntry": "Tidpost"
+    "timeEntry": "Tidpost",
+    "contractLabel": "Avtal: {{contract}}",
+    "hoursLeftValue": "{{hours}} h kvar · {{value}}",
+    "validFrom": "Giltig från {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — förbetalt block, {{hours}} tim",
+    "overPrepaidBlock": "{{name}} (utöver förbetalt block)"
+  },
+  "bucketUsage": {
+    "contractLine": "Avtalsrad med timpott",
+    "usage": "Förbrukning",
+    "hoursUsed": "{{hours}} h förbrukade",
+    "hoursTotal": "{{hours}} h totalt",
+    "rolloverHours": "Inkluderar {{hours}} h överförd tid"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Betalas vid mottagande",
+      "net14": "14 dagar netto",
+      "net15": "15 dagar netto",
+      "net30": "30 dagar netto",
+      "net7": "7 dagar netto"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Banköverföring",
+      "check": "Check",
+      "creditCard": "Kreditkort"
+    },
+    "tenantDefault": "Hyresgästens standard ({{value}})"
   }
 }

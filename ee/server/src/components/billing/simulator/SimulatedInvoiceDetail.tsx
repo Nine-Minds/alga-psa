@@ -10,6 +10,7 @@ import type {
   IInvoiceTemplate,
   ScenarioReplayInvoice,
 } from "@alga-psa/types";
+import { pairReplayLines } from "@ee/lib/billing/simulator/replayLineIdentity";
 import { TemplateRenderer } from "@alga-psa/billing/components/billing-dashboard/TemplateRenderer";
 
 interface SimulatedInvoiceDetailProps {
@@ -306,41 +307,24 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
             </div>
           </div>
           <div className="space-y-1 rounded border border-[rgb(var(--color-border-200))] p-2">
-            {Array.from(
-              new Map(
-                [...actualInvoice.lines, ...period.lines].map((line) => [
-                  `${line.line_key}:${line.service_id ?? "none"}:${line.charge_type}`,
-                  line,
-                ]),
-              ).entries(),
-            ).map(([key, representative]) => {
-              const actual = actualInvoice.lines.find(
-                (line) =>
-                  `${line.line_key}:${line.service_id ?? "none"}:${line.charge_type}` ===
-                  key,
-              );
-              const simulated = period.lines.find(
-                (line) =>
-                  `${line.line_key}:${line.service_id ?? "none"}:${line.charge_type}` ===
-                  key,
-              );
-              const delta = (simulated?.total ?? 0) - (actual?.total ?? 0);
+            {pairReplayLines(actualInvoice.lines, period.lines).map(
+              ({ key, service_name, actual, simulated, delta }) => {
               return (
                 <div
                   key={key}
                   className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-3 text-[11px]"
                 >
                   <span className="truncate text-[rgb(var(--color-text-700))]">
-                    {representative.service_name}
+                    {service_name}
                   </span>
                   <span className="font-mono text-[rgb(var(--color-text-500))]">
-                    {money(actual?.total ?? 0)}{" "}
+                    {money(actual)}{" "}
                     {t("contractSimulator.replay.issued", {
                       defaultValue: "issued",
                     })}
                   </span>
                   <span className="font-mono text-[rgb(var(--color-text-500))]">
-                    {money(simulated?.total ?? 0)}{" "}
+                    {money(simulated)}{" "}
                     {t("contractSimulator.replay.projected", {
                       defaultValue: "simulated",
                     })}
@@ -351,7 +335,8 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
                   </span>
                 </div>
               );
-            })}
+              },
+            )}
           </div>
           {template && (
             <details className="mt-3">

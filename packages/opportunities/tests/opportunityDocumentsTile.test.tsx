@@ -14,8 +14,16 @@ vi.mock('next-auth/react', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
-      (fallback ?? _key).replace('{{count}}', String(options?.count ?? '')),
+    // Callers use two shapes: t(key, fallbackString, options) — this
+    // component's own calls — and the i18next-standard t(key, { defaultValue,
+    // ...interpolations }) used by shared primitives like Dialog. Handle both
+    // so a dialog nested in this tile doesn't crash the mock.
+    t: (_key: string, fallbackOrOptions?: string | Record<string, unknown>, maybeOptions?: Record<string, unknown>) => {
+      const fallback = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : fallbackOrOptions?.defaultValue;
+      const options = typeof fallbackOrOptions === 'string' ? maybeOptions : fallbackOrOptions;
+      const value = String(fallback ?? _key);
+      return value.replace('{{count}}', String(options?.count ?? ''));
+    },
   }),
 }));
 
@@ -24,7 +32,7 @@ const getDocumentsByEntity = vi.fn();
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
   useDocumentsCrossFeature: () => ({
     getDocumentsByEntity,
-    renderDocuments: ({ documentToOpen, entityType, entityId }: any) =>
+    renderDocuments: ({ documentToOpen, entityType, entityId, onDocumentCreated }: any) =>
       documentToOpen ? (
         <div
           role="dialog"
@@ -32,7 +40,7 @@ vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
           data-entity-type={entityType}
           data-entity-id={entityId}
         />
-      ) : null,
+      ) : onDocumentCreated ? <button onClick={() => void onDocumentCreated()}>Remove attached document</button> : null,
   }),
 }));
 
@@ -87,5 +95,18 @@ describe('OpportunityDocumentsTile', () => {
 
     expect(await screen.findByText('Documents service unavailable')).toBeInTheDocument();
     expect(screen.queryByText(/No documents yet/)).not.toBeInTheDocument();
+  });
+
+  it('refreshes the opportunity evidence after a document is removed', async () => {
+    getDocumentsByEntity.mockResolvedValue({ documents, totalCount: 2, currentPage: 1, totalPages: 1 });
+    const onDocumentsChanged = vi.fn();
+
+    render(<OpportunityDocumentsTile opportunityId="opp-1" onDocumentsChanged={onDocumentsChanged} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add or manage documents' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove attached document' }));
+
+    expect(await screen.findByText('rfp.pdf')).toBeInTheDocument();
+    expect(getDocumentsByEntity).toHaveBeenCalledTimes(2);
+    expect(onDocumentsChanged).toHaveBeenCalledTimes(1);
   });
 });

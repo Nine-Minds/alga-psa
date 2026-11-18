@@ -24,7 +24,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), content);
   };
-  for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs',
+  for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs', 'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/flaky-error.mjs',
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
     'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs',
     'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
@@ -34,7 +34,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
   const files = [...floorRelative, 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
-  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'CI fixture');
   git('add', '.'); git('commit', '-qm', 'fixture');
@@ -194,7 +194,8 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   assert.equal(onPush.status, 1, onPush.stdout);
   const pushEvidence = read('test-results/infrastructure/evidence.json');
   assert.equal(pushEvidence.status, 'failed');
-  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+  // The policy line carries the first attempt's error after the test id.
+  assert.ok(pushEvidence.failures.some(failure => failure.startsWith(`retry-only pass on push run: ${flakyId}`)), pushEvidence.failures.join('\n'));
 
   const stable = run('run-infrastructure-tests.mjs', 1, 'full', 1);
   assert.equal(stable.status, 0, stable.stdout + stable.stderr);

@@ -1,11 +1,19 @@
 import { cache } from "react";
-import { cookies } from "next/headers.js";
+import { cookies, headers } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
+import { isLicensedUserType } from "@alga-psa/types";
 import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
-import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { TimeEntryModeProvider } from "@alga-psa/scheduling/context/TimeEntryModeContext";
+import { timeEntryModeForSurfaceKind } from "@alga-psa/scheduling/lib/timeEntryMode";
+import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
+import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
+import { getCurrentProductPrincipal } from "@/lib/productAccess";
+import { assertPrincipalRouteOpen } from "@/lib/serverProductRouteGuard";
+import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
 import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
@@ -17,6 +25,7 @@ import { getTenantThemeByTenantId } from "@alga-psa/tenancy/actions/tenant-actio
 import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getDontNotifyCustomerDefaultAction } from '@alga-psa/notifications/actions/notification-actions/notificationActions';
 
 /**
  * Client-portal branding must never leak into the staff app by itself. The
@@ -69,11 +78,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function MspLayout({
   children,
   modal,
+  surface,
 }: Readonly<{
   children: React.ReactNode;
   // Parallel slot for app-wide intercepting modal routes (e.g. create-ticket). Falls back
   // to @modal/default.tsx (null) on routes that don't open a modal.
   modal: React.ReactNode;
+  // Parallel slot holding the principal-kind surface gate. Renders nothing; it exists to run on every navigation.
+  surface: React.ReactNode;
 }>) {
   // Use full auth with revocation check so terminated sessions cannot keep browsing
   const session =
@@ -87,11 +99,33 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
-  // Check if user is trying to access wrong portal
-  if (session.user.user_type === 'client') {
-    console.log('[msp-layout] Client user trying to access MSP portal, redirecting to switch prompt');
+  // Only internal users belong in the MSP portal. Client users are in the wrong portal;
+  // a non-interactive type must never hold a UI session, so send both to sign-in rather
+  // than to the client portal.
+  if (!isLicensedUserType(session.user.user_type)) {
+    console.log('[msp-layout] Non-internal session trying to access MSP portal, redirecting to sign-in');
     redirect('/auth/msp/signin');
   }
+
+  // One read answers the tenant's product and the user's principal kind: the route guard, the menu and the
+  // action guards all decide from this principal.
+  const principal = await getCurrentProductPrincipal();
+  const productCode = principal.productCode;
+
+  // A principal kind's surface is enforced here, before any page renders, on a hard load. Soft navigation does
+  // not re-run a layout; the @surface slot below re-runs on every navigation and applies the same gate.
+  if (principal.surfaceKind) {
+    const pathname = (await headers()).get('x-pathname');
+    if (pathname) assertPrincipalRouteOpen(principal, pathname);
+  }
+
+  // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
+  // A failed or gated read is no notice: the shell must never block on it.
+  const workspaceNotice: CoManagedWorkspaceNoticeState = productCode === 'co_managed'
+    ? await getCoManagedWorkspaceState()
+        .then((state) => (state.kind === 'ended' ? { kind: 'ended' as const, endedAt: state.endedAt, sponsorName: state.sponsorName } : null))
+        .catch(() => null)
+    : null;
 
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
@@ -99,24 +133,35 @@ export default async function MspLayout({
   let needsOnboarding = false;
   let onboardingResolvedServerSide = false;
   try {
-    const tenantSettings = await getTenantSettings();
-    if (tenantSettings) {
-      needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+    if (!productUsesWorkspaceOnboarding(productCode)) {
       onboardingResolvedServerSide = true;
+    } else {
+      const tenantSettings = await getTenantSettings();
+      if (tenantSettings) {
+        needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+        onboardingResolvedServerSide = true;
+      }
     }
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
+  // Only an administrator is sent to workspace setup; other users work in the
+  // workspace as configured so far instead of being stuck on a wizard they
+  // cannot complete.
+  const canRunOnboarding = productUsesWorkspaceOnboarding(productCode) && await getWorkspaceSetupAccess().then(access => access.canRun).catch(() => false);
+  needsOnboarding = needsOnboarding && canRunOnboarding;
 
   const locale = await getHierarchicalLocaleAction();
   const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
-  const productCode = await getCurrentTenantProduct();
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
   // Digit order / separator / clock follow the tenant's country, never the language.
   const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
+  // Seeds every "Don't notify the customer" checkbox in the MSP portal. A
+  // failed read falls back to the unticked default rather than blocking the shell.
+  const dontNotifyCustomerDefault = await getDontNotifyCustomerDefaultAction().catch(() => false);
 
   const tenantId = session.user.tenant;
   const { mspWhiteLabel, tenantBranding } = tenantId
@@ -124,14 +169,21 @@ export default async function MspLayout({
     : { mspWhiteLabel: false, tenantBranding: null };
   const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise, mspWhiteLabel });
 
+  // The time-entry dialog's mode comes from the principal resolved above, exactly as `surfaceKind` does. It wraps
+  // the whole shell so a dialog opened from a drawer, a ticket or the time sheet reads the same server answer.
   return (
+    <TimeEntryModeProvider mode={timeEntryModeForSurfaceKind(principal.surfaceKind)}>
     <MspLayoutClient
       mspBranding={mspBranding}
       session={session}
       currencyCode={currencyCode}
       dateFormat={dateFormat}
+      dontNotifyCustomerDefault={dontNotifyCustomerDefault}
       productCode={productCode}
+      surfaceKind={principal.surfaceKind ?? null}
+      workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}
+      canRunOnboarding={canRunOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
       preloadedLocaleResources={preloadedLocaleResources}
@@ -140,6 +192,8 @@ export default async function MspLayout({
     >
       {children}
       {modal}
+      {surface}
     </MspLayoutClient>
+    </TimeEntryModeProvider>
   );
 }

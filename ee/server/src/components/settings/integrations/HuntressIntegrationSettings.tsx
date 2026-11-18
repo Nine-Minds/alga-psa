@@ -11,10 +11,10 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { AlertCircle, CheckCircle, RefreshCw, ShieldAlert, Unlink } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -34,7 +34,6 @@ const HuntressIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
   const [status, setStatus] = useState<HuntressConnectionStatus | null>(null);
   const [routingOptions, setRoutingOptions] = useState<RoutingOptions | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -53,20 +52,19 @@ const HuntressIntegrationSettings: React.FC = () => {
   const [priorityHigh, setPriorityHigh] = useState<string | null>(null);
   const [priorityLow, setPriorityLow] = useState<string | null>(null);
   const [autoClose, setAutoClose] = useState(false);
+  const [ingestEscalations, setIngestEscalations] = useState(false);
   const [closedStatusId, setClosedStatusId] = useState<string | null>(null);
   const [pollInterval, setPollInterval] = useState('5');
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [statusResult, optionsResult, clientsResult] = await Promise.all([
+      const [statusResult, optionsResult] = await Promise.all([
         getHuntressConnectionStatus(),
         getHuntressRoutingOptions(),
-        getAllClients(false),
       ]);
       setStatus(statusResult);
       setRoutingOptions(optionsResult);
-      setClients(clientsResult ?? []);
 
       const s = statusResult.settings;
       if (s) {
@@ -78,6 +76,7 @@ const HuntressIntegrationSettings: React.FC = () => {
         setPriorityHigh(s.severityPriorityMap.high ?? null);
         setPriorityLow(s.severityPriorityMap.low ?? null);
         setAutoClose(s.autoCloseTickets);
+        setIngestEscalations(s.ingestEscalations);
         setClosedStatusId(s.closedStatusId ?? null);
         setPollInterval(String(s.pollIntervalMinutes));
       }
@@ -136,6 +135,7 @@ const HuntressIntegrationSettings: React.FC = () => {
           low: priorityLow ?? undefined,
         },
         autoCloseTickets: autoClose,
+        ingestEscalations,
         closedStatusId,
         pollIntervalMinutes: Number(pollInterval) || 5,
       });
@@ -289,10 +289,10 @@ const HuntressIntegrationSettings: React.FC = () => {
               <CardDescription>
                 {t('integrations.rmm.huntress.connection.summary', {
                   defaultValue:
-                    '{{organizations}} organizations ({{unmapped}} unmapped) · {{openIncidents}} open incidents · last poll: {{lastPoll}}',
+                    '{{organizations}} organizations ({{unmapped}} unmapped) · {{openAlerts}} open alerts · last poll: {{lastPoll}}',
                   organizations: status.organization_count,
                   unmapped: status.unmapped_count,
-                  openIncidents: status.open_alert_count,
+                  openAlerts: status.open_alert_count,
                   lastPoll: status.last_poll_at
                     ? new Date(status.last_poll_at).toLocaleString()
                     : t('integrations.rmm.huntress.connection.neverPolled', { defaultValue: 'never' }),
@@ -385,7 +385,7 @@ const HuntressIntegrationSettings: React.FC = () => {
                   </label>
                   <ClientPicker
                     id="huntress-fallback-client"
-                    clients={clients}
+                    searchClients={searchClientsForPicker}
                     selectedClientId={fallbackClientId}
                     onSelect={(id) => setFallbackClientId(id)}
                     filterState="active"
@@ -483,6 +483,27 @@ const HuntressIntegrationSettings: React.FC = () => {
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div>
+                  <label htmlFor="huntress-ingest-escalations" className="text-sm font-medium">
+                    {t('integrations.rmm.huntress.routing.ingestEscalations', {
+                      defaultValue: 'Create tickets from Huntress escalations',
+                    })}
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('integrations.rmm.huntress.routing.ingestEscalationsHelp', {
+                      defaultValue:
+                        'Escalations use the same board, category, priority mapping and auto-close settings as incidents. An escalation that covers several organizations creates one ticket per organization.',
+                    })}
+                  </p>
+                </div>
+                <Switch
+                  id="huntress-ingest-escalations"
+                  checked={ingestEscalations}
+                  onCheckedChange={setIngestEscalations}
+                />
               </div>
 
               <Button id="huntress-save-routing" onClick={handleSaveRouting} disabled={isPending}>

@@ -1,0 +1,49 @@
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+Workspace DB suite: 20 required files
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/server
+      Running tests with seed "1793151634239"
+
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+ ✓ ../shared/billingClients/__tests__/hourBlockService.db.test.ts (25 tests) 4179ms 35 MB heap used
+   ✓ hourBlockService DB integration > sets the immutable first_allocated_at marker on first burn and never clears it on reversal  440ms
+   ✓ hourBlockService DB integration > serializes two concurrent full-block allocations: no oversell, second allocation sees committed exhaustion  519ms
+ ✓ ../packages/billing/tests/prepaidBlockTemplateClone.db.test.ts (11 tests) 201ms 63 MB heap used
+ ✓ ../packages/client-portal/tests/clientHourBlocks.minorUnits.db.test.ts (1 test) 3946ms 205 MB heap used
+   ✓ client portal hour blocks in non-2-decimal currencies > returns currency, valid_from and minor-unit remaining value for JPY and KWD cadence blocks  3877ms
+ ✓ ../packages/billing/tests/prepaidBlockRenewal.db.test.ts (22 tests) 2795ms 223 MB heap used
+ ✓ migrations/__tests__/prepaidBlockMigration.integration.test.ts (4 tests) 223ms 228 MB heap used
+ ✓ ../packages/jobs/tests/prepaidBlockRenewalHandler.db.test.ts (2 tests) 1599ms 243 MB heap used
+   ✓ processRenewalQueueHandler Prepaid Block renewal issuance > schedules one renewal issuance due on the anniversary for an evergreen assignment outside the decision horizon; a second run adds nothing  1069ms
+   ✓ processRenewalQueueHandler Prepaid Block renewal issuance > does not back-fill a line whose block config was created after the anniversary  529ms
+ ✓ src/test/unit/billing/prepaidBlockReplenishment.db.test.ts (6 tests) 858ms 292 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockInvoicing.db.test.ts (6 tests) 616ms 319 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockConfigActions.db.test.ts (14 tests) 251ms 237 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockDueWork.db.test.ts (14 tests) 1294ms 272 MB heap used
+ ✓ ../packages/jobs/tests/prepaidBlockExpiryJobs.db.test.ts (2 tests) 270ms 286 MB heap used
+ ✓ src/test/unit/billing/prepaidBlockAcceptance.db.test.ts (9 tests) 2855ms 565 MB heap used
+   ✓ Prepaid Block acceptance: Ryan's scenario > steps 1-6: finalize keeps 37 h on the follow-on, anniversary forfeits 10 h and re-issues, uncovered service bills on the other line  390ms
+   ✓ Prepaid Block acceptance: Ryan's scenario > void path: voiding the exhaustion follow-on's invoice restores the source block's expiry issuance to scheduled  312ms
+   ✓ Prepaid Block: manual issue supersedes a scheduled expiry issuance (alga-2026-0002695) > steps 1-6: manual issue is allowed, supersedes the expiry issuance, and the 4 h are drawn from the new block exactly once  349ms
+   ✓ Prepaid Block: manual issue supersedes a scheduled expiry issuance (alga-2026-0002695) > variant: voiding the manual draft restores the expiry issuance and the 4 h bill once as overage  449ms
+   ✓ Prepaid Block: manual issue supersedes a scheduled expiry issuance (alga-2026-0002695) > negative: while a block is pending (follow-on draft) or a usage issuance is scheduled, the action still rejects  317ms
+   ✓ Prepaid Block deploy fixes: generation through the real action path > generates the block invoice without claiming the cycle, despite unapproved time on another line, and the T&M invoice stays blocked until approval and is then generated exactly once  348ms
+ ✓ src/test/unit/billing/prepaidBlockLateTime.db.test.ts (4 tests) 1532ms 617 MB heap used
+   ✓ Prepaid Block late time on a cadence line (real engine, migrated DB) > bills late time beyond the earlier block as overage with the late label, once, and never draws the current block  316ms
+   ✓ Prepaid Block late time on a cadence line (real engine, migrated DB) > bills late time fully covered by the earlier block at $0 on the next invoice, once  329ms
+   ✓ Prepaid Block late time on a cadence line (real engine, migrated DB) > draws 8 hours from the expired historical block and bills +0 overage once  366ms
+   ✓ Prepaid Block late time on a cadence line (real engine, migrated DB) > draws 10 hours from the expired historical block and bills 4 overage once  315ms
+ ✓ ../packages/jobs/tests/prepaidBlockContractEnd.db.test.ts (13 tests) 1539ms 620 MB heap used
+ ✓ ../packages/billing/tests/pendingHourBlockService.db.test.ts (1 test) 88ms 631 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockLifecycle.db.test.ts (16 tests) 2172ms 666 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockDuplicateGuard.db.test.ts (1 test) 193ms 680 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockDeployFixes.db.test.ts (16 tests) 1691ms 720 MB heap used
+ ✓ ../packages/billing/tests/prepaidBlockWizardSubmission.db.test.ts (9 tests) 345ms 745 MB heap used
+ ✓ ../packages/billing/tests/hourBlockRemainingValue.db.test.ts (1 test) 244ms 774 MB heap used
+
+ Test Files  20 passed (20)
+      Tests  177 passed (177)
+   Start at  01:40:34
+   Duration  35.26s (transform 5.77s, setup 101ms, collect 7.38s, tests 26.89s, environment 0ms, prepare 32ms)
+
+JSON report written to /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/test-results/workspace-db/results.json

@@ -38,11 +38,18 @@ export interface AssetMigrationConfiguration {
   customFieldMapping?: Record<string, Record<string, string>>;
 }
 
+/** Operator-supplied product reference data. Required when products are staged. */
+export interface ProductMigrationConfiguration {
+  /** Tenant service type (service_types.id) that newly created products are filed under. */
+  serviceTypeId?: string | null;
+}
+
 export interface MigrationJobConfiguration {
   /** Client that receives orphaned contacts/assets (no resolvable organization). */
   defaultClientId?: string | null;
   tickets?: TicketMigrationConfiguration;
   assets?: AssetMigrationConfiguration;
+  products?: ProductMigrationConfiguration;
 }
 
 export interface MigrationJobSummary {
@@ -110,12 +117,22 @@ export interface MigrationOutcomeSummary {
   failed: number;
 }
 
+/**
+ * Machine-readable prefix of the outcome warning an applier writes when it
+ * matched an existing product by SKU; the report service turns it into
+ * MigrationOutcomeClaim.matchReason.
+ */
+// LEVERAGE: friction outcome-structured-reason — migration_record_outcomes has no reason column, so a skip's cause rides as a prefixed free-text warning.
+export const SKU_MATCH_WARNING_PREFIX = 'sku_match: ';
+
 /** The prior migration whose identity mapping claimed a skipped record. */
 export interface MigrationOutcomeClaim {
   migrationJobId: string;
   sourceFileName: string | null;
   /** True when the claim's package matches the reporting job's package. */
   samePackage: boolean;
+  /** Why the record was skipped when it was matched rather than identity-mapped; null for identity re-runs. */
+  matchReason: 'sku_match' | null;
 }
 
 export interface MigrationOutcomeRecord {
@@ -167,6 +184,9 @@ export const MIGRATION_PHASE_ORDER: readonly AmpEntityType[] = [
   'tickets',
   'ticket_comments',
   'assets',
+  // Vendor offers reference products, so products always apply first.
+  'products',
+  'vendor_products',
 ];
 
 export function migrationPhaseFor(entityType: AmpEntityType): number {

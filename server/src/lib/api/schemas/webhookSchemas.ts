@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { payloadFieldsByEntitySchema } from '../../webhooks/payloadFields';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { 
   uuidSchema, 
   emailSchema, 
@@ -31,54 +32,16 @@ export {
 } from '../../webhooks/payloadFields';
 
 // Webhook event types enum
-export const webhookEventTypeSchema = z.enum([
-  // Entity events
-  'ticket.created',
-  'ticket.updated',
-  'ticket.status_changed',
-  'ticket.assigned',
-  'ticket.closed',
-  'ticket.comment.added',
-  'ticket.response_state_changed',
-  'project.created',
-  'project.updated',
-  'project.status_changed',
-  'project.assigned',
-  'project.closed',
-  // Deprecated compatibility alias for project.closed.
-  'project.completed',
-  'project.task.created',
-  'project.task.updated',
-  'project.task.status_changed',
-  'project.task.assigned',
-  'project.task.completed',
-  'client.created',
-  'client.updated',
-  'contact.created',
-  'contact.updated',
-  'time.entry.created',
-  'time.entry.updated',
-  'time.entry.approved',
-  'invoice.created',
-  'invoice.finalized',
-  'invoice.sent',
-  'invoice.paid',
-  'asset.created',
-  'asset.updated',
-  'asset.maintenance.scheduled',
-  'asset.maintenance.completed',
-  // System events
-  'system.backup.completed',
-  'system.backup.failed',
-  'system.maintenance.started',
-  'system.maintenance.completed',
-  // Workflow events
-  'workflow.execution.started',
-  'workflow.execution.completed',
-  'workflow.execution.failed',
-  // Custom events
-  'custom.event'
-]);
+// Webhook event types enum: derived from the single event registry.
+export const webhookEventTypeSchema = z.enum(WEBHOOK_EVENT_NAMES);
+
+/**
+ * Event type as READ back from storage or older deliveries. Rows created
+ * before the registry may hold names that are no longer advertised
+ * (time.entry.*, invoice.*, ...); those must load, list and serialise
+ * without error, so reads accept any string. Writes use `webhookEventTypeSchema`.
+ */
+export const storedWebhookEventTypeSchema = z.string().min(1);
 
 // HTTP methods for webhook endpoints
 export const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
@@ -155,7 +118,7 @@ export const eventFilterSchema = z.object({
   conditions: z.array(z.object({
     field: z.string(),
     operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-    value: z.any()
+    value: z.any().optional()
   })).optional(),
   tags: z.array(z.string()).optional()
 }).optional();
@@ -165,7 +128,7 @@ export const payloadTransformationSchema = z.object({
   template: z.string().optional(), // Handlebars template
   include_fields: z.array(z.string()).optional(),
   exclude_fields: z.array(z.string()).optional(),
-  custom_fields: z.record(z.any()).optional(),
+  custom_fields: z.record(z.string(), z.any()).optional(),
   flatten_nested: z.boolean().optional().default(false)
 }).optional();
 
@@ -173,7 +136,7 @@ export const payloadTransformationSchema = z.object({
 export const createWebhookSchema = z.object({
   name: z.string().min(1, 'Webhook name is required').max(255),
   description: z.string().optional(),
-  url: urlSchema.refine((url) => url !== undefined, 'Webhook URL is required'),
+  url: z.string({ error: (issue) => (issue.input === undefined ? 'Webhook URL is required' : undefined) }).url(),
   method: httpMethodSchema.default('POST'),
   event_types: z.array(webhookEventTypeSchema).min(1, 'At least one event type is required'),
   
@@ -183,7 +146,7 @@ export const createWebhookSchema = z.object({
   // Payload configuration
   payload_format: webhookPayloadFormatSchema.default('json'),
   content_type: z.string().default('application/json'),
-  custom_headers: z.record(z.string()).optional(),
+  custom_headers: z.record(z.string(), z.string()).optional(),
   
   // Event filtering
   event_filter: eventFilterSchema,
@@ -216,7 +179,11 @@ export const createWebhookSchema = z.object({
 });
 
 // Update webhook schema
-export const updateWebhookSchema = createUpdateSchema(createWebhookSchema);
+// On update `event_types` is shape-checked only; WebhookService rejects names that are neither in the
+// registry nor already stored on the webhook (legacy names pass through, new unknown names are a 400).
+export const updateWebhookSchema = createUpdateSchema(createWebhookSchema).extend({
+  event_types: z.array(storedWebhookEventTypeSchema).min(1, 'At least one event type is required').optional(),
+});
 
 // Webhook response schema
 export const webhookResponseSchema = z.object({
@@ -225,12 +192,12 @@ export const webhookResponseSchema = z.object({
   description: z.string().nullable(),
   url: z.string(),
   method: httpMethodSchema,
-  event_types: z.array(webhookEventTypeSchema),
+  event_types: z.array(storedWebhookEventTypeSchema),
   
   security: webhookSecurityConfigSchema,
   payload_format: webhookPayloadFormatSchema,
   content_type: z.string(),
-  custom_headers: z.record(z.string()).nullable(),
+  custom_headers: z.record(z.string(), z.string()).nullable(),
   
   event_filter: eventFilterSchema,
   payload_transformation: payloadTransformationSchema,
@@ -266,7 +233,7 @@ export const webhookResponseSchema = z.object({
 export const webhookFilterSchema = baseFilterSchema.extend({
   name: z.string().optional(),
   url: z.string().optional(),
-  event_type: webhookEventTypeSchema.optional(),
+  event_type: storedWebhookEventTypeSchema.optional(),
   is_active: booleanTransform.optional(),
   is_test_mode: booleanTransform.optional(),
   payload_format: webhookPayloadFormatSchema.optional(),
@@ -285,17 +252,17 @@ export const webhookDeliverySchema = z.object({
   delivery_id: uuidSchema,
   webhook_id: uuidSchema,
   event_id: uuidSchema.optional(),
-  event_type: webhookEventTypeSchema,
+  event_type: storedWebhookEventTypeSchema,
   
   // Request details
   request_url: z.string(),
   request_method: httpMethodSchema,
-  request_headers: z.record(z.string()).optional(),
+  request_headers: z.record(z.string(), z.string()).optional(),
   request_body: z.string().optional(),
   
   // Response details
   response_status: z.number().optional(),
-  response_headers: z.record(z.string()).optional(),
+  response_headers: z.record(z.string(), z.string()).optional(),
   response_body: z.string().optional(),
   
   // Delivery metadata
@@ -316,7 +283,7 @@ export const webhookDeliverySchema = z.object({
 export const webhookTestSchema = z.object({
   webhook_id: uuidSchema.optional(), // If testing existing webhook
   test_event_type: webhookEventTypeSchema,
-  test_payload: z.record(z.any()).optional(),
+  test_payload: z.record(z.string(), z.any()).optional(),
   override_url: urlSchema.optional() // For testing different URL
 });
 
@@ -342,7 +309,7 @@ export const webhookTemplateSchema = z.object({
   default_config: z.object({
     url_template: z.string().optional(), // Template with placeholders
     method: httpMethodSchema,
-    headers: z.record(z.string()).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
     payload_template: z.string(), // Handlebars template
     security_type: webhookSecurityTypeSchema.optional()
   }),
@@ -378,7 +345,7 @@ export const webhookSubscriptionSchema = z.object({
   webhook_id: uuidSchema,
   entity_type: z.string(), // e.g., 'ticket', 'project', 'client'
   entity_id: uuidSchema.optional(), // Optional for entity-specific subscriptions
-  event_types: z.array(webhookEventTypeSchema),
+  event_types: z.array(storedWebhookEventTypeSchema),
   
   // Subscription settings
   is_active: z.boolean().default(true),
@@ -403,10 +370,10 @@ export const webhookAnalyticsSchema = z.object({
     average_response_time: z.number(), // milliseconds
     
     // Delivery by status
-    deliveries_by_status: z.record(z.number()),
+    deliveries_by_status: z.record(z.string(), z.number()),
     
     // Event type breakdown
-    deliveries_by_event_type: z.record(z.number()),
+    deliveries_by_event_type: z.record(z.string(), z.number()),
     
     // Timeline data
     deliveries_timeline: z.array(z.object({
@@ -433,12 +400,12 @@ export const webhookEventSchema = z.object({
   entity_id: uuidSchema,
   
   // Event data
-  current_data: z.record(z.any()), // Current state of the entity
-  previous_data: z.record(z.any()).optional(), // Previous state (for updates)
+  current_data: z.record(z.string(), z.any()), // Current state of the entity
+  previous_data: z.record(z.string(), z.any()).optional(), // Previous state (for updates)
   changes: z.array(z.object({
     field: z.string(),
-    old_value: z.any(),
-    new_value: z.any()
+    old_value: z.any().optional(),
+    new_value: z.any().optional()
   })).optional(),
   
   // Context
@@ -454,7 +421,7 @@ export const webhookEventSchema = z.object({
   tenant: uuidSchema,
   
   // Metadata
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 // Webhook signature verification
@@ -471,7 +438,7 @@ export const webhookSignatureSchema = z.object({
 export const webhookSearchSchema = z.object({
   query: z.string().optional(),
   filters: z.object({
-    event_types: z.array(webhookEventTypeSchema).optional(),
+    event_types: z.array(storedWebhookEventTypeSchema).optional(),
     status: z.array(z.enum(['active', 'inactive'])).optional(),
     last_delivery: z.object({
       from: dateSchema,

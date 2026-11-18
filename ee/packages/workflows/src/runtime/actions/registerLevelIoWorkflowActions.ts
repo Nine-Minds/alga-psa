@@ -14,7 +14,7 @@ const PROVIDER = 'levelio';
 
 const deviceSchema = z.object({
   device_id: z.string(),
-  asset_id: z.string().uuid().nullable(),
+  asset_id: z.string().guid().nullable(),
   hostname: z.string().nullable(),
   nickname: z.string().nullable(),
   group_id: z.string().nullable(),
@@ -180,7 +180,7 @@ export function registerLevelIoWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
       device_id: z.string().trim().min(1).optional(),
-      asset_id: z.string().uuid().optional(),
+      asset_id: z.string().guid().optional(),
       group_id: z.string().trim().min(1).optional(),
       query: z.string().trim().min(1).optional(),
       live: z.boolean().default(false),
@@ -434,7 +434,7 @@ export function registerLevelIoWorkflowActionsV2(): void {
     outputSchema: z.object({
       triggered: z.boolean(),
       webhook_token: z.string(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Trigger automation',
@@ -474,7 +474,7 @@ export function registerLevelIoWorkflowActionsV2(): void {
     }),
     outputSchema: z.object({
       run: runSchema,
-      steps: z.unknown().nullable()
+      steps: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Get automation run',

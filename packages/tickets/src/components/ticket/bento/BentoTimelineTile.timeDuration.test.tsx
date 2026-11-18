@@ -59,7 +59,8 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
   Label: ({ children }: { children: React.ReactNode }) => <label>{children}</label>,
 }));
 vi.mock('@alga-psa/ui/components/Switch', () => ({ Switch: () => null }));
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
   BentoTileEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -72,7 +73,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
   useDialogSubmitShortcut: () => undefined,
   usePageCreateShortcut: () => undefined,
 }));
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/ui-reflection/withDataAutomationId')>()),
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
   // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
   withUIReflectionId: (Component: unknown) => Component,

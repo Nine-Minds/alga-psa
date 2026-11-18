@@ -9,6 +9,7 @@ const fetchMock = vi.fn<typeof fetch>();
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
   isSelfHostLicensing: vi.fn(),
+  assertInstallationAiCredentialAllowed: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/licensing', () => licensingMocks);
@@ -64,6 +65,7 @@ describe('AI gateway client', () => {
       'aiGatewayGrantConsent',
       'aiGatewayRevokeConsent',
       'aiGatewaySetAutoTopup',
+      'isAiGatewayConfigured',
       'mintGatewayToken',
       'resolveGatewayAuthToken',
     ]);

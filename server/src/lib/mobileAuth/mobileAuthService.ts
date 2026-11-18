@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
-import { ApiKeyService } from '@alga-psa/auth';
+import { ApiKeyService, assertActiveInternalUser } from '@alga-psa/auth';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
 
@@ -86,6 +86,17 @@ function sha256(value: string): string {
 
 export type IssuedOtt = { ott: string; expiresAtMs: number };
 
+/**
+ * Mobile access is for active internal (licensed MSP staff) users only. Re-read from the
+ * database on every issue/exchange/refresh so a client user, a non-interactive user or a
+ * deactivated internal user can never obtain or keep a mobile session. Fails closed.
+ */
+export async function assertMobileUserAllowed(tenantId: string, userId: string): Promise<void> {
+  if (!(await assertActiveInternalUser(userId, tenantId))) {
+    throw new ForbiddenError('Mobile app access is not available for this account');
+  }
+}
+
 export async function issueMobileOtt(input: {
   tenantId: string;
   userId: string;
@@ -93,6 +104,8 @@ export async function issueMobileOtt(input: {
   state: string;
   metadata?: Record<string, unknown>;
 }): Promise<IssuedOtt> {
+  await assertMobileUserAllowed(input.tenantId, input.userId);
+
   const config = getMobileAuthConfig();
 
   const ott = generateOpaqueToken(24);
@@ -260,6 +273,7 @@ export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSch
   const userId = consumed.user_id;
 
   await enforceMobileOttExchangeLimit(`${tenantId}:${userId}`);
+  await assertMobileUserAllowed(tenantId, userId);
 
   if (consumed.session_id) {
     const tenantKnex = await connectionFactory(tenantId);
@@ -374,6 +388,7 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
     }
 
     await enforceMobileRefreshLimit(`${existing.tenant}:${existing.user_id}`);
+    await assertMobileUserAllowed(existing.tenant, existing.user_id);
 
     const accessExpiresAt = new Date(Date.now() + config.accessTtlSec * 1000);
     const refreshExpiresAt = new Date(Date.now() + config.refreshTtlSec * 1000);

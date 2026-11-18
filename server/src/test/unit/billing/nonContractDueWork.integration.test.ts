@@ -90,7 +90,8 @@ function createQueryBuilder(rows: Row[]) {
           return subBuilder;
         };
         const addInCheck = (type: 'and' | 'or', column: string, values: any[]) => {
-          const normalized = normalizeColumn(column);
+          // time-entry rows expose the joined owners as ticket_client_id / project_client_id
+          const normalized = normalizeColumn(column.replace(/^tickets\.client_id$/, 'ticket_client_id').replace(/^projects\.client_id$/, 'project_client_id'));
           clauses.push({
             type,
             predicate: (row: Row) => values.includes(row[normalized]),
@@ -184,6 +185,12 @@ const mocks = vi.hoisted(() => {
     withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => callback(trx)),
   };
 });
+
+// Not under test here: the stranded arrears-only line gap query has its own coverage, and the
+// hand-rolled knex mock below does not model its recurring_service_periods query shape.
+vi.mock('../../../../../packages/billing/src/actions/arrearsOnlyLineGaps', () => ({
+  fetchStrandedArrearsOnlyLineGaps: vi.fn(async () => []),
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: (...args: any[]) => Promise<unknown>) =>

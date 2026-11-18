@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect from './CustomSelect';
 import { AutomationProps } from '../ui-reflection/types';
 
@@ -19,6 +20,7 @@ interface StyleProps {
 }
 
 const EditableField = ({ label, value, options, onValueChange }: EditableFieldProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const fieldRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +65,7 @@ const EditableField = ({ label, value, options, onValueChange }: EditableFieldPr
           onClick={() => setIsEditing(true)}
         >
           <span className="hover:bg-gray-100 rounded px-[2px] py-[3px] transition-colors duration-200 ">
-            {currentOption?.label || 'Not set'}
+            {currentOption?.label || t('editableField.notSet')}
           </span>
         </p>
       )}

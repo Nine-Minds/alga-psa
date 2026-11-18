@@ -2,6 +2,12 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 
+// The real token service and message helpers, run against the emulator. Node
+// strips the types; both files are dependency-free by design.
+const cippDir = '../../ee/server/src/lib/integrations/entra/providers/cipp';
+const { CippTokenService, cippTokenCacheKey } = await import(`${cippDir}/cippTokenService.ts`);
+const { looksLikeHtml } = await import(`${cippDir}/cippFailureMessages.ts`);
+
 const emulatorPort = 14020;
 const base = `http://127.0.0.1:${emulatorPort}`;
 const CONTOSO = '22222222-2222-4222-8222-222222222222';
@@ -290,4 +296,191 @@ test('offboarding a user flips accountEnabled for the next sync', async () => {
     headers: { authorization: `Bearer ${contosoToken}` },
   })).json()).value;
   assert.equal(users.find((user) => user.mail === 'ada.lovelace@contoso.com').accountEnabled, false);
+});
+
+// ---------------------------------------------------------------------------
+// CIPP API client (client-credentials) mode
+// ---------------------------------------------------------------------------
+
+const CLIENT = {
+  clientId: 'cipp-api-client-id',
+  clientSecret: 'cipp-api-client-secret-VALUE',
+  directoryId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+};
+
+async function control(path, payload) {
+  const response = await fetch(`${base}/__control/entra/${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload ?? {}),
+  });
+  return response.json();
+}
+
+async function apiClientMode() {
+  await control('cipp-faults', { reset: true });
+  await control('cipp-client', {
+    tenantId: CLIENT.directoryId,
+    clientId: CLIENT.clientId,
+    clientSecret: CLIENT.clientSecret,
+  });
+}
+
+async function legacyMode() {
+  await control('cipp-faults', { reset: true });
+  await control('cipp-client', { clientId: null });
+}
+
+async function mintFailure(overrides = {}, authority = base) {
+  const service = new CippTokenService({ authorityBaseUrl: authority });
+  try {
+    await service.getToken('t', { ...CLIENT, ...overrides });
+  } catch (error) {
+    return error;
+  }
+  assert.fail('expected the mint to fail');
+}
+
+test('api-client mode: a minted Bearer token reads the directory, and an X-API-KEY alone is a 401', async () => {
+  await apiClientMode();
+  try {
+    const service = new CippTokenService({ authorityBaseUrl: base });
+    const token = await service.getToken('t', CLIENT);
+    const headers = { authorization: `Bearer ${token}` };
+
+    const tenants = await (await fetch(`${base}/api/listtenants`, { headers })).json();
+    assert.ok(tenants.length >= 3);
+    const mailboxes = await fetch(`${base}/api/ListMailboxes?tenantFilter=${CONTOSO}`, { headers });
+    assert.equal(mailboxes.status, 200);
+
+    const keyOnly = await fetch(`${base}/api/listtenants`, { headers: { 'x-api-key': 'cipp-dev-key' } });
+    assert.equal(keyOnly.status, 401);
+    const state = await (await fetch(`${base}/__control/entra/state`)).json();
+    assert.equal(state.cippApiClientMode, true);
+  } finally {
+    await legacyMode();
+  }
+});
+
+test('api-client mode: a long sync re-mints past a short expires_in, proactively and after a 401', async () => {
+  await apiClientMode();
+  try {
+    await control('cipp-faults', { tokenTtlSeconds: 2 });
+    let offsetMs = 0;
+    // The service's clock runs ahead of the emulator's, standing in for a sync
+    // that outlives the token. skew 1s of a 2s token: usable for about a second.
+    const service = new CippTokenService({
+      authorityBaseUrl: base,
+      skewMs: 1000,
+      now: () => Date.now() + offsetMs,
+    });
+    const list = async (token) => (await fetch(`${base}/api/listtenants`, {
+      headers: { authorization: `Bearer ${token}` },
+    })).status;
+
+    const first = await service.getToken('t', CLIENT);
+    assert.equal(await list(first), 200);
+    assert.equal(await service.getToken('t', CLIENT), first, 'still cached');
+
+    offsetMs = 1500; // inside the skew window: re-mint before it can 401
+    const second = await service.getToken('t', CLIENT);
+    assert.notEqual(second, first);
+    assert.equal(await list(second), 200);
+
+    // Real expiry on the emulator's side: the old token 401s, a fresh one works.
+    await new Promise((resolve) => setTimeout(resolve, 2100));
+    assert.equal(await list(second), 401);
+    service.invalidate(cippTokenCacheKey('t', CLIENT), second);
+    const third = await service.getToken('t', CLIENT);
+    assert.equal(await list(third), 200);
+
+    // Revocation (401 with a token the service still thinks is good).
+    await control('cipp-revoke-tokens');
+    assert.equal(await list(third), 401);
+    service.invalidate(cippTokenCacheKey('t', CLIENT), third);
+    assert.equal(await list(await service.getToken('t', CLIENT)), 200);
+
+    const state = await (await fetch(`${base}/__control/entra/state`)).json();
+    assert.equal(state.cippMintCount, 4);
+  } finally {
+    await legacyMode();
+  }
+});
+
+test('api-client faults at the token endpoint each produce a distinct error', async () => {
+  await apiClientMode();
+  try {
+    const badSecret = await mintFailure({ clientSecret: 'the-secret-id-not-the-value' });
+    assert.equal(badSecret.aadstsCode, 'AADSTS7000215');
+    assert.equal(badSecret.category, 'invalid_secret');
+    assert.match(badSecret.message, /secret ID instead of its Value/);
+
+    const wrongClient = await mintFailure({ clientId: 'not-a-client' });
+    assert.equal(wrongClient.aadstsCode, 'AADSTS700016');
+    const wrongTenant = await mintFailure({ directoryId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+    assert.equal(wrongTenant.aadstsCode, 'AADSTS700016');
+    assert.match(wrongTenant.message, /Check the Application \(client\) ID and the Tenant/);
+
+    await control('cipp-faults', { tenantNotFound: true });
+    const noTenant = await mintFailure();
+    assert.equal(noTenant.aadstsCode, 'AADSTS90002');
+    assert.match(noTenant.message, /15 minutes/);
+
+    await control('cipp-faults', { reset: true });
+    await control('cipp-faults', { missingIdentifierUri: true });
+    const noUri = await mintFailure();
+    assert.equal(noUri.code, 'token-scope-rejected');
+    assert.match(noUri.message, /Repair Identifier URI/);
+
+    await control('cipp-faults', { reset: true });
+    await control('cipp-faults', { consentRequired: true });
+    const consent = await mintFailure();
+    assert.equal(consent.category, 'consent_required');
+
+    // None of them leak the secret.
+    for (const error of [badSecret, wrongClient, wrongTenant, noTenant, noUri, consent]) {
+      assert.ok(!error.message.includes(CLIENT.clientSecret));
+    }
+  } finally {
+    await legacyMode();
+  }
+});
+
+test('api-client faults at the CIPP API: IP block, role block and an HTML page are distinguishable', async () => {
+  await apiClientMode();
+  try {
+    const service = new CippTokenService({ authorityBaseUrl: base });
+    const headers = { authorization: `Bearer ${await service.getToken('t', CLIENT)}` };
+    const get = (path) => fetch(`${base}${path}?tenantFilter=${CONTOSO}`, { headers });
+
+    // Role-blocked: one endpoint 403s while listtenants still answers.
+    await control('cipp-faults', { blockedEndpoints: ['listusers'] });
+    assert.equal((await get('/api/listusers')).status, 403);
+    assert.equal((await get('/api/listtenants')).status, 200);
+    assert.equal((await get('/api/listgroups')).status, 200);
+
+    // IP-blocked: everything 403s, listtenants included.
+    await control('cipp-faults', { reset: true });
+    await control('cipp-faults', { ipBlocked: true });
+    assert.equal((await get('/api/listtenants')).status, 403);
+    assert.equal((await get('/api/listusers')).status, 403);
+
+    // HTML where /api should be.
+    await control('cipp-faults', { reset: true });
+    await control('cipp-faults', { htmlAtApi: true });
+    const html = await get('/api/listtenants');
+    assert.equal(html.status, 200);
+    assert.ok(looksLikeHtml(html.headers.get('content-type'), await html.text()));
+  } finally {
+    await legacyMode();
+  }
+});
+
+test('legacy api-key mode still works after API-client mode is switched off', async () => {
+  await apiClientMode();
+  await legacyMode();
+  const response = await fetch(`${base}/api/listtenants`, { headers: { 'x-api-key': 'any-key' } });
+  assert.equal(response.status, 200);
+  const state = await (await fetch(`${base}/__control/entra/state`)).json();
+  assert.equal(state.cippApiClientMode, false);
 });

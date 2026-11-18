@@ -3,21 +3,29 @@
  * Business logic for client-related operations
  */
 
+import { CLIENT_BILLING_PERMISSION, omitClientBillingColumns } from '@alga-psa/auth/lib/clientBillingProjection';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
+import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createLocation as createClientLocation,
   deleteLocation as deleteClientLocation,
   updateLocation as updateClientLocation,
 } from '@alga-psa/clients/models';
+import type { ClientBillingProfileResponse } from '../schemas/client';
 import { withClientSinceDateString } from '@alga-psa/clients/lib/clientSince';
 import {
   CreateClientData,
@@ -28,6 +36,8 @@ import {
 } from '../schemas/client';
 import { ListOptions } from '../controllers/types';
 import { runWithTenant } from 'server/src/lib/db';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { subjectFromServiceContext } from './serviceContextSubject';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -39,13 +49,11 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
-  ensureDefaultContractForClientIfBillingConfigured,
-} from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
-import { resolveProductCode } from '@alga-psa/types';
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   ClientMergeBlockedError,
   executeClientMerge,
@@ -256,6 +264,23 @@ export class ClientService extends BaseService<IClient> {
   }
 
   /**
+   * The clients the caller may read, as one SQL predicate (the same compiled narrowing the client actions use, with the
+   * API key's bundles folded into the subject). Free for a caller nothing narrows.
+   */
+  private async clientNarrowing(trx: Knex.Transaction, context: ServiceContext, alias: string) {
+    return (await createClientScopeContext(trx, context.tenant, subjectFromServiceContext(context))).narrowing('client', alias);
+  }
+
+  // LEVERAGE: pattern rest-assert-in-scope — the same "404 unless the one row is in the caller's read scope" guard is in ContactService; a shared service-layer guard over ClientScopeContext.permits would own it.
+  /** 404 for a client the caller may not read: an out-of-scope client is indistinguishable from a missing one. */
+  private async assertClientInScope(trx: Knex.Transaction, clientId: string, context: ServiceContext): Promise<void> {
+    const scope = await createClientScopeContext(trx, context.tenant, subjectFromServiceContext(context));
+    if (!(await scope.permits('client', clientId))) {
+      throw new NotFoundError('Client not found');
+    }
+  }
+
+  /**
    * List clients with enhanced filtering and search
    */
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<IClient>> {
@@ -278,6 +303,11 @@ export class ClientService extends BaseService<IClient> {
 
       let countQuery = db.table('clients as c');
       joinDefaultLocation(db, countQuery);
+
+      // Narrow both queries before filters and pagination: the page and the total cover the readable set.
+      const narrowing = await this.clientNarrowing(trx, context, 'c');
+      narrowing.apply(dataQuery);
+      narrowing.apply(countQuery);
 
       // Apply filters
       dataQuery = this.applyClientFilters(dataQuery, filters);
@@ -314,11 +344,29 @@ export class ClientService extends BaseService<IClient> {
         })
       );
 
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      const displayTags = await loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'client', ids: clientsWithLogos.map((client) => client.client_id) },
+      ]);
+
+      const billingVisible = await this.clientBillingVisible(context, trx);
       return {
-        data: clientsWithLogos,
+        data: clientsWithLogos.map((client) => {
+          const row = { ...client, display_tags: displayTags.get(displayTagKey('client', client.client_id)) ?? [] };
+          return billingVisible ? row : omitClientBillingColumns(row);
+        }),
         total: parseInt(count as string)
       };
     });
+  }
+
+  /**
+   * Whether the caller sees a client's billing columns (clientBillingProjection). Decided like every other
+   * API permission: the effective user and, when acting through a principal, the principal must both hold
+   * it; a context with no user sees none.
+   */
+  private clientBillingVisible(context: ServiceContext, trx: Knex.Transaction): Promise<boolean> {
+    return hasApiContextPermission(context, CLIENT_BILLING_PERMISSION.resource, CLIENT_BILLING_PERMISSION.action, trx);
   }
 
   /**
@@ -332,6 +380,8 @@ export class ClientService extends BaseService<IClient> {
       const clientQuery = db.table<IClient>('clients as c');
       db.tenantJoin(clientQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       joinDefaultLocation(db, clientQuery);
+
+      (await this.clientNarrowing(trx, context, 'c')).apply(clientQuery);
 
       const client = await clientQuery
         .select(
@@ -347,13 +397,20 @@ export class ClientService extends BaseService<IClient> {
         return null;
       }
 
-      // Get logo URL
-      const logoUrl = await getClientLogoUrl(id, context.tenant);
+      const [logoUrl, displayTags] = await Promise.all([
+        getClientLogoUrl(id, context.tenant),
+        loadDisplayTagsForEntities(trx, context.tenant, displayAudienceForUser(context.user), [
+          { taggedType: 'client', ids: [id] },
+        ]),
+      ]);
 
-      return withClientSinceDateString({
+      const row = withClientSinceDateString({
         ...stripLegacyClientTaxId(client),
-        logoUrl
+        logoUrl,
+        // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+        display_tags: displayTags.get(displayTagKey('client', id)) ?? [],
       }) as unknown as IClient;
+      return (await this.clientBillingVisible(context, trx)) ? row : omitClientBillingColumns(row);
     });
   }
 
@@ -392,45 +449,24 @@ export class ClientService extends BaseService<IClient> {
         is_inactive: data.is_inactive || false,
         lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        tenant: context.tenant
       };
 
-      // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
-        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
+      // The shared creation seam owns the insert plus every default a client
+      // needs (tenant currency, default billing profile, default contract,
+      // default tax settings) in this transaction. Its failures are mapped to
+      // the same API errors direct inserts used to raise.
+      const client = await createClientWithDefaults(
+        trx,
+        context.tenant,
+        clientData as unknown as CreateClientWithDefaultsData
+      ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
-      // Terminal step of charge attribution — every client has exactly one.
-      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
-        clientName: client.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: context.tenant,
-        clientId: client.client_id,
-      });
-
-      // Tax initialization shares the client transaction: for PSA tenants an
-      // invalid/missing configuration must roll the client back rather than
-      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
-      // rates (the product intentionally excludes billing) and keep the same
-      // exemption as the UI and shared client-writer paths.
-      const tenantProduct = await tenantDb(trx, context.tenant)
-        .table('tenants')
-        .first('product_code');
-      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
-        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
-      }
-
-      // Handle tags if provided
+      // Tags are written in the client's transaction, so a tag failure fails the create. It cannot be caught and
+      // skipped here: after a failed statement PostgreSQL aborts the transaction and the commit becomes a rollback,
+      // so the caller would get a 201 for a client that was never saved.
       if ((data as any).tags && (data as any).tags.length > 0) {
-        try {
-          await this.handleTags(client.client_id, (data as any).tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(client.client_id, (data as any).tags, context, trx);
       }
 
       return client;
@@ -463,10 +499,13 @@ export class ClientService extends BaseService<IClient> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const client = await scopedTable(knex, context.tenant, 'clients')
-      .where({ client_id: id })
-      .select('client_id')
-      .first();
+    const client = await withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, id, context);
+      return scopedTable(trx, context.tenant, 'clients')
+        .where({ client_id: id })
+        .select('client_id')
+        .first();
+    });
     if (!client?.client_id) {
       throw new NotFoundError('Client not found');
     }
@@ -523,6 +562,8 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+    await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -650,7 +691,9 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      let newlyDeactivatedContactIds: string[] = [];
       const db = tenantDb(trx, context.tenant);
+      await this.assertClientInScope(trx, id, context);
       const before = await db.table('clients')
         .where('client_id', id)
         .first();
@@ -692,6 +735,11 @@ export class ClientService extends BaseService<IClient> {
       }
       const updatedFieldKeys = Object.keys(updateData);
 
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, context.tenant, id, updateData).catch((error: unknown) => {
+        throw error instanceof ClientSeatArrangementError ? new ConflictError(error.message) : error;
+      });
+
       // Update client
       const [client] = await db.table('clients')
         .where('client_id', id)
@@ -706,7 +754,7 @@ export class ClientService extends BaseService<IClient> {
       // Deactivating a client also deactivates its contacts and their portal users
       // unless the caller chose "client only" — the same choice the web dialog offers.
       if (data.is_inactive === true && data.deactivate_contacts !== false) {
-        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', trx))) {
+        if (!before.is_inactive && !(await hasApiContextPermission(context, 'contact', 'update', trx))) {
           throw new ForbiddenError('Permission denied: Cannot update contacts');
         }
         // Get all contact IDs for this client
@@ -715,6 +763,12 @@ export class ClientService extends BaseService<IClient> {
           .where({ client_id: id });
 
         const contactIds = contacts.map((c) => c.contact_name_id);
+
+        // Only contacts that were active flip state (and get contact.deactivated).
+        const activeNow = await db.table('contacts')
+          .select('contact_name_id')
+          .where({ client_id: id, is_inactive: false });
+        newlyDeactivatedContactIds = activeNow.map((c) => c.contact_name_id);
 
         // Deactivate all contacts
         await db.table('contacts')
@@ -730,17 +784,12 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      // Handle tags if provided
+      // In the update's transaction, so a tag failure fails the update (see create: it cannot be skipped).
       if (data.tags !== undefined) {
-        try {
-          await this.handleTags(id, data.tags, context, trx);
-        } catch (tagError) {
-          console.warn('Failed to handle tags:', tagError);
-          // Continue without tags - they can be added later
-        }
+        await this.handleTags(id, data.tags, context, trx);
       }
 
-      return { before, after: client, updatedFieldKeys };
+      return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
     });
 
     const occurredAt = (result.after as any).updated_at ?? new Date().toISOString();
@@ -822,6 +871,21 @@ export class ClientService extends BaseService<IClient> {
       });
     }
 
+    // Contacts the cascade flipped to inactive are real contact.deactivated transitions.
+    for (const contactId of result.newlyDeactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId: id,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
+      });
+    }
+
     const updatedPayload = buildClientUpdatedPayload({
       clientId: id,
       before: result.before as any,
@@ -873,6 +937,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, clientId, context);
       const locations = await scopedTable<IClientLocation>(trx, context.tenant, 'client_locations')
         .where({
           client_id: clientId
@@ -880,7 +945,18 @@ export class ClientService extends BaseService<IClient> {
         .orderBy('is_default', 'desc')
         .orderBy('location_name', 'asc');
 
-      return locations;
+      // contact_count tells an API caller (and the MCP agent) how many people work at each site,
+      // and therefore why a delete would be refused. One batched read for the whole list.
+      const counts = await getContactCountsByLocation(
+        trx,
+        context.tenant,
+        locations.map((location) => location.location_id),
+      );
+
+      return locations.map((location) => ({
+        ...location,
+        contact_count: counts.get(location.location_id) ?? 0,
+      }));
     });
   }
 
@@ -894,7 +970,8 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       return await withTransaction(knex, async (trx) => {
-        // Verify client exists before entering the shared mutation layer.
+        // Verify client exists (and is in the caller's scope) before entering the shared mutation layer.
+        await this.assertClientInScope(trx, clientId, context);
         const client = await scopedTable(trx, context.tenant, 'clients')
           .where({ client_id: clientId })
           .first();
@@ -903,7 +980,7 @@ export class ClientService extends BaseService<IClient> {
           throw new NotFoundError('Client not found');
         }
 
-        return createClientLocation(trx, context.tenant, clientId, data);
+        return createClientLocation(trx, context.tenant, clientId, data, { actorUserId: context.userId });
       });
     } catch (error) {
       throwClientLocationApiError(error);
@@ -920,9 +997,10 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
     try {
-      return await withTransaction(knex, (trx) =>
-        updateClientLocation(trx, context.tenant, clientId, locationId, data)
-      );
+      return await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, clientId, context);
+        return updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId });
+      });
     } catch (error) {
       throwClientLocationApiError(error);
     }
@@ -937,9 +1015,10 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<void> {
     const { knex } = await this.getKnex();
     try {
-      await withTransaction(knex, (trx) =>
-        deleteClientLocation(trx, context.tenant, clientId, locationId)
-      );
+      await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, clientId, context);
+        await deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId });
+      });
     } catch (error) {
       throwClientLocationApiError(error);
     }
@@ -953,6 +1032,8 @@ export class ClientService extends BaseService<IClient> {
 
     return withTransaction(knex, async (trx) => {
       const clientsTable = scopedTable(trx, context.tenant, 'clients');
+      // Statistics are computed over the clients the caller may read.
+      (await this.clientNarrowing(trx, context, 'clients')).apply(clientsTable);
       const [
         totalStats,
         billingCycleStats,
@@ -1134,12 +1215,14 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<ClientMergePreview> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, (trx) =>
-      previewClientMerge(trx, context.tenant, {
+    return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, sourceClientId, context);
+      await this.assertClientInScope(trx, clientId, context);
+      return previewClientMerge(trx, context.tenant, {
         sourceClientId,
         targetClientId: clientId,
-      })
-    );
+      });
+    });
   }
 
   async mergeClient(
@@ -1167,8 +1250,10 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     let result: ClientMergeResult;
     try {
-      result = await withTransaction(knex, (trx) =>
-        executeClientMerge(trx, context.tenant, context.userId ?? null, {
+      result = await withTransaction(knex, async (trx) => {
+        await this.assertClientInScope(trx, input.sourceClientId, context);
+        await this.assertClientInScope(trx, clientId, context);
+        return executeClientMerge(trx, context.tenant, context.userId ?? null, {
           sourceClientId: input.sourceClientId,
           targetClientId: clientId,
           contactAssignments: input.contactAssignments,
@@ -1176,8 +1261,8 @@ export class ClientService extends BaseService<IClient> {
           pinPortalGrants: input.pinPortalGrants,
           externalRemapChoices: input.externalRemapChoices,
           billingStrategy: input.billingStrategy,
-        })
-      );
+        });
+      });
     } catch (error) {
       // A refused merge is the caller asking for something impossible, not a
       // server fault; the blockers carry the reason.
@@ -1266,6 +1351,128 @@ export class ClientService extends BaseService<IClient> {
     });
   }
 
+  /**
+   * Billing profiles of a client, default first, then by name. Inactive profiles are included.
+   * 404 for a missing or out-of-scope client.
+   */
+  async listBillingProfiles(clientId: string, context: ServiceContext): Promise<ClientBillingProfileResponse[]> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertClientInScope(trx, clientId, context);
+      // Scope checks answer "may the caller see this client", not "does it exist": an unscoped
+      // caller passes for any id, so an unknown client must be rejected here, not listed as [].
+      const client = await tenantDb(trx, context.tenant)
+        .table('clients')
+        .where({ client_id: clientId })
+        .first('client_id');
+      if (!client) {
+        throw new NotFoundError('Client not found');
+      }
+      const rows = await this.billingProfileQuery(trx, context)
+        .where({ 'cbp.client_id': clientId })
+        .orderBy('cbp.is_default', 'desc')
+        .orderBy('cbp.name', 'asc')
+        .orderBy('cbp.billing_profile_id', 'asc');
+      return rows.map((row: any) => this.mapBillingProfileRow(row));
+    });
+  }
+
+  /**
+   * One billing profile. A profile of another (or out-of-scope) client is a 404, never a 403,
+   * so callers cannot probe which profiles exist under other clients.
+   */
+  async getBillingProfile(
+    clientId: string,
+    billingProfileId: string,
+    context: ServiceContext
+  ): Promise<ClientBillingProfileResponse> {
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.assertProfileBelongsToClient(trx, clientId, billingProfileId, context);
+      const row = await this.billingProfileQuery(trx, context)
+        .where({ 'cbp.client_id': clientId, 'cbp.billing_profile_id': billingProfileId })
+        .first();
+      if (!row) {
+        throw new NotFoundError('Billing profile not found for this client');
+      }
+      return this.mapBillingProfileRow(row);
+    });
+  }
+
+  /**
+   * Shared select for the billing profile read endpoints. Display names come from tenant-safe
+   * LEFT joins. invoice_template_id only ever names a tenant-owned invoice_templates row (standard
+   * templates are addressed by code in the global standard_invoice_templates table, not by uuid).
+   */
+  private billingProfileQuery(trx: Knex.Transaction, context: ServiceContext) {
+    const db = tenantDb(trx, context.tenant);
+    const query = db.table('client_billing_profiles as cbp');
+    db.tenantJoin(query, 'client_locations as loc', 'cbp.bill_to_location_id', 'loc.location_id', { type: 'left' });
+    db.tenantJoin(query, 'contacts as bc', 'cbp.billing_contact_id', 'bc.contact_name_id', { type: 'left' });
+    db.tenantJoin(query, 'invoice_templates as it', 'cbp.invoice_template_id', 'it.template_id', { type: 'left' });
+    return query.select(
+      'cbp.billing_profile_id',
+      'cbp.client_id',
+      'cbp.name',
+      'cbp.is_default',
+      'cbp.is_system_managed_default',
+      'cbp.is_active',
+      'cbp.bills_separately',
+      'cbp.bill_to_name',
+      'cbp.bill_to_location_id',
+      'loc.location_name as bill_to_location_name',
+      'cbp.billing_contact_id',
+      'bc.full_name as billing_contact_name',
+      'cbp.billing_email',
+      'cbp.is_tax_exempt',
+      'cbp.tax_exemption_certificate',
+      'cbp.tax_id_number',
+      'cbp.po_number',
+      'cbp.po_required',
+      'cbp.invoice_delivery_method',
+      'cbp.invoice_template_id',
+      'it.name as invoice_template_name',
+      'cbp.billing_cycle',
+      'cbp.payment_terms',
+      'cbp.preferred_payment_method',
+      'cbp.created_at',
+      'cbp.updated_at'
+    );
+  }
+
+  private mapBillingProfileRow(row: any): ClientBillingProfileResponse {
+    const iso = (value: unknown): string | null =>
+      value == null ? null : value instanceof Date ? value.toISOString() : String(value);
+    return {
+      billing_profile_id: row.billing_profile_id,
+      client_id: row.client_id,
+      name: row.name,
+      is_default: Boolean(row.is_default),
+      is_system_managed_default: Boolean(row.is_system_managed_default),
+      is_active: Boolean(row.is_active),
+      bills_separately: Boolean(row.bills_separately),
+      bill_to_name: row.bill_to_name ?? null,
+      bill_to_location_id: row.bill_to_location_id ?? null,
+      bill_to_location_name: row.bill_to_location_name ?? null,
+      billing_contact_id: row.billing_contact_id ?? null,
+      billing_contact_name: row.billing_contact_name ?? null,
+      billing_email: row.billing_email ?? null,
+      is_tax_exempt: row.is_tax_exempt ?? null,
+      tax_exemption_certificate: row.tax_exemption_certificate ?? null,
+      tax_id_number: row.tax_id_number ?? null,
+      po_number: row.po_number ?? null,
+      po_required: row.po_required ?? null,
+      invoice_delivery_method: row.invoice_delivery_method ?? null,
+      invoice_template_id: row.invoice_template_id ?? null,
+      invoice_template_name: row.invoice_template_name ?? null,
+      billing_cycle: row.billing_cycle ?? null,
+      payment_terms: row.payment_terms ?? null,
+      preferred_payment_method: row.preferred_payment_method ?? null,
+      created_at: iso(row.created_at),
+      updated_at: iso(row.updated_at),
+    };
+  }
+
   /** Replaces the profile's contact list; omitting a contact removes it. */
   async setBillingProfileContacts(
     clientId: string,
@@ -1320,6 +1527,7 @@ export class ClientService extends BaseService<IClient> {
     billingProfileId: string,
     context: ServiceContext
   ): Promise<void> {
+    await this.assertClientInScope(trx, clientId, context);
     const profile = await tenantDb(trx, context.tenant)
       .table('client_billing_profiles')
       .where({ billing_profile_id: billingProfileId })
@@ -1356,9 +1564,11 @@ export class ClientService extends BaseService<IClient> {
         .delete();
     }
 
-    // Add new tags
-    if (tags.length > 0) {
-      for (const tagText of tags) {
+    // One mapping per distinct tag: a repeated text ("vip", " vip") names the same tag, and a second mapping
+    // for it would violate tag_mappings (tenant, tag_id, tagged_id).
+    const tagTexts = [...new Set(tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))];
+    if (tagTexts.length > 0) {
+      for (const tagText of tagTexts) {
         // First, ensure the tag definition exists
         let tagDef = await db.table('tag_definitions')
           .where({

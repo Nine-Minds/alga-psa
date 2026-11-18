@@ -212,6 +212,39 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('font-style:italic');
   });
 
+  it('renders amounts with the currency symbol, not the ISO code', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      metadata: { currencyCode: 'ZAR' },
+      bindings: {
+        values: { total: { id: 'total', kind: 'value', path: 'total' } },
+        collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          // A field node (fieldFormatting) and a totals row (formatValue): both
+          // formatters have to agree with the picker that offered "ZAR (R)".
+          { id: 'invoice-total', type: 'field', label: 'Total', binding: { bindingId: 'total' }, format: 'currency' },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [{ id: 'grandTotal', label: 'Grand Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency' }],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateTemplateAst(ast, { ...invoiceFixture, total: 123450 });
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation, { locale: 'en' });
+
+    expect(rendered.html.replace(/&nbsp;|\u00a0/g, ' ')).toContain('R 1,234.50');
+    expect(rendered.html).not.toContain('ZAR');
+  });
+
   it('renders multiline address fields with preserved line breaks', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',
@@ -1246,6 +1279,39 @@ describe('renderEvaluatedTemplateAst stacked table-cell lines', () => {
     expect(rendered.html).toContain('-$5.00');
   });
 
+  it('drops a stacked line that repeats text the cell already shows', async () => {
+    const columns = [
+      {
+        id: 'description',
+        header: 'Description',
+        value: { type: 'path', path: 'description' },
+        lines: [
+          {
+            id: 'item-description',
+            value: { type: 'path', path: 'description' },
+            style: { inline: { fontWeight: 600 } },
+          },
+          {
+            id: 'catalog-description',
+            value: { type: 'path', path: 'catalog_description' },
+            style: { inline: { color: '#4b5563' } },
+          },
+        ],
+      },
+    ];
+
+    const repeated = await renderAst(columns, [
+      { description: ' Managed Support ', catalog_description: 'Managed Support' },
+    ]);
+    expect((repeated.html.match(/Managed Support/g) ?? []).length).toBe(1);
+
+    const distinct = await renderAst(columns, [
+      { description: 'Managed Support', catalog_description: 'Full-service support' },
+    ]);
+    expect(distinct.html).toContain('<div class="ast-table-cell-line" style="font-weight:600">Managed Support</div>');
+    expect(distinct.html).toContain('<div class="ast-table-cell-line" style="color:#4b5563">Full-service support</div>');
+  });
+
   it('renders the plain value exactly as before when a column has no lines', async () => {
     const rendered = await renderAst(
       [
@@ -1614,5 +1680,27 @@ describe('titled sections with nothing to head', () => {
     expect(rendered.css).toContain('section > h2 { break-after: avoid; }');
     expect(rendered.css).toContain('section > h2 + * { break-before: avoid; }');
     expect(rendered.css).toContain('#signature-block { break-inside: avoid; }');
+  });
+
+  it('drops blank text lines from column stacks (no gap for an empty line) but keeps them in rows', async () => {
+    const line = (id: string) => ({ id, type: 'text', content: { type: 'binding', bindingId: id } }) as const;
+    const ast = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'col', type: 'stack', direction: 'column', children: [line('filled'), line('blank'), line('spaces')] },
+        { id: 'row', type: 'stack', direction: 'row', children: [line('rowBlank'), line('rowFilled')] },
+      ] },
+    } as unknown as TemplateAst;
+    const evaluation = {
+      bindings: { filled: 'Shown', blank: null, spaces: '  ', rowBlank: '', rowFilled: 'Right' },
+      rows: {}, aggregates: {},
+    } as unknown as TemplateEvaluationResult;
+    const { html } = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(html).toContain('id="filled"');
+    expect(html).not.toContain('id="blank"');
+    expect(html).not.toContain('id="spaces"');
+    expect(html).toContain('id="rowBlank"');
+    expect(html).toContain('id="rowFilled"');
   });
 });

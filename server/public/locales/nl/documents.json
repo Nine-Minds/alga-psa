@@ -14,6 +14,7 @@
       "semiAnnually": "Halfjaarlijks"
     },
     "cadenceTotal": "Totaal {{cadence}}",
+    "currency": "Valuta",
     "date": "Datum",
     "description": "Omschrijving",
     "discounts": "Kortingen",
@@ -28,6 +29,7 @@
     "invoiceTitle": "FACTUUR",
     "issueDate": "Factuurdatum",
     "locationSubtotal": "Subtotaal locatie",
+    "unassignedLocation": "Hele offerte",
     "monthly": "Maandelijks",
     "monthlyItems": "Maandelijkse regels",
     "monthlyTotal": "Maandtotaal",
@@ -55,11 +57,26 @@
     "product": "Product",
     "projectPhase": "Projectfase",
     "qty": "Aantal",
+    "quoteAcceptance": {
+      "title": "Offerte geaccepteerd",
+      "signedBy": "Ondertekend door",
+      "email": "E-mail",
+      "jobTitle": "Functie",
+      "acceptedOn": "Geaccepteerd op",
+      "method": "Methode",
+      "ipAddress": "IP-adres",
+      "methods": {
+        "emailLink": "Link per e-mail",
+        "portal": "Klantenportaal",
+        "msp": "Vastgelegd door MSP"
+      }
+    },
     "quoteNumber": "Offertenr.",
     "quoteTitle": "OFFERTE",
     "rate": "Tarief",
     "recurring": "Terugkerend",
     "service": "Dienst",
+    "servicePeriod": "Serviceperiode",
     "shipDate": "Verzenddatum",
     "shipTo": "Afleveradres",
     "shipped": "Verzonden",
@@ -67,6 +84,7 @@
     "sku": "SKU",
     "source": "Bron",
     "subtotal": "Subtotaal",
+    "subtotalBeforeDiscounts": "Subtotaal vóór kortingen",
     "tax": "Belasting",
     "termsAndConditions": "Algemene voorwaarden",
     "ticket": "Ticket",
@@ -83,16 +101,47 @@
       "noLineItems": "Geen regels",
       "noMonthlyItems": "Geen maandelijkse regels",
       "noOneTimeItems": "Geen eenmalige regels",
-      "noPhasesDefined": "Geen fasen gedefinieerd"
+      "noPhasesDefined": "Geen fasen gedefinieerd",
+      "noItemsInBox": "Deze doos is leeg"
     },
     "note": {
       "billedTimePortalDetail": "Neem contact op met uw dienstverlener voor een specificatie van de gefactureerde tijd.",
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
-      "thankYouForOrder": "Bedankt voor uw order."
+      "thankYouForOrder": "Bedankt voor uw order.",
+      "checkedBy": "Gecontroleerd door: ____________________     Datum: ____________",
+      "releasedBy": "Vrijgegeven door: ____________________     Handtekening: ____________________     Datum: ____________"
     },
     "serialNumbers": "Serienummers",
-    "allocatedSerialsNote": "Toegewezen serienummers; kunnen bij uitvoering wijzigen."
+    "allocatedSerialsNote": "Toegewezen serienummers; kunnen bij uitvoering wijzigen.",
+    "stagingManifestTitle": "PAKLIJST",
+    "boxNumber": "Doos nr.",
+    "project": "Project",
+    "client": "Klant",
+    "task": "Taak",
+    "status": "Status",
+    "sealedOn": "Verzegeld",
+    "sealedBy": "Verzegeld door",
+    "location": "Locatie",
+    "checked": "Gecontroleerd",
+    "item": "Artikel",
+    "skuOrTag": "SKU / label",
+    "serialNumber": "Serienummer",
+    "owner": "Eigenaar",
+    "ownerMsp": "MSP",
+    "ownerClient": "Klant",
+    "statusOpen": "Open",
+    "statusSealed": "Verzegeld",
+    "rmaReturnSlipTitle": "RMA-RETOURBON",
+    "device": "Apparaat",
+    "vendor": "Leverancier",
+    "vendorReference": "Leveranciersreferentie",
+    "asset": "Asset",
+    "assetTag": "Assettag",
+    "replacementSerial": "Serienummer vervanging",
+    "shipping": "Verzending",
+    "returnBy": "Retour vóór",
+    "returnShipTo": "Retour verzenden naar"
   },
   "errors": {
     "permissions": {
@@ -131,6 +180,7 @@
     "upload": {
       "fileRequired": "Kies een bestand voordat u uploadt.",
       "typeNotAllowed": "Dit bestandstype is niet toegestaan.",
+      "contentMismatch": "De inhoud van dit bestand komt niet overeen met het bestandstype, dus het is niet geüpload. Controleer of u het juiste bestand hebt gekozen.",
       "sessionRequired": "Uw sessie is vereist om documenten te uploaden. Meld u opnieuw aan."
     }
   },

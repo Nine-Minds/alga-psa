@@ -427,5 +427,12 @@
       "loading": "Loading…",
       "loadMore": "Load more"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Account management and billing features are available in Pro for hosted deployments.",
+    "selfHostedDescription": "Self-hosted Community Edition has unlimited users with no license restrictions or billing."
+  },
+  "page": {
+    "title": "Account Management"
   }
 }

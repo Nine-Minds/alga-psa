@@ -34,6 +34,22 @@ vi.mock('../../../../../packages/clients/src/lib/billingHelpers.ts', () => ({
   cloneTemplateContractLineAsync: (...args: any[]) => cloneTemplateContractLineAsync(...args),
 }));
 
+// addClientContractLine now resolves the template's amounts in the target
+// contract's currency before it mints the new line id. These tests assert the
+// line identity, not the money, so resolve to an empty base set rather than
+// teaching the fake trx below about the template amount tables.
+vi.mock('@alga-psa/shared/billingClients/templateAmounts', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveTemplateAmountsForContract: vi.fn(async () => ({
+    source: 'base',
+    template_currency: 'USD',
+    target_currency: 'USD',
+    price_set_currencies: [],
+    slots: [],
+    amountBySlot: new Map(),
+  })),
+}));
+
 function createAddClientContractLineTrx(options?: { templateContractId?: string | null }) {
   const createdLine = { contract_line_id: 'generated-line-id' };
   const templateLine = {

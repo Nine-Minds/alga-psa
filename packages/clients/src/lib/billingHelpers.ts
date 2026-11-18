@@ -3,8 +3,11 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
+import type { ResolvedTemplateAmounts } from '@alga-psa/shared/billingClients/templateAmounts';
 import { withAuth, withAuthCheck } from '@alga-psa/auth';
-import { hasPermission } from '@alga-psa/auth/rbac';import {
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
+import {
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
   getPrepaidReplenishmentContractOverridesDb,
@@ -111,6 +114,8 @@ export async function cloneTemplateContractLineAsync(
     templateContractId?: string | null;
     overrideRate?: number | null;
     effectiveDate?: string | null;
+    /** The template's amounts resolved for the target contract's currency. */
+    amounts: ResolvedTemplateAmounts;
   }
 ): Promise<{ appliedCustomRate: number | null }> {
   return cloneTemplateContractLine(trx, options);
@@ -346,12 +351,13 @@ export const getServiceCategoriesAsync = withAuth(async (
 });
 
 export const getServicesAsync = withAuth(async (
-  _user,
+  user,
   { tenant },
   page: number = 1,
   pageSize: number = 999,
   options: ServiceListOptions = {}
 ): Promise<PaginatedServicesResponse> => {
+  await assertCommercialReadPermission(user);
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -2032,7 +2032,7 @@
     {
       "term": "bucket",
       "preferred": "pacchetto ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Residuo inglese non tradotto per i pacchetti di ore prepagate."
     },
     {
@@ -2146,13 +2146,13 @@
     {
       "term": "secchi",
       "preferred": "pacchetti ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plurale della traduzione letterale del bucket."
     },
     {
       "term": "secchio",
       "preferred": "pacchetto ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Traduzione letterale del bucket di ore prepagate; il termine di listino è pacchetto ore."
     },
     {
@@ -2207,6 +2207,12 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Layout",
+      "1 asset",
+      "Offline",
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "AI",
       "API",
       "Account",
@@ -2220,6 +2226,7 @@
       "App Store (iOS)",
       "Asia",
       "Asset",
+      "Audit",
       "Australia",
       "Authorization: Bearer abc123\nX-Source: alga-psa",
       "Budget",
@@ -2234,6 +2241,7 @@
       "Dashboard",
       "Dashboard | AlgaPSA",
       "Datto",
+      "Datto RMM",
       "Email",
       "Email:",
       "Entra ID",
@@ -2250,6 +2258,7 @@
       "HMAC-SHA256",
       "HTML",
       "Hardware",
+      "Host",
       "Hudu",
       "Huntress",
       "Hypervisor",
@@ -2315,6 +2324,7 @@
       "Test",
       "Ticket",
       "Trigger",
+      "Trigger:",
       "Try/Catch",
       "URL",
       "UUID",
@@ -2359,7 +2369,20 @@
       "Volume",
       "Auto",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "{{size}} GB",
+      "Code 128",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}",
+      "Markdown",
+      "ticket",
+      "Firmware",
+      "No",
+      "team",
+      "{{actor}} • {{eventType}}",
+      "Standard",
+      "Ticket {{number}}"
     ],
     "caseInsensitive": [
       "account",

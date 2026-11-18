@@ -13,8 +13,10 @@ import type { Knex } from 'knex';
 import type { IContract, IContractWithClient, IContractLine } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { lockTenantBilling } from '@alga-psa/shared/billingClients/billingMutationLock';
 import {
   deriveClientContractStatus,
+  getTenantLocalToday,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
 
@@ -174,6 +176,7 @@ const Contract = {
         .pluck('contract_line_id');
 
       if (contractLineIds.length > 0) {
+        await lockTenantBilling(knexOrTrx as Knex.Transaction, tenant);
         await contractTable(knexOrTrx, tenant, 'recurring_service_periods')
           .whereIn('obligation_id', contractLineIds)
           .delete();
@@ -345,8 +348,10 @@ const Contract = {
         )
         .orderBy('cc.created_at', 'desc');
 
+      const tenantToday = await getTenantLocalToday(knexOrTrx, tenant);
       return rows.map((row: any) => {
         const assignmentStatus = deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.assignment_is_active),
           startDate: row.start_date,
           endDate: row.end_date,

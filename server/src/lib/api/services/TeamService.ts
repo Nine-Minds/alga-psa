@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { NotFoundError, ValidationError, ConflictError, BadRequestError } from '../middleware/apiMiddleware';
 
@@ -98,7 +98,7 @@ export class TeamService extends BaseService<ITeam> {
       tableName: 'teams',
       primaryKey: 'team_id',
       tenantColumn: 'tenant',
-      searchableFields: ['team_name'],
+      searchableFields: ['team_name', 'description'],
       defaultSort: 'team_name',
       defaultOrder: 'asc'
     });
@@ -357,6 +357,9 @@ export class TeamService extends BaseService<ITeam> {
           }
         }
   
+        // A live seat technician joins no MSP team.
+        await assertSeatTechnicianWrite(trx, context.tenant, [data.manager_id, ...(data.members ?? []).map(m => m.user_id)], { teamMembership: true });
+
         // Validate team size if members provided
         if (data.members && !validateTeamSize(data.members.length)) {
           throw new ValidationError('Team size exceeds maximum allowed members');
@@ -366,6 +369,7 @@ export class TeamService extends BaseService<ITeam> {
         const teamData = {
           team_id: uuid4(),
           team_name: data.team_name,
+          description: data.description ?? null,
           manager_id: data.manager_id || null,
           tenant: context.tenant,
           created_at: new Date(),
@@ -434,6 +438,8 @@ export class TeamService extends BaseService<ITeam> {
       }
 
       // Validate manager if changing
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, [data.manager_id], { teamMembership: true });
       if (data.manager_id !== undefined) {
         if (data.manager_id) {
           const manager = await tenantDb(trx, context.tenant).table('users')
@@ -538,6 +544,9 @@ export class TeamService extends BaseService<ITeam> {
         throw new BadRequestError('User not found or inactive');
       }
 
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { teamMembership: true });
+
       // Check if user is already a member
       const existingMember = await tenantDb(trx, context.tenant).table('team_members')
         .where({ team_id: teamId, user_id: userId })
@@ -636,6 +645,9 @@ export class TeamService extends BaseService<ITeam> {
 
       // Managers can be team members, so no need to check this restriction
 
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, userIds, { teamMembership: true });
+
       // Check for existing members
       const existingMembers = await tenantDb(trx, context.tenant).table('team_members')
         .whereIn('user_id', userIds)
@@ -725,6 +737,9 @@ export class TeamService extends BaseService<ITeam> {
       if (!manager) {
         throw new NotFoundError('Manager not found or inactive');
       }
+
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, [managerId], { teamMembership: true });
 
       // Check if manager is currently a team member
       const isCurrentMember = await tenantDb(trx, context.tenant).table('team_members')
@@ -1496,6 +1511,9 @@ export class TeamService extends BaseService<ITeam> {
         case 'team_name':
           query.whereILike('t.team_name', `%${value}%`);
           break;
+        case 'description':
+          query.whereILike('t.description', `%${value}%`);
+          break;
         case 'manager_id':
           query.where('t.manager_id', value);
           break;
@@ -1524,6 +1542,7 @@ export class TeamService extends BaseService<ITeam> {
         case 'search':
           query.where(function() {
             this.whereILike('t.team_name', `%${value}%`);
+            this.orWhereILike('t.description', `%${value}%`);
             // Only search in manager name if the manager table is joined
             if (hasManagerJoin) {
               this.orWhereRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ILIKE ?`, [`%${value}%`]);
@@ -1698,6 +1717,9 @@ export class TeamService extends BaseService<ITeam> {
         throw new BadRequestError('User not found or inactive');
       }
 
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, [data.user_id], { teamMembership: true });
+
       // Check if user is already a member
       const existingMember = await tenantDb(trx, context.tenant).table('team_members')
         .where({
@@ -1810,6 +1832,9 @@ export class TeamService extends BaseService<ITeam> {
           already_members: data.user_ids
         };
       }
+
+      // A live seat technician joins no MSP team.
+      await assertSeatTechnicianWrite(trx, context.tenant, newUserIds, { teamMembership: true });
 
       // Add new members
       const membersToAdd = newUserIds.map(userId => ({

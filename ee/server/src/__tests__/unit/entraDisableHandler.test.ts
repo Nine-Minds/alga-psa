@@ -9,6 +9,12 @@ vi.mock('@/lib/db', () => ({
   runWithTenant: runWithTenantMock,
 }));
 
+// trackContactUpdates reads each contact before and after the mutation through the model.
+const getContactByIdMock = vi.fn();
+vi.mock('@alga-psa/shared/models/contactModel', () => ({
+  ContactModel: { getContactById: getContactByIdMock },
+}));
+
 function buildDbMocks() {
   const linksSelectMock = vi.fn(async () => [{ contact_name_id: 'contact-103' }]);
   const contactsUpdateMock = vi.fn(async () => 1);
@@ -76,6 +82,10 @@ describe('disableHandler', () => {
     vi.resetModules();
     createTenantKnexMock.mockReset();
     runWithTenantMock.mockReset();
+    getContactByIdMock.mockReset();
+    getContactByIdMock
+      .mockResolvedValueOnce({ contact_name_id: 'contact-103', client_id: 'client-1', is_inactive: false })
+      .mockResolvedValue({ contact_name_id: 'contact-103', client_id: 'client-1', is_inactive: true });
     runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
   });
 

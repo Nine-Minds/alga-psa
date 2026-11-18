@@ -140,7 +140,8 @@ export const getAllSessionsAction = withAuth(async (currentUser, { tenant }): Pr
     // Ensure required fields have defaults if user is deleted
     user_name: sess.user_name || 'Unknown User',
     user_email: sess.user_email || 'unknown@example.com',
-    user_type: sess.user_type || 'internal'
+    // A missing user row (deleted user) has no known type; never guess one.
+    user_type: sess.user_type || 'unknown'
   }));
 
   return {

@@ -427,5 +427,12 @@
       "loading": "Carregando…",
       "loadMore": "Carregar mais"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Os recursos de gerenciamento de conta e faturamento estão disponíveis no Pro para implantações hospedadas.",
+    "selfHostedDescription": "A Community Edition auto-hospedada permite usuários ilimitados, sem restrições de licença ou faturamento."
+  },
+  "page": {
+    "title": "Gerenciamento da conta"
   }
 }

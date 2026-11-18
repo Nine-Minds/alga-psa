@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface BreadcrumbItem {
   /** Text or node displayed for this breadcrumb segment. */
@@ -43,8 +44,9 @@ const lastItemStyle: React.CSSProperties = {
 
 /** Horizontal breadcrumb navigation trail. */
 export function Breadcrumbs({ items, separator = '/', style }: BreadcrumbsProps) {
+  const { t } = useTranslation('common');
   return (
-    <nav aria-label="Breadcrumb" style={style}>
+    <nav aria-label={t('breadcrumbs.ariaLabel')} style={style}>
       <ol style={olStyle}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

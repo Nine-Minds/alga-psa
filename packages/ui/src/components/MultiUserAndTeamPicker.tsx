@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { FocusScope } from '@radix-ui/react-focus-scope';
 import UserAvatar from './UserAvatar';
 import type { IUser } from '@alga-psa/types';
 import { ChevronDown, X, Search, UserMinus } from 'lucide-react';
@@ -14,6 +15,17 @@ import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
+
+/**
+ * A caller-supplied pseudo-option pinned above the user list (next to "Unassigned"). Its `value` lives in
+ * the picker's `values` alongside user ids; the picker attaches no meaning to it.
+ */
+export interface MultiUserAndTeamPickerPinnedOption {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+}
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -34,6 +46,8 @@ interface MultiUserAndTeamPickerProps {
   filterMode?: boolean;
   includeUnassigned?: boolean;
   onUnassignedChange?: (value: boolean) => void;
+  /** Pseudo-options pinned with "Unassigned" (filter mode). Their values are kept in `values`, never filtered by search or cleaned as stale. */
+  pinnedOptions?: MultiUserAndTeamPickerPinnedOption[];
   /**
    * Show a type-ahead filter at the top of the list. Defaults to on for lists longer than a
    * screenful, so long lists are never scroll-only.
@@ -69,6 +83,7 @@ const MultiUserAndTeamPicker = ({
   filterMode = false,
   includeUnassigned = false,
   onUnassignedChange,
+  pinnedOptions,
   showSearch: showSearchProp,
   compactDisplay = false,
   teams = [],
@@ -106,7 +121,9 @@ const MultiUserAndTeamPicker = ({
 
   // Filter out stale/invalid values that don't match any internal user
   // This handles cases where values contain IDs of inactive/external users from URL or saved state
-  const validValues = values.filter(id => internalUserIds.has(id));
+  const pinnedOptionList = filterMode ? (pinnedOptions ?? []) : [];
+  const pinnedValues = new Set(pinnedOptionList.map(option => option.value));
+  const validValues = values.filter(id => internalUserIds.has(id) || pinnedValues.has(id));
   const teamIds = new Set(teams.map(team => team.team_id));
   const validTeamValues = teamValues.filter(id => teamIds.has(id));
 
@@ -192,11 +209,15 @@ const MultiUserAndTeamPicker = ({
     });
 
   const selectedUsers = internalUsers.filter(user => validValues.includes(user.user_id));
+  const selectedPinned = pinnedOptionList.filter(option => values.includes(option.value));
   const filteredTeams = teams
     .filter(team => {
       if (!searchQuery) return true;
+      const needle = searchQuery.toLowerCase();
       const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
+      return `${team.team_name || ''}`.toLowerCase().includes(needle)
+        || leadName.includes(needle)
+        || (team.description || '').toLowerCase().includes(needle);
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
   const selectedTeams = teams.filter(team => validTeamValues.includes(team.team_id));
@@ -287,6 +308,27 @@ const MultiUserAndTeamPicker = ({
     }
   }, [isOpen, showSearch]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the search
+  // box cannot stop them and the surrounding dialog closed too - taking any
+  // unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsOpen(false);
+      setSearchQuery('');
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
+
   // Update dropdown position
   const updateDropdownPosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -363,7 +405,7 @@ const MultiUserAndTeamPicker = ({
 
   // Render trigger content
   const renderTriggerContent = () => {
-    const hasSelection = selectedUsers.length > 0 || includeUnassigned || selectedTeams.length > 0;
+    const hasSelection = selectedPinned.length > 0 || selectedUsers.length > 0 || includeUnassigned || selectedTeams.length > 0;
 
     if (!hasSelection) {
       return <span className="text-gray-500">{loading ? t('pickers.loadingUsers', { defaultValue: 'Loading users...' }) : placeholder}</span>;
@@ -371,7 +413,17 @@ const MultiUserAndTeamPicker = ({
 
     // Compact display mode (for filters)
     if (compactDisplay) {
-      if (selectedUsers.length === 0 && selectedTeams.length === 0 && includeUnassigned) {
+      if (selectedPinned.length === 1 && selectedUsers.length === 0 && selectedTeams.length === 0 && !includeUnassigned) {
+        const option = selectedPinned[0];
+        return (
+          <div className="flex items-center gap-2">
+            {option.icon && <span className="flex items-center text-[rgb(var(--color-text-500))]">{option.icon}</span>}
+            <span className="truncate max-w-[120px]">{option.label}</span>
+          </div>
+        );
+      }
+
+      if (selectedPinned.length === 0 && selectedUsers.length === 0 && selectedTeams.length === 0 && includeUnassigned) {
         return (
           <div className="flex items-center gap-2">
             <UserMinus className="w-4 h-4 text-gray-500" />
@@ -380,7 +432,7 @@ const MultiUserAndTeamPicker = ({
         );
       }
 
-      if (selectedUsers.length === 1 && selectedTeams.length === 0 && !includeUnassigned) {
+      if (selectedPinned.length === 0 && selectedUsers.length === 1 && selectedTeams.length === 0 && !includeUnassigned) {
         const user = selectedUsers[0];
         return (
           <div className="flex items-center gap-2">
@@ -397,7 +449,7 @@ const MultiUserAndTeamPicker = ({
         );
       }
 
-      if (selectedUsers.length === 0 && selectedTeams.length === 1 && !includeUnassigned) {
+      if (selectedPinned.length === 0 && selectedUsers.length === 0 && selectedTeams.length === 1 && !includeUnassigned) {
         const team = selectedTeams[0];
         return (
           <div className="flex items-center gap-2">
@@ -415,14 +467,18 @@ const MultiUserAndTeamPicker = ({
       }
 
       // Multiple selections - compact
-      const firstUser = selectedUsers[0];
-      const firstTeam = selectedTeams[0];
-      const totalSelected = selectedUsers.length + selectedTeams.length + (includeUnassigned ? 1 : 0);
+      // First-item rule: a pinned option ranks before users, users before teams, teams before Unassigned.
+      const firstPinned = selectedPinned[0];
+      const firstUser = firstPinned ? undefined : selectedUsers[0];
+      const firstTeam = firstPinned || firstUser ? undefined : selectedTeams[0];
+      const totalSelected = selectedPinned.length + selectedUsers.length + selectedTeams.length + (includeUnassigned ? 1 : 0);
       const additionalCount = totalSelected > 0 ? totalSelected - 1 : 0;
 
       return (
         <div className="flex items-center gap-2">
-          {firstUser ? (
+          {firstPinned ? (
+            firstPinned.icon ? <span className="flex items-center text-[rgb(var(--color-text-500))]">{firstPinned.icon}</span> : null
+          ) : firstUser ? (
             <UserAvatar
               userId={firstUser.user_id}
               userName={`${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim()}
@@ -440,7 +496,9 @@ const MultiUserAndTeamPicker = ({
             <UserMinus className="w-4 h-4 text-gray-500" />
           )}
           <span className="text-sm">
-            {firstUser
+            {firstPinned
+              ? firstPinned.label
+              : firstUser
               ? `${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim().split(' ')[0]
               : firstTeam
                 ? (firstTeam.team_name || 'Team')
@@ -454,6 +512,31 @@ const MultiUserAndTeamPicker = ({
     // Standard pills display - allow wrapping, button expands to fit
     return (
       <div className="flex items-center gap-2 flex-wrap flex-1">
+        {selectedPinned.map((option): React.JSX.Element => (
+          <div
+            key={`pinned-${option.value}`}
+            className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-2 pr-2 py-1"
+          >
+            {option.icon && <span className="flex items-center text-[rgb(var(--color-text-500))] [&>svg]:w-3 [&>svg]:h-3">{option.icon}</span>}
+            <span className="text-sm">{option.label}</span>
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={option.label}
+              onClick={(e) => removeUser(option.value, e)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  removeUser(option.value);
+                }
+              }}
+              className="ml-1 p-0.5 hover:bg-[rgb(var(--color-border-300))] rounded-full cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </div>
+          </div>
+        ))}
         {includeUnassigned && (
           <div className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-2 pr-2 py-1">
             <UserMinus className="w-3 h-3 text-gray-500" />
@@ -567,6 +650,21 @@ const MultiUserAndTeamPicker = ({
   };
 
   const dropdownContent = (
+    // Portaled to document.body, so inside a modal dialog this sits outside that
+    // dialog's focus scope and its trap would steal every keystroke from the
+    // search box. A nested trapped scope pauses the dialog's, as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-50 pointer-events-auto"
@@ -598,6 +696,28 @@ const MultiUserAndTeamPicker = ({
             </div>
           </div>
         )}
+
+        {/* Pinned pseudo-options (filter mode only); deliberately not filtered by the search box */}
+        {pinnedOptionList.map((option): React.JSX.Element => {
+          const isSelected = values.includes(option.value);
+          return (
+            <div
+              key={`pinned-${option.value}`}
+              className="px-3 py-1.5 border-b border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)]"
+              onClick={() => handleUserToggle(option.value)}
+            >
+              <div onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  id={`${id ?? 'picker'}-pinned-${option.value}`}
+                  checked={isSelected}
+                  onChange={() => handleUserToggle(option.value)}
+                />
+              </div>
+              {option.icon && <span className="flex items-center text-[rgb(var(--color-text-400))] [&>svg]:w-4 [&>svg]:h-4">{option.icon}</span>}
+              <span className="text-sm">{option.label}</span>
+            </div>
+          );
+        })}
 
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
@@ -722,9 +842,14 @@ const MultiUserAndTeamPicker = ({
                           avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                           size="sm"
                         />
-                        <div className="ml-2 flex flex-col">
+                        <div className="ml-2 flex flex-col flex-1 min-w-0">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
+                          {team.description && (
+                            <span className="text-xs text-gray-500 truncate" title={team.description}>
+                              {truncateTeamDescription(team.description)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -750,6 +875,7 @@ const MultiUserAndTeamPicker = ({
         )}
       </div>
     </div>
+    </FocusScope>
   );
 
   return (

@@ -27,6 +27,7 @@ import {
   buildPaymentRecordedPayload,
   buildPaymentRefundedPayload,
 } from '../../../../lib/api/services/paymentWorkflowEvents';
+import { buildExternalPaymentRecordedPayload } from '../../../../../../packages/billing/src/lib/paymentRecordedEvent';
 import type { EmitterContracts } from '../registryTypes';
 import { NO_EMITTER_UMBRELLA_TICKET } from '../registryTypes';
 import { IDS, NOW, EARLIER } from '../fixtures';
@@ -42,6 +43,7 @@ import { IDS, NOW, EARLIER } from '../fixtures';
 
 const INVOICE_SERVICE = 'server/src/lib/api/services/InvoiceService.ts';
 const PAYMENT_SERVICE = 'ee/server/src/lib/payments/PaymentService.ts';
+const RECORD_EXTERNAL_PAYMENT = 'packages/billing/src/services/accountingSync/recordExternalPayment.ts';
 const AUTOPAY = 'ee/server/src/lib/payments/AutopayService.ts';
 const BILLING = 'packages/billing/src/actions';
 const CLIENT_CONTRACTS = 'packages/clients/src/actions/clientContractActions.ts';
@@ -255,6 +257,7 @@ export const billingContracts = {
             method: 'check',
             receivedByUserId: IDS.user,
             gatewayTransactionId: 'CHK-1042',
+            source: 'manual',
           }),
       },
       {
@@ -269,6 +272,22 @@ export const billingContracts = {
             currency: 'USD',
             method: 'stripe',
             gatewayTransactionId: 'pi_3Nabc',
+            source: 'online_payment',
+          }),
+      },
+      {
+        site: `${RECORD_EXTERNAL_PAYMENT}#recordExternalPayment`,
+        ctx: { ...system, occurredAt: NOW },
+        build: () =>
+          buildExternalPaymentRecordedPayload({
+            paymentId: IDS.payment,
+            clientId: IDS.client,
+            receivedAt: NOW,
+            amount: 500,
+            currency: 'USD',
+            method: 'stripe',
+            gatewayTransactionId: 'pi_3Nabc',
+            source: 'online_payment',
           }),
       },
     ],

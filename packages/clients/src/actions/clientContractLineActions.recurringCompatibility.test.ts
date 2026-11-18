@@ -25,6 +25,22 @@ vi.mock('../lib/billingHelpers', () => ({
   cloneTemplateContractLineAsync: (...args: any[]) => cloneTemplateContractLineAsyncMock(...args),
 }));
 
+// addClientContractLine now resolves the template's amounts in the target
+// contract's currency before it builds the new line. This test is about the
+// recurring fields, not the money, so resolve to an empty base set and leave
+// the amount tables out of the fake trx below.
+vi.mock('@alga-psa/shared/billingClients/templateAmounts', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveTemplateAmountsForContract: vi.fn(async () => ({
+    source: 'base',
+    template_currency: 'USD',
+    target_currency: 'USD',
+    price_set_currencies: [],
+    slots: [],
+    amountBySlot: new Map(),
+  })),
+}));
+
 vi.mock('../lib/authHelpers', () => ({
   assertMspPermission: vi.fn(async () => {}),
   hasMspPermission: vi.fn(async () => true),

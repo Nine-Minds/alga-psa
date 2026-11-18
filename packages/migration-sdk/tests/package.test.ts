@@ -320,3 +320,106 @@ describe('AMP validator attacks', () => {
     ).toBe(true);
   });
 });
+
+describe('AMP products and vendor_products entities', () => {
+  const baseIds = {
+    source_record_id: 's',
+    external_identifier_namespace: 'ns',
+  };
+
+  function build(rows: Record<string, unknown[]>): ReturnType<typeof validateAmpPackage> {
+    const path = nextPath();
+    new AmpPackageBuilder(path).write(sampleManifest(), rows as never);
+    return validateAmpPackage(path);
+  }
+
+  it('includes both tables in the entity allowlist and validates the sample', () => {
+    expect(AMP_ENTITY_TABLES).toContain('products');
+    expect(AMP_ENTITY_TABLES).toContain('vendor_products');
+    const path = nextPath();
+    buildSamplePackage(path);
+    const result = validateAmpPackage(path);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.rowCounts.products).toBe(1);
+    expect(result.rowCounts.vendor_products).toBe(1);
+  });
+
+  it('rejects extra columns on products', () => {
+    const builder = new AmpPackageBuilder(nextPath());
+    expect(() =>
+      builder.write(sampleManifest(), {
+        products: [{ package_record_id: 'p', ...baseIds, name: 'x', surprise: 1 } as never],
+      })
+    ).toThrow(/not allowlisted/);
+  });
+
+  it('rejects a products table with a missing column', () => {
+    const path = nextPath();
+    buildSamplePackage(path);
+    const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as {
+      DatabaseSync: new (p: string) => { exec(sql: string): void; close(): void };
+    };
+    const db = new DatabaseSync(path);
+    db.exec('ALTER TABLE vendor_products DROP COLUMN lead_time_days');
+    db.close();
+    const result = validateAmpPackage(path);
+    expect(result.valid).toBe(false);
+    expect(result.diagnostics.some((d) => d.code === 'AMP_SCHEMA_MISMATCH' && d.table === 'vendor_products')).toBe(true);
+  });
+
+  it('requires a product name and a vendor name', () => {
+    const result = build({
+      products: [{ package_record_id: 'p', ...baseIds, name: '' }],
+      vendor_products: [{ package_record_id: 'v', ...baseIds, product_sku: 'A', vendor_name: '' }],
+    });
+    const fields = result.diagnostics.map((d) => `${d.table}.${d.field}`);
+    expect(fields).toContain('products.name');
+    expect(fields).toContain('vendor_products.vendor_name');
+  });
+
+  it('rejects negative, fractional and out-of-range numeric values', () => {
+    const result = build({
+      products: [
+        { package_record_id: 'p', ...baseIds, name: 'x', price_minor: -1, cost_minor: 1.5, is_active: 2 },
+      ],
+      vendor_products: [
+        { package_record_id: 'v', ...baseIds, product_sku: 'A', vendor_name: 'V', unit_cost_minor: -5, lead_time_days: 99999, is_preferred: 7 },
+      ],
+    });
+    const fields = result.diagnostics.map((d) => `${d.table}.${d.field}`);
+    for (const expected of [
+      'products.price_minor',
+      'products.cost_minor',
+      'products.is_active',
+      'vendor_products.unit_cost_minor',
+      'vendor_products.lead_time_days',
+      'vendor_products.is_preferred',
+    ]) {
+      expect(fields).toContain(expected);
+    }
+  });
+
+  it('rejects malformed currency codes', () => {
+    const result = build({
+      products: [{ package_record_id: 'p', ...baseIds, name: 'x', price_minor: 1, price_currency: 'usd' }],
+    });
+    expect(result.diagnostics.some((d) => d.field === 'price_currency')).toBe(true);
+  });
+
+  it('requires a product reference or product_sku on vendor_products', () => {
+    const result = build({
+      vendor_products: [{ package_record_id: 'v', ...baseIds, vendor_name: 'V' }],
+    });
+    expect(result.diagnostics.some((d) => d.table === 'vendor_products' && d.field === 'product_package_record_id')).toBe(true);
+  });
+
+  it('accepts product_sku alone and rejects a dangling product reference', () => {
+    expect(
+      build({ vendor_products: [{ package_record_id: 'v', ...baseIds, product_sku: 'A', vendor_name: 'V' }] }).diagnostics
+    ).toEqual([]);
+    const dangling = build({
+      vendor_products: [{ package_record_id: 'v', ...baseIds, product_package_record_id: 'nope', vendor_name: 'V' }],
+    });
+    expect(dangling.diagnostics.some((d) => d.code === 'AMP_INVALID_REFERENCE')).toBe(true);
+  });
+});

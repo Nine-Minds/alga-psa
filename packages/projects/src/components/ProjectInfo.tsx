@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
+import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { Download, Edit2, Mail, Printer, Save, Settings2 } from 'lucide-react';
+import { projectScreenOffers } from '../lib/projectSurface';
+import { Download, Edit2, Mail, Package, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
@@ -22,6 +23,7 @@ import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface ProjectBilledSummary {
   invoicedCents: number;
@@ -39,7 +41,6 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  clients: IClient[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
@@ -53,6 +54,8 @@ interface ProjectInfoProps {
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  /** Hide project-level editing (assigned user, contact, edit drawer, tags). Defaults to the screen's setting. */
+  freezeProjectEdit?: boolean;
 }
 
 export default function ProjectInfo({
@@ -61,17 +64,25 @@ export default function ProjectInfo({
   contact,
   assignedUser,
   users,
-  clients,
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
   onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
-  onTagsChange
+  onTagsChange,
+  freezeProjectEdit = false
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const billingIntegration = useProjectBillingIntegration();
+  const projectSource = useProjectDataSource();
+  const sharedMode = projectSource.kind !== 'native';
+  // Project management (edit, template, export, status update, materials, staging) is closed to a viewer who works
+  // tasks but does not run the project (a seat technician); a screen that closes nothing offers all of it, as before.
+  const manageOffered = !sharedMode && projectScreenOffers(projectSource.screen, 'project_manage');
+  const materialsOffered = projectScreenOffers(projectSource.screen, 'project_materials');
+  const projectFrozen = freezeProjectEdit || projectSource.screen.freezeProjectEdit;
+  const backHref = projectSource.screen.backHref;
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
   const selectedTaskCount = selectedTaskIds.size;
@@ -90,7 +101,10 @@ export default function ProjectInfo({
   const [billedSummary, setBilledSummary] = useState<ProjectBilledSummary | null>(null);
 
   useEffect(() => {
+    if (sharedMode) return;
     let stale = false;
+    // The billed summary is project billing: not fetched where the screen closes it (the action refuses it anyway).
+    const billingOffered = projectScreenOffers(projectSource.screen, 'project_billing');
     // Fetch project metrics and the ambient billing summary concurrently so the
     // billed bar (F135) extends the existing metadata load rather than adding a
     // second waterfall. The overview action enforces billing:read and throws for
@@ -98,7 +112,7 @@ export default function ProjectInfo({
     const fetchProjectMetrics = async () => {
       const [metricsResult, billingResult] = await Promise.allSettled([
         calculateProjectCompletion(project.project_id),
-        billingIntegration
+        billingIntegration && billingOffered
           ? billingIntegration.fetchOverview(project.project_id)
           : Promise.resolve(null),
       ]);
@@ -106,9 +120,10 @@ export default function ProjectInfo({
 
       if (metricsResult.status === 'fulfilled') {
         const metrics = metricsResult.value;
-        setProjectMetrics({
+        // The budget section renders only with a budget: a seat technician's metrics carry none (the keys are absent).
+        setProjectMetrics(metrics.budgetedHours === undefined ? null : {
           taskCompletionPercentage: metrics.taskCompletionPercentage,
-          hoursCompletionPercentage: metrics.hoursCompletionPercentage,
+          hoursCompletionPercentage: metrics.hoursCompletionPercentage || 0,
           budgetedHours: metrics.budgetedHours || 0,
           spentHours: metrics.spentHours || 0,
           remainingHours: metrics.remainingHours || 0
@@ -139,7 +154,7 @@ export default function ProjectInfo({
 
     fetchProjectMetrics();
     return () => { stale = true; };
-  }, [project.project_id, billingIntegration]);
+  }, [project.project_id, billingIntegration, sharedMode]);
 
   useEffect(() => {
     setCurrentProject(project);
@@ -149,7 +164,6 @@ export default function ProjectInfo({
     openDrawer(
       <ProjectDetailsEdit
         initialProject={currentProject}
-        clients={clients}
         onSave={(updatedProject) => {
           setCurrentProject(updatedProject);
           if (onProjectUpdate) {
@@ -192,7 +206,11 @@ export default function ProjectInfo({
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
-          <BackNav href="/msp/projects">{t('backToProjects', '← Back to Projects')}</BackNav>
+          {sharedMode ? (
+            backHref ? <BackNav href={backHref}>{t('backToSharedTasks', '← Back to Shared Tasks')}</BackNav> : null
+          ) : (
+            <BackNav href="/msp/projects">{t('backToProjects', '← Back to Projects')}</BackNav>
+          )}
 
           {/* Project number */}
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -201,7 +219,7 @@ export default function ProjectInfo({
 
           <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
           {/* Tags using TagManager for inline editing */}
-          {onTagsChange && (
+          {onTagsChange && !projectFrozen && !sharedMode && (
             <TagManager
               entityId={project.project_id}
               entityType="project"
@@ -211,6 +229,7 @@ export default function ProjectInfo({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {manageOffered && (<>
           <Button
             id="save-as-template-button"
             variant="outline"
@@ -241,13 +260,24 @@ export default function ProjectInfo({
             {t('statusUpdate.button', 'Send status update')}
           </Button>
           <ProjectTasksShareMenu />
-          <Button
+          {materialsOffered && <Button
             id="project-materials-button"
             variant="outline"
             size="sm"
             onClick={handleMaterialsClick}
           >
             {t('projectInfo.materials', 'Materials')}
+          </Button>}
+          <Button
+            id="project-staging-button"
+            variant="outline"
+            size="sm"
+            asChild
+          >
+            <a href={`/msp/projects/${project.project_id}/staging`}>
+              <Package className="h-4 w-4 mr-2" />
+              {t('projectInfo.staging', 'Staging')}
+            </a>
           </Button>
           <Button
             id="edit-project-button"
@@ -258,6 +288,7 @@ export default function ProjectInfo({
             <Edit2 className="h-4 w-4 mr-2" />
             {t('common:actions.edit', 'Edit')}
           </Button>
+          </>)}
         </div>
       </div>
       

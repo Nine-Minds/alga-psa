@@ -53,3 +53,30 @@ test('actual git diffs preserve both sides of moves and recover conservatively f
   }
   assert.equal(readChangedFiles({ cwd, base, head: 'missing-head' }), null);
 });
+
+test('shallow checkouts fetch only the missing base commit instead of reporting unknown evidence', (t) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'integration-selection-shallow-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const origin = path.join(root, 'origin');
+  const clone = path.join(root, 'clone');
+  mkdirSync(origin);
+  const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  git(origin, 'init', '-q');
+  git(origin, 'config', 'user.name', 'CI fixture');
+  git(origin, 'config', 'user.email', 'fixture@example.invalid');
+  git(origin, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
+  writeFileSync(path.join(origin, 'README.md'), 'Initial\n');
+  git(origin, 'add', '.'); git(origin, 'commit', '-qm', 'initial');
+  const base = git(origin, 'rev-parse', 'HEAD');
+  writeFileSync(path.join(origin, 'notes.md'), 'Docs only\n');
+  git(origin, 'add', '.'); git(origin, 'commit', '-qm', 'docs');
+  git(root, 'clone', '-q', '--depth=1', `file://${origin}`, clone);
+  assert.throws(() => git(clone, 'cat-file', '-e', `${base}^{commit}`));
+
+  const changed = readChangedFiles({ cwd: clone, base });
+  assert.deepEqual(changed, ['notes.md']);
+  assert.equal(selectIntegration(changed).shouldRun, false);
+  // Option-shaped and unknown revisions are never handed to fetch.
+  assert.equal(readChangedFiles({ cwd: clone, base: '--upload-pack=false' }), null);
+  assert.equal(readChangedFiles({ cwd: clone, base: 'f'.repeat(40) }), null);
+});

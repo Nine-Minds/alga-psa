@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
@@ -315,7 +316,21 @@
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
     "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
-    "recurringTickets": "Recurring tickets"
+    "recurringTickets": "Recurring tickets",
+    "software": "Software",
+    "checklistsTab": "Checklists",
+    "checklists": {
+      "name": "Name",
+      "items": "Items",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "description": "Checklist templates that are only offered on this client's tickets. Edit them in Settings > Ticketing > Checklist Templates.",
+      "empty": "No client-specific checklist templates.",
+      "loadFailed": "Failed to load checklist templates",
+      "retry": "Retry"
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -328,7 +343,8 @@
       "people": "People",
       "record": "Client record",
       "service": "Service",
-      "timeline": "Everything, in order"
+      "timeline": "Everything, in order",
+      "software": "Software"
     },
     "csatEmpty": "No survey responses yet.",
     "discardCancel": "Keep editing",
@@ -368,14 +384,23 @@
       "warrantyExpired_other": "{{count}} out of warranty",
       "warrantyExpiring_one": "1 expiring ≤90d",
       "warrantyExpiring_other": "{{count}} expiring ≤90d",
-      "warrantyTracked": " (of {{count}} tracked)"
+      "warrantyTracked": " (of {{count}} tracked)",
+      "auditsLink": "Site audits",
+      "lastAudit": "Last audit {{date}}",
+      "lastAuditMissing_one": "1 missing",
+      "lastAuditMissing_other": "{{count}} missing",
+      "neverAudited": "Never audited"
     },
     "locations": {
       "billing": "Billing",
+      "contactCount_one": "1 contact",
+      "contactCount_other": "{{count}} contacts",
       "manage": "Manage",
       "more": "+{{count}} more",
       "none": "No locations yet.",
-      "shipping": "Shipping"
+      "shipping": "Shipping",
+      "lastAudit": "Audited {{date}}",
+      "neverAudited": "Never audited"
     },
     "money": {
       "activeContracts": "Active contracts",
@@ -405,6 +430,12 @@
       "primary": "Primary"
     },
     "pulseError": "Could not load the client snapshot.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Contacts",
+      "label": "Quick links",
+      "software": "Software"
+    },
     "rail": {
       "close": "Close",
       "installBase": "Install base",
@@ -440,6 +471,13 @@
       "onTrackLeft": "SLA {{left}} left",
       "paused": "SLA paused"
     },
+    "software": {
+      "assetsMeta_one": "1 asset",
+      "assetsMeta_other": "{{count}} assets",
+      "loadError": "Could not load software inventory.",
+      "titles": "titles",
+      "viewAll": "All software"
+    },
     "timeline": {
       "daysAgo": "{{count}}d ago",
       "empty": "Nothing recorded yet for this client.",
@@ -464,7 +502,8 @@
       "ticketClosed": "Ticket closed",
       "ticketOpened": "Ticket opened",
       "unitDelivered": "Equipment delivered"
-    }
+    },
+    "discardFeatureMessage": "You have unsaved changes in this view. Close and discard them?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Lifecycle",
@@ -571,11 +610,6 @@
     "invoiceDeliveryMethod": "Invoice delivery method",
     "invoiceTemplate": "Invoice template",
     "invoiceTemplateHelp": "Select a template or use default",
-    "paymentTerms": {
-      "dueOnReceipt": "Due on Receipt",
-      "net15": "Net 15",
-      "net30": "Net 30"
-    },
     "preferredPaymentMethod": "Preferred payment method",
     "defaultCurrency": "Default currency",
     "selectTaxRegion": "Select Tax Region (Optional)",
@@ -587,11 +621,6 @@
       "both": "Both",
       "email": "Email",
       "mail": "Mail"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bank Transfer",
-      "check": "Check",
-      "creditCard": "Credit Card"
     },
     "paymentTermsLabel": "Payment terms",
     "standardTemplateLabel": "(Standard)",
@@ -1362,7 +1391,10 @@
         "phoneLabel": "Phone",
         "setDefault": "Set as default",
         "shippingTag": "Shipping",
-        "unnamed": "Unnamed Location"
+        "unnamed": "Unnamed Location",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
+        "contactPrimary": "Primary"
       },
       "dialog": {
         "addTitle": "Add New Location",
@@ -1468,7 +1500,14 @@
       "refreshRecordings": "Refresh recordings",
       "sectionTitle": "Online Meeting",
       "transcriptArtifact": "Transcript",
-      "viewTranscript": "View transcript"
+      "viewTranscript": "View transcript",
+      "status": {
+        "noRecording": "No recording",
+        "recordingReady": "Recording ready",
+        "cancelled": "Cancelled",
+        "failed": "Recording unavailable",
+        "recordingPending": "Recording pending"
+      }
     },
     "quickAdd": {
       "clientRequired": "Select a client for this interaction",
@@ -1527,6 +1566,86 @@
       "assignedTo": {
         "label": "Assigned To",
         "placeholder": "Select user"
+      },
+      "endBeforeStart": "End time must be on or after the start time.",
+      "endBeforeStartShort": "End time must be on or after the start time",
+      "rangeTooLong": "Interactions can't be longer than 24 hours.",
+      "reflectionLabel": "Quick Add Interaction",
+      "validationIntro": "Please fix the following errors:",
+      "loadingEditor": "Loading editor...",
+      "dialog": {
+        "createTitle": "Add New Interaction",
+        "editTitle": "Edit Interaction"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "cancelHelper": "Cancel creating/editing this interaction",
+        "save": "Save Interaction",
+        "saveHelper": "Create this new interaction",
+        "update": "Update Interaction",
+        "updateHelper": "Save changes to this interaction",
+        "close": "Close Dialog",
+        "closeHelper": "Close the interaction dialog"
+      },
+      "fields": {
+        "type": {
+          "label": "Interaction Type",
+          "helper": "Select the type of interaction (phone call, email, meeting, etc.)",
+          "placeholder": "Select Interaction Type"
+        },
+        "title": {
+          "label": "Interaction Title",
+          "helper": "Enter a descriptive title for this interaction",
+          "placeholder": "Title"
+        },
+        "notes": {
+          "label": "Interaction Notes",
+          "helper": "Add detailed notes about this interaction"
+        },
+        "notesShort": "Notes",
+        "status": {
+          "label": "Interaction Status",
+          "helper": "Set the current status of this interaction",
+          "placeholder": "Select Status"
+        },
+        "user": {
+          "label": "Assigned User",
+          "helper": "Select the user responsible for this interaction",
+          "placeholder": "Select User"
+        },
+        "userShort": "User",
+        "client": {
+          "label": "Associated Client",
+          "helper": "Select the client this interaction is related to"
+        },
+        "clientShort": "Client",
+        "contact": {
+          "label": "Associated Contact",
+          "helper": "Select the contact this interaction is with",
+          "placeholder": "Select Contact"
+        },
+        "contactShort": "Contact",
+        "startTime": {
+          "label": "Start Time",
+          "helper": "When did this interaction start?",
+          "placeholder": "Select start time"
+        },
+        "endTime": {
+          "label": "End Time",
+          "helper": "When did this interaction end?",
+          "placeholder": "Select end time"
+        },
+        "durationHours": {
+          "label": "Duration Hours",
+          "helper": "Duration hours of the interaction"
+        },
+        "durationMinutes": {
+          "label": "Duration Minutes",
+          "helper": "Duration minutes of the interaction"
+        },
+        "duration": "Duration",
+        "hours": "hours",
+        "minutes": "minutes"
       }
     },
     "feed": {
@@ -1584,6 +1703,51 @@
       "transcriptTitle": "Call transcript",
       "loading": "Loading transcript…",
       "loadFailed": "The transcript could not be loaded."
+    },
+    "details": {
+      "title": "Interaction Details",
+      "noTitle": "No title",
+      "unknownUser": "Unknown",
+      "noContact": "No contact associated",
+      "noClient": "No client associated",
+      "deleteConfirm": "Are you sure you want to delete this interaction? This action cannot be undone.",
+      "timeEntryFailed": "Failed to prepare time entry. Please try again.",
+      "fields": {
+        "title": "Title:",
+        "notes": "Notes",
+        "status": "Status:",
+        "startTime": "Start Time:",
+        "endTime": "End Time:",
+        "duration": "Duration:",
+        "user": "User:",
+        "contact": "Contact:",
+        "client": "Client:"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "editShort": "Edit",
+        "deleteShort": "Delete",
+        "edit": {
+          "label": "Edit Interaction",
+          "helper": "Edit this interaction details"
+        },
+        "delete": {
+          "label": "Delete Interaction",
+          "helper": "Delete this interaction permanently"
+        },
+        "back": {
+          "label": "Back",
+          "helper": "Go back to previous view"
+        },
+        "addTicket": {
+          "label": "Add Ticket",
+          "helper": "Create a new ticket related to this interaction"
+        },
+        "addTimeEntry": {
+          "label": "Add Time Entry",
+          "helper": "Add time entry for this interaction"
+        }
+      }
     }
   },
   "clientDrawer": {
@@ -1674,7 +1838,8 @@
           "members": "Members",
           "people": "People"
         }
-      }
+      },
+      "startAudit": "Start audit"
     },
     "tickets": {
       "addTicket": "Add Ticket",
@@ -1790,7 +1955,8 @@
     },
     "cardExpiry": ", exp {{month}}/{{year}}",
     "legacyPaymentTerms": "\"{{value}}\" is not a recognized payment term and was never applied. Saving clears it.",
-    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Tenant default: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid Balance Alerts",
@@ -1842,7 +2008,8 @@
       "invalidValue": "One of the selected client values is invalid. Please refresh and try again.",
       "invalidData": "Invalid client data provided. Please check all fields and try again.",
       "missingField": "Missing required client field.",
-      "missingFieldNamed": "Missing required client field: {{field}}."
+      "missingFieldNamed": "Missing required client field: {{field}}.",
+      "hasSeatArrangement": "This client has a co-managed IT seat arrangement. End the arrangement before making the client inactive."
     },
     "permissions": {
       "readClients": "Permission denied: Cannot read clients",
@@ -1956,8 +2123,10 @@
       "sourceAlreadyMerged": "This client has already been merged into another client.",
       "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
       "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
+      "sourceHasCoManagement": "This client has a co-managed IT arrangement. Cancel its setup or end co-management before merging it.",
       "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
-      "invalidContractCutover": "One of the cutover dates falls outside its contract term."
+      "invalidContractCutover": "One of the cutover dates falls outside its contract term.",
+      "invalidContactLocation": "A chosen location belongs to neither client being merged."
     },
     "profileContacts": {
       "duplicateManager": "A billing profile can only have one manager.",
@@ -2012,7 +2181,16 @@
     "billingStrategyHeading": "Bill merged work and devices under",
     "billingStrategySource": "{{source}} billing profile, kept as a separate profile on {{target}}",
     "billingStrategyTarget": "{{target}} default billing profile",
-    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile."
+    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile.",
+    "locationsColumn": "Locations",
+    "remoteBadge": "Remote",
+    "noLocationsAfterMerge": "No locations",
+    "unnamedLocation": "Location",
+    "movingFrom": "moving from {{client}}",
+    "primaryLocation": "Primary",
+    "targetAlsoHas": "{{client}} also has \"{{location}}\"",
+    "useIt": "Use it",
+    "contactLocationSummary": "{{count}} contact location links, {{repointed}} re-pointed"
   },
   "billingProfileContacts": {
     "title": "Profile contacts",
@@ -2030,5 +2208,21 @@
     "manager": "Manager",
     "seesTickets": "Sees profile tickets",
     "editHint": "Edit these on the billing profile, under the client's billing settings."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Last seen",
+      "title": "Title",
+      "versions": "Versions"
+    },
+    "empty": "No software inventory yet — inventory is collected per device",
+    "emptyAssetsLink": "View assets",
+    "exportCsv": "Export CSV",
+    "exportError": "Could not export software inventory.",
+    "installedOn": "Installed on",
+    "loadError": "Could not load software inventory.",
+    "moreAssets": "and {{count}} more (showing the first {{limit}} by name)",
+    "searchPlaceholder": "Search software..."
   }
 }

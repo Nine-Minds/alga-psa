@@ -346,3 +346,25 @@ export function applyEntryAccess(entries: IScheduleEntry[], access: CalendarAcce
 }
 
 export { personalCalendarColor } from './calendarColors';
+
+/**
+ * Validate a target group calendar for an entry: it must exist, be a
+ * non-archived group calendar, and the viewer must have edit or higher on it.
+ */
+export async function assertEditableGroupCalendar(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  calendarId: string,
+  access: CalendarAccess
+): Promise<string | null> {
+  const calendar = await tenantDb(trx, tenant).table('calendars')
+    .where({ calendar_id: calendarId })
+    .first('calendar_type', 'is_archived');
+  if (!calendar || calendar.calendar_type !== 'group' || calendar.is_archived) {
+    return 'The selected calendar is not available.';
+  }
+  if (!levelAtLeast(access.groupLevels.get(calendarId)?.level, 'edit')) {
+    return 'Permission denied to add entries to this calendar.';
+  }
+  return null;
+}

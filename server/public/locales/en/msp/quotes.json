@@ -333,6 +333,16 @@
       "addLocation": "+ Add location",
       "fromTemplate": "+ From template"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remove this location?",
+        "message": "This location still has {{count}} line item(s). Choose what happens to them.",
+        "moveOption": "Move these items to {{location}}",
+        "ungroupOption": "Keep these items and stop grouping by location",
+        "deleteOption": "Delete these items",
+        "confirm": "Remove location"
+      }
+    },
     "clientFacing": {
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
@@ -499,6 +509,13 @@
     },
     "availability": {
       "onHand": "On hand: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Quote viewed via email link",
+        "descriptionWithRecipient": "Quote viewed via email link by {{email}}",
+        "type": "Viewed via email link"
+      }
     }
   },
   "quoteLineItems": {
@@ -537,6 +554,7 @@
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",
+      "taxable": "Taxable",
       "ungroupedItems": "Ungrouped Items"
     },
     "placeholders": {
@@ -580,10 +598,13 @@
       "groupHeading": "Location {{index}}",
       "pickerPlaceholder": "Select a location",
       "unassigned": "Items without a location are listed here until one is chosen.",
+      "quoteWide": "Quote-wide",
+      "quoteWideHint": "Discounts apply across the quote, so they are not tied to a location.",
       "removeGroup": "Remove location",
       "subtotal": "Location subtotal",
       "addLocationButton": "+ Add location",
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
+      "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
     }
   },
@@ -630,6 +651,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Discounts carried onto contract lines",
       "contractItems": "Contract Items",
       "conversionMode": "Conversion Mode",
       "excludedFromConversion": "Excluded from Conversion",
@@ -655,6 +677,7 @@
       "converted": "Converted",
       "discount": "Discount",
       "fixed": "fixed",
+      "monthlyTotal": "Monthly total after discounts",
       "notConverted": "Not converted"
     },
     "partial": {
@@ -719,6 +742,12 @@
       "draftDescription": "You are the only user who can approve quotes. After you submit this quote for approval, you can approve it yourself and then send it.",
       "pendingDescription": "You are the only user who can approve quotes, so you can approve this quote yourself. Choose Approve to make it ready to send.",
       "dialogNote": "You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval."
+    },
+    "emailLinkReview": {
+      "label": "Let clients review and approve quotes from the email link without signing in",
+      "lifetimeLabel": "Link lifetime (hours)",
+      "lifetimePlaceholder": "Default: until the quote expires",
+      "lifetimeHelp": "Between 24 and 2160 hours. Leave empty to use the quote expiry date (30 days when it has none)."
     }
   },
   "quoteTemplates": {
@@ -888,6 +917,21 @@
       "missingFieldNamed": "Missing required quote field: {{field}}.",
       "templateCannotBeAccepted": "Quote templates cannot be marked as accepted",
       "onlySentCanBeAccepted": "Only sent quotes can be marked as accepted"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Link lifetime must be a whole number of hours between 24 and 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Accepted by {{signer}} via email link, {{date}}",
+      "portal": "Accepted by {{signer}} via the client portal, {{date}}",
+      "mspMarked": "Marked as accepted by MSP on behalf of the client, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rejected by {{signer}} via email link, {{date}}",
+      "portal": "Rejected by {{signer}} via the client portal, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

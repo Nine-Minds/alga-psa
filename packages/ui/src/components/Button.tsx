@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../lib/utils'
+import { useTranslation } from '../lib/i18n/client'
 import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent';
 import { ButtonComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
@@ -76,6 +77,7 @@ function Button({
   ref: forwardedRef,
   ...props
 }: ButtonProps & AutomationProps) {
+  const { t } = useTranslation('common')
   const Comp = asChild ? Slot : 'button'
   const buttonRef = React.useRef<HTMLButtonElement | null>(null)
   const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 })
@@ -113,8 +115,8 @@ function Button({
     disabled,
     variant: variant || undefined
   }, () => [
-    CommonActions.click(currentLabel ? `Click ${currentLabel}` : 'Click this button'),
-    CommonActions.focus('Focus this button')
+    CommonActions.click(currentLabel ? t('button.actions.clickLabel', { label: currentLabel }) : t('button.actions.click')),
+    CommonActions.focus(t('button.actions.focus'))
   ]);
 
   // Update metadata when disabled state or label changes

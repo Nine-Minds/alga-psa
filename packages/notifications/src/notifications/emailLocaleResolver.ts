@@ -5,6 +5,7 @@
  */
 
 import { getConnection, tenantDb } from '@alga-psa/db';
+import { isClientUserType } from '@alga-psa/types';
 import { SupportedLocale, normalizeLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
 import type { Knex } from 'knex';
@@ -62,7 +63,8 @@ export async function resolveEmailLocale(
         })
         .first();
 
-      userType = user?.user_type || 'internal';
+      // 'service' (non-interactive) resolves with the MSP locale defaults, never the client path.
+      userType = isClientUserType(user?.user_type) ? 'client' : 'internal';
     }
 
     if (recipient.userId) {
@@ -127,12 +129,17 @@ export async function resolveEmailLocale(
   }
 }
 
+/**
+ * `knex` is optional: callers already inside a transaction pass it so the read uses that connection
+ * instead of taking a second one from the pool.
+ */
 export async function getTenantDefaultLocale(
   tenantId: string,
-  userType?: 'client' | 'internal'
+  userType?: 'client' | 'internal',
+  existingKnex?: Knex | Knex.Transaction
 ): Promise<SupportedLocale> {
   try {
-    const knex = await getConnection(tenantId);
+    const knex = existingKnex ?? await getConnection(tenantId);
     const tenantSettings = await tenantScopedTable(knex, 'tenant_settings', tenantId)
       .first();
 
@@ -200,7 +207,7 @@ export async function getUserInfoForEmail(
     return {
       email,
       userId: user.user_id,
-      userType: user.user_type || 'internal',
+      userType: isClientUserType(user.user_type) ? 'client' : 'internal', // 'service' uses MSP locale defaults
       clientId: clientId || undefined
     };
   } catch (error) {

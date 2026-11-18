@@ -1,6 +1,16 @@
 'use server';
 
+import {
+  resolveEffectiveBillingTiming,
+  contractLineRecurringStreams,
+  contractLineOwnStream,
+  type LineRecurringStream,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  repairArrearsOnlyLineSchedulesForTenant,
+  type ArrearsOnlyLineRepairSummary,
+} from './arrearsOnlyLineRepair';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,6 +25,7 @@ import type {
   RecurringChargeFamily,
 } from '@alga-psa/types';
 import { ensureUtcMidnightIsoDate } from '../lib/billing/billingCycleAnchors';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import {
   getRecurringServicePeriodDisplayState,
@@ -98,7 +109,24 @@ type LiveScheduleContextRow = ObligationContextRow & {
   billing_timing: 'advance' | 'arrears' | null;
   assignment_start_date: unknown;
   assignment_end_date: unknown;
+  /** contract_line_prepaid_blocks.issue_mode (null when the line has no block config). */
+  prepaid_block_issue_mode: string | null;
 };
+
+/**
+ * The line stream a schedule belongs to. Schedule keys carry the due position,
+ * and a line's streams never share one (an arrears-only Hourly line's block fee
+ * is the only advance stream), so the due position selects the stream.
+ */
+function streamForSchedule(
+  context: LiveScheduleContextRow,
+  duePosition: string,
+): LineRecurringStream | null {
+  return contractLineRecurringStreams(
+    context,
+    { issue_mode: context.prepaid_block_issue_mode },
+  ).find((entry) => entry.duePosition === duePosition) ?? null;
+}
 
 export interface RecurringServicePeriodManagementRow {
   record: IRecurringServicePeriodRecord;
@@ -376,26 +404,6 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
   return compareIsoDateOnly(left, right) >= 0 ? left : right;
 }
 
-function resolveRecurringChargeFamily(contractLineType: string | null): RecurringChargeFamily {
-  switch ((contractLineType ?? 'fixed').toLowerCase()) {
-    case 'fixed':
-      return 'fixed';
-    case 'time':
-    case 'hourly':
-      return 'hourly';
-    case 'usage':
-      return 'usage';
-    case 'bucket':
-      return 'bucket';
-    case 'product':
-      return 'product';
-    case 'license':
-      return 'license';
-    default:
-      return 'fixed';
-  }
-}
-
 function normalizeContractCadenceBillingCycle(value: string | null): SupportedContractCadenceBillingCycle | null {
   return normalizeCadenceBillingCycle(value) as SupportedContractCadenceBillingCycle | null;
 }
@@ -500,6 +508,7 @@ async function loadLiveScheduleContext(input: {
       join.andOn('cc.is_active', '=', trx.raw('?', [true]));
     },
   });
+  db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
 
   const row = await query
     .where('cl.contract_line_id', obligationId)
@@ -517,6 +526,7 @@ async function loadLiveScheduleContext(input: {
       'cl.billing_timing as billing_timing',
       'cc.start_date as assignment_start_date',
       'cc.end_date as assignment_end_date',
+      'pb.issue_mode as prepaid_block_issue_mode',
     ) as LiveScheduleContextRow | undefined;
 
   return {
@@ -530,9 +540,12 @@ async function loadLiveScheduleContext(input: {
     contract_line_type: row?.contract_line_type ?? null,
     cadence_owner: row?.cadence_owner ?? null,
     billing_frequency: row?.billing_frequency ?? null,
-    billing_timing: row?.billing_timing ?? null,
+    billing_timing: row?.billing_timing
+      ? resolveEffectiveBillingTiming(row.contract_line_type, row.billing_timing)
+      : null,
     assignment_start_date: row?.assignment_start_date ?? null,
     assignment_end_date: row?.assignment_end_date ?? null,
+    prepaid_block_issue_mode: row?.prepaid_block_issue_mode ?? null,
   };
 }
 
@@ -587,6 +600,8 @@ async function persistRecurringServicePeriodRepair(
     recordsToInsert: IRecurringServicePeriodRecord[];
   },
 ) {
+  if (params.recordsToSupersede.length === 0 && params.recordsToInsert.length === 0) return;
+  await lockTenantBilling(trx, params.tenant);
   for (const record of params.recordsToSupersede) {
     await tenantDb(trx, params.tenant).table('recurring_service_periods')
       .where({ record_id: record.recordId })
@@ -612,7 +627,8 @@ async function repairScheduleMaterialization(input: {
 }): Promise<RepairRecurringServicePeriodMaterializationResult> {
   const { trx, tenant, schedule, context, existingRecords } = input;
   const repairedAt = new Date().toISOString();
-  const chargeFamily = resolveRecurringChargeFamily(context.contract_line_type);
+  const scheduleStream = streamForSchedule(context, schedule.duePosition);
+  const chargeFamily = (scheduleStream ?? contractLineOwnStream(context)).family;
 
   if (!context.contract_line_id) {
     throw new Error(`Recurring obligation ${schedule.obligationId} no longer exists.`);
@@ -624,7 +640,7 @@ async function repairScheduleMaterialization(input: {
       ?? ensureUtcMidnightIsoDate(repairedAt);
     const assignmentEnd = normalizeUtcMidnightDateValue(context.assignment_end_date);
     const billingCycle = normalizeContractCadenceBillingCycle(context.billing_frequency);
-    if (!billingCycle || context.billing_timing !== schedule.duePosition) {
+    if (!billingCycle || !context.billing_timing || !scheduleStream) {
       throw new Error('The live contract line no longer matches the requested recurring schedule.');
     }
 
@@ -713,7 +729,7 @@ async function repairScheduleMaterialization(input: {
     throw new Error('The client cadence source for this schedule could not be resolved.');
   }
 
-  if (context.billing_timing !== schedule.duePosition) {
+  if (!context.billing_timing || !scheduleStream) {
     throw new Error('The live client-cadence obligation no longer matches the requested schedule timing.');
   }
 
@@ -905,7 +921,7 @@ export const getRecurringServicePeriodManagementView = withAuth(async (
         obligationId: parsedScheduleKey.obligationId,
         cadenceOwner: parsedScheduleKey.cadenceOwner,
         duePosition: parsedScheduleKey.duePosition,
-        chargeFamily: resolveRecurringChargeFamily(context.contract_line_type),
+        chargeFamily: (streamForSchedule(context, parsedScheduleKey.duePosition) ?? contractLineOwnStream(context)).family,
         clientId: context.client_id,
         clientName: context.client_name,
         contractId: context.contract_id,
@@ -1130,7 +1146,7 @@ export const previewRecurringServicePeriodInvoiceLinkageRepair = withAuth(async 
 export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
   user,
   { tenant },
-): Promise<RepairAllClientCadenceServicePeriodsSummary | ActionPermissionError> => {
+): Promise<(RepairAllClientCadenceServicePeriodsSummary & { arrearsOnlyLines: ArrearsOnlyLineRepairSummary }) | ActionPermissionError> => {
   const denied = await requireRecurringServicePeriodPermission(
     user,
     'regenerate',
@@ -1142,6 +1158,10 @@ export const repairAllRecurringServicePeriodsForTenant = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: any) => {
-    return repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    // Hourly/Usage lines saved as "advance" are repaired first so the client-cadence
+    // pass below sees their arrears schedule.
+    const arrearsOnlyLines = await repairArrearsOnlyLineSchedulesForTenant(trx, { tenant });
+    const summary = await repairAllClientCadenceServicePeriodsForTenant(trx, { tenant });
+    return { ...summary, arrearsOnlyLines };
   });
 });

@@ -9,14 +9,14 @@ import {
   ImapProviderForm,
   MicrosoftProviderForm,
 } from '@alga-psa/integrations/email/providers/entry';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { MicrosoftEmailSetupReadiness } from '../../actions/integrations/providerReadiness';
 
 interface ProviderSetupWizardDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (provider: EmailProvider) => void;
+  onComplete: (provider: PublicEmailProvider) => void;
   tenant: string;
   microsoftEmailSetup?: MicrosoftEmailSetupReadiness | null;
 }
@@ -55,7 +55,7 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant,
     setProviderType(null);
   };
 
-  const handleSetupSuccess = (provider: EmailProvider) => {
+  const handleSetupSuccess = (provider: PublicEmailProvider) => {
     onComplete(provider);
     reset();
   };

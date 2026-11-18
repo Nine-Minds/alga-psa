@@ -1,4 +1,7 @@
+'use client';
+
 import EntityAvatar, { EntityAvatarProps, getDefaultInitials } from './EntityAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 interface TeamAvatarProps {
   teamId: string;
@@ -15,6 +18,8 @@ const TeamAvatar = ({
   size = 'md',
   className,
 }: TeamAvatarProps) => {
+  const { t } = useTranslation('common');
+
   return (
     <EntityAvatar
       entityId={teamId}
@@ -23,7 +28,7 @@ const TeamAvatar = ({
       size={size}
       className={className}
       getInitials={getDefaultInitials}
-      altText={`${teamName || 'Team'} avatar`}
+      altText={teamName ? t('teamAvatar.alt', { name: teamName }) : t('teamAvatar.defaultAlt')}
     />
   );
 };

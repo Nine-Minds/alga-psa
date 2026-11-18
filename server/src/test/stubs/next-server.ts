@@ -174,6 +174,20 @@ class StubNextResponse extends GlobalResponse {
     });
   }
 
+  /** Middleware pass-through (Next marks it with `x-middleware-next`). */
+  static next(init?: ResponseInit & { request?: { headers?: HeadersInit } }): StubNextResponse {
+    const { request: _request, ...responseInit } = init ?? {};
+    const headers = new GlobalHeaders(responseInit.headers || {});
+    headers.set('x-middleware-next', '1');
+    return new StubNextResponse(null, { ...responseInit, status: responseInit.status ?? 200, headers });
+  }
+
+  static rewrite(url: string | URL, init?: ResponseInit): StubNextResponse {
+    const headers = new GlobalHeaders(init?.headers || {});
+    headers.set('x-middleware-rewrite', String(url));
+    return new StubNextResponse(null, { ...init, status: init?.status ?? 200, headers });
+  }
+
   static json(data: any, init?: ResponseInit): StubNextResponse {
     const headers = new GlobalHeaders(init?.headers || {});
     if (!headers.has('content-type')) {
@@ -197,8 +211,11 @@ class StubNextRequest extends GlobalRequest {
     }
   }
 
-  get nextUrl(): URL {
-    return new URL(this.url);
+  get nextUrl(): URL & { clone(): URL } {
+    // NextURL is a URL with clone(); middleware relies on it.
+    const url = new URL(this.url) as URL & { clone(): URL };
+    url.clone = () => new URL(url.toString()) as URL & { clone(): URL };
+    return url;
   }
 
   get cookies(): StubRequestCookies {

@@ -10,7 +10,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   archiveMicrosoftProfile,
   getMicrosoftIntegrationStatus,
@@ -29,6 +30,11 @@ import {
 import type { MicrosoftConsumerDescriptor, TranslateFn } from './MicrosoftProfileFormDialog';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
+import {
+  formatMicrosoftEmailSetupFailure,
+  useMicrosoftEmailSetupCallback,
+  type MicrosoftEmailSetupCallbackResult,
+} from './useMicrosoftEmailSetupCallback';
 import { getMicrosoftEmailAdminConsentUrl } from '../../../actions/integrations/microsoftEmailSetupActions';
 import {
   AlertTriangle,
@@ -109,21 +115,51 @@ function getTeamsApplicationIdUri(baseUrl?: string, clientId?: string): string |
   }
 }
 
+type GuidanceItem = {
+  label: string;
+  value: string;
+  /** Stable kebab-case suffix; when set the row gets a copy button (`microsoft-redirect-uri-<id>-copy`). */
+  copyId?: string;
+};
+
 function GuidanceBlock({
   title,
   items,
+  profileId,
+  onCopy,
 }: {
   title: string;
-  items: Array<{ label: string; value: string }>;
+  items: GuidanceItem[];
+  profileId: string;
+  onCopy: (item: GuidanceItem) => void;
 }) {
+  const { t } = useTranslation('msp/integrations');
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
       <div className="space-y-2">
         {items.map((item) => (
           <div key={`${title}-${item.label}`} className="rounded-md border bg-muted/20 p-2">
-            <div className="text-xs font-medium text-muted-foreground">{item.label}</div>
-            <div className="mt-1 break-all font-mono text-xs">{item.value}</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-medium text-muted-foreground">{item.label}</div>
+              {item.copyId && (
+                <Button
+                  id={`microsoft-redirect-uri-${item.copyId}-copy-${profileId}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCopy(item)}
+                >
+                  {t('integrations.microsoft.settings.guidance.copy', { defaultValue: 'Copy' })}
+                </Button>
+              )}
+            </div>
+            <div
+              id={item.copyId ? `microsoft-redirect-uri-${item.copyId}-${profileId}` : undefined}
+              className="mt-1 break-all font-mono text-xs"
+            >
+              {item.value}
+            </div>
           </div>
         ))}
       </div>
@@ -235,11 +271,11 @@ function getGuidanceBlocks(
   const unavailable = t('integrations.microsoft.settings.guidance.unavailable', { defaultValue: 'Unavailable' });
   const notConfigured = t('integrations.microsoft.settings.guidance.notConfigured', { defaultValue: 'Not configured' });
 
-  const blocks: Array<{ title: string; items: Array<{ label: string; value: string }> }> = [
+  const blocks: Array<{ title: string; items: GuidanceItem[] }> = [
     {
       title: t('integrations.microsoft.settings.guidance.mspSsoTitle', { defaultValue: 'Staff sign-in' }),
       items: [
-        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.sso || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.sso || unavailable, copyId: 'sso' },
         { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.sso || []).join(', ') || unavailable },
       ],
     },
@@ -250,14 +286,15 @@ function getGuidanceBlocks(
       {
         title: t('integrations.microsoft.settings.guidance.emailTitle', { defaultValue: 'Email' }),
         items: [
-          { label: t('integrations.microsoft.settings.guidance.emailRedirect', { defaultValue: 'Inbound email redirect URI' }), value: status?.redirectUris?.email || unavailable },
+          { label: t('integrations.microsoft.settings.guidance.emailRedirect', { defaultValue: 'Inbound email redirect URI' }), value: status?.redirectUris?.email || unavailable, copyId: 'email' },
+          { label: t('integrations.microsoft.settings.guidance.emailSetupRedirect', { defaultValue: 'Email setup redirect URI' }), value: status?.redirectUris?.emailSetup || unavailable, copyId: 'email-setup' },
           { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.email || []).join(', ') || unavailable },
         ],
       },
       {
         title: t('integrations.microsoft.settings.guidance.calendarTitle', { defaultValue: 'Calendar' }),
         items: [
-          { label: t('integrations.microsoft.settings.guidance.calendarRedirect', { defaultValue: 'Calendar sync redirect URI' }), value: status?.redirectUris?.calendar || unavailable },
+          { label: t('integrations.microsoft.settings.guidance.calendarRedirect', { defaultValue: 'Calendar sync redirect URI' }), value: status?.redirectUris?.calendar || unavailable, copyId: 'calendar' },
           { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.calendar || []).join(', ') || unavailable },
         ],
       }
@@ -265,7 +302,7 @@ function getGuidanceBlocks(
     blocks.push({
       title: t('integrations.microsoft.settings.guidance.entraTitle', { defaultValue: 'Entra Direct' }),
       items: [
-        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.entra || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.redirectUri', { defaultValue: 'Redirect URI' }), value: status?.redirectUris?.entra || unavailable, copyId: 'entra' },
         { label: t('integrations.microsoft.settings.guidance.scopes', { defaultValue: 'Scopes' }), value: (status?.scopes?.entra || []).join(', ') || unavailable },
         { label: t('integrations.microsoft.settings.guidance.entraConsent', { defaultValue: 'Requirement' }), value: t('integrations.microsoft.settings.guidance.entraConsentValue', { defaultValue: 'Register this app as multitenant and grant admin consent in your partner Microsoft tenant.' }) },
       ],
@@ -276,11 +313,12 @@ function getGuidanceBlocks(
     blocks.push({
       title: t('integrations.microsoft.settings.guidance.teamsTitle', { defaultValue: 'Teams' }),
       items: [
-        { label: t('integrations.microsoft.settings.guidance.teamsTabRedirect', { defaultValue: 'Personal tab redirect URI' }), value: status?.redirectUris?.teamsTab || unavailable },
-        { label: t('integrations.microsoft.settings.guidance.teamsBotRedirect', { defaultValue: 'Personal bot redirect URI' }), value: status?.redirectUris?.teamsBot || unavailable },
+        { label: t('integrations.microsoft.settings.guidance.teamsTabRedirect', { defaultValue: 'Personal tab redirect URI' }), value: status?.redirectUris?.teamsTab || unavailable, copyId: 'teams-tab' },
+        { label: t('integrations.microsoft.settings.guidance.teamsBotRedirect', { defaultValue: 'Personal bot redirect URI' }), value: status?.redirectUris?.teamsBot || unavailable, copyId: 'teams-bot' },
         {
           label: t('integrations.microsoft.settings.guidance.teamsMessageRedirect', { defaultValue: 'Message extension redirect URI' }),
           value: status?.redirectUris?.teamsMessageExtension || unavailable,
+          copyId: 'teams-message-extension',
         },
         { label: t('integrations.microsoft.settings.guidance.teamsScopes', { defaultValue: 'Teams scopes' }), value: (status?.scopes?.teams || []).join(', ') || unavailable },
         { label: t('integrations.microsoft.settings.guidance.applicationIdUri', { defaultValue: 'Application ID URI' }), value: teamsApplicationIdUri || t('integrations.microsoft.settings.guidance.requiresBaseUrl', { defaultValue: 'Requires base URL and client ID' }) },
@@ -309,6 +347,8 @@ export function MicrosoftIntegrationSettings({
   onStatusChange,
 }: MicrosoftIntegrationSettingsProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
@@ -326,6 +366,10 @@ export function MicrosoftIntegrationSettings({
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedChoiceInitializedRef = React.useRef(false);
   const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
+  const [setupFailure, setSetupFailure] = React.useState<string | null>(null);
+  const handledSetupOutcomeRef = React.useRef(false);
+  // Set only for a URL-driven (full-page) outcome; popup outcomes already show in-place.
+  const pendingOutcomeScrollRef = React.useRef<'ok' | 'error' | null>(null);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
@@ -422,8 +466,87 @@ export function MicrosoftIntegrationSettings({
 
   const approvePendingEmailSetup = React.useCallback(async () => {
     const url = await getPendingEmailApprovalUrl();
-    if (url) window.location.assign(url);
+    if (!url) return;
+    setSetupFailure(null);
+    // Popup first so the outcome returns through postMessage; when it is
+    // blocked, the full-page round trip lands back here via query params.
+    const popup = window.open(url, 'microsoft-email-admin-consent', 'popup,width=520,height=680');
+    if (!popup) {
+      window.location.assign(url);
+      return;
+    }
+    popup.focus?.();
   }, [getPendingEmailApprovalUrl]);
+
+  const handleEmailSetupOutcome = React.useCallback((data: MicrosoftEmailSetupCallbackResult) => {
+    if (data.success) {
+      setSetupFailure(null);
+      toast({
+        title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
+        description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
+      });
+    } else {
+      setSetupFailure(formatMicrosoftEmailSetupFailure(t, data));
+    }
+    void load();
+  }, [load, t, toast]);
+  // The dialog listens while it is open; this covers the Providers-card popup.
+  useMicrosoftEmailSetupCallback(handleEmailSetupOutcome, !emailSetupOpen);
+
+  // Full-page return (no opener): read the outcome once, strip it from the URL.
+  React.useEffect(() => {
+    const outcome = searchParams?.get('microsoft_email_setup');
+    if (!outcome || handledSetupOutcomeRef.current) return;
+    handledSetupOutcomeRef.current = true;
+    pendingOutcomeScrollRef.current = outcome === 'ok' ? 'ok' : 'error';
+    handleEmailSetupOutcome(
+      outcome === 'ok'
+        ? { success: true, stage: 'admin_consent' }
+        : {
+            success: false,
+            errorCode: searchParams?.get('error_code') || undefined,
+            // Query params are user-editable; accept only well-formed diagnostics.
+            aadsts: /^\d{4,7}$/.test(searchParams?.get('aadsts') ?? '') ? searchParams?.get('aadsts') ?? undefined : undefined,
+            correlationId: /^[0-9a-fA-F-]{8,64}$/.test(searchParams?.get('correlation_id') ?? '')
+              ? searchParams?.get('correlation_id') ?? undefined
+              : undefined,
+          },
+    );
+    const remaining = new URLSearchParams(searchParams?.toString());
+    ['microsoft_email_setup', 'error_code', 'aadsts', 'correlation_id'].forEach((key) => remaining.delete(key));
+    const query = remaining.toString();
+    const base = pathname ?? window.location.pathname;
+    router.replace(query ? `${base}?${query}` : base);
+  }, [handleEmailSetupOutcome, pathname, router, searchParams]);
+
+  // Bring the URL-driven outcome into view once it has rendered.
+  React.useEffect(() => {
+    const pending = pendingOutcomeScrollRef.current;
+    if (!pending) return;
+    const target = document.getElementById(
+      pending === 'error' ? 'microsoft-email-setup-failure' : 'microsoft-email-setup-ready',
+    );
+    if (!target) return;
+    pendingOutcomeScrollRef.current = null;
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [setupFailure, emailSetup?.state]);
+
+  const copyGuidanceValue = React.useCallback(async (item: GuidanceItem) => {
+    try {
+      await navigator.clipboard.writeText(item.value);
+      toast({
+        title: t('integrations.microsoft.settings.guidance.copied', { defaultValue: 'Copied' }),
+        description: item.label,
+      });
+    } catch {
+      toast({
+        title: t('integrations.microsoft.settings.guidance.copyFailed', { defaultValue: 'Could not copy' }),
+        variant: 'destructive',
+      });
+    }
+  }, [t, toast]);
 
   const copyPendingEmailApprovalLink = React.useCallback(async () => {
     const url = await getPendingEmailApprovalUrl();
@@ -643,8 +766,14 @@ export function MicrosoftIntegrationSettings({
             </Alert>
           )}
 
+          {setupFailure && (
+            <Alert variant="destructive" id="microsoft-email-setup-failure">
+              <AlertDescription>{setupFailure}</AlertDescription>
+            </Alert>
+          )}
+
           {emailSetup?.state === 'ready' && (
-            <Alert variant="success">
+            <Alert variant="success" id="microsoft-email-setup-ready">
               <AlertDescription>
                 <div className="font-medium">
                   {t('integrations.microsoft.settings.platform.title', { defaultValue: 'Microsoft email is ready to connect' })}
@@ -656,7 +785,7 @@ export function MicrosoftIntegrationSettings({
                   id="microsoft-platform-connect-email"
                   type="button"
                   className="mt-3"
-                  onClick={() => router.push('/msp/settings/integrations?category=communication')}
+                  onClick={() => router.push(MAILBOX_SETUP_ENTRY_PATH)}
                 >
                   {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
                 </Button>
@@ -1074,7 +1203,13 @@ export function MicrosoftIntegrationSettings({
                         </summary>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
                           {getGuidanceBlocks(status, profile, showTeamsUi, t).map((block) => (
-                            <GuidanceBlock key={`${profile.profileId}-${block.title}`} title={block.title} items={block.items} />
+                            <GuidanceBlock
+                              key={`${profile.profileId}-${block.title}`}
+                              title={block.title}
+                              items={block.items}
+                              profileId={profile.profileId}
+                              onCopy={(item) => void copyGuidanceValue(item)}
+                            />
                           ))}
                         </div>
                       </details>

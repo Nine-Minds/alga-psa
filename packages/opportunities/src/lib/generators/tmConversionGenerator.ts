@@ -57,11 +57,15 @@ export async function loadTmBillingFacts(
   const db = tenantDb(knex, tenant);
   const linkedTimeItems = db.table('invoice_time_entries')
     .whereNotNull('item_id')
-    .distinct('item_id');
+    .distinct('tenant', 'item_id')
+    .as('time_items');
   const query = db.table('invoice_charges as ic');
   db.tenantJoin(query, 'invoices as inv', 'ic.invoice_id', 'inv.invoice_id');
   db.tenantJoin(query, 'clients as c', 'inv.client_id', 'c.client_id');
-  query.join(linkedTimeItems.as('time_items'), 'time_items.item_id', 'ic.item_id');
+  db.tenantJoinSubquery(query, linkedTimeItems, 'time_items.item_id', 'ic.item_id', {
+    rootTenantColumn: 'ic.tenant',
+    joinedTenantColumn: 'time_items.tenant',
+  });
 
   const rows = await query
     .where('inv.invoice_date', '>=', start)

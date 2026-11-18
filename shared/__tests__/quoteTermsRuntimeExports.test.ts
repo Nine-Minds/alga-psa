@@ -29,7 +29,7 @@ const runImageTest = process.env.RUN_QUOTE_TERMS_IMAGE_TEST === '1';
 const itImage = runImageTest ? it : (() => {}) as unknown as typeof it;
 
 function runNativeImport(specifier: string): { ok: boolean; output: string } {
-  const script = `import(${JSON.stringify(specifier)}).then(() => console.log('OK')).catch((e) => { console.error(e.code || e.message); process.exit(1); })`;
+  const script = `import(${JSON.stringify(specifier)}).then(() => console.log('OK')).catch((e) => { console.error(e); process.exit(1); })`;
   try {
     const stdout = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
       cwd: repoRoot,

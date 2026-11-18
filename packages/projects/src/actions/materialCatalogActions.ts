@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { assertResourceOperationOpen } from '@alga-psa/authorization/recordCreateAuthorization';
 import type {
   IProjectMaterial,
   IService,
@@ -21,7 +22,8 @@ import {
   queryServicePrices,
   updateProjectMaterialBilling,
 } from '@alga-psa/inventory/lib';
-import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
+import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import {
   actionError,
   permissionError,
@@ -96,6 +98,12 @@ export const getProjectMaterialBillingOptions = withAuth(async (
     return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
   }
   const { knex: db } = await createTenantKnex();
+  // Priced items and billing schedules are closed to a seat technician (`SEAT_AUTHORITY_PROJECTION.project`).
+  try {
+    await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'project_materials' }, 'projects');
+  } catch (error) {
+    return permissionError(error instanceof Error ? error.message : 'Permission denied', 'projects:errors.permissions.materialRead');
+  }
   return withTransaction(db, async (trx) => {
     const config = await trx('project_billing_configs')
       .where({ tenant, project_id: projectId })
@@ -120,11 +128,12 @@ export const getProjectMaterialBillingOptions = withAuth(async (
 });
 
 export const searchServiceCatalogForPicker = withAuth(async (
-  _user,
+  user,
   { tenant },
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
   const { knex: db } = await createTenantKnex();
+  await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'service_catalog' }, 'projects');
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const { items, totalCount } = await queryCatalogPickerItems(trx, tenant, options);
     return { items: items as CatalogPickerItem[], totalCount };
@@ -132,11 +141,12 @@ export const searchServiceCatalogForPicker = withAuth(async (
 });
 
 export const getServicePrices = withAuth(async (
-  _user,
+  user,
   { tenant },
   serviceId: string
 ): Promise<IServicePrice[]> => {
   const { knex: db } = await createTenantKnex();
+  await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'service_catalog' }, 'projects');
   return withTransaction(db, async (trx: Knex.Transaction) => {
     return queryServicePrices(trx, tenant, serviceId);
   });
@@ -152,6 +162,7 @@ export const listProjectMaterials = withAuth(async (
       return permissionError('Permission denied: project read required', 'projects:errors.permissions.materialRead');
     }
     const { knex: db } = await createTenantKnex();
+    await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'project_materials' }, 'projects');
     return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
   } catch (error) {
     const expected = projectMaterialActionErrorFrom(error);
@@ -174,10 +185,12 @@ export const addProjectMaterial = withAuth(async (
     currency_code: string;
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
+    /** Set only after the user confirmed a stockConflict result with overrideable=true. */
+    allow_reserved_override?: boolean;
     billing_destination?: ProjectMaterialBillingDestination;
     billing_schedule_entry_id?: string | null;
   }
-): Promise<IProjectMaterial | ProjectMaterialActionError> => {
+): Promise<IProjectMaterial | ProjectMaterialActionError | StockConflictResult> => {
   try {
     if (!await hasPermission(user, 'project', 'update')) {
       return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
@@ -190,6 +203,11 @@ export const addProjectMaterial = withAuth(async (
       (user as any)?.user_id ?? null,
     )) as IProjectMaterial;
   } catch (error) {
+    // Stock-level refusals travel as a structured, serializable result so the dialog can
+    // show the refusal or the override prompt (thrown messages do not cross the boundary).
+    // LEVERAGE: pattern stock-conflict-action-mapping — the stockConflictResultFrom -> actionErrorFrom sequence repeats in tickets, projects and billing add actions.
+    const conflict = stockConflictResultFrom(error);
+    if (conflict) return conflict;
     const expected = projectMaterialActionErrorFrom(error);
     if (expected) {
       return expected;

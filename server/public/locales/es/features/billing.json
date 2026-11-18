@@ -67,6 +67,7 @@
     "taxBreakdown": "Desglose de impuestos",
     "manualInvoice": "Factura manual",
     "credits": "Créditos",
+    "currency": "Moneda",
     "financialArtifactSummary": "Factura solo financiera. Los períodos de servicio recurrentes aparecen únicamente en las líneas de detalle recurrentes.",
     "servicePeriod": "Período de servicio",
     "servicePeriods": "Períodos de servicio",
@@ -202,6 +203,7 @@
       "exclude": "Excluir",
       "excluded": "Excluido",
       "fallbackTitle": "Cotización {{id}}",
+      "unnumberedTitle": "Cotización",
       "include": "Incluir",
       "included": "Incluido",
       "lineItems": "Artículos",
@@ -212,6 +214,7 @@
       "optionalLockedHint": "La selección de artículos opcionales se bloquea cuando la cotización ya no espera su respuesta.",
       "optionalToggleHint": "Active o desactive los artículos opcionales para ver su total preferido antes de responder.",
       "poNumber": "Orden de compra n.º",
+      "previewUnavailable": "No hay una vista previa en vivo para esta cotización, por lo que los totales mostrados son los totales guardados actualmente. Su selección se enviará igualmente al aceptar.",
       "quoteDate": "Fecha de la cotización",
       "readyToRespond": "¿Listo para responder?",
       "reject": "Rechazar",
@@ -221,7 +224,6 @@
       "rejectQuote": "Rechazar cotización",
       "rejectedBanner": "Cotización rechazada.",
       "rejectedBannerWithReason": "Cotización rechazada: {{reason}}",
-      "savingSelections": "Guardando la selección de artículos opcionales...",
       "scopeOfWork": "Alcance del trabajo",
       "submitting": "Enviando...",
       "subtotal": "Subtotal",
@@ -229,6 +231,79 @@
       "termsAndConditions": "Términos y condiciones",
       "total": "Total",
       "validUntil": "Válido hasta"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Cotización aceptada",
+        "body": "Gracias. Su aceptación ha sido registrada y hemos sido notificados."
+      },
+      "rejected": {
+        "title": "Cotización rechazada",
+        "body": "Su respuesta ha sido registrada y hemos sido notificados."
+      },
+      "already": {
+        "title": "Esta cotización ya ha sido respondida",
+        "accepted": "Esta cotización fue aceptada el {{date}}.",
+        "rejected": "Esta cotización fue rechazada el {{date}}."
+      },
+      "changed": {
+        "title": "Esta cotización ha cambiado",
+        "body": "Esta cotización ha cambiado desde que la abrió. Póngase en contacto con nosotros."
+      },
+      "optionalItems": "Elementos opcionales",
+      "optionalHint": "Elija los elementos opcionales que desea. Su selección se envía al aceptar.",
+      "subtotal": "Subtotal",
+      "tax": "Impuestos",
+      "total": "Total",
+      "fullName": "Nombre completo",
+      "titleOptional": "Cargo (opcional)",
+      "agreementVersion": "Versión del acuerdo {{version}}",
+      "accept": "Aceptar cotización",
+      "reject": "Rechazar cotización",
+      "submitting": "Enviando...",
+      "rejectTitle": "Rechazar cotización",
+      "rejectHint": "Indíquenos qué debe cambiar. Es posible que revisemos y reenviemos la cotización.",
+      "rejectConfirm": "Rechazar",
+      "cancel": "Cancelar",
+      "errors": {
+        "generic": "Algo salió mal. Inténtelo de nuevo.",
+        "nameRequired": "Escriba su nombre completo.",
+        "agreementRequired": "Confirme el acuerdo para aceptar esta cotización.",
+        "agreementOutdated": "El texto del acuerdo se ha actualizado. Recargue la página e inténtelo de nuevo.",
+        "commentRequired": "Añada un breve comentario antes de rechazar esta cotización.",
+        "tooLong": "Una de sus entradas es demasiado larga.",
+        "reload": "Vuelva a cargar esta página e inténtelo de nuevo."
+      }
+    },
+    "public": {
+      "metaTitle": "Revisión de cotización",
+      "notice": {
+        "accepted": "Este cotización ha sido aceptado. Se muestra aquí para su referencia.",
+        "declined": "Este cotización ha sido rechazado. Se muestra aquí para su referencia.",
+        "converted": "Este cotización ha sido aceptado y está en curso. Se muestra aquí para su referencia.",
+        "readOnly": "Esta es una vista de solo lectura de su cotización."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Este enlace no está disponible",
+          "body": "Es posible que el enlace esté mal escrito o que ya no esté activo."
+        },
+        "expired": {
+          "title": "Este enlace ha caducado",
+          "body": "Por seguridad, los enlaces de cotizaciones dejan de funcionar pasado un tiempo."
+        },
+        "superseded": {
+          "title": "Este cotización ha sido reemplazado",
+          "body": "Se ha enviado una versión más reciente. Utilice el enlace del último correo."
+        },
+        "decided": {
+          "title": "Este cotización ya ha sido resuelto",
+          "body": "Ya se registró una respuesta, por lo que no se puede abrir desde este enlace."
+        },
+        "help": "¿Necesita ayuda? Responda al correo en el que recibió este enlace.",
+        "signIn": "Iniciar sesión en el portal de clientes",
+        "signInHint": "¿Ya tiene una cuenta en el portal de clientes?"
+      }
     }
   },
   "enums": {
@@ -241,7 +316,8 @@
     "contractLineType": {
       "Fixed": "Fijo",
       "Hourly": "Por hora",
-      "Usage": "Basado en uso"
+      "Usage": "Basado en uso",
+      "PrepaidBlock": "Bloque prepagado"
     },
     "quoteStatus": {
       "draft": "Borrador",
@@ -288,6 +364,13 @@
       "pending": "Facturas en espera de aprobación o procesamiento adicional",
       "prepayment": "Facturas de anticipo o depósito",
       "partially_applied": "Facturas con pagos parciales aplicados"
+    },
+    "billingPeriod": {
+      "weekly": "por semana",
+      "monthly": "por mes",
+      "quarterly": "por trimestre",
+      "semi-annually": "por semestre",
+      "annually": "por año"
     }
   },
   "quoteForm": {
@@ -442,6 +525,35 @@
     "hoursLeft": "Quedan {{hours}} h",
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
-    "timeEntry": "Entrada de tiempo"
+    "timeEntry": "Entrada de tiempo",
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido desde {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloque prepago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (por encima del bloque prepago)"
+  },
+  "bucketUsage": {
+    "contractLine": "Línea de contrato de bolsa de horas",
+    "usage": "Uso",
+    "hoursUsed": "{{hours}} horas utilizadas",
+    "hoursTotal": "{{hours}} horas en total",
+    "rolloverHours": "Incluye {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimiento al recibir",
+      "net14": "neto 14",
+      "net15": "neto 15",
+      "net30": "neto 30",
+      "net7": "neto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferencia bancaria",
+      "check": "Cheque",
+      "creditCard": "Tarjeta de crédito"
+    },
+    "tenantDefault": "Predeterminado del inquilino ({{value}})"
   }
 }

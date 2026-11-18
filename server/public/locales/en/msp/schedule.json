@@ -472,18 +472,37 @@
         "noLimit": "No limit"
       },
       "actions": {
-        "save": "Save Service Rules"
+        "save": "Save Service Rules",
+        "savePortalBooking": "Save Portal Booking Settings"
       },
       "feedback": {
         "selectServiceError": "Please select a service",
         "saveSuccess": "Service rules saved",
         "saveError": "Failed to save service rules",
         "deleteSuccess": "Service rules deleted",
-        "deleteError": "Failed to delete service rules"
+        "deleteError": "Failed to delete service rules",
+        "portalBookingSaveSuccess": "Client portal booking settings saved"
       },
       "deleteDialog": {
         "title": "Delete Service Rules",
         "message": "Are you sure you want to delete the rules for {{serviceName}}? This action cannot be undone."
+      },
+      "portalBooking": {
+        "title": "Client Portal Booking",
+        "description": "What clients see when they request an appointment from the portal."
+      },
+      "portalHideContractServices": {
+        "label": "Only show configured bookable services in the client portal",
+        "help": "Hides the services clients inherit from their contracts, so the portal lists only the services configured above with \"Allow Booking Without Contract\"."
+      },
+      "portalDefaultService": {
+        "label": "Default booking service",
+        "none": "No default — client chooses",
+        "help": "Preselected for clients so they never have to choose a service. Pick one of your configured services — nothing is preselected until you do."
+      },
+      "portalShowServiceRates": {
+        "label": "Show service rates to clients",
+        "help": "When off, clients never see a price for a service while booking."
       }
     },
     "exceptions": {
@@ -853,5 +872,81 @@
       "members": "Members",
       "creatorNote": "You will be able to manage this calendar."
     }
+  },
+  "ticketDetails": {
+    "title": "Ticket Details",
+    "numberedTitle": "Ticket #{{number}}",
+    "untitled": "Untitled ticket",
+    "noDescription": "No description",
+    "notAvailable": "N/A",
+    "unassigned": "Unassigned",
+    "fields": {
+      "title": {
+        "label": "Title"
+      },
+      "description": {
+        "label": "Description"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priority"
+      },
+      "board": {
+        "label": "Board"
+      },
+      "client": {
+        "label": "Client"
+      },
+      "contact": {
+        "label": "Contact"
+      },
+      "assignedUser": {
+        "label": "Assigned User"
+      },
+      "entered": {
+        "label": "Entered"
+      },
+      "updated": {
+        "label": "Updated"
+      },
+      "closed": {
+        "label": "Closed"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Project Task",
+    "noDescription": "No description",
+    "notAvailable": "N/A",
+    "unassigned": "Unassigned",
+    "untitledItem": "Untitled item",
+    "noChecklistItems": "No checklist items",
+    "fields": {
+      "description": {
+        "label": "Description"
+      },
+      "project": {
+        "label": "Project"
+      },
+      "phase": {
+        "label": "Phase"
+      },
+      "assignedTo": {
+        "label": "Assigned To"
+      },
+      "dueDate": {
+        "label": "Due Date"
+      },
+      "checklist": {
+        "label": "Checklist"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Agent schedule view is now owned by Scheduling. (agentId: {{agentId}})",
+    "timeEntry": "Time entry is managed in Scheduling.",
+    "scheduling": "Scheduling is managed in Scheduling."
   }
 }

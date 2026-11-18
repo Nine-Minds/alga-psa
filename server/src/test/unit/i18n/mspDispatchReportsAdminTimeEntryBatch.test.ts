@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
+import { createInstance } from 'i18next';
+import { getNamespacesForRoute, ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
 import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
@@ -108,6 +109,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'common',
       'msp/core',
       'msp/settings',
+      'msp/extensions',
       'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
@@ -118,6 +120,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'features/billing',
       'msp/calendar',
       'msp/integrations',
+      'features/documents',
     ]);
 
     expect(ROUTE_NAMESPACES['/msp/service-requests']).toEqual([
@@ -125,8 +128,9 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'msp/core',
       'features/tickets',
       'msp/service-requests',
+      'features/documents',
     ]);
-    expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/time-entry']);
+    expect(ROUTE_NAMESPACES['/msp/time-entry']).toEqual(['common', 'msp/core', 'msp/settings', 'msp/time-entry', 'features/tickets', 'features/documents']);
     expect(ROUTE_NAMESPACES['/msp/time-sheet-approvals']).toEqual([
       'common',
       'msp/core',
@@ -138,6 +142,30 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       'msp/time-entry',
     ]);
   });
+
+  it.each(['/msp/time-entry', '/msp/time-entry/sheet-1'])(
+    'loads translated service attribution with the route resources for %s',
+    async (route) => {
+      const namespaces = getNamespacesForRoute(route);
+      const i18n = createInstance();
+      await i18n.init({
+        lng: 'de',
+        fallbackLng: false,
+        ns: namespaces,
+        resources: {
+          de: Object.fromEntries(namespaces.map((namespace) => [
+            namespace,
+            readJson(`server/public/locales/de/${namespace}.json`),
+          ])),
+        },
+        interpolation: { escapeValue: false },
+      });
+
+      const t = i18n.getFixedT('de', 'msp/settings');
+      expect(t('servicePrincipals.badge.service', { defaultValue: 'Service' })).toBe('Dienst');
+      expect(t('servicePrincipals.via.label', { principal: 'Billing sync' })).toBe('via Billing sync');
+    },
+  );
 
   it('T023/T033: Italian admin and time-entry locale files stay clear of the accent-audit anti-patterns', () => {
     // " e " followed by a lowercase letter is legitimate Italian ("and"), so the audit

@@ -1,6 +1,7 @@
 import {
   buildAssetAssignedPayload,
   buildAssetCreatedPayload,
+  buildAssetCustodyChangedPayload,
   buildAssetUnassignedPayload,
   buildAssetUpdatedPayload,
   buildAssetWarrantyExpiringPayload,
@@ -17,6 +18,7 @@ import { IDS, NOW, EARLIER } from '../fixtures';
 
 const ASSET_ACTIONS = 'packages/assets/src/actions/assetActions.ts';
 const ASSET_SERVICE = 'server/src/lib/api/services/AssetService.ts';
+const CUSTODY_CORE = 'packages/assets/src/lib/custody/publishCustodyChanged.ts';
 const WARRANTY_SOURCE = 'packages/jobs/src/lib/dateTriggers/sources/assetWarrantyEnd.ts';
 
 type AssetEventType =
@@ -24,7 +26,8 @@ type AssetEventType =
   | 'ASSET_UPDATED'
   | 'ASSET_ASSIGNED'
   | 'ASSET_UNASSIGNED'
-  | 'ASSET_WARRANTY_EXPIRING';
+  | 'ASSET_WARRANTY_EXPIRING'
+  | 'ASSET_CUSTODY_CHANGED';
 
 const user = { actor: { actorType: 'USER' as const, actorUserId: IDS.user }, occurredAt: NOW };
 
@@ -182,6 +185,32 @@ export const assetContracts = {
             clientId: IDS.client,
             expiresAt: '2026-08-05T00:00:00.000Z',
             daysUntilExpiry: 20,
+          }),
+      },
+    ],
+  },
+  ASSET_CUSTODY_CHANGED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${CUSTODY_CORE}#publishCustodyChanged`,
+        ctx: user,
+        build: () =>
+          buildAssetCustodyChangedPayload({
+            assetId: IDS.asset,
+            custodyId: IDS.asset,
+            clientId: IDS.client,
+            ticketId: IDS.ticket,
+            eventType: 'moved',
+            state: 'in_office',
+            purpose: 'repair',
+            nextActionParty: 'vendor',
+            followUpOn: '2026-10-30',
+            locationId: IDS.asset,
+            bin: 'Shelf C1',
+            holderUserId: IDS.user,
+            actorUserId: IDS.user,
+            occurredAt: NOW,
           }),
       },
     ],

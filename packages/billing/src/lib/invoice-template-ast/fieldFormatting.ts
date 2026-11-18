@@ -21,10 +21,12 @@ const FALLBACK_CURRENCY = 'USD';
 
 const formatCurrency = (value: number, currencyCode: string, locale?: string) => {
   try {
-    return new Intl.NumberFormat(locale || FALLBACK_LOCALE, {
-      style: 'currency',
-      currency: currencyCode || FALLBACK_CURRENCY,
-    }).format(value / 100);
+    const currency = currencyCode || FALLBACK_CURRENCY;
+    const resolvedLocale = locale || FALLBACK_LOCALE;
+    // Amounts are minor units; the shared formatter takes the exponent from the
+    // currency (USD 2, JPY 0, KWD 3) and shows the product's symbol, so a
+    // rendered invoice reads "R 12.34" like every other surface — not "ZAR 12.34".
+    return formatCurrencyFromMinorUnits(value, resolvedLocale, currency);
   } catch {
     return formatCurrencyFromMinorUnits(value, FALLBACK_LOCALE, FALLBACK_CURRENCY);
   }

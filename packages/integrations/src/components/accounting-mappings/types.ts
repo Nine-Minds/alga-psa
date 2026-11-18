@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import type { ExternalEntityMapping, CreateMappingData, UpdateMappingData } from '@alga-psa/integrations/actions';
 
 export type AccountingMappingEntityOption = {
@@ -118,11 +119,28 @@ export type AccountingMappingTargetConfig = {
   /** Catalog option id a stored mapping row corresponds to. */
   optionIdForMapping: (mapping: ExternalEntityMapping) => string;
   /**
+   * Whether a mapping of this kind holds its target exclusively, i.e. the
+   * server's unique index rejects a second mapping to the same target. The bulk
+   * grid withholds only exclusively-held options from suggestions.
+   */
+  isExclusiveKind: (kindId: string) => boolean;
+  /**
    * Copy rendered (table and edit dialog) when a stored mapping's target no
    * longer exists in the live catalog — the remediation prompt for invalid
    * legacy mappings.
    */
   invalidNotice: string;
+};
+
+export type AccountingMetadataField = {
+  /** Metadata key the value is stored under. */
+  key: string;
+  label: string;
+  placeholder?: string;
+  helpText?: string;
+  /** Column heading in the mappings table; defaults to `label`. */
+  columnLabel?: string;
+  required?: boolean;
 };
 
 export type AccountingMetadataConfig = {
@@ -131,6 +149,11 @@ export type AccountingMetadataConfig = {
     * Defaults to false.
     */
   enableJsonEditor?: boolean;
+  /**
+   * Named text inputs stored in the mapping's metadata, edited in the dialog
+   * and shown as table columns. Other metadata keys are preserved on save.
+   */
+  fields?: AccountingMetadataField[];
 };
 
 export type AccountingMappingElementIds = {
@@ -143,6 +166,30 @@ export type AccountingMappingElementIds = {
   deleteMenuPrefix?: string;
 };
 
+/** Props the engine passes to a module's searched Alga-side selector. */
+export type AccountingMappingAlgaPickerProps = {
+  id: string;
+  /** Selected Alga entity id, or '' for none. */
+  value: string;
+  onChange: (algaEntityId: string) => void;
+  /** Entities that already hold a mapping; the engine never includes the edited mapping's own entity. */
+  excludeIds: string[];
+  placeholder: string;
+};
+
+/**
+ * Alga side of a module whose entities are too many to list (clients): the dialog searches on the
+ * server, the mappings table names only the mapped entities, and the full list is read only when the
+ * user opens the bulk grid, whose rows are the unmapped entities themselves.
+ */
+export type AccountingMappingAlgaSearch = {
+  Picker: ComponentType<AccountingMappingAlgaPickerProps>;
+  /** Display options for the given ids (the mapped entities), sized by the ids, not the tenant. */
+  resolve(ids: string[]): Promise<AccountingMappingEntityOption[]>;
+  /** Every Alga entity. Called only when the bulk grid opens. */
+  loadAll(context: AccountingMappingContext): Promise<AccountingMappingEntityOption[]>;
+};
+
 export interface AccountingMappingModule {
   id: string;
   adapterType: string;
@@ -152,11 +199,23 @@ export interface AccountingMappingModule {
   metadata?: AccountingMetadataConfig;
   /** Present when the external side spans multiple provider catalogs. */
   externalTarget?: AccountingMappingTargetConfig;
+  /**
+   * The external value is typed by hand: file-based exports (QuickBooks CSV,
+   * QuickBooks Desktop, Xero CSV) have no provider catalog to pick from. Bulk
+   * mapping then renders a text input per row. Catalog-backed modules leave
+   * this unset, so an empty or unavailable catalog never turns into free text.
+   */
+  manualExternalEntry?: boolean;
   overridesKey?: string;
   resolveOverrides?: (
     context: AccountingMappingContext
   ) => AccountingMappingOverrides | undefined;
   elements?: AccountingMappingElementIds;
+  /**
+   * Set when the Alga side is searched rather than listed. `load` then returns no `algaEntities`;
+   * the engine resolves the mapped ones through `resolve` and loads the rest only for the bulk grid.
+   */
+  algaSearch?: AccountingMappingAlgaSearch;
 
   load(context: AccountingMappingContext): Promise<AccountingMappingLoadResult>;
   create(

@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { recordPath } from '@alga-psa/types';
 
 interface StockUnitSearchRow {
   unit_id: string;
@@ -37,7 +38,8 @@ function toSearchDoc(tenant: string, row: StockUnitSearchRow): SearchDoc {
     title,
     subtitle: compactJoin([row.service_name, row.sku, row.status]),
     body: compactJoin([row.serial_number, row.mac_address, row.service_name, row.sku, row.location_name, row.status]),
-    url: `/msp/inventory/units?unitId=${row.unit_id}`,
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    url: recordPath('stock_unit', row.unit_id),
     metadata: {
       serviceId: row.service_id,
       sku: row.sku,

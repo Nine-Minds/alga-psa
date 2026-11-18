@@ -1899,7 +1899,7 @@
     {
       "term": "bucket",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Nieprzetłumaczony anglicyzm dla pakietu godzin przedpłaconych."
     },
     {
@@ -2013,7 +2013,7 @@
     {
       "term": "kubeł",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Dosłowne tłumaczenie bucketa godzin; termin produktowy to pakiet godzin."
     },
     {
@@ -2161,19 +2161,19 @@
     {
       "term": "wiadro",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Dosłowne tłumaczenie bucketa godzin."
     },
     {
       "term": "zasobnik",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Techniczne tłumaczenie bucketa niepasujące do pakietu godzin."
     },
     {
       "term": "łyżka",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Błędne tłumaczenie bucketa godzin."
     }
   ],
@@ -2216,6 +2216,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2243,10 +2246,12 @@
       "CSV",
       "Ctrl",
       "Datto",
+      "Datto RMM",
       "email@example.com, another@example.com",
       "Entra ID",
       "Excel",
       "Folder",
+      "{{size}} GB",
       "Gmail",
       "Google",
       "Google OAuth",
@@ -2255,6 +2260,7 @@
       "GPU",
       "h",
       "HMAC-SHA256",
+      "Host",
       "HTML",
       "Hudu",
       "Huntress",
@@ -2273,6 +2279,7 @@
       "Linux",
       "Logo",
       "macOS",
+      "Markdown",
       "Marketing",
       "Meta",
       "Microsoft",
@@ -2293,6 +2300,7 @@
       "Offline",
       "OK",
       "Online",
+      "Operator",
       "Outlook",
       "PDF",
       "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
@@ -2303,6 +2311,7 @@
       "Pro",
       "QuickBooks",
       "QuickBooks Online",
+      "RAM",
       "RAM (GB)",
       "Realm",
       "RMA",
@@ -2317,6 +2326,7 @@
       "Solo",
       "SSO",
       "Status",
+      "Status:",
       "Stripe",
       "System",
       "T&M",
@@ -2350,7 +2360,13 @@
       "TeamViewer",
       "Kilogram",
       "Auto",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "Code 128",
+      "RMA {{number}} · {{status}}",
+      "Plan",
+      "Workflow",
+      "status",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "api",

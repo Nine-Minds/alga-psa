@@ -207,7 +207,7 @@ export const categorySearchSchema = z.object({
 export const bulkDeleteCategoriesSchema = z.object({
   category_ids: z.array(uuidSchema).min(1, 'At least one category ID is required').max(50, 'Too many categories for bulk operation'),
   category_type: categoryTypeSchema,
-  force: booleanTransform.optional().default("false") // Force delete even if in use
+  force: booleanTransform.prefault("false") // Force delete even if in use
 });
 
 export const bulkUpdateCategoriesSchema = z.object({
@@ -241,8 +241,8 @@ export const importCategoriesSchema = z.object({
 // Category Validation Rules
 export const categoryValidationRulesSchema = z.object({
   max_depth: z.number().int().min(1).max(10).optional().default(5),
-  allow_empty_categories: booleanTransform.optional().default("true"),
-  unique_names_per_level: booleanTransform.optional().default("true"),
+  allow_empty_categories: booleanTransform.prefault("true"),
+  unique_names_per_level: booleanTransform.prefault("true"),
   max_children: z.number().int().min(1).max(100).optional().default(50)
 });
 

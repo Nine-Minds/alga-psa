@@ -53,3 +53,7 @@ export interface IOnlineMeeting extends TenantEntity {
   updated_at: Date;
   artifacts: IOnlineMeetingArtifact[];
 }
+
+/** Public meeting projection. Provider/storage identities remain internal. */
+export type IOnlineMeetingArtifactView = Pick<IOnlineMeetingArtifact, 'artifact_id' | 'artifact_type' | 'document_id' | 'created_date_time'> & { download_url?: string };
+export type IOnlineMeetingView = Pick<IOnlineMeeting, 'tenant' | 'meeting_id' | 'provider' | 'subject' | 'join_url' | 'start_time' | 'end_time' | 'status' | 'appointment_request_id' | 'interaction_id' | 'schedule_entry_id' | 'created_at' | 'updated_at'> & { artifacts: IOnlineMeetingArtifactView[] };

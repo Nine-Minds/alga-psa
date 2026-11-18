@@ -23,6 +23,7 @@ import {
   getListViewDefinition,
   migrateListViewSettings,
   type ListViewDefinition,
+  type ListViewMigrationContext,
 } from '../lib/registry';
 import { normalizeListViewName } from '../lib/settingsSchema';
 import { ListViewModel, type ListViewRowWithOwner } from '../models/listViewModel';
@@ -138,12 +139,37 @@ async function canReadList(user: IUser, definition: ListViewDefinition, trx: Kne
   return hasPermission(user, definition.readPermission.resource, definition.readPermission.action, trx);
 }
 
+/** Resolves the lookups a stale document's migration needs; nothing is queried for current rows. */
+async function loadMigrationContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  definition: ListViewDefinition,
+  rows: ListViewRowWithOwner[],
+): Promise<ListViewMigrationContext | undefined> {
+  if (!definition.prepareMigration) return undefined;
+  const stale = rows.filter((row) => row.schema_version < definition.schemaVersion);
+  if (stale.length === 0) return undefined;
+  return definition.prepareMigration(
+    stale.map((row) => (row.settings ?? {}) as ListViewSettings),
+    {
+      ticketTagIdsByText: async (texts) => {
+        const found = await trx('tag_definitions')
+          .where({ tenant, tagged_type: 'ticket' })
+          .whereIn('tag_text', texts)
+          .select('tag_text', 'tag_id');
+        return new Map<string, string>(found.map((r: { tag_text: string; tag_id: string }) => [r.tag_text, r.tag_id]));
+      },
+    },
+  );
+}
+
 function toSummary(
   row: ListViewRowWithOwner,
   definition: ListViewDefinition,
   user: IUser,
   caps: Capabilities,
   defaultViewId: string | null,
+  migration?: ListViewMigrationContext,
 ): ListViewSummary {
   return {
     view_id: row.view_id,
@@ -152,7 +178,7 @@ function toSummary(
     visibility: row.visibility,
     owner_user_id: row.owner_user_id,
     owner_name: ownerName(row),
-    settings: migrateListViewSettings(definition, row.settings ?? {}, row.schema_version),
+    settings: migrateListViewSettings(definition, row.settings ?? {}, row.schema_version, migration),
     schema_version: row.schema_version,
     created_at: toIso(row.created_at),
     updated_at: toIso(row.updated_at),
@@ -201,8 +227,9 @@ export const listListViews = withAuth(async (
     // someone else) simply stops being a default.
     const defaultViewId = storedDefault && rows.some((row) => row.view_id === storedDefault) ? storedDefault : null;
 
+    const migration = await loadMigrationContext(trx, tenant, definition, rows);
     return {
-      views: rows.map((row) => toSummary(row, definition, user, caps, defaultViewId)),
+      views: rows.map((row) => toSummary(row, definition, user, caps, defaultViewId, migration)),
       defaultViewId,
       canShare: caps.canShare,
     };
@@ -227,7 +254,7 @@ export const getListView = withAuth(async (
 
     const caps = await loadCapabilities(user, trx);
     const defaultViewId = await ListViewModel.getDefaultViewId(trx, tenant, user.user_id, definition.listKey);
-    return toSummary(row, definition, user, caps, defaultViewId);
+    return toSummary(row, definition, user, caps, defaultViewId, await loadMigrationContext(trx, tenant, definition, [row]));
   });
 });
 
@@ -275,7 +302,7 @@ export const createListView = withAuth(async (
         throw new Error(`List view ${viewId} was not readable immediately after insert`);
       }
       const defaultViewId = await ListViewModel.getDefaultViewId(trx, tenant, user.user_id, definition.listKey);
-      return toSummary(row, definition, user, caps, defaultViewId);
+      return toSummary(row, definition, user, caps, defaultViewId, await loadMigrationContext(trx, tenant, definition, [row]));
     });
   } catch (error) {
     // Two concurrent saves of the same name: the unique index is the arbiter.
@@ -347,7 +374,7 @@ export const updateListView = withAuth(async (
         // An admin made someone else's view private: it has left the caller's reach.
         return notFound();
       }
-      return toSummary(updated, definition, user, caps, defaultViewId);
+      return toSummary(updated, definition, user, caps, defaultViewId, await loadMigrationContext(trx, tenant, definition, [updated]));
     });
   } catch (error) {
     if (isUniqueViolation(error) && name !== undefined) return duplicateName(name);

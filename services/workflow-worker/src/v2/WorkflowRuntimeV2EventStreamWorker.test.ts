@@ -157,6 +157,7 @@ vi.mock('../../../../shared/services/email/inboundEmailDurableStore', () => ({
 }));
 
 import { convertToWorkflowEvent } from '../../../../packages/event-schemas/src/schemas/eventBusSchema';
+import { parseStreamEvent } from '../../../../packages/event-schemas/src/schemas/workflowEventSchema';
 import { workflowEventPayloadSchemas } from '../../../../packages/event-schemas/src/schemas/domain/workflowEventPayloadSchemas';
 import { InboundEmailOutboxEventPublisher } from '../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher';
 import { WorkflowRuntimeV2EventStreamWorker } from './WorkflowRuntimeV2EventStreamWorker';
@@ -779,6 +780,162 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         payload: expect.objectContaining({ ticketId, tenantId: tenant, occurredAt: expect.any(String) })
       })
     );
+  });
+
+  describe('occurredAt consumer-boundary normalisation (alga-2026-0002379)', () => {
+    const tenant = '91a53464-0b67-4e3f-ae88-922d9c5af6ed';
+    const ticketId = '7fa265ac-3a50-4ad6-9454-4a860d884996';
+    const eventId = 'c9f1f8d4-7c1f-4a0c-9b0e-5a2f1f7f3a11';
+    const envelopeTimestamp = '2026-10-19T14:03:22.000Z';
+    // The exact key set of every payload rejected in production.
+    const productionPayload = {
+      source: 'email',
+      userId: ticketId,
+      board_id: '11111111-1111-4111-8111-111111111111',
+      tenantId: tenant,
+      ticketId,
+      client_id: '22222222-2222-4222-8222-222222222222',
+      priority_id: '33333333-3333-4333-8333-333333333333',
+    };
+
+    const setUpTicketCreatedWorkflow = async () => {
+      catalogSchemaRef = 'payload.TicketCreated.v1';
+      workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: eventId });
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+      workflowDefinitionListMock.mockResolvedValue([
+        { workflow_id: 'wf-tc', key: 'tc', status: 'published', trigger: { type: 'event', eventName: 'TICKET_CREATED' } },
+      ]);
+      workflowDefinitionVersionListByWorkflowMock.mockResolvedValue([
+        {
+          version: 3,
+          definition_json: {
+            id: 'wf-tc',
+            version: 3,
+            payloadSchemaRef: 'payload.TicketCreated.v1',
+            trigger: { type: 'event', eventName: 'TICKET_CREATED' },
+            steps: [],
+          },
+        },
+      ]);
+      schemaRegistryHasMock.mockReturnValue(true);
+      schemaRegistryGetMock.mockImplementation((ref: string) => workflowEventPayloadSchemas[ref]);
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+      await worker.start();
+    };
+
+    const deliverEnvelope = (payload: unknown) =>
+      registeredConsumer!({
+        event_id: eventId,
+        event_type: 'TICKET_CREATED',
+        tenant,
+        timestamp: envelopeTimestamp,
+        payload,
+      });
+
+    it('(a) fills occurredAt from the envelope timestamp for the production inbound-email payload and launches', async () => {
+      await setUpTicketCreatedWorkflow();
+      await deliverEnvelope({ ...productionPayload });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        workflowId: 'wf-tc',
+        payload: expect.objectContaining({ ticketId, occurredAt: envelopeTimestamp }),
+      });
+      expect(skipInsertManyMock.mock.calls.flatMap((call: any[]) => call[2] as unknown[])).toHaveLength(0);
+      expect(workflowRuntimeEventCreateMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: envelopeTimestamp }),
+      });
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('defaulted from envelope timestamp'),
+        expect.objectContaining({
+          eventId,
+          eventType: 'TICKET_CREATED',
+          tenant,
+          payloadKeys: Object.keys(productionPayload).sort(),
+        })
+      );
+    });
+
+    it('(b) preserves an occurredAt the producer already stamped and does not warn', async () => {
+      await setUpTicketCreatedWorkflow();
+      const stamped = '2026-10-19T14:03:20.500Z';
+      await deliverEnvelope({ ...productionPayload, occurredAt: stamped });
+
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: stamped }),
+      });
+      expect(loggerWarnMock).not.toHaveBeenCalledWith(
+        expect.stringContaining('defaulted from envelope timestamp'),
+        expect.anything()
+      );
+    });
+
+    it('(c) a JSON-string payload_json on the wire is parsed by the real envelope parser, then normalised and launched', async () => {
+      await setUpTicketCreatedWorkflow();
+      // How the payload really travels: payload_json is a JSON string in the Redis stream message.
+      const parsed = parseStreamEvent({
+        id: '1-0',
+        message: {
+          event_id: eventId,
+          execution_id: '',
+          event_name: 'TICKET_CREATED',
+          event_type: 'TICKET_CREATED',
+          tenant,
+          timestamp: envelopeTimestamp,
+          user_id: '',
+          from_state: '',
+          to_state: '',
+          payload_json: JSON.stringify(productionPayload),
+        },
+      } as any);
+      await registeredConsumer!(parsed);
+
+      expect(launchPublishedWorkflowRunMock.mock.calls[0]![1]).toMatchObject({
+        payload: expect.objectContaining({ occurredAt: envelopeTimestamp }),
+      });
+    });
+
+    it('(c) a double-encoded string payload never reaches the worker: the stream envelope parser rejects it loudly', () => {
+      expect(() =>
+        parseStreamEvent({
+          id: '1-0',
+          message: {
+            event_id: eventId,
+            event_name: 'TICKET_CREATED',
+            event_type: 'TICKET_CREATED',
+            tenant,
+            timestamp: envelopeTimestamp,
+            payload_json: JSON.stringify(JSON.stringify(productionPayload)),
+          },
+        } as any)
+      ).toThrow(/Failed to parse workflow event/);
+    });
+
+    it('leaves the payload alone (validation still fails loudly) when the envelope has no timestamp, and never uses the clock', async () => {
+      await setUpTicketCreatedWorkflow();
+      await registeredConsumer!({ event_id: eventId, event_type: 'TICKET_CREATED', tenant, payload: { ...productionPayload } });
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      expect(workflowRuntimeEventCreateMock.mock.calls[0]![1].payload).not.toHaveProperty('occurredAt');
+      const rows = skipInsertManyMock.mock.calls[0]![2] as any[];
+      expect(rows[0]).toMatchObject({ reason: 'payload_validation_failed' });
+    });
+
+    it('payload_validation_failed skip details carry eventId and sorted payloadKeys', async () => {
+      await setUpTicketCreatedWorkflow();
+      const { ticketId: _omitted, ...withoutTicketId } = productionPayload;
+      await deliverEnvelope(withoutTicketId);
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      const rows = skipInsertManyMock.mock.calls[0]![2] as any[];
+      expect(rows[0].reason).toBe('payload_validation_failed');
+      expect(rows[0].details).toMatchObject({
+        eventId,
+        payloadKeys: [...Object.keys(withoutTicketId), 'occurredAt'].sort(),
+        workflowPayloadSchemaRef: 'payload.TicketCreated.v1',
+        issues: [expect.objectContaining({ path: 'ticketId' })],
+      });
+    });
   });
 
   it('does not stamp a validation error when the event still launches another workflow', async () => {

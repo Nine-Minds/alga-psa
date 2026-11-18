@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
 import { tenantDb } from '@alga-psa/db';
+import { assertActiveInternalUser } from '@alga-psa/auth';
 import { getConnection } from '@/lib/db/db';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
 import {
@@ -147,6 +148,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // An already-linked identity skipped the email-match filters above, so re-check that
+    // the bound user is still an active internal user (never client or non-interactive).
+    if (!(await assertActiveInternalUser(identity.user_id, identity.tenant))) {
+      return NextResponse.json(
+        {
+          error: 'account_not_allowed',
+          message: 'This Apple ID is linked to an account that cannot use the mobile app.',
+        },
+        { status: 403 },
+      );
+    }
+
     await enforceMobileOttIssueLimit(`${identity.tenant}:${identity.user_id}:${getClientIp(req)}`);
 
     // Opportunistically upgrade stored refresh token on subsequent sign-ins
@@ -188,7 +201,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     if (error instanceof UnauthorizedError) {
       return handleApiError(error);

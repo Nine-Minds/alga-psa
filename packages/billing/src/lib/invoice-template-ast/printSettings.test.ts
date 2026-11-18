@@ -6,7 +6,7 @@ import {
   pixelsToMillimeters,
   type TemplateAst,
 } from '@alga-psa/types';
-import { resolvePdfPrintOptionsFromAst } from './printSettings';
+import { resolveCustomPageCssFromAst, resolvePdfPrintOptionsFromAst } from './printSettings';
 
 const buildTemplateAst = ({
   paperPreset,
@@ -122,5 +122,45 @@ describe('invoice print preset registry', () => {
         left: '0mm',
       },
     });
+  });
+});
+
+describe('custom page size', () => {
+  const customAst = (customPageSize: unknown, marginMm = 2): TemplateAst =>
+    ({
+      kind: 'invoice-template-ast',
+      version: 1,
+      metadata: { printSettings: { paperPreset: 'Letter', marginMm, customPageSize } },
+      layout: { id: 'document-root', type: 'document', children: [] },
+    }) as unknown as TemplateAst;
+
+  it('emits width, height and preferCSSPageSize for a custom size', () => {
+    const options = resolvePdfPrintOptionsFromAst(customAst({ width: 4, height: 2, unit: 'in' }));
+    expect(options.width).toBe('4in');
+    expect(options.height).toBe('2in');
+    expect(options.preferCSSPageSize).toBe(true);
+    expect(options.format).toBeUndefined();
+  });
+
+  it('supports millimetres', () => {
+    const options = resolvePdfPrintOptionsFromAst(customAst({ width: 102, height: 51, unit: 'mm' }));
+    expect(options.width).toBe('102mm');
+    expect(options.height).toBe('51mm');
+  });
+
+  it('emits a matching @page rule only for custom sizes', () => {
+    expect(resolveCustomPageCssFromAst(customAst({ width: 4, height: 2, unit: 'in' }, 2))).toBe(
+      '@page { size: 4in 2in; margin: 2mm; }'
+    );
+    expect(resolveCustomPageCssFromAst(customAst(undefined))).toBeNull();
+  });
+
+  it.each(['Letter', 'A4', 'Legal'] as const)('leaves %s output unchanged', (paperPreset) => {
+    const ast = buildTemplateAst({ paperPreset, marginMm: 10, widthPx: 800, heightPx: 1000, paddingPx: 0 });
+    const options = resolvePdfPrintOptionsFromAst(ast);
+    expect(options.format).toBe(paperPreset);
+    expect(options.width).toBeUndefined();
+    expect(options.preferCSSPageSize).toBeUndefined();
+    expect(resolveCustomPageCssFromAst(ast)).toBeNull();
   });
 });

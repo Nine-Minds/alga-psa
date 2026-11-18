@@ -1,7 +1,7 @@
 'use server';
 
 import { getTenantForCurrentRequest } from '../../server';
-import { getPortalDomainStatusForTenant } from '../../server/portalDomainStatus';
+import { getPortalDomainStatusForTenant } from '../../lib/portalDomainStatus';
 import { withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { PortalDomainStatusResponse } from './portalDomain.types';

@@ -62,6 +62,10 @@ export interface IQuoteItem extends TenantEntity {
   is_taxable?: boolean;
   tax_region?: string | null;
   tax_rate?: number | null;
+  /** Read-only, client-portal payload only: tax this row carries when included (server-resolved, minor units). Used for the local optional-item preview; never persisted. */
+  tax_amount_if_included?: number | null;
+  /** Read-only, client-portal payload only: exact percentage behind `tax_amount_if_included`, so the preview can re-tax the row on its discounted base. Never persisted. */
+  tax_rate_if_included?: number | null;
   location_id?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
@@ -85,6 +89,18 @@ export interface IQuoteActivity extends TenantEntity {
  * rendered when this is NULL.
  */
 export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
+
+/** Display projection of a quote_decisions row. */
+export interface IQuoteDecisionSummary {
+  decision_id: string;
+  decision: 'accepted' | 'rejected';
+  method: 'portal' | 'email_link' | 'msp_marked';
+  signer_name?: string | null;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  comment?: string | null;
+  decided_at: ISO8601String;
+}
 
 export interface IQuote extends TenantEntity {
   quote_id: string;
@@ -120,6 +136,8 @@ export interface IQuote extends TenantEntity {
   accepted_at?: ISO8601String | null;
   accepted_by?: string | null;
   accepted_by_name?: string | null;
+  /** Decision audit rows, newest first (from quote_decisions). Populated by getQuote. */
+  decisions?: IQuoteDecisionSummary[];
   rejected_at?: ISO8601String | null;
   rejection_reason?: string | null;
   cancelled_at?: ISO8601String | null;
@@ -166,6 +184,21 @@ export interface QuoteConversionPreviewItem {
   location_name?: string | null;
 }
 
+/** A quote discount's recurring share as it lands on one converted contract line. */
+export interface QuoteConversionPreviewDiscount {
+  quote_item_id: string;
+  /** quote_item_id of the recurring row whose contract line the discount reduces. */
+  line_quote_item_id: string;
+  description: string;
+  line_description: string;
+  discount_type: 'percentage' | 'fixed';
+  /** Percent units (e.g. 10) when `discount_type` is percentage, else null. */
+  percentage: number | null;
+  /** Reduction per billing period of the line, minor units (positive). */
+  amount: number;
+  billing_frequency: string | null;
+}
+
 export interface QuoteConversionPreview {
   quote_id: string;
   available_actions: Array<'contract' | 'invoice' | 'both'>;
@@ -176,6 +209,12 @@ export interface QuoteConversionPreview {
   /** Description of the service-less recurring item behind `contract_blocked_reason`, for localized display. */
   contract_blocked_item_description?: string | null;
   contract_items: QuoteConversionPreviewItem[];
+  /** Recurring discount shares a contract conversion writes as line discounts. */
+  contract_discounts: QuoteConversionPreviewDiscount[];
+  /** Recurring charge per month (cadences normalized) before carried discounts, minor units. */
+  contract_monthly_before_discounts: number;
+  /** Recurring charge per month after carried discounts, minor units. */
+  contract_monthly_total: number;
   /** One-time items an invoice conversion would bill right now — mirrors the
    *  runtime exclusion of product lines already claimed by a sales order. */
   invoice_items: QuoteConversionPreviewItem[];
@@ -379,6 +418,22 @@ export interface QuoteViewModel {
   has_multiple_locations?: boolean;
   accepted_by_name?: string | null;
   accepted_at?: ISO8601String | null;
+  /**
+   * Who accepted the quote and how. Populated only when the renderer is handed
+   * acceptance details (the signed copy of a quote accepted through an emailed
+   * link); null/absent for every other render, so a sent quote is unchanged.
+   */
+  acceptance?: QuoteViewModelAcceptance | null;
+}
+
+/** The acceptance record shown on a signed quote copy. */
+export interface QuoteViewModelAcceptance {
+  signer_name: string;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  accepted_at: ISO8601String;
+  method: string;
+  ip_address?: string | null;
 }
 
 export type QuoteDocumentTemplateSource = 'standard' | 'custom';

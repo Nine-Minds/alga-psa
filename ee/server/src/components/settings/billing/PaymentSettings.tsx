@@ -34,8 +34,14 @@ import {
   retryStripeWebhookConfigurationAction,
 } from '@ee/lib/actions/payment-actions';
 import type { PaymentSettings as PaymentSettingsType } from 'server/src/interfaces/payment.interfaces';
+import {
+  PAYMENT_LINK_EXPIRATION_OPTIONS_HOURS,
+  PAYMENT_LINK_EXPIRATION_MIN_HOURS,
+  PAYMENT_LINK_EXPIRATION_MAX_HOURS,
+} from '@alga-psa/types';
 
 // Payment Link Expiration Selector Component
+// LEVERAGE: pattern payment-link-expiration-selector — this selector is duplicated verbatim between PaymentSettings.tsx and PaymentSettingsConfig.tsx; only the options constant is shared so far.
 interface PaymentLinkExpirationSelectorProps {
   value: number; // hours
   onChange: (hours: number) => void;
@@ -50,14 +56,15 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
   const { t } = useTranslation('msp/billing-settings');
 
   // Predefined expiration options in hours
-  const expirationOptions = useMemo(() => [
-    { hours: 24, label: t('payment.expiration.daysSingular', { count: 1 }) },
-    { hours: 48, label: t('payment.expiration.daysPlural', { count: 2 }) },
-    { hours: 72, label: t('payment.expiration.daysPlural', { count: 3 }) },
-    { hours: 168, label: t('payment.expiration.daysPlural', { count: 7 }) },
-    { hours: 336, label: t('payment.expiration.daysPlural', { count: 14 }) },
-    { hours: 720, label: t('payment.expiration.daysPlural', { count: 30 }) },
-  ], [t]);
+  const expirationOptions = useMemo(() => PAYMENT_LINK_EXPIRATION_OPTIONS_HOURS.map((hours) => {
+    const days = hours / 24;
+    return {
+      hours,
+      label: days === 1
+        ? t('payment.expiration.daysSingular', { count: days })
+        : t('payment.expiration.daysPlural', { count: days }),
+    };
+  }), [t]);
 
   // Check if current value matches a predefined option
   const currentOption = expirationOptions.find(opt => opt.hours === value);
@@ -122,11 +129,14 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
         <div className="flex items-center gap-2 pl-2">
           <Input
             type="number"
-            min={1}
-            max={720}
+            min={PAYMENT_LINK_EXPIRATION_MIN_HOURS}
+            max={PAYMENT_LINK_EXPIRATION_MAX_HOURS}
             value={customHours}
             onChange={(e) => {
-              const hours = parseInt(e.target.value, 10) || 168;
+              const parsed = parseInt(e.target.value, 10);
+              const hours = Number.isNaN(parsed)
+                ? 168
+                : Math.min(PAYMENT_LINK_EXPIRATION_MAX_HOURS, Math.max(PAYMENT_LINK_EXPIRATION_MIN_HOURS, parsed));
               handleCustomHoursChange(hours);
             }}
             className="w-24"

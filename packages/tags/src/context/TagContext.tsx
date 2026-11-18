@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import type { ITag, TaggedEntityType } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions, isTagActionError } from '../actions';
 
 interface TagPermissions {
@@ -213,9 +214,10 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useTags = () => {
+  const { t } = useTranslation('common');
   const context = useContext(TagContext);
   if (context === undefined) {
-    throw new Error('useTags must be used within a TagProvider');
+    throw new Error(t('tags.errors.providerRequired'));
   }
 
   // Lazy load tags on first access

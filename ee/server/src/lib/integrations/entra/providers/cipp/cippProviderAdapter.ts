@@ -1,5 +1,24 @@
 import axios from 'axios';
-import { getEntraCippCredentials } from './cippSecretStore';
+import {
+  getEntraCippCredentials,
+  type EntraCippApiClientCredentials,
+  type EntraCippCredentials,
+} from './cippSecretStore';
+import {
+  cippTokenCacheKey,
+  getCippTokenService,
+  isCippApiClientCredentials,
+  isCippTokenError,
+} from './cippTokenService';
+import {
+  cippApiClientRejectedMessage,
+  cippEndpointName,
+  cippHtmlResponseMessage,
+  cippIpBlockedMessage,
+  cippListTenantsForbiddenMessage,
+  cippRoleBlockedMessage,
+  looksLikeHtml,
+} from './cippFailureMessages';
 import { normalizeEntraSyncUser } from '../../sync/types';
 import {
   EntraOperatorError,
@@ -116,6 +135,7 @@ export type CippTenantProbeOutcome =
   | 'auth_rejected'
   | 'http_error'
   | 'invalid_payload'
+  | 'html_response'
   | 'unreachable';
 
 export interface CippTenantProbe {
@@ -199,7 +219,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     if (!credentials) return null;
     try {
       const tenantId = encodeURIComponent(input.managedTenantId);
-      const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      const payload = await this.requestFromCandidates(input.tenant, credentials, [
         `/api/ListMailboxes?tenantFilter=${tenantId}&RecipientTypeDetails=SharedMailbox`,
       ]);
       const rows = Array.isArray(payload)
@@ -232,27 +252,110 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     }
   }
 
-  private async requestFromCandidates(
+  /**
+   * One authenticated GET. Legacy sends exactly the headers it always has. An
+   * API client sends only `Authorization: Bearer <minted token>`; on a 401 the
+   * cached token is dropped, a new one minted, and the call retried ONCE. A
+   * second 401 propagates and is reported as the credential being rejected.
+   */
+  private async authenticatedGet(
+    tenant: string,
+    credentials: EntraCippCredentials,
+    url: string,
+    signal?: AbortSignal
+  ) {
+    if (!isCippApiClientCredentials(credentials)) {
+      return axios.get(url, {
+        timeout: CIPP_REQUEST_TIMEOUT_MS,
+        signal,
+        headers: {
+          Authorization: `Bearer ${credentials.apiToken}`,
+          'X-API-KEY': credentials.apiToken,
+        },
+      });
+    }
+
+    const tokens = getCippTokenService();
+    const key = cippTokenCacheKey(tenant, credentials);
+    const get = (token: string) =>
+      axios.get(url, {
+        timeout: CIPP_REQUEST_TIMEOUT_MS,
+        signal,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+    const token = await this.mintToken(tenant, credentials);
+    try {
+      return await get(token);
+    } catch (error: unknown) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+        throw error;
+      }
+      tokens.invalidate(key, token);
+      return get(await this.mintToken(tenant, credentials));
+    }
+  }
+
+  /** Mint failures become operator errors; the message is already actionable. */
+  private async mintToken(tenant: string, credentials: EntraCippApiClientCredentials): Promise<string> {
+    try {
+      return await getCippTokenService().getToken(tenant, credentials);
+    } catch (error: unknown) {
+      if (isCippTokenError(error)) {
+        throw new EntraOperatorError(error.code, error.message, error.category);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Tell an IP-allowlist 403 from a Custom Role 403. They look identical on
+   * the wire; the difference is whether anything else works. listtenants is the
+   * baseline: if it too is refused, the caller is shut out entirely (allowlist);
+   * if it answers, the role is blocking just this endpoint.
+   */
+  private async classifyForbidden(
+    tenant: string,
+    credentials: EntraCippApiClientCredentials,
     baseUrl: string,
-    apiToken: string,
+    endpoint: string,
+    signal?: AbortSignal
+  ): Promise<EntraOperatorError> {
+    if (endpoint.toLowerCase() === 'listtenants') {
+      return new EntraOperatorError('credential-rejected', cippListTenantsForbiddenMessage(), 'ip-blocked');
+    }
+    try {
+      await this.authenticatedGet(tenant, credentials, `${baseUrl}/api/listtenants`, signal);
+      return new EntraOperatorError('credential-rejected', cippRoleBlockedMessage(endpoint), 'role-blocked');
+    } catch {
+      return new EntraOperatorError('credential-rejected', cippIpBlockedMessage(), 'ip-blocked');
+    }
+  }
+
+  private async requestFromCandidates(
+    tenant: string,
+    credentials: EntraCippCredentials,
     candidates: string[],
     signal?: AbortSignal
   ): Promise<unknown> {
     let lastError: Error | null = null;
+    const isApiClient = isCippApiClientCredentials(credentials);
+    const baseUrl = credentials.baseUrl.replace(/\/+$/, '');
 
     for (const candidate of candidates) {
-      const url = `${baseUrl.replace(/\/+$/, '')}${candidate}`;
+      const url = `${baseUrl}${candidate}`;
       try {
-        const response = await axios.get(url, {
-          timeout: CIPP_REQUEST_TIMEOUT_MS,
-          signal,
-          headers: {
-            Authorization: `Bearer ${apiToken}`,
-            'X-API-KEY': apiToken,
-          },
-        });
+        const response = await this.authenticatedGet(tenant, credentials, url, signal);
+        if (isApiClient && looksLikeHtml(response.headers?.['content-type'], response.data)) {
+          throw new EntraOperatorError('unreachable', cippHtmlResponseMessage(), 'html-response');
+        }
         return response.data;
       } catch (error: unknown) {
+        if (isApiClient && axios.isAxiosError(error)
+          && looksLikeHtml(error.response?.headers?.['content-type'], error.response?.data)) {
+          throw new EntraOperatorError('unreachable', cippHtmlResponseMessage(), 'html-response');
+        }
+
         if (axios.isAxiosError(error) && error.response?.status === 404) {
           lastError = error;
           continue;
@@ -264,10 +367,18 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         // code 401", which names neither the cause nor the remedy.
         if (axios.isAxiosError(error)) {
           const status = error.response?.status;
+          if (isApiClient && status === 403) {
+            throw await this.classifyForbidden(
+              tenant, credentials, baseUrl, cippEndpointName(candidate), signal
+            );
+          }
           if (status === 401 || status === 403) {
             throw new EntraOperatorError(
               'credential-rejected',
-              'CIPP rejected the stored API credential. Rotate it from the Connection tab to resume syncing.'
+              isApiClient
+                ? cippApiClientRejectedMessage()
+                : 'CIPP rejected the stored API credential. Rotate it from the Connection tab to resume syncing.',
+              isApiClient ? 'token-rejected' : undefined
             );
           }
           // A timeout is not a refusal: CIPP is up and still working, and the
@@ -306,7 +417,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     // CIPP-API exposes Azure Functions by name: ListTenants is the endpoint.
     // The REST-style aliases this adapter used to guess at (/api/tenant/list,
     // /api/tenants) do not exist in stock CIPP.
-    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+    const payload = await this.requestFromCandidates(input.tenant, credentials, [
       '/api/listtenants',
     ]);
     return mapCippTenants(payload);
@@ -324,6 +435,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     }
 
     const base = credentials.baseUrl.replace(/\/+$/, '');
+    const isApiClientProbe = isCippApiClientCredentials(credentials);
     const attempted: string[] = [];
     let lastError: unknown = null;
 
@@ -331,13 +443,19 @@ export class CippProviderAdapter implements EntraProviderAdapter {
       const url = `${base}${candidate}`;
       attempted.push(url);
       try {
-        const response = await axios.get(url, {
-          timeout: CIPP_REQUEST_TIMEOUT_MS,
-          headers: {
-            Authorization: `Bearer ${credentials.apiToken}`,
-            'X-API-KEY': credentials.apiToken,
-          },
-        });
+        const response = await this.authenticatedGet(tenant, credentials, url);
+        if (isApiClientProbe && looksLikeHtml(response.headers?.['content-type'], response.data)) {
+          return {
+            outcome: 'html_response',
+            reachable: true,
+            authRejected: false,
+            endpoint: url,
+            attempted,
+            status: response.status,
+            error: cippHtmlResponseMessage(),
+            tenants: [],
+          };
+        }
         if (!isRecognizableTenantList(response.data)) {
           return {
             outcome: 'invalid_payload',
@@ -360,8 +478,27 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           tenants: mapCippTenants(response.data),
         };
       } catch (error: unknown) {
+        // A mint failure is not a reachability or auth verdict about CIPP; the
+        // token-mint diagnostic reports it, so let it through unmangled.
+        if (error instanceof EntraOperatorError
+          && (error.code === 'token-mint-failed' || error.code === 'token-scope-rejected')) {
+          throw error;
+        }
         if (axios.isAxiosError(error)) {
           const status = error.response?.status;
+          if (isApiClientProbe
+            && looksLikeHtml(error.response?.headers?.['content-type'], error.response?.data)) {
+            return {
+              outcome: 'html_response',
+              reachable: true,
+              authRejected: false,
+              endpoint: url,
+              attempted,
+              status,
+              error: cippHtmlResponseMessage(),
+              tenants: [],
+            };
+          }
           if (status === 401 || status === 403) {
             return {
               outcome: 'auth_rejected',
@@ -370,6 +507,11 @@ export class CippProviderAdapter implements EntraProviderAdapter {
               endpoint: url,
               attempted,
               status,
+              // listtenants is the baseline endpoint, so an API-client 403 here
+              // is the allowlist (or a role that blocks even listtenants).
+              ...(isApiClientProbe
+                ? { error: status === 403 ? cippListTenantsForbiddenMessage() : cippApiClientRejectedMessage() }
+                : {}),
               tenants: [],
             };
           }
@@ -420,7 +562,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     // is `tenantFilter` — a customerId GUID or default domain — and the
     // response is a plain array of Graph beta user objects.
     const tenantId = encodeURIComponent(input.managedTenantId);
-    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+    const payload = await this.requestFromCandidates(input.tenant, credentials, [
       `/api/listusers?tenantFilter=${tenantId}`,
     ], options.signal);
     const rows = extractCollection(payload);
@@ -491,7 +633,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     // — securityEnabled is selected precisely so callers can filter, which
     // the direct adapter already does and this one must match.
     const tenantId = encodeURIComponent(input.managedTenantId);
-    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+    const payload = await this.requestFromCandidates(input.tenant, credentials, [
       `/api/listgroups?tenantFilter=${tenantId}`,
     ]);
     const rows = extractCollection(payload);
@@ -530,7 +672,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     // (the display fields are PascalCase — DisplayName, SecurityGroup).
     const tenantId = encodeURIComponent(input.managedTenantId);
     const userId = encodeURIComponent(input.userEntraObjectId);
-    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+    const payload = await this.requestFromCandidates(input.tenant, credentials, [
       `/api/listusergroups?tenantFilter=${tenantId}&userId=${userId}`,
     ]);
     const rows = extractCollection(payload);

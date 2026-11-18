@@ -82,6 +82,48 @@ test('repeated ffmpeg download failure preserves terminal result after two attem
   assert.equal(calls, 2); assert.deepEqual(result, ffmpegDownload);
 });
 
+// Replays the enterprise production-browser diagnostic: prebuild-install timed
+// out, and the fallback build the package falls back to does not exist.
+const zstdPrebuildDownload = { code: 127, signal: null, stderr: [
+  'npm error code 127',
+  'npm error path /home/runner/work/alga-psa/alga-psa/node_modules/@mongodb-js/zstd',
+  'npm error command failed',
+  'npm error command sh -c prebuild-install --runtime napi || npm run clean-install',
+  'npm error > @mongodb-js/zstd@7.0.0 clean-install',
+  'npm error > npm run install-zstd && npm run compile',
+  'npm error > @mongodb-js/zstd@7.0.0 install-zstd',
+  'npm error > bash etc/install-zstd.sh',
+  'npm error prebuild-install warn install Request timed out',
+  'npm error bash: etc/install-zstd.sh: No such file or directory',
+].join('\n') };
+for (const [name, first, expectedCalls] of [
+  ['observed zstd prebuild timeout recovers without an opt-in', zstdPrebuildDownload, 2],
+  ['absent zstd prebuild is not retried', { ...zstdPrebuildDownload,
+    stderr: zstdPrebuildDownload.stderr.replace('warn install Request timed out', 'WARN install No prebuilt binaries found') }, 1],
+  ['unrelated package reaching 127 is not retried', { ...zstdPrebuildDownload,
+    stderr: zstdPrebuildDownload.stderr.replace('node_modules/@mongodb-js/zstd', 'node_modules/other') }, 1],
+  ['another install command is not retried', { ...zstdPrebuildDownload,
+    stderr: zstdPrebuildDownload.stderr.replace('sh -c prebuild-install --runtime napi || npm run clean-install', 'sh -c node install.js') }, 1],
+  ['conflicting zstd lifecycle code is not retried', { ...zstdPrebuildDownload,
+    stderr: `${zstdPrebuildDownload.stderr}\nnpm error code ELIFECYCLE` }, 1],
+  ['a missing script alone is not retried', { ...zstdPrebuildDownload, code: 1,
+    stderr: zstdPrebuildDownload.stderr.replace('npm error code 127', 'npm error code 1') }, 1],
+  ['zstd signal is preserved without retry', { ...zstdPrebuildDownload, code: null, signal: 'SIGTERM' }, 1],
+]) test(name, async () => {
+  let calls = 0, pauses = 0;
+  const result = await installApiTestDependencies({
+    run: async args => { assert.deepEqual(args, ['ci', '--prefer-offline']); return calls++ === 0 ? first : success; },
+    wait: async ms => { assert.equal(ms, 2000); pauses++; } });
+  assert.equal(calls, expectedCalls); assert.equal(pauses, expectedCalls - 1);
+  assert.deepEqual(result, expectedCalls === 2 ? success : first);
+});
+test('repeated zstd prebuild timeout preserves terminal result after two attempts', async () => {
+  let calls = 0;
+  const result = await installApiTestDependencies({
+    run: async () => { calls++; return zstdPrebuildDownload; }, wait: async () => {} });
+  assert.equal(calls, 2); assert.deepEqual(result, zstdPrebuildDownload);
+});
+
 for (const [workflow, jobId] of [
   ['node-tests.yml', 'browser-discovery'],
   ['temporal-readiness.yml', 'engine-tests'],

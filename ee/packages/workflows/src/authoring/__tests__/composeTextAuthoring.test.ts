@@ -74,7 +74,7 @@ describe('composeTextAuthoring', () => {
         expect.objectContaining({
           outputId: 'out-1',
           field: 'label',
-          message: 'String must contain at least 1 character(s)',
+          message: 'Too small: expected string to have >=1 characters',
         }),
         expect.objectContaining({
           outputId: 'out-2',

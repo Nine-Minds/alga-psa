@@ -1,0 +1,271 @@
+[
+  {
+    "id": "F001",
+    "phase": 0,
+    "description": "Hoist tenantScopedTable, publishRmmSyncEvent, axiosErrorToMessage from tacticalrmm/deviceSync.ts into lib/rmm/common/ with re-exports (no behavior change).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-10"
+    ]
+  },
+  {
+    "id": "F002",
+    "phase": 0,
+    "description": "Hoist software_catalog/asset_software upsert helpers out of tacticalRmmActions.ts into lib/rmm/common/softwareInventory.ts.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-10",
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F003",
+    "phase": 0,
+    "description": "CE RMM tab renders provider picker from getAvailableRmmProviderRegistry({isEnterprise:false}) instead of hardcoding Tactical; ?rmmProvider deep link preserved.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F004",
+    "phase": 0,
+    "description": "Grep migrations/seeds for provider CHECK constraints or enums listing tacticalrmm; add 'datto' where required.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "phase": 1,
+    "description": "Register 'datto' in providerRegistry (requiresEnterprise:false, icon 'datto'), display name 'Datto RMM', ticketCreator label, reserved inbound webhook slugs 'datto'/'datto_rmm'.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-1"
+    ]
+  },
+  {
+    "id": "F011",
+    "phase": 1,
+    "description": "DattoRmmClient: platform URL normalization, OAuth password-grant token fetch with cached token+expiry in tenant secrets, 401 re-auth once, 429 Retry-After backoff, nextPageUrl pagination, request counter.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3",
+      "Datto RMM API facts"
+    ]
+  },
+  {
+    "id": "F012",
+    "phase": 1,
+    "description": "buildDattoClientForTenant reads rmm_integrations(provider='datto') + secrets; returns null when inactive.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F013",
+    "phase": 1,
+    "description": "Server actions: getDattoRmmSettings (masked), saveDattoRmmConfiguration, testDattoRmmConnection (account + sites probe, 403 permission hint), disconnectDattoRmmIntegration (clear secrets, keep mappings, cancel jobs), getDattoRmmConnectionSummary.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F014",
+    "phase": 1,
+    "description": "DattoRmmIntegrationSettings connection + status sections; picker wiring and DRMM chip in RmmIntegrationsSetup.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-9",
+      "FR-2"
+    ]
+  },
+  {
+    "id": "F015",
+    "phase": 1,
+    "description": "Mark integration reconnectRequired on persistent 401 so job gates skip it.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-3"
+    ]
+  },
+  {
+    "id": "F020",
+    "phase": 2,
+    "description": "syncDattoRmmSites upserts rmm_organization_mappings from /v2/account/sites with autotask metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F021",
+    "phase": 2,
+    "description": "Suggested client match by autotaskCompanyName then site name (case-insensitive exact); suggestion only.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4"
+    ]
+  },
+  {
+    "id": "F022",
+    "phase": 2,
+    "description": "Site mapping table UI reusing ClientPicker, ContactPicker default contact, billing profile, auto-sync, client-change dialog, user/contact mapping panel.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-4",
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F030",
+    "phase": 3,
+    "description": "mappers.ts: Datto Device -> NormalizedRmmExternalDeviceSnapshot (type, status, lifecycle, extension fields, systemInfo extras).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F031",
+    "phase": 3,
+    "description": "Audit enrichment (serial, make/model, CPU, RAM, disks) only when lastAuditDate changed; printer/esxi audit endpoints by deviceClass.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F032",
+    "phase": 3,
+    "description": "runDattoRmmDeviceSync full/incremental via ingestNormalizedRmmDeviceSnapshot per auto-sync site; external entity mappings integration_type='datto'; vanished devices left in place.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F033",
+    "phase": 3,
+    "description": "dattoRmmDeviceSyncStrategy registered in rmm-device-sync job (non-@enterprise import); 'datto' added to RMM_DEVICE_SYNC_PROVIDERS; throws on unsuccessful run.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5"
+    ]
+  },
+  {
+    "id": "F034",
+    "phase": 3,
+    "description": "syncDattoSingleDeviceForTenant + syncDattoRmmDevices / syncDattoRmmSingleDevice actions; Devices section UI with shared RmmDeviceSyncSettings.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-5",
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F035",
+    "phase": 3,
+    "description": "package.json exports subpaths for datto modules consumed by packages/jobs and server routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F040",
+    "phase": 4,
+    "description": "mapDattoAlertToEvent (priority->severity, epoch ms, conditionIdentity from @class + monitor info, site/device ids).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F041",
+    "phase": 4,
+    "description": "dattoRmmAlertFetcher registered (side effect + ensureFetchersRegistered); 'datto' in RMM_ALERT_POLLING_PROVIDERS; filtered to mapped sites.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F042",
+    "phase": 4,
+    "description": "backfillDattoRmmAlerts action + Alerts section UI (polling toggle, Sync Alerts).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6",
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F043",
+    "phase": 4,
+    "description": "Webhook route /api/webhooks/datto: tenant + header secret (constant-time), rmm_webhook_events dedupe, fetch authoritative alert, process, single-device refresh, suspended-tenant 200 no-op; middleware exact skip path.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F044",
+    "phase": 4,
+    "description": "getDattoRmmWebhookInfo: URL, generated secret, JSON body template with Datto placeholders.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F050",
+    "phase": 5,
+    "description": "ingestDattoRmmSoftwareInventory with concurrency limit and lastAuditDate skip, via common softwareInventory helper.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-7"
+    ]
+  },
+  {
+    "id": "F051",
+    "phase": 5,
+    "description": "dattoRmmAssetDeviceActions (refresh, remoteControlTypes/Url via webRemoteUrl, reboot via configured component, runScript quick job) wired in resolveRmmAssetDeviceActions; RemoteAccessButton providerTypes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR-8"
+    ]
+  },
+  {
+    "id": "F052",
+    "phase": 5,
+    "description": "Asset actions settings: reboot component UID + listDattoRmmComponents lookup (graceful on 403).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-8",
+      "FR-9"
+    ]
+  },
+  {
+    "id": "F060",
+    "phase": 6,
+    "description": "Outbound adapter: resolve Datto alert on linked ticket close, behind settings toggle (default off).",
+    "implemented": true,
+    "prdRefs": [
+      "FR-6"
+    ]
+  },
+  {
+    "id": "F061",
+    "phase": 6,
+    "description": "Admin guide docs/integrations/datto-rmm.md mirroring tactical-rmm.md.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout"
+    ]
+  }
+]

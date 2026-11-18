@@ -8,6 +8,11 @@
  */
 
 import { NextResponse } from 'next/server';
+import { readAssetGateForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
+import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import {
+  ASSET_NOTE_RESPONSE_SOURCE,
+} from '@alga-psa/authorization/recordProjectionDescriptors';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import {
   getAssetNoteContent,
@@ -44,13 +49,25 @@ export async function GET(
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
 
+    const { projection: assetGate, denied } = await readAssetGateForRequest(request, id);
+    if (denied) return denied;
+
     const noteContent = await runWithApiKeyOrSession(request, () => getAssetNoteContent(id));
     if (isActionError(noteContent)) {
       return actionErrorResponse(noteContent);
     }
 
+    const projectedContent = reprojectUnderDecision(
+      assetGate,
+      noteContent as Record<string, any>,
+      ASSET_NOTE_RESPONSE_SOURCE,
+    );
+    if (!projectedContent) {
+      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+    }
+
     return NextResponse.json({
-      data: noteContent,
+      data: projectedContent,
       _links: {
         self: { href: `/api/v1/assets/${id}/notes` },
         asset: { href: `/api/v1/assets/${id}` },
@@ -88,13 +105,25 @@ export async function PUT(
       );
     }
 
+    const { projection: assetGate, denied } = await readAssetGateForRequest(request, id);
+    if (denied) return denied;
+
     const result = await runWithApiKeyOrSession(request, () => saveAssetNote(id, blockData));
     if (isActionError(result)) {
       return actionErrorResponse(result);
     }
 
+    const projectedResult = reprojectUnderDecision(
+      assetGate,
+      { document: result as Record<string, any> },
+      ASSET_NOTE_RESPONSE_SOURCE,
+    );
+    if (!projectedResult) {
+      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+    }
+
     return NextResponse.json({
-      data: result,
+      data: projectedResult.document ?? {},
       message: 'Notes saved successfully',
       _links: {
         self: { href: `/api/v1/assets/${id}/notes` },

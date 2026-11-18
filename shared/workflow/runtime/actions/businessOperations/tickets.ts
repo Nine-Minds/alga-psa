@@ -10,6 +10,7 @@ import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '../../../../lib/tickets/ticketLifecycleEvents';
+import { loadTicketRecurringProvenance } from '../../../../lib/tickets/ticketRecurringProvenance';
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
@@ -29,7 +30,9 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
+import { retainWorkflowTicketAuthority } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
@@ -145,6 +148,12 @@ const withTicketAssignmentEditor = <T extends z.ZodTypeAny>(schema: T, descripti
   });
 
 const uniqueStrings = (values: string[]): string[] => Array.from(new Set(values));
+
+const toIsoOrNull = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const date = new Date(value as string | Date);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
 
 function tenantScopedTable(
   tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
@@ -353,6 +362,12 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   assignedTo: string | null,
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
+  // Human-work guard (R5.3): additional agents and the primary must be active internal users.
+  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)], {
+    kind: 'ticket',
+    ticketId,
+  });
+
   await tenantScopedTable(tx, 'ticket_resources')
     .where('ticket_id', ticketId)
     .delete();
@@ -439,8 +454,8 @@ export function registerTicketActions(): void {
         ['board_id', 'category_id']
       ),
       tags: z.array(z.string()).optional().describe('Optional tags (applied to ticket tags and mirrored into ticket attributes)'),
-      custom_fields: z.record(z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
-      attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
+      custom_fields: z.record(z.string(), z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
+      attributes: z.record(z.string(), z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
       initial_comment: z.object({
         body: z.string().min(1).describe('Initial comment body'),
         visibility: commentVisibilityChoice()
@@ -653,6 +668,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['comments']);
 
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
@@ -761,10 +777,10 @@ export function registerTicketActions(): void {
           'Location id',
           'client-location'
         ),
-        due_date: isoDateTimeSchema.nullable().optional().describe('Optional due date (stored in ticket.attributes.due_date)'),
+        due_date: isoDateTimeSchema.nullable().optional().describe('Due date'),
         tags: z.array(z.string()).optional().describe('Tags (stored in ticket attributes)'),
-        custom_fields: z.record(z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
-        attributes: z.record(z.unknown()).optional().describe('Attributes merge')
+        custom_fields: z.record(z.string(), z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
+        attributes: z.record(z.string(), z.unknown()).optional().describe('Attributes merge')
       }).describe('Patch object').refine((patch) => Object.keys(patch).length > 0, {
         message: 'Patch must include at least one field'
       }),
@@ -776,6 +792,7 @@ export function registerTicketActions(): void {
       updated_at: isoDateTimeSchema,
       status_id: withWorkflowPicker(uuidSchema.nullable(), 'Status id', 'ticket-status'),
       priority_id: withWorkflowPicker(uuidSchema.nullable(), 'Priority id', 'ticket-priority'),
+      due_date: isoDateTimeSchema.nullable(),
       tags: z.array(z.string()).nullable()
     }),
     sideEffectful: true,
@@ -787,6 +804,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, Object.keys(input.patch));
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
@@ -841,6 +859,8 @@ export function registerTicketActions(): void {
       } as Record<string, any>;
       if (input.patch.tags) mergedAttributes.tags = input.patch.tags;
       if (input.patch.custom_fields) mergedAttributes.custom_fields = input.patch.custom_fields;
+      // The column is the due date (below). The attribute is mirrored only because workflows written
+      // before the backfill read it through tickets.find include.attributes; nothing else reads it.
       if (input.patch.due_date !== undefined) mergedAttributes.due_date = input.patch.due_date;
 
       const before = {
@@ -862,7 +882,7 @@ export function registerTicketActions(): void {
         category_id: (current.category_id as string | null) ?? null,
         subcategory_id: (current.subcategory_id as string | null) ?? null,
         location_id: (current.location_id as string | null) ?? null,
-        due_date: (currentAttributes.due_date as string | null | undefined) ?? null,
+        due_date: toIsoOrNull(current.due_date),
         tags: (currentAttributes.tags as string[] | undefined) ?? null
       };
 
@@ -894,6 +914,8 @@ export function registerTicketActions(): void {
             ...(input.patch.category_id !== undefined ? { category_id: input.patch.category_id } : {}),
             ...(input.patch.subcategory_id !== undefined ? { subcategory_id: input.patch.subcategory_id } : {}),
             ...(input.patch.location_id !== undefined ? { location_id: input.patch.location_id } : {}),
+            // The column, not attributes: the UI, SLA, reports and the ticket.due_date trigger read it.
+            ...(input.patch.due_date !== undefined ? { due_date: input.patch.due_date } : {}),
             attributes: mergedAttributes,
             updated_by: tx.actorUserId
           } as any,
@@ -942,7 +964,7 @@ export function registerTicketActions(): void {
         category_id: (updated.category_id as string | null) ?? null,
         subcategory_id: (updated.subcategory_id as string | null) ?? null,
         location_id: (updated.location_id as string | null) ?? null,
-        due_date: (normalizedUpdatedAttributes.due_date as string | null | undefined) ?? null,
+        due_date: toIsoOrNull(updated.due_date),
         tags: (normalizedUpdatedAttributes.tags as string[] | undefined) ?? null
       };
 
@@ -957,6 +979,7 @@ export function registerTicketActions(): void {
         updated_at: new Date(updated.updated_at ?? new Date().toISOString()).toISOString(),
         status_id: (updated.status_id as string | null) ?? null,
         priority_id: (updated.priority_id as string | null) ?? null,
+        due_date: after.due_date,
         tags: (after.tags as string[] | null) ?? null
       };
     })
@@ -997,6 +1020,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['assignment']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1160,6 +1184,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['status_id']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1344,7 +1369,7 @@ export function registerTicketActions(): void {
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
       link_type: z.string().min(1).describe('Link type'),
-      metadata: z.record(z.unknown()).optional().describe('Optional link metadata')
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata')
     }),
     outputSchema: z.object({
       link_id: uuidSchema,
@@ -1551,8 +1576,15 @@ export function registerTicketActions(): void {
     updated_at: isoDateTimeSchema.nullable().describe('Last updated at'),
     closed_at: isoDateTimeSchema.nullable().describe('Closed at'),
     is_closed: z.boolean().nullable().describe('Is closed'),
+    due_date: isoDateTimeSchema.nullable().describe('Due date'),
+    ticket_origin: z.string().nullable().describe('Where the ticket came from (internal, client_portal, inbound_email, api, recurring)'),
+    recurrence: z.object({
+      definition_id: z.string().describe('Recurring schedule (definition) ID'),
+      occurrence_id: z.string().describe('Recurring occurrence ID'),
+      occurrence_date: z.string().describe('Scheduled date of the occurrence (YYYY-MM-DD)'),
+    }).nullable().describe('Recurring schedule that generated the ticket'),
     response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Waiting on (client or internal)'),
-    attributes: z.record(z.unknown()).optional().describe('Custom attributes')
+    attributes: z.record(z.string(), z.unknown()).optional().describe('Custom attributes')
   });
 
   type TicketDisplayNames = {
@@ -1733,12 +1765,16 @@ export function registerTicketActions(): void {
         return { ticket: null, latest_comment: null, latest_customer_comment: null, comments: [], attachments: [] };
       }
 
-      const include = input.include ?? {};
+      const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
       const includeAttributes = Boolean(include.attributes || include.custom_fields);
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 
       const displayNames = await loadTicketDisplayNames(tx, ticket);
       const clientId = ticket.client_id ?? ticket.company_id ?? null;
+      // Only recurring-origin tickets can have a schedule behind them, so other tickets skip the lookup.
+      const provenance = ticket.ticket_origin === 'recurring'
+        ? (await loadTicketRecurringProvenance(tx.trx, tx.tenantId, [ticket.ticket_id])).get(ticket.ticket_id)
+        : undefined;
       const parsedTicket = ticketSummarySchema.parse({
         ...displayNames,
         ticket_id: ticket.ticket_id,
@@ -1758,6 +1794,11 @@ export function registerTicketActions(): void {
         updated_at: ticket.updated_at ? new Date(ticket.updated_at).toISOString() : null,
         closed_at: ticket.closed_at ? new Date(ticket.closed_at).toISOString() : null,
         is_closed: ticket.is_closed ?? null,
+        due_date: toIsoOrNull(ticket.due_date),
+        ticket_origin: ticket.ticket_origin ?? null,
+        recurrence: provenance
+          ? { definition_id: provenance.definitionId, occurrence_id: provenance.occurrenceId, occurrence_date: provenance.occurrenceDate }
+          : null,
         response_state: ticket.response_state ?? null,
         ...(includeAttributes ? { attributes: (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) ? attrs : {} } : {})
       });
@@ -1851,7 +1892,8 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema,
       template_id: uuidSchema,
       applied: z.boolean().describe('False when the template was already on the ticket (idempotent no-op)'),
-      items_added: z.number().int()
+      items_added: z.number().int(),
+      reason: z.enum(['template-client-mismatch']).optional().describe('Set when the template is scoped to a different client than the ticket and was not applied')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1898,7 +1940,10 @@ export function registerTicketActions(): void {
         ticket_id: input.ticket_id,
         template_id: input.template_id,
         applied: applyResult.applied,
-        items_added: applyResult.itemsAdded
+        items_added: applyResult.itemsAdded,
+        // Workflow choice: a client-scope mismatch is a non-fatal no-op reported in the output
+        // (like the idempotent already-applied case) so a run isn't failed by template scope.
+        ...(applyResult.reason ? { reason: applyResult.reason } : {})
       };
     })
   });

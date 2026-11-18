@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import { FocusViewNavigationContext, type FocusViewNavigation } from './FocusViewNavigation';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -26,11 +27,13 @@ const RAIL_GROUP_BY_TAB: Record<string, string> = {
   tickets: 'service',
   'recurring-tickets': 'service',
   interactions: 'service',
+  'co-managed': 'service',
   billing: 'money',
   'billing-dashboard': 'money',
   'tax-settings': 'money',
   equipment: 'installBase',
   assets: 'installBase',
+  software: 'installBase',
   contacts: 'records',
   documents: 'records',
   notes: 'records',
@@ -46,6 +49,10 @@ const RAIL_GROUP_ORDER = ['', 'service', 'money', 'installBase', 'records', 'mor
  */
 export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab, onClose, t }: FocusViewHostProps) {
   const activeTab = activeTabId ? tabs.find((tab) => tab.id === activeTabId) ?? null : null;
+  const navigation = useMemo<FocusViewNavigation>(() => ({
+    hasView: (tabId) => tabs.some((tab) => tab.id === tabId),
+    openView: onSelectTab,
+  }), [tabs, onSelectTab]);
 
   const groups = RAIL_GROUP_ORDER
     .map((key) => ({
@@ -124,7 +131,9 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
                 against the fixed panel, escape this clip and grow the panel's
                 own scroll height — a second scrollbar over the first. */}
             <div className="relative flex-1 overflow-y-auto min-w-0 pl-4 pr-1 pt-4">
-              {activeTab.content}
+              <FocusViewNavigationContext.Provider value={navigation}>
+                {activeTab.content}
+              </FocusViewNavigationContext.Provider>
             </div>
           </div>
         </div>

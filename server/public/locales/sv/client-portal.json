@@ -165,6 +165,11 @@
           "cancelled": "Bokning avbokad: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Den här begäran kunde inte behandlas. Kontakta din tjänsteleverantör för hjälp."
+        }
+      },
       "algadeskEmptyHint": "När ärenden uppdateras visas de här."
     },
     "devices": {
@@ -179,7 +184,8 @@
       "createTicket": "Skapa ärende",
       "requestAppointment": "Begär bokning",
       "viewLatestInvoice": "Visa senaste fakturan",
-      "newServiceRequest": "Ny tjänsteförfrågan"
+      "newServiceRequest": "Ny tjänsteförfrågan",
+      "createSupportTicket": "Skapa supportärende"
     },
     "appointments": {
       "title": "Kommande bokningar",
@@ -378,10 +384,29 @@
       "missing_email": "Din identitetsleverantör returnerade ingen e-postadress, så inget kundportalskonto kunde matchas. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
       "inactive_user": "Kundportalskontot för {{providerEmail}} är inaktivt. Kontakta din tjänsteleverantör för att aktivera det igen.",
       "user_type_mismatch": "{{providerEmail}} är inget kundportalskonto. Kontakta din tjänsteleverantör.",
-      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "tenant_required": "{{providerEmail}} används i fler än en organisation. Kontakta din tjänsteleverantör för hjälp."
     },
     "configurationTitle": "Inloggningen misslyckades",
-    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör."
+    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör.",
+    "registration": {
+      "messages": {
+        "verified": "Användaren har verifierats och registrerats"
+      },
+      "errors": {
+        "verifyFailed": "Det gick inte att verifiera och registrera användaren",
+        "invalidToken": "Ogiltig token",
+        "tokenExpired": "Token har gått ut",
+        "tokenNotActive": "Token är inte aktiv än",
+        "unknown": "Okänt fel"
+      },
+      "user": "Användare",
+      "clientPortalUser": "Kundportalanvändare",
+      "mspUser": "MSP-användare",
+      "resetExpiration": "1 timme",
+      "verificationExpiration": "24 timmar",
+      "superadminRole": "Superadministratörsroll"
+    }
   },
   "account": {
     "title": "Konto",
@@ -490,6 +515,15 @@
         "failed": "Det gick inte att spara ditt kort",
         "savedDescription": "Ditt kort är klart för framtida betalningar.",
         "failedDescription": "Det gick inte att verifiera registreringen. Be leverantören om en ny länk."
+      },
+      "payLink": {
+        "heading": "Den här betalningslänken kan inte användas",
+        "expired": "Den här betalningslänken har gått ut.",
+        "invalid": "Den här betalningslänken är ogiltig.",
+        "notPayable": "Den här fakturan kan inte längre betalas med den här länken. Den kan redan vara betald eller inte längre öppen för onlinebetalning.",
+        "unavailable": "Vi kunde inte öppna betalningssidan just nu. Försök igen om några minuter.",
+        "viewInPortal": "Visa fakturan i kundportalen",
+        "contactProvider": "Kontakta din faktureringsleverantör för en ny länk."
       },
       "fields": {
         "cardNumber": "Kortnummer",
@@ -607,7 +641,9 @@
       "invoices": "Fakturaaviseringar",
       "announcements": "Systemmeddelanden",
       "emailPreferences": "E-post",
-      "internalPreferences": "Internt"
+      "internalPreferences": "Internt",
+      "unreadCount_few": "{{count}} olästa aviseringar",
+      "unreadCount_many": "{{count}} olästa aviseringar"
     },
     "actions": {
       "save": "Spara ändringar",
@@ -747,7 +783,43 @@
       "deleteError": "Det gick inte att radera användaren",
       "reportsTo": "Rapporterar till",
       "noManager": "Ingen chef",
-      "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster."
+      "reportsToHelp": "En chef kan se ärenden, enheter och projekt för personer som rapporterar till dem när deras synlighetsgrupp är begränsad till egna poster.",
+      "locations": "Platser",
+      "primaryLocation": "Primär",
+      "remote": "Distans",
+      "thisUser": "den här användaren",
+      "deactivate": {
+        "title": "Inaktivera användare och hantera öppet arbete",
+        "confirm": "Inaktivera användare",
+        "deactivating": "Inaktiverar…",
+        "thisUserCapitalized": "Den här användaren",
+        "openWorkPrompt": "har öppet arbete. Välj vad som ska hända innan användaren inaktiveras.",
+        "reassignTo": "Tilldela öppet arbete till",
+        "selectAssignee": "Välj en aktiv intern användare",
+        "noAssignee": "Det finns ingen aktiv intern användare att tilldela arbetet till.",
+        "selectedUser": "den valda användaren",
+        "buckets": {
+          "tickets": "Ärenden",
+          "tasks": "Projektuppgifter"
+        },
+        "openCount": "Antal öppna {{label}}: {{count}}",
+        "actions": {
+          "reassign": "Tilldela på nytt",
+          "unassign": "Ta bort tilldelning",
+          "archive": "Arkivera"
+        },
+        "labels": {
+          "ticket": "ärende",
+          "tickets": "ärenden",
+          "projectTask": "projektuppgift",
+          "projectTasks": "projektuppgifter"
+        },
+        "summary": {
+          "archived": "{{count}} {{label}} kommer att arkiveras",
+          "unassigned": "{{count}} {{label}} kommer att få tilldelningen borttagen",
+          "reassigned": "{{count}} {{label}} kommer att tilldelas {{name}}"
+        }
+      }
     },
     "messages": {
       "saveChanges": "Spara ändringar",
@@ -885,7 +957,14 @@
     "card": {
       "unread": "Oläst",
       "noMessage": "Inget meddelande"
-    }
+    },
+    "unreadCount_few": "{{count}} olästa aviseringar",
+    "unreadCount_many": "{{count}} olästa aviseringar",
+    "reconnectingToServer": "Återansluter till servern…",
+    "refresh": "Uppdatera",
+    "markAllRead": "Markera alla som lästa",
+    "emptyTitle": "Inga aviseringar",
+    "emptyDescription": "Du har läst alla aviseringar."
   },
   "billing": {
     "columns": {
@@ -1015,7 +1094,34 @@
     },
     "unassigned": "Ej tilldelad",
     "sharedWorkspace": "Delad arbetsplats: {{name}}",
-    "sharedWorkspaceLabel": "Delad arbetsplats"
+    "sharedWorkspaceLabel": "Delad arbetsplats",
+    "details": {
+      "notProvided": "Inte angivet",
+      "notAvailable": "Saknas",
+      "cpuWithModel": "{{model}} (antal kärnor: {{count}})",
+      "cpuCores": "Antal kärnor: {{count}}",
+      "workstationTitle": "Information om arbetsstationen",
+      "networkDeviceTitle": "Information om nätverksenheten",
+      "serverTitle": "Information om servern",
+      "basicInformation": "Grundläggande information",
+      "os": "Operativsystem",
+      "cpu": "CPU",
+      "ram": "RAM",
+      "storage": "Lagring",
+      "deviceType": "Enhetstyp",
+      "ipAddress": "IP-adress",
+      "ports": "Portar",
+      "firmware": "Inbyggd programvara",
+      "type": "Typ",
+      "virtual": "Virtuell",
+      "physical": "Fysisk",
+      "assetTag": "Inventarienummer",
+      "serialNumber": "Serienummer",
+      "status": "Status",
+      "location": "Plats",
+      "purchaseDate": "Inköpsdatum",
+      "warrantyEndDate": "Garantins slutdatum"
+    }
   },
   "errors": {
     "account": {
@@ -1068,6 +1174,10 @@
       "recordInvalid": "En av de valda synlighetsgruppsposterna är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en synlighetsgrupp med de här uppgifterna för den här kunden.",
       "invalidData": "Ogiltiga uppgifter har angetts för synlighetsgruppen. Kontrollera gruppens uppgifter och de valda tavlorna."
+    },
+    "roles": {
+      "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
     }
   }
 }

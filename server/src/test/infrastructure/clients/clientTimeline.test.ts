@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
@@ -102,7 +103,11 @@ describe('Client timeline infrastructure', () => {
       Object.entries(data).filter(([column]) => column in columns)
     );
 
-    await context.db(table).insert(filtered);
+    if (table === 'assets') {
+      await insertTestAssets(context.db, filtered as { tenant: string; asset_tag: string; asset_id: string });
+    } else {
+      await context.db(table).insert(filtered);
+    }
   }
 
   async function seedTicket(input: {
@@ -346,6 +351,7 @@ describe('Client timeline infrastructure', () => {
       tenant: context.tenantId,
       rma_id: rmaId,
       rma_type: 'standard',
+      rma_number: `RMA-T${rmaId.slice(0, 8)}`,
       service_id: serviceId,
       client_id: context.clientId,
       rma_reference: input.rmaReference,

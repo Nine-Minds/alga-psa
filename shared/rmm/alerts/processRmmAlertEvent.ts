@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type {
   NormalizedRmmAlertEvent,
   RmmAlertProcessingContext,
@@ -10,6 +11,7 @@ import type {
 } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { computeDedupKey } from './dedupKey';
+import { persistRmmAlertMetadata } from './metadata';
 import { evaluateAlertRules } from './ruleEvaluator';
 import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
@@ -21,6 +23,8 @@ import {
   publishTicketTransitionsAfterCommit,
 } from '../../lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { conditionTriggerDisposition } from './conditionLifecycle';
+import { buildTicketClosedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -100,6 +104,16 @@ async function resolveAlertContext(knex: Knex, event: NormalizedRmmAlertEvent): 
   return { assetId, clientId, organizationName, mappingDefaultContactId };
 }
 
+async function isLinkedTicketClosedOrMissing(
+  db: ReturnType<typeof tenantDb>,
+  ticketId: string
+): Promise<boolean> {
+  const query = db.table('tickets as t').where('t.ticket_id', ticketId);
+  db.tenantJoin(query, 'statuses as s', 's.status_id', 't.status_id');
+  const row = (await query.select({ is_closed: 's.is_closed' }).first()) as { is_closed?: boolean | null } | undefined;
+  return !row || row.is_closed === true;
+}
+
 async function processTriggered(
   ctx: RmmAlertProcessingContext,
   event: NormalizedRmmAlertEvent,
@@ -107,12 +121,29 @@ async function processTriggered(
 ): Promise<RmmAlertProcessingResult> {
   const { knex, deps } = ctx;
   const warnings: string[] = [];
-  const context = await resolveAlertContext(knex, event);
+  let resolvedAssetId: string | null = null;
   const dedupKey = computeDedupKey(event);
 
   const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
+    if (event.raw.__alga_condition_lifecycle === true) {
+      // Lock the durable condition row in the same transaction as alert/ticket
+      // writes. A recovery transition either wins first (and suppresses this
+      // stale trigger) or waits until this trigger commits, preserving order.
+      const current = await db.table('rmm_condition_states').where({
+        integration_id: event.integrationId,
+        scope_key: String(event.raw.scopeKey ?? ''),
+        subject_key: String(event.raw.subjectKey ?? ''),
+        condition_key: String(event.raw.conditionKey ?? ''),
+      }).forUpdate().first('state', 'current_outage_id');
+      const disposition = conditionTriggerDisposition(event, current);
+      if (disposition === 'defer') return { outcome: 'deferred', ticketId: null, warnings };
+      if (disposition === 'obsolete') return { outcome: 'skipped', ticketId: null, warnings };
+    }
+
+    const context = await resolveAlertContext(trx, event);
+    resolvedAssetId = context.assetId;
     const existing = await db.table('rmm_alerts')
       .where({
         integration_id: event.integrationId,
@@ -127,7 +158,14 @@ async function processTriggered(
     const duplicateStatuses = options.reprocessSuppressed
       ? ['active', 'acknowledged']
       : ['active', 'acknowledged', 'suppressed'];
-    if (existing && duplicateStatuses.includes(existing.status)) {
+    // A live-looking row whose linked ticket is closed (or gone — ticket_id has
+    // no FK) is not a redelivery: the reset that should have retired it never
+    // landed (outbound reset disabled, no adapter, lost TICKET_CLOSED). Let it
+    // fall through to the reopen path below instead of dropping every later firing.
+    const linkedTicketGone = existing && duplicateStatuses.includes(existing.status) && existing.ticket_id
+      ? await isLinkedTicketClosedOrMissing(db, existing.ticket_id)
+      : false;
+    if (existing && duplicateStatuses.includes(existing.status) && !linkedTicketGone) {
       const refresh: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (existing.device_name == null && event.deviceName != null) refresh.device_name = event.deviceName;
       await db.table('rmm_alerts')
@@ -141,8 +179,8 @@ async function processTriggered(
       };
     }
 
+    // No tenant here: Citus rejects an UPDATE that sets the distribution column.
     const baseRow = {
-      tenant: event.tenantId,
       integration_id: event.integrationId,
       external_alert_id: event.externalAlertId,
       external_device_id: event.externalDeviceId ?? null,
@@ -157,7 +195,7 @@ async function processTriggered(
       dedup_key: dedupKey,
       triggered_at: event.occurredAt,
       last_occurrence_at: event.occurredAt,
-      metadata: JSON.stringify(event.raw),
+      metadata: JSON.stringify(persistRmmAlertMetadata(event)),
       updated_at: new Date().toISOString(),
     };
 
@@ -170,7 +208,7 @@ async function processTriggered(
         .update({ ...baseRow, ticket_id: null, resolved_at: null, suppressed_by_window_id: null });
     } else {
       const inserted = await db.table('rmm_alerts')
-        .insert({ ...baseRow, created_at: new Date().toISOString() })
+        .insert({ tenant: event.tenantId, ...baseRow, created_at: new Date().toISOString() })
         .returning(['alert_id']);
       alertId = inserted[0].alert_id;
     }
@@ -187,7 +225,7 @@ async function processTriggered(
     if (matchedWindow) {
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ status: 'suppressed', suppressed_by_window_id: matchedWindow.window_id });
+        .update({ status: 'suppressed', suppressed_by_window_id: matchedWindow.window_id, updated_at: new Date().toISOString() });
       return {
         outcome: 'suppressed',
         alertId,
@@ -205,7 +243,7 @@ async function processTriggered(
     if (evaluation.rule) {
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ matched_rule_id: evaluation.rule.rule_id });
+        .update({ matched_rule_id: evaluation.rule.rule_id, updated_at: new Date().toISOString() });
     }
 
     const actions = parseActions(evaluation.rule, warnings);
@@ -243,10 +281,10 @@ async function processTriggered(
       const occurrence = Number(sibling.occurrence_count ?? 1) + 1;
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ ticket_id: sibling.ticket_id });
+        .update({ ticket_id: sibling.ticket_id, updated_at: new Date().toISOString() });
       await db.table('rmm_alerts')
         .where({ alert_id: sibling.sibling_alert_id })
-        .update({ occurrence_count: occurrence, last_occurrence_at: event.occurredAt });
+        .update({ occurrence_count: occurrence, last_occurrence_at: event.occurredAt, updated_at: new Date().toISOString() });
       await addAlertInternalNote(
         trx,
         event.tenantId,
@@ -277,7 +315,7 @@ async function processTriggered(
     });
     await db.table('rmm_alerts')
       .where({ alert_id: alertId })
-      .update({ ticket_id: ticket.ticket_id, auto_ticket_created: true });
+      .update({ ticket_id: ticket.ticket_id, auto_ticket_created: true, updated_at: new Date().toISOString() });
 
     return {
       outcome: 'ticket_created',
@@ -288,8 +326,8 @@ async function processTriggered(
     };
   });
 
-  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped') {
-    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, context.assetId);
+  if (result.outcome !== 'suppressed' && result.outcome !== 'skipped' && result.outcome !== 'deferred') {
+    await publishSafely(ctx, 'RMM_ALERT_TRIGGERED', event, result, resolvedAssetId);
     if (result.outcome === 'ticket_created' && result.ticketId) {
       await publishRmmTicketCreated({
         tenantId: event.tenantId,
@@ -298,7 +336,7 @@ async function processTriggered(
       });
     }
     if (result.outcome === 'ticket_created' && result.matchedRuleId) {
-      await notifySafely(ctx, event, result, context.assetId);
+      await notifySafely(ctx, event, result, resolvedAssetId);
     }
   }
 
@@ -322,6 +360,7 @@ async function processReset(
         integration_id: event.integrationId,
         external_alert_id: event.externalAlertId,
       })
+      .forUpdate()
       .first('alert_id', 'status', 'ticket_id', 'matched_rule_id', 'asset_id');
 
     if (!existing || existing.status === 'resolved' || existing.status === 'auto_resolved') {
@@ -351,7 +390,7 @@ async function processReset(
       if (!ticket) {
         await db.table('rmm_alerts')
           .where({ alert_id: existing.alert_id })
-          .update({ ticket_id: null });
+          .update({ ticket_id: null, updated_at: new Date().toISOString() });
         warnings.push(`Linked ticket ${existing.ticket_id} no longer exists; alert resolved without ticket update`);
         existing.ticket_id = null;
       }
@@ -380,11 +419,40 @@ async function processReset(
             await publishTicketTransitionsAfterCommit(trx, {
               tenant: event.tenantId,
               before: transitionBefore,
-              correlationId: event.externalAlertId,
+              // Must be a UUID (workflow execution_id); external ids (Level GIDs etc.) are not.
+              correlationId: existing.alert_id,
             });
+            // The transition publisher has no TICKET_CLOSED member, so emit it
+            // here (system actor, after commit) like every other close path.
+            // This lets the ticket-closed subscriber reset any other alert rows
+            // attached to this ticket (e.g. dedup-attached automation alerts).
+            const closedStatus = await db.table('statuses')
+              .where({ status_id: statusId })
+              .first('is_closed');
+            if (closedStatus?.is_closed) {
+              const closedTicketId = existing.ticket_id;
+              const closedCorrelationId = existing.alert_id;
+              const closedAt = new Date().toISOString();
+              registerAfterCommit(
+                trx,
+                () =>
+                  publishWorkflowEvent({
+                    eventType: 'TICKET_CLOSED',
+                    payload: buildTicketClosedPayload({ ticketId: closedTicketId, closedAt }),
+                    ctx: {
+                      tenantId: event.tenantId,
+                      actor: { actorType: 'SYSTEM' },
+                      correlationId: closedCorrelationId,
+                    },
+                    eventName: 'Ticket Closed',
+                    toState: statusId,
+                  }),
+                `TICKET_CLOSED ticket=${closedTicketId}`
+              );
+            }
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
-              .update({ status: 'auto_resolved' });
+              .update({ status: 'auto_resolved', updated_at: new Date().toISOString() });
             await addAlertInternalNote(
               trx,
               event.tenantId,

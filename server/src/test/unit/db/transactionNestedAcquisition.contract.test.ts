@@ -20,6 +20,8 @@ const helperAcquirers = [
   'resolveEmailLocale',
   'getJobStatus',
   'getPortalDomainStatusForTenant',
+  'getTenantPortalBaseUrl',
+  'buildTenantPortalUrl',
   'getClientUserIdFromContact',
   'getEntityImageUrl',
 ];

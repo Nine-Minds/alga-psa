@@ -18,7 +18,7 @@ describe('contract line mapping recurring timing audit', () => {
     expect(actionsSource).toContain('const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({');
     expect(actionsSource).toContain('billingTiming: dbUpdateData.billing_timing,');
     expect(modelSource).toContain('return normalizeLiveRecurringStorage(line);');
-    expect(modelSource).toContain("first(['cadence_owner', 'billing_timing']);");
+    expect(modelSource).toContain("first(['cadence_owner', 'billing_timing', 'contract_line_type']);");
     expect(modelSource).toContain('billing_timing: recurringAuthoringPolicy.billingTiming,');
 
     const mappingAndDisambiguationSource =

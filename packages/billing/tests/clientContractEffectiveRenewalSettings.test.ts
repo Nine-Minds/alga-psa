@@ -1,4 +1,36 @@
+// Pinned before any Date is constructed. pg returns DATE columns as server-local-midnight Dates,
+// so the fixtures below build `new Date(y, m, d)`; every-zone coverage is in clientContractDateColumn.timeZones.test.ts.
+process.env.TZ = 'America/Los_Angeles';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+const dbState = vi.hoisted(() => ({
+  existingRow: null as Record<string, unknown> | null,
+  activeContract: true,
+  updateCalls: [] as unknown[],
+}));
+
+vi.mock('@alga-psa/db', () => {
+  const makeBuilder = (table: string) => {
+    const builder: any = {};
+    for (const m of ['where', 'orderBy', 'select', 'whereIn', 'andWhere']) {
+      builder[m] = () => builder;
+    }
+    builder.first = async () =>
+      table === 'contracts' ? { contract_id: 'contract-1', is_active: dbState.activeContract } : dbState.existingRow;
+    builder.update = (data: unknown) => {
+      dbState.updateCalls.push(data);
+      return { returning: async () => [{ ...dbState.existingRow, ...(data as object) }] };
+    };
+    return builder;
+  };
+  return {
+    tenantDb: () => ({
+      table: (name: string) => makeBuilder(name),
+      tenantJoin: (q: unknown) => q,
+    }),
+  };
+});
+
 import {
   computeDaysUntilDate,
   computeEvergreenDecisionDueDate,
@@ -6,6 +38,7 @@ import {
   computeNextEvergreenReviewAnchorDate,
   dedupeClientContractsByRenewalCycle,
   normalizeClientContract,
+  updateClientContractAssignment,
 } from '../../../shared/billingClients/clientContracts';
 
 describe('client contract effective renewal settings normalization', () => {
@@ -492,5 +525,73 @@ describe('client contract effective renewal settings normalization', () => {
 
     expect(normalized.evergreen_review_anchor_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(normalized.decision_due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+  it('emits the stored calendar day for a server-local-midnight pg DATE under TZ=America/Los_Angeles', () => {
+    expect(new Intl.DateTimeFormat('en').resolvedOptions().timeZone).toBe('America/Los_Angeles');
+
+    const normalized = normalizeClientContract({
+      contract_id: 'contract-6',
+      client_contract_id: 'cc-6',
+      client_id: 'client-6',
+      tenant: 'tenant-1',
+      start_date: new Date(2026, 3, 1),
+      end_date: null,
+      is_active: true,
+      use_tenant_renewal_defaults: true,
+      tenant_default_renewal_mode: 'manual',
+      tenant_default_notice_period_days: 30,
+    });
+
+    expect(normalized.start_date).toBe('2026-04-01');
+    expect(normalized.end_date).toBeNull();
+    expect(normalized.evergreen_review_anchor_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(normalized.decision_due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(normalized.assignment_status).toBeDefined();
+  });
+
+  it('emits both dates as YYYY-MM-DD strings, and leaves end_date alone when absent', () => {
+    const both = normalizeClientContract({
+      is_active: true,
+      start_date: new Date(2026, 3, 1),
+      end_date: new Date(2026, 11, 31),
+    });
+    expect(both.start_date).toBe('2026-04-01');
+    expect(both.end_date).toBe('2026-12-31');
+
+    const noEnd = normalizeClientContract({ is_active: true, start_date: '2026-04-01' });
+    expect('end_date' in noEnd).toBe(false);
+  });
+
+  describe('update path start_date comparison', () => {
+    beforeEach(() => {
+      dbState.updateCalls = [];
+      dbState.activeContract = true;
+      dbState.existingRow = {
+        tenant: 'tenant-1',
+        client_contract_id: 'cc-1',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        is_active: true,
+        start_date: new Date(2026, 2, 31),
+        end_date: null,
+      };
+    });
+
+    it('does not trip the active-contract guard when the start date is unchanged', async () => {
+      await expect(
+        updateClientContractAssignment({} as any, 'tenant-1', 'cc-1', {
+          start_date: '2026-03-31' as any,
+        })
+      ).resolves.toBeDefined();
+      expect(dbState.updateCalls).toHaveLength(1);
+    });
+
+    it('still rejects an actual start date change on an active contract', async () => {
+      await expect(
+        updateClientContractAssignment({} as any, 'tenant-1', 'cc-1', {
+          start_date: '2026-04-01' as any,
+        })
+      ).rejects.toThrow('Start date cannot be changed for active contracts');
+    });
   });
 });

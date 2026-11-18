@@ -16,7 +16,7 @@ describe('tenant core and portal-domain tenant-scoped query contract', () => {
   });
 
   it('uses structural tenant scoping for tenant-known portal-domain roots', () => {
-    const source = readFileSync(resolve(__dirname, '../lib/PortalDomainModel.ts'), 'utf8');
+    const source = readFileSync(resolve(__dirname, '../lib/PortalDomainStore.ts'), 'utf8');
     expect(source).toContain('tenantDb(knex, tenant).table<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)');
     expect(source).toContain(".unscoped<PortalDomainRecord>(PORTAL_DOMAIN_TABLE, PORTAL_DOMAIN_HOSTNAME_DISCOVERY_REASON)");
     expect(source).toContain('portalDomainsQuery(knex, tenant)');

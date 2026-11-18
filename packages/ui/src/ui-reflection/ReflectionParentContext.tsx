@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useContext, useDebugValue, PropsWithChildren } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 let providerCounter = 0;
 
@@ -17,11 +18,12 @@ ReflectionParentContext.displayName = 'ReflectionParentContext';
  * Hook to access the current parent component's ID from context
  */
 export function useReflectionParent() {
+  const { t } = useTranslation('common');
   const context = useContext(ReflectionParentContext);
   
   // Add debug value for React DevTools
   useDebugValue(context, value => 
-    value ? `Parent ID: ${value}` : 'No Parent'
+    value ? t('reflection.parentId', { id: value }) : t('reflection.noParent')
   );
 
   return context;

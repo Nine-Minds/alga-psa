@@ -3,6 +3,7 @@
 // Auth-owned admin API key management UI.
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -21,6 +22,7 @@ import {
   type ApiRateLimitSettingsValue,
   type ApiRateLimitSettingsView,
 } from '@/lib/actions/apiKeyRateLimitActions';
+import { ApiKeyPrincipalCell } from '@enterprise/components/service-principals/ApiKeyPrincipalCell';
 import { Search, RotateCcw } from 'lucide-react';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -35,6 +37,8 @@ export interface AdminApiKey {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  /** Owner's user type; `service` marks a service principal (EE renders it with a badge). */
+  user_type?: string | null;
   created_at: Date;
   last_used_at: Date | null;
   expires_at: Date | null;
@@ -299,7 +303,14 @@ export default function AdminApiKeysSetup() {
       width: '15%',
       render: (_: string, record: AdminApiKey) => {
         const name = [record.first_name, record.last_name].filter(Boolean).join(' ');
-        return name || record.username;
+        const displayName = name || record.username;
+        return (
+          <ApiKeyPrincipalCell
+            userType={record.user_type}
+            displayName={displayName}
+            fallback={displayName}
+          />
+        );
       },
     },
     {
@@ -448,9 +459,9 @@ export default function AdminApiKeysSetup() {
       dataIndex: 'active',
       width: '10%',
       render: (value: boolean) => (
-        <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <Badge variant={value ? 'success' : 'error'}>
           {value ? t('security.apiKeys.list.status.active') : t('security.apiKeys.list.status.inactive')}
-        </span>
+        </Badge>
       ),
     },
     {

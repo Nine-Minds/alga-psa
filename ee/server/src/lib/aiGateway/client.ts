@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
 import {
+  assertInstallationAiCredentialAllowed,
   getLicenseStateRow,
   isSelfHostLicensing,
 } from '@alga-psa/licensing';
@@ -21,6 +22,21 @@ function requireEnvironmentValue(name: 'AI_GATEWAY_SERVICE_SECRET' | 'AI_GATEWAY
     throw new Error(`${name} is not configured`);
   }
   return value;
+}
+
+/**
+ * True when the gateway request path has what it needs: the URL always, and the
+ * service secret unless this is a self-hosted install (which authenticates with
+ * the appliance credential instead; see `resolveGatewayAuthToken`).
+ */
+export async function isAiGatewayConfigured(): Promise<boolean> {
+  if (!process.env.AI_GATEWAY_URL?.trim()) {
+    return false;
+  }
+  if (await isSelfHostLicensing()) {
+    return true;
+  }
+  return !!process.env.AI_GATEWAY_SERVICE_SECRET?.trim();
 }
 
 function gatewayBaseUrl(): string {
@@ -93,6 +109,7 @@ export async function resolveGatewayAuthToken(tenantId: string): Promise<string>
     return mintGatewayToken(tenantId);
   }
 
+  await assertInstallationAiCredentialAllowed(tenantId);
   const licenseState = await getLicenseStateRow();
   const applianceCredential = licenseState?.appliance_credential?.trim();
   if (!applianceCredential) {

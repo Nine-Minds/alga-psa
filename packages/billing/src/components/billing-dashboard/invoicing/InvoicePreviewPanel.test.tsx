@@ -55,6 +55,7 @@ vi.mock('@alga-psa/billing/actions/quoteActions', () => ({
   getQuoteByConvertedInvoiceId: (...args: unknown[]) => getQuoteByConvertedInvoiceIdMock(...args),
 }));
 
+vi.mock('./InvoiceHistorySection', () => ({ default: () => null }));
 vi.mock('../TemplateRenderer', () => ({
   TemplateRenderer: (props: any) => {
     templateRendererMock(props);

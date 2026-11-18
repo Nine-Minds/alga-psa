@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Button } from './Button';
 import styles from '../editor/TicketDetails.module.css';
+import { useTranslation } from '../lib/i18n/client';
+import { useReportBoardSlotEmpty, useBentoBoardSlot, BentoShelfChip } from './bento/BentoTile';
 
 export type ContentCardVariant = 'default' | 'bento';
 
@@ -32,6 +34,17 @@ export function ContentCardVariantProvider({
  */
 export function useContentCardVariant(): ContentCardVariant {
   return useContext(ContentCardVariantContext);
+}
+
+/**
+ * Lets a host append actions to an injected ContentCard it does not own (e.g.
+ * the ticket Grid adds "Receive equipment" under the injected Assets card).
+ * Consumed by the nearest ContentCard only; nested cards see no footer.
+ */
+const ContentCardFooterContext = React.createContext<React.ReactNode>(null);
+
+export function ContentCardFooter({ footer, children }: { footer: React.ReactNode; children: React.ReactNode }) {
+  return <ContentCardFooterContext.Provider value={footer}>{children}</ContentCardFooterContext.Provider>;
 }
 
 interface ContentCardProps {
@@ -110,11 +123,19 @@ export function ContentCard({
   addButton,
   variant,
 }: ContentCardProps) {
+  const { t } = useTranslation('common');
   const contextVariant = useContext(ContentCardVariantContext);
+  const hostFooter = useContext(ContentCardFooterContext);
+  const footerNode = hostFooter ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">{hostFooter}</div>
+  ) : null;
   const resolvedVariant = variant ?? contextVariant;
   const isBento = resolvedVariant === 'bento';
   const shellClass = isBento ? BENTO_SHELL : `${styles['card']} p-6 space-y-4`;
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  // A collapsible card with nothing in it counts as an empty board section.
+  useReportBoardSlotEmpty(collapsible && count === 0);
+  const slot = useBentoBoardSlot();
 
   // Auto-expand when count transitions from 0/undefined to >0 (async-loaded data)
   const prevCountRef = useRef(count);
@@ -129,6 +150,38 @@ export function ContentCard({
     }
     prevCountRef.current = count;
   }, [count, collapsible]);
+
+  if (slot?.shelved && collapsible && title) {
+    return (
+      <BentoShelfChip
+        id={id ?? 'content-card'}
+        icon={headerIcon}
+        title={title}
+        onOpen={() => {
+          setIsExpanded(true);
+          slot.open();
+        }}
+        action={
+          addButton ? (
+            <Button
+              id={addButton.id}
+              variant="ghost"
+              size="sm"
+              title={addButton.label || t('actions.add')}
+              aria-label={addButton.label || t('actions.add')}
+              onClick={() => {
+                addButton.onClick();
+                setIsExpanded(true);
+                slot.open();
+              }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
 
   if (collapsible && title) {
     return (
@@ -163,29 +216,32 @@ export function ContentCard({
           {addButton && (
             <Button
               id={addButton.id}
-              variant="outline"
-              size={isBento ? 'xs' : 'sm'}
+              variant={isBento ? 'ghost' : 'outline'}
+              size="sm"
               className="flex-shrink-0 whitespace-nowrap"
-              title={addButton.label || 'Add'}
-              aria-label={addButton.label || 'Add'}
+              title={addButton.label || t('actions.add')}
+              aria-label={addButton.label || t('actions.add')}
               onClick={() => {
                 addButton.onClick();
                 if (!isExpanded) setIsExpanded(true);
               }}
             >
-              <Plus className={`${isBento ? 'w-3.5 h-3.5' : 'w-4 h-4'} @sm:mr-1 flex-shrink-0`} />
-              <span className="hidden @sm:inline">{addButton.label || 'Add'}</span>
+              <Plus className={`w-4 h-4 flex-shrink-0 ${isBento ? '' : '@sm:mr-1'}`} />
+              {/* Bento tiles use the shared icon-only header add affordance. */}
+              {!isBento ? <span className="hidden @sm:inline">{addButton.label || t('actions.add')}</span> : null}
             </Button>
           )}
         </div>
-        {isExpanded && children}
+        <ContentCardFooterContext.Provider value={null}>{isExpanded && children}</ContentCardFooterContext.Provider>
+        {footerNode}
       </div>
     );
   }
 
   return (
     <div id={id} className={`${shellClass} ${className}`}>
-      {children}
+      <ContentCardFooterContext.Provider value={null}>{children}</ContentCardFooterContext.Provider>
+      {footerNode}
     </div>
   );
 }

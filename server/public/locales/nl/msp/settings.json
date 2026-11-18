@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} niet-opgeslagen wijziging",
-    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen"
+    "unsavedChanges_other": "{{count}} niet-opgeslagen wijzigingen",
+    "unsavedChanges_few": "{{count}} niet-opgeslagen wijzigingen",
+    "unsavedChanges_many": "{{count}} niet-opgeslagen wijzigingen"
   },
   "page": {
     "title": "Beheerdersinstellingen"
@@ -32,9 +34,10 @@
     "loadingExperimental": "Configuratie experimentele functies laden...",
     "loadingInteractions": "Interactie-instellingen laden...",
     "keyboardShortcuts": "Sneltoetsen",
-    "mcpServer": "MCP-server",
     "opportunities": "Verkoopkansen",
-    "settingsFallback": "Instellingen"
+    "mcpServer": "MCP-server",
+    "settingsFallback": "Instellingen",
+    "tags": "Labels"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",
@@ -305,6 +308,36 @@
       "expiresPrefix": "Verloopt:",
       "revoke": "Intrekken",
       "revoking": "Bezig met intrekken..."
+    },
+    "seatTechnicians": {
+      "title": "Seat-technici",
+      "description": "Mensen die via de co-managed seat van een klant in uw PSA werken. Zij tellen niet mee voor uw gelicentieerde gebruikers.",
+      "clientUnavailable": "Klant niet beschikbaar",
+      "effectiveAccess": "Effectieve toegang",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "client": "Klant",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "state": {
+        "active": "Actief",
+        "invited": "Uitnodiging in behandeling"
+      },
+      "dialog": {
+        "title": "Effectieve toegang voor {{name}}",
+        "help": "Kies een ticket om te zien of deze seat-technicus het kan lezen, en waarom.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecteer een ticket...",
+        "checking": "Toegang controleren...",
+        "allowed": "{{name}} kan dit ticket lezen.",
+        "denied": "{{name}} kan dit ticket niet lezen.",
+        "noReasons": "Er zijn geen verdere details gemeld.",
+        "error": "Kon de toegang niet controleren. Probeer het opnieuw.",
+        "close": "Sluiten",
+        "unavailable": "Effectieve toegang kan voor dit ticket in deze editie of configuratie niet worden gecontroleerd."
+      }
     }
   },
   "userDetails": {
@@ -385,13 +418,13 @@
         "removeRoleFailed": "Kan rol niet verwijderen. Probeer het opnieuw.",
         "updateUserNotFound": "Kan gebruiker niet bijwerken. Gebruiker niet gevonden.",
         "updateFailed": "Kan gebruiker niet bijwerken. Probeer het opnieuw.",
-        "passwordTooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
-        "passwordChangeFailed": "Kan wachtwoord niet wijzigen",
-        "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
         "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
+        "passwordTooShort": "Wachtwoord moet minimaal 8 tekens lang zijn",
+        "passwordChangeFailed": "Kan wachtwoord niet wijzigen",
+        "passwordChangeError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -411,17 +444,21 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "placeholder": "Nieuwe teamnaam invoeren",
+      "descriptionPlaceholder": "Optionele teambeschrijving invoeren",
       "selectManager": "Selecteer een manager"
     },
     "details": {
       "loading": "Teamgegevens laden...",
       "notFound": "Geen team gevonden",
+      "noDescription": "Geen beschrijving",
       "fields": {
         "teamLead": "Teamleider",
+        "description": "Beschrijving",
         "addMember": "Lid toevoegen"
       },
       "placeholders": {
         "teamName": "Teamnaam invoeren",
+        "description": "Teambeschrijving invoeren",
         "selectTeamLead": "Selecteer een teamleider",
         "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
         "noTeamLead": "Niet toegewezen"
@@ -433,8 +470,10 @@
         "discard": "Verwerpen",
         "saveChanges": "Wijzigingen opslaan",
         "saveName": "Naam opslaan",
+        "saveDescription": "Beschrijving opslaan",
         "cancel": "Annuleren",
         "editName": "Naam bewerken",
+        "editDescription": "Beschrijving bewerken",
         "remove": "Verwijderen"
       },
       "table": {
@@ -448,7 +487,9 @@
       },
       "leadName": "Leider: {{name}}",
       "memberCount_one": "{{count}} lid",
-      "memberCount_other": "{{count}} leden"
+      "memberCount_other": "{{count}} leden",
+      "memberCount_few": "{{count}} leden",
+      "memberCount_many": "{{count}} leden"
     },
     "messages": {
       "error": {
@@ -457,6 +498,7 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
+        "updateDescription": "Kan teambeschrijving niet bijwerken",
         "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
@@ -702,11 +744,12 @@
         "conflictsTitle": "Importconflicten oplossen",
         "conflictsDescription": "De volgende items hebben conflicten die moeten worden opgelost:",
         "nameConflict": "Naam bestaat al",
+        "orderConflict": "Volgorde {{order}} is al in gebruik",
         "skipItem": "Dit item overslaan",
         "importNewName": "Importeren met een andere naam:",
+        "importWithOrder": "Importeren met volgorde {{order}}",
         "importWithResolutions": "Importeren met oplossingen",
-        "orderConflict": "Volgorde {{order}} is al in gebruik",
-        "importWithOrder": "Importeren met volgorde {{order}}"
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
         "active": "Actief"
@@ -775,7 +818,9 @@
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
-          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
+          "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog andere instellingen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -801,6 +846,9 @@
         "inactivityDaysLabel": "Dagen inactiviteit",
         "warningDaysLabel": "Waarschuwingsdagen vóór sluiting",
         "warningDaysPlaceholder": "Geen waarschuwing",
+        "suppressContactNotificationsLabel": "Klant niet informeren",
+        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
+        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren",
         "ruleEnabledLabel": "Ingeschakeld",
         "removeRule": "Verwijderen",
         "messages": {
@@ -809,10 +857,7 @@
           "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
           "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen",
           "autoCloseSuppressionInvalid": "Meldingen aan agenten en volgers kunnen alleen worden overgeslagen als klantmeldingen worden overgeslagen."
-        },
-        "suppressContactNotificationsLabel": "Klant niet informeren",
-        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
-        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren"
+        }
       },
       "editor": {
         "sections": {
@@ -836,11 +881,15 @@
           "notificationsRecipients": "Melden aan",
           "notificationsRecipientsPlaceholder": "Selecteer gebruikers en teams...",
           "notificationsRecipientsHelp": "Teamleden worden bij elke melding opnieuw opgezocht.",
+          "notificationsEmails": "E-mailadressen",
+          "notificationsEmailsPlaceholder": "Voeg een distributielijst of gedeelde mailbox toe...",
+          "notificationsEmailsHelp": "Deze adressen ontvangen de volledige ticketgegevens van elk overeenkomend ticket op dit bord, ook al zijn het geen Alga-gebruikers en geldt er geen toestemmingscontrole. Gebruik dit voor distributielijsten die u beheert. Kies een persoon met een Alga-account liever hierboven.",
+          "notificationsEmailInvalid": "Corrigeer of verwijder de ongeldige e-mailadressen in de meldingsregels.",
           "notificationsDefaultWatchers": "Standaardvolgers",
           "notificationsDefaultWatchersPlaceholder": "Selecteer gebruikers...",
           "notificationsDefaultWatchersHelp": "Toegevoegd aan de volgerslijst van elk nieuw ticket op dit bord en op de hoogte gebracht van elke latere update.",
           "notificationsTriggerRequired": "Elke meldingsregel heeft minstens één trigger nodig: het aanmaken van een ticket of een status.",
-          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker of team nodig om te informeren.",
+          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker, team of e-mailadres nodig om te informeren.",
           "notificationsFetchFailed": "Meldingsinstellingen laden mislukt",
           "notificationsStatusRemapFailed": "Het bord is aangemaakt, maar de status van een meldingsregel kon niet aan het nieuwe bord worden gekoppeld. Voeg de meldingsregels opnieuw toe.",
           "inbound": "E-mail & inkomende antwoorden",
@@ -881,14 +930,56 @@
       "empty": "Geen borden gevonden.",
       "searchPlaceholder": "Borden zoeken…",
       "emailSender": {
-        "useDefault": "Ticketstandaard gebruiken",
-        "duplicateRoute": "Deze afzenderroute bestaat al.",
-        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw.",
         "label": "Afzender voor uitgaande e-mail",
         "inboundWarning": "Deze afzender wordt gebruikt voor uitgaande ticket-e-mail. De instellingen voor inkomende e-mail blijven ongewijzigd.",
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
-        "saved": "Afzender opgeslagen"
+        "saved": "Afzender opgeslagen",
+        "useDefault": "Ticketstandaard gebruiken",
+        "duplicateRoute": "Deze afzenderroute bestaat al.",
+        "saveFailed": "Ticketafzender opslaan is mislukt. Probeer het opnieuw."
+      },
+      "deleteDependencies": {
+        "categories_one": "categorie",
+        "categories_other": "categorieën",
+        "categories_few": "categorieën",
+        "categories_many": "categorieën",
+        "statuses_one": "ticketstatus",
+        "statuses_other": "ticketstatussen",
+        "statuses_few": "ticketstatussen",
+        "statuses_many": "ticketstatussen",
+        "autoCloseRules_one": "automatisch-sluitenregel",
+        "autoCloseRules_other": "automatisch-sluitenregels",
+        "autoCloseRules_few": "automatisch-sluitenregels",
+        "autoCloseRules_many": "automatisch-sluitenregels",
+        "notificationRules_one": "meldingsregel",
+        "notificationRules_other": "meldingsregels",
+        "notificationRules_few": "meldingsregels",
+        "notificationRules_many": "meldingsregels",
+        "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
+        "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_many": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "emailSenderRoutes_one": "uitgaande afzenderroute",
+        "emailSenderRoutes_other": "uitgaande afzenderroutes",
+        "emailSenderRoutes_few": "uitgaande afzenderroutes",
+        "emailSenderRoutes_many": "uitgaande afzenderroutes",
+        "ticketTemplates_one": "ticketsjabloon",
+        "ticketTemplates_other": "ticketsjablonen",
+        "ticketTemplates_few": "ticketsjablonen",
+        "ticketTemplates_many": "ticketsjablonen",
+        "recurringTickets_one": "planning voor terugkerende tickets",
+        "recurringTickets_other": "planningen voor terugkerende tickets",
+        "recurringTickets_few": "planningen voor terugkerende tickets",
+        "recurringTickets_many": "planningen voor terugkerende tickets",
+        "checklistRules_one": "controlelijstregel",
+        "checklistRules_other": "controlelijstregels",
+        "checklistRules_few": "controlelijstregels",
+        "checklistRules_many": "controlelijstregels",
+        "cannedResponses_one": "standaardantwoord van het bord",
+        "cannedResponses_other": "standaardantwoorden van het bord",
+        "cannedResponses_few": "standaardantwoorden van het bord",
+        "cannedResponses_many": "standaardantwoorden van het bord"
       }
     },
     "priorities": {
@@ -980,7 +1071,8 @@
         "description": "Beschrijving",
         "items": "Artikelen",
         "status": "Status",
-        "actions": "Acties"
+        "actions": "Acties",
+        "scope": "Beschikbaar voor"
       },
       "statusLabels": {
         "active": "Actief",
@@ -998,7 +1090,9 @@
         "down": "Omlaag",
         "remove": "Verwijderen",
         "addItem": "Item toevoegen",
-        "addRule": "Regel toevoegen"
+        "addRule": "Regel toevoegen",
+        "duplicateToClient": "Dupliceren naar klant…",
+        "duplicate": "Dupliceren"
       },
       "fields": {
         "name": {
@@ -1020,13 +1114,48 @@
         },
         "rules": {
           "label": "Automatisch-toepassenregels",
-          "help": "Het sjabloon wordt automatisch toegepast op nieuwe tickets die overeenkomen met een van deze regels. Laat een veld op \"Willekeurig\" staan om alle waarden te matchen.",
+          "help": "Een sjabloon wordt toegepast op een nieuw ticket als het aan een van de regels voldoet. Een regel komt alleen overeen als het ticket aan alle ingestelde filters voldoet. Laat een filter leeg om het te negeren.",
           "empty": "Geen automatisch-toepassenregels. Dit sjabloon kan nog steeds handmatig op tickets worden toegepast.",
           "board": "Bord",
           "category": "Categorie",
           "subcategory": "Subcategorie",
           "priority": "Prioriteit",
-          "any": "Willekeurig"
+          "any": "Willekeurig",
+          "appliesToAll": "Geldt voor alle tickets",
+          "appliesToAllClientTickets": "Geldt voor alle tickets van {{client}}",
+          "clients": "Klanten",
+          "clientsAny": "Elke klant",
+          "clientsFixedByTemplate": "Alleen {{client}} (bepaald door de klant van het sjabloon)",
+          "clientsAddAnother": "Nog een klant toevoegen",
+          "removeClient": "{{name}} verwijderen",
+          "origins": "Bron van het ticket",
+          "originsAny": "Elke bron",
+          "fromServiceRequest": "Alleen tickets uit een serviceaanvraag",
+          "anyServiceRequest": "Elke serviceaanvraag",
+          "keywords": "Trefwoorden",
+          "keywordsPlaceholder": "Typ een woord of zin en druk op Enter",
+          "keywordsHelp": "Ook woorddelen komen overeen, dus \"onboard\" vindt ook \"onboarding\". Hoofdletters worden genegeerd.",
+          "removeKeyword": "{{keyword}} verwijderen",
+          "keywordMode": "Overeenkomst",
+          "keywordModeAny": "Een willekeurig trefwoord",
+          "keywordModeAll": "Alle trefwoorden",
+          "keywordTarget": "Zoeken in",
+          "keywordTargetBoth": "Titel en beschrijving",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beschrijving",
+          "originLabels": {
+            "internal": "Aangemaakt door medewerkers",
+            "client_portal": "Klantenportaal",
+            "inbound_email": "Inkomende e-mail",
+            "api": "API",
+            "recurring": "Terugkerende planning"
+          },
+          "clientScopedWarning": "Dit sjabloon is beperkt tot {{client}}: deze regels gelden alleen voor tickets van {{client}}."
+        },
+        "availableTo": {
+          "label": "Beschikbaar voor",
+          "clear": "Alle klanten",
+          "help": "Laat op Alle klanten staan om deze sjabloon bij elk ticket aan te bieden, of kies een klant om hem tot de tickets van die klant te beperken."
         }
       },
       "dialog": {
@@ -1034,13 +1163,17 @@
         "editTemplate": "Checklistsjabloon bewerken",
         "createFirstHelp": "Maak eerst het sjabloon aan en voeg daarna checklistitems en automatisch-toepassenregels toe.",
         "deleteTitle": "Checklistsjabloon verwijderen",
-        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed."
+        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed.",
+        "duplicateTitle": "Dupliceren naar klant",
+        "duplicateHelp": "Kopieer \"{{name}}\" en de bijbehorende items naar een nieuw sjabloon dat tot één klant is beperkt. De kopie is onafhankelijk: latere wijzigingen aan het ene sjabloon hebben geen invloed op het andere.",
+        "duplicateClientPlaceholder": "Selecteer een klant"
       },
       "messages": {
         "success": {
           "created": "Checklistsjabloon succesvol aangemaakt",
           "updated": "Checklistsjabloon succesvol bijgewerkt",
-          "deleted": "Checklistsjabloon succesvol verwijderd"
+          "deleted": "Checklistsjabloon succesvol verwijderd",
+          "duplicated": "Checklistsjabloon naar klant gedupliceerd"
         },
         "error": {
           "fetchFailed": "Kan checklistsjablonen niet ophalen",
@@ -1050,8 +1183,67 @@
           "deleteFailed": "Kan checklistsjabloon niet verwijderen",
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
-          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan",
+          "duplicateFailed": "Checklistsjabloon dupliceren mislukt"
         }
+      },
+      "scope": {
+        "allClients": "Alle klanten",
+        "unknownClient": "Onbekende klant"
+      },
+      "filter": {
+        "client": "Klant",
+        "allClients": "Alle klanten",
+        "clear": "Filter wissen"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Bord",
+          "category_id": "Categorie",
+          "subcategory_id": "Subcategorie",
+          "priority_id": "Prioriteit",
+          "client_id": "Klant",
+          "client_tags": "Klantlabels",
+          "contact_tags": "Contactlabels",
+          "location_id": "Locatie",
+          "contact_locations": "Locatie van aanvrager",
+          "ticket_origin": "Ticketbron",
+          "title_folded": "Titel",
+          "description_folded": "Beschrijving",
+          "from_service_request": "Uit serviceaanvraag",
+          "service_request_definition_id": "Serviceaanvraag"
+        },
+        "operators": {
+          "equals": "Is gelijk aan",
+          "not_equals": "Is niet gelijk aan",
+          "in": "Bevat een van",
+          "not_in": "Bevat geen van",
+          "contains": "Bevat",
+          "starts_with": "Begint met",
+          "ends_with": "Eindigt op",
+          "not_contains": "Bevat niet",
+          "not_starts_with": "Begint niet met",
+          "not_ends_with": "Eindigt niet op",
+          "is_empty": "Is leeg",
+          "is_not_empty": "Is niet leeg"
+        },
+        "conditions": "Voorwaarden",
+        "match": "Overeenkomst",
+        "and": "Alle voorwaarden",
+        "or": "Een van de voorwaarden",
+        "field": "Veld",
+        "operator": "Voorwaarde",
+        "value": "Waarde",
+        "yes": "Ja",
+        "no": "Nee",
+        "advanced": "Deze regel bevat gegroepeerde of geavanceerde voorwaarden en is alleen-lezen in deze editor.",
+        "add": "Voorwaarde toevoegen",
+        "save": "Voorwaarden opslaan",
+        "enabled": "Ingeschakeld",
+        "matchesAll": "Komt overeen met alle tickets binnen het bereik van de sjabloon.",
+        "matchesNone": "Komt met geen enkel ticket overeen.",
+        "tagsFailed": "De labelopties konden niet worden geladen. Opgeslagen selecties blijven behouden.",
+        "retry": "Opnieuw proberen"
       }
     },
     "externalSystems": {
@@ -1139,7 +1331,9 @@
         "success": {
           "deleted": "Interactietype verwijderd",
           "imported_one": "{{count}} interactietype geïmporteerd",
-          "imported_other": "{{count}} interactietypen geïmporteerd"
+          "imported_other": "{{count}} interactietypen geïmporteerd",
+          "imported_few": "{{count}} interactietypen geïmporteerd",
+          "imported_many": "{{count}} interactietypen geïmporteerd"
         },
         "error": {
           "fetchFailed": "Kan interactietypen niet ophalen",
@@ -1390,7 +1584,9 @@
         "saveDomain": "Domein opslaan",
         "updateDomain": "Domein bijwerken",
         "submitting": "Bezig met verzenden…",
-        "cancelEdit": "Bewerken annuleren"
+        "cancelEdit": "Bewerken annuleren",
+        "confirmUris": "Ik heb deze geregistreerd — bevestigen",
+        "confirmingUris": "Bevestigen…"
       },
       "form": {
         "label": "Aangepast domein",
@@ -1428,7 +1624,8 @@
         "deploying": "Implementeren",
         "active": "Actief",
         "disabled": "Uitgeschakeld",
-        "unknown": "Onbekend"
+        "unknown": "Onbekend",
+        "pending_redirect_uri": "Redirect-URI's in afwachting"
       },
       "messages": {
         "requestSubmitted": "Aanvraag voor aangepast domein verzonden.",
@@ -1440,9 +1637,32 @@
         "registerFailed": "Kan aangepast domein niet registreren.",
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
-        "disableFailed": "Kan aangepast domein niet uitschakelen."
+        "disableFailed": "Kan aangepast domein niet uitschakelen.",
+        "confirmUrisFailed": "Bevestigen van redirect-URI's mislukt.",
+        "urisConfirmed": "Redirect-URI's bevestigd."
       },
-      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "surface": {
+        "label": "Bedient",
+        "current": "Bedient: {{value}}",
+        "updatingSurface": "Opslaan wijzigt welke app dit domein bedient en start de provisioning opnieuw.",
+        "options": {
+          "client_portal": "Klantenportaal",
+          "msp": "MSP-app",
+          "both": "Beide"
+        },
+        "descriptions": {
+          "client_portal": "Het domein opent uw klantenportaal. Dit is de standaardinstelling.",
+          "msp": "Het domein opent de MSP-app (technici). De redirect-URI's voor single sign-on moeten eerst worden geregistreerd.",
+          "both": "Eén domein bedient beide apps. Paden onder /msp openen de MSP-app en paden onder /client-portal openen het klantenportaal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-redirect-URI's moeten worden geregistreerd",
+        "description": "Dit domein bedient de MSP-app, dus single sign-on werkt pas zodra de onderstaande redirect-URI's bij uw SSO-provider zijn geregistreerd. Het domein blijft in behandeling totdat ze zijn bevestigd.",
+        "listLabel": "Registreer deze redirect-URI's:",
+        "contactSupport": "Vraag uw beheerder of neem contact op met support om deze redirect-URI's te registreren en te bevestigen."
+      }
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
@@ -1668,10 +1888,15 @@
         "label": "Meldingen inschakelen",
         "description": "Alle meldingen voor deze tenant in- of uitschakelen"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Tickets starten met \"Klant niet informeren\" aangevinkt",
+        "description": "Ticketopmerkingen, status- en contactwijzigingen en afsluitingen starten zonder klantmeldingen. Medewerkers kunnen het vakje uitvinken om de klant voor een enkele actie te informeren."
+      },
       "loading": "Meldingsinstellingen laden...",
       "loadError": "Kan instellingen niet laden",
       "save": "Wijzigingen opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "saveError": "Meldingsinstellingen konden niet worden opgeslagen"
     },
     "emailTemplatesUi": {
       "preview": {
@@ -1687,7 +1912,8 @@
         "loading": "E-mailsjablonen laden...",
         "templateCount": "({{templateCount}} sjablonen)",
         "usingCustom": "Aangepast sjabloon wordt gebruikt",
-        "usingStandard": "Standaardsjabloon wordt gebruikt"
+        "usingStandard": "Standaardsjabloon wordt gebruikt",
+        "notCurrentlySent": "Wordt momenteel niet verzonden"
       },
       "columns": {
         "name": "Naam",
@@ -1711,7 +1937,8 @@
         "close": "Sluiten",
         "cancel": "Annuleren",
         "saving": "Opslaan...",
-        "save": "Opslaan"
+        "save": "Opslaan",
+        "variableReference": "Variabelenoverzicht"
       },
       "description": "Elk gebeurtenistype heeft een standaardsjabloon dat kan worden aangepast. U kunt het standaardsjabloon gebruiken of een aangepaste versie maken.",
       "filter": {
@@ -1734,7 +1961,8 @@
         "notAvailable": "n.v.t."
       },
       "edit": {
-        "title": "Aangepast sjabloon bewerken: {{name}}"
+        "title": "Aangepast sjabloon bewerken: {{name}}",
+        "variableSuggestions": "Suggesties voor sjabloonvariabelen"
       },
       "languages": {
         "en": "Engels",
@@ -1744,7 +1972,8 @@
         "nl": "Nederlands",
         "it": "Italiaans",
         "pl": "Pools",
-        "pt": "Portugees"
+        "pt": "Portugees",
+        "sv": "Zweeds"
       }
     },
     "emailBranding": {
@@ -1955,6 +2184,50 @@
     "emailTemplates": {
       "editor": {
         "inlineLogoHint": "Uw logo wordt bij verzending in het bericht ingesloten. Laat de verwijzing src=\"cid:{{cid}}\" ongewijzigd — vervangt u die door een URL, dan moeten ontvangers eerst toestemming geven om de afbeelding te downloaden."
+      }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Invoegen bij cursor",
+        "guide": "De volledige handleiding lezen",
+        "copy": "{{path}} kopiëren"
+      },
+      "insertHelp": "Selecteer een variabele om deze in te voegen.",
+      "availableHelp": "Variabelen die beschikbaar zijn voor dit sjabloon.",
+      "fields": {
+        "search": {
+          "placeholder": "Variabelen zoeken"
+        },
+        "globalSearch": {
+          "placeholder": "Paden, beschrijvingen en concepten zoeken"
+        },
+        "category": {
+          "all": "Alle gebieden"
+        }
+      },
+      "title": "Variabelenreferentie voor e-mailsjablonen",
+      "panelTitle": "Sjabloonvariabelen",
+      "mspOnly": "Alleen MSP",
+      "clientSafeHelp": "Wordt naar klanten verzonden. Variabelen die alleen voor de MSP zijn, zijn niet beschikbaar.",
+      "inferredContract": "Wordt momenteel niet verzonden. Dit contract is afgeleid van het sjabloon.",
+      "empty": "Geen overeenkomende variabelen.",
+      "example": "Voorbeeld:",
+      "usedBy": "Gebruikt door {{templates}}",
+      "description": "Bekijk de beschikbare gegevens voor elk systeeme-mailsjabloon. Kopieer het exacte Handlebars-token naar een aangepast sjabloon.",
+      "enums": {
+        "categories": {
+          "appointments": "Afspraken",
+          "auth": "Authenticatie",
+          "billing": "Facturatie",
+          "quotes": "Offertes",
+          "invoices": "Facturen",
+          "opportunities": "Verkoopkansen",
+          "projects": "Projecten",
+          "sla": "SLA",
+          "surveys": "Enquêtes",
+          "tickets": "Tickets",
+          "time": "Tijd"
+        }
       }
     }
   },
@@ -2265,11 +2538,15 @@
         "samples_other": "{{sample}} · {{count}} gegevensrijen",
         "noSample": "Geen voorbeeld",
         "missingRequired": "Niet-gekoppelde verplichte velden: {{fields}}",
-        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron."
+        "duplicate": "Een aangepast veld is meerdere keren gekoppeld. Kies een uniek doel voor elke bron.",
+        "samples_few": "{{sample}} · {{count}} gegevensrijen",
+        "samples_many": "{{sample}} · {{count}} gegevensrijen"
       },
       "actions": {
         "back": "Terug naar migraties",
-        "upload": "Pakket uploaden"
+        "upload": "Pakket uploaden",
+        "close": "Sluiten",
+        "cancel": "Annuleren"
       },
       "errors": {
         "noImportableRecords": "Dit pakket bevatte geen importeerbare records.",
@@ -2282,10 +2559,48 @@
         "storageRejected": "De server heeft deze upload geweigerd. Vraag uw beheerder de bestandstypeconfiguratie van de opslag te controleren.",
         "spreadsheetFailed": "Het spreadsheet kon niet worden geïmporteerd. Probeer het opnieuw.",
         "uploadFailed": "Het pakket kon niet worden geüpload. Probeer het opnieuw.",
-        "unknown": "De upload is mislukt. Probeer het opnieuw."
+        "unknown": "De upload is mislukt. Probeer het opnieuw.",
+        "loadJobs": "Migratieachtergrondtaken konden niet worden geladen.",
+        "loadJob": "De migratieachtergrondtaak kon niet worden geladen.",
+        "jobNotFound": "Migratieachtergrondtaak niet gevonden."
       },
       "preflight": {
-        "title": "Voorcontrole"
+        "title": "Voorcontrole",
+        "description": "Een proefuitvoering die elk klaargezet record controleert aan de hand van deze tenant en uw configuratie. De voorcontrole maakt niets aan.",
+        "errors": {
+          "loadReport": "Het voorcontrolerapport kon niet worden geladen.",
+          "runFailed": "De voorcontrole kon niet worden uitgevoerd.",
+          "startMigration": "De migratie kon niet worden gestart.",
+          "downloadCsv": "Het CSV-bestand van de voorcontrole kon niet worden gedownload.",
+          "downloadJson": "Het JSON-bestand van de voorcontrole kon niet worden gedownload."
+        },
+        "running": "Voorcontrole wordt uitgevoerd…",
+        "runAgain": "Voorcontrole opnieuw uitvoeren",
+        "run": "Voorcontrole uitvoeren",
+        "empty": "Voor deze configuratie is nog geen voorcontrole uitgevoerd. Voer een voorcontrole uit om het plan per entiteit en eventuele problemen te bekijken.",
+        "plan": "Plan",
+        "preflightedAt": "Voorcontrole uitgevoerd op {{timestamp}}",
+        "downloadCsv": "CSV downloaden",
+        "downloadJson": "JSON downloaden",
+        "columns": {
+          "entity": "Entiteit",
+          "staged": "Klaargezet",
+          "toCreate": "Aan te maken",
+          "toSkip": "Over te slaan (al gemigreerd)",
+          "blocked": "Geblokkeerd"
+        },
+        "noStagedRecords": "Het pakket heeft geen records klaargezet.",
+        "blockingIssues": "Blokkerende problemen ({{count}})",
+        "warnings": "Waarschuwingen ({{count}})",
+        "blockedWithIssues_one": "De migratie kan niet worden uitgevoerd: eerst moet {{count}} blokkerend probleem worden opgelost.",
+        "blockedWithIssues_other": "De migratie kan niet worden uitgevoerd: eerst moeten {{count}} blokkerende problemen worden opgelost.",
+        "blockedNoPreflight": "De migratie kan pas worden uitgevoerd nadat de voorcontrole zonder blokkerende problemen is geslaagd.",
+        "needsConfiguration": "De migratie kan worden uitgevoerd zodra de voorcontrole van de opgeslagen configuratie is geslaagd.",
+        "starting": "Starten…",
+        "runMigration": "Migratie uitvoeren",
+        "recordsAffected_one": "{{count}} betrokken record",
+        "recordsAffected_other": "{{count}} betrokken records",
+        "sampleRecords": "Voorbeeldrecords:"
       },
       "run": {
         "queued": "Migratie in wachtrij",
@@ -2302,7 +2617,153 @@
         "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
         "claimedBySamePackage": "Al gemigreerd door dit pakket",
         "claimedByOtherPackage": "Al gemigreerd door {{file}}",
-        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit",
+        "matchedBySku": "Op SKU gekoppeld aan een bestaand product",
+        "title": "Resultaten",
+        "errors": {
+          "loadSummary": "De resultatensamenvatting kon niet worden geladen.",
+          "loadRecords": "De resultaatrecords konden niet worden geladen.",
+          "downloadCsv": "Het CSV-bestand met resultaten kon niet worden gedownload."
+        },
+        "actions": {
+          "created": "Aangemaakt",
+          "skipped": "Overgeslagen",
+          "failed": "Mislukt"
+        },
+        "counts": {
+          "created": "aangemaakt",
+          "skipped": "overgeslagen",
+          "failed": "mislukt"
+        },
+        "finishedAt": "Voltooid op {{timestamp}}.",
+        "noLongerRunning": "De achtergrondtaak wordt niet meer uitgevoerd.",
+        "preparing": "Voorbereiden…",
+        "downloadCsv": "CSV met resultaten downloaden",
+        "failedLabel": "De migratie is mislukt:",
+        "cancelled": "De migratie is bij een controlepunt geannuleerd. Records die vóór de annulering zijn verwerkt, blijven behouden en worden hieronder weergegeven.",
+        "noRecordsWritten": "Er zijn geen resultaatrecords voor deze achtergrondtaak vastgelegd.",
+        "noRecordsMatch": "Er zijn geen resultaatrecords die overeenkomen met deze filters.",
+        "columns": {
+          "entity": "Entiteit",
+          "sourceRecord": "Bronrecord",
+          "action": "Actie",
+          "result": "Resultaat",
+          "at": "Tijdstip"
+        },
+        "filters": {
+          "allEntities": "Alle entiteiten",
+          "allActions": "Alle acties"
+        },
+        "unknownError": "Onbekende fout",
+        "recordLimitNotice": "De eerste {{count}} overeenkomende records worden weergegeven. Download het CSV-bestand met resultaten voor de volledige lijst."
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Producten (catalogus / prijslijst)",
+          "vendorProducts": "Leveranciersprijslijst (distributiekosten)",
+          "assets": "Assets (oude assetimport)",
+          "organizations": "Organisaties",
+          "locations": "Locaties",
+          "contacts": "Contacten",
+          "tickets": "Tickets",
+          "ticketComments": "Ticketopmerkingen"
+        },
+        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam.",
+        "headersHint": "Standaardkolomkoppen worden automatisch herkend. Andere kolommen kunnen tijdens de configuratie aan aangepaste velden van assettypen worden gekoppeld. Voor contacten worden gangbare schrijfwijzen geaccepteerd, zoals Name, First Name, Last Name, E-mail, Phone, Title en Client; oude assetkolomkoppen zoals Asset Name, Asset Type en Serial Number blijven in het AMP-proces behouden."
+      },
+      "configure": {
+        "products": {
+          "title": "Producten",
+          "serviceType": "Servicetype voor nieuwe producten",
+          "serviceTypePlaceholder": "Selecteer een servicetype",
+          "serviceTypeHelp": "Producten waarvan de SKU al bestaat worden gekoppeld en ongewijzigd gelaten; alleen nieuwe producten worden onder dit servicetype geplaatst."
+        },
+        "title": "De migratie configureren",
+        "description": "Koppel de referentiegegevens van het pakket aan deze tenant. De voorcontrole verifieert elke koppeling voordat er iets kan worden uitgevoerd.",
+        "errors": {
+          "loadOptions": "Configuratieopties konden niet worden geladen.",
+          "save": "De configuratie kon niet worden opgeslagen.",
+          "optionsUnavailable": "Configuratieopties zijn niet beschikbaar."
+        },
+        "clientPlaceholder": "Selecteer een klant",
+        "mappingPlaceholder": "Selecteer een koppeling",
+        "tickets": {
+          "title": "Tickets",
+          "board": "Bord",
+          "boardPlaceholder": "Selecteer een bord",
+          "defaultRequester": "Standaardklant voor aanvragers",
+          "defaultRequesterHelp": "Wordt gebruikt wanneer de organisatie van een ticket niet kan worden bepaald.",
+          "defaultAssignee": "Standaardverantwoordelijke",
+          "defaultAssigneePlaceholder": "Tickets niet toewijzen"
+        },
+        "statusMapping": {
+          "title": "Statuskoppeling",
+          "description": "Elke statusnaam in het pakket moet aan een ticketstatus in deze tenant worden gekoppeld.",
+          "empty": "De tickets in het pakket bevatten geen statusnamen."
+        },
+        "priorityMapping": {
+          "title": "Prioriteitskoppeling",
+          "description": "Elke prioriteitsnaam in het pakket moet aan een prioriteit in deze tenant worden gekoppeld.",
+          "empty": "De tickets in het pakket bevatten geen prioriteitsnamen."
+        },
+        "assets": {
+          "title": "Assets"
+        },
+        "assetTypeMapping": {
+          "title": "Koppeling van assettypen",
+          "description": "Elke assettypenaam in het pakket moet aan een assettype in deze tenant worden gekoppeld.",
+          "empty": "De assets in het pakket bevatten geen assettypenamen."
+        },
+        "general": {
+          "title": "Algemeen",
+          "defaultClient": "Standaardklant voor records zonder organisatie",
+          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld.",
+          "clearDefaultClient": "Wissen"
+        },
+        "saved": "Configuratie opgeslagen. Voer de voorcontrole uit om deze te controleren aan de hand van de klaargezette records.",
+        "saving": "Opslaan…",
+        "save": "Configuratie opslaan"
+      },
+      "home": {
+        "title": "Migraties",
+        "description": "Zet gegevens uit een ander PSA-systeem over naar Alga door een AMP-pakket of een CSV/XLSX-spreadsheet te uploaden. Elke upload wordt geïnspecteerd, geconfigureerd en vooraf gecontroleerd voordat er iets wordt aangemaakt.",
+        "columns": {
+          "package": "Pakket",
+          "sourceSystem": "Bronsysteem",
+          "state": "Status",
+          "progress": "Voortgang",
+          "created": "Aangemaakt"
+        },
+        "empty": {
+          "title": "Nog geen migraties",
+          "descriptionPrefix": "Een Alga Migration Package (",
+          "descriptionSuffix": ") is een overdraagbaar, gevalideerd archief met organisaties, locaties, contacten, tickets, opmerkingen en assets die uit een ander systeem zijn geëxporteerd. Upload een pakket om de inhoud te inspecteren, de referentiegegevens aan deze tenant te koppelen en een vooraf gecontroleerde import uit te voeren die veilig kan worden herhaald.",
+          "docsLink": "Lees de documentatie over AMP-pakketten"
+        }
+      },
+      "upload": {
+        "title": "Migratiepakket uploaden",
+        "tooLarge": "Migratiepakketten mogen niet groter zijn dan {{megabytes}} MB.",
+        "fileLabel": "Pakket of spreadsheet",
+        "fileHint": "AMP (.amp) of CSV/XLSX, maximaal {{megabytes}} MB. Spreadsheets worden omgezet in een AMP-pakket voordat de records worden klaargezet; er wordt niets geïmporteerd totdat u de migratie uitvoert.",
+        "entityLabel": "Type records in het spreadsheet",
+        "rejected": "Het pakket is afgewezen en er zijn geen records klaargezet. Los deze problemen in het bronpakket op en upload het opnieuw:",
+        "stagedWithDiagnostics": "De records uit het pakket zijn klaargezet, maar sommige brongegevens vereisen uw aandacht voordat u de import uitvoert:",
+        "continueToConfigure": "Doorgaan naar configuratie",
+        "uploading": "Uploaden…",
+        "submit": "Uploaden"
+      },
+      "detail": {
+        "source": "Bron: {{system}}",
+        "sourceNotDeclared": "Bronsysteem niet opgegeven",
+        "producer": "Producent: {{producer}}",
+        "uploaded": "Geüpload op {{timestamp}}",
+        "lifecycleAria": "Migratielevenscyclus",
+        "inspecting": "Het pakket wordt geïnspecteerd en de records worden klaargezet",
+        "packageSuffix": "(pakket {{packageId}})",
+        "inspectingRefresh": ". Deze weergave wordt automatisch vernieuwd.",
+        "rejectedBody": "Dit pakket is tijdens de inspectie afgewezen; er zijn geen records klaargezet en er wordt niets uit geïmporteerd. Corrigeer het pakket in het bronsysteem en upload een nieuw pakket.",
+        "rejectionDetails": "Details van de afwijzing"
       }
     },
     "jobDetails": {
@@ -2383,7 +2844,16 @@
   },
   "policyManagement": {
     "title": "Beleidsbeheer",
-    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen."
+    "upgradeDescription": "Beleidsbeheer is een Pro-functie. Voer een upgrade uit voor toegang tot geavanceerde beleidsinstellingen.",
+    "bundleLibrary": {
+      "title": "Bibliotheek met autorisatiebundels",
+      "upgradeDescription": "Geavanceerd beheer van autorisatiebundels is beschikbaar in Pro. Upgrade om beperkende bundels voor rollen, teams, gebruikers en API-sleutels te configureren.",
+      "protectionsDescription": "Ingebouwde autorisatiebeveiligingen blijven actief, ook wanneer configureerbare geavanceerde opties niet beschikbaar zijn in deze editie of dit abonnement."
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Beleidsbeheer vereist Pro. Upgrade om toegang te krijgen tot deze functie."
+    }
   },
   "roleManagement": {
     "title": "Rollen beheren",
@@ -2528,7 +2998,9 @@
         "noSessions": "Geen actieve sessies gevonden"
       },
       "subtitle_one": "{{sessionCount}} actieve sessie bij {{userCount}} gebruiker",
-      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
+      "subtitle_other": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "subtitle_few": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers",
+      "subtitle_many": "{{sessionCount}} actieve sessies bij {{userCount}} gebruikers"
     }
   },
   "ssoBulk": {
@@ -2594,7 +3066,8 @@
         "preparingPreview": "Voorbeeld voorbereiden…",
         "linking": "Accounts koppelen…",
         "unlinking": "Accounts ontkoppelen…",
-        "bulkLabel": "SSO-bulkacties {{location}}"
+        "bulkLabel": "SSO-bulkacties {{location}}",
+        "disabledSelectUsers": "Selecteer eerst minimaal één gebruiker."
       },
       "table": {
         "email": "E-mail",
@@ -2621,7 +3094,9 @@
         "unlinkedCount": "{{count}} accounts ontkoppeld via {{provider}}.",
         "previewUnlink_one": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruiker.",
         "previewUnlink_other": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers.",
-        "previewLink": "Voorbeeld klaar. Bekijk het overzicht voordat u accounts koppelt."
+        "previewLink": "Voorbeeld klaar. Bekijk het overzicht voordat u accounts koppelt.",
+        "previewUnlink_few": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers.",
+        "previewUnlink_many": "Voorbeeld klaar. We ontkoppelen {{count}} geselecteerde gebruikers."
       },
       "results": {
         "completeTitle": "Toewijzing voltooid",
@@ -2636,12 +3111,16 @@
         "wouldLink": "Zou koppelen",
         "alreadyUnlinked": "Al ontkoppeld",
         "alreadyLinked": "Al gekoppeld",
-        "skippedInactive": "Overgeslagen (inactief)"
+        "skippedInactive": "Overgeslagen (inactief)",
+        "processed_few": "{{count}} gebruikers verwerkt.",
+        "processed_many": "{{count}} gebruikers verwerkt."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} gebruikers geselecteerd.",
+      "selected_many": "{{count}} gebruikers geselecteerd."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "Wanneer dit is ingeschakeld, worden gebruikers die via Entra-inrichting worden beheerd gedeactiveerd zodra hun recht op de toegangsgroep wordt verwijderd.",
@@ -2657,9 +3136,14 @@
       "modeTitle": "Entra-inrichtingsmodus voor het klantenportaal",
       "modeWorkflowManaged": "Door workflow beheerd",
       "workflowManagedInfo": "De door workflow beheerde modus publiceert alleen Entra-toegangsgebeurtenissen. De geselecteerde workflow is verantwoordelijk voor de inrichting van gebruikers van het klantenportaal, roltoewijzing, uitnodigingen en levenscycluswijzigingen."
+    },
+    "proFeature": {
+      "title": "Bulktoewijzing voor single sign-on",
+      "description": "Deze functie is beschikbaar in Pro. Upgrade om SSO-toewijzingen voor Google Workspace en Microsoft 365 rechtstreeks vanaf de pagina met beveiligingsinstellingen te beheren."
     }
   },
   "profile": {
+    "pageTitle": "Uw profiel",
     "tabs": {
       "profile": "Profiel",
       "security": "Beveiliging",
@@ -2715,8 +3199,7 @@
     "validation": {
       "firstNameRequired": "Voornaam is vereist",
       "lastNameRequired": "Achternaam is vereist"
-    },
-    "pageTitle": "Uw profiel"
+    }
   },
   "password": {
     "changePassword": "Wachtwoord wijzigen",
@@ -2742,7 +3225,8 @@
     "rmmEnterpriseNote": "RMM-integraties zijn beschikbaar in Pro.",
     "categoryHeading": "{{label}}-integraties",
     "loading": {
-      "payments": "Betalingsinstellingen laden..."
+      "payments": "Betalingsinstellingen laden...",
+      "hudu": "Instellingen voor de Hudu-integratie laden..."
     },
     "categories": {
       "accounting": {
@@ -2834,13 +3318,19 @@
         "name": "Telefonie",
         "description": "Leg gesprekken vast als interacties, herken de beller en maak van een gesprek een ticket"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} vereist de add-on {{addOnName}}",
+      "manageAddOns": "Add-ons beheren",
+      "entraDescription": "Schaf de Enterprise-add-on aan om Microsoft Entra Sync te activeren, inclusief tenantdetectie, klantkoppeling, contactsynchronisatie en afstemmingsworkflows."
     }
   },
   "orgChart": {
     "emptyState": "Geen gebruikers beschikbaar.",
     "roles": {
       "client": "Klantgebruiker",
-      "internal": "Interne gebruiker"
+      "internal": "Interne gebruiker",
+      "service": "Serviceaccount"
     },
     "badge": {
       "inactive": "Inactief"
@@ -2850,6 +3340,54 @@
     "messages": {
       "adminLocked": "Machtigingen van de beheerdersrol kunnen niet worden gewijzigd",
       "permissionsUpdated": "Machtigingen succesvol bijgewerkt"
+    },
+    "title": "Machtigingen beheren",
+    "description": "Configureer toegangsmachtigingen voor verschillende rollen en resources",
+    "selectPrompt": "Selecteer een rol of resource om machtigingen te beheren",
+    "unsavedChanges": "U hebt niet-opgeslagen wijzigingen",
+    "adminLockedTooltip": "Machtigingen voor de beheerdersrol zijn door het systeem vastgelegd en kunnen niet worden gewijzigd",
+    "none": "Geen",
+    "actionCount_one": "{{count}} actie",
+    "actionCount_other": "{{count}} acties",
+    "views": {
+      "clientPortal": "Klantenportaal"
+    },
+    "filters": {
+      "allResources": "Alle resources",
+      "allRoles": "Alle rollen",
+      "selectRole": "Selecteer een rol",
+      "filterByResource": "Filteren op resource"
+    },
+    "columns": {
+      "resource": "Resource",
+      "role": "Rol",
+      "create": "Aanmaken",
+      "read": "Lezen",
+      "update": "Bijwerken",
+      "delete": "Verwijderen",
+      "specialActions": "Speciale acties"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saveChanges": "Wijzigingen opslaan",
+      "saving": "Opslaan..."
+    },
+    "confirm": {
+      "title": "Machtigingswijzigingen bevestigen",
+      "message": "Weet u zeker dat u deze machtigingswijzigingen wilt opslaan?",
+      "confirmLabel": "Wijzigingen opslaan"
+    },
+    "stats": {
+      "empty": "Selecteer een rol of resource om machtigingen te bekijken",
+      "rolesForResource_one": "{{count}} rol voor {{resource}}",
+      "rolesForResource_other": "{{count}} rollen voor {{resource}}",
+      "resourcesAndPermissions": "{{count}} resources • {{assigned}}/{{total}} machtigingen"
+    },
+    "errors": {
+      "fetchPermissions": "Machtigingen konden niet worden opgehaald",
+      "fetchRoles": "Rollen konden niet worden opgehaald",
+      "fetchRolePermissions": "Rolmachtigingen konden niet worden opgehaald",
+      "savePermissions": "Machtigingen konden niet worden opgeslagen"
     }
   },
   "sla": {
@@ -2905,7 +3443,9 @@
         "overallCompliance": "Totale naleving",
         "pausedSla": "tickets met een gepauzeerde SLA",
         "ticketsTracked_one": "{{count}} ticket gevolgd",
-        "ticketsTracked_other": "{{count}} tickets gevolgd"
+        "ticketsTracked_other": "{{count}} tickets gevolgd",
+        "ticketsTracked_few": "{{count}} tickets gevolgd",
+        "ticketsTracked_many": "{{count}} tickets gevolgd"
       },
       "recentBreaches": {
         "empty": "Geen SLA-overschrijdingen in de geselecteerde periode",
@@ -2948,7 +3488,9 @@
         "responseTrackingDisabled": "Registratie van de reactiestatus uitgeschakeld",
         "responseTrackingEnabled": "Registratie van de reactiestatus ingeschakeld",
         "statusesUpdated_one": "{{count}} statusconfiguratie bijgewerkt",
-        "statusesUpdated_other": "{{count}} statusconfiguraties bijgewerkt"
+        "statusesUpdated_other": "{{count}} statusconfiguraties bijgewerkt",
+        "statusesUpdated_few": "{{count}} statusconfiguraties bijgewerkt",
+        "statusesUpdated_many": "{{count}} statusconfiguraties bijgewerkt"
       },
       "perStatus": {
         "description": "Configureer bij welke ticketstatussen de SLA-timer moet pauzeren. Wanneer een ticket naar een status met ingeschakelde pauze wordt verplaatst, stopt de SLA-timer totdat het ticket naar een andere status wordt verplaatst.",
@@ -2960,7 +3502,9 @@
         "resetChanges": "Wijzigingen herstellen",
         "saveChanges": "Wijzigingen opslaan",
         "saving": "Opslaan...",
-        "title": "Pauzeconfiguratie per status"
+        "title": "Pauzeconfiguratie per status",
+        "modifiedCount_few": "{{count}} statussen gewijzigd",
+        "modifiedCount_many": "{{count}} statussen gewijzigd"
       },
       "retry": "Opnieuw proberen"
     },
@@ -3003,7 +3547,9 @@
         "selectAll": "Alles selecteren",
         "selectAllVisible": "Alle zichtbare items selecteren",
         "selectedCount_one": "{{count}} geselecteerd",
-        "selectedCount_other": "{{count}} geselecteerd"
+        "selectedCount_other": "{{count}} geselecteerd",
+        "selectedCount_few": "{{count}} geselecteerd",
+        "selectedCount_many": "{{count}} geselecteerd"
       },
       "targets": {
         "always": "Doorlopend (kantooruren negeren)",
@@ -3096,7 +3642,13 @@
         "usageClients_one": "Klant: {{names}}",
         "usageClients_other": "Klanten: {{names}}",
         "usageTickets_one": "{{count}} ticket",
-        "usageTickets_other": "{{count}} tickets"
+        "usageTickets_other": "{{count}} tickets",
+        "usageBoards_few": "Borden: {{names}}",
+        "usageBoards_many": "Borden: {{names}}",
+        "usageClients_few": "Klanten: {{names}}",
+        "usageClients_many": "Klanten: {{names}}",
+        "usageTickets_few": "{{count}} tickets",
+        "usageTickets_many": "{{count}} tickets"
       },
       "description": "Beheer SLA-beleidsregels die doelen voor reactie- en oplossingstijden vastleggen",
       "empty": "Geen SLA-beleid gevonden. Klik op \"SLA-beleid toevoegen\" om het eerste beleid te maken.",
@@ -3124,6 +3676,91 @@
         "timerPaused": "SLA-timer: gepauzeerd"
       },
       "unknown": "Onbekend"
+    },
+    "businessHours": {
+      "title": "Kantoorurenschema's",
+      "description": "Bepaal wanneer uw supportteam beschikbaar is voor SLA-berekeningen",
+      "loading": "Kantoorurenschema's laden...",
+      "default": "Standaard",
+      "recurring": "Terugkerend",
+      "openMenu": "Menu openen",
+      "workingHours": "Werktijden",
+      "dailyHours": "Dagelijkse werktijden",
+      "closed": "Gesloten",
+      "alwaysOpen": "Dit is een 24/7-schema: de hele dag beschikbaar, elke dag.",
+      "holidays": "Feestdagen",
+      "noHolidays": "Er zijn geen feestdagen ingesteld voor dit schema.",
+      "timezoneLabel": "Tijdzone: {{timezone}}",
+      "days": {
+        "0": "zondag",
+        "1": "maandag",
+        "2": "dinsdag",
+        "3": "woensdag",
+        "4": "donderdag",
+        "5": "vrijdag",
+        "6": "zaterdag"
+      },
+      "columns": {
+        "name": "Naam",
+        "timezone": "Tijdzone",
+        "actions": "Acties",
+        "holidayName": "Naam van de feestdag",
+        "date": "Datum",
+        "day": "Dag",
+        "enabled": "Ingeschakeld",
+        "startTime": "Starttijd",
+        "endTime": "Eindtijd"
+      },
+      "empty": {
+        "title": "Geen kantoorurenschema's",
+        "description": "Maak uw eerste kantoorurenschema aan om SLA-tijden te berekenen."
+      },
+      "actions": {
+        "edit": "Bewerken",
+        "viewDetails": "Details bekijken",
+        "delete": "Verwijderen",
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "create": "Aanmaken",
+        "update": "Bijwerken",
+        "saving": "Opslaan...",
+        "adding": "Toevoegen...",
+        "createDefault": "Standaardschema aanmaken",
+        "createCustom": "Aangepast schema aanmaken",
+        "addSchedule": "Schema toevoegen",
+        "addHoliday": "Feestdag toevoegen"
+      },
+      "fields": {
+        "scheduleName": "Schemanaam *",
+        "scheduleNamePlaceholder": "bijv. Standaardkantooruren",
+        "timezone": "Tijdzone *",
+        "is24x7": "24/7-schema (altijd beschikbaar)",
+        "isDefault": "Als standaardschema instellen",
+        "holidayName": "Naam van de feestdag *",
+        "holidayNamePlaceholder": "bijv. eerste kerstdag",
+        "holidayDate": "Datum *",
+        "holidayDatePlaceholder": "Selecteer een datum",
+        "isRecurring": "Wordt jaarlijks herhaald"
+      },
+      "dialog": {
+        "editTitle": "Schema bewerken",
+        "createTitle": "Schema aanmaken",
+        "deleteScheduleTitle": "Schema verwijderen",
+        "deleteScheduleMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Hiermee worden ook alle bijbehorende feestdagen verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+        "deleteHolidayTitle": "Feestdag verwijderen",
+        "deleteHolidayMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "errors": {
+        "loadSchedules": "Kantoorurenschema's konden niet worden geladen",
+        "loadScheduleDetails": "Schemadetails konden niet worden geladen",
+        "nameRequired": "De schemanaam is verplicht",
+        "invalidTimeRange": "Ongeldige tijdsperiode voor {{day}}: de eindtijd moet na de starttijd liggen",
+        "saveSchedule": "Het schema kon niet worden opgeslagen",
+        "deleteSchedule": "Het schema kon niet worden verwijderd",
+        "createDefaultSchedule": "Het standaardschema kon niet worden aangemaakt",
+        "addHoliday": "De feestdag kon niet worden toegevoegd",
+        "deleteHoliday": "De feestdag kon niet worden verwijderd"
+      }
     }
   },
   "clientPortalLanguage": {
@@ -3257,7 +3894,7 @@
       "platformManaged": "Beheerd door AlgaPSA — geen configuratie nodig. Verbind in stap 2 een agent met een van deze providers.",
       "addAnother": "Nog een provider toevoegen",
       "advancedOptions": "Geavanceerde opties",
-      "googleNoSetup": "Google vereist geen configuratie. Agenten melden zich aan met de ID van hun Google-serviceaccount.",
+      "googleSetup": "Agenten melden zich aan met een Google-ID-token van een serviceaccount. Alleen de doelgroep hieronder moet overeenkomen met hoe ze het aanvragen.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3271,9 +3908,14 @@
       "fields": {
         "provider": "Aanbieder",
         "entraTenantId": "Entra-tenant-ID",
-        "audienceOptional": "Doelgroep (optioneel)",
         "audience": "Doelgroep",
         "subjectClaim": "Agenten identificeren via",
+        "audienceHelp": {
+          "microsoft": "De toepassings-ID (client-ID) van de Entra-appregistratie waarvoor uw agenten tokens aanvragen. Agenten vragen het bereik api://<die ID>/.default aan.",
+          "google": "Agenten moeten hun Google-ID-token met precies deze doelgroep aanvragen. We hebben de MCP-URL van deze server ingevuld, de gebruikelijke keuze.",
+          "custom": "De API- of resource-id die in uw provider is ingesteld (bijvoorbeeld een Auth0 API-id). Deze moet exact overeenkomen met de aud-claim in agenttokens. De MCP-URL van deze server is een goede keuze."
+        },
+        "audienceWhy": "Tokens die uw provider voor andere apps heeft uitgegeven, worden hier niet geaccepteerd.",
         "subjectClaimHelp": "Laat leeg, tenzij uw provider anders aangeeft.",
         "issuer": "Uitgever",
         "jwksUri": "URL van ondertekeningssleutels"
@@ -3387,6 +4029,36 @@
         "confirm": "Verbinding verbreken",
         "cancel": "Annuleren"
       }
+    },
+    "loading": "Laden…",
+    "downloadHosts": {
+      "title": "Toegestane downloadhosts",
+      "intro": "Wanneer een document via een URL wordt bijgevoegd, downloadt AlgaPSA het alleen van de hosts die hier staan. Dit geldt voor iedereen die documenten bijvoegt, inclusief AI-agents, API-clients en de REST API. Geef de voorkeur aan bucketspecifieke hosts zoals acme-uploads.s3.us-east-1.amazonaws.com boven brede hosts.",
+      "readOnly": "U kunt deze lijst bekijken. Voor wijzigingen is de machtiging 'Downloadhosts beheren' nodig.",
+      "builtIn": "Ingebouwd",
+      "empty": "Nog geen aangepaste hosts.",
+      "add": "Host toevoegen",
+      "addTitle": "Toegestane downloadhost toevoegen",
+      "remove": "Verwijderen",
+      "removeTitle": "Host verwijderen?",
+      "removeMessage": "Downloads van {{host}} werken pas weer als de host opnieuw is toegevoegd.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Een hostnaam, of *.example.com om alle subdomeinen toe te staan.",
+        "note": "Notitie (optioneel)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Gebruikt voor",
+        "allowed": "Toegestaan",
+        "note": "Notitie",
+        "addedBy": "Toegevoegd door",
+        "addedOn": "Toegevoegd op"
+      },
+      "errors": {
+        "load": "Kan de toegestane downloadhosts niet laden.",
+        "save": "Kan de wijziging niet opslaan."
+      }
     }
   },
   "errors": {
@@ -3485,7 +4157,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
       "nameRequired": "Rolnaam is verplicht.",
       "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
-      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal.",
+      "lastMspAdmin": "Een tenant moet ten minste één actieve MSP-Admin-gebruiker houden.",
+      "lastRole": "Een gebruiker moet ten minste één rol houden. Wijs eerst een andere rol toe en verwijder daarna deze."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
@@ -3557,10 +4231,415 @@
       "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
       "notApplianceHost": "Kies een ander domein dan de primaire host van deze server. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
-      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie.",
+      "alreadyInUse": "Dit domein is al in gebruik. Kies een ander domein.",
+      "usedByOtherSurface": "Dit domein wordt al gebruikt door een ander aangepast domein van u. Kies \"Beide\" om het klantportaal en de MSP-app via één domein aan te bieden.",
+      "invalidSurface": "Kies wat het aangepaste domein aanbiedt: klantportaal, MSP-app of beide.",
+      "redirectUrisHosted": "Omleidings-URI's voor gehoste domeinen worden door platformondersteuning geregistreerd.",
+      "nothingToConfirm": "Er staat geen bevestiging van SSO-omleidings-URI's open voor dit domein."
     }
   },
   "common": {
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "cancel": "Annuleren"
+  },
+  "loginPolicy": {
+    "title": "Aanmeldbeleid",
+    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich mogen aanmelden, met een wachtwoord of single sign-on. Deze regels worden op de server afgedwongen.",
+    "requireSso": {
+      "title": "Single sign-on verplichten voor MSP-medewerkers",
+      "body": "Interne gebruikers moeten zich aanmelden met Google, Microsoft of uw Keycloak-provider. Aanmelden met een wachtwoord en het opnieuw instellen van wachtwoorden zijn geblokkeerd, behalve voor de noodbeheerders hieronder.",
+      "signOutWarning": "Als u “Single sign-on verplichten” inschakelt, worden alle interne gebruikers die zich met een wachtwoord hebben aangemeld afgemeld, behalve noodbeheerders. Het inschakelen van een tweefactorvereiste meldt niemand af; die geldt bij de volgende aanmelding."
+    },
+    "require2faInternal": {
+      "title": "Tweefactorauthenticatie verplichten voor aanmelden met wachtwoord door MSP-medewerkers",
+      "body": "Medewerkers zonder authenticator moeten er bij hun volgende aanmelding een instellen."
+    },
+    "require2faClient": {
+      "title": "Tweefactorauthenticatie verplichten voor aanmelden met wachtwoord in het klantportaal",
+      "body": "Klantportaalgebruikers zonder authenticator moeten er bij hun volgende aanmelding een instellen. De single sign-on-vereiste geldt nooit voor klantportaalgebruikers."
+    },
+    "knownDeviceSkip": {
+      "title": "Bekende apparaten mogen de code overslaan",
+      "body": "Gebruikers die een apparaat vertrouwd hebben, krijgen op dat apparaat geen codevraag. Noodbeheerders hebben altijd een code nodig."
+    },
+    "breakGlass": {
+      "title": "Noodbeheerders",
+      "body": "Deze beheerders kunnen zich nog steeds met een wachtwoord aanmelden wanneer single sign-on verplicht is. Het moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld, en ze hebben altijd een code nodig.",
+      "noEligible": "Geen geschikte beheerders. Een beheerder moet actief zijn en tweefactorauthenticatie hebben ingeschakeld.",
+      "noLongerEligible": "Niet langer geschikt.",
+      "remove": "Verwijderen",
+      "reasons": {
+        "no_two_factor": "Tweefactorauthenticatie is gereset of ontbreekt.",
+        "inactive": "De gebruiker is gedeactiveerd.",
+        "not_admin": "De gebruiker is geen beheerder meer.",
+        "not_internal": "De gebruiker is geen interne gebruiker.",
+        "not_found": "De gebruiker bestaat niet meer."
+      }
+    },
+    "clientPortalSso": {
+      "title": "Aanmeldopties voor het klantportaal",
+      "body": "Kies welke single sign-on-providers op de aanmeldpagina van het klantportaal verschijnen. Alleen providers waarmee uw organisatie zich kan aanmelden worden getoond. Aanmelden met een wachtwoord blijft ongewijzigd.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Er zijn geen single sign-on-providers geconfigureerd voor uw organisatie. Stel er een in via de single sign-on-instellingen om die in het klantportaal aan te bieden."
+    },
+    "guard": {
+      "sso_provider_required": "Stel minstens één single sign-on-provider in voordat u single sign-on verplicht stelt.",
+      "break_glass_required": "Selecteer minstens één noodbeheerder voordat u single sign-on verplicht stelt.",
+      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld.",
+      "client_portal_sso_provider_invalid": "Kies alleen ondersteunde single sign-on-providers."
+    },
+    "errors": {
+      "load": "Het aanmeldbeleid kan niet worden geladen.",
+      "save": "Het aanmeldbeleid kan niet worden opgeslagen."
+    }
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Kernfuncties",
+        "description": "Essentiële functies voor dagelijkse werkzaamheden"
+      },
+      "ui": {
+        "title": "Gebruikersinterface",
+        "description": "Nieuwe interfacefuncties en verbeteringen"
+      },
+      "ai": {
+        "title": "AI-functies",
+        "description": "Functies op basis van kunstmatige intelligentie"
+      },
+      "integrations": {
+        "title": "Integraties",
+        "description": "Integraties met externe diensten"
+      },
+      "performance": {
+        "title": "Prestaties",
+        "description": "Functies voor prestatieoptimalisatie"
+      },
+      "experimental": {
+        "title": "Experimenteel",
+        "description": "Innovatieve functies in ontwikkeling"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ticketautomatisering",
+        "description": "Tickets automatisch toewijzen en doorsturen op basis van regels"
+      },
+      "enable_time_tracking": {
+        "title": "Tijdregistratie",
+        "description": "Tijd besteed aan tickets en projecten registreren"
+      },
+      "enable_billing": {
+        "title": "Facturatiesysteem",
+        "description": "Facturen aanmaken en betalingen bijhouden"
+      },
+      "new_ticket_ui": {
+        "title": "Nieuwe ticketinterface",
+        "description": "Vernieuwde interface voor het aanmaken en beheren van tickets"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern dashboard",
+        "description": "Nieuw dashboard met aanpasbare widgets"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI-ticketsuggesties",
+        "description": "Ticketcategorisering en prioriteitssuggesties op basis van AI"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI-tijdregistratie",
+        "description": "Tijd automatisch registreren op basis van activiteit"
+      },
+      "enable_predictive_analytics": {
+        "title": "Voorspellende analyses",
+        "description": "Ticketvolume en benodigde middelen voorspellen"
+      },
+      "enable_slack_integration": {
+        "title": "Slack-integratie",
+        "description": "Meldingen en updates naar Slack sturen"
+      },
+      "teams-integration-ui": {
+        "description": "Integreren met Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira-synchronisatie",
+        "description": "Tickets synchroniseren met Jira-issues"
+      },
+      "enable_query_caching": {
+        "title": "Querycaching",
+        "description": "Databasequery’s cachen voor snellere reacties"
+      },
+      "enable_lazy_loading": {
+        "title": "Laden op aanvraag",
+        "description": "Inhoud laden wanneer nodig voor betere prestaties"
+      },
+      "enable_websocket_updates": {
+        "title": "Realtime-updates",
+        "description": "WebSockets gebruiken voor directe updates"
+      },
+      "enable_voice_commands": {
+        "title": "Spraakopdrachten",
+        "description": "De app bedienen met spraakopdrachten"
+      },
+      "beta_mobile_app": {
+        "title": "Mobiele app bèta",
+        "description": "Toegang tot de bètaversie van de mobiele app"
+      }
+    },
+    "enums": {
+      "stable": "Stabiel",
+      "beta": "Bèta",
+      "experimental": "Experimenteel"
+    },
+    "loading": "Functieschakelaars laden...",
+    "title": "Functieschakelaars",
+    "description": "Schakel functies in uw applicatie in of uit. Sommige functies vereisen mogelijk een herstart.",
+    "unsaved": "U heeft niet-opgeslagen wijzigingen. Klik op Opslaan om ze toe te passen.",
+    "requiresRestart": "Herstart vereist",
+    "errors": {
+      "loadFailed": "Fout bij het laden van functieschakelaars: {{message}}"
+    },
+    "dependencies": "Vereist: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Taalinstellingen voor het klantenportaal",
+    "description": "Configureer de taalopties die beschikbaar zijn voor uw klanten",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standaardtaal",
+        "help": "Deze taal wordt gebruikt voor nieuwe klanten en wanneer er geen voorkeur is ingesteld"
+      },
+      "availableLanguages": {
+        "label": "Beschikbare talen",
+        "help": "Selecteer de talen waaruit klanten kunnen kiezen"
+      }
+    },
+    "defaultSuffix": "(standaard)",
+    "preview": {
+      "title": "Voorbeeld",
+      "defaultLanguage": "Standaardtaal:",
+      "availableLanguages": "Beschikbare talen:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Instellingen succesvol opgeslagen"
+      }
+    },
+    "errors": {
+      "saveFailed": "Instellingen opslaan mislukt"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "nl": "Nederlands",
+      "it": "Italiaans",
+      "pl": "Pools",
+      "pt": "Portugees (Brazilië)",
+      "sv": "Zweeds",
+      "xx": "Pseudotaal (xx)",
+      "yy": "Pseudotaal (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Gebruiksstatistieken",
+        "enabledDescription": "Ingeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren",
+        "disabledDescription": "Uitgeschakeld - Verzendt anonieme gebruiksgegevens om het product te helpen verbeteren"
+      }
+    },
+    "environmentHelp": "Gebruiksstatistieken worden beheerd via de omgevingsvariabele {{variable}}. Neem contact op met uw systeembeheerder om deze instelling te wijzigen.",
+    "sections": {
+      "collectedData": {
+        "title": "Welke gegevens worden verzameld",
+        "featureUsage": "Gebruikspatronen van functies (geen persoonsgegevens)",
+        "errorReports": "Foutrapporten voor foutopsporing",
+        "performance": "Prestatiestatistieken",
+        "configuration": "Systeemconfiguratie (geanonimiseerd)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Standaardstatussen importeren",
+      "description": "Selecteer de standaardstatussen die u wilt importeren",
+      "selectAll": "Alles selecteren ({{selected}}/{{total}})",
+      "closed": "Gesloten",
+      "default": "Standaard",
+      "empty": "Geen standaardstatussen beschikbaar om te importeren",
+      "importSelected": "Selectie importeren ({{count}})"
+    }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Service"
+    },
+    "keyReveal": {
+      "copySuccess": "API-sleutel naar klembord gekopieerd!",
+      "copyFailed": "API-sleutel kopiëren naar klembord mislukt",
+      "downloadFailed": "API-sleutel downloaden mislukt",
+      "title": "API-sleutel gegenereerd",
+      "warning": "Kopieer uw API-sleutel nu. Om veiligheidsredenen wordt deze niet opnieuw weergegeven.",
+      "rotationNote": "De vorige sleutel blijft nog 5 minuten werken, zodat u kunt overschakelen.",
+      "copy": "Naar klembord kopiëren",
+      "download": "Downloaden als .txt",
+      "done": "Gereed"
+    },
+    "dialog": {
+      "nameRequired": "Een naam is vereist",
+      "rateLimitInvalid": "Voer beide snelheidslimietwaarden in, binnen de getoonde maxima, of laat beide leeg.",
+      "saveFailed": "Serviceprincipal opslaan mislukt",
+      "editTitle": "Serviceprincipal bewerken",
+      "createTitle": "Nieuwe serviceprincipal",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "name": "Naam",
+      "description": "Beschrijving",
+      "roles": "Rollen",
+      "allowActAs": "Handelen namens een gebruiker toestaan",
+      "rateLimit": "Overschrijving van snelheidslimiet (optioneel)",
+      "rateLimitBurst": "Burstgrootte (max. {{max}})",
+      "rateLimitRefill": "Verzoeken per minuut (max. {{max}})",
+      "allowActAsHelp": "Als dit is ingeschakeld, kunnen aanvragen handelen als een actieve interne gebruiker. Elke actie moet zijn toegestaan voor zowel de principal als die gebruiker."
+    },
+    "keys": {
+      "loadFailed": "Sleutels laden mislukt",
+      "issueFailed": "API-sleutel maken mislukt",
+      "revokeFailed": "API-sleutel intrekken mislukt",
+      "columns": {
+        "description": "Beschrijving",
+        "status": "Status",
+        "lastUsed": "Laatst gebruikt",
+        "expires": "Verloopt"
+      },
+      "noDescription": "Geen beschrijving",
+      "status": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      },
+      "never": "Nooit",
+      "noExpiry": "Verloopt niet",
+      "rotate": "Roteren",
+      "revoke": "Intrekken",
+      "title": "API-sleutels voor {{name}}",
+      "descriptionLabel": "Sleutelbeschrijving",
+      "create": "Sleutel maken",
+      "revokeTitle": "API-sleutel intrekken?",
+      "revokeMessage": "Alles wat deze sleutel gebruikt, werkt onmiddellijk niet meer."
+    },
+    "columns": {
+      "actions": "Acties",
+      "name": "Naam",
+      "status": "Status",
+      "active": "Actief",
+      "roles": "Rollen",
+      "keys": "Actieve sleutels",
+      "lastUsed": "Laatst gebruikt",
+      "createdBy": "Gemaakt door",
+      "kind": "Type",
+      "allowActAs": "Handelen als"
+    },
+    "loadFailed": "Serviceprincipals laden mislukt",
+    "toggleFailed": "Serviceprincipal bijwerken mislukt",
+    "delete": {
+      "archived": "Serviceprincipal gearchiveerd. De geschiedenis blijft bewaard, zodat eerdere activiteit nog steeds de naam toont.",
+      "deleted": "Serviceprincipal verwijderd.",
+      "failed": "Serviceprincipal verwijderen mislukt",
+      "title": "Serviceprincipal verwijderen?",
+      "message": "De API-sleutels ervan werken niet meer. Als er geschiedenis is, wordt deze gearchiveerd in plaats van verwijderd."
+    },
+    "status": {
+      "inactive": "Inactief",
+      "active": "Actief"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "keys": "Sleutels",
+      "deactivate": "Deactiveren",
+      "delete": "Verwijderen",
+      "new": "Nieuwe serviceprincipal"
+    },
+    "featureName": "Serviceprincipals",
+    "title": "Serviceprincipals",
+    "description": "Niet-menselijke identiteiten met eigen rollen en API-sleutels voor integraties en agents.",
+    "usage": {
+      "header": "{{used}} van {{limit}} serviceprincipals",
+      "availableOnPro": "Beschikbaar met Pro",
+      "row": "{{used}} van {{limit}}",
+      "label": "Serviceprincipals",
+      "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
+      "settingsLink": "Instellingen voor serviceprincipals",
+      "blockedAccess": "API- en MCP-toegang is geblokkeerd onder Pro.",
+      "blockedCount": "{{used}} actieve serviceprincipals geblokkeerd door het abonnement"
+    },
+    "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een andere toe te voegen.",
+    "mcp": {
+      "sharedLimit": "MCP-agents tellen mee voor uw limiet voor serviceprincipals: {{used}} van {{limit}} in gebruik.",
+      "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een agent toe te voegen.",
+      "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen.",
+      "sharedLimitBlocked": "MCP-agents tellen mee voor de gedeelde limiet voor serviceprincipals: {{used}} van {{limit}}; actieve records zijn geblokkeerd door het abonnement."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP-agent"
+    },
+    "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
+    "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen."
+  },
+  "tagDisplay": {
+    "title": "Weergeven op chips",
+    "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
+    "loading": "Laden…",
+    "description": "Kies welke tags als badges naast contactpersonen en klanten worden getoond en in welke volgorde. Een lijst zonder tags toont geen badges voor dat publiek.",
+    "contacts": "Contactpersonen",
+    "clients": "Klanten",
+    "audienceInternal": "Interne gebruikers",
+    "audienceClient": "Klantenportaal",
+    "clientNote": "Begint leeg. Tags in deze lijst zijn zichtbaar voor de eigen gebruikers van de klant in het klantenportaal.",
+    "noneSelected": "Geen tags getoond.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "remove": "Verwijderen",
+    "addTag": "Tag toevoegen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Terug naar e-mailinstellingen",
+      "title": "E-mail- en identiteitsproviders",
+      "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail en aanmelding door medewerkers. Deze inloggegevens horen bij uw werkruimte."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Assetnummering",
+      "description": "Eén tenantbrede reeks wordt opgemaakt met het voorvoegsel van elke klant. Voorbeelden en afdrukken wijzen geen nummers toe. Uitgegeven nummers die worden verlaten, laten gaten achter en worden nooit hergebruikt.",
+      "clientPrefixes": "Klantvoorvoegsels",
+      "noPrefix": "Geen voorvoegsel",
+      "prefixSaved": "Klantvoorvoegsel opgeslagen",
+      "uniquenessEnabled": "Unieke assetlabels zijn geactiveerd",
+      "legacyAudit": "Controle van bestaande labels",
+      "legacyAuditHelp": "Bestaande labels blijven behouden. Los duplicaten op door de labels van de betrokken assets te bewerken; controleer lege labels zonder ze te wijzigen als ze bewust leeg zijn.",
+      "reconciliationNote": "Notitie voor handmatige afstemming",
+      "markReviewed": "Markeren als gecontroleerd",
+      "noLegacyIssues": "Bij de migratie zijn geen lege of dubbele labels gevonden.",
+      "activate": "Unieke assetlabels activeren",
+      "saveFailed": "Voorvoegsel kon niet worden opgeslagen",
+      "activationFailed": "Los dubbele labels op vóór activering",
+      "continuationReview": "De controle van bestaande gegevens heeft {{scanned}} opgeslagen labels onderzocht; {{numeric}} hebben numerieke achtervoegsels. Het hoogste achtervoegsel is {{maximum}}; controleer een beginwaarde van {{next}}. Dit is alleen een advies. Voer hierboven de goedgekeurde vervolgwaarde in en sla deze op; deze controle verbruikt geen waarde uit de reeks.",
+      "continuationExamples": "Voorbeelden: {{examples}}",
+      "blankTag": "(leeg label)",
+      "normalizedTag": "Genormaliseerd: {{tag}}"
+    }
   }
 }

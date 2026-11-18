@@ -1,13 +1,14 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
+import { projectedPeopleAsUsers, projectedPeopleForCaller } from '../lib/seatPeople';
 import logger from '@alga-psa/core/logger';
 import { getCurrentUser, withAuth, withOptionalAuth } from '@alga-psa/auth';
 
@@ -55,7 +56,8 @@ export const findUserById = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read user');
 
       const user = await User.getUserWithRoles(trx, id);
-      return user || null;
+      // Non-interactive principals are not managed through user management.
+      return user && isInteractiveUserType(user.user_type) ? user : null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
@@ -74,18 +76,23 @@ export const getAllUsersBasic = withAuth(async (
   currentUser,
   { tenant },
   includeInactive: boolean = true,
-  userType?: string
+  userType?: string,
+  includeNonInteractive: boolean = false
 ): Promise<IUser[]> => {
   try {
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the people projection (their grant for it), whatever `user:read` says.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) return projectedPeopleAsUsers(projected, tenant, { userType });
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
       assertNotClientPortalCaller(currentUser, 'read users');
 
-      const users = await User.getAll(trx, includeInactive);
+      const users = await User.getAll(trx, includeInactive, { includeNonInteractive });
 
       // Filter by tenant and optionally by user_type
       return users.filter(user =>
@@ -106,18 +113,23 @@ export const getAllUsers = withAuth(async (
   currentUser,
   { tenant },
   includeInactive: boolean = true,
-  userType?: string
+  userType?: string,
+  includeNonInteractive: boolean = false
 ): Promise<IUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the people projection (their grant for it), whatever `user:read` says.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) return projectedPeopleAsUsers(projected, tenant, { userType });
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read users');
       }
       assertNotClientPortalCaller(currentUser, 'read users');
 
-      const users = await User.getAll(trx, includeInactive);
+      const users = await User.getAll(trx, includeInactive, { includeNonInteractive });
 
       // Filter by tenant and optionally by user_type first to reduce role fetching
       const filteredUsers = users.filter(user =>
@@ -353,7 +365,8 @@ export const getUserWithRoles = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read user with roles');
 
       const user = await User.getUserWithRoles(trx, userId);
-      return user || null;
+      // Non-interactive principals are not managed through user management.
+      return user && isInteractiveUserType(user.user_type) ? user : null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
@@ -366,20 +379,27 @@ export const getUserWithRoles = withAuth(async (
 
 export const getMultipleUsersWithRoles = withAuth(async (
   currentUser,
-  _ctx,
+  { tenant },
   userIds: string[]
 ): Promise<IUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician is answered from the people projection: only requested ids they may see, no roles.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser);
+      if (projected) {
+        const requested = new Set(userIds);
+        return projectedPeopleAsUsers(projected.filter((person) => person.userId !== null && requested.has(person.userId)), tenant);
+      }
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read multiple users with roles');
       }
       assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
-      return users.filter((user): user is IUserWithRoles => user !== undefined);
+      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type));
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
@@ -566,6 +586,12 @@ export const getClientUsersForClient = withAuth(async (
 
     // Get all users associated with the client
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A seat technician sees the portal users of their own client's contacts, and no other client's.
+      const projected = await projectedPeopleForCaller(trx, tenant, currentUser, { kinds: ['contact'] });
+      if (projected) {
+        return projectedPeopleAsUsers(projected.filter((person) => person.clientId === clientId), tenant, { userType: 'client' });
+      }
+
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
         throw new Error('Permission denied: Cannot read client users for client');
       }

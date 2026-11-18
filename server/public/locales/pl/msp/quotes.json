@@ -333,6 +333,16 @@
       "addLocation": "+ Dodaj lokalizację",
       "fromTemplate": "+ Z szablonu"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Usunąć tę lokalizację?",
+        "message": "Ta lokalizacja ma jeszcze {{count}} pozycji. Wybierz, co z nimi zrobić.",
+        "moveOption": "Przenieś te pozycje do {{location}}",
+        "ungroupOption": "Zachowaj te pozycje i zakończ grupowanie według lokalizacji",
+        "deleteOption": "Usuń te pozycje",
+        "confirm": "Usuń lokalizację"
+      }
+    },
     "clientFacing": {
       "title": "Tekst widoczny dla klienta",
       "subtitle": "Pojawia się na PDF, pod sumami.",
@@ -499,6 +509,13 @@
     },
     "availability": {
       "onHand": "Na stanie: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Ofertę wyświetlono przez link w e-mailu",
+        "descriptionWithRecipient": "Ofertę wyświetlono przez link w e-mailu ({{email}})",
+        "type": "Wyświetlono przez link w e-mailu"
+      }
     }
   },
   "quoteLineItems": {
@@ -537,6 +554,7 @@
       "recurring": "Powtarzający się",
       "service": "praca",
       "setPrice": "Ustal cenę",
+      "taxable": "Podlega opodatkowaniu",
       "ungroupedItems": "Rozgrupowane elementy"
     },
     "placeholders": {
@@ -580,10 +598,13 @@
       "groupHeading": "Lokalizacja {{index}}",
       "pickerPlaceholder": "Wybierz lokalizację",
       "unassigned": "Pozycje bez lokalizacji są tu wymienione, dopóki nie zostanie wybrana.",
+      "quoteWide": "Cała oferta",
+      "quoteWideHint": "Rabaty obowiązują w całej ofercie, więc nie są powiązane z lokalizacją.",
       "removeGroup": "Usuń lokalizację",
       "subtotal": "Suma częściowa lokalizacji",
       "addLocationButton": "+ Dodaj lokalizację",
       "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć oferty wielolokalizacyjne.",
+      "allLocationsInUse": "Każda aktywna lokalizacja tego klienta ma już grupę w tej ofercie.",
       "emptyGroup": "Brak pozycji dla tej lokalizacji."
     }
   },
@@ -630,6 +651,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Rabaty przeniesione na linie kontraktowe",
       "contractItems": "Przedmioty umowy",
       "conversionMode": "Tryb konwersji",
       "excludedFromConversion": "Wykluczone z konwersji",
@@ -655,6 +677,7 @@
       "converted": "Przekształcony",
       "discount": "Rabat",
       "fixed": "naprawił",
+      "monthlyTotal": "Suma miesięczna po rabatach",
       "notConverted": "Nie przekonwertowany"
     },
     "partial": {
@@ -719,6 +742,12 @@
       "draftDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny. Po przesłaniu tej wyceny do zatwierdzenia możesz ją sam zatwierdzić, a następnie wysłać.",
       "pendingDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny, więc możesz sam zatwierdzić tę wycenę. Wybierz Zatwierdź, aby była gotowa do wysłania.",
       "dialogNote": "Jesteś jedyną osobą zatwierdzającą, więc zatwierdzenie własnej wyceny jest dozwolone. Zatwierdzenie zostanie zapisane jako samodzielne zatwierdzenie."
+    },
+    "emailLinkReview": {
+      "label": "Zezwalaj klientom na przeglądanie i zatwierdzanie wycen z linku w e-mailu bez logowania",
+      "lifetimeLabel": "Czas ważności linku (godziny)",
+      "lifetimePlaceholder": "Domyślnie: do wygaśnięcia wyceny",
+      "lifetimeHelp": "Od 24 do 2160 godzin. Pozostaw puste, aby użyć daty ważności wyceny (30 dni, gdy jej brak)."
     }
   },
   "quoteTemplates": {
@@ -888,6 +917,21 @@
       "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}.",
       "templateCannotBeAccepted": "Szablonów wycen nie można oznaczyć jako zaakceptowanych",
       "onlySentCanBeAccepted": "Jako zaakceptowane można oznaczyć tylko wysłane wyceny"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Czas ważności linku musi być liczbą całkowitą godzin od 24 do 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Zaakceptowano przez {{signer}} za pomocą linku w e-mailu, {{date}}",
+      "portal": "Zaakceptowano przez {{signer}} w portalu klienta, {{date}}",
+      "mspMarked": "Oznaczone jako zaakceptowane przez MSP w imieniu klienta, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Odrzucono przez {{signer}} za pomocą linku w e-mailu, {{date}}",
+      "portal": "Odrzucono przez {{signer}} w portalu klienta, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

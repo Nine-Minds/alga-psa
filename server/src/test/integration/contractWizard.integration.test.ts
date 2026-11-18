@@ -310,6 +310,174 @@ describe('createClientContractFromWizard', () => {
     ).toBe(true);
   });
 
+  describe('billing timing chosen in the wizard', () => {
+    async function linesOf(contractId: string) {
+      const lines = await tenantTable(db, tenantId, 'contract_lines')
+        .where({ tenant: tenantId, contract_id: contractId })
+        .select('contract_line_id', 'contract_line_type', 'contract_line_name', 'billing_timing');
+      createdIds.contractLineIds = lines.map((line: any) => line.contract_line_id);
+      return lines as Array<{ contract_line_id: string; contract_line_type: string; contract_line_name: string; billing_timing: string }>;
+    }
+
+    async function finishCreate(clientId: string, submission: Record<string, unknown>) {
+      const result: any = await createClientContractFromWizard({
+        description: 'billing timing coverage',
+        client_id: clientId,
+        start_date: '2026-03-01',
+        end_date: null,
+        enable_proration: false,
+        fixed_services: [],
+        hourly_services: [],
+        usage_services: [],
+        po_required: false,
+        ...submission,
+      } as any);
+      if (result?.actionError) throw new Error(result.actionError);
+      createdIds.contractId = result.contract_id;
+      const clientContract = await tenantTable(db, tenantId, 'client_contracts')
+        .where({ tenant: tenantId, contract_id: result.contract_id, client_id: clientId })
+        .first('client_contract_id');
+      createdIds.clientContractId = clientContract?.client_contract_id;
+      return result;
+    }
+
+    async function seedCatalog(kind: 'fixed' | 'hourly', itemKind: 'service' | 'product', name: string) {
+      createdIds.serviceTypeId = await insertServiceType(db, tenantId, kind);
+      createdIds.serviceId = await insertCatalogItem(db, tenantId, {
+        serviceTypeId: createdIds.serviceTypeId,
+        serviceName: name,
+        billingMethod: kind,
+        itemKind,
+        defaultRate: 120000,
+        unitOfMeasure: kind === 'hourly' ? 'hour' : 'year',
+      });
+      createdIds.clientId = await insertClient(db, tenantId, `${name} Client`);
+    }
+
+    it('an annual Products contract created in advance stores advance and its service periods follow it', async () => {
+      createdIds = {};
+      await seedCatalog('fixed', 'product', 'Advance Annual Product');
+
+      const result = await finishCreate(createdIds.clientId!, {
+        contract_name: 'Advance Annual Products',
+        billing_frequency: 'annual',
+        cadence_owner: 'contract',
+        billing_timing: 'advance',
+        product_services: [{ service_id: createdIds.serviceId, quantity: 1, custom_rate: 120000 }],
+      });
+      createdIds.contractLineId = result.contract_line_id ?? undefined;
+
+      const lines = await linesOf(result.contract_id);
+      expect(lines).toHaveLength(1);
+      expect(lines[0].billing_timing).toBe('advance');
+
+      const periods = await tenantTable(db, tenantId, 'recurring_service_periods')
+        .where({ tenant: tenantId, obligation_id: lines[0].contract_line_id })
+        .whereNot('lifecycle_state', 'superseded')
+        .orderBy('service_period_start', 'asc');
+      expect(periods.length).toBeGreaterThan(0);
+      expect(periods.every((period: any) => period.due_position === 'advance')).toBe(true);
+      // Advance: the first invoice window opens when the service period starts, not when it ends.
+      const first: any = periods[0];
+      expect(dateOnly(first.invoice_window_start)).toBe(dateOnly(first.service_period_start));
+      expect(dateOnly(first.invoice_window_start)).toBe('2026-03-01');
+    });
+
+    it('the products line timing overrides the contract default, and unset inherits it', async () => {
+      createdIds = {};
+      await seedCatalog('fixed', 'product', 'Override Product');
+
+      const result = await finishCreate(createdIds.clientId!, {
+        contract_name: 'Products Arrears Under Advance Default',
+        billing_frequency: 'annual',
+        cadence_owner: 'contract',
+        billing_timing: 'advance',
+        product_billing_timing: 'arrears',
+        product_services: [{ service_id: createdIds.serviceId, quantity: 1, custom_rate: 120000 }],
+      });
+      createdIds.contractLineId = result.contract_line_id ?? undefined;
+      const lines = await linesOf(result.contract_id);
+      expect(lines.map((line) => line.billing_timing)).toEqual(['arrears']);
+    });
+
+    it('an advance default still creates an hourly line in arrears', async () => {
+      createdIds = {};
+      await seedCatalog('hourly', 'service', 'Hourly Under Advance Default');
+
+      const result = await finishCreate(createdIds.clientId!, {
+        contract_name: 'Advance Default With Hourly',
+        billing_frequency: 'monthly',
+        cadence_owner: 'client',
+        billing_timing: 'advance',
+        hourly_services: [{ service_id: createdIds.serviceId, hourly_rate: 12000 }],
+        minimum_billable_time: 15,
+        round_up_to_nearest: 15,
+      });
+      createdIds.contractLineId = result.contract_line_id ?? undefined;
+      const lines = await linesOf(result.contract_id);
+      const hourly = lines.find((line) => line.contract_line_type === 'Hourly');
+      expect(hourly?.billing_timing).toBe('arrears');
+    });
+
+    it('an explicit arrears fixed line stays arrears under an advance default', async () => {
+      createdIds = {};
+      await seedCatalog('fixed', 'service', 'Fixed Arrears Override');
+
+      const result = await finishCreate(createdIds.clientId!, {
+        contract_name: 'Fixed Arrears Under Advance Default',
+        billing_frequency: 'monthly',
+        cadence_owner: 'contract',
+        billing_timing: 'advance',
+        fixed_lines: [
+          { services: [{ service_id: createdIds.serviceId, quantity: 1 }], base_rate: 10000, billing_timing: 'arrears' },
+          { services: [{ service_id: createdIds.serviceId, quantity: 1 }], base_rate: 10000 },
+        ],
+      });
+      createdIds.contractLineId = result.contract_line_id ?? undefined;
+      const lines = await linesOf(result.contract_id);
+      expect(lines.map((line) => line.billing_timing).sort()).toEqual(['advance', 'arrears']);
+    });
+
+    it('a draft round-trips the products line timing and keeps an inheriting products line inheriting', async () => {
+      createdIds = {};
+      await seedCatalog('fixed', 'product', 'Round Trip Product');
+      const fixedServiceId = await insertCatalogItem(db, tenantId, {
+        serviceTypeId: createdIds.serviceTypeId!,
+        serviceName: 'Round Trip Fixed',
+        billingMethod: 'fixed',
+        itemKind: 'service',
+        defaultRate: 10000,
+        unitOfMeasure: 'month',
+      });
+      createdIds.additionalServiceIds = [fixedServiceId];
+      const base = {
+        contract_name: 'Round trip products timing',
+        client_id: createdIds.clientId!,
+        start_date: '2026-03-01',
+        end_date: null,
+        billing_frequency: 'monthly',
+        cadence_owner: 'contract',
+        enable_proration: false,
+        hourly_services: [],
+        usage_services: [],
+        po_required: false,
+        billing_timing: 'arrears',
+        fixed_lines: [{ services: [{ service_id: fixedServiceId, quantity: 1 }], base_rate: 10000 }],
+        product_services: [{ service_id: createdIds.serviceId, quantity: 1, custom_rate: 120000 }],
+      };
+
+      const overridden: any = await createClientContractFromWizard(
+        { ...base, product_billing_timing: 'advance' } as any,
+        { isDraft: true },
+      );
+      createdIds.contractId = overridden.contract_id;
+      const resumedOverride: any = await getDraftContractForResume(overridden.contract_id);
+      expect(resumedOverride.billing_timing).toBe('arrears');
+      expect(resumedOverride.product_billing_timing).toBe('advance');
+      await linesOf(overridden.contract_id);
+    });
+  });
+
   it('T013: accepts fixed services even when catalog billing_method is non-fixed', async () => {
     createdIds = {};
     const serviceTypeId = await insertServiceType(db, tenantId, 'hourly');

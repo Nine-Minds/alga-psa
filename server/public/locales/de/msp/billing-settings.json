@@ -202,6 +202,27 @@
         "save": "Einstellungen konnten nicht gespeichert werden",
         "range": "Geben Sie eine ganze Zahl von 1 bis 365 ein."
       }
+    },
+    "paymentTerms": {
+      "title": "Standard-Zahlungsbedingungen",
+      "description": "Legen Sie die Zahlungsbedingungen fest, die neue Rechnungen verwenden, wenn weder der Kunde noch sein Abrechnungsprofil welche festlegt.",
+      "fields": {
+        "terms": {
+          "label": "Zahlungsbedingungen",
+          "help": "Gilt nur für neue Rechnungen. Bestehende Rechnungen und Kunden mit eigenen Bedingungen behalten diese."
+        }
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "toast": {
+        "updated": "Die Standard-Zahlungsbedingungen wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden",
+        "invalid": "Wählen Sie gültige Zahlungsbedingungen."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Standardsteuersatz", "tooltip": "Wählen Sie den Steuersatz, den neue Kunden, Produkte und Services übernehmen.", "description": "Legen Sie den Steuersatz für neue Kunden und Katalogeinträge fest. Bestehende Datensätze bleiben unverändert.", "loading": "Standardsteuersatz wird geladen...", "empty": "Erstellen Sie einen aktiven Steuersatz, bevor Sie einen Standard auswählen.", "invalid": "Der konfigurierte Standard ist nicht mehr aktiv oder gültig. Wählen Sie einen anderen Satz.", "field": { "label": "Standardsteuersatz" }, "options": { "none": "Kein Mandantenstandard" }, "help": "Ohne Standard bleiben neue Katalogeinträge steuerfrei; neue Kunden verwenden, falls vorhanden, den ältesten aktiven Satz.", "actions": { "save": "Standard speichern", "saving": "Wird gespeichert..." }, "toast": { "saved": "Standardsteuersatz gespeichert." }, "errors": { "load": "Standardsteuersatz konnte nicht geladen werden.", "save": "Standardsteuersatz konnte nicht gespeichert werden." } },
-    "backfill": { "title": "Standard auf bestehende Katalogeinträge anwenden", "description": "Zeigen Sie Produkte und Services ohne Steuersatz in der Vorschau an.", "warning": "Dies ändert die zukünftige Besteuerung und schreibt ausgestellte Rechnungen nicht neu.", "loading": "Vorschau wird geladen...", "empty": "Keine geeigneten Produkte oder Services gefunden.", "target": "Zielsatz: {{rate}}", "count": "{{count}} geeignete Einträge", "dialog": { "title": "Standardsteuersatz anwenden" }, "actions": { "preview": "Bestehende Einträge prüfen", "apply": "Auswahl anwenden", "applying": "Wird angewendet..." }, "toast": { "applied": "Standardsteuersatz auf ausgewählte Einträge angewendet." }, "errors": { "preview": "Katalogvorschau konnte nicht geladen werden.", "apply": "Standardsteuersatz konnte nicht angewendet werden." } },
+    "defaultRate": {
+      "title": "Standardsteuersatz",
+      "tooltip": "Wählen Sie den Steuersatz, den neue Kunden, Produkte und Services übernehmen.",
+      "description": "Legen Sie den Steuersatz für neue Kunden und Katalogeinträge fest. Bestehende Datensätze bleiben unverändert.",
+      "loading": "Standardsteuersatz wird geladen...",
+      "empty": "Erstellen Sie einen aktiven Steuersatz, bevor Sie einen Standard auswählen.",
+      "invalid": "Der konfigurierte Standard ist nicht mehr aktiv oder gültig. Wählen Sie einen anderen Satz.",
+      "field": {
+        "label": "Standardsteuersatz"
+      },
+      "options": {
+        "none": "Kein Mandantenstandard"
+      },
+      "help": "Ohne Standard bleiben neue Katalogeinträge steuerfrei; neue Kunden verwenden, falls vorhanden, den ältesten aktiven Satz.",
+      "actions": {
+        "save": "Standard speichern",
+        "saving": "Wird gespeichert..."
+      },
+      "toast": {
+        "saved": "Standardsteuersatz gespeichert."
+      },
+      "errors": {
+        "load": "Standardsteuersatz konnte nicht geladen werden.",
+        "save": "Standardsteuersatz konnte nicht gespeichert werden."
+      }
+    },
+    "backfill": {
+      "title": "Standard auf bestehende Katalogeinträge anwenden",
+      "description": "Zeigen Sie Produkte und Services ohne Steuersatz in der Vorschau an.",
+      "warning": "Dies ändert die zukünftige Besteuerung und schreibt ausgestellte Rechnungen nicht neu.",
+      "loading": "Vorschau wird geladen...",
+      "empty": "Keine geeigneten Produkte oder Services gefunden.",
+      "target": "Zielsatz: {{rate}}",
+      "count": "{{count}} geeignete Einträge",
+      "dialog": {
+        "title": "Standardsteuersatz anwenden"
+      },
+      "actions": {
+        "preview": "Bestehende Einträge prüfen",
+        "apply": "Auswahl anwenden",
+        "applying": "Wird angewendet..."
+      },
+      "toast": {
+        "applied": "Standardsteuersatz auf ausgewählte Einträge angewendet."
+      },
+      "errors": {
+        "preview": "Katalogvorschau konnte nicht geladen werden.",
+        "apply": "Standardsteuersatz konnte nicht angewendet werden."
+      }
+    },
     "taxRegions": {
       "title": "Steuerregionen",
       "description": "Steuerregionen und zugehörige Einstellungen verwalten."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Steuersatz (optional)",
         "placeholder": "Steuersatz auswählen (optional)",
-        "loading": "Steuersätze werden geladen...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
+        "loading": "Steuersätze werden geladen...",
+        "inherit": "Mandantenstandard verwenden",
+        "inheritNamed": "Mandantenstandard verwenden ({{rate}})",
+        "nonTaxable": "Nicht steuerpflichtig"
       },
       "sku": {
         "label": "Artikelnummer",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Steuersatz",
         "placeholder": "Nicht steuerpflichtig",
-        "loading": "Laden...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
+        "loading": "Laden...",
+        "inherit": "Mandantenstandard verwenden",
+        "inheritNamed": "Mandantenstandard verwenden ({{rate}})",
+        "nonTaxable": "Nicht steuerpflichtig"
       },
       "active": {
         "label": "Aktiv"
@@ -1420,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Bestehende Stripe-Kunden importieren",
+      "description": "Stripe-Kunden und gespeicherte Karten aus einem anderen System übernehmen. Der Import meldet Kunden nie automatisch für Auto-Pay an; das bestätigen Sie pro Zeile.",
+      "open": "Import starten",
+      "preview": "Vorschau",
+      "execute": "Importieren",
+      "reset": "Neu beginnen",
+      "default": "Standard",
+      "done": "Import abgeschlossen",
+      "attest": "Der Kunde hat wiederkehrende Abbuchungen von dieser Karte autorisiert",
+      "alreadyEnrolled": "Bereits angemeldet",
+      "scaRisk": "SCA-Risiko: Kein Nachweis, dass die Karte für Off-Session-Nutzung gespeichert wurde",
+      "cardsImported": "{{count}} Karte(n) importiert",
+      "csv": {
+        "label": "Zeilen (Kunde, Abrechnungsprofil, Stripe-Kunden-ID)",
+        "upload": "CSV hochladen"
+      },
+      "assisted": {
+        "run": "Nach E-Mail, dann nach Name abgleichen",
+        "summary": "{{matched}} vorgeschlagen, {{ambiguous}} mehrdeutig (nicht vorgeschlagen){{truncated}}",
+        "truncated": "; Liste gekürzt",
+        "ambiguousTitle": "Mehrdeutige Treffer (nicht vorgeschlagen)",
+        "addRow": "Als Zeile hinzufügen",
+        "matchedBy": "Abgeglichen nach {{by}}",
+        "by": {
+          "email": "E-Mail",
+          "name": "Name"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Passt zu mehreren Abrechnungsprofilen",
+          "multiple-customers": "Passt zu mehreren Stripe-Kunden"
+        }
+      },
+      "errors": {
+        "preview": "Vorschau fehlgeschlagen",
+        "noRows": "Fügen Sie mindestens eine Zeile hinzu",
+        "match": "Abgleich fehlgeschlagen",
+        "execute": "Import fehlgeschlagen"
+      },
+      "table": {
+        "customer": "Stripe-Kunde",
+        "plan": "Tarif",
+        "cards": "Karten",
+        "enroll": "Für Auto-Pay anmelden",
+        "clientProfile": "Kunde / Abrechnungsprofil",
+        "include": "Einbeziehen"
+      },
+      "actions": {
+        "adopt": "Übernehmen",
+        "already-imported": "Bereits importiert",
+        "conflict": "Konflikt",
+        "skip": "Überspringen"
+      },
+      "cardActions": {
+        "import": "Importieren",
+        "already-imported": "Bereits importiert",
+        "conflict": "Konflikt",
+        "skip": "Überspringen"
+      },
+      "cardReasons": {
+        "unsupported-method": "nicht unterstützte Zahlungsmethode",
+        "expired-card": "abgelaufene Karte",
+        "card-claimed-elsewhere": "Karte gehört zu einem anderen Kunden"
+      },
+      "reasons": {
+        "invalid-customer-id": "Keine gültige Stripe-Kunden-ID",
+        "customer-not-found": "Kunde in Stripe nicht gefunden",
+        "customer-deleted": "Kunde ist in Stripe gelöscht",
+        "profile-not-found": "Kunde oder Abrechnungsprofil nicht gefunden",
+        "profile-inactive": "Abrechnungsprofil ist inaktiv",
+        "currency-not-configured": "Für diesen Kunden ist keine Abrechnungswährung konfiguriert",
+        "currency-unsupported": "Die Abrechnungswährung wird von Stripe Auto-Pay nicht unterstützt",
+        "duplicate-customer-in-input": "Derselbe Stripe-Kunde erscheint in mehr als einer Zeile",
+        "duplicate-profile-in-input": "Dasselbe Abrechnungsprofil erscheint mit mehr als einem Stripe-Kunden",
+        "customer-claimed-by-other": "Der Stripe-Kunde ist bereits einem anderen Kunden oder Abrechnungsprofil zugeordnet",
+        "customer-metadata-owned-by-other": "Die Metadaten des Stripe-Kunden nennen einen anderen Mandanten, Kunden oder ein anderes Abrechnungsprofil",
+        "profile-mapped-to-other-customer": "Dieses Abrechnungsprofil verwendet bereits einen anderen Stripe-Kunden"
+      },
+      "warnings": {
+        "no-cards": "Der Kunde hat keine Zahlungsmethoden",
+        "customer-currency-mismatch": "Die Währung des Stripe-Kunden weicht von der Abrechnungswährung ab",
+        "no-importable-card": "Es kann keine Karte importiert werden"
+      },
+      "resultStatus": {
+        "imported": "Importiert",
+        "unchanged": "Nichts zu tun",
+        "skipped": "Übersprungen",
+        "conflict": "Konflikt",
+        "failed": "Fehlgeschlagen"
+      },
+      "enrollment": {
+        "enrolled": "für Auto-Pay angemeldet",
+        "not-eligible": "nicht für die Anmeldung berechtigt",
+        "already-enrolled": "bereits angemeldet",
+        "failed": "Anmeldung fehlgeschlagen"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Zahlungskonfiguration konnte nicht geladen werden",
       "keysRequired": "Bitte geben Sie sowohl den geheimen Schlüssel als auch den veröffentlichbaren Schlüssel ein",
@@ -1446,7 +1618,7 @@
       "daysPlural": "{{count}} Tage",
       "daysDecimal": "{{count}} Tage",
       "hoursUnit": "Stunden ({{formatted}})",
-      "willExpireAfter": "Zahlungslinks laufen nach {{duration}} ab"
+      "willExpireAfter": "Der per E-Mail versendete Zahlungslink funktioniert {{duration}} lang"
     },
     "notConnected": {
       "title": "Stripe nicht verbunden",
@@ -1464,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Ablauf des Zahlungslinks",
-        "description": "Wie lange Zahlungslinks gültig bleiben, bevor sie ablaufen"
+        "description": "Wie lange der Zahlungslink in Rechnungs-E-Mails funktioniert (1 Stunde bis 30 Tage). Jeder Klick öffnet eine neue sichere Zahlungsseite, solange die Rechnung offen ist."
       },
       "actions": {
         "save": "Einstellungen speichern",

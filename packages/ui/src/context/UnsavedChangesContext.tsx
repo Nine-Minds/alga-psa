@@ -57,11 +57,12 @@ interface UnsavedChangesProviderProps {
 
 export function UnsavedChangesProvider({
   children,
-  dialogTitle = 'Unsaved Changes',
-  dialogMessage = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
-  dialogConfirmLabel = 'Leave Without Saving',
-  dialogCancelLabel = 'Stay',
+  dialogTitle,
+  dialogMessage,
+  dialogConfirmLabel,
+  dialogCancelLabel,
 }: UnsavedChangesProviderProps) {
+  const { t } = useTranslation('common');
   // Use ref to track unsaved components without causing re-renders
   const unsavedComponentsRef = useRef<Set<string>>(new Set());
 
@@ -189,10 +190,10 @@ export function UnsavedChangesProvider({
         isOpen={showDialog}
         onClose={handleClose}
         onConfirm={handleConfirm}
-        title={dialogTitle}
-        message={dialogMessage}
-        confirmLabel={dialogConfirmLabel}
-        cancelLabel={dialogCancelLabel}
+        title={dialogTitle ?? t('dialogs.unsavedChanges.title', 'Unsaved Changes')}
+        message={dialogMessage ?? t('dialogs.unsavedChanges.message', 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
+        confirmLabel={dialogConfirmLabel ?? t('dialogs.unsavedChanges.confirm', 'Leave Without Saving')}
+        cancelLabel={dialogCancelLabel ?? t('dialogs.unsavedChanges.cancel', 'Stay')}
       />
     </UnsavedChangesContext>
   );

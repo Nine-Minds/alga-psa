@@ -1,19 +1,25 @@
 import msgraph from '@alga-psa/emulator-msgraph';
+import googleCalendar from '@alga-psa/emulator-google-calendar';
 import qbo from '@alga-psa/emulator-qbo';
 import smtpSink from '@alga-psa/emulator-smtp-sink';
 import webhookSink from '@alga-psa/emulator-webhook-sink';
 import stripe from '@alga-psa/emulator-stripe';
 import xero from '@alga-psa/emulator-xero';
 import threecx from '@alga-psa/emulator-threecx';
+import levelio from '@alga-psa/emulator-levelio';
+import huntress from '@alga-psa/emulator-huntress';
 import type { EmulatorPackage } from '@alga-psa/emulator-host';
 
 /** Every emulator in the suite. New emulators register here. */
 export const SUITE_EMULATORS: EmulatorPackage[] = [
   msgraph as EmulatorPackage,
+  googleCalendar as EmulatorPackage,
   qbo as EmulatorPackage,
   webhookSink as EmulatorPackage,
   smtpSink as EmulatorPackage,
   stripe as EmulatorPackage,
   xero as EmulatorPackage,
   threecx as EmulatorPackage,
+  levelio as EmulatorPackage,
+  huntress as EmulatorPackage,
 ];

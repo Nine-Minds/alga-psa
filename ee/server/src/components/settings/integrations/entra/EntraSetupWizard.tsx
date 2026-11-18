@@ -15,6 +15,8 @@ import {
 } from '@alga-psa/integrations/actions';
 import { EntraTenantMappingTable } from '../EntraTenantMappingTable';
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
+import { EntraCippConnectionDetails } from './EntraCippConnectionDetails';
+import { buildCippConnectionView } from './entraConsoleModel';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
@@ -105,6 +107,9 @@ export function EntraSetupWizard({
   React.useEffect(() => {
     if (status?.connectionDetails?.directProfileMissing) setMethod('direct');
   }, [status?.connectionDetails?.directProfileMissing]);
+  const cippView = isConnected
+    ? buildCippConnectionView(status?.connectionType, status?.connectionDetails)
+    : null;
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
     isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
@@ -313,6 +318,16 @@ export function EntraSetupWizard({
           ) : null}
         </div>
 
+        {cippView ? (
+          <div className="mt-3 max-w-xl" id="entra-setup-cipp-connection">
+            <EntraCippConnectionDetails
+              view={cippView}
+              idPrefix="entra-setup"
+              onReconnect={() => setCippDialogOpen(true)}
+            />
+          </div>
+        ) : null}
+
         <div className="mt-4">
           <WizardProgress
             id="entra-setup-ladder"
@@ -367,6 +382,12 @@ export function EntraSetupWizard({
       <EntraCippConnectDialog
         open={cippDialogOpen}
         onOpenChange={setCippDialogOpen}
+        reconnect={cippView && cippView.authType ? {
+          authType: cippView.authType,
+          apiUrl: cippView.apiUrl,
+          clientId: cippView.clientId,
+          tenantId: cippView.tenantId,
+        } : null}
         onSuccess={() => void onStatusChanged()}
       />
 

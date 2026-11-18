@@ -207,28 +207,35 @@ export async function getEntityImageUrlsBatch(
         updated_at: Date | string | null;
       }>;
 
+    // LEVERAGE: pattern entity-image-url-batch — same assoc -> documents -> external_files batch lives in packages/user-composition/src/lib/avatarUtils.ts
     // Create maps for quick lookup
     const docToFileMap = new Map(documents.map(d => [d.document_id, { file_id: d.file_id, updated_at: d.updated_at }]));
     const entityToDocMap = new Map(associations.map(a => [a.entity_id, a.document_id]));
 
-    // Process each entity
+    // Resolve every referenced file in ONE query (constant query count regardless
+    // of how many entities were passed), instead of one external_files lookup each.
+    const fileIds = Array.from(
+      new Set(documents.map(d => d.file_id).filter((id): id is string => Boolean(id)))
+    );
+    const imageFileIds = new Set<string>();
+    if (fileIds.length > 0) {
+      const files = await tenantScopedTable('external_files')
+        .select('file_id', 'mime_type')
+        .whereIn('file_id', fileIds) as Array<{ file_id: string; mime_type: string | null }>;
+      for (const file of files) {
+        if (file.mime_type?.startsWith('image/')) {
+          imageFileIds.add(file.file_id);
+        }
+      }
+    }
+
+    // Build URLs in memory; only existing image files get one (same as getImageUrlCore).
     for (const [entityId, documentId] of entityToDocMap) {
       const docInfo = docToFileMap.get(documentId);
-      if (docInfo?.file_id) {
-        try {
-          // Pass tenant to avoid circular dependency
-          const imageUrl = await getImageUrlInternal(docInfo.file_id, tenant);
-          if (imageUrl) {
-            // Add the document's updated_at timestamp for cache busting
-            const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
-            const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
-            result.set(entityId, urlWithTimestamp);
-          }
-        } catch (error) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error(`[getEntityImageUrlsBatch] Failed to get image URL for ${entityType} ${entityId}:`, error);
-          }
-        }
+      if (docInfo?.file_id && imageFileIds.has(docInfo.file_id)) {
+        // Add the document's updated_at timestamp for cache busting
+        const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
+        result.set(entityId, `/api/documents/view/${docInfo.file_id}?t=${timestamp}`);
       }
     }
 

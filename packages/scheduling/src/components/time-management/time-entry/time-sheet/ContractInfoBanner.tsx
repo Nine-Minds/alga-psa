@@ -1,21 +1,12 @@
 'use client';
 
-import { memo, useEffect, useState } from 'react';
+import { memo } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Info, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { ISO8601String } from '@alga-psa/types';
 
-interface ContractInfoBannerProps {
-  workItemId: string;
-  workItemType: string;
-  serviceId?: string | null;
-  entryDate?: Date;
-  clientId?: string | null;
-}
-
-interface EligiblePlanUI {
+export interface EligiblePlanUI {
   client_contract_line_id: string;
   contract_line_name: string;
   contract_line_type: string;
@@ -25,109 +16,49 @@ interface EligiblePlanUI {
   has_bucket_overlay: boolean;
 }
 
+interface ContractInfoBannerProps {
+  /** Lines loaded by the form (single fetch). `null` while loading. */
+  eligibleContractLines: EligiblePlanUI[] | null;
+}
+
 /**
- * ContractInfoBanner displays information about which contract will be used
- * for a time entry. This is a read-only informational component.
+ * ContractInfoBanner displays which contract a time entry will use. It is
+ * presentational: the form owns the eligibility fetch and passes the lines in.
+ * The ambiguous case (several lines, no single bucket-overlay line) renders the
+ * "select a contract line" warning that sits directly above the form's picker.
  *
- * Note: This component only renders when serviceId is provided. If no service
- * is selected, the parent should not render this component.
+ * Only render when a service is selected.
  */
 const ContractInfoBanner = memo(function ContractInfoBanner({
-  workItemId,
-  workItemType,
-  serviceId,
-  entryDate,
-  clientId: propClientId
+  eligibleContractLines: plans
 }: ContractInfoBannerProps) {
   const { t } = useTranslation('msp/time-entry');
-  const [contractInfo, setContractInfo] = useState<{
+
+  let contractInfo: {
     contractName?: string;
     contractLineName?: string;
     contractLineType?: string;
-    multipleLines?: boolean;
     requiresSelection?: boolean;
     noContract?: boolean;
     loading?: boolean;
-  }>({ loading: true });
-
-  // Track the serviceId that was used for the last fetch to prevent unnecessary reloads
-  const [lastFetchedServiceId, setLastFetchedServiceId] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    // Don't fetch if no service is selected - banner shouldn't show in this case
-    if (!serviceId) {
-      setContractInfo({ loading: false, noContract: true });
-      return;
-    }
-
-    // If we already fetched for this serviceId, don't show loading state again
-    const shouldShowLoading = lastFetchedServiceId !== serviceId;
-
-    const fetchContractInfo = async () => {
-      if (shouldShowLoading) {
-        setContractInfo({ loading: true });
-      }
-
-      // Get client ID if not provided
-      let clientId = propClientId;
-      if (!clientId && workItemId && workItemType) {
-        try {
-          clientId = await getClientIdForWorkItem(workItemId, workItemType);
-        } catch (error) {
-          console.error('Error fetching client ID:', error);
+  };
+  if (plans === null) {
+    contractInfo = { loading: true };
+  } else if (plans.length === 0) {
+    contractInfo = { noContract: true };
+  } else {
+    const single = plans.length === 1 ? plans[0] : (() => {
+      const overlayPlans = plans.filter((p) => p.has_bucket_overlay);
+      return overlayPlans.length === 1 ? overlayPlans[0] : null;
+    })();
+    contractInfo = single
+      ? {
+          contractName: single.contract_name,
+          contractLineName: single.contract_line_name,
+          contractLineType: single.contract_line_type,
         }
-      }
-
-      if (!clientId) {
-        setContractInfo({ noContract: true, loading: false });
-        setLastFetchedServiceId(serviceId);
-        return;
-      }
-
-      try {
-        const date = entryDate || new Date();
-        const plans = await getEligibleContractLinesForUI(
-          clientId,
-          serviceId,
-          date.toISOString()
-        ) as EligiblePlanUI[];
-
-        if (plans.length === 0) {
-          setContractInfo({ noContract: true, loading: false });
-        } else if (plans.length === 1) {
-          setContractInfo({
-            contractName: plans[0].contract_name,
-            contractLineName: plans[0].contract_line_name,
-            contractLineType: plans[0].contract_line_type,
-            loading: false
-          });
-        } else {
-          const overlayPlans = plans.filter((p) => p.has_bucket_overlay);
-          if (overlayPlans.length === 1) {
-            setContractInfo({
-              contractName: overlayPlans[0].contract_name,
-              contractLineName: overlayPlans[0].contract_line_name,
-              contractLineType: overlayPlans[0].contract_line_type,
-              loading: false,
-            });
-          } else {
-            setContractInfo({
-              multipleLines: true,
-              requiresSelection: true,
-              loading: false,
-            });
-          }
-        }
-        setLastFetchedServiceId(serviceId);
-      } catch (error) {
-        console.error('Error fetching contract info:', error);
-        setContractInfo({ noContract: true, loading: false });
-        setLastFetchedServiceId(serviceId);
-      }
-    };
-
-    fetchContractInfo();
-  }, [workItemId, workItemType, serviceId, entryDate, propClientId, lastFetchedServiceId]);
+      : { requiresSelection: true };
+  }
 
   // Don't render anything if loading
   if (contractInfo.loading) {
@@ -159,7 +90,9 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
       <Alert variant="warning">
         <Info className="h-5 w-5" />
         <AlertDescription>
-          Multiple contract lines are eligible for this date. Select a contract line to persist assignment.
+          {t('contractInfo.multipleEligible', {
+            defaultValue: 'Multiple contract lines are eligible for this date. Select a contract line to persist assignment.'
+          })}
         </AlertDescription>
       </Alert>
     );
@@ -178,13 +111,6 @@ const ContractInfoBanner = memo(function ContractInfoBanner({
         <p className="text-xs mt-0.5">
           {contractInfo.contractLineName} ({contractInfo.contractLineType})
         </p>
-        {contractInfo.multipleLines && (
-          <p className="text-xs mt-1 italic">
-            {t('contractInfo.multipleLines', {
-              defaultValue: 'Multiple contract lines available - using default selection'
-            })}
-          </p>
-        )}
       </AlertDescription>
     </Alert>
   );

@@ -1,32 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const withAdminTransactionMock = vi.fn();
-const updateMock = vi.fn();
+const addRecipientsMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
-let firstRow: { attributes?: unknown } | undefined;
-
-const ticketsBuilder: any = {
-  select: vi.fn().mockReturnThis(),
-  where: vi.fn().mockReturnThis(),
-  first: vi.fn(async () => firstRow),
-  update: vi.fn(async (...args: any[]) => updateMock(...args)),
-};
-
-const trxMock = vi.fn((table: string) => {
-  if (table !== 'tickets') {
-    throw new Error(`Unexpected table access in test: ${table}`);
-  }
-  return ticketsBuilder;
+const trxMock: any = vi.fn(() => {
+  throw new Error('upsertTicketWatchListRecipients must not touch tables directly');
 });
-(trxMock as any).fn = { now: () => 'NOW()' };
 
 vi.mock('@alga-psa/db', () => ({
-  withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
-    withAdminTransactionMock(callback),
+  withAdminTransaction: (callback: (trx: any) => Promise<any>, existing?: unknown) =>
+    withAdminTransactionMock(callback, existing),
   tenantDb: (trx: any) => ({
     table: (tableName: string) => trx(tableName),
   }),
 }));
+
+vi.mock('../../../services/tickets/ticketWatcherService', () => {
+  class TicketWatcherError extends Error {
+    constructor(readonly kind: string) {
+      super(kind);
+    }
+  }
+  return {
+    TicketWatcherError,
+    TicketWatcherService: { addRecipients: (...args: any[]) => addRecipientsMock(...args) },
+  };
+});
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
@@ -38,102 +37,80 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+// Merge/dedupe semantics now live in TicketWatcherService and are covered by
+// server/src/test/integration/ticketWatchers.integration.test.ts; this suite only
+// proves the inbound path delegates to it (the table is the source of truth).
 describe('upsertTicketWatchListRecipients', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) =>
       callback(trxMock)
     );
-    firstRow = {
-      attributes: {
-        watch_list: [{ email: 'existing@example.com', active: false, source: 'manual' }],
-      },
-    };
-    updateMock.mockResolvedValue(1);
   });
 
-  it('T025: upsert watch-list recipients writes expected JSON in tickets.attributes.watch_list', async () => {
+  it('T025: delegates recipients to TicketWatcherService.addRecipients inside the admin transaction', async () => {
+    addRecipientsMock.mockResolvedValue({
+      changed: true,
+      watchers: [
+        { email: 'existing@example.com', name: null, active: true, entity_type: null, entity_id: null, source: 'manual' },
+        { email: 'new@example.com', name: 'New Watcher', active: true, entity_type: null, entity_id: null, source: 'inbound_cc' },
+      ],
+    });
     const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
 
-    const result = await upsertTicketWatchListRecipients(
-      {
-        ticketId: 'ticket-1',
-        recipients: [
-          { email: 'existing@example.com', source: 'inbound_to' },
-          { email: 'new@example.com', source: 'inbound_cc', name: 'New Watcher' },
-        ],
-      },
-      'tenant-1'
-    );
+    const recipients = [
+      { email: 'existing@example.com', source: 'inbound_to' },
+      { email: 'new@example.com', source: 'inbound_cc', name: 'New Watcher' },
+    ];
+    const result = await upsertTicketWatchListRecipients({ ticketId: 'ticket-1', recipients }, 'tenant-1');
 
+    expect(addRecipientsMock).toHaveBeenCalledWith(trxMock, 'tenant-1', 'ticket-1', recipients, null);
     expect(result.updated).toBe(true);
-    expect(updateMock).toHaveBeenCalledTimes(1);
-    const updatePayload = updateMock.mock.calls[0][0];
-    expect(updatePayload).toHaveProperty('attributes');
-    // System write: bump updated_at and clear updated_by so a prior human is not credited.
-    expect(updatePayload.updated_at).toBe('NOW()');
-    expect(updatePayload.updated_by).toBeNull();
-
-    const parsedAttributes = JSON.parse(updatePayload.attributes);
-    expect(parsedAttributes.watch_list).toEqual([
-      {
-        email: 'existing@example.com',
-        active: true,
-        source: 'manual',
-      },
-      {
-        email: 'new@example.com',
-        active: true,
-        source: 'inbound_cc',
-        name: 'New Watcher',
-      },
+    expect(result.watchList).toEqual([
+      { email: 'existing@example.com', active: true, source: 'manual' },
+      { email: 'new@example.com', active: true, source: 'inbound_cc', name: 'New Watcher' },
     ]);
   });
 
-  it('T026: upsert with only invalid recipients performs no ticket attribute mutation', async () => {
+  it('T026: reports updated=false when the service made no change', async () => {
+    addRecipientsMock.mockResolvedValue({ changed: false, watchers: [] });
     const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
 
     const result = await upsertTicketWatchListRecipients(
-      {
-        ticketId: 'ticket-1',
-        recipients: [{ email: 'not-an-email' }, { email: null }, { email: '' }],
-      },
+      { ticketId: 'ticket-1', recipients: [{ email: 'not-an-email' }, { email: null }, { email: '' }] },
       'tenant-1'
     );
 
     expect(result.updated).toBe(false);
-    expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it('T060: upsert persists entity metadata in tickets.attributes.watch_list for picker-added entries', async () => {
-    firstRow = {
-      attributes: {
-        watch_list: [],
-      },
-    };
-
+  it('T060: passes entity metadata through and maps it back into the watch list', async () => {
+    addRecipientsMock.mockResolvedValue({
+      changed: true,
+      watchers: [
+        {
+          email: 'picker.user@example.com',
+          name: 'Picker User',
+          active: true,
+          entity_type: 'user',
+          entity_id: 'user-77',
+          source: 'manual',
+        },
+      ],
+    });
     const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
 
-    const result = await upsertTicketWatchListRecipients(
-      {
-        ticketId: 'ticket-1',
-        recipients: [
-          {
-            email: 'picker.user@example.com',
-            source: 'manual',
-            name: 'Picker User',
-            entity_type: 'user',
-            entity_id: 'user-77',
-          },
-        ],
-      },
-      'tenant-1'
-    );
+    const recipient = {
+      email: 'picker.user@example.com',
+      source: 'manual',
+      name: 'Picker User',
+      entity_type: 'user' as const,
+      entity_id: 'user-77',
+    };
+    const result = await upsertTicketWatchListRecipients({ ticketId: 'ticket-1', recipients: [recipient] }, 'tenant-1');
 
-    expect(result.updated).toBe(true);
-    expect(updateMock).toHaveBeenCalledTimes(1);
-    const parsedAttributes = JSON.parse(updateMock.mock.calls[0][0].attributes);
-    expect(parsedAttributes.watch_list).toEqual([
+    expect(addRecipientsMock.mock.calls[0][3]).toEqual([recipient]);
+    expect(result.watchList).toEqual([
       {
         email: 'picker.user@example.com',
         active: true,
@@ -145,31 +122,13 @@ describe('upsertTicketWatchListRecipients', () => {
     ]);
   });
 
-  it('T061: upsert ignores recipient inputs with metadata but no valid email', async () => {
+  it('T061: a missing ticket is a no-op, not an error', async () => {
+    const { TicketWatcherError } = await import('../../../services/tickets/ticketWatcherService');
+    addRecipientsMock.mockRejectedValue(new (TicketWatcherError as any)('ticket_not_found'));
     const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
 
-    const result = await upsertTicketWatchListRecipients(
-      {
-        ticketId: 'ticket-1',
-        recipients: [
-          {
-            email: '',
-            source: 'manual',
-            name: 'Missing Email',
-            entity_type: 'contact',
-            entity_id: 'contact-22',
-          },
-          {
-            email: null,
-            entity_type: 'user',
-            entity_id: 'user-88',
-          },
-        ],
-      },
-      'tenant-1'
-    );
+    const result = await upsertTicketWatchListRecipients({ ticketId: 'missing', recipients: [{ email: 'a@b.co' }] }, 'tenant-1');
 
-    expect(result.updated).toBe(false);
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ updated: false, watchList: [] });
   });
 });

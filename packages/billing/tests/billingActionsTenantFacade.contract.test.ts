@@ -107,8 +107,9 @@ describe('billing action tenant facade migration contract', () => {
     const source = readSource('packages/billing/src/actions/contractLineServiceActions.ts');
 
     expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
-    expect(source).toContain('function tenantScopedTable(');
-    expect(source).toContain("tenantScopedTable(trx, tenant, 'contract_template_lines')");
+    const membership = readSource('packages/billing/src/lib/billing/contractLineMembership.ts');
+    expect(membership).toContain('function tenantScopedTable(');
+    expect(membership).toContain("tenantScopedTable(trx, tenant, 'contract_template_lines')");
     expect(source).toContain("tenantScopedTable(trx, tenant, 'contract_line_services')");
     expect(source).toContain("tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')");
     expect(source).toContain("facade.tenantJoin(query, 'service_catalog as sc'");

@@ -19,6 +19,7 @@ import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
 import QuoteSettings from './QuoteSettings';
+import DefaultPaymentTermsSettings from './DefaultPaymentTermsSettings';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -179,6 +180,21 @@ const BillingSettings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DefaultCurrencySettings />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.paymentTerms.title', { defaultValue: 'Default payment terms' })}</CardTitle>
+              <CardDescription>
+                {t('general.paymentTerms.description', {
+                  defaultValue: 'Set the payment terms new invoices use when neither the client nor its billing profile sets any.'
+                })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* LEVERAGE: pattern tenant-settings-card — self-loading, independently-saving settings section (QuoteSettings, DefaultPaymentTermsSettings); a shared card/section hook would remove the load/save/toast boilerplate. */}
+              <DefaultPaymentTermsSettings />
             </CardContent>
           </Card>
 

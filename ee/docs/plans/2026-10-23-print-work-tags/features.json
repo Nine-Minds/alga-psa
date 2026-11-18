@@ -1,0 +1,107 @@
+[
+  {
+    "id": "F001",
+    "description": "Asset read authorization extracted to a shared assets lib and reused by the label provider",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Ticket label provider fills detail from subcategory then category",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "getTicketLinkedAssetLabelParts returns the single or chosen readable linked asset with serial suffix",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "printLabels skips unreadable records and returns a skipped count",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "printLabels returns uniform 404 when nothing is readable",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "printLabels accepts templateId, sanitised single-ticket overrides and linkedAssetId",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "POST /api/labels/pdf sets X-Label-Skipped",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "labelSettings.hiddenFields and labelClass added as optional AST metadata",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Hidden fields are nulled before display lines are derived",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Migration adds label_class scope with scope_key (up and down)",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Per-class default resolution: explicit, class default, standard",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Tenant logo inlined as data URL for rendering",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Standard templates show logo, asset line and serial line",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "GET /api/labels/templates and /api/labels/linked-assets on middleware skip-list",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Template designer: label class and Fields shown on the label",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Templates page: Class column and per-class Set as Default",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "LabelPrintDialog and useLabelPrint",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Ticket detail Print work tag button",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Asset detail Print asset label and Print page buttons",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Ticket list bulk Print labels with 200 limit",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Asset list bulk Print labels with 200 limit",
+    "implemented": true
+  }
+]

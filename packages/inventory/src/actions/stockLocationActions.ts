@@ -222,6 +222,14 @@ export const deactivateStockLocation = withAuth(
           .first();
         if (units) throw new Error('Cannot deactivate a location that still holds units');
 
+        // C4: client-owned equipment held at this location is not stock, but it is physically here.
+        // Keyed off the open custody episode (closed_at IS NULL), never off assets.status.
+        const custody = await trx('asset_custody')
+          .where({ tenant, location_id: locationId })
+          .whereNull('closed_at')
+          .first('custody_id');
+        if (custody) throw new Error('Cannot deactivate a location that still holds client equipment in custody');
+
         const [row] = await trx('stock_locations')
           .where({ tenant, location_id: locationId })
           .update({ is_active: false, updated_at: trx.fn.now() })

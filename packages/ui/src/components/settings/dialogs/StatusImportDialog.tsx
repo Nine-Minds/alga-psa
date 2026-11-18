@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { IStandardStatus } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface StatusImportDialogProps {
   open: boolean;
@@ -23,6 +24,8 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
   onSelectionChange,
   onImport
 }) => {
+  const { t } = useTranslation('msp/settings');
+  const { t: tCommon } = useTranslation('common');
   const toggleSelectAll = () => {
     if (selectedStatuses.length === availableStatuses.length) {
       // Deselect all
@@ -45,14 +48,14 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
     <Dialog 
       isOpen={open} 
       onClose={() => onOpenChange(false)}
-      title="Import Standard Statuses"
+      title={t('dialogs.statusImport.title')}
       className="max-w-2xl"
       id="import-status-dialog"
     >
       <DialogContent>
         <div className="flex flex-col h-full">
           <p className="text-sm text-gray-500 mb-4">
-            Select the standard statuses you want to import
+            {t('dialogs.statusImport.description')}
           </p>
           
           <div className="flex items-center justify-between py-3 border-b">
@@ -63,7 +66,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
                 id="select-all"
               />
               <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                Select All ({selectedStatuses.length}/{availableStatuses.length})
+                {t('dialogs.statusImport.selectAll', { selected: selectedStatuses.length, total: availableStatuses.length })}
               </label>
             </div>
           </div>
@@ -93,12 +96,12 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
                   <div className="flex gap-2">
                     {status.is_closed && (
                       <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md">
-                        Closed
+                        {t('dialogs.statusImport.closed')}
                       </span>
                     )}
                     {status.is_default && (
                       <span className="px-2 py-1 bg-info/15 text-info-foreground text-xs rounded-md">
-                        Default
+                        {t('dialogs.statusImport.default')}
                       </span>
                     )}
                   </div>
@@ -106,7 +109,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
               ))}
               {availableStatuses.length === 0 && (
                 <p className="text-center text-gray-500 py-8">
-                  No standard statuses available for import
+                  {t('dialogs.statusImport.empty')}
                 </p>
               )}
             </div>
@@ -119,7 +122,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {tCommon('actions.cancel')}
             </Button>
             <Button
               id="confirm-import-button"
@@ -127,7 +130,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
               disabled={selectedStatuses.length === 0}
               className="bg-primary-500 text-white hover:bg-primary-600"
             >
-              Import Selected ({selectedStatuses.length})
+              {t('dialogs.statusImport.importSelected', { count: selectedStatuses.length })}
             </Button>
       </DialogFooter>
     </Dialog>

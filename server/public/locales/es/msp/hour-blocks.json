@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Bloques de horas",
-    "description": "Bloques de horas de prepago de compra única. El tiempo que no cubre una línea de contrato se descuenta de estos bloques por fecha de vencimiento (primero los más antiguos).",
+    "description": "Bloques de horas de prepago puntuales. Solo reciben el tiempo que no cubre ninguna línea de contrato. Los bloques emitidos por una línea de contrato de Bloque prepagado solo se descuentan con el tiempo de esa misma línea.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aún no hay bloques de horas. Venda un bloque a este cliente u otorgue horas de cortesía.",
     "loadFailed": "No se pudieron cargar los bloques de horas. Inténtelo de nuevo."
@@ -30,7 +30,8 @@
     "status": "Estado",
     "expiration": "Vencimiento",
     "source": "Origen",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "validFrom": "Válido desde {{date}}"
   },
   "status": {
     "pending": "Pendiente",
@@ -53,8 +54,10 @@
     "rateRequired": "Introduce una tarifa válida.",
     "scopeLabel": "Cobertura: servicios que cubre este bloque (vacío = toda la mano de obra)",
     "serviceLabel": "Servicio",
+    "serviceNoResults": "No se encontraron servicios",
     "servicePlaceholder": "Seleccione un servicio",
     "serviceRequired": "Selecciona un servicio.",
+    "serviceSearchPlaceholder": "Buscar servicios...",
     "submit": "Crear borrador de factura",
     "submitted": "Se creó el borrador de factura {{invoiceNumber}}. Finalícelo para activar el bloque.",
     "title": "Vender bloque de horas",
@@ -126,7 +129,10 @@
     "autoExpired": "Vencido automáticamente",
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (factura desfinalizada)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contrato: {{contract}}",
+    "remainingValue": "Valor de las horas restantes: {{value}}",
+    "validFrom": "Válido desde {{date}}"
   },
   "expire": {
     "error": "No se pudo caducar el bloque de horas.",

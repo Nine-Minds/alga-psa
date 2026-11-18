@@ -349,3 +349,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("id: 'webhooks-inbound-view-btn'");
   });
 });
+
+describe('AdminWebhooksSetup legacy event types', () => {
+  it('shows stored event names that are no longer advertised as unsupported, and lets them be removed', () => {
+    expect(adminWebhooksSource).toContain('legacyEventTypes');
+    expect(adminWebhooksSource).toContain('data-testid="webhook-legacy-events"');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.form.legacyEventLabel'");
+    expect(adminWebhooksSource).toContain("t('security.webhooks.form.legacyEventsHelp'");
+  });
+
+  it('does not cast saved event types to a closed enum', () => {
+    expect(adminWebhooksSource).not.toMatch(/eventTypes:[^,\n]*as (?:typeof|SupportedWebhookEvent|WebhookEvent)/);
+  });
+});

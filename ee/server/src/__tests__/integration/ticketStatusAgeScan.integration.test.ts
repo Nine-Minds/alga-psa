@@ -82,7 +82,7 @@ describe('ticket.status_age date trigger integration', () => {
         const trigger = { type: 'date', source: 'ticket.status_age', offsetDays: 0, localTime: '00:00', timezone: 'UTC', ...(params ? { params } : {}) };
         const definition = { trigger, payloadSchemaRef: REF, steps: [] };
         await trx('workflow_definitions').insert({ workflow_id: workflowId, tenant, name: `Status age ${workflowId.slice(0, 4)}`, payload_schema_ref: REF, trigger: JSON.stringify(trigger), draft_definition: JSON.stringify(definition), draft_version: 1, status: 'published' });
-        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, version: 1, definition_json: JSON.stringify(definition), published_at: '2026-01-01' });
+        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, tenant, version: 1, definition_json: JSON.stringify(definition), published_at: '2026-01-01' });
         return workflowId;
       };
       const scan = async (at: Date | string) => {

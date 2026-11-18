@@ -333,6 +333,16 @@
       "addLocation": "+ Adicionar localização",
       "fromTemplate": "+ Do modelo"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remover este local?",
+        "message": "Este local ainda tem {{count}} item(ns). Escolha o que acontece com eles.",
+        "moveOption": "Mover estes itens para {{location}}",
+        "ungroupOption": "Manter estes itens e deixar de agrupar por localização",
+        "deleteOption": "Excluir estes itens",
+        "confirm": "Remover local"
+      }
+    },
     "clientFacing": {
       "title": "Texto voltado para o cliente",
       "subtitle": "Aparece no PDF, abaixo dos totais.",
@@ -499,6 +509,13 @@
     },
     "availability": {
       "onHand": "Em estoque: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Proposta visualizada por link de e-mail",
+        "descriptionWithRecipient": "Proposta visualizada por {{email}} por link de e-mail",
+        "type": "Visualizada por link de e-mail"
+      }
     }
   },
   "quoteLineItems": {
@@ -537,6 +554,7 @@
       "recurring": "Recorrente",
       "service": "serviço",
       "setPrice": "Definir preço",
+      "taxable": "Tributável",
       "ungroupedItems": "Itens desagrupados"
     },
     "placeholders": {
@@ -580,10 +598,13 @@
       "groupHeading": "Localização {{index}}",
       "pickerPlaceholder": "Selecione um local",
       "unassigned": "Itens sem localização são listados aqui até que um seja escolhido.",
+      "quoteWide": "Toda a cotação",
+      "quoteWideHint": "Os descontos aplicam-se a toda a cotação, por isso não estão associados a uma localização.",
       "removeGroup": "Remover local",
       "subtotal": "Subtotal de localização",
       "addLocationButton": "+ Adicionar localização",
       "needMoreLocations": "Este cliente possui apenas um local ativo. Adicione um segundo local nas configurações do cliente para ativar a cotação de vários sites.",
+      "allLocationsInUse": "Todos os locais ativos deste cliente já têm um grupo nesta cotação.",
       "emptyGroup": "Ainda não há itens para este local."
     }
   },
@@ -630,6 +651,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Descontos transferidos para as linhas de contrato",
       "contractItems": "Itens do contrato",
       "conversionMode": "Modo de conversão",
       "excludedFromConversion": "Excluído da conversão",
@@ -655,6 +677,7 @@
       "converted": "Convertido",
       "discount": "Desconto",
       "fixed": "fixo",
+      "monthlyTotal": "Total mensal após descontos",
       "notConverted": "Não convertido"
     },
     "partial": {
@@ -719,6 +742,12 @@
       "draftDescription": "Você é o único usuário que pode aprovar cotações. Depois de enviar esta cotação para aprovação, você poderá aprová-la você mesmo e depois enviá-la.",
       "pendingDescription": "Você é o único usuário que pode aprovar cotações, então pode aprovar esta cotação você mesmo. Escolha Aprovar para deixá-la pronta para envio.",
       "dialogNote": "Você é o único aprovador, então aprovar a sua própria cotação é permitido. A aprovação é registrada como autoaprovação."
+    },
+    "emailLinkReview": {
+      "label": "Permitir que os clientes revisem e aprovem cotações pelo link do e-mail sem iniciar sessão",
+      "lifetimeLabel": "Duração do link (horas)",
+      "lifetimePlaceholder": "Padrão: até a cotação expirar",
+      "lifetimeHelp": "Entre 24 e 2160 horas. Deixe vazio para usar a data de validade da cotação (30 dias se não houver)."
     }
   },
   "quoteTemplates": {
@@ -888,6 +917,21 @@
       "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}.",
       "templateCannotBeAccepted": "Modelos de cotação não podem ser marcados como aceitos",
       "onlySentCanBeAccepted": "Somente cotações enviadas podem ser marcadas como aceitas"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "A duração do link deve ser um número inteiro de horas entre 24 e 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Aceito por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Aceito por {{signer}} pelo portal do cliente, {{date}}",
+      "mspMarked": "Marcado como aceito pelo MSP em nome do cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rejeitado por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Rejeitado por {{signer}} pelo portal do cliente, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

@@ -12,7 +12,7 @@ import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
 import { useCurrencyFormat } from '@alga-psa/ui/lib'; // invoices.total_amount is in cents
 import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
-import { parseISO, subDays, format } from 'date-fns'; // Import date functions
+import { addDays, parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
  getHoursByServiceType, HoursByServiceResult,
  getRemainingBucketUnits, RemainingBucketUnitsResult,
@@ -357,7 +357,12 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
       {renderClientUnresolvedChargeReview?.({
         clientId,
         windowStart: dateRange.startDate,
-        windowEnd: dateRange.endDate,
+        // The dashboard range includes its end date; the review's window end is
+        // exclusive, so add a day or today's work is not reviewed until tomorrow.
+        // Convention: days are the viewer's local calendar days, sent as
+        // yyyy-MM-dd strings that the server casts at UTC midnight.
+        // LEVERAGE: pattern day-window-strings — several calls here compare yyyy-MM-dd strings to timestamptz; a half-open day-range type resolved once in the viewer's calendar would remove this class of bug
+        windowEnd: format(addDays(parseISO(dateRange.endDate), 1), 'yyyy-MM-dd'),
       })}
 
       {/* Spend by billing profile (F053). Renders nothing for a single-profile

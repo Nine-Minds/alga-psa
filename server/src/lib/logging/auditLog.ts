@@ -4,6 +4,8 @@ import { tenantDb } from '@alga-psa/db';
 
 interface AuditLogParams {
   userId?: string;
+  /** Principal the user's request came through; recorded as `via_principal_user_id` in details. */
+  viaPrincipalUserId?: string | null;
   operation: string;
   tableName: string;
   recordId: string;
@@ -11,6 +13,9 @@ interface AuditLogParams {
   details: Record<string, unknown>;
 }
 
+// LEVERAGE: friction audit-log-best-effort — this helper skips silently without the app.current_tenant GUC and the
+// settings that must be audited (documentFetchHostSettings.ts) cannot use it; they write audit_logs directly in their
+// transaction. A must-write variant (throws, sets the GUC tx-locally, joins the caller's trx) belongs in this layer.
 export async function auditLog(
   knex: Knex,
   params: AuditLogParams
@@ -41,7 +46,9 @@ export async function auditLog(
       table_name: params.tableName,
       record_id: params.recordId,
       changed_data: params.changedData,
-      details: params.details,
+      details: params.viaPrincipalUserId
+        ? { ...params.details, via_principal_user_id: params.viaPrincipalUserId }
+        : params.details,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

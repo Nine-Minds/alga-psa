@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Actif",
+      "scheduled": "Planifié",
       "inactive": "Inactif",
       "loading": "Chargement...",
       "na": "S/O",
@@ -315,7 +316,21 @@
     "inboundDomainAutoCreateHelp": "Les domaines associés peuvent créer un contact pour un nouvel expéditeur de confiance.",
     "inboundDomainAutoCreateUpdated": "Paramètre des contacts expéditeurs mis à jour.",
     "inboundDomainAutoCreateUpdateFailed": "Impossible de mettre à jour le paramètre des contacts expéditeurs.",
-    "recurringTickets": "Tickets récurrents"
+    "recurringTickets": "Tickets récurrents",
+    "software": "Logiciels",
+    "checklistsTab": "Listes de contrôle",
+    "checklists": {
+      "name": "Nom",
+      "items": "Éléments",
+      "status": "Statut",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "description": "Modèles de listes de contrôle proposés uniquement sur les tickets de ce client. Modifiez-les dans Paramètres > Tickets > Modèles de listes de contrôle.",
+      "empty": "Aucun modèle de liste de contrôle propre au client.",
+      "loadFailed": "Échec du chargement des modèles de listes de contrôle",
+      "retry": "Réessayer"
+    },
+    "audits": "Audits"
   },
   "clientCommandCenter": {
     "cards": {
@@ -328,7 +343,8 @@
       "people": "Personnes",
       "record": "Fiche client",
       "service": "Service",
-      "timeline": "Tout, dans l’ordre"
+      "timeline": "Tout, dans l’ordre",
+      "software": "Logiciels"
     },
     "csatEmpty": "Aucune réponse d’enquête pour l’instant.",
     "discardCancel": "Continuer la modification",
@@ -368,14 +384,23 @@
       "warrantyExpired_other": "{{count}} hors garantie",
       "warrantyExpiring_one": "1 expire sous ≤90 j",
       "warrantyExpiring_other": "{{count}} expirent sous ≤90 j",
-      "warrantyTracked": " (sur {{count}} suivis)"
+      "warrantyTracked": " (sur {{count}} suivis)",
+      "auditsLink": "Audits sur site",
+      "lastAudit": "Dernier audit : {{date}}",
+      "lastAuditMissing_one": "1 manquant",
+      "lastAuditMissing_other": "{{count}} manquants",
+      "neverAudited": "Jamais audité"
     },
     "locations": {
       "billing": "Facturation",
+      "contactCount_one": "1 contact",
+      "contactCount_other": "{{count}} contacts",
       "manage": "Gérer",
       "more": "+{{count}} de plus",
       "none": "Aucun site pour l’instant.",
-      "shipping": "Livraison"
+      "shipping": "Livraison",
+      "lastAudit": "Audité le {{date}}",
+      "neverAudited": "Jamais audité"
     },
     "money": {
       "activeContracts": "Contrats actifs",
@@ -405,6 +430,12 @@
       "primary": "Principal"
     },
     "pulseError": "Impossible de charger l’aperçu du client.",
+    "quickLinks": {
+      "assets": "Actifs",
+      "contacts": "Contacts",
+      "label": "Liens rapides",
+      "software": "Logiciels"
+    },
     "rail": {
       "close": "Fermer",
       "installBase": "Parc installé",
@@ -440,6 +471,13 @@
       "onTrackLeft": "SLA : {{left}} restant",
       "paused": "SLA en pause"
     },
+    "software": {
+      "assetsMeta_one": "1 actif",
+      "assetsMeta_other": "{{count}} actifs",
+      "loadError": "Impossible de charger l'inventaire des logiciels.",
+      "titles": "titres",
+      "viewAll": "Tous les logiciels"
+    },
     "timeline": {
       "daysAgo": "il y a {{count}} j",
       "empty": "Rien n’est encore enregistré pour ce client.",
@@ -464,7 +502,8 @@
       "ticketClosed": "Ticket clôturé",
       "ticketOpened": "Ticket ouvert",
       "unitDelivered": "Équipement livré"
-    }
+    },
+    "discardFeatureMessage": "Vous avez des modifications non enregistrées dans cette vue. Fermer et les abandonner ?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Cycle de vie",
@@ -571,11 +610,6 @@
     "invoiceDeliveryMethod": "Méthode de livraison des factures",
     "invoiceTemplate": "Modèle de facture",
     "invoiceTemplateHelp": "Sélectionnez un modèle ou utilisez la valeur par défaut",
-    "paymentTerms": {
-      "dueOnReceipt": "Exigible à réception",
-      "net15": "Net à 15 jours",
-      "net30": "Net à 30 jours"
-    },
     "preferredPaymentMethod": "Mode de paiement préféré",
     "defaultCurrency": "Devise par défaut",
     "selectTaxRegion": "Sélectionnez la région fiscale (facultatif)",
@@ -587,11 +621,6 @@
       "both": "Les deux",
       "email": "E-mail",
       "mail": "Courrier"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Virement bancaire",
-      "check": "Chèque",
-      "creditCard": "Carte de crédit"
     },
     "paymentTermsLabel": "Conditions de paiement",
     "standardTemplateLabel": "(Standard)",
@@ -1335,7 +1364,10 @@
         "phoneLabel": "Téléphone",
         "setDefault": "Définir par défaut",
         "shippingTag": "Expédition",
-        "unnamed": "Emplacement sans nom"
+        "unnamed": "Emplacement sans nom",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
+        "contactPrimary": "Principal"
       },
       "dialog": {
         "addTitle": "Ajouter un nouvel emplacement",
@@ -1441,7 +1473,14 @@
       "refreshRecordings": "Actualiser les enregistrements",
       "sectionTitle": "Réunion en ligne",
       "transcriptArtifact": "Transcription",
-      "viewTranscript": "Voir la transcription"
+      "viewTranscript": "Voir la transcription",
+      "status": {
+        "noRecording": "Aucun enregistrement",
+        "recordingReady": "Enregistrement prêt",
+        "cancelled": "Réunion annulée",
+        "failed": "Enregistrement indisponible",
+        "recordingPending": "Enregistrement en attente"
+      }
     },
     "quickAdd": {
       "clientRequired": "Sélectionnez un client pour cette interaction",
@@ -1500,6 +1539,86 @@
       "assignedTo": {
         "label": "Attribué à",
         "placeholder": "Sélectionner un utilisateur"
+      },
+      "endBeforeStart": "L'heure de fin doit être égale ou postérieure à l'heure de début.",
+      "endBeforeStartShort": "L'heure de fin doit être égale ou postérieure à l'heure de début",
+      "rangeTooLong": "Les interactions ne peuvent pas durer plus de 24 heures.",
+      "reflectionLabel": "Ajout rapide d'une interaction",
+      "validationIntro": "Veuillez corriger les erreurs suivantes :",
+      "loadingEditor": "Chargement de l'éditeur...",
+      "dialog": {
+        "createTitle": "Ajouter une nouvelle interaction",
+        "editTitle": "Modifier l'interaction"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "cancelHelper": "Annuler la création ou la modification de cette interaction",
+        "save": "Enregistrer l'interaction",
+        "saveHelper": "Créer cette nouvelle interaction",
+        "update": "Mettre à jour l'interaction",
+        "updateHelper": "Enregistrer les modifications de cette interaction",
+        "close": "Fermer la boîte de dialogue",
+        "closeHelper": "Fermer la boîte de dialogue de l'interaction"
+      },
+      "fields": {
+        "type": {
+          "label": "Type d'interaction",
+          "helper": "Sélectionnez le type d'interaction (appel téléphonique, e-mail, réunion, etc.)",
+          "placeholder": "Sélectionner un type d'interaction"
+        },
+        "title": {
+          "label": "Titre de l'interaction",
+          "helper": "Saisissez un titre descriptif pour cette interaction",
+          "placeholder": "Titre"
+        },
+        "notes": {
+          "label": "Notes sur l'interaction",
+          "helper": "Ajoutez des notes détaillées sur cette interaction"
+        },
+        "notesShort": "Notes",
+        "status": {
+          "label": "Statut de l'interaction",
+          "helper": "Définissez le statut actuel de cette interaction",
+          "placeholder": "Sélectionner un statut"
+        },
+        "user": {
+          "label": "Utilisateur affecté",
+          "helper": "Sélectionnez l'utilisateur responsable de cette interaction",
+          "placeholder": "Sélectionner un utilisateur"
+        },
+        "userShort": "Utilisateur",
+        "client": {
+          "label": "Client associé",
+          "helper": "Sélectionnez le client concerné par cette interaction"
+        },
+        "clientShort": "Client",
+        "contact": {
+          "label": "Contact associé",
+          "helper": "Sélectionnez le contact avec lequel a lieu cette interaction",
+          "placeholder": "Sélectionner un contact"
+        },
+        "contactShort": "Contact",
+        "startTime": {
+          "label": "Heure de début",
+          "helper": "Quand cette interaction a-t-elle commencé ?",
+          "placeholder": "Sélectionner l'heure de début"
+        },
+        "endTime": {
+          "label": "Heure de fin",
+          "helper": "Quand cette interaction s'est-elle terminée ?",
+          "placeholder": "Sélectionner l'heure de fin"
+        },
+        "durationHours": {
+          "label": "Durée en heures",
+          "helper": "Nombre d'heures de l'interaction"
+        },
+        "durationMinutes": {
+          "label": "Durée en minutes",
+          "helper": "Nombre de minutes de l'interaction"
+        },
+        "duration": "Durée",
+        "hours": "heures",
+        "minutes": "minutes"
       }
     },
     "feed": {
@@ -1557,6 +1676,51 @@
       "transcriptTitle": "Transcription de l'appel",
       "loading": "Chargement de la transcription…",
       "loadFailed": "La transcription n'a pas pu être chargée."
+    },
+    "details": {
+      "title": "Détails de l'interaction",
+      "noTitle": "Sans titre",
+      "unknownUser": "Inconnu",
+      "noContact": "Aucun contact associé",
+      "noClient": "Aucun client associé",
+      "deleteConfirm": "Voulez-vous vraiment supprimer cette interaction ? Cette action est irréversible.",
+      "timeEntryFailed": "Impossible de préparer l'entrée de temps. Veuillez réessayer.",
+      "fields": {
+        "title": "Titre :",
+        "notes": "Notes",
+        "status": "Statut :",
+        "startTime": "Heure de début :",
+        "endTime": "Heure de fin :",
+        "duration": "Durée :",
+        "user": "Utilisateur :",
+        "contact": "Contact :",
+        "client": "Client :"
+      },
+      "actions": {
+        "cancel": "Annuler",
+        "editShort": "Modifier",
+        "deleteShort": "Supprimer",
+        "edit": {
+          "label": "Modifier l'interaction",
+          "helper": "Modifier les détails de cette interaction"
+        },
+        "delete": {
+          "label": "Supprimer l'interaction",
+          "helper": "Supprimer définitivement cette interaction"
+        },
+        "back": {
+          "label": "Retour",
+          "helper": "Revenir à la vue précédente"
+        },
+        "addTicket": {
+          "label": "Ajouter un ticket",
+          "helper": "Créer un nouveau ticket lié à cette interaction"
+        },
+        "addTimeEntry": {
+          "label": "Ajouter une entrée de temps",
+          "helper": "Ajouter une entrée de temps pour cette interaction"
+        }
+      }
     }
   },
   "clientDrawer": {
@@ -1647,7 +1811,8 @@
           "members": "Membres",
           "people": "Personnes"
         }
-      }
+      },
+      "startAudit": "Démarrer un audit"
     },
     "tickets": {
       "addTicket": "Ajouter un ticket",
@@ -1763,7 +1928,8 @@
     },
     "cardExpiry": ", expire le {{month}}/{{year}}",
     "legacyPaymentTerms": "« {{value}} » n’est pas une condition de paiement reconnue et n’a jamais été appliquée. Elle sera supprimée lors de l’enregistrement.",
-    "cardOnFile": "{{type}} se terminant par {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} se terminant par {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Valeur par défaut du locataire : {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertes de solde prépayé",
@@ -1815,7 +1981,8 @@
       "invalidValue": "L’une des valeurs client sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
       "invalidData": "Données client non valides. Veuillez vérifier tous les champs et réessayer.",
       "missingField": "Un champ client obligatoire est manquant.",
-      "missingFieldNamed": "Un champ client obligatoire est manquant : {{field}}."
+      "missingFieldNamed": "Un champ client obligatoire est manquant : {{field}}.",
+      "hasSeatArrangement": "Ce client dispose d’un accord de postes d’informatique cogérée. Mettez fin à l’accord avant de désactiver le client."
     },
     "permissions": {
       "readClients": "Autorisation refusée : impossible de lire des clients",
@@ -1929,8 +2096,10 @@
       "sourceAlreadyMerged": "Ce client a déjà été fusionné dans un autre client.",
       "targetAlreadyMerged": "Le client de destination a lui-même été fusionné dans un autre client. Fusionnez vers celui-ci à la place.",
       "sourceIsTenantDefault": "La fiche de votre propre organisation ne peut pas être fusionnée dans un client.",
+      "sourceHasCoManagement": "Ce client dispose d’un espace de travail d’informatique cogérée. Annulez sa configuration ou mettez fin à la cogestion avant de le fusionner.",
       "parentLinkCycle": "Ce client est enregistré comme enfant de celui que vous fusionnez ; la fusion inverserait la hiérarchie.",
-      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat."
+      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat.",
+      "invalidContactLocation": "Un site choisi n'appartient à aucun des clients fusionnés."
     },
     "profileContacts": {
       "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",
@@ -2012,7 +2181,16 @@
     "billingStrategyHeading": "Facturer le travail et les appareils fusionnés sous",
     "billingStrategySource": "Profil de facturation de {{source}}, conservé comme profil distinct chez {{target}}",
     "billingStrategyTarget": "Profil de facturation par défaut de {{target}}",
-    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné."
+    "billingStrategyHelp": "S'applique à {{tickets}} ticket(s), {{projects}} projet(s), {{assets}} actif(s) et {{mappings}} groupe(s) d'appareils RMM sans profil de facturation propre. Les lignes avec un profil explicite le conservent, et les factures, cycles de facturation, paiements et crédits restent toujours sur le profil fusionné.",
+    "locationsColumn": "Sites",
+    "remoteBadge": "À distance",
+    "noLocationsAfterMerge": "Aucun site",
+    "unnamedLocation": "Site",
+    "movingFrom": "provient de {{client}}",
+    "primaryLocation": "Principal",
+    "targetAlsoHas": "{{client}} possède aussi « {{location}} »",
+    "useIt": "Utiliser celui-ci",
+    "contactLocationSummary": "{{count}} liens de site de contacts, {{repointed}} redirigés"
   },
   "billingProfileContacts": {
     "title": "Contacts du profil",
@@ -2030,5 +2208,21 @@
     "manager": "Responsable",
     "seesTickets": "Voit les tickets du profil",
     "editHint": "Ces éléments se modifient sur le profil de facturation, dans les paramètres de facturation du client."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Actifs",
+      "lastSeen": "Dernière détection",
+      "title": "Titre",
+      "versions": "Versions"
+    },
+    "empty": "Aucun inventaire logiciel pour l'instant — l'inventaire est collecté par appareil",
+    "emptyAssetsLink": "Voir les actifs",
+    "exportCsv": "Exporter en CSV",
+    "exportError": "Impossible d'exporter l'inventaire des logiciels.",
+    "installedOn": "Installé sur",
+    "loadError": "Impossible de charger l'inventaire des logiciels.",
+    "moreAssets": "et {{count}} de plus (les {{limit}} premiers par nom)",
+    "searchPlaceholder": "Rechercher un logiciel..."
   }
 }

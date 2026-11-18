@@ -347,7 +347,7 @@ export const accessControlAuditLogSchema = z.object({
   target_user_id: uuidSchema.optional(),
   role_id: uuidSchema.optional(),
   permission_id: uuidSchema.optional(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
   timestamp: z.string().datetime(),
   tenant: uuidSchema
 });
@@ -360,8 +360,8 @@ export const accessControlMetricsSchema = z.object({
   active_roles: z.number(),
   unused_roles: z.number(),
   unused_permissions: z.number(),
-  role_distribution: z.record(z.number()),
-  permission_distribution: z.record(z.number()),
+  role_distribution: z.record(z.string(), z.number()),
+  permission_distribution: z.record(z.string(), z.number()),
   recent_changes: z.number()
 });
 

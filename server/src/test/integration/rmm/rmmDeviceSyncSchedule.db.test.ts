@@ -208,6 +208,37 @@ describe('RMM device sync — reconciler against a real database', () => {
   });
 });
 
+describe('RMM device sync — Datto RMM schedule', () => {
+  it('schedules Datto RMM on its own singleton key', async () => {
+    const [datto] = await admin('rmm_integrations')
+      .insert({
+        tenant: TENANT,
+        provider: 'datto',
+        is_active: true,
+        connected_at: new Date(),
+        sync_status: 'completed',
+        last_full_sync_at: LAST_FULL_SYNC,
+        settings: JSON.stringify({ deviceSync: { enabled: true, intervalMinutes: 30 } }),
+      })
+      .returning('integration_id');
+    const dattoId = String(datto.integration_id ?? datto);
+
+    try {
+      const runner = spyRunner();
+      await reconcileRmmPollingSchedules(asRunner(runner));
+
+      const dattoCall = runner.scheduleRecurringJob.mock.calls.find(
+        ([n, data]) => n === RMM_DEVICE_SYNC_JOB && data.provider === 'datto'
+      );
+      expect(dattoCall, 'no Datto device sync schedule was created').toBeDefined();
+      expect(dattoCall![2]).toBe('*/30 * * * *');
+      expect(dattoCall![3]).toEqual({ singletonKey: `${RMM_DEVICE_SYNC_JOB}:${TENANT}:${dattoId}` });
+    } finally {
+      await admin('rmm_integrations').where({ tenant: TENANT, integration_id: dattoId }).delete();
+    }
+  });
+});
+
 describe('RMM device sync — handler against a real database', () => {
   const data = () => ({ tenantId: TENANT, integrationId, provider: PROVIDER });
 

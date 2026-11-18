@@ -102,8 +102,8 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
       // show on-hand/available without a per-row drill-in.
       const levels = trx('stock_levels')
         .where({ tenant })
-        .groupBy('service_id')
-        .select('service_id')
+        .groupBy('tenant', 'service_id')
+        .select('tenant', 'service_id')
         .select(trx.raw('SUM(quantity_on_hand) as on_hand'))
         .select(trx.raw('SUM(quantity_on_hand - reserved_quantity - held_quantity) as available'))
         .as('lv');
@@ -119,8 +119,8 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
           this.on('sl.service_id', '=', 'p2.service_id').andOn('sl.tenant', '=', 'p2.tenant');
         })
         .where({ 'sl.tenant': tenant, 'p2.track_stock': true })
-        .groupBy('sl.service_id')
-        .select('sl.service_id')
+        .groupBy('sl.tenant', 'sl.service_id')
+        .select('sl.tenant', 'sl.service_id')
         .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= ${REORDER}) as needs_reorder`))
         .select(trx.raw(`bool_or(${REORDER} IS NOT NULL AND ${AVAIL} <= 0) as any_out`))
         .select(trx.raw(`count(*) FILTER (WHERE ${REORDER} IS NOT NULL AND ${AVAIL} <= 0) as out_locations`))
@@ -131,8 +131,12 @@ export const listInventoryProducts = withAuth(async (user, { tenant }): Promise<
         .join('service_catalog as sc', function () {
           this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
         })
-        .leftJoin(levels, 'lv.service_id', 'pis.service_id')
-        .leftJoin(status, 'st.service_id', 'pis.service_id')
+        .leftJoin(levels, function () {
+          this.on('lv.service_id', '=', 'pis.service_id').andOn('lv.tenant', '=', 'pis.tenant');
+        })
+        .leftJoin(status, function () {
+          this.on('st.service_id', '=', 'pis.service_id').andOn('st.tenant', '=', 'pis.tenant');
+        })
         .where({ 'pis.tenant': tenant })
         .select(
           'pis.*',

@@ -1,39 +1,63 @@
-import { formatCurrency } from '@alga-psa/core/lib/formatters';
+import { formatCurrency } from '@alga-psa/core/formatters';
+import { formatLocalizedCalendarDate } from '@alga-psa/core';
 import type { IQuote } from '@alga-psa/types';
 
 interface QuoteEmailTemplateInput {
   quote: IQuote;
   companyName: string;
   portalLink?: string;
+  /**
+   * Per-recipient unauthenticated review link. When present it is the primary
+   * call to action and the portal link becomes a secondary link.
+   */
+  quoteReviewLink?: string;
+  /**
+   * Whether the recipient can sign in to the client portal. Only consulted when
+   * `quoteReviewLink` is present: the secondary portal link is omitted without
+   * portal access. Defaults to true.
+   */
+  hasPortalAccess?: boolean;
   customMessage?: string;
   /** BCP-47 locale for amount formatting; falls back to 'en'. */
   locale?: string;
 }
 
+// Quote dates are calendar dates: format the calendar day itself, never
+// through the process timezone (which can render the previous day).
 export const formatQuoteDate = (value?: string | null, locale?: string): string => {
   if (!value) {
     return 'N/A';
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  try {
+    return formatLocalizedCalendarDate(value, locale || 'en');
+  } catch {
     return 'N/A';
   }
-
-  // A NAMED month is the one date shape the language still owns: its order is
-  // that language's grammar, so Intl stays in charge here. The country rule
-  // governs numeric dates, which this is not.
-  return date.toLocaleDateString(locale || 'en', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 };
+
+// With a review link: it is the primary CTA and the portal link is secondary
+// (portal access only). Without one: the portal link is the only link, as before.
+function resolveLinks(
+  { portalLink, quoteReviewLink, hasPortalAccess }: Pick<QuoteEmailTemplateInput, 'portalLink' | 'quoteReviewLink' | 'hasPortalAccess'>
+): { reviewLink?: string; portal?: string } {
+  const reviewLink = quoteReviewLink?.trim() || undefined;
+  const portal = portalLink?.trim() || undefined;
+  if (!reviewLink) {
+    return { portal };
+  }
+  return { reviewLink, portal: hasPortalAccess === false ? undefined : portal };
+}
+
+const reviewButtonHtml = (reviewLink: string) =>
+  `<p><a href="${reviewLink}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:#6366f1;color:#ffffff;font-weight:600;text-decoration:none;">Review and approve quote</a></p>`;
 
 export function buildQuoteSentEmailTemplate({
   quote,
   companyName,
   portalLink,
+  quoteReviewLink,
+  hasPortalAccess,
   customMessage,
   locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
@@ -42,7 +66,7 @@ export function buildQuoteSentEmailTemplate({
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const validUntil = formatQuoteDate(quote.valid_until ?? null, locale);
   const trimmedMessage = customMessage?.trim();
-  const resolvedPortalLink = portalLink?.trim();
+  const { reviewLink, portal: resolvedPortalLink } = resolveLinks({ portalLink, quoteReviewLink, hasPortalAccess });
   const subject = `Quote ${quoteNumber} from ${companyName}`;
 
   const htmlSections = [
@@ -53,6 +77,7 @@ export function buildQuoteSentEmailTemplate({
     `<li><strong>Valid Until:</strong> ${validUntil}</li>`,
     '</ul>',
     trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
+    reviewLink ? reviewButtonHtml(reviewLink) : '',
     resolvedPortalLink
       ? `<p>You can also review this quote in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
       : '',
@@ -66,6 +91,7 @@ export function buildQuoteSentEmailTemplate({
     `Total: ${formattedAmount}`,
     `Valid Until: ${validUntil}`,
     trimmedMessage ? `\n${trimmedMessage}` : '',
+    reviewLink ? `\nReview and approve online: ${reviewLink}` : '',
     resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',
     `\nThank you,\n${companyName}`,
   ];
@@ -81,6 +107,8 @@ export function buildQuoteReminderEmailTemplate({
   quote,
   companyName,
   portalLink,
+  quoteReviewLink,
+  hasPortalAccess,
   customMessage,
   locale,
 }: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
@@ -88,7 +116,7 @@ export function buildQuoteReminderEmailTemplate({
   const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD');
   const validUntil = formatQuoteDate(quote.valid_until ?? null, locale);
   const trimmedMessage = customMessage?.trim();
-  const resolvedPortalLink = portalLink?.trim();
+  const { reviewLink, portal: resolvedPortalLink } = resolveLinks({ portalLink, quoteReviewLink, hasPortalAccess });
   const subject = `Reminder: Quote ${quoteNumber} expires on ${validUntil}`;
 
   return {
@@ -97,6 +125,7 @@ export function buildQuoteReminderEmailTemplate({
       '<p>Hello,</p>',
       `<p>This is a reminder that quote <strong>${quoteNumber}</strong> for ${formattedAmount} expires on <strong>${validUntil}</strong>.</p>`,
       trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
+      reviewLink ? reviewButtonHtml(reviewLink) : '',
       resolvedPortalLink
         ? `<p>Review the quote in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
         : '',
@@ -107,6 +136,7 @@ export function buildQuoteReminderEmailTemplate({
       '',
       `This is a reminder that quote ${quoteNumber} for ${formattedAmount} expires on ${validUntil}.`,
       trimmedMessage ? `\n${trimmedMessage}` : '',
+      reviewLink ? `\nReview and approve online: ${reviewLink}` : '',
       resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',
       `\nThank you,\n${companyName}`,
     ].filter(Boolean).join('\n'),

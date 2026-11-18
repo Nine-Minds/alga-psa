@@ -70,8 +70,12 @@ describe('invoice designer: billed-time collection discoverability', () => {
     expect(resolveExtraBindingKeySuggestions('timeEntries')).toEqual(
       expect.arrayContaining(['item.description', 'item.serviceName', 'item.billedMinutes']),
     );
-    // Non-time tables keep the recurring-period suggestions untouched.
+    // Non-time tables keep the recurring-period suggestions, now led by the
+    // ready-made `servicePeriodLabel` range the standard templates render in
+    // their Service Period column; the raw start/end dates stay available for
+    // anyone laying out the two halves themselves.
     expect(resolveExtraBindingKeySuggestions('lineItems')).toEqual([
+      'item.servicePeriodLabel',
       'item.servicePeriodStart',
       'item.servicePeriodEnd',
       'item.billingTiming',

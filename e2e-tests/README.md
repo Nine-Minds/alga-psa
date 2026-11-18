@@ -69,6 +69,17 @@ web application; it does not provide Temporal, extension-runner, or Citus proof.
 `E2E_REVISION` to the tested checkout for local report attribution; CI supplies
 its actual checkout SHA. This metadata does not prove image digest provenance.
 
+`E2E_SHARD=<index>/<total>` runs one share of the journey files. The runner
+lists the whole collection, partitions the files heaviest-first using the
+measured durations in `journey-weights.json`, lists its own share and refuses
+to run unless that listing is exactly its assignment. Its evidence then
+declares `selection.mode: shard`; CI merges every shard of an edition back
+into one record with `scripts/merge-browser-shards.mjs` and reconciles it
+against the full collection. Unset, the runner executes everything, as before.
+After a run whose timings have drifted, refresh the profile from its merged
+`results.json` with `node scripts/update-browser-journey-weights.mjs
+<results.json>`; a stale entry only unbalances the shards.
+
 Both server Dockerfiles accept the client build override
 `NEXT_PUBLIC_FORCE_FEATURE_FLAGS` as a build argument and default to an empty
 override for normal builds. When an image is built with a forced flag, set

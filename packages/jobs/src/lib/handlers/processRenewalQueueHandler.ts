@@ -8,6 +8,8 @@ import {
   resolveRenewalTicketRouting,
 } from '@shared/billingClients/renewalTicket';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
+import { scheduleRenewalIssuancesForRolledCycle } from '@alga-psa/billing/services/prepaidBlockRenewalService';
+import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from '@alga-psa/billing/lib/prepaidBlockDates';
 import type { Knex } from 'knex';
 
 export interface RenewalQueueProcessorJobData extends Record<string, unknown> {
@@ -209,6 +211,54 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let automationErrorCount = 0;
   const nowIso = new Date().toISOString();
   const processedCycleKeys = new Set<string>();
+
+  // Prepaid Block renewal trigger (captain decision 1a). Detected from the assignment dates alone,
+  // independent of the decision-date horizon and of the stored renewal_cycle_* columns (after an
+  // evergreen anniversary the next decision date is a year out, so the queue loop below would not
+  // touch the row for months): an active assignment that continues and whose current cycle began
+  // after its start date and on or before today owes each trigger_on_renewal line a `renewal`
+  // block due on that cycle start. Idempotent per (line, assignment, cycle start); lines whose
+  // block config post-dates the cycle are skipped (no back-fill at deploy). A failure is logged and
+  // retried on the next run; it never blocks the queue processing.
+  const prepaidBlockBusinessDate = await resolvePrepaidBlockBusinessDate(knex, tenantId);
+  for (const row of candidateRows) {
+    const normalized = normalizeClientContract(row as any) as unknown as Record<string, unknown>;
+    const cycleStart = normalizeOptionalDateOnly(normalized.renewal_cycle_start);
+    const assignmentStart = toPrepaidBlockDateOnly((row as any).start_date);
+    if (!cycleStart || !assignmentStart || cycleStart <= assignmentStart || cycleStart > prepaidBlockBusinessDate) {
+      continue;
+    }
+    try {
+      const outcomes = await withTransaction(knex, async (trx: Knex.Transaction) => (
+        scheduleRenewalIssuancesForRolledCycle(trx, tenantId, {
+          clientContractId: (row as any).client_contract_id,
+          clientId: (row as any).client_id,
+          contractId: (row as any).contract_id,
+          endDate: (row as any).end_date,
+          newCycleStart: cycleStart,
+        })
+      ));
+      for (const outcome of outcomes) {
+        if (outcome.action === 'skipped_open_issuance' || outcome.action === 'skipped_pending_block') {
+          logger.info('Prepaid Block renewal issuance skipped; retried on the next run', {
+            tenantId,
+            clientContractId: (row as any).client_contract_id,
+            contractLineId: outcome.contractLineId,
+            reason: outcome.action,
+            openKind: 'openKind' in outcome ? outcome.openKind : undefined,
+            openDueDate: 'openDueDate' in outcome ? outcome.openDueDate : undefined,
+          });
+        }
+      }
+    } catch (error) {
+      logger.error('Prepaid Block renewal issuance failed; retried on the next run', {
+        tenantId,
+        clientContractId: (row as any).client_contract_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      automationErrorCount += 1;
+    }
+  }
 
   for (const row of candidateRows) {
     const normalized = normalizeClientContract(row as any) as unknown as Record<string, unknown>;

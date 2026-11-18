@@ -1,10 +1,28 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
 import { assertBoardScopedTicketStatusSelection } from '../lib/boardScopedTicketStatusValidation';
 import { deriveClientContractStatus } from './clientContractStatus';
+import { getTenantLocalToday } from './tenantLocalDate';
+
+export type ClientContractErrorCode = 'NOT_FOUND' | 'CONFLICT' | 'INVALID';
+
+/**
+ * Domain failure raised by the client-contract assignment engine. Callers (UI actions, REST API)
+ * map `code` to their own error surface instead of matching on message text.
+ */
+export class ClientContractError extends Error {
+  readonly code: ClientContractErrorCode;
+
+  constructor(code: ClientContractErrorCode, message: string) {
+    super(message);
+    this.name = 'ClientContractError';
+    this.code = code;
+  }
+}
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
@@ -33,7 +51,16 @@ const normalizeDateOnly = (value: unknown): string | undefined => {
   if (value === null || value === undefined) return undefined;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return undefined;
-    return value.toISOString().slice(0, 10);
+    // client_contracts.start_date / end_date are pg DATE columns and pg has no DATE (1082)
+    // parser, so the driver yields a Date at *server-local* midnight. Local getters reverse
+    // that; toISOString() would read the UTC day and be a day early east of UTC.
+    // LEVERAGE: friction pg-date-parsing — DATE columns arrive as local-midnight Dates, so every reader
+    // re-derives the calendar date by hand (same site: formatDbDate in TimeSheetService). A global 1082
+    // parser returning strings would remove this; the string branch below already handles that shape.
+    const year = String(value.getFullYear()).padStart(4, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
   if (typeof value !== 'string') return undefined;
 
@@ -75,17 +102,27 @@ const findMixedCurrencyActiveAssignment = async (
       end_date: 'cc.end_date',
       currency_code: 'c.currency_code',
       contract_name: 'c.contract_name',
+      contract_status: 'c.status',
     });
+
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
 
   const activeRow = rows.find((row: {
     start_date: string | null;
     end_date: string | null;
     currency_code?: string | null;
-  }) => deriveClientContractStatus({
-    isActive: true,
-    startDate: row.start_date,
-    endDate: row.end_date,
-  }) === 'active');
+    contract_status?: string | null;
+  }) => {
+    const status = deriveClientContractStatus({
+      isActive: true,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      now: today,
+    });
+    // 'scheduled' is live here: a confirmed future-start contract will bill, so it conflicts.
+    // Draft headers keep the previous behaviour (a future-start draft never conflicted).
+    return status === 'active' || (status === 'scheduled' && row.contract_status !== 'draft');
+  });
   if (!activeRow || typeof activeRow.currency_code !== 'string' || activeRow.currency_code.trim().length === 0) {
     return null;
   }
@@ -223,7 +260,10 @@ const withRenewalDefaultsJoin = (
   return query;
 };
 
-export const normalizeClientContract = (row: any): IClientContract => {
+export const normalizeClientContract = (
+  row: any,
+  options: { today?: string } = {}
+): IClientContract => {
   if (!row) return row;
 
   const normalized = { ...row } as Record<string, unknown>;
@@ -258,6 +298,13 @@ export const normalizeClientContract = (row: any): IClientContract => {
 
   const normalizedEndDate = normalizeDateOnly(normalized.end_date);
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
+  // start_date / end_date are DATE columns: pg returns them as a Date at server-local midnight,
+  // and normalizeDateOnly reads that Date with local getters to emit YYYY-MM-DD, so every
+  // consumer sees one representation whatever the server time zone.
+  if (normalizedStartDate !== undefined) normalized.start_date = normalizedStartDate;
+  if (normalizedEndDate !== undefined || normalized.end_date === null) {
+    normalized.end_date = normalizedEndDate ?? null;
+  }
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
   const isInactiveAssignment = normalized.is_active !== true;
@@ -309,6 +356,7 @@ export const normalizeClientContract = (row: any): IClientContract => {
     contractStatus: typeof normalized.contract_status === 'string'
       ? normalized.contract_status
       : undefined,
+    now: options.today,
   });
 
   delete normalized.tenant_default_renewal_mode;
@@ -356,7 +404,57 @@ export async function getClientContracts(
     ...RENEWAL_DEFAULT_SELECTIONS,
   ]);
 
-  return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
+  return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
+}
+
+/**
+ * Currency a new contract for `clientId` is billed in: the client's configured
+ * default, then the tenant default (default_billing_settings), then 'USD' as the
+ * last-resort default the contract record has always used. Shared by the contract
+ * wizard and the REST contract create so both resolve the same currency.
+ */
+export async function resolveClientContractCurrency(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<string> {
+  const db = tenantDb(knexOrTrx, tenant);
+  const clientRow = await db.table('clients')
+    .where({ client_id: clientId })
+    .select('default_currency_code')
+    .first();
+  if (clientRow?.default_currency_code) {
+    return clientRow.default_currency_code;
+  }
+  const billingSettings = await db.table('default_billing_settings')
+    .select('default_currency_code')
+    .first();
+  return billingSettings?.default_currency_code || 'USD';
+}
+
+/**
+ * Every client assignment of one contract (active or not), oldest first.
+ */
+export async function getClientContractsByContractId(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  contractId: string
+): Promise<IClientContract[]> {
+  const db = tenantDb(knexOrTrx, tenant);
+  const baseQuery = db.table('client_contracts as cc')
+    .where({ 'cc.contract_id': contractId })
+    .orderBy('cc.start_date', 'asc');
+  db.tenantJoin(baseQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id', { type: 'left' });
+
+  const rows = await withRenewalDefaultsJoin(db, baseQuery).select([
+    'cc.*',
+    'c.billing_frequency as contract_billing_frequency',
+    'c.status as contract_status',
+    ...RENEWAL_DEFAULT_SELECTIONS,
+  ]);
+
+  return rows.map(normalizeClientContract);
 }
 
 export async function getActiveClientContractsByClientIds(
@@ -383,7 +481,8 @@ export async function getActiveClientContractsByClientIds(
     ...RENEWAL_DEFAULT_SELECTIONS,
   ]);
 
-  return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
+  return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
 }
 
 export async function getClientContractById(
@@ -405,7 +504,7 @@ export async function getClientContractById(
     ])
     .first();
 
-  return row ? normalizeClientContract(row) : null;
+  return row ? normalizeClientContract(row, { today: await getTenantLocalToday(knexOrTrx, tenant) }) : null;
 }
 
 export async function getDetailedClientContract(
@@ -432,7 +531,9 @@ export async function getDetailedClientContract(
 
   if (!clientContract) return null;
 
-  const normalized = normalizeClientContract(clientContract);
+  const normalized = normalizeClientContract(clientContract, {
+    today: await getTenantLocalToday(knexOrTrx, tenant),
+  });
 
   const contractLinesQuery = db.table('client_contracts as cc');
   db.tenantJoin(contractLinesQuery, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
@@ -457,7 +558,7 @@ export async function createClientContractAssignment(
   const db = tenantDb(knexOrTrx, tenant);
   const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
   if (!clientExists) {
-    throw new Error(`Client ${input.client_id} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client ${input.client_id} not found`);
   }
 
   const contractQuery = db.table('contracts')
@@ -467,7 +568,7 @@ export async function createClientContractAssignment(
   }
   const contractExists = await contractQuery.first();
   if (!contractExists) {
-    throw new Error(`Contract ${input.contract_id} not found or inactive`);
+    throw new ClientContractError('NOT_FOUND', `Contract ${input.contract_id} not found or inactive`);
   }
 
   if (input.is_active) {
@@ -483,7 +584,7 @@ export async function createClientContractAssignment(
       const contractLabel = mixedCurrencyConflict.contract_name
         ? ` ("${mixedCurrencyConflict.contract_name}")`
         : '';
-      throw new Error(
+      throw new ClientContractError('CONFLICT', 
         `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
         `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
       );
@@ -499,7 +600,7 @@ export async function createClientContractAssignment(
       .where({ billing_profile_id: billingProfileId })
       .first('client_id');
     if (!profile || profile.client_id !== input.client_id) {
-      throw new Error('That billing profile belongs to a different client.');
+      throw new ClientContractError('INVALID', 'That billing profile belongs to a different client.');
     }
   }
 
@@ -582,7 +683,7 @@ export async function createClientContractAssignment(
   if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
 
   const [created] = await db.table<IClientContract>('client_contracts').insert(insertPayload).returning('*');
-  return normalizeClientContract(created);
+  return normalizeClientContract(created, { today: await getTenantLocalToday(knexOrTrx, tenant) });
 }
 
 export async function updateClientContractAssignment(
@@ -593,7 +694,7 @@ export async function updateClientContractAssignment(
 ): Promise<IClientContract> {
   const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
   if (!existing) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
   // Re-pointing a contract at another profile moves every charge it produces,
@@ -603,7 +704,7 @@ export async function updateClientContractAssignment(
       .where({ billing_profile_id: updateData.billing_profile_id })
       .first('client_id');
     if (!profile || profile.client_id !== existing.client_id) {
-      throw new Error('That billing profile belongs to a different client.');
+      throw new ClientContractError('INVALID', 'That billing profile belongs to a different client.');
     }
   }
 
@@ -640,7 +741,7 @@ export async function updateClientContractAssignment(
       .first();
 
     if (contract && contract.is_active) {
-      throw new Error('Start date cannot be changed for active contracts. Set the contract to draft first.');
+      throw new ClientContractError('CONFLICT', 'Start date cannot be changed for active contracts. Set the contract to draft first.');
     }
   }
 
@@ -650,10 +751,25 @@ export async function updateClientContractAssignment(
     .returning('*');
 
   if (!updated) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
-  return normalizeClientContract(updated);
+  return normalizeClientContract(updated, { today: await getTenantLocalToday(knexOrTrx, tenant) });
+}
+
+/**
+ * Activation was requested for an assignment that is already confirmed and active but has not
+ * started yet. Typed so the server-action boundary can map it to a localized expected error
+ * without matching on the message text.
+ */
+export class ContractAlreadyActiveScheduledError extends Error {
+  readonly startDate: string;
+
+  constructor(startDate: string) {
+    super(`Contract is already active and starts on ${startDate}; there is nothing to activate.`);
+    this.name = 'ContractAlreadyActiveScheduledError';
+    this.startDate = startDate;
+  }
 }
 
 /**
@@ -669,7 +785,7 @@ export async function activateClientContractAssignment(
 ): Promise<IClientContract> {
   const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
   if (!existing) {
-    throw new Error(`Client contract ${clientContractId} not found`);
+    throw new ClientContractError('NOT_FOUND', `Client contract ${clientContractId} not found`);
   }
 
   const db = tenantDb(knexOrTrx, tenant);
@@ -677,10 +793,19 @@ export async function activateClientContractAssignment(
     .where({ contract_id: existing.contract_id })
     .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name');
   if (!contract) {
-    throw new Error(`Contract ${existing.contract_id} not found`);
+    throw new ClientContractError('NOT_FOUND', `Contract ${existing.contract_id} not found`);
   }
 
   const needsHeaderActivation = contract.status === 'draft' || contract.is_active === false;
+
+  // Already confirmed and active but not started yet: activating would change nothing. Say so
+  // instead of reporting a success the user cannot see any effect of (activation never moves
+  // start_date; that is deliberately unchanged).
+  if (!needsHeaderActivation && existing.is_active && existing.assignment_status === 'scheduled') {
+    throw new ContractAlreadyActiveScheduledError(
+      tryNormalizeDateOnly(existing.start_date) ?? String(existing.start_date)
+    );
+  }
 
   if (needsHeaderActivation) {
     // Same rule createClientContractAssignment enforces: a client cannot hold active
@@ -695,7 +820,7 @@ export async function activateClientContractAssignment(
       const contractLabel = mixedCurrencyConflict.contract_name
         ? ` ("${mixedCurrencyConflict.contract_name}")`
         : '';
-      throw new Error(
+      throw new ClientContractError('CONFLICT', 
         `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
         `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
       );

@@ -10,10 +10,12 @@ import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from '@alga-psa/core';
+import { resolveTemplateAmountsForContract } from '@alga-psa/shared/billingClients/templateAmounts';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import {
   checkAndReactivateExpiredContract,
   createClientContractAssignment,
+  getTenantLocalToday,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -36,6 +38,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+// Tenant-local "today" for workflow status derivation (UTC fallback when no tenant timezone is set).
+const getWorkflowToday = async (tenant: string): Promise<string> => {
+  const { knex } = await createTenantKnex(tenant);
+  return getTenantLocalToday(knex, tenant);
+};
 
 const assertCanReadClientContracts = (user: any) =>
   assertMspPermission(
@@ -249,6 +257,7 @@ export const assignContractToClient = withAuth(async (
 
     const createdAt = clientContract.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: clientContract.is_active,
       startDate: clientContract.start_date,
       endDate: clientContract.end_date,
@@ -397,6 +406,7 @@ export const createClientContract = withAuth(async (
   if (createdForEvent) {
     const createdAt = createdForEvent.created_at ?? new Date().toISOString();
     const status = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: createdForEvent.is_active,
       startDate: createdForEvent.start_date,
       endDate: createdForEvent.end_date,
@@ -626,11 +636,13 @@ export const updateClientContract = withAuth(async (
     });
 
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
     });
     const newStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: updatedClientContract.is_active,
       startDate: updatedClientContract.start_date,
       endDate: updatedClientContract.end_date,
@@ -732,6 +744,7 @@ export const deactivateClientContract = withAuth(async (
 
     const changedAt = deactivatedContract.updated_at ?? new Date().toISOString();
     const previousStatus = deriveClientContractWorkflowStatus({
+      now: await getWorkflowToday(tenant),
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
       endDate: beforeContract.end_date,
@@ -840,6 +853,14 @@ export const applyContractToClient = withAuth(async (
         );
       }
 
+      // Resolve once in the contract's currency; no template amount crosses currencies.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        tenant,
+        templateContractId,
+        clientContract.contract_id
+      );
+
       for (const line of contractLines) {
         // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
         // Clone services and configuration from template to this contract line
@@ -849,7 +870,8 @@ export const applyContractToClient = withAuth(async (
           contractLineId: line.contract_line_id,
           templateContractId,
           overrideRate: line.custom_rate ?? null,
-          effectiveDate: clientContract.start_date ?? null
+          effectiveDate: clientContract.start_date ?? null,
+          amounts: templateAmounts
         });
       }
     });

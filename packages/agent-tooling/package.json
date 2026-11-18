@@ -30,6 +30,14 @@
     "./tools/definitions": {
       "import": "./src/tools/definitions.ts",
       "types": "./src/tools/definitions.ts"
+    },
+    "./invoke/buildAttachFileRequest": {
+      "import": "./src/invoke/buildAttachFileRequest.ts",
+      "types": "./src/invoke/buildAttachFileRequest.ts"
+    },
+    "./invoke/redactToolArguments": {
+      "import": "./src/invoke/redactToolArguments.ts",
+      "types": "./src/invoke/redactToolArguments.ts"
     }
   },
   "scripts": {

@@ -8,7 +8,12 @@ import { UnitOfMeasureInput } from "@alga-psa/ui/components/UnitOfMeasureInput";
 import { labelForUnitCode } from "@alga-psa/core/unitOfMeasure";
 import { dateFromString, dateToString } from "@alga-psa/ui/lib/dateInput";
 import { cn } from "@alga-psa/ui/lib/utils";
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+} from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useCurrencyFormat } from "@alga-psa/ui/lib";
 import type {
   ScenarioCatalogService,
   ScenarioAdjustment,
@@ -80,7 +85,7 @@ interface InlineRateEditorProps {
   onCommit: (cents: number | null) => void;
 }
 
-/** Click-to-edit rate: text button that swaps to a number input, edited in dollars. */
+/** Click-to-edit rate: text button that swaps to a number input, edited in major currency units. */
 const InlineRateEditor: React.FC<InlineRateEditorProps> = ({
   id,
   label,
@@ -262,6 +267,30 @@ function defaultConfiguration(
   }
   return { configuration_type: "Fixed", base_rate: null };
 }
+
+/**
+ * Wraps a money input with the contract currency symbol. Callers pass the
+ * simulator's working currency; the tenant default is never used here.
+ */
+const CurrencyAdornment: React.FC<{
+  currencyCode: string;
+  children: React.ReactNode;
+}> = ({ currencyCode, children }) => {
+  const { symbol } = useCurrencyFormat();
+  return (
+    <span className="relative min-w-0">
+      <span
+        data-testid="currency-adornment"
+        className="pointer-events-none absolute left-1.5 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--color-text-400))]"
+      >
+        {symbol(currencyCode)}
+      </span>
+      {children}
+    </span>
+  );
+};
+
+const adornedFieldClass = "w-full pl-5";
 
 const fieldClass =
   "min-w-0 rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-1.5 text-xs text-[rgb(var(--color-text-800))]";
@@ -466,13 +495,23 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                           { defaultValue: line.billing_frequency },
                         ),
                         timing:
-                          line.billing_timing === "advance"
+                          resolveEffectiveBillingTiming(
+                            line.contract_line_type,
+                            line.billing_timing,
+                          ) === "advance"
                             ? t("contractSimulator.scenario.timing.advance", {
                                 defaultValue: "Bill in advance",
                               })
-                            : t("contractSimulator.scenario.timing.arrears", {
-                                defaultValue: "Bill in arrears",
-                              }),
+                            : !isAdvanceTimingAllowedForLineType(
+                                  line.contract_line_type,
+                                )
+                              ? t(
+                                  "contractSimulator.scenario.timing.arrearsOnly",
+                                  { defaultValue: "Billed in arrears" },
+                                )
+                              : t("contractSimulator.scenario.timing.arrears", {
+                                  defaultValue: "Bill in arrears",
+                                }),
                         services:
                           line.services.length === 1
                             ? t("contractSimulator.scenario.oneService", {
@@ -591,6 +630,10 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                             const type = event.target
                               .value as ScenarioLine["contract_line_type"];
                             draft.contract_line_type = type;
+                            draft.billing_timing = resolveEffectiveBillingTiming(
+                              type,
+                              draft.billing_timing,
+                            );
                             draft.services = draft.services.map((service) =>
                               service.item_kind === "product" ||
                               service.configuration.configuration_type ===
@@ -657,39 +700,52 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                         ))}
                       </select>
                     </label>
-                    <label className={fieldLabelClass}>
-                      {t("contractSimulator.scenario.fields.billingTiming", {
-                        defaultValue: "Billing timing",
-                      })}
-                      <select
-                        aria-label={t(
-                          "contractSimulator.scenario.fields.billingTiming",
-                          {
-                            defaultValue: "Billing timing",
-                          },
-                        )}
-                        className={fieldClass}
-                        value={line.billing_timing}
-                        onChange={(event) =>
-                          updateLine(line.key, (draft) => {
-                            draft.billing_timing = event.target.value as
-                              | "arrears"
-                              | "advance";
-                          })
-                        }
-                      >
-                        <option value="advance">
-                          {t("contractSimulator.scenario.timing.advance", {
-                            defaultValue: "Bill in advance",
-                          })}
-                        </option>
-                        <option value="arrears">
+                    {isAdvanceTimingAllowedForLineType(line.contract_line_type) ? (
+                      <label className={fieldLabelClass}>
+                        {t("contractSimulator.scenario.fields.billingTiming", {
+                          defaultValue: "Billing timing",
+                        })}
+                        <select
+                          aria-label={t(
+                            "contractSimulator.scenario.fields.billingTiming",
+                            {
+                              defaultValue: "Billing timing",
+                            },
+                          )}
+                          className={fieldClass}
+                          value={line.billing_timing}
+                          onChange={(event) =>
+                            updateLine(line.key, (draft) => {
+                              draft.billing_timing = event.target.value as
+                                | "arrears"
+                                | "advance";
+                            })
+                          }
+                        >
+                          <option value="advance">
+                            {t("contractSimulator.scenario.timing.advance", {
+                              defaultValue: "Bill in advance",
+                            })}
+                          </option>
+                          <option value="arrears">
+                            {t("contractSimulator.scenario.timing.arrears", {
+                              defaultValue: "Bill in arrears",
+                            })}
+                          </option>
+                        </select>
+                      </label>
+                    ) : (
+                      <div className={fieldLabelClass}>
+                        {t("contractSimulator.scenario.fields.billingTiming", {
+                          defaultValue: "Billing timing",
+                        })}
+                        <span className="mt-1 block text-sm text-[rgb(var(--color-text-700))]">
                           {t("contractSimulator.scenario.timing.arrears", {
                             defaultValue: "Bill in arrears",
                           })}
-                        </option>
-                      </select>
-                    </label>
+                        </span>
+                      </div>
+                    )}
                     <label className={fieldLabelClass}>
                       {t("contractSimulator.scenario.fields.cadenceOwner", {
                         defaultValue: "Billing schedule",
@@ -810,35 +866,37 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                       </label>
                       <label className={fieldLabelClass}>
                         {t("contractSimulator.scenario.fields.overtimeRate", {
-                          defaultValue: "Overtime rate ($/hr)",
+                          defaultValue: "Overtime rate per hour",
                         })}
-                        <input
-                          aria-label={t(
-                            "contractSimulator.scenario.fields.overtimeRate",
-                            { defaultValue: "Overtime rate dollars" },
-                          )}
-                          type="number"
-                          className={fieldClass}
-                          placeholder={t(
-                            "contractSimulator.scenario.placeholders.overtimeRate",
-                            { defaultValue: "overtime $/hr" },
-                          )}
-                          value={
-                            line.overtime_rate == null
-                              ? ""
-                              : line.overtime_rate / 100
-                          }
-                          onChange={(event) =>
-                            updateLine(line.key, (draft) => {
-                              draft.overtime_rate =
-                                event.target.value === ""
-                                  ? null
-                                  : Math.round(
-                                      Number(event.target.value) * 100,
-                                    );
-                            })
-                          }
-                        />
+                        <CurrencyAdornment currencyCode={currencyCode}>
+                          <input
+                            aria-label={t(
+                              "contractSimulator.scenario.fields.overtimeRate",
+                              { defaultValue: "Overtime rate per hour" },
+                            )}
+                            type="number"
+                            className={`${fieldClass} ${adornedFieldClass}`}
+                            placeholder={t(
+                              "contractSimulator.scenario.placeholders.overtimeRate",
+                              { defaultValue: "overtime rate per hour" },
+                            )}
+                            value={
+                              line.overtime_rate == null
+                                ? ""
+                                : line.overtime_rate / 100
+                            }
+                            onChange={(event) =>
+                              updateLine(line.key, (draft) => {
+                                draft.overtime_rate =
+                                  event.target.value === ""
+                                    ? null
+                                    : Math.round(
+                                        Number(event.target.value) * 100,
+                                      );
+                              })
+                            }
+                          />
+                        </CurrencyAdornment>
                       </label>
                     </div>
                   )}
@@ -1161,7 +1219,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                 <div className="mb-0.5 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
                                   <span>Minimum</span>
                                   <span>Maximum</span>
-                                  <span>Rate ($)</span>
+                                  <span>{t("contractSimulator.scenario.columns.rate", { defaultValue: "Rate" })}</span>
                                   <span className="w-3" />
                                 </div>
                                 <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1">
@@ -1210,28 +1268,30 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                                       })
                                     }
                                   />
-                                  <input
-                                    aria-label={t(
-                                      "contractSimulator.scenario.fields.tierRate",
-                                      { defaultValue: "Tier rate dollars" },
-                                    )}
-                                    type="number"
-                                    className={fieldClass}
-                                    value={tier.rate / 100}
-                                    onChange={(event) =>
-                                      updateService((draft) => {
-                                        if (
-                                          draft.configuration
-                                            .configuration_type === "Usage"
-                                        )
-                                          draft.configuration.tiers[
-                                            tierIndex
-                                          ].rate = Math.round(
-                                            Number(event.target.value) * 100,
-                                          );
-                                      })
-                                    }
-                                  />
+                                  <CurrencyAdornment currencyCode={currencyCode}>
+                                    <input
+                                      aria-label={t(
+                                        "contractSimulator.scenario.fields.tierRate",
+                                        { defaultValue: "Tier rate" },
+                                      )}
+                                      type="number"
+                                      className={`${fieldClass} ${adornedFieldClass}`}
+                                      value={tier.rate / 100}
+                                      onChange={(event) =>
+                                        updateService((draft) => {
+                                          if (
+                                            draft.configuration
+                                              .configuration_type === "Usage"
+                                          )
+                                            draft.configuration.tiers[
+                                              tierIndex
+                                            ].rate = Math.round(
+                                              Number(event.target.value) * 100,
+                                            );
+                                        })
+                                      }
+                                    />
+                                  </CurrencyAdornment>
                                   <button
                                     type="button"
                                     aria-label={t(
@@ -1461,7 +1521,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
               <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
                 <span>Starts</span>
                 <span>Ends</span>
-                <span>Rate ($)</span>
+                <span>{t("contractSimulator.scenario.columns.rate", { defaultValue: "Rate" })}</span>
                 <span className="w-3" />
               </div>
             )}
@@ -1513,38 +1573,40 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                     )
                   }
                 />
-                <input
-                  aria-label={t(
-                    "contractSimulator.scenario.fields.scheduleRate",
-                    {
-                      defaultValue: "Schedule rate dollars",
-                    },
-                  )}
-                  type="number"
-                  className={fieldClass}
-                  value={
-                    schedule.custom_rate == null
-                      ? ""
-                      : schedule.custom_rate / 100
-                  }
-                  onChange={(event) =>
-                    onPricingSchedulesChange(
-                      pricingSchedules.map((candidate, candidateIndex) =>
-                        candidateIndex === index
-                          ? {
-                              ...candidate,
-                              custom_rate:
-                                event.target.value === ""
-                                  ? null
-                                  : Math.round(
-                                      Number(event.target.value) * 100,
-                                    ),
-                            }
-                          : candidate,
-                      ),
-                    )
-                  }
-                />
+                <CurrencyAdornment currencyCode={currencyCode}>
+                  <input
+                    aria-label={t(
+                      "contractSimulator.scenario.fields.scheduleRate",
+                      {
+                        defaultValue: "Schedule rate",
+                      },
+                    )}
+                    type="number"
+                    className={`${fieldClass} ${adornedFieldClass}`}
+                    value={
+                      schedule.custom_rate == null
+                        ? ""
+                        : schedule.custom_rate / 100
+                    }
+                    onChange={(event) =>
+                      onPricingSchedulesChange(
+                        pricingSchedules.map((candidate, candidateIndex) =>
+                          candidateIndex === index
+                            ? {
+                                ...candidate,
+                                custom_rate:
+                                  event.target.value === ""
+                                    ? null
+                                    : Math.round(
+                                        Number(event.target.value) * 100,
+                                      ),
+                              }
+                            : candidate,
+                        ),
+                      )
+                    }
+                  />
+                </CurrencyAdornment>
                 <button
                   type="button"
                   aria-label={t("contractSimulator.scenario.removeSchedule", {
@@ -1787,7 +1849,7 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
             {adjustments.length > 0 && (
               <div className="mt-2 grid grid-cols-[1.4fr_0.8fr_0.8fr_auto_auto] gap-1 text-[9px] text-[rgb(var(--color-text-400))]">
                 <span>{t("contractSimulator.scenario.columns.description", { defaultValue: "Description" })}</span>
-                <span>{t("contractSimulator.scenario.columns.amount", { defaultValue: "Amount ($)" })}</span>
+                <span>{t("contractSimulator.scenario.columns.amount", { defaultValue: "Amount" })}</span>
                 <span>{t("contractSimulator.scenario.columns.billingPeriod", { defaultValue: "Billing period" })}</span>
                 <span>{t("contractSimulator.scenario.columns.timing", { defaultValue: "Timing" })}</span>
                 <span className="w-3" />
@@ -1815,29 +1877,31 @@ const ScenarioPanel: React.FC<ScenarioPanelProps> = ({
                     )
                   }
                 />
-                <input
-                  aria-label={t(
-                    "contractSimulator.scenario.fields.adjustmentAmount",
-                    { defaultValue: "Adjustment amount dollars" },
-                  )}
-                  type="number"
-                  className={fieldClass}
-                  value={adjustment.amount / 100}
-                  onChange={(event) =>
-                    onAdjustmentsChange(
-                      adjustments.map((candidate, candidateIndex) =>
-                        candidateIndex === index
-                          ? {
-                              ...candidate,
-                              amount: Math.round(
-                                Number(event.target.value) * 100,
-                              ),
-                            }
-                          : candidate,
-                      ),
-                    )
-                  }
-                />
+                <CurrencyAdornment currencyCode={currencyCode}>
+                  <input
+                    aria-label={t(
+                      "contractSimulator.scenario.fields.adjustmentAmount",
+                      { defaultValue: "Adjustment amount" },
+                    )}
+                    type="number"
+                    className={`${fieldClass} ${adornedFieldClass}`}
+                    value={adjustment.amount / 100}
+                    onChange={(event) =>
+                      onAdjustmentsChange(
+                        adjustments.map((candidate, candidateIndex) =>
+                          candidateIndex === index
+                            ? {
+                                ...candidate,
+                                amount: Math.round(
+                                  Number(event.target.value) * 100,
+                                ),
+                              }
+                            : candidate,
+                        ),
+                      )
+                    }
+                  />
+                </CurrencyAdornment>
                 <input
                   aria-label={t(
                     "contractSimulator.scenario.fields.adjustmentPeriod",

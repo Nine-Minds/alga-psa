@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const timeSheetController = new ApiTimeSheetController();
     const req = request as any;
     req.params = params;
-    return await timeSheetController.list()(req);
+    return await timeSheetController.getEntries()(req);
   } catch (error) {
     return handleApiError(error);
   }

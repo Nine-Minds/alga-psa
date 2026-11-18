@@ -196,8 +196,8 @@ export const loanersOutReport = withAuth(async (user, { tenant }): Promise<Loane
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const latestLoanOut = trx('stock_movements')
       .where({ tenant, movement_type: 'loan_out' })
-      .groupBy('unit_id')
-      .select('unit_id')
+      .groupBy('tenant', 'unit_id')
+      .select('tenant', 'unit_id')
       .max('created_at as loaned_at')
       .as('lo');
     return trx('stock_units as su')
@@ -207,7 +207,9 @@ export const loanersOutReport = withAuth(async (user, { tenant }): Promise<Loane
       .leftJoin('clients as c', function () {
         this.on('su.client_id', '=', 'c.client_id').andOn('su.tenant', '=', 'c.tenant');
       })
-      .leftJoin(latestLoanOut, 'lo.unit_id', 'su.unit_id')
+      .leftJoin(latestLoanOut, function () {
+        this.on('lo.unit_id', '=', 'su.unit_id').andOn('lo.tenant', '=', 'su.tenant');
+      })
       .where({ 'su.tenant': tenant, 'su.status': 'on_loan' })
       .select(
         'su.unit_id',

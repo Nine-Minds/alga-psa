@@ -273,6 +273,45 @@ describe('Ticket bundling integration', () => {
     await db?.destroy().catch(() => undefined);
   });
 
+  it('getConsolidatedTicketData returns only the ticket client, never the tenant client list', async () => {
+    const tag = uuidv4().slice(0, 6);
+    const ticketClientName = `Only Client ${tag}`;
+    const ticketClientId = await createClient(db, tenantId, ticketClientName);
+    const otherClients: Array<{ id: string; name: string }> = [];
+    for (let i = 0; i < 4; i += 1) {
+      const name = `Unrelated Client ${tag} ${i}`;
+      otherClients.push({ id: await createClient(db, tenantId, name), name });
+    }
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      ticketNumber: `CLN-${tag}`,
+      title: 'Client list probe',
+      clientId: ticketClientId,
+      contactId: null as any,
+      statusId: statusOpenId,
+      priorityId,
+      boardId,
+    });
+
+    const data = await runWithTenant(tenantId, async () =>
+      getConsolidatedTicketData(ticketId)
+    );
+
+    expect(data).not.toHaveProperty('clients');
+    expect(data.client?.client_id).toBe(ticketClientId);
+    expect(data.client?.client_name).toBe(ticketClientName);
+
+    // None of the other seeded clients may appear anywhere in the payload.
+    const payload = JSON.stringify(data);
+    for (const other of otherClients) {
+      expect(payload).not.toContain(other.id);
+      expect(payload).not.toContain(other.name);
+    }
+  });
+
   it('enforces permissions for bundle operations', async () => {
     const clientA = await createClient(db, tenantId, `Perm Client ${uuidv4().slice(0, 6)}`);
     const contactA = await createContact(db, tenantId, clientA, `perm-${uuidv4().slice(0, 6)}@example.com`);
@@ -484,7 +523,7 @@ describe('Ticket bundling integration', () => {
     expect(childAfter?.priority_id).toBe(nextPriorityId);
 
     const childWorkflowUpdateResult = await runWithTenant(tenantId, async () => {
-      return updateTicketWithCache(childId, { status_id: statusOpenId }, internalUser as any);
+      return updateTicketWithCache(childId, { status_id: statusOpenId });
     });
     expect(childWorkflowUpdateResult).toMatchObject({
       actionError: 'This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.',
@@ -553,7 +592,7 @@ describe('Ticket bundling integration', () => {
 
     // The child renderer resolves the agent, not Unknown User.
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const resolvedChildAuthor = resolveCommentAuthor(mirrored, {
       userMap: childData.userMap,
@@ -653,7 +692,7 @@ describe('Ticket bundling integration', () => {
     expect(mirrored?.author_type).toBe('internal');
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     // The contact id is carried onto the child; when the user record is not
     // resolvable it is the contact map that renders the author.
@@ -736,7 +775,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const childComments = childData.comments as any[];
     const mirrored = childComments.find((comment) => comment.comment_id === mirroredCommentId);
@@ -798,7 +837,7 @@ describe('Ticket bundling integration', () => {
     );
 
     const resolutionData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(resolutionChildId, internalUser as any)
+      getConsolidatedTicketData(resolutionChildId)
     );
     const resolutionMirror = (resolutionData.comments as any[]).find((comment) => comment.is_system_generated);
     expect(resolutionMirror).toBeTruthy();
@@ -1218,6 +1257,146 @@ describe('Ticket bundling integration', () => {
     });
   });
 
+  describe('child workflow lock follows the master mode', () => {
+    const setup = async (mode: 'link_only' | 'sync_updates' | 'no_row') => {
+      const scopedDb = tenantDb(db, tenantId);
+      const clientA = await createClient(db, tenantId, `LK ${uuidv4().slice(0, 6)}`);
+      const contactA = await createContact(db, tenantId, clientA, `lk-${uuidv4().slice(0, 6)}@example.com`);
+      const masterId = uuidv4();
+      const childId = uuidv4();
+      await insertTicket(db, { tenant: tenantId, ticketId: masterId, ticketNumber: `LK-${uuidv4().slice(0, 6)}`, title: 'Master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+      await insertTicket(db, { tenant: tenantId, ticketId: childId, ticketNumber: `LK-${uuidv4().slice(0, 6)}`, title: 'Child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+      await runWithTenant(tenantId, async () => {
+        await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: mode === 'sync_updates' ? 'sync_updates' : 'link_only' }, internalUser as any);
+      });
+      if (mode === 'no_row') {
+        await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).delete();
+      }
+      return { scopedDb, masterId, childId };
+    };
+
+    it.each(['link_only', 'no_row'] as const)('%s child can change status, assignee and priority (server action)', async (mode) => {
+      const { scopedDb, childId } = await setup(mode);
+      const other = await scopedDb.table('priorities').andWhereNot({ priority_id: priorityId }).first();
+      // Without a second priority the priority assertion below would prove nothing.
+      expect(other?.priority_id).toBeTruthy();
+      const result = await runWithTenant(tenantId, () =>
+        updateTicketWithCache(
+          childId,
+          { status_id: statusClosedId, assigned_to: internalUser.user_id, priority_id: other.priority_id },
+        )
+      );
+      expect(result).not.toMatchObject({ actionError: expect.anything() });
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusClosedId);
+      expect(child?.assigned_to).toBe(internalUser.user_id);
+      expect(child?.priority_id).toBe(other.priority_id);
+    });
+
+    it('sync_updates child is rejected with the lock message (server action)', async () => {
+      const { childId } = await setup('sync_updates');
+      const result = await runWithTenant(tenantId, () =>
+        updateTicketWithCache(childId, { assigned_to: internalUser.user_id })
+      );
+      expect(result).toMatchObject({
+        actionError: 'This ticket is bundled; workflow fields are locked (assigned_to). Update the master ticket instead.',
+      });
+    });
+
+    it.each(['link_only', 'no_row'] as const)('%s child can change workflow fields (REST TicketService.update)', async (mode) => {
+      const { scopedDb, childId } = await setup(mode);
+      const service = new TicketService();
+      await runWithTenant(tenantId, async () => {
+        await service.update(childId, { status_id: statusClosedId, assigned_to: internalUser.user_id }, { tenant: tenantId, userId: internalUser.user_id });
+      });
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusClosedId);
+      expect(child?.assigned_to).toBe(internalUser.user_id);
+    });
+
+    it('sync_updates child is rejected (REST TicketService.update)', async () => {
+      const { childId } = await setup('sync_updates');
+      const service = new TicketService();
+      const rejection = await runWithTenant(tenantId, async () =>
+        service.update(childId, { status_id: statusClosedId }, { tenant: tenantId, userId: internalUser.user_id })
+          .then(() => null, (error: unknown) => error));
+      expect(rejection).toBeInstanceOf(ValidationError);
+    });
+  });
+
+  describe('switching a bundle to sync_updates', () => {
+    const setupClosedMaster = async (mode: 'link_only' | 'sync_updates' = 'link_only') => {
+      const scopedDb = tenantDb(db, tenantId);
+      const clientA = await createClient(db, tenantId, `MS ${uuidv4().slice(0, 6)}`);
+      const contactA = await createContact(db, tenantId, clientA, `ms-${uuidv4().slice(0, 6)}@example.com`);
+      const masterId = uuidv4();
+      const childId = uuidv4();
+      await insertTicket(db, { tenant: tenantId, ticketId: masterId, ticketNumber: `MS-${uuidv4().slice(0, 6)}`, title: 'Master', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+      await insertTicket(db, { tenant: tenantId, ticketId: childId, ticketNumber: `MS-${uuidv4().slice(0, 6)}`, title: 'Child', clientId: clientA, contactId: contactA, statusId: statusOpenId, priorityId, boardId });
+      await runWithTenant(tenantId, async () => {
+        await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode }, internalUser as any);
+      });
+      await closeTicketRow(db, tenantId, masterId, statusClosedId, internalUser.user_id);
+      return { scopedDb, masterId, childId };
+    };
+
+    it('closed master without on_closed_master returns 409 and changes nothing (REST)', async () => {
+      const { scopedDb, masterId, childId } = await setupClosedMaster();
+      const service = new TicketService();
+      const context = { tenant: tenantId, userId: internalUser.user_id, user: internalUser };
+      await runWithTenant(tenantId, async () => {
+        await expect(
+          service.updateBundleSettings(context, { masterTicketId: masterId, mode: 'sync_updates' })
+        ).rejects.toMatchObject({ statusCode: 409, message: expect.stringMatching(/on_closed_master/) });
+      });
+      const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
+      expect(settings?.mode).toBe('link_only');
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusOpenId);
+    });
+
+    it('apply_resolution closes the open children and switches the mode (action)', async () => {
+      const { scopedDb, masterId, childId } = await setupClosedMaster();
+      await runWithTenant(tenantId, () =>
+        updateBundleSettingsAction({ masterTicketId: masterId, mode: 'sync_updates', onClosedMaster: 'apply_resolution' }, internalUser as any)
+      );
+      const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
+      expect(settings?.mode).toBe('sync_updates');
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusClosedId);
+      expect(child?.is_closed).toBe(true);
+    });
+
+    it('keep_closed switches the mode and leaves the children untouched (action)', async () => {
+      const { scopedDb, masterId, childId } = await setupClosedMaster();
+      await runWithTenant(tenantId, () =>
+        updateBundleSettingsAction({ masterTicketId: masterId, mode: 'sync_updates', onClosedMaster: 'keep_closed' }, internalUser as any)
+      );
+      const settings = await scopedDb.table('ticket_bundle_settings').where({ master_ticket_id: masterId }).first();
+      expect(settings?.mode).toBe('sync_updates');
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusOpenId);
+      expect(child?.is_closed).toBeFalsy();
+    });
+
+    it('switching to link_only changes no child data, and an open master switches without closing children', async () => {
+      const { scopedDb, masterId, childId } = await setupClosedMaster('sync_updates');
+      await runWithTenant(tenantId, () =>
+        updateBundleSettingsAction({ masterTicketId: masterId, mode: 'link_only' }, internalUser as any)
+      );
+      const child = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
+      expect(child?.status_id).toBe(statusOpenId);
+
+      const open = await setupClosedMaster();
+      await scopedDb.table('tickets').where({ ticket_id: open.masterId }).update({ status_id: statusOpenId, is_closed: false, closed_at: null, closed_by: null });
+      await runWithTenant(tenantId, () =>
+        updateBundleSettingsAction({ masterTicketId: open.masterId, mode: 'sync_updates' }, internalUser as any)
+      );
+      const openChild = await scopedDb.table('tickets').where({ ticket_id: open.childId }).first();
+      expect(openChild?.status_id).toBe(statusOpenId);
+    });
+  });
+
   it('T011: list rows and consolidated data expose the open-child count', async () => {
     const scopedDb = tenantDb(db, tenantId);
     const clientA = await createClient(db, tenantId, `CT ${uuidv4().slice(0, 6)}`);
@@ -1245,7 +1424,7 @@ describe('Ticket bundling integration', () => {
     const masterRow = (listResult.tickets ?? []).find((t: any) => t.ticket_id === masterId);
     expect(masterRow?.bundle_open_child_count).toBe(2);
 
-    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId, internalUser as any));
+    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId));
     expect(consolidated.bundle.openChildrenCount).toBe(2);
     const consolidatedChild = (consolidated.bundle.children ?? []).find((c: any) => c.ticket_id === child1Id);
     expect(consolidatedChild?.is_closed).toBe(false);
@@ -1315,7 +1494,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const consolidated = await runWithTenant(tenantId, async () => {
-      return getConsolidatedTicketData(masterId, internalUser as any);
+      return getConsolidatedTicketData(masterId);
     });
 
     expect(Array.isArray(consolidated.aggregatedChildClientComments)).toBe(true);

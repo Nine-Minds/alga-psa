@@ -133,11 +133,12 @@ const { gmailAdapterMock, googleProviderConfigMock, microsoftFetchMock, microsof
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
-  GmailAdapter: vi.fn(() => gmailAdapterMock),
+  GmailAdapter: vi.fn(function () { return gmailAdapterMock; }),
 }));
 
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
-  MicrosoftGraphAdapter: vi.fn(() => microsoftGraphAdapterMock),
+  // vitest 4 calls mock implementations with `new`; arrow functions cannot be constructed.
+  MicrosoftGraphAdapter: vi.fn(function () { return microsoftGraphAdapterMock; }),
 }));
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor', () => ({

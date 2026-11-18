@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 import { createComment, updateComment, findCommentById } from '../../../actions/comment-actions/commentActions';
@@ -15,7 +15,11 @@ const {
   toastSuccessMock,
   toastErrorMock,
   getDocumentsMock,
+  getTicketLayoutPreferenceMock,
+  setTicketLayoutPreferenceMock,
 } = vi.hoisted(() => ({
+  getTicketLayoutPreferenceMock: vi.fn(),
+  setTicketLayoutPreferenceMock: vi.fn().mockResolvedValue(undefined),
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
@@ -28,6 +32,7 @@ let conversationProps: any;
 let ticketInfoDirtyFields: string[] = [];
 let ticketPropertiesDirtyFields: string[] = [];
 let ticketInfoLocalFieldValues: Record<string, string> = {};
+let ticketInfoSaveChanges: ((changes: Record<string, unknown>) => Promise<boolean>) | undefined;
 let liveTicketContext = {
   enabled: true,
   presence: [] as Array<{ userId: string; displayName: string; avatarUrl?: string | null; color: string }>,
@@ -231,6 +236,17 @@ vi.mock('@alga-psa/teams/actions', () => ({
   isTeamActionError: () => false,
 }));
 
+// The Grid body is a separate composition; these specs only need to know it mounted.
+vi.mock('../bento/TicketBentoLayout', () => ({
+  __esModule: true,
+  default: () => <div data-testid="grid-layout" />,
+}));
+
+vi.mock('../../../actions/ticketLayoutPreference', () => ({
+  getTicketLayoutPreference: (...args: unknown[]) => getTicketLayoutPreferenceMock(...args),
+  setTicketLayoutPreference: (...args: unknown[]) => setTicketLayoutPreferenceMock(...args),
+}));
+
 vi.mock('../../../actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: vi
     .fn()
@@ -278,14 +294,17 @@ vi.mock('../TicketInfo', () => ({
     liveFieldConflicts = {},
     onKeepLiveConflict,
     onTakeLiveConflict,
+    onSaveChanges,
   }: {
-    ticket: { status_id?: string; priority_id?: string };
+    ticket: { status_id?: string; priority_id?: string; assigned_to?: string | null; board_id?: string };
+    onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
     onLiveDirtyFieldsChange?: (fields: string[]) => void;
     liveHighlightedFields?: string[];
     liveFieldConflicts?: Record<string, unknown>;
     onKeepLiveConflict?: (field: string) => void;
     onTakeLiveConflict?: (field: string) => void;
   }) {
+    ticketInfoSaveChanges = onSaveChanges;
     React.useEffect(() => {
       onLiveDirtyFieldsChange?.(ticketInfoDirtyFields);
       return () => onLiveDirtyFieldsChange?.([]);
@@ -300,6 +319,7 @@ vi.mock('../TicketInfo', () => ({
 
     return (
       <div>
+        <div data-testid="ticket-info-placement" data-board={ticket.board_id ?? ''} data-assigned={ticket.assigned_to ?? ''} />
         <div
           data-testid="ticket-info-status"
           data-status={displayedStatus}
@@ -489,7 +509,7 @@ describe('TicketDetails remote live updates', () => {
     vi.mocked(createComment).mockResolvedValue(comment as any);
     vi.mocked(updateComment).mockResolvedValue(comment as any);
     vi.mocked(findCommentById).mockResolvedValue(comment as any);
-    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(undefined) : undefined;
+    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(true) : undefined;
     await act(async () => { renderTicketDetails({ initialDocuments: [draft], onAddComment }); });
     expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([draft]));
     getDocumentsMock.mockResolvedValue([claimed]);
@@ -854,5 +874,67 @@ describe('TicketDetails remote live updates', () => {
     });
 
     expect(routerPushMock).toHaveBeenCalledWith('/msp/tickets');
+  });
+
+  describe('a local save that moves the ticket', () => {
+    const seatTicket = { ...baseTicket, assigned_to: 'seat-tech-1' };
+
+    it('re-reads the ticket so an assignee the server cleared on the move is shown', async () => {
+      const onBatchTicketUpdate = vi.fn().mockResolvedValue(true);
+      getTicketByIdMock.mockResolvedValue({ ...seatTicket, board_id: 'board-2', status_id: 'status-2', assigned_to: null });
+      await act(async () => { renderTicketDetails({ initialTicket: seatTicket, onBatchTicketUpdate }); });
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', 'seat-tech-1');
+
+      let saved: boolean | undefined;
+      await act(async () => { saved = await ticketInfoSaveChanges!({ board_id: 'board-2', status_id: 'status-2' }); });
+
+      expect(saved).toBe(true);
+      expect(onBatchTicketUpdate).toHaveBeenCalledWith({ board_id: 'board-2', status_id: 'status-2' }, undefined);
+      expect(getTicketByIdMock).toHaveBeenCalledWith('ticket-1');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-board', 'board-2');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', '');
+    });
+
+    it('keeps its own merge, without a re-read, for a save that does not move the ticket', async () => {
+      const onBatchTicketUpdate = vi.fn().mockResolvedValue(true);
+      await act(async () => { renderTicketDetails({ initialTicket: seatTicket, onBatchTicketUpdate }); });
+      getTicketByIdMock.mockClear();
+
+      await act(async () => { await ticketInfoSaveChanges!({ priority_id: 'priority-2' }); });
+
+      expect(onBatchTicketUpdate).toHaveBeenCalledWith({ priority_id: 'priority-2' }, undefined);
+      expect(getTicketByIdMock).not.toHaveBeenCalled();
+      expect(screen.getByTestId('ticket-info-priority')).toHaveAttribute('data-priority', 'priority-2');
+      expect(screen.getByTestId('ticket-info-placement')).toHaveAttribute('data-assigned', 'seat-tech-1');
+    });
+  });
+
+  describe('stored layout preference', () => {
+    const unbootstrapped = { ...entryLayoutBootstrap, layoutPreference: null };
+
+    it('applies the stored layout when the user has not chosen one', async () => {
+      getTicketLayoutPreferenceMock.mockResolvedValueOnce({ layout: 'entry', timelineOrder: 'asc' });
+      renderTicketDetails({ bootstrap: unbootstrapped });
+      // Grid is the default until the stored preference arrives.
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+      await act(async () => {});
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByTestId('grid-layout')).toBeNull();
+    });
+
+    it('keeps an explicit layout choice made before the stored preference loads', async () => {
+      let resolveStored: (value: { layout: 'grid' | 'entry'; timelineOrder: 'asc' | 'desc' }) => void = () => {};
+      getTicketLayoutPreferenceMock.mockReturnValueOnce(new Promise((resolve) => { resolveStored = resolve; }));
+      renderTicketDetails({ bootstrap: unbootstrapped });
+      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: 'Entry' }));
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      await act(async () => { resolveStored({ layout: 'grid', timelineOrder: 'desc' }); });
+      // The late stored value ("grid") must not unmount the Entry screen the user chose.
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.queryByTestId('grid-layout')).toBeNull();
+      expect(setTicketLayoutPreferenceMock).toHaveBeenCalledWith({ layout: 'entry' });
+    });
   });
 });

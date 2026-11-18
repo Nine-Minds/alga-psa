@@ -28,8 +28,8 @@ const RedisConfigSchema = z.object({
       retries: z.number().int().positive().default(10),
       initialDelay: z.number().int().positive().default(100), // ms
       maxDelay: z.number().int().positive().default(3000), // ms
-    }).default({}),
-  }).default({}),
+    }).prefault({}),
+  }).prefault({}),
 });
 
 // Environment variables validation
@@ -63,7 +63,7 @@ const validateConfig = () => {
     return config;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.error('Invalid Redis configuration:', error.errors);
+      logger.error('Invalid Redis configuration:', error.issues);
     }
     throw error;
   }

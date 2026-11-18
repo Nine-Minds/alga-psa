@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  contractLineFieldsForWrite,
   clampDurationToSameDay,
   getSameDayDurationLimit,
   getTimeEntryWorkDate,
@@ -95,5 +96,33 @@ describe('time entry same-day duration helpers', () => {
 
     expect(() => getTimeEntryWorkDate(entry)).toThrow('entry-without-work-date');
     expect(() => isTimeEntryOnWorkDate(entry, '2026-04-01')).toThrow('entry-without-work-date');
+  });
+});
+
+describe('contractLineFieldsForWrite', () => {
+  it('re-save omits server-resolved lines but keeps explicit and legacy ones', () => {
+    expect(contractLineFieldsForWrite({ contract_line_id: 'l', contract_line_source: 'auto_unique_service' }, 'resave'))
+      .toEqual({ contract_line_id: null, contract_line_source: undefined });
+    expect(contractLineFieldsForWrite({ contract_line_id: 'l', contract_line_source: 'explicit' }, 'resave'))
+      .toEqual({ contract_line_id: 'l' });
+    expect(contractLineFieldsForWrite({ contract_line_id: 'l' }, 'resave')).toEqual({ contract_line_id: 'l' });
+  });
+
+  it('re-save keeps an explicit null (un-picked line) as null so the column is cleared', () => {
+    const fields = contractLineFieldsForWrite({ contract_line_id: null, contract_line_source: undefined }, 'resave');
+    expect(fields.contract_line_id).toBeNull();
+    expect(contractLineFieldsForWrite({ contract_line_id: null, contract_line_source: 'unresolved' }, 'resave').contract_line_id)
+      .toBeNull();
+    // no value at all stays undefined
+    expect(contractLineFieldsForWrite({}, 'resave').contract_line_id).toBeUndefined();
+  });
+
+  it('copy-to-new-entry carries only explicit lines', () => {
+    expect(contractLineFieldsForWrite({ contract_line_id: 'l', contract_line_source: 'explicit' }, 'copy-to-new-entry'))
+      .toEqual({ contract_line_id: 'l' });
+    for (const contract_line_source of ['auto_bucket_overlay', 'unresolved', undefined]) {
+      expect(contractLineFieldsForWrite({ contract_line_id: 'l', contract_line_source }, 'copy-to-new-entry').contract_line_id)
+        .toBeUndefined();
+    }
   });
 });

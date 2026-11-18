@@ -58,6 +58,14 @@ describe('ProductContext', () => {
     expect(result.current.isAlgaDesk).toBe(true);
   });
 
+  it('uses the server-resolved product even when the session has stale product data', () => {
+    const authoritativeWrapper = ({ children }: { children: React.ReactNode }) => (
+      <ProductProvider productCode="co_managed">{children}</ProductProvider>
+    );
+    const { result } = renderHook(() => useProduct(), { wrapper: authoritativeWrapper });
+    expect(result.current.productCode).toBe('co_managed');
+  });
+
   it('exposes the build edition alongside the product', () => {
     vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
 

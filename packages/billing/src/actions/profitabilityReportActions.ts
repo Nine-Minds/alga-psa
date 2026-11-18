@@ -488,7 +488,8 @@ async function fetchRevenueFacts(
         classification.is_fixed_project_material_charge
     ),
     line_candidates AS (
-      SELECT DISTINCT ON (ic.item_id)
+      SELECT DISTINCT ON (ic.tenant, ic.item_id)
+        ic.tenant,
         ic.item_id,
         COALESCE(te.contract_line_id, clsc.contract_line_id) AS contract_line_id,
         cli.contract_line_name AS contract_line_name
@@ -509,7 +510,7 @@ async function fetchRevenueFacts(
         ON cli.tenant = ic.tenant
        AND cli.contract_line_id = COALESCE(te.contract_line_id, clsc.contract_line_id)
       WHERE ic.tenant = ?
-      ORDER BY ic.item_id, COALESCE(te.contract_line_id, clsc.contract_line_id) NULLS LAST
+      ORDER BY ic.tenant, ic.item_id, COALESCE(te.contract_line_id, clsc.contract_line_id) NULLS LAST
     )
     SELECT
       cd.item_id,
@@ -535,7 +536,8 @@ async function fetchRevenueFacts(
       ) AS unconverted
     FROM charge_details cd
     LEFT JOIN line_candidates lc
-      ON lc.item_id = cd.item_id
+      ON lc.tenant = cd.tenant
+     AND lc.item_id = cd.item_id
   `, [
     tenant,
     tenant,
@@ -842,7 +844,8 @@ async function fetchSalesOrderCogsFacts(
   // keeps one row per movement when an SO is billed across several invoices.
   const result = await knex.raw(`
     WITH so_cogs_movements AS (
-      SELECT DISTINCT ON (sm.movement_id)
+      SELECT DISTINCT ON (sm.tenant, sm.movement_id)
+        sm.tenant,
         sm.movement_id,
         sm.cogs_cost,
         (COALESCE(sm.cost_currency, pis.cost_currency, ?) <> ?) AS currency_mismatch,
@@ -873,9 +876,10 @@ async function fetchSalesOrderCogsFacts(
         AND inv.status = ANY(?::text[])
         AND inv.invoice_date::date >= ?::date
         AND inv.invoice_date::date <= ?::date
-      ORDER BY sm.movement_id, inv.invoice_date, inv.invoice_id
+      ORDER BY sm.tenant, sm.movement_id, inv.invoice_date, inv.invoice_id
     )
     SELECT
+      m.tenant,
       m.movement_id,
       m.cogs_cost::bigint AS cogs_cents,
       m.currency_mismatch,
@@ -886,7 +890,7 @@ async function fetchSalesOrderCogsFacts(
       c.contract_name
     FROM so_cogs_movements m
     LEFT JOIN client_contracts cc
-      ON cc.tenant = ?
+      ON cc.tenant = m.tenant
      AND cc.client_contract_id = m.client_contract_id
     LEFT JOIN contracts c
       ON c.tenant = cc.tenant
@@ -898,7 +902,6 @@ async function fetchSalesOrderCogsFacts(
     COUNTABLE_INVOICE_STATUSES,
     startDate,
     endDate,
-    tenant,
   ]);
 
   return rawRows<Record<string, unknown>>(result).map((row) => ({
@@ -1010,12 +1013,13 @@ async function fetchTicketRevenueFacts(
   const result = await knex.raw(`
     WITH linked_time AS (
       SELECT
+        ic.tenant,
         ic.item_id,
         ic.client_contract_id,
         t.ticket_id,
         COALESCE(te.billable_duration, 0) AS billable_minutes,
-        SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.item_id) AS item_billable_minutes,
-        COUNT(*) OVER (PARTITION BY ic.item_id) AS item_link_count,
+        SUM(COALESCE(te.billable_duration, 0)) OVER (PARTITION BY ic.tenant, ic.item_id) AS item_billable_minutes,
+        COUNT(*) OVER (PARTITION BY ic.tenant, ic.item_id) AS item_link_count,
         CASE
           WHEN COALESCE(inv.currency_code, ?) = ? THEN ic.net_amount::bigint
           WHEN inv.exchange_rate_basis_points IS NULL THEN NULL

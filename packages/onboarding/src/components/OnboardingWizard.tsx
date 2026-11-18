@@ -24,7 +24,8 @@ import {
   configureTicketing,
   completeOnboarding,
   validateOnboardingDefaults,
-  saveOnboardingStepPosition
+  saveOnboardingStepPosition,
+  type TeamMemberNotCreated,
 } from '../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { updateTenantDefaultLocaleAction } from '@alga-psa/tenancy/actions';
@@ -33,6 +34,7 @@ import {
   getOnboardingWizardRequiredStepPositions,
   getOnboardingWizardStepIndexes,
 } from '../lib/onboardingWizardSteps';
+import { hasTeamMemberEmail, uniqueTeamMemberEmails } from '../lib/teamMemberEmails';
 
 interface OnboardingWizardProps {
   open?: boolean;
@@ -143,6 +145,12 @@ export function OnboardingWizard({
   }, [currentStep, testMode]);
 
   const updateData = (data: Partial<WizardData>) => {
+    // A member saved or invited from the team step supersedes any stale
+    // team-step error (e.g. "These team members were not created").
+    const listGrew =
+      (data.createdTeamMemberEmails?.length ?? 0) > (wizardData.createdTeamMemberEmails?.length ?? 0) ||
+      (data.invitedTeamMemberEmails?.length ?? 0) > (wizardData.invitedTeamMemberEmails?.length ?? 0);
+    if (listGrew) setErrors((prev) => ({ ...prev, [1]: '' }));
     setWizardData((prev) => ({ ...prev, ...data }));
   };
 
@@ -212,31 +220,66 @@ export function OnboardingWizard({
           break;
           
         case 1: // Team Members
-          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email);
-          
-          // Filter out already created team members
+          const validMembers = wizardData.teamMembers.filter(m => m.firstName && m.lastName && m.email?.trim());
+
+          // Members already created or invited are done. An invited member gets
+          // their account when they accept; creating one here would give them a
+          // login they never chose and break their invitation.
           const existingEmails = wizardData.createdTeamMemberEmails || [];
-          const newMembers = validMembers.filter(m => !existingEmails.includes(m.email));
-          
-          
+          const invitedEmails = wizardData.invitedTeamMemberEmails || [];
+          const newMembers = validMembers.filter(m => !hasTeamMemberEmail(existingEmails, m.email) && !hasTeamMemberEmail(invitedEmails, m.email));
+
+          // An unsent email invite has no password to create an account with.
+          if (newMembers.some(m => (m.inviteMode || 'email') === 'email')) {
+            setErrors(prev => ({ ...prev, [stepIndex]: t('onboardingWizard.errors.unsentInvites', {
+              defaultValue: 'Send the invitation for each team member you added, or remove them, before continuing.'
+            }) }));
+            return false;
+          }
+
           if (newMembers.length > 0) {
             const teamResult = await addTeamMembers(newMembers);
+
+            // Members created in a partial batch are done even when others
+            // failed, so a retry after fixing the rest does not recreate them.
+            const createdNow: string[] = teamResult.data?.created ?? [];
+            if (createdNow.length > 0) {
+              const allCreated = uniqueTeamMemberEmails([...existingEmails, ...createdNow]);
+              setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
+            }
+
+            // The members exist but the saved progress does not name them, so
+            // a resumed wizard would not know them. Say so before moving on:
+            // the step stays put once, and Next then continues (they are
+            // already marked created and are not sent again).
+            const progressNotSaved = teamResult.data?.progressError && createdNow.length > 0
+              ? t('onboardingWizard.errors.teamProgressNotSaved', {
+                  defaultValue: 'These team members were created, but setup could not save its progress: {{users}}. If you leave setup and come back they may not show as added; their accounts already exist, so do not add them again. Select Next to continue.',
+                  users: createdNow.join(', ')
+                })
+              : undefined;
+
             if (!teamResult.success) {
-              setErrors(prev => ({ ...prev, [stepIndex]: teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
-                defaultValue: 'Failed to add team members'
-              }) }));
+              // Name every member that was not created and why; the step
+              // stays put until each one is fixed or removed.
+              const notCreated: TeamMemberNotCreated[] = teamResult.data?.notCreated ?? [];
+              const message = notCreated.length > 0
+                ? [
+                    t('onboardingWizard.errors.teamMembersNotCreated', {
+                      defaultValue: 'These team members were not created. Fix or remove each one before continuing:'
+                    }),
+                    ...notCreated.map(entry => `• ${entry.email}: ${entry.error}`),
+                  ].join('\n')
+                : teamResult.error || t('onboardingWizard.errors.addTeamMembers', {
+                    defaultValue: 'Failed to add team members'
+                  });
+              setErrors(prev => ({ ...prev, [stepIndex]: progressNotSaved ? `${message}\n\n${progressNotSaved}` : message }));
               return false;
             }
-            
-            // Track created team member emails
-            if (teamResult.data?.created && teamResult.data.created.length > 0) {
-              const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
-              setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
-              
-              // Show warning if some users were skipped
-              if (teamResult.data.message) {
-                setErrors(prev => ({ ...prev, [stepIndex]: teamResult.data.message }));
-              }
+
+            if (progressNotSaved) {
+              setErrors(prev => ({ ...prev, [stepIndex]: progressNotSaved }));
+              return false;
             }
           }
           break;
@@ -622,7 +665,7 @@ export function OnboardingWizard({
 
       {errors[currentOriginalStepIndex] && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{errors[currentOriginalStepIndex]}</AlertDescription>
+          <AlertDescription className="whitespace-pre-line">{errors[currentOriginalStepIndex]}</AlertDescription>
         </Alert>
       )}
     </>

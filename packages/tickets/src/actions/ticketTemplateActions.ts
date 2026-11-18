@@ -1,24 +1,32 @@
 'use server'
 
 import type { Knex } from 'knex';
+import { findTicketFieldReferenceProblems } from '../lib/ticketFieldReferences';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import TagDefinition from '@alga-psa/tags/models/tagDefinition';
 import type {
   ITicketTemplate,
   ITicketTemplateChecklistItem,
+  ITicketTemplateLink,
   TicketTemplateForCreate,
   TicketTemplateListItem,
   TicketTemplateOption,
+  TicketTemplateUsage,
   TicketTemplateReferenceProblem,
 } from '@alga-psa/types';
 import { countDuplicableCustomFields, pickDuplicableAttributes } from '../lib/ticketDuplicate';
 import {
-  findTicketTemplateReferenceProblems,
   ticketTemplateInputSchema,
   type ParsedTicketTemplateInput,
   type TicketTemplateInput,
 } from '../lib/ticketTemplates';
+import {
+  ExternalLinkValidationError,
+  loadTenantExternalSystems,
+  validateLinkTarget,
+} from '@alga-psa/shared/services/tickets/externalLinkPersistence';
+import { renderExternalLinkUrl, resolveExternalSystem } from '../lib/externalSystems';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import {
   isDuplicateTemplateNameViolation,
@@ -29,6 +37,7 @@ import {
 
 const TEMPLATES = 'ticket_templates';
 const ITEMS = 'ticket_template_checklist_items';
+const LINKS = 'ticket_template_links';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Action = 'read' | 'create' | 'update' | 'delete';
@@ -54,11 +63,11 @@ function toIso(value: Date | string): string {
   return (value instanceof Date ? value : new Date(value)).toISOString();
 }
 
-async function loadTemplateRow(trx: Knex.Transaction, tenant: string, templateId: string, opts: { activeOnly?: boolean } = {}) {
+async function loadTemplateRow(trx: Knex.Transaction, tenant: string, templateId: string, opts: { activeOnly?: boolean; manualUseOnly?: boolean } = {}) {
   const row = UUID_PATTERN.test(templateId)
     ? await tenantDb(trx, tenant)
         .table(TEMPLATES)
-        .where({ template_id: templateId, ...(opts.activeOnly ? { is_active: true } : {}) })
+        .where({ template_id: templateId, ...(opts.activeOnly || opts.manualUseOnly ? { is_active: true } : {}), ...(opts.manualUseOnly ? { offer_for_manual_use: true } : {}) })
         .first()
     : undefined;
   if (!row) throw new TicketTemplateError('Ticket template not found', 'TEMPLATE_NOT_FOUND');
@@ -74,7 +83,20 @@ async function loadItemRows(trx: Knex.Transaction, tenant: string, templateId: s
     .select('template_item_id', 'item_name', 'description', 'is_required', 'order_number', 'checklist_template_id');
 }
 
-function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITicketTemplate {
+async function loadLinkRows(trx: Knex.Transaction, tenant: string, templateId: string) {
+  return tenantDb(trx, tenant)
+    .table(LINKS)
+    .where({ template_id: templateId })
+    .orderBy('order_number', 'asc')
+    .orderBy('created_at', 'asc')
+    .select('template_link_id', 'system', 'external_id', 'realm', 'url', 'title', 'order_number', 'metadata');
+}
+
+function toTemplate(
+  row: Record<string, any>,
+  items: Record<string, any>[],
+  links: Record<string, any>[] = []
+): ITicketTemplate {
   return {
     tenant: row.tenant,
     template_id: row.template_id,
@@ -82,6 +104,7 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
     notes: row.notes ?? null,
     title: row.title,
     description: row.description ?? null,
+    client_id: row.client_id ?? null,
     board_id: row.board_id ?? null,
     category_id: row.category_id ?? null,
     subcategory_id: row.subcategory_id ?? null,
@@ -91,6 +114,7 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
     tags: asJsonColumn<string[]>(row.tags ?? []),
     custom_fields: asJsonColumn<Record<string, unknown>>(row.custom_fields ?? {}),
     is_active: row.is_active,
+    offer_for_manual_use: row.offer_for_manual_use,
     source_ticket_id: row.source_ticket_id ?? null,
     created_by: row.created_by ?? null,
     updated_by: row.updated_by ?? null,
@@ -106,6 +130,18 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
         checklist_template_id: item.checklist_template_id ?? null,
       })
     ),
+    links: links.map(
+      (link): ITicketTemplateLink => ({
+        template_link_id: link.template_link_id,
+        system: link.system,
+        external_id: link.external_id,
+        realm: link.realm ?? null,
+        url: link.url ?? null,
+        title: link.title ?? null,
+        metadata: link.metadata ? asJsonColumn<Record<string, unknown>>(link.metadata) : null,
+        order_number: link.order_number,
+      })
+    ),
   };
 }
 
@@ -114,14 +150,104 @@ function allowlistedCustomFields(fields: Record<string, unknown>): Record<string
   return (pickDuplicableAttributes({ custom_fields: fields }).custom_fields as Record<string, unknown> | undefined) ?? {};
 }
 
-async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
-  const problems = await findTicketTemplateReferenceProblems(trx, tenant, input);
+/**
+ * A broken template link is a save error, never a later occurrence failure: each link must pass the
+ * same pure rules as a ticket link (system resolves, safe http(s) URL, a clickable destination).
+ */
+async function assertValidLinks(trx: Knex.Transaction, tenant: string, links: ParsedTicketTemplateInput['links']) {
+  if (links.length === 0) return;
+  const systems = await loadTenantExternalSystems(trx, tenant);
+  const problems: string[] = [];
+  links.forEach((link, index) => {
+    try {
+      validateLinkTarget(systems, link);
+    } catch (error) {
+      if (!(error instanceof ExternalLinkValidationError)) throw error;
+      problems.push(`Link ${index + 1} (${link.title ?? link.external_id}): ${error.message}`);
+    }
+  });
   if (problems.length > 0) {
-    throw new TicketTemplateError(
-      problems.map((problem) => problem.message).join('. '),
-      'INVALID_REFERENCES'
-    );
+    const joined = problems.join('. ');
+    throw new TicketTemplateError(joined, 'INVALID_REFERENCES', { problems: joined });
   }
+}
+
+async function insertLinks(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  links: ParsedTicketTemplateInput['links']
+) {
+  if (links.length === 0) return;
+  const systems = await loadTenantExternalSystems(trx, tenant);
+  await tenantDb(trx, tenant)
+    .table(LINKS)
+    .insert(
+      links.map((link, index) => {
+        const target = validateLinkTarget(systems, link);
+        return {
+          tenant,
+          template_id: templateId,
+          // Stored canonical: the registry key and the validated, trimmed fields.
+          system: target.system,
+          external_id: target.external_id,
+          realm: target.realm,
+          url: target.url,
+          title: link.title ?? null,
+          order_number: index,
+          metadata: link.metadata ? JSON.stringify(link.metadata) : null,
+        };
+      })
+    );
+}
+
+async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
+  const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: input });
+  // The client scope is not part of the shared ticket field group, so it is checked here.
+  if (input.client_id) {
+    const client = await tenantDb(trx, tenant).table('clients').where({ client_id: input.client_id }).first('client_id');
+    if (!client) problems.push({ field: 'client_id', message: 'The selected client no longer exists' });
+  }
+  if (problems.length > 0) {
+    const joined = problems.map((problem) => problem.message).join('. ');
+    throw new TicketTemplateError(joined, 'INVALID_REFERENCES', { problems: joined });
+  }
+}
+
+/** Per template: non-archived schedules using it and tickets created from it. */
+async function loadTemplateUsage(
+  trx: Knex.Transaction,
+  tenant: string,
+  templateIds: string[]
+): Promise<Map<string, TicketTemplateUsage>> {
+  const db = tenantDb(trx, tenant);
+  const schedules = await db
+    .table('recurring_ticket_definitions')
+    .whereIn('ticket_template_id', templateIds)
+    .whereNull('archived_at')
+    .groupBy('ticket_template_id')
+    .select('ticket_template_id')
+    .count('* as total');
+  const tickets = await db
+    .table('tickets')
+    .whereIn('created_from_template_id', templateIds)
+    .groupBy('created_from_template_id')
+    .select('created_from_template_id')
+    .count('* as total');
+  const usage = new Map<string, TicketTemplateUsage>(templateIds.map((id) => [id, { schedule_count: 0, ticket_count: 0 }]));
+  for (const row of schedules) usage.get(row.ticket_template_id as string)!.schedule_count = Number(row.total);
+  for (const row of tickets) usage.get(row.created_from_template_id as string)!.ticket_count = Number(row.total);
+  return usage;
+}
+
+/** Non-archived schedules (active or paused) that use the template: what blocks its deletion (R3). */
+async function listBlockingSchedules(trx: Knex.Transaction, tenant: string, templateId: string) {
+  return tenantDb(trx, tenant)
+    .table('recurring_ticket_definitions')
+    .where({ ticket_template_id: templateId })
+    .whereNull('archived_at')
+    .orderBy('name', 'asc')
+    .select('definition_id', 'name', 'is_active', 'status_id');
 }
 
 function duplicateNameError(name: string): TicketTemplateError {
@@ -156,6 +282,7 @@ function templateColumns(input: ParsedTicketTemplateInput) {
     notes: input.notes,
     title: input.title,
     description: input.description,
+    client_id: input.client_id,
     board_id: input.board_id,
     category_id: input.category_id,
     subcategory_id: input.subcategory_id,
@@ -164,6 +291,8 @@ function templateColumns(input: ParsedTicketTemplateInput) {
     itil_urgency: input.itil_urgency,
     tags: JSON.stringify(input.tags),
     custom_fields: JSON.stringify(allowlistedCustomFields(input.custom_fields)),
+    // Unset on update leaves the stored value alone; a new template is offered unless said otherwise.
+    ...(input.offer_for_manual_use === undefined ? {} : { offer_for_manual_use: input.offer_for_manual_use }),
   };
 }
 
@@ -177,7 +306,7 @@ async function failed(error: unknown, label: string): Promise<TicketTemplateActi
 export const listTicketTemplates = withAuth(async (
   user,
   { tenant },
-  options: { includeInactive?: boolean } = {}
+  options: { includeInactive?: boolean; clientId?: string | null; search?: string } = {}
 ): Promise<TicketTemplateListItem[] | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -188,8 +317,17 @@ export const listTicketTemplates = withAuth(async (
 
       const query = db.table(`${TEMPLATES} as t`);
       db.tenantJoin(query, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
       if (!options.includeInactive) query.where('t.is_active', true);
-      const rows = await query.orderBy('t.name', 'asc').select('t.*', 'b.board_name');
+      // A client filter is "what this client can use": its own templates plus the tenant-wide ones.
+      if (options.clientId) {
+        query.where((builder) => builder.whereNull('t.client_id').orWhere('t.client_id', options.clientId!));
+      }
+      if (options.search?.trim()) {
+        const term = `%${options.search.trim()}%`;
+        query.where((builder) => builder.whereILike('t.name', term).orWhereILike('t.title', term));
+      }
+      const rows = await query.orderBy('t.name', 'asc').select('t.*', 'b.board_name', 'c.client_name');
       if (rows.length === 0) return [];
 
       const counts = await db
@@ -199,16 +337,22 @@ export const listTicketTemplates = withAuth(async (
         .select('template_id')
         .count('* as total');
       const countById = new Map(counts.map((row) => [row.template_id as string, Number(row.total)]));
+      const usageById = await loadTemplateUsage(trx, tenant, rows.map((row) => row.template_id as string));
 
       return rows.map((row): TicketTemplateListItem => ({
         template_id: row.template_id,
         name: row.name,
         title: row.title,
+        client_id: row.client_id ?? null,
+        client_name: row.client_name ?? null,
         board_id: row.board_id ?? null,
         board_name: row.board_name ?? null,
         checklist_count: countById.get(row.template_id) ?? 0,
         tag_count: asJsonColumn<string[]>(row.tags ?? []).length,
         is_active: row.is_active,
+        offer_for_manual_use: row.offer_for_manual_use,
+        schedule_count: usageById.get(row.template_id)?.schedule_count ?? 0,
+        ticket_count: usageById.get(row.template_id)?.ticket_count ?? 0,
         updated_at: toIso(row.updated_at),
       }));
     });
@@ -221,7 +365,7 @@ export const getTicketTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<(ITicketTemplate & { referenceProblems: TicketTemplateReferenceProblem[] }) | TicketTemplateActionError> => {
+): Promise<(ITicketTemplate & TicketTemplateUsage & { referenceProblems: TicketTemplateReferenceProblem[] }) | TicketTemplateActionError> => {
   try {
     requireInternal(user);
     const { knex } = await createTenantKnex();
@@ -229,9 +373,11 @@ export const getTicketTemplate = withAuth(async (
       await requirePermission(user, 'ticket_template', 'read', trx);
       const row = await loadTemplateRow(trx, tenant, templateId);
       const items = await loadItemRows(trx, tenant, row.template_id);
-      const template = toTemplate(row, items);
-      const referenceProblems = await findTicketTemplateReferenceProblems(trx, tenant, template);
-      return { ...template, referenceProblems };
+      const links = await loadLinkRows(trx, tenant, row.template_id);
+      const template = toTemplate(row, items, links);
+      const referenceProblems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
+      const usage = (await loadTemplateUsage(trx, tenant, [template.template_id])).get(template.template_id)!;
+      return { ...template, referenceProblems, ...usage };
     });
   } catch (error) {
     return failed(error, 'getTicketTemplate');
@@ -251,6 +397,7 @@ export const createTicketTemplate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket_template', 'create', trx);
       await assertValidReferences(trx, tenant, parsed);
+      await assertValidLinks(trx, tenant, parsed.links);
       try {
         const [row] = await tenantDb(trx, tenant)
           .table(TEMPLATES)
@@ -264,6 +411,7 @@ export const createTicketTemplate = withAuth(async (
           })
           .returning('template_id');
         await insertItems(trx, tenant, row.template_id, parsed.checklist);
+        await insertLinks(trx, tenant, row.template_id, parsed.links);
         return { template_id: row.template_id as string };
       } catch (error) {
         if (isDuplicateTemplateNameViolation(error)) throw duplicateNameError(parsed.name);
@@ -289,6 +437,7 @@ export const updateTicketTemplate = withAuth(async (
       await requirePermission(user, 'ticket_template', 'update', trx);
       const existing = await loadTemplateRow(trx, tenant, templateId);
       await assertValidReferences(trx, tenant, parsed);
+      await assertValidLinks(trx, tenant, parsed.links);
       try {
         await tenantDb(trx, tenant)
           .table(TEMPLATES)
@@ -297,6 +446,9 @@ export const updateTicketTemplate = withAuth(async (
         // Item ids are never referenced elsewhere, so the checklist is replaced wholesale.
         await tenantDb(trx, tenant).table(ITEMS).where({ template_id: existing.template_id }).delete();
         await insertItems(trx, tenant, existing.template_id, parsed.checklist);
+        // Links are replaced wholesale too (PUT semantics): the stored list becomes exactly the payload.
+        await tenantDb(trx, tenant).table(LINKS).where({ template_id: existing.template_id }).delete();
+        await insertLinks(trx, tenant, existing.template_id, parsed.links);
         return { template_id: existing.template_id as string };
       } catch (error) {
         if (isDuplicateTemplateNameViolation(error)) throw duplicateNameError(parsed.name);
@@ -347,8 +499,19 @@ export const deleteTicketTemplate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket_template', 'delete', trx);
       const existing = await loadTemplateRow(trx, tenant, templateId);
+      // R3: refused while any non-archived schedule (active or paused) uses the template. The tenant-composite
+      // FK (ON DELETE RESTRICT) enforces the same rule for any other writer; this gives the actionable message.
+      const blocking = await listBlockingSchedules(trx, tenant, existing.template_id);
+      if (blocking.length > 0) {
+        throw new TicketTemplateError(
+          `Used by ${blocking.length} recurring schedule${blocking.length === 1 ? '' : 's'}: ${blocking.map((row) => row.name).join(', ')}. Point them at another template or archive them first.`,
+          'IN_USE_BY_SCHEDULES',
+          { count: blocking.length, schedules: blocking.map((row) => row.name).join(', ') }
+        );
+      }
       // Hard delete. Tickets keep created_from_template_id (no FK) and the activity-row name snapshot.
       await tenantDb(trx, tenant).table(ITEMS).where({ template_id: existing.template_id }).delete();
+      await tenantDb(trx, tenant).table(LINKS).where({ template_id: existing.template_id }).delete();
       await tenantDb(trx, tenant).table(TEMPLATES).where({ template_id: existing.template_id }).delete();
       return { template_id: existing.template_id as string };
     });
@@ -357,10 +520,15 @@ export const deleteTicketTemplate = withAuth(async (
   }
 });
 
-/** Active templates for the Quick Add picker. Needs `ticket:create` as well as template read. */
+/**
+ * Active templates for the Quick Add picker. Needs `ticket:create` as well as template read.
+ * With a client: the tenant-wide templates plus that client's. Without one: every offered template,
+ * each carrying its `client_id` so a picker can narrow as the client is chosen.
+ */
 export const listTicketTemplatesForCreate = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  clientId?: string | null
 ): Promise<TicketTemplateOption[] | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -368,14 +536,17 @@ export const listTicketTemplatesForCreate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket', 'create', trx);
       await requirePermission(user, 'ticket_template', 'read', trx);
-      const rows = await tenantDb(trx, tenant)
+      const query = tenantDb(trx, tenant)
         .table(TEMPLATES)
-        .where({ is_active: true })
-        .orderBy('name', 'asc')
-        .select('template_id', 'name', 'board_id');
+        .where({ is_active: true, offer_for_manual_use: true });
+      if (clientId) {
+        query.where((builder) => builder.whereNull('client_id').orWhere('client_id', clientId));
+      }
+      const rows = await query.orderBy('name', 'asc').select('template_id', 'name', 'client_id', 'board_id');
       return rows.map((row): TicketTemplateOption => ({
         template_id: row.template_id,
         name: row.name,
+        client_id: row.client_id ?? null,
         board_id: row.board_id ?? null,
       }));
     });
@@ -391,7 +562,8 @@ export const listTicketTemplatesForCreate = withAuth(async (
 export const getTicketTemplateForCreate = withAuth(async (
   user,
   { tenant },
-  templateId: string
+  templateId: string,
+  clientId?: string | null
 ): Promise<TicketTemplateForCreate | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -399,11 +571,17 @@ export const getTicketTemplateForCreate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket', 'create', trx);
       await requirePermission(user, 'ticket_template', 'read', trx);
-      const row = await loadTemplateRow(trx, tenant, templateId, { activeOnly: true });
+      const row = await loadTemplateRow(trx, tenant, templateId, { manualUseOnly: true });
+      // A client-bound template belongs to one client only; it is not offered for another.
+      if (clientId && row.client_id && row.client_id !== clientId) {
+        throw new TicketTemplateError('This template belongs to a different client', 'NOT_AVAILABLE');
+      }
       const items = await loadItemRows(trx, tenant, row.template_id);
-      const template = toTemplate(row, items);
+      const links = await loadLinkRows(trx, tenant, row.template_id);
+      const template = toTemplate(row, items, links);
+      const systems = template.links.length > 0 ? await loadTenantExternalSystems(trx, tenant) : [];
 
-      const problems = await findTicketTemplateReferenceProblems(trx, tenant, template);
+      const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: template });
       const bad = new Set(problems.map((problem) => problem.field));
       const boardGone = bad.has('board_id');
       const categoryGone = boardGone || bad.has('category_id');
@@ -417,6 +595,7 @@ export const getTicketTemplateForCreate = withAuth(async (
         name: template.name,
         title: template.title,
         description: template.description ?? '',
+        client_id: template.client_id,
         board_id: boardGone ? null : template.board_id,
         category_id: categoryGone ? null : template.category_id,
         subcategory_id: subcategoryGone ? null : template.subcategory_id,
@@ -434,11 +613,51 @@ export const getTicketTemplateForCreate = withAuth(async (
           };
         }),
         checklist: template.checklist.map((item) => ({ item_name: item.item_name, is_required: item.is_required })),
+        links: template.links.map((link) => {
+          const definition = resolveExternalSystem(systems, link.system);
+          return {
+            title: link.title,
+            href: renderExternalLinkUrl(definition, link),
+            systemLabel: definition?.label ?? link.system,
+          };
+        }),
         custom_field_count: countDuplicableCustomFields({ custom_fields: template.custom_fields }),
         warnings: problems.map((problem) => problem.message),
       } satisfies TicketTemplateForCreate;
     });
   } catch (error) {
     return failed(error, 'getTicketTemplateForCreate');
+  }
+});
+
+/** A non-archived schedule using a template. `pins_status`: it dispatches into a fixed status that belongs to one board. */
+export interface TicketTemplateScheduleUse {
+  definition_id: string;
+  name: string;
+  is_active: boolean;
+  pins_status: boolean;
+}
+
+/** Non-archived schedules using a template, for the editor's "Used by" panel. */
+export const listSchedulesForTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateId: string
+): Promise<TicketTemplateScheduleUse[] | TicketTemplateActionError> => {
+  try {
+    requireInternal(user);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      await requirePermission(user, 'ticket_template', 'read', trx);
+      const existing = await loadTemplateRow(trx, tenant, templateId);
+      return (await listBlockingSchedules(trx, tenant, existing.template_id)).map((row) => ({
+        definition_id: row.definition_id as string,
+        name: row.name as string,
+        is_active: row.is_active as boolean,
+        pins_status: row.status_id !== null && row.status_id !== undefined,
+      }));
+    });
+  } catch (error) {
+    return failed(error, 'listSchedulesForTemplate');
   }
 });

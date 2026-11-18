@@ -40,6 +40,11 @@ import toast from 'react-hot-toast';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory, KitPricingMode } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import {
+  minorUnitsToRateText,
+  rateTextToMinorUnits,
+  rescaleRateToCurrency,
+} from '@alga-psa/billing/lib/currency/rateInput';
 import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions';
 import {
   getErrorMessage,
@@ -185,8 +190,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         : [{ currency_code: 'USD', rate: product.default_rate ?? 0 }];
       setFormPrices(prices);
       const primaryRate = prices.length > 0 ? prices[0].rate : product.default_rate ?? 0;
-      setPriceInput((primaryRate / 100).toFixed(2));
-      setCostInput(product.cost != null ? (product.cost / 100).toFixed(2) : '');
+      setPriceInput(minorUnitsToRateText(primaryRate, prices[0]?.currency_code ?? defaultCurrency));
+      setCostInput(product.cost != null
+        ? minorUnitsToRateText(product.cost, product.cost_currency ?? defaultCurrency)
+        : '');
     } else if (isOpen && !product) {
       setFormProduct(getInitialProductState());
       setFormPrices([{ currency_code: defaultCurrency, rate: 0 }]);
@@ -619,7 +626,16 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   value={price.currency_code}
                   onValueChange={(value) => {
                     const next = [...prices];
-                    next[index] = { ...next[index], currency_code: value };
+                    // Keep the amount the operator typed: minor units are per currency, so
+                    // 50 stays 50 across a USD → JPY switch instead of becoming 5000. The
+                    // primary row re-reads its live text, which may not have blurred yet.
+                    next[index] = {
+                      ...next[index],
+                      currency_code: value,
+                      rate: index === 0 && primaryInput.trim() !== ''
+                        ? rateTextToMinorUnits(primaryInput, value)
+                        : rescaleRateToCurrency(next[index].rate, next[index].currency_code, value),
+                    };
                     setPrices(next);
                   }}
                   placeholder={t('quickAddProduct.fields.pricing.placeholders.currency', {
@@ -635,7 +651,9 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   id={`quick-add-product-price-rate-${index}`}
                   type="text"
                   inputMode="decimal"
-                  value={index === 0 ? primaryInput : (price.rate > 0 ? (price.rate / 100).toFixed(2) : '')}
+                  value={index === 0
+                    ? primaryInput
+                    : (price.rate > 0 ? minorUnitsToRateText(price.rate, price.currency_code) : '')}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9.]/g, '');
                     const decimalCount = (value.match(/\./g) || []).length;
@@ -646,10 +664,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                       return;
                     }
 
-                    const dollars = parseFloat(value) || 0;
-                    const cents = Math.round(dollars * 100);
                     const next = [...prices];
-                    next[index] = { ...next[index], rate: cents };
+                    next[index] = { ...next[index], rate: rateTextToMinorUnits(value, price.currency_code) };
                     setPrices(next);
                   }}
                   onBlur={() => {
@@ -658,12 +674,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                     if (primaryInput.trim() === '') {
                       return;
                     }
-                    const dollars = parseFloat(primaryInput) || 0;
-                    const cents = Math.round(dollars * 100);
+                    const minorUnits = rateTextToMinorUnits(primaryInput, price.currency_code);
                     const next = [...prices];
-                    next[0] = { ...next[0], rate: cents };
+                    next[0] = { ...next[0], rate: minorUnits };
                     setPrices(next);
-                    setPrimaryInput((cents / 100).toFixed(2));
+                    setPrimaryInput(minorUnitsToRateText(minorUnits, price.currency_code));
                   }}
                   placeholder={t('quickAddProduct.fields.pricing.placeholders.rate', {
                     defaultValue: '0.00'
@@ -682,7 +697,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                     const next = prices.filter((_, i) => i !== index);
                     setPrices(next);
                     if (index === 0 && next.length > 0) {
-                      setPrimaryInput((next[0].rate / 100).toFixed(2));
+                      setPrimaryInput(minorUnitsToRateText(next[0].rate, next[0].currency_code));
                     }
                   }}
                 >
@@ -864,7 +879,14 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   <CurrencyPicker
                     id="quick-add-product-cost-currency"
                     value={formProduct.cost_currency || 'USD'}
-                    onValueChange={(v) => setFormProduct({ ...formProduct, cost_currency: v })}
+                    onValueChange={(v) => setFormProduct({
+                      ...formProduct,
+                      cost_currency: v,
+                      // The typed cost keeps its value; only its minor-unit scale changes.
+                      cost: formProduct.cost == null
+                        ? formProduct.cost
+                        : rescaleRateToCurrency(formProduct.cost, formProduct.cost_currency || 'USD', v),
+                    })}
                   />
                 </div>
                 <div className="relative flex-1">
@@ -887,10 +909,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                         setFormProduct({ ...formProduct, cost: null });
                         return;
                       }
-                      const dollars = parseFloat(costInput) || 0;
-                      const cents = Math.round(dollars * 100);
-                      setFormProduct({ ...formProduct, cost: cents });
-                      setCostInput((cents / 100).toFixed(2));
+                      const costCurrency = formProduct.cost_currency || 'USD';
+                      const minorUnits = rateTextToMinorUnits(costInput, costCurrency);
+                      setFormProduct({ ...formProduct, cost: minorUnits });
+                      setCostInput(minorUnitsToRateText(minorUnits, costCurrency));
                     }}
                     placeholder={t('quickAddProduct.fields.cost.placeholder', { defaultValue: '0.00' })}
                     className="pl-8"

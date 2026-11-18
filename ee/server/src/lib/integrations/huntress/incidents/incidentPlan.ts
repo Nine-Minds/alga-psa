@@ -59,14 +59,15 @@ function lastProcessedUpdatedAt(alert: ExistingAlertSummary): string | undefined
   return undefined;
 }
 
-function hasIncidentChanged(
+/** True when the Huntress record moved on since the alert row was last processed. */
+export function hasAlertChanged(
   alert: ExistingAlertSummary,
-  incident: HuntressIncidentReport
+  item: { status: string; updated_at: string }
 ): boolean {
-  if (alert.status !== incident.status) return true;
+  if (alert.status !== item.status) return true;
   const last = lastProcessedUpdatedAt(alert);
   if (!last) return true;
-  return Date.parse(incident.updated_at) > Date.parse(last);
+  return Date.parse(item.updated_at) > Date.parse(last);
 }
 
 export function planIncidentAction(input: PlanIncidentInput): IncidentAction {
@@ -77,7 +78,7 @@ export function planIncidentAction(input: PlanIncidentInput): IncidentAction {
   }
 
   if (existingAlert) {
-    if (!hasIncidentChanged(existingAlert, incident)) {
+    if (!hasAlertChanged(existingAlert, incident)) {
       return { kind: 'skip', reason: 'unchanged' };
     }
     if (!existingAlert.ticket_id) {

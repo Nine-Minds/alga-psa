@@ -1,5 +1,6 @@
 'use server';
 
+import { assertContractLineHasNoPrepaidBlock } from '../services/prepaidBlockConfigService';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -7,6 +8,8 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import type { IUser } from '@alga-psa/types';
+import { authorizeMembershipWrite } from '../lib/billing/contractLineMembership';
 import {
   actionError,
   permissionError,
@@ -198,6 +201,7 @@ export const upsertBucketOverlay = withAuth(async (
     await upsertBucketOverlayInTransaction(
       trx,
       tenant,
+      user,
       contractLineId,
       serviceId,
       overlay,
@@ -216,9 +220,11 @@ export const upsertBucketOverlay = withAuth(async (
  *          the pool identity is the successor of the legacy per-service
  *          bucket config_id.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function upsertBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   contractLineId: string,
   serviceId: string,
   overlay: BucketOverlayInput,
@@ -228,6 +234,10 @@ export async function upsertBucketOverlayInTransaction(
   if (overlay.total_minutes == null || overlay.overage_rate == null) {
     throw new Error('Cannot upsert bucket overlay without total_minutes and overage_rate.');
   }
+
+  // Authorize from the rows this call will write, before any bucket row is
+  // written: attaching a service (or its configuration) needs billing:create.
+  await authorizeMembershipWrite(trx, tenant, user, contractLineId, serviceId);
 
   const normalizedTotal = Math.max(0, Math.round(overlay.total_minutes));
   const normalizedOverage = Math.max(0, Math.round(overlay.overage_rate));
@@ -264,7 +274,9 @@ export async function upsertBucketOverlayInTransaction(
     return member.bucket_id;
   }
 
-  // No pool yet: create a member-scoped single-member 1x pool.
+  // No pool yet: create a member-scoped single-member 1x pool. A Prepaid Block
+  // line carries no bucket pools (plan D1).
+  await assertContractLineHasNoPrepaidBlock(trx, tenant, contractLineId);
   const bucketId = uuidv4();
   await db.table('contract_line_buckets').insert({
     tenant,
@@ -336,6 +348,7 @@ export const deleteBucketOverlay = withAuth(async (
 /**
  * Internal function to delete bucket overlay within a transaction.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function deleteBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,

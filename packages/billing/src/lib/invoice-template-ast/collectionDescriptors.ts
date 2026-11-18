@@ -183,7 +183,7 @@ export const resolveExtraBindingKeySuggestions = (sourceBindingId: string): stri
   if (sourceBindingId === 'timeEntries') {
     return ['item.description', 'item.serviceName', 'item.billedMinutes'];
   }
-  return ['item.servicePeriodStart', 'item.servicePeriodEnd', 'item.billingTiming'];
+  return ['item.servicePeriodLabel', 'item.servicePeriodStart', 'item.servicePeriodEnd', 'item.billingTiming'];
 };
 
 // Preset ids, binding keys, types and widths are the data contract; only labels are translated.
@@ -248,12 +248,26 @@ const ticket: CollectionDescriptor = {
 };
 const primary: CollectionDescriptor = {
   documentKind: 'invoice', id: 'ticketPresentationRows', path: 'ticketPresentationRows',
-  fields: fields(['label', 'description', 'quantity', 'rate', 'rateKind', 'rateDisplay', 'amount', 'servicePeriodStart', 'servicePeriodEnd'], ['quantity', 'rate', 'amount']),
+  fields: fields(['label', 'description', 'quantity', 'rate', 'rateKind', 'rateDisplay', 'amount', 'servicePeriodStart', 'servicePeriodEnd', 'servicePeriodLabel'], ['quantity', 'rate', 'amount']),
   presets: (t) => buildTicketGroupColumnPresets(t).map((preset) => ({ ...preset, key: preset.key.replace('totalHours', 'quantity').replace('totalAmount', 'amount') })),
+};
+// Rows of a Fixed bundle (`item.components`). Not a table source on its own:
+// it feeds the binding pickers for a table's "Bundle component rows" cells.
+// `unitPrice`/`total` are only present in data when the template binds them.
+const component: CollectionDescriptor = {
+  documentKind: 'invoice', id: 'components', path: 'item.components', presets: () => [],
+  fields: fields(
+    ['name', 'quantity', 'quantityChange', 'periodLabelStart', 'periodLabelEnd', 'pricingBasis', 'unitPrice', 'total'],
+    ['quantity', 'quantityChange', 'unitPrice', 'total'],
+  ),
 };
 const items: CollectionDescriptor = {
   documentKind: 'invoice', id: 'lineItems', path: 'items', presets: buildColumnPresets,
-  fields: fields(['description', 'quantity', 'unitPrice', 'total', 'unit_code', 'unit_label', 'servicePeriodStart', 'servicePeriodEnd', 'billingTiming'], ['quantity', 'unitPrice', 'total']),
+  fields: [
+    ...fields(['description', 'subtitle', 'quantity', 'unitPrice', 'total', 'unit_code', 'unit_label', 'servicePeriodStart', 'servicePeriodEnd', 'servicePeriodLabel', 'billingTiming'], ['quantity', 'unitPrice', 'total']),
+    { name: 'components', type: 'array' },
+  ],
+  nested: { components: component },
 };
 export const INVOICE_COLLECTION_DESCRIPTORS = [items, ticket, entry, primary];
 

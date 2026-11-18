@@ -471,4 +471,30 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(syntheticLayout.children.map((child) => child.id)).toEqual(['top-stack']);
     expect(syntheticLayout.children[0]?.type).toBe('stack');
   });
+
+  it('round-trips barcode nodes (QR + Code 128), keeping symbology and the value expression', () => {
+    const ast = createAstDocument(
+      [
+        {
+          id: 'page-section',
+          type: 'section',
+          children: [
+            { id: 'qr-code', type: 'barcode', symbology: 'qr', value: { type: 'literal', value: 'https://psa.example.com/msp/tickets/1' } },
+            { id: 'tag-code', type: 'barcode', symbology: 'code128', value: { type: 'binding', bindingId: 'tenantClientName' } },
+          ],
+        },
+      ],
+      {
+        bindings: {
+          values: { tenantClientName: { id: 'tenantClientName', kind: 'value', path: 'tenantClient.name' } },
+          collections: {},
+        },
+      }
+    );
+    const layout = getDocumentNode(roundTripAst(ast));
+    const qr = findNodeById(layout, 'qr-code');
+    const code128 = findNodeById(layout, 'tag-code');
+    expect(qr).toMatchObject({ type: 'barcode', symbology: 'qr', value: { type: 'literal', value: 'https://psa.example.com/msp/tickets/1' } });
+    expect(code128).toMatchObject({ type: 'barcode', symbology: 'code128', value: { type: 'binding', bindingId: 'tenantClientName' } });
+  });
 });

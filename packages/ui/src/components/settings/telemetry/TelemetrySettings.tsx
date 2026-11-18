@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TelemetrySettings() {
+  const { t } = useTranslation('msp/settings');
   const [usageStatsEnabled, setUsageStatsEnabled] = useState(false);
 
   useEffect(() => {
@@ -38,10 +40,12 @@ export function TelemetrySettings() {
           />
           <div className="flex-1">
             <Label htmlFor="usage-stats" className="text-sm font-medium text-gray-900">
-              Usage Statistics
+              {t('telemetry.fields.usageStats.label')}
             </Label>
             <p className="text-sm text-gray-600 mt-1">
-              {usageStatsEnabled ? 'Enabled' : 'Disabled'} - Sends anonymous usage data to help improve the product
+              {usageStatsEnabled
+                ? t('telemetry.fields.usageStats.enabledDescription')
+                : t('telemetry.fields.usageStats.disabledDescription')}
             </p>
           </div>
         </div>
@@ -49,18 +53,17 @@ export function TelemetrySettings() {
 
       <Alert variant="info">
         <AlertDescription>
-          Usage statistics are controlled via the ALGA_USAGE_STATS environment variable.
-          Contact your system administrator to modify this setting.
+          {t('telemetry.environmentHelp', { variable: 'ALGA_USAGE_STATS' })}
         </AlertDescription>
       </Alert>
 
       <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-2">What data is collected</h4>
+        <h4 className="text-sm font-medium text-gray-900 mb-2">{t('telemetry.sections.collectedData.title')}</h4>
         <ul className="text-sm text-gray-600 space-y-1">
-          <li>• Feature usage patterns (no personal data)</li>
-          <li>• Error reports for debugging</li>
-          <li>• Performance metrics</li>
-          <li>• System configuration (anonymized)</li>
+          <li>• {t('telemetry.sections.collectedData.featureUsage')}</li>
+          <li>• {t('telemetry.sections.collectedData.errorReports')}</li>
+          <li>• {t('telemetry.sections.collectedData.performance')}</li>
+          <li>• {t('telemetry.sections.collectedData.configuration')}</li>
         </ul>
       </div>
     </div>

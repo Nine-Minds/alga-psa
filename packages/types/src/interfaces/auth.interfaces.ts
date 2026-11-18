@@ -1,5 +1,6 @@
 import type { UserAttributeKey, TicketAttributeKey } from '../lib/attributes';
 import type { TenantEntity } from './index';
+import type { SafeApiUser } from '../lib/userResponse';
 import type {
   IUser as BaseIUser,
   IRole as BaseIRole,
@@ -26,13 +27,14 @@ export interface IUserWithRoles extends IUser {
   avatarUrl?: string | null;
 }
 
-export interface ITeamMember extends IUserWithRoles {
+export type ITeamMember = SafeApiUser & {
   role: 'member' | 'lead';
-}
+};
 
 export interface ITeam extends TenantEntity {
   team_id: string;
   team_name: string;
+  description?: string | null;
   manager_id: string | null;
   created_at?: Date;
   updated_at?: Date;

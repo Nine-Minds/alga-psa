@@ -427,5 +427,12 @@
       "loading": "Läser in…",
       "loadMore": "Läs in fler"
     }
+  },
+  "communityEdition": {
+    "hostedDescription": "Funktioner för kontohantering och fakturering är tillgängliga i Pro för drift i en värdtjänst.",
+    "selfHostedDescription": "Community Edition i egen drift har obegränsat antal användare utan licensbegränsningar eller fakturering."
+  },
+  "page": {
+    "title": "Kontohantering"
   }
 }

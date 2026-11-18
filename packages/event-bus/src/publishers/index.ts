@@ -248,6 +248,7 @@ export async function publishWorkflowEvent<T extends WorkflowCatalogEventType>(p
   const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
   const payload = buildWorkflowPayload(params.payload as Record<string, unknown>, ctx);
   const workflow: WorkflowPublishHooks = {
+    // LEVERAGE: friction workflow-correlation-id — correlationId is copied into a UUID-only execution_id; callers with external ids fail the Zod parse after the fact
     executionId: ctx.correlationId,
     eventName: params.eventName,
     fromState: params.fromState,
@@ -274,6 +275,7 @@ export async function publishNonCatalogWorkflowEvent<T extends NonCatalogEventTy
   const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
   const payload = buildWorkflowPayload(params.payload, ctx);
   const workflow: WorkflowPublishHooks = {
+    // LEVERAGE: friction workflow-correlation-id — correlationId is copied into a UUID-only execution_id; callers with external ids fail the Zod parse after the fact
     executionId: ctx.correlationId,
     eventName: params.eventName,
     fromState: params.fromState,

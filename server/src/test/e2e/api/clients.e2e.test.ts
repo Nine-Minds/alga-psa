@@ -266,6 +266,30 @@ describe('Clients API E2E Tests', () => {
       });
     });
 
+    it('should clear optional location fields when updated with null', async () => {
+      const locationData = createClientLocationTestData({ address_line2: 'Suite 200', notes: 'to be cleared' });
+      const createResponse = await env.apiClient.post(
+        `/api/v1/clients/${testClientId}/locations`,
+        locationData
+      );
+      expect(createResponse.status).toBe(201);
+      const locationId = createResponse.data.data.location_id;
+
+      const updateResponse = await env.apiClient.put(
+        `/api/v1/clients/${testClientId}/locations/${locationId}`,
+        { address_line2: null, notes: null }
+      );
+      expect(updateResponse.status).toBe(200);
+      expect(updateResponse.data.data.address_line2).toBeNull();
+      expect(updateResponse.data.data.notes).toBeNull();
+
+      const stored = await env.db('client_locations')
+        .where({ location_id: locationId })
+        .first();
+      expect(stored.address_line2).toBeNull();
+      expect(stored.notes).toBeNull();
+    });
+
     it('should get client locations', async () => {
       if (!testClientId) {
         throw new Error('Test client not created in beforeEach');

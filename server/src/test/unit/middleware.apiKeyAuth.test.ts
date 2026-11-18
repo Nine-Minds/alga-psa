@@ -19,6 +19,38 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
   });
 
+  it('lets the session-authenticated label endpoints (pdf, templates, linked-assets) through, and only those', () => {
+    for (const p of ['/api/labels/pdf', '/api/labels/templates', '/api/labels/linked-assets']) {
+      expect(shouldSkipApiKeyAuth(p)).toBe(true);
+    }
+    expect(shouldSkipApiKeyAuth('/api/labels/pdf/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/labels/other')).toBe(false);
+  });
+
+  it('lets the session-authenticated staging box manifest through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/manifest')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/x/manifest/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/123')).toBe(false);
+  });
+
+  it('lets the session-authenticated RMA document route through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/document')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x/document/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
+  });
+
+  it('lets the resumable document upload routes authenticate in their handlers, and only those shapes', () => {
+    const id = '0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c';
+    expect(shouldSkipApiKeyAuth('/api/documents/uploads')).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/other`)).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/documents/uploads/${id}/complete/extra`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/documents/uploadsevil')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -85,9 +117,21 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the ticket original-email view to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/email-html')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/comments')).toBe(false);
+  });
+
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/export')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/export/evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/exportevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
   });
 
   it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
@@ -97,11 +141,24 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
   });
 
+  it('allows the Datto RMM webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/')).toBe(true);
+  });
+
+  it('exempts the Datto RMM route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/dattoevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/malicious')).toBe(false);
+  });
+
   it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/ninjaone')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/tacticalrmm')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/ai-gateway')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/stripe/payments/0ad8e710-13bc-4e01-a6ca-3f8992978ae8')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/other-provider')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
@@ -109,5 +166,15 @@ describe('shouldSkipApiKeyAuth', () => {
   it('still requires an API key for unrelated API routes', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
+  });
+
+  it('exempts exactly the two co-managed attachment download routes', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments')).toBe(false);
   });
 });

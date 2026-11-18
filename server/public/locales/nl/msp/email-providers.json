@@ -297,7 +297,7 @@
         "description": "Configureer geavanceerde opties voor e-mailverwerking",
         "folderFiltersLabel": "Mapfilters",
         "folderFiltersPlaceholder": "Inbox, Ondersteuning, Aangepaste map",
-        "folderFiltersHelp": "Door komma's gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox)",
+        "folderFiltersHelp": "Door komma’s gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox). Gebruik de exacte mapnaam zoals weergegeven in Outlook en schrijf geneste mappen als Inbox/Submap.",
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "OAuth-client-ID",
         "clientSecret": "OAuth-clientgeheim",
         "scopes": "OAuth-bereiken",
-        "scopesPlaceholder": "door spaties begrensde scopes"
+        "scopesPlaceholder": "door spaties begrensde scopes",
+        "clientSecretHelp": "Het clientgeheim wordt veilig opgeslagen en wordt niet getoond. Laat leeg om het bestaande geheim te behouden."
       },
       "processing": {
         "title": "Verwerkingsinstellingen",
@@ -432,6 +433,9 @@
         "folderFilters": "Mapfilters",
         "folderFiltersPlaceholder": "Inbox, ondersteuning, tickets",
         "active": "Actief"
+      },
+      "messages": {
+        "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
       "senderDisplayName": "Weergavenaam afzender",
       "senderDisplayNamePlaceholder": "bv. Acme Support",
-      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
+      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken.",
+      "oauthClientSecretHelp": "Het clientgeheim wordt veilig opgeslagen en wordt niet getoond. Laat leeg om het bestaande geheim te behouden."
     },
     "authOptions": {
       "password": "Wachtwoord",
@@ -580,6 +585,9 @@
       "saving": "Opslaan...",
       "updateProvider": "Aanbieder bijwerken",
       "createProvider": "Aanbieder maken"
+    },
+    "messages": {
+      "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-functie",
+      "domainsDescription": "Beheerde domeinen vereisen Pro.",
+      "settingsDescription": "Instellingen voor beheerde e-mail vereisen Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Kan beheerde domeinen niet laden",
       "loadOutboundSettingsFailed": "Kan instellingen voor uitgaande e-mail niet laden",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Host kopiëren",
       "copyFqdnAriaLabel": "Volledige naam kopiëren",
       "hostHint": "Tip: voer bij uw DNS-provider alleen de hierboven getoonde Host in. De meeste providers (Namecheap, GoDaddy, Cloudflare en andere) voegen “{{domain}}” automatisch toe. Als u de volledige naam plakt, wordt het domein herhaald (…{{domain}}.{{domain}}) en wordt het record nooit geverifieerd."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-functie",
+        "description": "Instructies voor DNS-records vereisen Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1065,6 +1084,7 @@
       "noClient": "Geen klant gematcht",
       "outcome": {
         "assignClient": "Ticket toegewezen aan klant \"{{client}}\"",
+        "matchedClient": "de gekoppelde klant",
         "fallback": "Geen klant gematcht — ticket gerouteerd naar de terugvalbestemming",
         "none": "Regel gaf geen resultaat — normale verwerking gaat door",
         "setDestination": "Ticket gerouteerd naar de geselecteerde bestemming",
@@ -1148,5 +1168,53 @@
         "users": "Kan de gebruikers niet laden. Probeer het opnieuw."
       }
     }
+  },
+  "quarantine": {
+    "title": "Inkomende e-mail in quarantaine",
+    "description": "Inkomende berichten die zijn geweigerd in plaats van aan een ticket toegevoegd. Bekijk ze en sluit af wat u hebt afgehandeld.",
+    "backToSettings": "Terug naar e-mailinstellingen",
+    "openQueue": "E-mail in quarantaine",
+    "empty": "Geen e-mail in quarantaine voor deze filters.",
+    "loadError": "Kan e-mail in quarantaine niet laden",
+    "dismissError": "Kan item niet verwijderen",
+    "dismissed": "Item verwijderd",
+    "noSubject": "(geen onderwerp)",
+    "dismiss": "Verwijderen",
+    "filters": {
+      "mailbox": "Postvak",
+      "reason": "Reden",
+      "status": "Status",
+      "allMailboxes": "Alle postvakken",
+      "allReasons": "Alle redenen",
+      "allStatuses": "Alle statussen",
+      "ticket": "Gefilterd op één ticket",
+      "clearTicket": "Alle tickets tonen"
+    },
+    "status": {
+      "open": "Open",
+      "dismissed": "Verwijderd"
+    },
+    "columns": {
+      "mailbox": "Postvak",
+      "sender": "Afzender",
+      "subject": "Onderwerp",
+      "reason": "Reden",
+      "ticket": "Ticket",
+      "received": "Ontvangen",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "Afzender staat niet op het ticket",
+      "reply_outside_sender_audience": "Antwoord buiten het publiek van de melding",
+      "co_managed_token_refused": "Co-managed antwoordlink geweigerd",
+      "co_managed_token_unserved": "Co-managed thread hier niet geaccepteerd",
+      "co_managed_sender_unauthenticated": "Co-managed afzender niet geverifieerd"
+    },
+    "banner_one": "{{count}} inkomende e-mail voor dit ticket is in quarantaine geplaatst",
+    "banner_other": "{{count}} inkomende e-mails voor dit ticket zijn in quarantaine geplaatst",
+    "bannerLink": "E-mail in quarantaine bekijken",
+    "bannerAskAdmin_one": "Vraag een e-mailbeheerder om deze te bekijken.",
+    "bannerAskAdmin_other": "Vraag een e-mailbeheerder om ze te bekijken."
   }
 }

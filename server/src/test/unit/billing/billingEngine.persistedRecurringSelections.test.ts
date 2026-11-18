@@ -63,7 +63,7 @@ describe('billing engine persisted recurring selections', () => {
       license,
     ]);
 
-    expect(selections['fixed-line']).toEqual({
+    expect(selections['fixed-line'].line).toEqual({
       servicePeriodRecordId: fixed.recordId,
       duePosition: 'advance',
       servicePeriodStart: '2025-01-01',
@@ -73,7 +73,7 @@ describe('billing engine persisted recurring selections', () => {
       coverageRatio: 1,
     });
 
-    expect(selections['product-line']).toMatchObject({
+    expect(selections['product-line'].line).toMatchObject({
       servicePeriodRecordId: product.recordId,
       duePosition: 'arrears',
       servicePeriodStart: '2025-02-10',
@@ -81,9 +81,9 @@ describe('billing engine persisted recurring selections', () => {
       servicePeriodStartExclusive: '2025-02-10',
       servicePeriodEndExclusive: '2025-02-20',
     });
-    expect(selections['product-line'].coverageRatio).toBeCloseTo(10 / 28);
+    expect(selections['product-line'].line.coverageRatio).toBeCloseTo(10 / 28);
 
-    expect(selections['license-line']).toEqual({
+    expect(selections['license-line'].line).toEqual({
       servicePeriodRecordId: license.recordId,
       duePosition: 'advance',
       servicePeriodStart: '2025-03-08',
@@ -92,5 +92,20 @@ describe('billing engine persisted recurring selections', () => {
       servicePeriodEndExclusive: '2025-04-08',
       coverageRatio: 1,
     });
+  });
+  it('guards multiple persisted due periods per stream', () => {
+    const engine = new BillingEngine();
+    const record = (recordId: string) => ({
+      recordId,
+      sourceObligation: { tenant: 'tenant-1', obligationId: 'fixed-line', chargeFamily: 'fixed' },
+      cadenceOwner: 'client',
+      duePosition: 'advance',
+      servicePeriod: { start: '2025-01-01', end: '2025-02-01', semantics: 'half_open' },
+      activityWindow: null,
+    });
+
+    expect(() =>
+      (engine as any).buildRecurringTimingSelectionsFromPersistedRecords([record('a'), record('b')]),
+    ).toThrow(/fixed-line: multiple persisted due periods matched one runtime obligation/);
   });
 });

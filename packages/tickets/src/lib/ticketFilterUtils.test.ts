@@ -1,7 +1,10 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import { TICKET_ASSIGNEE_ME } from '@alga-psa/types';
+import { encodeTicketWhere } from './ticketWhereUrl';
 import {
+  contactFilterUpdateForClientChange,
   normalizeAssignedToIdList,
   normalizeAssignedToIds,
   parseReturnFilters,
@@ -10,6 +13,9 @@ import {
 
 const USER_A = '11111111-2222-4333-8444-555555555555';
 const USER_B = 'aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee';
+const CLIENT_A = '22222222-3333-4444-8555-666666666666';
+const CLIENT_B = '33333333-4444-4555-8666-777777777777';
+const CONTACT_A = '44444444-5555-4666-8777-888888888888';
 
 describe('normalizeAssignedToIds', () => {
   it('returns an empty result for null, undefined, and empty input', () => {
@@ -109,5 +115,131 @@ describe('parseReturnFilters assignee handling', () => {
   it('keeps the explicit includeUnassigned flag working', () => {
     const filters = parseReturnFilters(encodeURIComponent('includeUnassigned=true'));
     expect(filters.includeUnassigned).toBe(true);
+  });
+});
+
+describe('contactFilterUpdateForClientChange (client row ↔ contact cross-link)', () => {
+  const row = (mode: 'in' | 'not_in', ...ids: string[]) => ({ mode, ids });
+  const whereOf = (mode: 'in' | 'not_in', ...ids: string[]) =>
+    ({ join: 'and', clauses: [{ path: 'client.id', operator: mode, value: ids }] });
+  const OTHER = { path: 'contact.tags', operator: 'in' as const, value: ['t1'] };
+
+  it('writes the row and leaves other clauses alone when no contact is applied', () => {
+    const update = contactFilterUpdateForClientChange({
+      currentWhere: { join: 'and', clauses: [OTHER] },
+      nextSelection: row('in', CLIENT_A),
+      currentContactId: null,
+    });
+    expect(update.where).toEqual({ join: 'and', clauses: [OTHER, { path: 'client.id', operator: 'in', value: [CLIENT_A] }] });
+    expect(update.contactId).toBeUndefined();
+  });
+
+  it('keeps the contact when its client is listed in an in row', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_A, CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBe(CONTACT_A);
+  });
+
+  it('clears the contact when its client is not listed in an in row', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBeUndefined();
+  });
+
+  it('clears the contact when its client is listed in a not_in row, and keeps it otherwise', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('not_in', CLIENT_A),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBeUndefined();
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('not_in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    }).contactId).toBe(CONTACT_A);
+  });
+
+  it('keeps the contact when the row is removed, and drops the row from where', () => {
+    const update = contactFilterUpdateForClientChange({
+      currentWhere: whereOf('in', CLIENT_A) as any,
+      nextSelection: null,
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    });
+    expect(update.contactId).toBe(CONTACT_A);
+    expect(update.where).toBeUndefined();
+  });
+
+  it('clears the contact when its ownership is unknown and a row applies', () => {
+    expect(contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+    }).contactId).toBeUndefined();
+  });
+
+  it('always names every key, so the update clears rather than merges', () => {
+    const update = contactFilterUpdateForClientChange({
+      currentWhere: undefined,
+      nextSelection: row('in', CLIENT_B),
+      currentContactId: CONTACT_A,
+      contactClientId: CLIENT_A,
+    });
+    expect(Object.keys(update).sort()).toEqual(['clientId', 'contactId', 'where']);
+    expect(update.clientId).toBeUndefined();
+  });
+});
+
+describe('legacy clientId folding in URL parsers', () => {
+  it('parseReturnFilters folds ?clientId= into an Any-of client.id row', () => {
+    const filters = parseReturnFilters(encodeURIComponent(`clientId=${CLIENT_A}`));
+    expect(filters.clientId).toBeUndefined();
+    expect(filters.where).toEqual({ join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [CLIENT_A] }] });
+  });
+
+  it('an explicit client row in the URL wins over clientId', () => {
+    const where = encodeTicketWhere({ join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [CLIENT_B] }] });
+    const filters = parseReturnFilters(encodeURIComponent(`clientId=${CLIENT_A}&where=${where}`));
+    expect(filters.clientId).toBeUndefined();
+    expect(filters.where?.clauses).toEqual([{ path: 'client.id', operator: 'not_in', value: [CLIENT_B] }]);
+  });
+
+  it('encoding a not_in row and parsing it back yields the same where', () => {
+    const original = { join: 'and', clauses: [{ path: 'client.id', operator: 'not_in', value: [CLIENT_A, CLIENT_B] }] } as const;
+    const params = new URLSearchParams({ where: encodeTicketWhere(original as any)! });
+    expect(parseReturnFilters(encodeURIComponent(params.toString())).where).toEqual(original);
+  });
+});
+
+describe('parseReturnFilters contact handling', () => {
+  it('round-trips the contact filter', () => {
+    const filters = parseReturnFilters(encodeURIComponent(`contactId=${CONTACT_A}`));
+    expect(filters.contactId).toBe(CONTACT_A);
+  });
+
+  it('leaves the contact filter unset when the URL carries none', () => {
+    expect(parseReturnFilters(encodeURIComponent('statusId=open')).contactId).toBeUndefined();
+  });
+});
+
+describe('"Me" assignee sentinel', () => {
+  it('keeps me in the URL CSV alongside unassigned and ids, dropping junk', () => {
+    expect(normalizeAssignedToIds(`me,${UNASSIGNED_FILTER_SENTINEL},${USER_A},junk,me`)).toEqual({
+      assignedToIds: [TICKET_ASSIGNEE_ME, USER_A],
+      includeUnassigned: true,
+    });
+  });
+
+  it('keeps me in stored arrays, deduped', () => {
+    expect(normalizeAssignedToIdList(['me', USER_A, 'me', 'junk', UNASSIGNED_FILTER_SENTINEL])).toEqual(['me', USER_A]);
+    expect(normalizeAssignedToIdList(['me'])).toEqual(['me']);
   });
 });

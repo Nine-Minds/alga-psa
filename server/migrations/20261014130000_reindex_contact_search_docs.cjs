@@ -19,6 +19,7 @@ exports.up = async function up(knex) {
 
   // Bound literal, not 'epoch'::timestamptz: Citus rejects non-IMMUTABLE
   // expressions in the SET list of an UPDATE on a distributed table.
+  // migration-lint: allow 5 - retroactive: single UPDATE limited to object_type contact rows of app_search_index to force a reindex; merged before the lint existed
   await knex('app_search_index')
     .where({ object_type: 'contact' })
     .update({ source_updated_at: knex.raw('?::timestamptz', ['1970-01-01T00:00:00.000Z']) });

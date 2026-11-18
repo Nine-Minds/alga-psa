@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import * as Popover from '@radix-ui/react-popover';
@@ -23,6 +23,8 @@ interface TagFilterProps {
   contentClassName?: string;
   modal?: boolean;
   align?: 'start' | 'center' | 'end';
+  /** Shown at the left of the popover footer once something is selected (e.g. a match-mode switch). */
+  footerContent?: React.ReactNode;
 }
 
 export function TagFilter({
@@ -38,6 +40,7 @@ export function TagFilter({
   contentClassName = '',
   modal = false,
   align = 'center',
+  footerContent,
 }: TagFilterProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('tagFilter.placeholder', { defaultValue: 'Filter by tags...' });
@@ -77,7 +80,8 @@ export function TagFilter({
               onTagSelect={onToggleTag}
             />
             {selectedTags.length > 0 && (
-              <div className="pt-2 border-t border-[rgb(var(--color-border-200))] flex justify-end">
+              <div className="pt-2 border-t border-[rgb(var(--color-border-200))] flex items-center justify-between gap-2">
+                {footerContent ?? <span />}
                 <Button id={`${id}-clear`} variant="ghost" size="sm" onClick={onClearTags}>
                   {t('tagFilter.clearAll', { defaultValue: 'Clear all' })}
                 </Button>

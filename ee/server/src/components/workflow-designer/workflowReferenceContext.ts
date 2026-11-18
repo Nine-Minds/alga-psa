@@ -2,7 +2,7 @@ import type { ExpressionContext } from './expression-editor';
 import { WORKFLOW_CAUGHT_ERROR_SCHEMA } from '@alga-psa/workflows/authoring';
 import { inferTypeFromJsonSchema } from './mapping/typeCompatibility';
 import type { WorkflowDataContext } from './mapping/MappingPanel';
-import type { JsonSchema } from './workflowDataContext';
+import { isAssignedVarStepId, type JsonSchema } from './workflowDataContext';
 
 export const buildWorkflowReferenceSourceTypeLookup = (
   ctx: WorkflowDataContext,
@@ -27,11 +27,8 @@ export const buildWorkflowReferenceSourceTypeLookup = (
     const outputType = inferTypeFromJsonSchema(stepOutput.outputSchema as JsonSchema);
     if (outputType) {
       map.set(basePath, outputType);
-    } else {
-      const isAssignedVar = stepOutput.stepId.includes(':');
-      if (!isAssignedVar) {
-        map.set(basePath, 'object');
-      }
+    } else if (!isAssignedVarStepId(stepOutput.stepId)) {
+      map.set(basePath, 'object');
     }
 
     stepOutput.fields.forEach((field) => addField(field, basePath));

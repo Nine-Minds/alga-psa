@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import {
   createAppointmentRequestSchema,
   updateAppointmentRequestSchema,
@@ -28,6 +29,7 @@ import {
 import {
   getAvailableServicesForClient,
   getServicesForPublicBooking,
+  getPortalBookingConfig,
   getAvailableTimeSlots as getTimeSlotsFromService,
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
@@ -39,6 +41,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { getClientPortalFeatureSettingsForTenant } from '../../lib/clientPortalFeatureSettingsDb';
 
 export interface IAppointmentRequest {
@@ -327,7 +330,7 @@ export const createAppointmentRequest = withAuth(async (
   data: CreateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can create appointment requests' };
     }
 
@@ -481,6 +484,8 @@ export const createAppointmentRequest = withAuth(async (
         updated_at: now
       };
 
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
       await tenantDb(trx, tenant).table('appointment_requests').insert(newRequest);
 
       return await tenantDb(trx, tenant).table('appointment_requests')
@@ -804,7 +809,7 @@ export const updateAppointmentRequest = withAuth(async (
   data: UpdateAppointmentRequestInput
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can update appointment requests' };
     }
 
@@ -884,6 +889,10 @@ export const updateAppointmentRequest = withAuth(async (
 
     // Update the appointment request
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.preferred_assigned_user_id], { kind: 'unscoped', surface: 'appointment_request' });
+      }
       await tenantDb(trx, tenant).table('appointment_requests')
         .where({
           appointment_request_id: validatedData.appointment_request_id
@@ -1077,7 +1086,7 @@ export const getMyAppointmentRequests = withAuth(async (
   filters?: Partial<AppointmentRequestFilters>
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1193,7 +1202,7 @@ export const getAppointmentRequestDetails = withAuth(async (
   requestId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1281,7 +1290,7 @@ export const cancelAppointmentRequest = withAuth(async (
   data: CancelAppointmentRequestInput
 ): Promise<AppointmentRequestResult<void>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can cancel appointment requests' };
     }
 
@@ -1532,7 +1541,8 @@ export const cancelAppointmentRequest = withAuth(async (
  */
 export const getAvailableServicesAndTickets = withAuth(async (
   currentUser: IUserWithRoles,
-  { tenant }: AuthContext
+  { tenant }: AuthContext,
+  includeServiceId?: string
 ): Promise<AppointmentRequestResult<{
   services: Array<{
     service_id: string;
@@ -1540,7 +1550,10 @@ export const getAvailableServicesAndTickets = withAuth(async (
     description?: string;
     service_type?: string;
     default_rate?: number;
+    unit_of_measure?: string;
   }>;
+  default_service_id: string | null;
+  show_service_rates: boolean;
   tickets: Array<{
     ticket_id: string;
     ticket_number: string;
@@ -1548,7 +1561,7 @@ export const getAvailableServicesAndTickets = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1574,9 +1587,15 @@ export const getAvailableServicesAndTickets = withAuth(async (
 
     const clientId = contact.client_id;
 
+    // The MSP curates this menu in Availability Settings → Service Rules.
+    const bookingConfig = await getPortalBookingConfig(tenant);
+
     // Get available services for the client from two sources:
-    // 1. Services from active contracts
-    const contractServices = await getAvailableServicesForClient(tenant, clientId);
+    // 1. Services from active contracts (skipped when the MSP only wants its
+    //    explicitly configured bookable services on the portal)
+    const contractServices = bookingConfig.hideContractServices
+      ? []
+      : await getAvailableServicesForClient(tenant, clientId);
 
     // 2. Services that allow booking without a contract
     const publicServices = await getServicesForPublicBooking(tenant);
@@ -1596,7 +1615,40 @@ export const getAvailableServicesAndTickets = withAuth(async (
       }
     });
 
+    // Editing an existing request must still render its own service, even when
+    // the curation above no longer lists it.
+    if (includeServiceId && !servicesMap.has(includeServiceId)) {
+      const existingService = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('service_catalog as sc')
+          .where({ 'sc.service_id': includeServiceId })
+          .select(
+            'sc.service_id',
+            'sc.service_name',
+            'sc.description as service_description',
+            'st.name as service_type',
+            'sc.default_rate',
+            'sc.unit_of_measure'
+          );
+        scopedDb.tenantJoin(query, 'service_types as st', 'sc.custom_service_type_id', 'st.id', { type: 'left' });
+        return await query.first();
+      });
+
+      if (existingService) {
+        servicesMap.set(existingService.service_id, existingService);
+      }
+    }
+
     const services = Array.from(servicesMap.values());
+
+    // Only the MSP's own choice preselects a service. A tenant that happens to
+    // have a single bookable service is not a decision anybody made, so "No
+    // default" leaves the client to pick rather than silently locking in
+    // whatever one service exists.
+    const defaultServiceId = bookingConfig.defaultServiceId
+      && servicesMap.has(bookingConfig.defaultServiceId)
+      ? bookingConfig.defaultServiceId
+      : null;
 
     // Get open tickets for the client
     const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1618,8 +1670,14 @@ export const getAvailableServicesAndTickets = withAuth(async (
           service_name: s.service_name,
           description: s.service_description,
           service_type: s.service_type,
-          default_rate: s.default_rate
+          // Hidden rates are withheld here, not just unrendered, so the price
+          // never reaches the browser. bigint rates arrive as strings from some
+          // drivers; a $0 rate must stay numeric 0 so the portal can hide it.
+          default_rate: bookingConfig.showServiceRates ? Number(s.default_rate ?? 0) : undefined,
+          unit_of_measure: bookingConfig.showServiceRates ? s.unit_of_measure : undefined
         })),
+        default_service_id: defaultServiceId,
+        show_service_rates: bookingConfig.showServiceRates,
         tickets: tickets.map(t => ({
           ticket_id: t.ticket_id,
           ticket_number: t.ticket_number,
@@ -1644,7 +1702,7 @@ export const getAvailableDatesForService = withAuth(async (
   userTimezone?: string
 ): Promise<AppointmentRequestResult<string[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1688,7 +1746,7 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
   ticketId: string
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 
@@ -1784,7 +1842,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
   }>;
 }>> => {
   try {
-    if (currentUser.user_type !== 'client') {
+    if (!isClientUserType(currentUser.user_type)) {
       return { success: false, error: 'Only client users can access this endpoint' };
     }
 

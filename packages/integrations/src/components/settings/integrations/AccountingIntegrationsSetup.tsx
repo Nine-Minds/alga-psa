@@ -10,11 +10,12 @@ import CSVIntegrationSettings from './CSVIntegrationSettings';
 import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
+import QuickBooksDesktopIntegrationSettings from './QuickBooksDesktopIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAccountingCapabilities } from './useAccountingCapabilities';
 
-type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
+type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv' | 'quickbooks_desktop';
 
 type AccountingIntegrationOption = {
   id: AccountingIntegrationId;
@@ -53,6 +54,10 @@ function IntegrationMark({ option }: { option: AccountingIntegrationOption }) {
     ) : option.id === 'xero_csv' ? (
       <BannerIcon className="bg-sky-500 text-[11px] font-bold tracking-wider text-white">
         X·CSV
+      </BannerIcon>
+    ) : option.id === 'quickbooks_desktop' ? (
+      <BannerIcon className="bg-green-700 text-[11px] font-bold tracking-wider text-white">
+        IIF
       </BannerIcon>
     ) : (
       <BannerIcon className="bg-slate-800 text-[11px] font-bold tracking-wider text-white">
@@ -122,6 +127,15 @@ export default function AccountingIntegrationsSetup({ canUseLiveIntegrations = t
             { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
             { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.csv', { defaultValue: 'CSV' }) }
           ]
+        },
+        {
+          id: 'quickbooks_desktop',
+          title: 'QuickBooks Desktop (IIF)',
+          description: t('integrations.accounting.setup.options.qbd.description', { defaultValue: 'Export invoices as an IIF file for import into QuickBooks Desktop.' }),
+          highlights: [
+            { label: t('integrations.accounting.setup.highlights.export', { defaultValue: 'Export' }), value: t('integrations.accounting.setup.highlightValues.manual', { defaultValue: 'Manual' }) },
+            { label: t('integrations.accounting.setup.highlights.format', { defaultValue: 'Format' }), value: t('integrations.accounting.setup.highlightValues.iif', { defaultValue: 'IIF' }) }
+          ]
         }
       );
 
@@ -148,6 +162,9 @@ export default function AccountingIntegrationsSetup({ canUseLiveIntegrations = t
     }
     if (requestedIntegration === 'quickbooks_csv') {
       return 'quickbooks_csv';
+    }
+    if (requestedIntegration === 'quickbooks_desktop' || requestedIntegration === 'qbd') {
+      return 'quickbooks_desktop';
     }
     if (qboOauthStatus && isEEAvailable) {
       return 'quickbooks_online';
@@ -331,6 +348,8 @@ export default function AccountingIntegrationsSetup({ canUseLiveIntegrations = t
           <XeroIntegrationSettings syncHealthSlot={xeroSyncHealthSlot} />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
+        ) : selected === 'quickbooks_desktop' ? (
+          <QuickBooksDesktopIntegrationSettings />
         ) : (
           <Card>
             <CardHeader>

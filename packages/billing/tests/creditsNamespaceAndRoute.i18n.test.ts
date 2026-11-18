@@ -61,6 +61,7 @@ describe('MSP credits namespace and route i18n contract', () => {
       'msp/core',
       'features/billing',
       'msp/credits',
+      'features/documents',
     ]);
   });
 

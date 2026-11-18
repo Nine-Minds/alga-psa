@@ -33,6 +33,8 @@ import GenericPlanServicesList from './GenericContractLineServicesList';
 interface UsagePlanConfigurationProps {
   contractLineId: string;
   className?: string;
+  /** Contract currency code, resolved by the caller: contract.currency_code || client.default_currency_code || 'USD'. */
+  currencyCode: string;
 }
 
 // Define the structure returned by getPlanServicesWithConfigurations locally
@@ -66,6 +68,7 @@ const isReturnedActionError = (value: unknown): boolean =>
 export function UsagePlanConfiguration({
   contractLineId,
   className = '',
+  currencyCode,
 }: UsagePlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
   const { money } = useCurrencyFormat();
@@ -874,6 +877,7 @@ export function UsagePlanConfiguration({
                       <ServiceUsageConfigForm
                         serviceId={service.configuration.service_id}
                         serviceName={service.service?.service_name || ''}
+                        currencyCode={currencyCode}
                         config={serviceConfigs[service.configuration.service_id]}
                         validationErrors={serviceValidationErrors[service.configuration.service_id]}
                         saveAttempted={saveAttempted}

@@ -17,9 +17,9 @@ export const TEST_SCHEMA = z.object({
   foo: z.string().optional(),
   bar: z.number().optional(),
   items: z.array(z.any()).optional(),
-  email: z.record(z.any()).optional(),
+  email: z.record(z.string(), z.any()).optional(),
   secretRef: z.string().optional(),
-  nested: z.record(z.any()).optional()
+  nested: z.record(z.string(), z.any()).optional()
 }).passthrough();
 
 export const TEST_SOURCE_SCHEMA = z.object({

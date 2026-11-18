@@ -472,18 +472,37 @@
         "noLimit": "Bez limitu"
       },
       "actions": {
-        "save": "Zapisz Regulamin usługi"
+        "save": "Zapisz Regulamin usługi",
+        "savePortalBooking": "Zapisz ustawienia rezerwacji w portalu"
       },
       "feedback": {
         "selectServiceError": "Wybierz usługę",
         "saveSuccess": "Regulamin usługi został zapisany",
         "saveError": "Nie udało się zapisać reguł usługi",
         "deleteSuccess": "Reguły usługi zostały usunięte",
-        "deleteError": "Nie udało się usunąć reguł usługi"
+        "deleteError": "Nie udało się usunąć reguł usługi",
+        "portalBookingSaveSuccess": "Zapisano ustawienia rezerwacji w portalu klienta"
       },
       "deleteDialog": {
         "title": "Usuń reguły usługi",
         "message": "Czy na pewno chcesz usunąć reguły dla {{serviceName}}? Tej operacji nie można cofnąć."
+      },
+      "portalBooking": {
+        "title": "Rezerwacje w portalu klienta",
+        "description": "Co widzą klienci, gdy proszą o termin w portalu."
+      },
+      "portalHideContractServices": {
+        "label": "W portalu klienta pokazuj tylko skonfigurowane usługi dostępne do rezerwacji",
+        "help": "Ukrywa usługi, które klienci otrzymują ze swoich umów, więc portal pokazuje tylko usługi skonfigurowane powyżej z opcją „Zezwalaj na rezerwację bez umowy”."
+      },
+      "portalDefaultService": {
+        "label": "Domyślna usługa rezerwacji",
+        "none": "Brak domyślnej — wybiera klient",
+        "help": "Jest wybierana z góry dla klientów, aby nigdy nie musieli wybierać usługi. Wybierz jedną ze skonfigurowanych usług — dopóki tego nie zrobisz, nic nie jest wybrane z góry."
+      },
+      "portalShowServiceRates": {
+        "label": "Pokazuj klientom stawki usług",
+        "help": "Gdy ta opcja jest wyłączona, klienci nigdy nie widzą ceny usługi podczas rezerwacji."
       }
     },
     "exceptions": {
@@ -853,5 +872,81 @@
       "members": "Członkowie",
       "creatorNote": "Będziesz mógł zarządzać tym kalendarzem."
     }
+  },
+  "ticketDetails": {
+    "title": "Szczegóły zgłoszenia",
+    "numberedTitle": "Zgłoszenie nr {{number}}",
+    "untitled": "Zgłoszenie bez tytułu",
+    "noDescription": "Brak opisu",
+    "notAvailable": "Brak danych",
+    "unassigned": "Nieprzypisane",
+    "fields": {
+      "title": {
+        "label": "Tytuł"
+      },
+      "description": {
+        "label": "Opis"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priorytet"
+      },
+      "board": {
+        "label": "Tablica"
+      },
+      "client": {
+        "label": "Klient"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "assignedUser": {
+        "label": "Przypisany użytkownik"
+      },
+      "entered": {
+        "label": "Utworzono"
+      },
+      "updated": {
+        "label": "Zaktualizowano"
+      },
+      "closed": {
+        "label": "Zamknięto"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Zadanie projektu",
+    "noDescription": "Brak opisu",
+    "notAvailable": "Brak danych",
+    "unassigned": "Nieprzypisane",
+    "untitledItem": "Element bez tytułu",
+    "noChecklistItems": "Brak elementów listy kontrolnej",
+    "fields": {
+      "description": {
+        "label": "Opis"
+      },
+      "project": {
+        "label": "Projekt"
+      },
+      "phase": {
+        "label": "Faza"
+      },
+      "assignedTo": {
+        "label": "Przypisano do"
+      },
+      "dueDate": {
+        "label": "Termin wykonania"
+      },
+      "checklist": {
+        "label": "Lista kontrolna"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Widok harmonogramu agenta jest teraz zarządzany w module Planowanie. (agentId: {{agentId}})",
+    "timeEntry": "Wpisy czasu są zarządzane w module Planowanie.",
+    "scheduling": "Planowanie jest zarządzane w module Planowanie."
   }
 }

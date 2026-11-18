@@ -358,12 +358,18 @@ describe("production compute extraction golden", () => {
       0,
       productionOrchestration.indexOf("calculateContractBilling({"),
     );
-    expect(beforeSharedCalculation).toMatch(/loadFixedPriceObligation\(/);
-    expect(beforeSharedCalculation).toMatch(/loadTimeBasedObligation\(/);
-    expect(beforeSharedCalculation).toMatch(/loadUsageBasedObligation\(/);
-    expect(beforeSharedCalculation).toMatch(/loadBucketObligation\(/);
-    expect(beforeSharedCalculation).toMatch(/loadProductObligation\(/);
-    expect(beforeSharedCalculation).toMatch(/loadLicenseObligation\(/);
+    // The main loop reaches the loaders through the shared resolver's database
+    // source rather than naming them; the source is built from the engine's
+    // loaders (see resolveLineCharges).
+    expect(beforeSharedCalculation).toMatch(/resolveLineCharges\(/);
+    const familyCharges = engine.slice(
+      engine.indexOf("private async resolveLineCharges("),
+      engine.indexOf("private async calculateFamilyCharges<"),
+    );
+    expect(familyCharges).toMatch(/loadFixedPriceObligation\(/);
+    expect(familyCharges).toMatch(/loadTimeBasedObligation\(/);
+    expect(familyCharges).toMatch(/loadUsageBasedObligation\(/);
+    expect(familyCharges).toMatch(/loadRecurringQuantityObligation\(/);
     expect(beforeSharedCalculation).not.toMatch(
       /this\.calculate(?:FixedPrice|TimeBased|UsageBased|BucketPlan|Product|License|RecurringQuantity)Charges\(/,
     );
@@ -394,9 +400,17 @@ describe("production compute extraction golden", () => {
       "calculateProductCharges",
       "calculateLicenseCharges",
     ]) {
-      expect(methodBody(compatibilityMethod)).toMatch(/this\.load/);
-      expect(methodBody(compatibilityMethod)).toMatch(
-        /calculateLoadedContractObligations\(/,
+      // Compatibility adapters either delegate to the shared resolver (via
+      // calculateFamilyCharges) or run a loader, then price through the shared
+      // calculation.
+      const start = Math.max(
+        engine.indexOf(`private ${compatibilityMethod}(`),
+        engine.indexOf(`private async ${compatibilityMethod}(`),
+      );
+      expect(start, `${compatibilityMethod} must exist`).toBeGreaterThan(-1);
+      const body = engine.slice(start, engine.indexOf("\n  private ", start + 1));
+      expect(body).toMatch(
+        /calculateFamilyCharges<|this\.load[\s\S]*calculateLoadedContractObligations\(/,
       );
     }
     expect(engine).not.toContain("calculateContractCharge(");

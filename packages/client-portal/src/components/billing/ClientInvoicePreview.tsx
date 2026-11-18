@@ -5,8 +5,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
-import { getResolvedInvoiceTemplateId } from '@alga-psa/billing/actions/invoiceQueries';
-import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
+import { getClientInvoicePreview } from '@alga-psa/client-portal/actions';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -69,51 +68,29 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
       setError(null);
 
       try {
-        // Fetch invoice, templates, and the client/default template selection in
-        // parallel. The resolver returns the client's override, otherwise the
-        // tenant default, otherwise its own first-template fallback.
-        const [dbInvoiceData, templates, resolvedTemplateId] = await Promise.all([
-          getClientInvoiceById(invoiceId),
-          getClientInvoiceTemplates(),
-          getResolvedInvoiceTemplateId(invoiceId),
-        ]);
+        // One server action resolves the invoice and its template and inlines
+        // the logo / designer images, which the browser cannot fetch itself.
+        const preview = await getClientInvoicePreview(invoiceId);
 
-        if (isBillingActionError(dbInvoiceData)) {
+        if (isBillingActionError(preview)) {
           setInvoiceData(null);
           setTemplate(null);
-          setError(getErrorMessage(dbInvoiceData));
+          setError(getErrorMessage(preview));
           return;
         }
 
-        if (isBillingActionError(templates)) {
-          setInvoiceData(null);
-          setTemplate(null);
-          setError(getErrorMessage(templates));
-          return;
-        }
-
-        if (!dbInvoiceData) {
+        if (!preview?.invoice) {
           throw new Error('Invoice not found');
         }
 
         // Map to view model for renderer
-        const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
+        const viewModel = mapDbInvoiceToWasmViewModel(preview.invoice);
         if (!viewModel) {
           throw new Error('Failed to process invoice data');
         }
 
         setInvoiceData(viewModel);
-
-        // Honor the resolved client/tenant/default template when it matches one
-        // of the available templates. A null or unmatched resolution falls back
-        // to the first standard template, then the first available template.
-        // An empty list keeps the existing unavailable state.
-        const resolvedTemplate = resolvedTemplateId
-          ? templates.find((entry) => entry.template_id === resolvedTemplateId)
-          : undefined;
-        const selectedTemplate =
-          resolvedTemplate || templates.find((entry) => entry.isStandard) || templates[0];
-        setTemplate(selectedTemplate || null);
+        setTemplate(preview.template);
 
       } catch (err) {
         console.error('Error loading invoice preview:', err);

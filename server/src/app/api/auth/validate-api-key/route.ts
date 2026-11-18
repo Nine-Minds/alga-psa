@@ -1,3 +1,5 @@
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 import { ApiKeyService } from '@alga-psa/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest) {
       tenant: keyRecord.tenant
     });
   } catch (error) {
+    if (isCoManagedLifecycleError(error)) return handleApiError(error);
     console.error('API key validation error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

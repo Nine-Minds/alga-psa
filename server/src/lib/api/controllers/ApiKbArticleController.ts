@@ -3,6 +3,7 @@
  * Handles knowledge base article API endpoints
  */
 
+import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { KbArticleService } from '../services/KbArticleService';
@@ -40,6 +41,11 @@ export class ApiKbArticleController extends ApiBaseController {
     });
 
     this.kbService = kbService;
+  }
+
+  protected async checkPermission(req: AuthenticatedApiRequest, action: string): Promise<void> {
+    if (action === 'read' && req.context.user && await canReadKnowledgeBase(req.context.user)) return;
+    return super.checkPermission(req, action);
   }
 
   /**

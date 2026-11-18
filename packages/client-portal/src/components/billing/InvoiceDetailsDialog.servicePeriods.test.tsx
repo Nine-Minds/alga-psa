@@ -162,6 +162,21 @@ describe('InvoiceDetailsDialog recurring service periods', () => {
     expect(within(firewallRow as HTMLElement).getByText('Advance')).toBeInTheDocument();
   });
 
+  it('shows the invoice currency code in the details grid', async () => {
+    render(
+      <InvoiceDetailsDialog
+        invoiceId="inv-1"
+        isOpen={true}
+        onClose={() => {}}
+        formatCurrency={(amount) => `$${(amount / 100).toFixed(2)}`}
+        formatDate={(date) => String(date)}
+      />
+    );
+
+    const label = await screen.findByText('Currency');
+    expect(label.nextElementSibling?.textContent).toBe('USD');
+  });
+
   it('T196: client-portal invoice detail dialogs flatten or omit recurring period copy according to the documented projection policy', async () => {
     render(
       <InvoiceDetailsDialog

@@ -267,7 +267,7 @@ describe('TeamsTabPage', () => {
     });
     expect((projectTaskResult as any)?.props?.['data-teams-tab-destination']).toBe('project_task');
     expect(collectNormalizedText(projectTaskResult)).toContain('Project task task-88');
-    expect(collectHrefs(projectTaskResult)).toContain('/msp/projects/project-44/tasks/task-88');
+    expect(collectHrefs(projectTaskResult)).toContain('/msp/projects/project-44?taskId=task-88');
 
     const approvalResult = await TeamsTabPage({
       searchParams: Promise.resolve({

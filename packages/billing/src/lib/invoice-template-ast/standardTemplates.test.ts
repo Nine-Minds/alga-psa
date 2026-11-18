@@ -18,6 +18,34 @@ const collectNodesById = (node: unknown, id: string, out: any[] = []): any[] => 
   return out;
 };
 
+describe('standard invoice template service period and currency', () => {
+  const LINE_TABLE_IDS = ['line-items', 'recurring-items', 'onetime-items', 'location-band-items', 'ticket-time-summary'];
+  const tablesOf = (ast: unknown) => LINE_TABLE_IDS.flatMap((id) => collectNodesById(ast, id)).filter((n) => n.type === 'dynamic-table');
+
+  it('puts exactly one translated Service Period column on every standard line table', () => {
+    for (const [code, ast] of Object.entries(STANDARD_INVOICE_TEMPLATE_ASTS)) {
+      const tables = tablesOf(ast);
+      expect(tables.length, code).toBeGreaterThan(0);
+      for (const table of tables) {
+        const columns = table.columns.filter((c: any) => c.value?.path === 'servicePeriodLabel');
+        expect(columns, `${code}/${table.id}`).toHaveLength(1);
+        expect(columns[0].header).toEqual({ i18nKey: 'labels.servicePeriod', defaultValue: 'Service Period' });
+      }
+    }
+  });
+
+  it('binds currencyCode in the header card and the totals of every standard template', () => {
+    for (const [code, ast] of Object.entries(STANDARD_INVOICE_TEMPLATE_ASTS)) {
+      expect(ast.bindings?.values?.currencyCode, code).toMatchObject({ path: 'currencyCode' });
+      const fields = collectNodesById(ast, 'currency');
+      const inCard = fields.filter((n) => n.type === 'field');
+      const inTotals = fields.filter((n) => n.type !== 'field' && n.value?.bindingId === 'currencyCode');
+      expect(inCard, `${code} meta card`).toHaveLength(1);
+      expect(inTotals, `${code} totals`).toHaveLength(1);
+    }
+  });
+});
+
 describe('standard invoice template AST definitions', () => {
   // Regression: alga0002161 — the issuer-logo image must letterbox (object-fit:
   // contain) instead of stretching non-wide logos to the 180x72 box.

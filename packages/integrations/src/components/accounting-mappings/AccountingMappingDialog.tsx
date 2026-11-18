@@ -67,6 +67,8 @@ export function AccountingMappingDialog({
   const [selectedKindId, setSelectedKindId] = useState<string>('');
   const [staleTarget, setStaleTarget] = useState(false);
   const [metadataInput, setMetadataInput] = useState<string>('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const metadataFields = useMemo(() => module.metadata?.fields ?? [], [module.metadata]);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const initializedDraft = useRef<string | null>(null);
@@ -114,12 +116,18 @@ export function AccountingMappingDialog({
       } else {
         setMetadataInput('');
       }
+      const storedMetadata = (existingMapping.metadata ?? {}) as Record<string, unknown>;
+      setFieldValues(Object.fromEntries((module.metadata?.fields ?? []).map((field) => {
+        const stored = storedMetadata[field.key];
+        return [field.key, typeof stored === 'string' ? stored : ''];
+      })));
     } else {
       setSelectedAlgaId('');
       setSelectedExternalId('');
       setSelectedKindId(targetConfig?.defaultKindId ?? '');
       setStaleTarget(false);
       setMetadataInput('');
+      setFieldValues({});
     }
     setError(null);
     setIsSaving(false);
@@ -148,6 +156,14 @@ export function AccountingMappingDialog({
         .map((entity) => ({ value: entity.id, label: entity.name })),
     [algaEntities, mappedAlgaIds, isEditing, ownAlgaId]
   );
+
+  // A searched Alga side (clients) withholds mapped entities on the server instead of filtering a list.
+  const AlgaPicker = module.algaSearch?.Picker;
+  const excludedAlgaIds = useMemo(
+    () => Array.from(mappedAlgaIds ?? []).filter((id) => !(isEditing && id === ownAlgaId)),
+    [mappedAlgaIds, isEditing, ownAlgaId]
+  );
+  const algaPlaceholder = t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField });
 
   const externalOptions = useMemo(
     () =>
@@ -196,6 +212,29 @@ export function AccountingMappingDialog({
       );
       setIsSaving(false);
       return;
+    }
+
+    const missingField = metadataFields.find((field) => field.required && !(fieldValues[field.key] ?? '').trim());
+    if (missingField) {
+      setError(t('integrations.accounting.dialog.errors.enterExternal', { defaultValue: 'Please enter {{field}}.', field: missingField.label.toLowerCase() }));
+      setIsSaving(false);
+      return;
+    }
+    if (metadataFields.length > 0) {
+      // Fields own only their keys; everything else the mapping carries (set by
+      // exports or other modules) is kept.
+      const merged: Record<string, unknown> = {
+        ...((parsedMetadata ?? existingMapping?.metadata ?? {}) as Record<string, unknown>)
+      };
+      for (const field of metadataFields) {
+        const value = (fieldValues[field.key] ?? '').trim();
+        if (value) {
+          merged[field.key] = value;
+        } else {
+          delete merged[field.key];
+        }
+      }
+      parsedMetadata = merged;
     }
 
     try {
@@ -261,16 +300,26 @@ export function AccountingMappingDialog({
             <Label htmlFor={`${module.id}-alga-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.algaField}
             </Label>
-            <SearchableSelect
-              id={`${module.id}-alga-select`}
-              options={algaOptions}
-              value={selectedAlgaId}
-              onChange={(value: string) => setSelectedAlgaId(value || '')}
-              placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.algaField })}
-              required
-              className="w-full"
-              dropdownMode="overlay"
-            />
+            {AlgaPicker ? (
+              <AlgaPicker
+                id={`${module.id}-alga-select`}
+                value={selectedAlgaId}
+                onChange={setSelectedAlgaId}
+                excludeIds={excludedAlgaIds}
+                placeholder={algaPlaceholder}
+              />
+            ) : (
+              <SearchableSelect
+                id={`${module.id}-alga-select`}
+                options={algaOptions}
+                value={selectedAlgaId}
+                onChange={(value: string) => setSelectedAlgaId(value || '')}
+                placeholder={algaPlaceholder}
+                required
+                className="w-full"
+                dropdownMode="overlay"
+              />
+            )}
           </div>
 
           {targetConfig ? (
@@ -343,6 +392,25 @@ export function AccountingMappingDialog({
             ) : null}
             {renderExternalFieldHelpText()}
           </div>
+
+          {metadataFields.map((field) => (
+            <div key={field.key} className="space-y-2">
+              <Label htmlFor={`${module.id}-field-${field.key}`} className="text-sm font-medium text-foreground">
+                {field.label}
+              </Label>
+              <Input
+                id={`${module.id}-field-${field.key}`}
+                value={fieldValues[field.key] ?? ''}
+                onChange={(event) => setFieldValues((previous) => ({ ...previous, [field.key]: event.target.value }))}
+                placeholder={field.placeholder}
+                className="w-full"
+                required={field.required}
+              />
+              {field.helpText ? (
+                <p className="text-xs text-muted-foreground">{field.helpText}</p>
+              ) : null}
+            </div>
+          ))}
 
           {context.realmId || context.realmDisplayValue ? (
             <div className="space-y-2">

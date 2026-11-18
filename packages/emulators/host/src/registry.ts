@@ -1,4 +1,4 @@
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 import type { ActionDef, ControlRegistry, FaultDef, SeederDef, StateViewDef } from './types';
 
 /** Error carrying the HTTP status the control API should respond with. */
@@ -19,7 +19,7 @@ function describe(def: Described): { name: string; description: string; paramsSc
   return {
     name: def.name,
     description: def.description,
-    paramsSchema: def.params ? zodToJsonSchema(def.params as never) : null,
+    paramsSchema: def.params ? z.toJSONSchema(def.params as z.ZodType, { target: 'draft-7', io: 'input', unrepresentable: 'any' }) : null,
   };
 }
 

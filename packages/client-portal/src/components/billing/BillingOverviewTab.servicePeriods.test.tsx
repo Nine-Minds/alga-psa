@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import BillingOverviewTab from './BillingOverviewTab';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useFormatters: () => ({ locale: 'en' }),
   useTranslation: () => ({
     t: (_key: string, fallback?: string | Record<string, unknown>) => {
       if (typeof fallback === 'string') {

@@ -31,7 +31,7 @@ import {
   handleApiError,
 } from '../middleware/apiMiddleware';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.string().guid();
 
 type MarketingAction = 'read' | 'manage';
 

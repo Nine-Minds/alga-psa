@@ -1,10 +1,11 @@
 'use server'
 
 import { randomBytes } from 'node:crypto';
-import { createTenantKnex, tenantDb, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
+import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
-import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
+import { getTenantPortalBaseUrl, resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
@@ -283,7 +284,7 @@ export const createClientPortalUser = withAuth(async (
     }
 
     // Create user and assign role
-    const result = await knex.transaction(async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
 
       // 1) Resolve or create contact
@@ -309,6 +310,7 @@ export const createClientPortalUser = withAuth(async (
               updated_at: trx.raw('now()')
             })
             .returning('*');
+          queueContactCreated(trx, tenant, createdContact, { actorUserId: user.user_id });
           contact = createdContact;
         }
       }
@@ -338,6 +340,7 @@ export const createClientPortalUser = withAuth(async (
               updated_at: trx.raw('now()')
             })
             .returning('*');
+          queueContactCreated(trx, tenant, createdContact, { actorUserId: user.user_id });
           contact = createdContact;
         }
       }
@@ -572,17 +575,23 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
-    // Prefer the tenant's active custom portal domain (vanity host) so the
-    // invitation lands on the host the client portal is served from.
-    let vanityBaseUrl = '';
+    // Resolve the portal origin before opening the transaction: the lookups acquire
+    // their own connection. Prefer the tenant's active custom domain serving the
+    // client portal (so the invitation lands on the host the client portal is served
+    // from); otherwise the tenant portal base URL (configured public base URL).
+    let portalBaseUrl: string | null = null;
     try {
-      const portalDomain = await getPortalDomainStatusForTenant(tenant);
-      if (portalDomain.status === 'active' && portalDomain.domain) {
-        vanityBaseUrl = `https://${portalDomain.domain}`;
+      const resolved = await resolveTenantAppBase(tenant, 'client_portal');
+      if (resolved.source === 'vanity') {
+        portalBaseUrl = resolved.baseUrl;
       }
     } catch (domainError) {
       console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
     }
+    if (!portalBaseUrl) {
+      portalBaseUrl = await getTenantPortalBaseUrl(tenant);
+    }
+
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -663,24 +672,14 @@ export const sendPortalInvitation = withAuth(async (
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
 
-      // Generate portal setup URL with robust base URL fallback
-      const baseUrl =
-        vanityBaseUrl ||
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTAUTH_URL ||
-        (process.env.HOST ? `https://${process.env.HOST}` : '');
-
-      if (!baseUrl) {
+      if (!portalBaseUrl) {
         throw new PortalInvitationError(
           'Base URL is not configured for portal invitations',
           'BASE_URL_NOT_CONFIGURED'
         );
       }
 
-      const setupUrl = new URL(
-        '/auth/portal/setup',
-        baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
-      );
+      const setupUrl = new URL('/auth/portal/setup', portalBaseUrl);
       setupUrl.searchParams.set('token', invitationResult.token || '');
       setupUrl.searchParams.set('tenant', tenantSlug);
       const portalSetupUrl = setupUrl.toString();

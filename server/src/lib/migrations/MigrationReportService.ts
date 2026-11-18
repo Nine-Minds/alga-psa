@@ -7,6 +7,7 @@ import type {
   MigrationSkipProvenance,
   PreflightResult,
 } from './types';
+import { SKU_MATCH_WARNING_PREFIX } from './types';
 
 /**
  * Builds operator-facing reports from the plan and the outcome ledger. All
@@ -101,6 +102,7 @@ export class MigrationReportService {
         'o.target_entity_type',
         'o.target_entity_id',
         'o.errors',
+        'o.warnings',
         'o.created_at',
         'm.migration_job_id as claimed_by_job_id',
         'cj.source_file_name as claimed_by_source_file_name',
@@ -212,7 +214,15 @@ export class MigrationReportService {
       migrationJobId: String(row.claimed_by_job_id as string),
       sourceFileName: (row.claimed_by_source_file_name as string | null) ?? null,
       samePackage: this.samePackage(row, currentJobId, currentPackageSha256),
+      matchReason: this.parseWarnings(row.warnings).some((w) => w.startsWith(SKU_MATCH_WARNING_PREFIX))
+        ? ('sku_match' as const)
+        : null,
     };
+  }
+
+  private parseWarnings(raw: unknown): string[] {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed.filter((w): w is string => typeof w === 'string') : [];
   }
 
   /** CSV rendering shared by preflight and outcome downloads. */

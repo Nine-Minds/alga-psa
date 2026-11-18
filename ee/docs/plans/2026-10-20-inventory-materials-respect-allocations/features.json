@@ -1,0 +1,16 @@
+[
+ {"id":"F001","description":"Free-stock check under the FOR UPDATE lock in recordStockConsumption","implemented":true,"prdRefs":["Rule"]},
+ {"id":"F002","description":"Hard hold blocks consumption unconditionally; override flag cannot reach held stock","implemented":true,"prdRefs":["Rule"]},
+ {"id":"F003","description":"Soft reservation refused without override, allowed with allow_reserved_override","implemented":true,"prdRefs":["Rule"]},
+ {"id":"F004","description":"Override recorded in stock_movements.reason and performed_by; reserved/held untouched","implemented":true,"prdRefs":["Override record"]},
+ {"id":"F005","description":"InsufficientStockError carries structured detail; stockConflict result crosses the server-action boundary","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F006","description":"Ticket and project add actions accept allow_reserved_override and return the conflict result","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F007","description":"Ticket card shows override prompt for reserved and inline error for held","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F008","description":"Project drawer shows override prompt for reserved and inline error for held","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F009","description":"Picker badge shows per-location free stock","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F010","description":"Advisory panel lists free stock by location","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F011","description":"New copy in all locale files, pseudo-locales regenerated","implemented":true,"prdRefs":["Errors and UI"]},
+ {"id":"F012","description":"REST TicketService gets a clean refusal (no override)","implemented":true,"prdRefs":["REST decision"]},
+ {"id":"F013","description":"Serialized units keep their hard refusal (documented asymmetry)","implemented":true,"prdRefs":["Serialized units (asymmetry)"]},
+ {"id":"F014","description":"Sweep of adjust/retire paths recorded; no behaviour change","implemented":true,"prdRefs":["Sweep of other stock-consuming paths"]}
+]

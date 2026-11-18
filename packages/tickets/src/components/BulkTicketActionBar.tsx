@@ -10,7 +10,10 @@ import {
   Flag,
   Tag,
   CalendarClock,
+  Printer,
+  Handshake,
 } from 'lucide-react';
+import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 
 interface BulkTicketActionBarProps {
@@ -22,8 +25,13 @@ interface BulkTicketActionBarProps {
   showPriority: boolean;
   showTags: boolean;
   showDueDate: boolean;
+  /** Defaults to true; a read-only workspace withdraws it. */
+  showDelete?: boolean;
   statusDisabled?: boolean;
   statusDisabledTitle?: string;
+  /** The handoff the caller is offered (the seat shape is released for the tenant): to client IT for MSP staff, to the MSP for a seat technician. Absent: no action. */
+  handoffDirection?: 'client_it' | 'msp';
+  onHandoff?: () => void;
   onMove: () => void;
   onBundle: () => void;
   onAssign: () => void;
@@ -32,6 +40,7 @@ interface BulkTicketActionBarProps {
   onTags: () => void;
   onDueDate: () => void;
   onDelete: () => void;
+  onPrintLabels: () => void;
   onClear: () => void;
   idPrefix?: string;
 }
@@ -45,8 +54,11 @@ export default function BulkTicketActionBar({
   showPriority,
   showTags,
   showDueDate,
+  showDelete = true,
   statusDisabled = false,
   statusDisabledTitle,
+  handoffDirection,
+  onHandoff,
   onMove,
   onBundle,
   onAssign,
@@ -55,6 +67,7 @@ export default function BulkTicketActionBar({
   onTags,
   onDueDate,
   onDelete,
+  onPrintLabels,
   onClear,
   idPrefix = 'ticket-bulk-action-bar',
 }: BulkTicketActionBarProps) {
@@ -69,6 +82,16 @@ export default function BulkTicketActionBar({
       label: t('bulk.actionBar.assign', 'Assign'),
       icon: <UserPlus className="h-4 w-4" />,
       onClick: onAssign,
+    });
+  }
+  if (handoffDirection && onHandoff) {
+    actions.push({
+      id: 'handoff',
+      label: handoffDirection === 'client_it'
+        ? t('seatResponsibility.handToClientIt', 'Hand to client IT')
+        : t('seatResponsibility.handToMsp', 'Hand to MSP'),
+      icon: <Handshake className="h-4 w-4" />,
+      onClick: onHandoff,
     });
   }
   if (showBundle) {
@@ -91,7 +114,18 @@ export default function BulkTicketActionBar({
       onClick: onMove,
     });
   }
+  const printTooMany = count > MAX_LABELS_PER_REQUEST;
   actions.push({
+    id: 'print-labels',
+    label: t('bulk.actionBar.printLabels', 'Print labels'),
+    icon: <Printer className="h-4 w-4" />,
+    onClick: onPrintLabels,
+    disabled: printTooMany,
+    title: printTooMany
+      ? t('bulk.actionBar.printLabelsLimit', 'You can print at most {{max}} labels at a time', { max: MAX_LABELS_PER_REQUEST })
+      : undefined,
+  });
+  if (showDelete) actions.push({
     id: 'delete',
     label: t('bulk.actionBar.delete', 'Delete'),
     icon: <Trash2 className="h-4 w-4" />,

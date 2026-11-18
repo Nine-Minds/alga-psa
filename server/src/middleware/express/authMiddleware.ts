@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
 import { resolveDeploymentCapabilities } from '../../lib/deployment/deploymentProfile';
@@ -440,7 +441,7 @@ export async function sessionAuthMiddleware(
       !tenant
       || !userId
       || !sessionId
-      || (userType !== 'internal' && userType !== 'client')
+      || !isInteractiveUserType(userType)
       || await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
         userId,
         userType,
@@ -461,7 +462,7 @@ export async function sessionAuthMiddleware(
     }
 
     // Enforce access rules based on user type
-    if (isClientPortal && userType !== 'client') {
+    if (isClientPortal && !isClientUserType(userType)) {
       // Non-client users cannot access client portal
       return res.redirect(
         buildClientPortalSigninUrl(req, { error: 'AccessDenied' })

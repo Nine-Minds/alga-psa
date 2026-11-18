@@ -1,6 +1,7 @@
 'use client';
 
-import React, { Suspense, useState, useRef, useCallback, useEffect } from 'react';
+import { SeatEffortCard, type SeatEffortCardData } from './SeatEffortCard';
+import React, { Suspense, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -14,18 +15,18 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  addTicketCommentWithCacheForCurrentUser,
-  updateTicketWithCache,
-  updateTicketWithCacheForCurrentUser,
-} from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
+import type { ComposerAudience } from './CommentAudienceControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+import type { TicketResponsibilityState } from '../../lib/ticketResponsibility';
+import { TicketDataSourceProvider, runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
+import { composeTicketDataSource } from '../../lib/ticketDataSource';
+import { useSeatTicket } from '../../hooks/useSeatTicket';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -48,6 +49,7 @@ interface TicketDetailsContainerProps {
     client: any;
     contacts: any[];
     contactInfo: any;
+    displayTags?: { contact: any[]; client: any[] };
     createdByUser: any;
     updatedByUser?: any;
     board: any;
@@ -80,9 +82,17 @@ interface TicketDetailsContainerProps {
       priority: { value: string; label: string }[];
     };
     categories: any[];
-    clients: any[];
     locations: any[];
     agentSchedules: any[];
+    /** Present only for a ticket of a client in a live seat arrangement, when the seat shape is released. */
+    seatResponsibility?: TicketResponsibilityState;
+    /**
+     * Seat facts of this ticket, present only when its client has a live seat arrangement (the
+     * server's ticket-detail load resolves it behind the `co-managed-seat` capability).
+     */
+    seatTicket?: { viewer: 'msp' | 'client_it'; arrangement: boolean; clientTechnicians: string[] } | null;
+    /** Effort by organization, projected by the server to this viewer (S28). Present only on an arrangement client's ticket. */
+    seatEffort?: SeatEffortCardData | null;
   };
   surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
@@ -91,6 +101,7 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
+  renderReceiveEquipment?: React.ComponentProps<typeof TicketDetails>['renderReceiveEquipment'];
   renderCreateWorkflowFromTicket?: React.ComponentProps<typeof TicketDetails>['renderCreateWorkflowFromTicket'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   isAlgaDeskMode?: boolean;
@@ -114,6 +125,11 @@ interface TicketDetailsContainerProps {
   disableAgentSchedule?: boolean;
 }
 
+/** Mounts the seat-shape data source around the screen when there is one; otherwise changes nothing. */
+function SeatDataSource({ dataSource, children }: { dataSource: ReturnType<typeof composeTicketDataSource> | null; children: React.ReactNode }) {
+  return dataSource ? <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider> : <>{children}</>;
+}
+
 export default function TicketDetailsContainer({
   ticketData,
   surveySummaryCard,
@@ -122,6 +138,7 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderQuickInvoice,
+  renderReceiveEquipment,
   renderCreateWorkflowFromTicket,
   renderClientDetails,
   isAlgaDeskMode = false,
@@ -139,6 +156,11 @@ export default function TicketDetailsContainer({
   disableAgentSchedule = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
+  const dataSource = useTicketDataSource();
+  const { updateTicketWithCache, updateTicketWithCacheForCurrentUser } = dataSource.ticket;
+  const { addTicketCommentWithCacheForCurrentUser } = dataSource.comments;
+  const { t: tSeat } = useTranslation('features/tickets');
+  const { seatTicket, seatDataSource } = useSeatTicket(ticketData.seatTicket, dataSource, tSeat('conversation.audience.private', 'Private'));
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -247,7 +269,7 @@ export default function TicketDetailsContainer({
         toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
-        router.refresh();
+        runTicketRefresh(dataSource, 'soft', router);
 
         return true;
       } catch (error) {
@@ -255,7 +277,7 @@ export default function TicketDetailsContainer({
         return false;
       }
     });
-  }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
+  }, [dataSource, router, session?.user, t, ticketData.ticket.ticket_id, updateTicketWithCache, withSubmitting]);
 
   const handleAddComment = async (
     content: string,
@@ -264,10 +286,11 @@ export default function TicketDetailsContainer({
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
-  ) => {
+    audienceId?: ComposerAudience | null,
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
-      return;
+      return false;
     }
 
     try {
@@ -281,6 +304,8 @@ export default function TicketDetailsContainer({
         undefined,
         schedule,
         emailRecipients,
+        // LEVERAGE: friction comment-audience-seam — the seam types this param as the native audience, but a shared-ticket source accepts `shared_it` too.
+        (audienceId ?? undefined) as Parameters<typeof addTicketCommentWithCacheForCurrentUser>[8],
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
@@ -288,8 +313,12 @@ export default function TicketDetailsContainer({
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
+      return true;
     } catch (error) {
+      // The failure is reported here; the composer learns only that the message was not
+      // confirmed, so it keeps the draft for the same intent to be retried.
       handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -319,7 +348,12 @@ export default function TicketDetailsContainer({
     : null;
 
   const shouldEnableTicketLiveUpdates =
-    Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
+    Boolean(
+      dataSource.capabilities.live &&
+      liveCurrentUser &&
+      ticketData.ticket.tenant &&
+      ticketData.ticket.ticket_id,
+    );
 
   const ticketDetailsContent = (
     <TicketDetails
@@ -332,6 +366,7 @@ export default function TicketDetailsContainer({
       initialClient={ticketData.client}
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
+      initialDisplayTags={ticketData.displayTags}
       initialCreatedByUser={ticketData.createdByUser}
       initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}
@@ -339,25 +374,30 @@ export default function TicketDetailsContainer({
       initialAvailableAgents={ticketData.availableAgents}
       initialUserMap={ticketData.userMap}
       initialContactMap={ticketData.contactMap || {}}
+      liveUserMap={dataSource.screen.liveConversationAuthors ? ticketData.userMap : undefined}
+      liveContactMap={dataSource.screen.liveConversationAuthors ? ticketData.contactMap || {} : undefined}
       statusOptions={ticketData.options.status}
       agentOptions={ticketData.options.agent}
+      clientItUserIds={seatTicket?.viewer === 'msp' && seatTicket.clientTechnicians.length ? seatTicket.clientTechnicians : undefined}
       boardOptions={ticketData.options.board}
       priorityOptions={ticketData.options.priority}
       initialCategories={ticketData.categories}
-      initialClients={ticketData.clients}
       initialLocations={ticketData.locations}
       initialAgentSchedules={ticketData.agentSchedules}
+      initialSeatResponsibility={ticketData.seatResponsibility ?? null}
       onTicketUpdate={handleTicketUpdate}
       onBatchTicketUpdate={handleBatchTicketUpdate}
       onAddComment={handleAddComment}
       onUpdateDescription={handleUpdateDescription}
       isSubmitting={isSubmitting}
       surveySummaryCard={surveySummaryCard}
+      seatEffortCard={seatTicket && ticketData.seatEffort ? <SeatEffortCard effort={ticketData.seatEffort} /> : undefined}
       associatedAssets={associatedAssets}
       bootstrap={bootstrap}
       renderContactDetails={renderContactDetails}
       renderCreateProjectTask={renderCreateProjectTask}
       renderQuickInvoice={renderQuickInvoice}
+      renderReceiveEquipment={renderReceiveEquipment}
       renderCreateWorkflowFromTicket={renderCreateWorkflowFromTicket}
       renderClientDetails={renderClientDetails}
       isAlgaDeskMode={isAlgaDeskMode}
@@ -380,6 +420,7 @@ export default function TicketDetailsContainer({
     <UnsavedChangesProvider>
       <div className="bg-[rgb(var(--color-app-ground))] min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
+          <SeatDataSource dataSource={seatDataSource}>
           {shouldEnableTicketLiveUpdates && liveCurrentUser ? (
             <TicketLiveProvider
               tenantId={ticketData.ticket.tenant}
@@ -391,6 +432,7 @@ export default function TicketDetailsContainer({
           ) : (
             ticketDetailsContent
           )}
+          </SeatDataSource>
         </Suspense>
       </div>
     </UnsavedChangesProvider>

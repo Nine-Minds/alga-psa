@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import type { ContractScenario } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
+import { simulationRefusal } from "./simulationRefusal";
 
 /** Reject identifiers that do not resolve inside the authenticated tenant. */
 export async function validateScenarioTenantScope(
@@ -25,7 +26,10 @@ export async function validateScenarioTenantScope(
           .where({ template_id: scenario.contract_id })
           .first("template_id");
     if (!contract && !template) {
-      throw new Error("Scenario contract is not available");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+        "Scenario contract is not available. It may have been deleted; reload the page.",
+      );
     }
 
     const originIds = Array.from(
@@ -48,7 +52,10 @@ export async function validateScenarioTenantScope(
             .whereIn("template_line_id", originIds)
             .select("template_line_id");
       if (rows.length !== originIds.length) {
-        throw new Error("Scenario contains an invalid contract line reference");
+        throw simulationRefusal(
+          "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+          "This scenario refers to a contract line that is no longer available. Reload the page to start from the current contract.",
+        );
       }
     }
   }
@@ -66,7 +73,10 @@ export async function validateScenarioTenantScope(
       .whereIn("service_id", serviceIds)
       .select("service_id");
     if (rows.length !== serviceIds.length) {
-      throw new Error("Scenario contains an invalid service reference");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+        "This scenario refers to a service that is no longer available. Remove the service from the scenario or reload the page.",
+      );
     }
   }
 
@@ -85,7 +95,10 @@ export async function validateScenarioTenantScope(
       .whereIn("tax_rate_id", taxRateIds)
       .select("tax_rate_id");
     if (rows.length !== taxRateIds.length) {
-      throw new Error("Scenario contains an invalid tax-rate reference");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+        "This scenario refers to a tax rate that is no longer available. Choose another tax rate or reload the page.",
+      );
     }
   }
 
@@ -95,7 +108,12 @@ export async function validateScenarioTenantScope(
       .table("clients")
       .where({ client_id: clientId })
       .first("client_id");
-    if (!client) throw new Error("Scenario client is not available");
+    if (!client) {
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "Scenario client is not available. It may have been deleted; choose another client.",
+      );
+    }
 
     const locationIds = Array.from(
       new Set(
@@ -111,8 +129,9 @@ export async function validateScenarioTenantScope(
         .whereIn("location_id", locationIds)
         .select("location_id");
       if (rows.length !== locationIds.length) {
-        throw new Error(
-          "Scenario contains an invalid client location reference",
+        throw simulationRefusal(
+          "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+          "This scenario refers to a client location that is no longer available. Reload the page to start from the current contract.",
         );
       }
     }

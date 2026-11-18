@@ -32,7 +32,7 @@ function applyFilters(rows: Record<string, any>[], calls: Call[]) {
   for (const call of calls) {
     const [first, second] = call.args;
     if (call.method === 'where' && typeof first === 'object') {
-      out = out.filter((row) => Object.entries(first).every(([key, value]) => row[key] === value));
+      out = out.filter((row) => Object.entries(first).every(([key, value]) => row[key.replace(/^\w+\./, '')] === value));
     } else if (call.method === 'where' && typeof first === 'string' && call.args.length === 2) {
       out = out.filter((row) => row[first] === second);
     } else if (call.method === 'whereNot' && typeof first === 'string' && call.args.length === 2) {
@@ -41,6 +41,8 @@ function applyFilters(rows: Record<string, any>[], calls: Call[]) {
       out = out.filter((row) => (second as any[]).includes(row[first]));
     } else if (call.method === 'whereRaw' && String(first).includes('addon_key')) {
       out = out.filter((row) => !row.metadata?.addon_key);
+    } else if (call.method === 'whereRaw' && String(first).includes('subscription_kind')) {
+      out = out.filter((row) => row.metadata?.subscription_kind !== 'co_managed');
     } else if (call.method === 'orderByRaw' && String(first).includes("'active'")) {
       out = [...out].sort(
         (a, b) => (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1),
@@ -55,7 +57,7 @@ function createFakeKnex(state: FakeDbState) {
     const calls: Call[] = [];
     const builder: any = {};
     let counting = false;
-    for (const method of ['where', 'whereNot', 'whereIn', 'whereRaw', 'orderByRaw', 'orderBy', 'select']) {
+    for (const method of ['where', 'whereNot', 'whereIn', 'whereRaw', 'whereNotExists', 'orderByRaw', 'orderBy', 'select']) {
       builder[method] = (...args: any[]) => {
         calls.push({ method, args });
         return builder;
@@ -77,6 +79,8 @@ function createFakeKnex(state: FakeDbState) {
     return builder;
   };
 
+  // The licensed count leaves out seat technicians with a subquery on seat assignments; none exist here.
+  knex.raw = (sql: string) => sql;
   knex.fn = {
     now: () => new Date('2026-07-10T00:00:00.000Z'),
   };
@@ -165,6 +169,9 @@ function createState(subscriptions: Record<string, any>[]): FakeDbState {
 }
 
 describe('StripeService license subscription lifecycle', () => {
+  // Co-managed routing lives in the payment-event registry (coManagedPaymentEvents.test.ts), not in the
+  // per-event MSP handlers, so those handlers are never reached by a co-managed event.
+
   beforeEach(() => {
     vi.clearAllMocks();
     startTenantDeletionWorkflowMock.mockResolvedValue({ available: true, workflowId: 'wf-1' });

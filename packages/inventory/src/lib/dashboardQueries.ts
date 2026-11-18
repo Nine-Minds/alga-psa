@@ -363,8 +363,8 @@ export async function queryGhostWeek(db: Db, tenant: string): Promise<GhostWeek>
         .where('tm.tenant', tenant)
         .andWhere('tm.is_billed', true)
         .andWhereRaw("tm.created_at >= now() - interval '90 days'")
-        .groupBy('tm.ticket_id')
-        .select('tm.ticket_id', db.raw('SUM(tm.rate * tm.quantity) as total'))
+        .groupBy('tm.tenant', 'tm.ticket_id')
+        .select('tm.tenant', 'tm.ticket_id', db.raw('SUM(tm.rate * tm.quantity) as total'))
         .as('t'),
     )
     .select<{ median: string | null }[]>(db.raw('percentile_cont(0.5) WITHIN GROUP (ORDER BY t.total) as median'))
@@ -911,6 +911,38 @@ export interface RmaReceivables {
   oldest_days: number | null;
   rows: RmaReceivableRow[];
   more_count: number;
+}
+
+export interface OverdueAdvanceVendorReturn {
+  rma_id: string;
+  rma_number: string;
+  rma_reference: string | null;
+  asset_id: string;
+  client_id: string | null;
+  return_by: string;
+  overdue_days: number;
+  days_until_due: number;
+}
+
+/** Advance-track claims awaiting dead-unit shipment, overdue or due within the next seven calendar days. */
+export async function queryOverdueAdvanceVendorReturns(db: Db, tenant: string, today: string): Promise<OverdueAdvanceVendorReturn[]> {
+  return db('rma_cases as r')
+    .where({ 'r.tenant': tenant, 'r.rma_type': 'advance_replacement' })
+    .whereIn('r.status', ['replaced', 'repaired'])
+    .whereNull('r.closed_at')
+    .whereNull('r.outbound_shipped_at')
+    .whereNull('r.returned_unit_id')
+    .whereNotNull('r.asset_id')
+    .whereNotNull('r.return_by')
+    .whereRaw("r.return_by <= ?::date + interval '7 days'", [today])
+    .orderBy('r.return_by', 'asc')
+    .select<OverdueAdvanceVendorReturn[]>(
+      'r.rma_id as rma_id', 'r.rma_number as rma_number', 'r.rma_reference as rma_reference',
+      'r.asset_id as asset_id', 'r.client_id as client_id',
+      db.raw("to_char(r.return_by, 'YYYY-MM-DD') as return_by"),
+      db.raw('( ?::date - r.return_by)::int as overdue_days', [today]),
+      db.raw('(r.return_by - ?::date)::int as days_until_due', [today]),
+    );
 }
 
 /**

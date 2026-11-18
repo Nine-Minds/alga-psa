@@ -2,6 +2,7 @@
 
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { recordTicketAssigneeChange } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
@@ -20,6 +21,7 @@ import {
 import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
+  assertBundlePropagationAuthority,
   BundlePropagationConfirmationRequiredError,
   type BundlePropagationChild,
   type BundlePropagationUnaffectedChild,
@@ -41,6 +43,7 @@ import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   buildTicketClosedPayload,
@@ -52,6 +55,7 @@ import {
   resolveClosedMasterChoices,
   type ClosedMasterChoice,
 } from '../lib/ticketBundlePolicy';
+import { effectiveBundleMode } from '../lib/bundleWorkflowLock';
 
 export type BundleMode = 'link_only' | 'sync_updates';
 
@@ -114,7 +118,9 @@ export type BundleMasterClosedContext = {
 export async function getBundleMasterClosedContext(
   trx: Knex.Transaction,
   tenant: string,
-  masterTicketId: string
+  masterTicketId: string,
+  /** Display-only narrowing of the open-children count (see `openBundleChildrenCount`). */
+  narrowChildren?: (query: Knex.QueryBuilder) => Knex.QueryBuilder
 ): Promise<BundleMasterClosedContext | null> {
   const master = await tenantDb(trx, tenant)
     .tenantJoin(
@@ -136,7 +142,7 @@ export async function getBundleMasterClosedContext(
   const requireNoOpenChildren = Boolean(rules?.is_enabled && rules?.require_no_open_children);
 
   const [openChildren, resolutionComment] = await Promise.all([
-    openBundleChildrenCount(trx, tenant, masterTicketId),
+    openBundleChildrenCount(trx, tenant, masterTicketId, narrowChildren),
     tenantScopedTable(trx, 'comments as c', tenant)
       .select(
         'c.comment_id',
@@ -457,6 +463,8 @@ export type ApplyClosedMasterChoiceParams = {
   actor: TicketActivityActorInfo;
   source: TicketActivitySource | string;
   occurredAt: string;
+  /** Recorded as the reopen trigger on the master's activity. Defaults to 'add_child'. */
+  reopenTrigger?: string;
 };
 
 /**
@@ -593,7 +601,7 @@ export async function applyClosedMasterChoice(
   const reopenResult = await reopenBundleMasterOnly(trx, tenant, master.masterTicketId, {
     actor,
     source,
-    trigger: 'add_child',
+    trigger: params.reopenTrigger ?? 'add_child',
     eventType: TICKET_ACTIVITY_EVENT.REOPENED,
     openStatusId: master.openStatusId ?? null,
   });
@@ -723,6 +731,47 @@ async function findBundleMasterIds(
 }
 
 /**
+ * Enforces each child's board close rules exactly as a human close would,
+ * returning the first failure (or null). Used before any write by every path
+ * that applies a master's resolution to children.
+ */
+async function findChildCloseRuleFailure(
+  trx: Knex.Transaction,
+  tenant: string,
+  children: Array<BundleTicketRow & Record<string, any>>,
+  actor: TicketActivityActorInfo,
+  source: TicketActivitySource | string
+): Promise<BundleAttachFailure | null> {
+  for (const child of children) {
+    try {
+      await enforceTicketCloseRules(trx, tenant, {
+        ticket: {
+          ticket_id: child.ticket_id,
+          board_id: child.board_id ?? null,
+          category_id: child.category_id ?? null,
+          subcategory_id: child.subcategory_id ?? null,
+          priority_id: child.priority_id ?? null,
+          assigned_to: child.assigned_to ?? null,
+        },
+        actor,
+        source,
+      });
+    } catch (error) {
+      if (error instanceof TicketCloseValidationError) {
+        return {
+          ok: false,
+          code: 'close_rule_failed',
+          childTicketId: child.ticket_id,
+          closeRuleFailures: error.failures,
+        };
+      }
+      throw error;
+    }
+  }
+  return null;
+}
+
+/**
  * The single attach engine. All four attach surfaces (two server actions, two
  * TicketService methods) call this so the closed-master policy, invariant
  * checks, and consequence writes live in one place. Returns a discriminated
@@ -817,33 +866,14 @@ export async function attachChildrenToBundle(
   // close rules exactly as a human close. Failures must abort before any
   // write so a returned failure leaves nothing behind.
   if (context.isClosed && choice === 'apply_resolution') {
-    for (const childId of childIds) {
-      const child = byId.get(childId)!;
-      try {
-        await enforceTicketCloseRules(trx, tenant, {
-          ticket: {
-            ticket_id: childId,
-            board_id: child.board_id ?? null,
-            category_id: (child as any).category_id ?? null,
-            subcategory_id: (child as any).subcategory_id ?? null,
-            priority_id: (child as any).priority_id ?? null,
-            assigned_to: (child as any).assigned_to ?? null,
-          },
-          actor: params.actor,
-          source,
-        });
-      } catch (error) {
-        if (error instanceof TicketCloseValidationError) {
-          return {
-            ok: false,
-            code: 'close_rule_failed',
-            childTicketId: childId,
-            closeRuleFailures: error.failures,
-          };
-        }
-        throw error;
-      }
-    }
+    const closeRuleFailure = await findChildCloseRuleFailure(
+      trx,
+      tenant,
+      childIds.map((childId) => byId.get(childId)!),
+      params.actor,
+      source
+    );
+    if (closeRuleFailure) return closeRuleFailure;
   }
 
   let openStatusId: string | null = null;
@@ -963,6 +993,163 @@ export async function attachChildrenToBundle(
   };
 }
 
+export type BundleModeChangeFailure =
+  | { ok: false; code: 'settings_not_found' }
+  | BundleAttachFailure;
+
+export type BundleModeChangeResult =
+  | {
+      ok: true;
+      value: {
+        settings: { master_ticket_id: string; mode: BundleMode; reopen_on_child_reply: boolean };
+        publications: BundleAfterCommitPublication[];
+      };
+    }
+  | BundleModeChangeFailure;
+
+export type ChangeBundleSettingsParams = {
+  masterTicketId: string;
+  mode?: BundleMode;
+  reopenOnChildReply?: boolean;
+  /**
+   * The closed-master policy, required when switching a bundle whose master is
+   * closed to sync_updates. Ignored for any other change.
+   */
+  choice?: ClosedMasterChoice | null;
+  actor: TicketActivityActorInfo;
+  source?: TicketActivitySource | string;
+  occurredAt?: string;
+};
+
+/**
+ * Updates a bundle's settings. Switching to link_only never touches children.
+ * Switching to sync_updates on an open master changes nothing retroactively.
+ * Switching to sync_updates on a closed master applies the same closed-master
+ * policy as adding children to it (`keep_closed`, `apply_resolution` to the
+ * children that are still open, or `reopen_master`); the choice is required.
+ *
+ * A failure is returned (not thrown) before any write, so the caller's
+ * transaction is left untouched.
+ */
+export async function changeBundleSettings(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: ChangeBundleSettingsParams
+): Promise<BundleModeChangeResult> {
+  const occurredAt = params.occurredAt ?? nowIso();
+  const source = params.source ?? TICKET_ACTIVITY_SOURCE.UI;
+
+  const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: params.masterTicketId })
+    .first();
+  if (!existing) return { ok: false, code: 'settings_not_found' };
+
+  const switchingToSync =
+    params.mode === 'sync_updates' && effectiveBundleMode(existing) !== 'sync_updates';
+
+  const publications: BundleAfterCommitPublication[] = [];
+  if (switchingToSync) {
+    const context = await getBundleMasterClosedContext(trx, tenant, params.masterTicketId);
+    if (!context) return { ok: false, code: 'master_not_found' };
+
+    const choice = params.choice ?? null;
+    if (!context.isClosed) {
+      if (choice) return { ok: false, code: 'choice_on_open_master' };
+    } else {
+      if (!choice) {
+        return { ok: false, code: 'choice_required', allowedChoices: context.allowedChoices };
+      }
+      if (!context.allowedChoices.includes(choice)) {
+        return { ok: false, code: 'choice_not_allowed', allowedChoices: context.allowedChoices };
+      }
+
+      const openChildren = (await tenantScopedTable(trx, 'tickets', tenant)
+        .select(
+          'ticket_id',
+          'ticket_number',
+          'status_id',
+          'board_id',
+          'category_id',
+          'subcategory_id',
+          'priority_id',
+          'assigned_to',
+          'response_state',
+          'itil_priority_level',
+          'entered_at'
+        )
+        .where({ master_ticket_id: params.masterTicketId })
+        .whereNull('closed_at')) as Array<BundleTicketRow & Record<string, any>>;
+
+      if (choice === 'apply_resolution') {
+        const closeRuleFailure = await findChildCloseRuleFailure(
+          trx,
+          tenant,
+          openChildren,
+          params.actor,
+          source
+        );
+        if (closeRuleFailure) return closeRuleFailure;
+      }
+
+      let openStatusId: string | null = null;
+      if (choice === 'reopen_master') {
+        openStatusId = await findDefaultOpenTicketStatusId(trx, tenant);
+        if (!openStatusId) return { ok: false, code: 'reopen_unavailable' };
+      }
+
+      if (choice !== 'keep_closed') {
+        publications.push(
+          ...(await applyClosedMasterChoice(trx, tenant, {
+            master: { ...context, masterTicketId: params.masterTicketId, openStatusId },
+            childTicketIds: openChildren.map((child) => child.ticket_id),
+            childSnapshots: new Map<string, BundleChildCloseSnapshot>(
+              openChildren.map((child) => [
+                child.ticket_id,
+                {
+                  status_id: child.status_id ?? null,
+                  response_state: child.response_state ?? null,
+                  itil_priority_level: child.itil_priority_level ?? null,
+                  entered_at: child.entered_at ?? null,
+                },
+              ])
+            ),
+            choice,
+            actor: params.actor,
+            source,
+            occurredAt,
+            reopenTrigger: 'bundle_mode_change',
+          }))
+        );
+      }
+    }
+  }
+
+  const update: Record<string, unknown> = {};
+  if (params.mode) update.mode = params.mode;
+  if (params.reopenOnChildReply !== undefined) update.reopen_on_child_reply = params.reopenOnChildReply;
+
+  if (Object.keys(update).length === 0) {
+    return {
+      ok: true,
+      value: {
+        settings: {
+          master_ticket_id: existing.master_ticket_id,
+          mode: existing.mode,
+          reopen_on_child_reply: existing.reopen_on_child_reply,
+        },
+        publications,
+      },
+    };
+  }
+
+  const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: params.masterTicketId })
+    .update(update)
+    .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
+
+  return { ok: true, value: { settings: updated, publications } };
+}
+
 interface DerivedBundleChildRow {
   ticket_id: string;
   ticket_number: string | null;
@@ -974,6 +1161,21 @@ interface DerivedBundleChildRow {
   closed_at: string | null;
   closed_by: string | null;
   propagation_id: string | null;
+}
+
+/** Records the assignee change of each child whose assignee a propagated write actually changed. */
+async function recordChildAssigneeChanges(
+  trx: Knex.Transaction,
+  tenant: string,
+  children: ReadonlyArray<{ ticket_id?: unknown; assigned_to?: unknown }>,
+  written: Record<string, unknown>,
+): Promise<void> {
+  if (!Object.prototype.hasOwnProperty.call(written, 'assigned_to')) return;
+  for (const child of children) {
+    if ((child.assigned_to ?? null) === (written.assigned_to ?? null)) continue;
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, child.ticket_id as string);
+  }
 }
 
 function propagationDisplayName(user: BundlePropagationUser): string {
@@ -1206,6 +1408,19 @@ export async function propagateBundleMasterStatus(
       ? (nextIsClosed ? 'close' : 'reopen')
       : null;
 
+  // Human-work guard (R5.3): propagating assigned_to to children must not assign a non-internal user.
+  if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
+    const assignee = updateData.assigned_to as string | null | undefined;
+    // The master and every child receive the assignee; a seat technician must be covered by each.
+    const childRows = assignee
+      ? await tenantScopedTable(trx, 'tickets', ctx.tenant).where({ master_ticket_id: masterId }).select('ticket_id')
+      : [];
+    await assertHumanWorkAssignee(trx, ctx.tenant, [assignee], [
+      { kind: 'ticket', ticketId: masterId },
+      ...childRows.map((row: { ticket_id: string }) => ({ kind: 'ticket' as const, ticketId: row.ticket_id })),
+    ]);
+  }
+
   if (crossesBoundary === null) {
     // Legacy sync: mirror workflow fields to every child, no propagation rows.
     const propagateFields: Record<string, unknown> = {};
@@ -1217,6 +1432,7 @@ export async function propagateBundleMasterStatus(
     if (Object.keys(propagateFields).length === 0) {
       return { propagated: false, action: null, affectedChildIds: [] };
     }
+    assertBundlePropagationAuthority(ctx);
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
@@ -1273,6 +1489,7 @@ export async function propagateBundleMasterStatus(
         .whereIn('ticket_id', closedChildIds)
         .update({ ...closedFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
     }
+    await recordChildAssigneeChanges(trx, ctx.tenant, childRows, propagateFields);
 
     for (const before of childSnapshots.values()) {
       await publishTicketTransitionsAfterCommit(trx, {
@@ -1317,6 +1534,8 @@ export async function propagateBundleMasterStatus(
     return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
   }
 
+  assertBundlePropagationAuthority(ctx);
+
   if (options.propagateToChildren === undefined) {
     const preview = await previewBundleStatusPropagation(trx, ctx.tenant, masterId, nextStatusId as string);
     throw new BundlePropagationConfirmationRequiredError(preview);
@@ -1359,6 +1578,7 @@ export async function propagateBundleMasterStatus(
     .whereIn('ticket_id', affectedChildIds)
     // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
     .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
+  await recordChildAssigneeChanges(trx, ctx.tenant, affected, propagate);
 
   for (const before of propagateSnapshots.values()) {
     await publishTicketTransitionsAfterCommit(trx, {

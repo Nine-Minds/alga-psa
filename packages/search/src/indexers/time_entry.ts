@@ -1,7 +1,9 @@
 import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
+import { recordPath } from '@alga-psa/types';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { attachClientScopes } from '../clientScope';
 
 interface TimeEntrySearchRow {
   entry_id: string;
@@ -50,13 +52,15 @@ function workItemLabel(row: TimeEntrySearchRow): string {
   return row.work_item_type ?? 'Time entry';
 }
 
-function urlFor(row: TimeEntrySearchRow): string {
+export function urlFor(row: TimeEntrySearchRow): string {
   if (row.work_item_type === 'ticket' && row.work_item_id) {
-    return `/msp/tickets/${row.work_item_id}`;
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    return recordPath('ticket', row.work_item_id);
   }
 
   if (row.work_item_type === 'project_task' && row.work_item_id && row.project_id) {
-    return `/msp/projects/${row.project_id}/tasks/${row.work_item_id}`;
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    return recordPath('project_task', row.work_item_id, { projectId: row.project_id });
   }
 
   if (row.work_item_type === 'interaction' && row.work_item_id) {
@@ -131,7 +135,9 @@ export const timeEntryIndexer: EntityIndexer = {
       .andWhere('te.entry_id', id)
       .first();
 
-    return row ? toSearchDoc(tenant, row) : null;
+    if (!row) return null;
+    const [doc] = await attachClientScopes(knex, tenant, 'time_entry', [toSearchDoc(tenant, row)]);
+    return doc;
   },
 
   async loadBatch(
@@ -149,6 +155,6 @@ export const timeEntryIndexer: EntityIndexer = {
     }
 
     const rows = await query;
-    return rows.map((row) => toSearchDoc(tenant, row));
+    return attachClientScopes(knex, tenant, 'time_entry', rows.map((row) => toSearchDoc(tenant, row)));
   },
 };

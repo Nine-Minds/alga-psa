@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
 
-import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
+import { createTestDbConnection, createTenant, createUser, createServiceUser } from './_dbTestUtils';
 
 const SCHEMA_INTROSPECTION_TENANT = '__workflow_scheduling_db_test_schema__';
 
@@ -649,6 +649,41 @@ describe('scheduling business operation db actions', () => {
       title: 'Not a technician',
       window: { start: '2026-06-20T10:00:00.000Z', end: '2026-06-20T11:00:00.000Z' },
     })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+  });
+
+  it('T043 (F054): assign_user and create_entry reject a service user even with the Technician role, and write nothing', async () => {
+    const tenantId = runtimeState.tenantId;
+    const service = await createServiceUser(db, tenantId);
+    await ensureTechnicianRole(db, tenantId, service);
+    const tech = await createUser(db, tenantId, { email: `tech-g-${Date.now()}@example.com` });
+    await ensureTechnicianRole(db, tenantId, tech);
+
+    const ticketId = uuidv4();
+
+    await expect(invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech, service],
+      title: 'Guarded entry',
+      window: { start: '2026-07-01T10:00:00.000Z', end: '2026-07-01T11:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'NOT_FOUND', details: { missing_user_ids: [service] } }); // existing internal-only allow-list
+
+    await expect(invokeAction('scheduling.assign_user', {
+      user_id: service,
+      link: { type: 'ticket', id: ticketId },
+      window: { start: '2026-07-01T10:00:00.000Z', end: '2026-07-01T11:00:00.000Z' },
+    })).rejects.toMatchObject({ code: 'HUMAN_WORK_ASSIGNEE_INVALID', userIds: [service] });
+
+    const entries = await tenantTable(db, tenantId, 'schedule_entries').where({ title: 'Guarded entry' });
+    expect(entries).toHaveLength(0);
+    const assignments = await tenantTable(db, tenantId, 'schedule_entry_assignees').whereIn('user_id', [service]);
+    expect(assignments).toHaveLength(0);
+
+    // An internal technician still works.
+    const ok = await invokeAction('scheduling.create_entry', {
+      assigned_user_ids: [tech],
+      title: 'Guarded entry ok',
+      window: { start: '2026-07-01T10:00:00.000Z', end: '2026-07-01T11:00:00.000Z' },
+    });
+    expect((ok as any).assigned_user_ids).toEqual([tech]);
   });
 
   it('create_entry: conflict fail mode reports conflicting users; shift mode moves past the conflict', async () => {

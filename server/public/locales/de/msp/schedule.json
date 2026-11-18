@@ -472,18 +472,37 @@
         "noLimit": "Keine Begrenzung"
       },
       "actions": {
-        "save": "Serviceregeln speichern"
+        "save": "Serviceregeln speichern",
+        "savePortalBooking": "Portal-Buchungseinstellungen speichern"
       },
       "feedback": {
         "selectServiceError": "Bitte wählen Sie eine Dienstleistung aus",
         "saveSuccess": "Serviceregeln gespeichert",
         "saveError": "Dienstregeln konnten nicht gespeichert werden",
         "deleteSuccess": "Serviceregeln gelöscht",
-        "deleteError": "Serviceregeln konnten nicht gelöscht werden"
+        "deleteError": "Serviceregeln konnten nicht gelöscht werden",
+        "portalBookingSaveSuccess": "Buchungseinstellungen für das Kundenportal gespeichert"
       },
       "deleteDialog": {
         "title": "Serviceregeln löschen",
         "message": "Möchten Sie die Regeln für {{serviceName}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "portalBooking": {
+        "title": "Buchung im Kundenportal",
+        "description": "Was Kunden sehen, wenn sie im Portal einen Termin anfragen."
+      },
+      "portalHideContractServices": {
+        "label": "Im Kundenportal nur konfigurierte buchbare Services anzeigen",
+        "help": "Blendet die Services aus, die Kunden über ihre Verträge erhalten. Das Portal zeigt dann nur die oben konfigurierten Services mit „Buchung ohne Vertrag zulassen“."
+      },
+      "portalDefaultService": {
+        "label": "Standard-Buchungsservice",
+        "none": "Kein Standard – Kunde wählt aus",
+        "help": "Wird für Kunden vorausgewählt, damit sie keinen Service auswählen müssen. Wählen Sie einen Ihrer konfigurierten Services – bis dahin wird nichts vorausgewählt."
+      },
+      "portalShowServiceRates": {
+        "label": "Servicesätze für Kunden anzeigen",
+        "help": "Wenn deaktiviert, sehen Kunden bei der Buchung nie einen Preis für einen Service."
       }
     },
     "exceptions": {
@@ -853,5 +872,81 @@
       "members": "Mitglieder",
       "creatorNote": "Sie können diesen Kalender verwalten."
     }
+  },
+  "ticketDetails": {
+    "title": "Ticketdetails",
+    "numberedTitle": "Ticket Nr. {{number}}",
+    "untitled": "Ticket ohne Titel",
+    "noDescription": "Keine Beschreibung",
+    "notAvailable": "Nicht verfügbar",
+    "unassigned": "Nicht zugewiesen",
+    "fields": {
+      "title": {
+        "label": "Titel"
+      },
+      "description": {
+        "label": "Beschreibung"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priorität"
+      },
+      "board": {
+        "label": "Board"
+      },
+      "client": {
+        "label": "Kunde"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "assignedUser": {
+        "label": "Zugewiesener Benutzer"
+      },
+      "entered": {
+        "label": "Erfasst"
+      },
+      "updated": {
+        "label": "Aktualisiert"
+      },
+      "closed": {
+        "label": "Geschlossen"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Projektaufgabe",
+    "noDescription": "Keine Beschreibung",
+    "notAvailable": "Nicht verfügbar",
+    "unassigned": "Nicht zugewiesen",
+    "untitledItem": "Eintrag ohne Titel",
+    "noChecklistItems": "Keine Checklisteneinträge",
+    "fields": {
+      "description": {
+        "label": "Beschreibung"
+      },
+      "project": {
+        "label": "Projekt"
+      },
+      "phase": {
+        "label": "Phase"
+      },
+      "assignedTo": {
+        "label": "Zugewiesen an"
+      },
+      "dueDate": {
+        "label": "Fälligkeitsdatum"
+      },
+      "checklist": {
+        "label": "Checkliste"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Die Zeitplanansicht des Mitarbeiters wird jetzt in der Planung verwaltet. (agentId: {{agentId}})",
+    "timeEntry": "Zeiteinträge werden in der Planung verwaltet.",
+    "scheduling": "Die Terminplanung wird in der Planung verwaltet."
   }
 }

@@ -1,5 +1,5 @@
 import type { RecurrenceRule, NonBusinessDayPolicy } from '@alga-psa/shared/lib/recurrence';
-import type { RecurringTicketOverrides } from './effectiveFields';
+import type { RecurringTemplateFields, RecurringTicketOverrides } from './effectiveFields';
 import type { OpenPreviousPolicy, RecurringOccurrenceStatus } from './definitionInput';
 
 /** Result shapes of the recurring-ticket actions. Dates are ISO strings (or `YYYY-MM-DD`) so they cross the server boundary. */
@@ -20,23 +20,33 @@ export interface RecurringDefinitionListItem {
   time_zone: string;
 }
 
+export interface RecurringTemplateSummary {
+  template_id: string;
+  name: string;
+  title: string;
+  is_active: boolean;
+  offer_for_manual_use: boolean;
+  board_id: string | null;
+  priority_id: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+}
+
 export interface RecurringDefinitionRecord {
   definition_id: string;
   name: string;
   is_active: boolean;
   archived_at: string | null;
-  title_template: string;
-  description: Record<string, unknown>[] | null;
-  board_id: string;
+  /** The shared ticket template this schedule instantiates live (R1). */
+  ticket_template_id: string;
+  /** Name and state of that template; null when the row is gone (the generator then fails each occurrence). */
+  template: RecurringTemplateSummary | null;
+  /** Overrides of the template for the whole schedule; client overrides layer on top. */
+  overrides: RecurringTicketOverrides;
   status_id: string | null;
-  priority_id: string;
-  category_id: string | null;
-  subcategory_id: string | null;
   assigned_to: string | null;
   assigned_team_id: string | null;
   additional_agent_ids: string[];
-  tags: string[];
-  checklist_template_id: string | null;
   recurrence: RecurrenceRule;
   start_date: string;
   create_time: string;
@@ -65,6 +75,8 @@ export interface RecurringDefinitionDetail {
   /** Earliest upcoming due instant, shown per client row (the schedule is shared). */
   next_due_at: string | null;
   time_zone: string;
+  /** Template -> dispatch -> schedule overrides: what a client without its own overrides gets. */
+  effective_fields: RecurringTemplateFields;
 }
 
 export interface RecurringOccurrenceListItem {
@@ -96,6 +108,8 @@ export interface RecurringSchedulePreview {
   time_zone: string;
   /** Which business-day calendar adjusted the dates; null when the policy is `keep`. */
   calendar: { source: 'default_schedule' | 'fallback'; schedule_name: string | null } | null;
+  /** The template's title rendered for the first occurrence (and the previewed client, when given); null without a template. */
+  sample_title: string | null;
 }
 
 export interface RecurringTicketForClient {
@@ -108,6 +122,8 @@ export interface RecurringTicketForClient {
   next_due_at: string | null;
   time_zone: string;
   overrides: RecurringTicketOverrides;
+  /** Template -> dispatch -> schedule overrides: what this client inherits, for the overrides dialog hints. */
+  inherited_fields: RecurringTemplateFields;
   contact_id: string | null;
   location_id: string | null;
   asset_ids: string[];

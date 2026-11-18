@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type Props = {
   src: string;
@@ -14,6 +15,7 @@ type Props = {
  * Uses same-origin path-based URLs instead of custom domains.
  */
 export default function DockerExtensionIframe({ src, extensionId }: Props) {
+  const { t } = useTranslation('msp/extensions');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -92,18 +94,18 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
           <LoadingIndicator
             layout="stacked"
             className="extension-loading-indicator"
-            text="Starting extension"
+            text={t('iframe.starting')}
             textClassName="extension-loading-text"
             spinnerProps={{ size: 'sm' }}
           />
-          <p className="extension-loading-subtext">Loading extension UI&hellip;</p>
+          <p className="extension-loading-subtext">{t('iframe.loadingUi')}</p>
         </div>
       )}
 
       {hasError && (
         <div className="extension-loading-overlay extension-loading-overlay--error" role="alert">
-          <p className="extension-loading-text">We couldn&rsquo;t load this extension.</p>
-          <p className="extension-loading-subtext">Check the extension configuration and try again.</p>
+          <p className="extension-loading-text">{t('iframe.loadFailed')}</p>
+          <p className="extension-loading-subtext">{t('iframe.configurationHint')}</p>
         </div>
       )}
 
@@ -111,7 +113,7 @@ export default function DockerExtensionIframe({ src, extensionId }: Props) {
         ref={iframeRef}
         key={finalSrc}
         src={finalSrc}
-        title="Extension App"
+        title={t('iframe.title')}
         className={`flex-1 h-full w-full border-0 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}

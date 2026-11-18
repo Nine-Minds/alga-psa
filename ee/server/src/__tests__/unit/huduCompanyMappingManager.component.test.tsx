@@ -17,14 +17,14 @@ const {
   getHuduCompanyMappingsMock,
   setHuduCompanyMappingMock,
   clearHuduCompanyMappingMock,
-  getAllClientsMock,
+  searchClientsMock,
   toastMock,
 } = vi.hoisted(() => ({
   syncHuduCompaniesMock: vi.fn(),
   getHuduCompanyMappingsMock: vi.fn(),
   setHuduCompanyMappingMock: vi.fn(),
   clearHuduCompanyMappingMock: vi.fn(),
-  getAllClientsMock: vi.fn(),
+  searchClientsMock: vi.fn(),
   toastMock: vi.fn(),
 }));
 
@@ -36,8 +36,8 @@ vi.mock('@ee/lib/actions/integrations/huduMappingActions', () => ({
   clearHuduCompanyMapping: clearHuduCompanyMappingMock,
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: getAllClientsMock,
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: searchClientsMock,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -87,17 +87,20 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ClientPicker: ({
     id,
-    clients = [],
+    searchClients,
     selectedClientId,
     onSelect,
     placeholder,
   }: {
     id?: string;
-    clients?: Array<{ client_id: string; client_name: string }>;
+    searchClients?: (params: Record<string, unknown>) => Promise<{ clients: Array<{ client_id: string; client_name: string }> }>;
     selectedClientId: string | null;
     onSelect: (clientId: string | null) => void;
     placeholder?: string;
-  }) => (
+  }) => {
+    // Options are the fixture, available at first render; the picker must be given a server searcher.
+    expect(typeof searchClients).toBe('function');
+    return (
     <select
       id={id}
       data-testid={id}
@@ -111,7 +114,8 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
         </option>
       ))}
     </select>
-  ),
+    );
+  },
 }));
 
 const clients = [
@@ -167,9 +171,13 @@ describe('HuduCompanyMappingManager', () => {
     getHuduCompanyMappingsMock.mockReset();
     setHuduCompanyMappingMock.mockReset();
     clearHuduCompanyMappingMock.mockReset();
-    getAllClientsMock.mockReset();
+    searchClientsMock.mockReset();
     toastMock.mockReset();
-    getAllClientsMock.mockResolvedValue(clients);
+    // Honors `ids` (by-id lookups) and otherwise returns the whole fixture (the picker's first page).
+    searchClientsMock.mockImplementation(async (params: { ids?: string[] } = {}) => {
+      const rows = params.ids ? clients.filter((c) => params.ids!.includes(c.client_id)) : clients;
+      return { clients: rows, total: rows.length };
+    });
     mockMappings(buildCompanies());
   });
 

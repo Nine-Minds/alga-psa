@@ -31,6 +31,7 @@ declare module 'next/server' {
   export { userAgent, userAgentFromString } from 'next/dist/server/web/spec-extension/user-agent';
   export { URLPattern } from 'next/dist/compiled/@edge-runtime/primitives/url';
   export { ImageResponse } from 'next/dist/server/web/spec-extension/image-response';
+  export { after } from 'next/dist/server/after';
   export type { ImageResponseOptions } from 'next/dist/compiled/@vercel/og/types';
 }
 

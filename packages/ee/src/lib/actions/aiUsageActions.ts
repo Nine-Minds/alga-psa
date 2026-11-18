@@ -10,9 +10,9 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import type { AiAccountSummary } from '../aiGateway/types';
+import type { AiAccountSummary, AiGatewayResult } from '../aiGateway/types';
 
-export async function getAiAccountSummary(): Promise<AiAccountSummary> {
-  logger.warn('[CE] getAiAccountSummary called but the AI add-on is Enterprise-only');
-  throw new Error('The AI add-on is only available in Enterprise Edition.');
+export async function getAiAccountSummary(): Promise<AiGatewayResult<AiAccountSummary>> {
+  logger.debug('[CE] getAiAccountSummary called but the AI add-on is Enterprise-only');
+  return { status: 'unavailable', reason: 'not_configured' };
 }

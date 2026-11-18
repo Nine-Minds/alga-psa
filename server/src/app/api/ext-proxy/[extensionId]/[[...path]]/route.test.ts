@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const assertSessionProductAccessMock = vi.fn();
-const handlerSpies: Record<string, ReturnType<typeof vi.fn>> = {
+type HandlerSpy = Mock<(...args: unknown[]) => unknown>;
+const handlerSpies: Record<string, HandlerSpy> = {
   GET: vi.fn(),
   POST: vi.fn(),
   PUT: vi.fn(),

@@ -10,10 +10,17 @@
  */
 
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { registerAfterCommitWithConnection, tenantDb, withSavepoint } from '@alga-psa/db';
+import type { Knex as RootKnex } from 'knex';
 import { IEscalationManagerWithUser } from '../types';
 import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
+import type { EmailNotificationResult } from '@alga-psa/notifications/notifications/email';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+
+/** Resolve the email consumer through this module's configured worker import. */
+export function getEscalationEmailNotificationService() {
+  return getEmailNotificationService();
+}
 
 /**
  * Result of escalating a ticket
@@ -30,6 +37,11 @@ export interface EscalationResult {
   };
   error?: string;
 }
+
+export type EscalationManagerTicketResourceResult =
+  | 'already_assignee'
+  | 'existing_resource'
+  | 'added';
 
 /**
  * Escalate a ticket to a new level.
@@ -63,7 +75,6 @@ export async function escalateTicket(
     const ticket = await scopedDb.table('tickets')
       .where({ ticket_id: ticketId })
       .select(
-        't.board_id',
         'ticket_id',
         'ticket_number',
         'title',
@@ -110,7 +121,8 @@ export async function escalateTicket(
       await logEscalationEvent(trx, tenant, ticketId, {
         level: newLevel,
         escalated_by: escalatedBy,
-        manager_found: false
+        manager_found: false,
+        notifications: { inApp: false, email: 'skipped' },
       });
       return result;
     }
@@ -119,15 +131,27 @@ export async function escalateTicket(
     result.managerName = `${manager.manager_first_name || ''} ${manager.manager_last_name || ''}`.trim() || null;
 
     // 4. Add manager as additional resource
-    const resourceAdded = await addEscalationManagerAsResource(
-      trx,
-      tenant,
-      ticketId,
-      ticket.assigned_to,
-      manager.manager_user_id,
-      newLevel
-    );
-    result.resourceAdded = resourceAdded;
+    try {
+      const resourceResult = await ensureEscalationManagerOnTicket(
+        trx,
+        tenant,
+        ticketId,
+        manager.manager_user_id,
+        newLevel
+      );
+      result.resourceAdded = resourceResult === 'added';
+    } catch (error) {
+      // Resource assignment is an optional side effect of escalation. A
+      // savepoint inside ensureEscalationManagerOnTicket leaves the outer
+      // transaction usable when PostgreSQL rejects the attachment statement.
+      console.error('Unable to attach SLA escalation manager to ticket:', {
+        tenant,
+        ticketId,
+        managerId: manager.manager_user_id,
+        level: newLevel,
+        error,
+      });
+    }
 
     // 5. Send notifications
     const notifyVia = manager.notify_via || ['in_app', 'email'];
@@ -145,8 +169,9 @@ export async function escalateTicket(
       result.notificationsSent.inApp = inAppSent;
     }
 
+    let sendEmail: (() => Promise<EmailNotificationResult>) | null = null;
     if (notifyVia.includes('email') && manager.manager_email) {
-      const emailSent = await sendEscalationEmailNotification(
+      sendEmail = await sendEscalationEmailNotification(
         trx,
         tenant,
         manager.manager_user_id,
@@ -156,18 +181,25 @@ export async function escalateTicket(
         ticket.title,
         newLevel
       );
-      result.notificationsSent.email = emailSent;
+      result.notificationsSent.email = sendEmail !== null;
     }
 
     // 6. Log the escalation event
-    await logEscalationEvent(trx, tenant, ticketId, {
+    const auditLogId = await logEscalationEvent(trx, tenant, ticketId, {
       level: newLevel,
       escalated_by: escalatedBy,
       manager_found: true,
       manager_id: manager.manager_user_id,
-      resource_added: resourceAdded,
-      notifications: result.notificationsSent
+      resource_added: result.resourceAdded,
+      notifications: {
+        inApp: result.notificationsSent.inApp,
+        email: sendEmail ? 'queued' : 'skipped',
+      }
     });
+
+    if (sendEmail) {
+      registerEmailOutcome(trx, tenant, ticketId, auditLogId, sendEmail);
+    }
 
     result.success = true;
     return result;
@@ -211,7 +243,8 @@ export async function checkEscalationNeeded(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  elapsedPercent: number
+  elapsedPercent: number,
+  requestedLevel?: 1 | 2 | 3
 ): Promise<1 | 2 | 3 | null> {
   const scopedDb = tenantDb(trx, tenant);
 
@@ -247,6 +280,15 @@ export async function checkEscalationNeeded(
   }
 
   const currentLevel = ticket.escalation_level || 0;
+
+  // Configured wake points can coincide. Evaluate each level independently so
+  // one shared timer does not collapse several due escalation actions into L3.
+  if (requestedLevel !== undefined) {
+    const threshold = target[`escalation_${requestedLevel}_percent`];
+    return threshold && elapsedPercent >= threshold && currentLevel < requestedLevel
+      ? requestedLevel
+      : null;
+  }
 
   // Check which escalation level should be triggered
   // Only trigger if we haven't already escalated to this level
@@ -295,54 +337,52 @@ async function getEscalationManagerInternal(
 /**
  * Add escalation manager as an additional resource on the ticket.
  */
-async function addEscalationManagerAsResource(
+export async function ensureEscalationManagerOnTicket(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-  assignedTo: string | null,
   managerId: string,
   level: number
-): Promise<boolean> {
-  try {
-    const scopedDb = tenantDb(trx, tenant);
+): Promise<EscalationManagerTicketResourceResult> {
+  return withSavepoint(trx, async (resourceTrx) => {
+    const scopedDb = tenantDb(resourceTrx, tenant);
+    const ticket = await scopedDb.table('tickets')
+      .where({ ticket_id: ticketId })
+      .select('assigned_to')
+      .first();
 
-    // Check if this manager is already a resource on this ticket
+    if (!ticket) {
+      throw new Error(`Cannot attach escalation manager: ticket ${ticketId} was not found`);
+    }
+    if (ticket.assigned_to === managerId) {
+      return 'already_assignee';
+    }
+
     const existingResource = await scopedDb.table('ticket_resources')
-      .where({
-        ticket_id: ticketId,
-        additional_user_id: managerId
-      })
+      .where({ ticket_id: ticketId, additional_user_id: managerId })
       .first();
 
     if (existingResource) {
-      // Update the role to reflect new escalation level
+      // Keep the existing resource's escalation role current when the same
+      // person handles a later level; do not create another assignment row.
       await scopedDb.table('ticket_resources')
-        .where({
-          assignment_id: existingResource.assignment_id
-        })
-        .update({
-          role: `escalation_manager_L${level}`
-        });
-      return true;
+        .where({ assignment_id: existingResource.assignment_id })
+        .update({ role: `escalation_manager_L${level}` });
+      return 'existing_resource';
     }
 
-    // Add as new resource
-    await scopedDb.table('ticket_resources')
-      .insert({
-        assignment_id: crypto.randomUUID(),
-        tenant,
-        ticket_id: ticketId,
-        assigned_to: assignedTo,
-        additional_user_id: managerId,
-        role: `escalation_manager_L${level}`,
-        assigned_at: trx.fn.now()
-      });
+    await scopedDb.table('ticket_resources').insert({
+      assignment_id: crypto.randomUUID(),
+      tenant,
+      ticket_id: ticketId,
+      assigned_to: ticket.assigned_to,
+      additional_user_id: managerId,
+      role: `escalation_manager_L${level}`,
+      assigned_at: resourceTrx.fn.now(),
+    });
 
-    return true;
-  } catch (error) {
-    console.error('Error adding escalation manager as resource:', error);
-    return false;
-  }
+    return 'added';
+  });
 }
 
 /**
@@ -357,33 +397,28 @@ async function sendEscalationInAppNotification(
   ticketTitle: string,
   level: number
 ): Promise<boolean> {
-  try {
-    // Use the central template creation path so enablement, locale, configured
-    // priority resolution, broadcasts, and post-creation delivery hooks all run.
-    const notification = await createNotificationFromTemplateInternal(trx, {
-      tenant,
-      user_id: userId,
-      template_name: 'sla-escalation',
-      type: 'warning',
-      data: {
-        ticketNumber,
-        ticketTitle,
-        escalationLevel: level,
-      },
-      category: 'sla',
-      link: `/msp/tickets/${ticketId}`,
-      metadata: {
-        ticket_id: ticketId,
-        escalation_level: level,
-        subtype: 'sla-escalation'
-      },
-    });
+  // Use the central template creation path so enablement, locale, configured
+  // priority resolution, broadcasts, and post-creation delivery hooks all run.
+  const notification = await createNotificationFromTemplateInternal(trx, {
+    tenant,
+    user_id: userId,
+    template_name: 'sla-escalation',
+    type: 'warning',
+    data: {
+      ticketNumber,
+      ticketTitle,
+      escalationLevel: level,
+    },
+    category: 'sla',
+    link: `/msp/tickets/${ticketId}`,
+    metadata: {
+      ticket_id: ticketId,
+      escalation_level: level,
+      subtype: 'sla-escalation'
+    },
+  });
 
-    return notification !== null;
-  } catch (error) {
-    console.error('Error sending escalation in-app notification:', error);
-    return false;
-  }
+  return notification !== null;
 }
 
 /**
@@ -398,85 +433,85 @@ async function sendEscalationEmailNotification(
   ticketNumber: string,
   ticketTitle: string,
   level: number
-): Promise<boolean> {
-  try {
-    const emailService = getEmailNotificationService();
+): Promise<(() => Promise<EmailNotificationResult>) | null> {
+  const emailService = getEscalationEmailNotificationService();
 
-    // Get the SLA Escalation notification subtype ID
-    const subtype = await tenantDb(trx, tenant)
+  // Get the SLA Escalation notification subtype ID
+  const subtype = await tenantDb(trx, tenant)
+    .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
+    .where({ name: 'SLA Escalation' })
+    .first();
+
+  let resolvedSubtype = subtype;
+  if (!resolvedSubtype) {
+    console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
+    // Try to fall back to SLA Warning subtype
+    resolvedSubtype = await tenantDb(trx, tenant)
       .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
-      .where({ name: 'SLA Escalation' })
+      .where({ name: 'SLA Warning' })
       .first();
 
-    if (!subtype) {
-      console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
-      // Try to fall back to SLA Warning subtype
-      const fallbackSubtype = await tenantDb(trx, tenant)
-        .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
-        .where({ name: 'SLA Warning' })
-        .first();
-
-      if (!fallbackSubtype) {
-        console.error('No suitable notification subtype found for escalation email');
-        return false;
-      }
+    if (!resolvedSubtype) {
+      console.error('No suitable notification subtype found for escalation email');
+      return null;
     }
-
-    // Get additional ticket context for the email template
-    const scopedDb = tenantDb(trx, tenant);
-    const ticketDetailsQuery = scopedDb.table<any>('tickets as t');
-    scopedDb.tenantJoin(ticketDetailsQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
-    scopedDb.tenantJoin(ticketDetailsQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
-    scopedDb.tenantJoin(ticketDetailsQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
-
-    const ticketDetails = await ticketDetailsQuery
-      .where('t.ticket_id', ticketId)
-      .select(
-        'c.client_name as client_name',
-        'p.priority_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as assignee_name")
-      )
-      .first();
-
-    // Get recipient name
-    const recipient = await scopedDb.table('users')
-      .where({ user_id: userId })
-      .select('first_name', 'last_name')
-      .first();
-
-    const recipientName = recipient
-      ? `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || 'Team Member'
-      : 'Team Member';
-
-    // Build template data matching sla-escalation template variables
-    const templateData = {
-      recipientName,
-      ticketNumber,
-      ticketTitle,
-      escalationLevel: level,
-      escalationReason: `SLA threshold reached - escalated to level ${level}`,
-      priority: ticketDetails?.priority_name || 'Not set',
-      clientName: ticketDetails?.client_name || 'Unknown',
-      assigneeName: ticketDetails?.assignee_name || 'Unassigned',
-      ticketUrl: `/msp/tickets/${ticketId}`
-    };
-
-    await emailService.sendNotification({
-      mailClass: 'ticket',
-      boardId: ticketDetails?.board_id,
-      tenant,
-      userId,
-      subtypeId: subtype?.id || 1,
-      emailAddress: email,
-      templateName: 'sla-escalation',
-      data: templateData as Record<string, string | number | boolean>
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Error sending escalation email notification:', error);
-    return false;
   }
+
+  // Get additional ticket context for the email template
+  const scopedDb = tenantDb(trx, tenant);
+  const ticketDetailsQuery = scopedDb.table<any>('tickets as t');
+  scopedDb.tenantJoin(ticketDetailsQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+  scopedDb.tenantJoin(ticketDetailsQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+  scopedDb.tenantJoin(ticketDetailsQuery, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+
+  const ticketDetails = await ticketDetailsQuery
+    .where('t.ticket_id', ticketId)
+    .select(
+      't.board_id',
+      'c.client_name as client_name',
+      'p.priority_name',
+      trx.raw("CONCAT(u.first_name, ' ', u.last_name) as assignee_name")
+    )
+    .first();
+
+  // Get recipient name
+  const recipient = await scopedDb.table('users')
+    .where({ user_id: userId })
+    .select('first_name', 'last_name')
+    .first();
+
+  const recipientName = recipient
+    ? `${recipient.first_name || ''} ${recipient.last_name || ''}`.trim() || 'Team Member'
+    : 'Team Member';
+
+  // Build template data matching sla-escalation template variables
+  const templateData = {
+    recipientName,
+    ticketNumber,
+    ticketTitle,
+    escalationLevel: level,
+    escalationReason: `SLA threshold reached - escalated to level ${level}`,
+    priority: ticketDetails?.priority_name || 'Not set',
+    clientName: ticketDetails?.client_name || 'Unknown',
+    assigneeName: ticketDetails?.assignee_name || 'Unassigned',
+    ticketUrl: `/msp/tickets/${ticketId}`
+  };
+
+  // Defer the send until the escalation transaction commits: a rollback (and the
+  // Temporal retry that follows) must not leave a stray email behind.
+  const boardId = ticketDetails?.board_id;
+  const subtypeId = resolvedSubtype.id;
+  return () =>
+      emailService.sendNotification({
+        mailClass: 'ticket',
+        boardId,
+        tenant,
+        userId,
+        subtypeId,
+        emailAddress: email,
+        templateName: 'sla-escalation',
+        data: templateData as Record<string, string | number | boolean>
+      });
 }
 
 /**
@@ -487,17 +522,52 @@ async function logEscalationEvent(
   tenant: string,
   ticketId: string,
   eventData: Record<string, unknown>
-): Promise<void> {
-  try {
-    await tenantDb(trx, tenant).table('sla_audit_log').insert({
-      log_id: crypto.randomUUID(),
-      tenant,
-      ticket_id: ticketId,
-      event_type: 'ticket_escalated',
-      event_data: JSON.stringify(eventData),
-      created_at: trx.fn.now()
-    });
-  } catch (error) {
-    console.error('Error logging escalation event:', error);
-  }
+): Promise<string> {
+  const logId = crypto.randomUUID();
+  await tenantDb(trx, tenant).table('sla_audit_log').insert({
+    log_id: logId,
+    tenant,
+    ticket_id: ticketId,
+    event_type: 'ticket_escalated',
+    event_data: JSON.stringify(eventData),
+    created_at: trx.fn.now()
+  });
+  return logId;
+}
+
+function registerEmailOutcome(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  auditLogId: string,
+  sendEmail: () => Promise<EmailNotificationResult>,
+): void {
+  registerAfterCommitWithConnection(trx, async (connection: RootKnex) => {
+    let outcome: EmailNotificationResult | { status: 'failed'; reason: string };
+    try {
+      outcome = await sendEmail();
+      if (outcome.status === 'skipped') outcome = { status: 'skipped', reason: outcome.reason };
+    } catch (error) {
+      outcome = { status: 'failed', reason: error instanceof Error ? error.message : String(error) };
+      console.error('SLA escalation email delivery failed', { ticketId, auditLogId, error });
+    }
+
+    try {
+      const scoped = tenantDb(connection, tenant);
+      const row = await scoped.table('sla_audit_log').where({ log_id: auditLogId, ticket_id: ticketId }).first('event_data');
+      if (!row) throw new Error('SLA escalation audit row no longer exists');
+      const eventData = typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data;
+      const status = outcome.status === 'sent' ? 'sent' : outcome.status;
+      eventData.notifications = {
+        ...eventData.notifications,
+        email: status,
+        ...(outcome.status === 'sent' && outcome.messageId ? { emailMessageId: outcome.messageId } : {}),
+        ...(outcome.status !== 'sent' ? { emailReason: outcome.reason } : {}),
+      };
+      await scoped.table('sla_audit_log').where({ log_id: auditLogId, ticket_id: ticketId }).update({ event_data: JSON.stringify(eventData) });
+    } catch (error) {
+      console.error('Failed to persist SLA escalation email outcome', { ticketId, auditLogId, error });
+      throw error;
+    }
+  }, `sla-escalation-email ticket=${ticketId} audit=${auditLogId}`);
 }

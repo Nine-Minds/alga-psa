@@ -10,6 +10,11 @@ const contractLineServiceActionsSource = readFileSync(
   path.resolve(process.cwd(), '../packages/billing/src/actions/contractLineServiceActions.ts'),
   'utf8',
 );
+// Live and template attach paths delegate to the shared membership helpers.
+const contractLineMembershipSource = readFileSync(
+  path.resolve(process.cwd(), '../packages/billing/src/lib/billing/contractLineMembership.ts'),
+  'utf8',
+);
 
 describe('contract authoring decoupling checklist guards', () => {
   it('T003: wizard submission validation accepts service identity across fixed/hourly/usage contexts', () => {
@@ -31,9 +36,12 @@ describe('contract authoring decoupling checklist guards', () => {
     // Live and template lines share one policy resolver:
     // resolveContractLineServiceConfig wraps
     // resolveContractLineServiceConfigurationType plus the per-type defaults.
-    expect(contractLineServiceActionsSource).toMatch(/resolveContractLineServiceConfig(?:urationType)?\(/);
-    expect(contractLineServiceActionsSource).not.toContain('service_type_billing_method');
-    expect(contractLineServiceActionsSource).not.toContain('Only fixed billing method services can be attached to this template line.');
+    expect(contractLineServiceActionsSource).toContain("from '../lib/billing/contractLineMembership'");
+    expect(contractLineMembershipSource).toMatch(/resolveContractLineServiceConfig(?:urationType)?\(/);
+    for (const source of [contractLineServiceActionsSource, contractLineMembershipSource]) {
+      expect(source).not.toContain('service_type_billing_method');
+      expect(source).not.toContain('Only fixed billing method services can be attached to this template line.');
+    }
   });
 
   it('T006: pricing defaults keep override > mode-default > catalog-default precedence hooks', () => {

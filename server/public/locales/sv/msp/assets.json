@@ -38,6 +38,38 @@
       "offline": "Offline",
       "overdue": "Försenad",
       "unknown": "Okänd"
+    },
+    "rmaStatus": {
+      "open": "Öppet",
+      "awaiting_return": "Väntar på retur",
+      "returned": "Returnerat",
+      "sent_to_vendor": "Skickat till leverantör",
+      "replacement_received": "Ersättningsenhet mottagen",
+      "replacement_deployed": "Ersättningsenhet driftsatt",
+      "dead_unit_owed": "Trasig enhet ska återlämnas",
+      "dead_unit_returned": "Trasig enhet återlämnad",
+      "replaced": "Ersatt",
+      "credited": "Krediterat",
+      "charged": "Debiterat",
+      "closed": "Stängt",
+      "warranty_review": "Garantigranskning",
+      "repaired": "Reparerad"
+    },
+    "assetAuditStatus": {
+      "in_progress": "Pågår",
+      "completed": "Slutförd",
+      "cancelled": "Avbruten"
+    },
+    "assetAuditResult": {
+      "expected": "Förväntad",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntad"
+    },
+    "assetAuditMethod": {
+      "scan": "Skanning",
+      "manual": "Manuell",
+      "register": "Registrerad på plats"
     }
   },
   "assetAlertsSection": {
@@ -106,7 +138,9 @@
       "selectedAssets_one": "{{count}} tillgång markerad",
       "selectedAssets_other": "{{count}} tillgångar markerade",
       "clearSelection": "Avmarkera alla",
-      "bulkActionsComingSoon": "Massåtgärder kommer snart"
+      "bulkActionsComingSoon": "Massåtgärder kommer snart",
+      "selectedAssets_few": "{{count}} tillgångar markerade",
+      "selectedAssets_many": "{{count}} tillgångar markerade"
     },
     "actions": {
       "openActionsForAsset": "Öppna åtgärder för tillgången {{name}}",
@@ -176,7 +210,24 @@
         "managed": "Hanterad via RMM",
         "unmanaged": "Inte hanterad"
       },
-      "allGroups": "Alla grupper"
+      "allGroups": "Alla grupper",
+      "ownership": {
+        "any": "Valfri ägare",
+        "client": "Kundägd",
+        "msp": "MSP-ägd"
+      },
+      "custody": {
+        "any": "Valfritt förvar",
+        "inCustody": "I MSP:ns förvar",
+        "notInCustody": "Inte i MSP:ns förvar"
+      },
+      "audit": {
+        "any": "Alla inventeringsresultat",
+        "present": "Senaste inventering: på plats",
+        "missing": "Senaste inventering: saknas",
+        "never": "Aldrig inventerad",
+        "stale": "Inte inventerad de senaste 90 dagarna"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -230,7 +281,9 @@
         "setLocation": "Ange plats",
         "setStatus": "Ange status",
         "assignContact": "Tilldela till kontakt",
-        "addToGroup": "Lägg till i grupp"
+        "addToGroup": "Lägg till i grupp",
+        "printLabels": "Skriv ut etiketter",
+        "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
       },
       "actions": {
         "apply": "Tillämpa",
@@ -347,7 +400,9 @@
       "location": "Plats",
       "purchaseDate": "Inköpsdatum",
       "warrantyEnd": "Garantins slutdatum",
-      "notProvided": "Inte angivet"
+      "notProvided": "Inte angivet",
+      "lastAudited": "Senast inventerad",
+      "neverAudited": "Aldrig inventerad"
     },
     "info": {
       "client": "Kund",
@@ -408,7 +463,13 @@
       "hoursAgo_one": "för {{count}} timme sedan",
       "hoursAgo_other": "för {{count}} timmar sedan",
       "daysAgo_one": "för {{count}} dag sedan",
-      "daysAgo_other": "för {{count}} dagar sedan"
+      "daysAgo_other": "för {{count}} dagar sedan",
+      "minutesAgo_few": "för {{count}} minuter sedan",
+      "minutesAgo_many": "för {{count}} minuter sedan",
+      "hoursAgo_few": "för {{count}} timmar sedan",
+      "hoursAgo_many": "för {{count}} timmar sedan",
+      "daysAgo_few": "för {{count}} dagar sedan",
+      "daysAgo_many": "för {{count}} dagar sedan"
     }
   },
   "assetDetailHeader": {
@@ -424,7 +485,9 @@
       "rebootDevice": "Starta om enhet",
       "rebooting": "Startar om…",
       "editAsset": "Redigera tillgång",
-      "deleteAsset": "Radera tillgång"
+      "deleteAsset": "Radera tillgång",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "printPage": "Skriv ut sida"
     },
     "values": {
       "unknownClient": "Okänd kund"
@@ -642,7 +705,8 @@
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
       "orderNumber": "Ordernr.",
-      "billingProfile": "Faktureringsprofil"
+      "billingProfile": "Faktureringsprofil",
+      "ownership": "Ägarskap"
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -696,6 +760,18 @@
     },
     "help": {
       "assignedTo": "I kundportalen ser personer med begränsad synlighet den här enheten bara om den är tilldelad dem eller någon som rapporterar till dem."
+    },
+    "ownership": {
+      "client": "Kundägd",
+      "msp": "MSP-ägd"
+    },
+    "create": {
+      "success": "Tillgång {{tag}} skapad",
+      "autoTag": "Tilldela nästa automatiska inventarienummer",
+      "preview": "Förhandsgranskning av nästa inventarienummer: {{tag}} (förhandsgranskningen reserverar inget nummer)",
+      "selectClient": "Välj en kund för förhandsgranskning",
+      "addAnother": "Spara och lägg till en till",
+      "submit": "Skapa tillgång"
     }
   },
   "assetFormClient": {
@@ -809,7 +885,8 @@
       "save": "Spara",
       "label": "Knapptext",
       "template": "URL-mall",
-      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
+      "ninjaExample": "Exempel på NinjaOne-enhetsinstrumentpanel: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Byt ut värden mot din NinjaOne-region: app, eu, ca, oc eller us2 .ninjarmm.com.",
+      "tokens": "Använd {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} och {field.<key>} med anpassade fältnycklar som definieras under Inställningar → Tillgångar → Tillgångstyper.",
       "errors": {
         "load": "Det gick inte att läsa in länkar för fjärråtkomst.",
         "save": "Det gick inte att spara länken för fjärråtkomst.",
@@ -851,7 +928,9 @@
       "addAsset": "Lägg till tillgång",
       "showLess": "Visa färre",
       "moreAssets_one": "{{count}} tillgång till",
-      "moreAssets_other": "{{count}} tillgångar till"
+      "moreAssets_other": "{{count}} tillgångar till",
+      "moreAssets_few": "{{count}} tillgångar till",
+      "moreAssets_many": "{{count}} tillgångar till"
     },
     "errors": {
       "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
@@ -867,7 +946,11 @@
       "associated_other": "{{count}} tillgångar har kopplats",
       "associatedPartial_one": "{{count}} tillgång har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
       "associatedPartial_other": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
-      "removed": "Tillgångskopplingen har tagits bort"
+      "removed": "Tillgångskopplingen har tagits bort",
+      "associated_few": "{{count}} tillgångar har kopplats",
+      "associated_many": "{{count}} tillgångar har kopplats",
+      "associatedPartial_few": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)",
+      "associatedPartial_many": "{{count}} tillgångar har kopplats, {{failed}} misslyckades (kan redan vara kopplade)"
     },
     "empty": {
       "noneAssociated": "Inga tillgångar är kopplade till det här ärendet.",
@@ -890,7 +973,9 @@
       },
       "actions": {
         "addAssets_one": "Lägg till tillgång",
-        "addAssets_other": "Lägg till tillgångar"
+        "addAssets_other": "Lägg till tillgångar",
+        "addAssets_few": "Lägg till tillgångar",
+        "addAssets_many": "Lägg till tillgångar"
       }
     },
     "table": {
@@ -898,11 +983,6 @@
       "assetTag": "Inventarienummer",
       "type": "Typ",
       "status": "Status"
-    },
-    "assetStatuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Underhåll"
     },
     "assetTypes": {
       "workstation": "Arbetsstation",
@@ -1010,7 +1090,11 @@
       "manufacturer": "Tillverkare",
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
-      "orderNumber": "Ordernr."
+      "orderNumber": "Ordernr.",
+      "ownership": "Ägarskap",
+      "autoAssetTag": "Tilldela automatiskt",
+      "assetTagPreviewLoading": "Välj en kund för att förhandsgranska nästa inventarienummer",
+      "previewNotReserved": "Endast förhandsgranskning; tilldelas vid sparande"
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -1133,7 +1217,8 @@
       "unknown": "Okänd",
       "unifiedMemory": "{{size}} GB enhetligt minne",
       "memoryUsed": " ({{size}} GB använt)",
-      "freeStorage": "{{size}} GB ledigt"
+      "freeStorage": "{{size}} GB ledigt",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Inga maskinvarudata tillgängliga",
     "emptyStorage": "Inga lagringsenheter upptäcktes"
@@ -1244,7 +1329,10 @@
       "frequency": "Frekvens *",
       "interval": "Intervall *",
       "nextMaintenanceDate": "Nästa underhållsdatum *",
-      "active": "Aktivt"
+      "active": "Aktivt",
+      "recurrenceUnit": "Enhet *",
+      "onWeekdays": "På veckodagar (valfritt)",
+      "onDayOfMonth": "På dag i månaden (valfritt)"
     },
     "placeholders": {
       "scheduleName": "t.ex. Månatligt serverunderhåll",
@@ -1259,7 +1347,8 @@
       "weekly": "Veckovis",
       "monthly": "Månadsvis",
       "quarterly": "Kvartalsvis",
-      "yearly": "Årligen"
+      "yearly": "Årligen",
+      "custom": "Anpassad"
     },
     "errors": {
       "scheduleNameRequired": "Schemanamn krävs",
@@ -1268,6 +1357,18 @@
       "nextMaintenanceRequired": "Nästa underhållsdatum krävs",
       "frequencyIntervalMin": "Upprepningsintervallet måste vara minst 1",
       "saveFailed": "Det gick inte att skapa underhållsschemat"
+    },
+    "recurrenceUnits": {
+      "days": "Dagar",
+      "weeks": "Veckor",
+      "months": "Månader",
+      "years": "År"
+    },
+    "dayOfMonthOptions": {
+      "any": "Valfri dag"
+    },
+    "hints": {
+      "selectors": "Utan val upprepas från slutförandedatumet."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1306,7 +1407,49 @@
         "quarterly_one": "kvartal",
         "quarterly_other": "kvartal",
         "yearly_one": "år",
-        "yearly_other": "år"
+        "yearly_other": "år",
+        "daily_few": "dagar",
+        "daily_many": "dagar",
+        "weekly_few": "veckor",
+        "weekly_many": "veckor",
+        "monthly_few": "månader",
+        "monthly_many": "månader",
+        "quarterly_few": "kvartal",
+        "quarterly_many": "kvartal",
+        "yearly_few": "år",
+        "yearly_many": "år"
+      },
+      "every_few": "Intervall: {{count}} {{frequency}}",
+      "every_many": "Intervall: {{count}} {{frequency}}",
+      "customUnconfigured": "Anpassad (inte konfigurerad)",
+      "onWeekdays": "{{cadence}} på {{days}}",
+      "onDaysOfMonth": "{{cadence}} på dag {{days}}",
+      "weekdays": {
+        "sun": "sön",
+        "mon": "mån",
+        "tue": "tis",
+        "wed": "ons",
+        "thu": "tors",
+        "fri": "fre",
+        "sat": "lör"
+      },
+      "customUnits": {
+        "days_one": "dag",
+        "days_other": "dagar",
+        "days_few": "dagar",
+        "days_many": "dagar",
+        "weeks_one": "vecka",
+        "weeks_other": "veckor",
+        "weeks_few": "veckor",
+        "weeks_many": "veckor",
+        "months_one": "månad",
+        "months_other": "månader",
+        "months_few": "månader",
+        "months_many": "månader",
+        "years_one": "år",
+        "years_other": "år",
+        "years_few": "år",
+        "years_many": "år"
       }
     },
     "status": {
@@ -1340,7 +1483,182 @@
   "maintenanceCommandCenter": {
     "title": "Underhåll",
     "description": "Kontrollcenter för förebyggande arbete med alla kunders tillgångar.",
-    "assetsLink": "Tillgångar"
+    "assetsLink": "Tillgångar",
+    "notRecorded": "Inte registrerat",
+    "system": "System",
+    "checklist": {
+      "complete": "Slutförd",
+      "incomplete": "Inte slutförd"
+    },
+    "weekdays": {
+      "0": "Sön",
+      "1": "Mån",
+      "2": "Tis",
+      "3": "Ons",
+      "4": "Tor",
+      "5": "Fre",
+      "6": "Lör"
+    },
+    "cadence": {
+      "custom": "Anpassad",
+      "customSchedule": "Anpassat schema",
+      "everyUnit": "Varje {{unit}}",
+      "everyCountUnit": "Varje {{count}} {{unit}}",
+      "onDays": "{{base}} på {{days}}",
+      "onDatesOfMonth": "{{base}} den {{dates}}",
+      "frequency": {
+        "daily": "Dagligen",
+        "weekly": "Veckovis",
+        "monthly": "Månadsvis",
+        "quarterly": "Kvartalsvis",
+        "yearly": "Årligen"
+      }
+    },
+    "urgency": {
+      "overdue": "{{count}} d försenat",
+      "dueToday": "klart senast idag",
+      "inDays": "om {{count}} d"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "refresh": "Uppdatera",
+      "newPlan": "Ny underhållsplan",
+      "skip": "Hoppa över",
+      "skipTooltip": "Hoppa över med obligatorisk motivering – planen går vidare till nästa tillfälle",
+      "complete": "Slutför underhåll",
+      "createTicket": "Skapa ärende",
+      "openTicket": "Öppna ärende ↗",
+      "pausePlan": "Pausa plan"
+    },
+    "assetPicker": {
+      "title": "Välj en tillgång",
+      "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+      "loading": "Läser in tillgångar…",
+      "loadFailed": "Det gick inte att läsa in tillgångar.",
+      "empty": "Inga tillgångar hittades.",
+      "showingFirst": "Visar de första {{shown}} av {{total}} – förfina din sökning."
+    },
+    "kpi": {
+      "overdue": "Försenat",
+      "dueToday": "Klart senast idag",
+      "upcoming7d": "Kommande 7 dagar",
+      "openTickets": "Öppna ärenden",
+      "compliance90d": "Efterlevnad 90 dagar",
+      "clickToFilter": "klicka för att filtrera",
+      "allClear": "allt klart",
+      "quietWeek": "lugn vecka framöver",
+      "linkedToOccurrences": "kopplade till underhållstillfällen",
+      "onTimeCompletion": "slutfört i tid"
+    },
+    "tabs": {
+      "queue": "Arbetskö",
+      "plans": "Plankö",
+      "history": "Historik"
+    },
+    "filters": {
+      "searchPlaceholder": "Sök efter planer, tillgångar eller kunder",
+      "actionable": "Kräver åtgärd",
+      "allStatuses": "Alla statusar",
+      "completed": "Slutfört",
+      "skipped": "Överhoppat",
+      "button": "Filter",
+      "allClients": "Alla kunder",
+      "allAssetTypes": "Alla tillgångstyper",
+      "allPlanTypes": "Alla plantyper",
+      "due": "Måldatum",
+      "clearAll": "Rensa alla",
+      "done": "Klar",
+      "clientChip": "Kund"
+    },
+    "viewMode": {
+      "list": "Lista",
+      "calendar": "Kalender"
+    },
+    "queue": {
+      "actionableTitle": "Underhållstillfällen som kräver åtgärd",
+      "plansTitle": "Aktiv plankö (baserad på underhållstillfällen)",
+      "loading": "Läser in underhåll…",
+      "empty": "Inga underhållstillfällen matchar dessa filter.",
+      "emptyFiltered": "Inga underhållstillfällen matchar dessa filter. Rensa ett filter eller utöka intervallet för måldatum.",
+      "emptyHistory": "Slutförda och överhoppade tillfällen visas här när underhållet har avslutats.",
+      "emptyPlans": "Öppna underhållstillfällen visas här när scheman genererar arbete.",
+      "clearBeyond": "Inget mer finns i kön utöver dessa {{count}} – utöka intervallet för måldatum eller kontrollera plankön.",
+      "allCaughtUp": "Allt klart",
+      "nextDueIn": "– nästa måldatum om {{count}} d",
+      "shownCount": "Visas: {{shown}} · Öppna: {{open}} ·",
+      "inHistory": "I historiken: {{count}}",
+      "itemCount_one": "· {{count}} post",
+      "itemCount_other": "· {{count}} poster",
+      "overdueCount": "Försenade: {{count}}",
+      "ticketChip": "ärende"
+    },
+    "miniMonth": {
+      "atAGlance": "Översikt för {{month}}",
+      "overdue": "försenat",
+      "today": "idag",
+      "upcoming": "kommande"
+    },
+    "calendar": {
+      "dueCount": "Med måldatum: {{count}}",
+      "today": "Idag",
+      "moreCount": "+{{count}} till",
+      "legend": "Teckenförklaring",
+      "scheduled": "Schemalagt"
+    },
+    "fields": {
+      "asset": "Tillgång",
+      "type": "Typ",
+      "cadence": "Intervall",
+      "nextDue": "Nästa måldatum",
+      "lastDone": "Senast utfört",
+      "assignee": "Ansvarig",
+      "createdBy": "Skapat av",
+      "linkedTicket": "Kopplat ärende"
+    },
+    "detail": {
+      "noSelection": "Inget underhållstillfälle valt",
+      "noSelectionHint": "Välj ett underhållstillfälle i kön för att se tillgången, planen, det kopplade ärendet och åtgärder för att utföra underhållet – eller rensa filtren för att se mer arbete.",
+      "unassignedClient": "Ingen kund tilldelad",
+      "dueSuffix": "· klart senast {{date}}",
+      "nextDueTooltip": "Nästa måldatum beräknas från det faktiska slutförandedatumet.",
+      "never": "Aldrig",
+      "unassigned": "Ej tilldelad",
+      "assignViaTicket": "Tilldela via ärende",
+      "ticketClosed": "Stängt",
+      "ticketOpen": "Öppet",
+      "noTicketYet": "Inget ännu",
+      "execution": "Utförande",
+      "noChecklistPrefix": "Den här planen saknar checklista –",
+      "addStepsLink": "lägg till steg på tillgången",
+      "noChecklistSuffix": "för att vägleda tekniker.",
+      "timeline": "Tidslinje"
+    },
+    "timeline": {
+      "created": "Underhållstillfälle skapat",
+      "ticketLinked": "Ärende kopplat – {{ticket}}",
+      "dueRepeats": "Måldatum – upprepas {{cadence}}",
+      "completedBy": "Slutfört av {{name}}{{notes}}",
+      "skippedBy": "Överhoppat av {{name}}"
+    },
+    "evidence": {
+      "completionTitle": "Dokumentation av slutförande",
+      "performed": "Utfört:",
+      "performedBy": "Utfört av:",
+      "notes": "Anteckningar:",
+      "checklist": "Checklista:",
+      "skipTitle": "Dokumentation av överhoppat underhåll",
+      "reason": "Orsak:",
+      "closedBy": "Avslutat av:",
+      "closed": "Avslutat:"
+    },
+    "skip": {
+      "title": "Hoppa över underhåll",
+      "reason": "Orsak"
+    },
+    "ticket": {
+      "title": "Underhåll: {{plan}}",
+      "description": "Underhåll av typen {{type}} ska vara klart senast {{date}}. Underhållstillfälle: {{occurrenceId}}"
+    }
   },
   "maintenanceCompletionDialog": {
     "errors": {
@@ -1439,6 +1757,8 @@
       "installDate": "Installationsdatum"
     },
     "empty": "Ingen programvara matchar din sökning.",
+    "noInventory": "Ingen programvaruinventering har samlats in för den här enheten ännu.",
+    "loadError": "Det gick inte att läsa in programvaruinventeringen.",
     "totalItems": "Totalt antal poster: {{count}}",
     "values": {
       "unknown": "Okänd"
@@ -1475,13 +1795,6 @@
     }
   },
   "assetBento": {
-    "rmmUser": {
-      "looksLike": "· Verkar vara {{contact}}",
-      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
-      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
-      "mapFailed": "Kunde inte spara kopplingen.",
-      "mapToContact": "Koppla till kontakt…"
-    },
     "health": "Hälsa",
     "security": "Säkerhet",
     "openTickets": "Öppna ärenden",
@@ -1531,6 +1844,13 @@
     "lastDone": "Senast utfört",
     "noMaintenance": "Inget schemalagt.",
     "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången.",
+    "rmmUser": {
+      "looksLike": "· Verkar vara {{contact}}",
+      "mapDialogDescription": "”{{user}}” kommer att kommas ihåg för den här RMM-organisationen.",
+      "mapDialogTitle": "Koppla inloggad användare till en kontakt",
+      "mapFailed": "Kunde inte spara kopplingen.",
+      "mapToContact": "Koppla till kontakt…"
+    },
     "manufacturer": "Tillverkare",
     "model": "Modell",
     "vendor": "Leverantör",
@@ -1544,7 +1864,8 @@
     "assignDialogTitle": "Tilldela den här tillgången",
     "sharedWorkspace": "Delad arbetsplats",
     "sharedWorkspaceValue": "{{name}} · {{count}} personer",
-    "billingProfile": "Faktureringsprofil"
+    "billingProfile": "Faktureringsprofil",
+    "lastAudited": "Senast inventerad"
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1574,7 +1895,11 @@
       "aGroup": "en grupp",
       "autoAssignedFrom": "Tilldelades automatiskt {{contact}} från {{provider}}",
       "groupLocationMoved": "Flyttad till {{location}} med {{group}}",
-      "groupLocationCleared": "Plats rensad med {{group}}"
+      "groupLocationCleared": "Plats rensad med {{group}}",
+      "audit": "Inventering",
+      "auditPresent": "Inventering: på plats",
+      "auditMissing": "Inventering: saknas",
+      "auditMethod": "Markeringsmetod: {{method}}"
     },
     "changeTypes": {
       "created": "Skapad",
@@ -1584,6 +1909,30 @@
       "rmm_linked": "RMM kopplad",
       "hardware_upgrade": "Maskinvara uppgraderad",
       "warranty_updated": "Garanti uppdaterad"
+    },
+    "custody": {
+      "unknownPlace": "en okänd plats",
+      "ticket": "Ärende {{ticket}}",
+      "receivedBack": "Mottagen tillbaka på {{place}}",
+      "received": "Mottagen i förvar på {{place}}",
+      "moved": "Flyttad från {{from}} till {{to}}",
+      "movedTo": "Flyttad till {{to}}",
+      "handedOff": "Överlämnad från {{from}} till {{to}}",
+      "handedOffTo": "Överlämnad till {{to}}",
+      "aColleague": "en kollega",
+      "shipped": "Skickad till {{counterparty}}",
+      "shippedVendor": "Skickad till leverantör",
+      "returnedTo": "Återlämnad till kund ({{counterparty}})",
+      "returned": "Återlämnad till kund",
+      "updated": "Förvarsuppgifter uppdaterade",
+      "fields": {
+        "purpose": "syfte",
+        "next_action_party": "nästa åtgärd",
+        "next_action_note": "anteckning om nästa åtgärd",
+        "follow_up_on": "uppföljningsdatum",
+        "condition_note": "skick",
+        "accessories": "tillbehör"
+      }
     }
   },
   "assetSignals": {
@@ -1643,7 +1992,10 @@
       "updateAssets": "Åtkomst nekad: kan inte uppdatera tillgångar"
     },
     "asset": {
+      "tagAlreadyExists": "Den här tillgångsetiketten används redan eller är reserverad. Skanna den för att hitta den befintliga tillgången eller ange en annan etikett.",
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "ticketNotFound": "Ärendet hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
+      "alreadyLinkedToTicket": "Den här tillgången är redan kopplad till ärendet.",
       "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
       "maintenanceMismatch": "Den här underhållsposten hör inte till den valda tillgången. Ladda om sidan och försök igen.",
@@ -1687,12 +2039,43 @@
     "loading": "Läser in...",
     "remove": "Ta bort tillgång"
   },
+  "inventoryProvenance": {
+    "title": "Lagerursprung",
+    "fields": {
+      "product": {
+        "label": "Produkt"
+      },
+      "serial": {
+        "label": "Serienummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Ursprunglig försäljningsorder"
+      },
+      "delivered": {
+        "label": "Levererad"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-historik"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Läser in tillgångsformuläret..."
+    }
+  },
   "assetStatuses": {
     "active": "Aktiv",
     "in_stock": "I lager",
     "maintenance": "Under underhåll",
     "inactive": "Inaktiv",
-    "retired": "Utfasad"
+    "retired": "Utfasad",
+    "held_by_msp": "Hos MSP"
   },
   "assetStatusKinds": {
     "deployable": "Driftsättningsbar",
@@ -1784,5 +2167,330 @@
       "createFailed": "Kunde inte skapa gruppen.",
       "addFailed": "Kunde inte lägga till de valda tillgångarna."
     }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparation",
+      "warranty_evaluation": "Garantibedömning",
+      "loaner_prep": "Förberedelse av lånemaskin",
+      "staging": "Driftförberedelse"
+    },
+    "party": {
+      "msp": "Vi (MSP)",
+      "client": "Kund",
+      "vendor": "Leverantör"
+    },
+    "fields": {
+      "location": "Plats",
+      "keepLocation": "Behåll nuvarande plats",
+      "selectLocation": "Välj en plats",
+      "bin": "Back eller hylla",
+      "binPlaceholder": "t.ex. Hylla B3",
+      "purpose": "Syfte",
+      "nextActionParty": "Nästa åtgärd ligger hos",
+      "followUpOn": "Uppföljning den",
+      "followUpPlaceholder": "Välj ett datum",
+      "nextActionNote": "Anteckning om nästa åtgärd",
+      "internalNote": "Intern. Skrivs aldrig ut på en etikett och visas aldrig för kunden.",
+      "conditionNote": "Skick",
+      "conditionPlaceholder": "Repor, saknade skruvar, skador vid ankomst",
+      "accessories": "Mottagna tillbehör",
+      "accessoryPlaceholder": "t.ex. Nätadapter",
+      "accessoryQuantity": "Antal",
+      "removeAccessory": "Ta bort tillbehör",
+      "addAccessory": "Lägg till tillbehör",
+      "note": "Anteckning (valfritt)"
+    },
+    "errors": {
+      "generic": "Något gick fel."
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "saving": "Sparar...",
+      "move": "Flytta",
+      "handOff": "Lämna över",
+      "ship": "Skicka till leverantör",
+      "receiveBack": "Ta emot",
+      "returnToClient": "Återlämna till kund",
+      "edit": "Redigera uppgifter",
+      "receiveIntoCustody": "Ta emot i förvar"
+    },
+    "move": {
+      "title": "Flytta utrustning",
+      "submit": "Flytta",
+      "toLocation": "Flytta till"
+    },
+    "handOff": {
+      "title": "Lämna över till en kollega",
+      "submit": "Lämna över",
+      "newHolder": "Ny innehavare",
+      "selectHolder": "Välj en person"
+    },
+    "ship": {
+      "title": "Skicka till leverantör",
+      "description": "Artikeln lämnar kontoret. Den förblir i förvar och visas som hos leverantören.",
+      "submit": "Skicka",
+      "counterparty": "Leverantör eller transportör",
+      "counterpartyPlaceholder": "t.ex. Dells RMA-depå"
+    },
+    "receiveBack": {
+      "title": "Ta emot från leverantör",
+      "submit": "Ta emot",
+      "holder": "Innehavare (du som standard)",
+      "me": "Jag"
+    },
+    "return": {
+      "title": "Återlämna till kund",
+      "description": "Detta avslutar förvarsperioden. Artikeln listas inte längre som i förvar.",
+      "submit": "Återlämna till kund",
+      "collectedBy": "Hämtad av (valfritt)"
+    },
+    "edit": {
+      "title": "Redigera förvarsuppgifter",
+      "submit": "Spara"
+    },
+    "open": {
+      "title": "Ta emot i förvar",
+      "description": "Registrera att MSP:n nu innehar den här utrustningen. Detta skapar inget lagersaldo och påverkar inte faktureringen.",
+      "submit": "Ta emot",
+      "holder": "Innehavare (du som standard)"
+    },
+    "card": {
+      "withVendor": "Hos leverantör",
+      "title": "Förvar",
+      "location": "Plats",
+      "holder": "Innehavare",
+      "purpose": "Syfte",
+      "nextAction": "Nästa åtgärd",
+      "followUp": "Uppföljning",
+      "overdue": "försenad",
+      "daysHeld": "Dagar i förvar",
+      "ticket": "Ärende",
+      "openTicket": "Öppna ärende",
+      "condition": "Skick",
+      "accessories": "Tillbehör",
+      "notInCustody": "Är för närvarande inte i MSP:ns förvar.",
+      "hideHistory": "Dölj förvarshistorik",
+      "showHistoryWithPast": "Förvarshistorik ({{count}} tidigare perioder)",
+      "showHistory": "Förvarshistorik",
+      "noEvents": "Inga förvarshändelser har registrerats."
+    },
+    "state": {
+      "with_vendor": "Hos leverantör",
+      "in_office": "På kontoret"
+    },
+    "badge": {
+      "withVendor": "Hos leverantör",
+      "inOfficeAt": "På kontoret - {{location}}",
+      "inOffice": "På kontoret"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Tillgång",
+        "client": "Kund",
+        "location": "Plats",
+        "holder": "Innehavare",
+        "purpose": "Syfte",
+        "nextAction": "Nästa åtgärd",
+        "followUp": "Uppföljning",
+        "daysHeld": "Dagar i förvar",
+        "ticket": "Ärende",
+        "actions": "Åtgärder"
+      },
+      "openMenu": "Öppna meny",
+      "tabs": {
+        "all_open": "Alla öppna",
+        "in_office": "På kontoret",
+        "waiting_on_vendor": "Väntar på leverantör",
+        "waiting_on_client": "Väntar på kund",
+        "overdue": "Försenade"
+      },
+      "title": "Utrustning i förvar",
+      "filters": {
+        "client": "Kund",
+        "allLocations": "Alla platser",
+        "holder": "Innehavare",
+        "allPurposes": "Alla syften",
+        "mine": "Mina"
+      },
+      "empty": "Ingen utrustning är i förvar i den här vyn."
+    },
+    "receiveEquipment": {
+      "button": "Ta emot utrustning",
+      "title": "Ta emot utrustning",
+      "description": "Registrera kundutrustning som lämnats in för det här ärendet. Detta skapar inget lagersaldo och påverkar inte fakturering eller tid.",
+      "submit": "Ta emot",
+      "modeExisting": "Befintlig tillgång",
+      "modeNew": "Ny artikel",
+      "search": "Sök kundens tillgångar",
+      "asset": "Tillgång",
+      "assetPlaceholder": "Välj en tillgång",
+      "fields": {
+        "name": "Namn",
+        "type": "Typ",
+        "manufacturer": "Tillverkare",
+        "model": "Modell",
+        "serial": "Serienummer",
+        "assetTag": "Tillgångsetikett (valfritt)"
+      },
+      "photos": "Foton (valfritt)",
+      "photosHint": "Foton bifogas det här ärendet och visas inte för kunden.",
+      "doneTitle": "Utrustning mottagen",
+      "doneBody": "{{name}} ({{tag}}) är nu i MSP:ns förvar.",
+      "printLabel": "Skriv ut tillgångsetikett",
+      "openAsset": "Öppna tillgång",
+      "close": "Stäng",
+      "inCustodyOption": "{{asset}} — I förvar: {{location}}"
+    },
+    "photos": {
+      "limit": "Upp till 20 foton, totalt 10 MB. Foton är dolda för kunder.",
+      "tooLarge": "Välj högst 20 foton på sammanlagt högst 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garanti",
+      "warrantyEnd": "Garantin upphör",
+      "expired": "Utgången",
+      "expiringSoon": "Upphör snart",
+      "vendor": "Leverantör",
+      "ownership": "Ägande",
+      "ownershipMsp": "Ägs av MSP",
+      "ownershipClient": "Ägs av kunden",
+      "claims": "Garantiärenden",
+      "noClaims": "Inga garantiärenden ännu.",
+      "openRma": "Öppna RMA",
+      "startClaim": "Starta garantiärende"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
+    }
+  },
+  "assetAudits": {
+    "title": "Inventeringar på plats",
+    "startAudit": "Starta inventering",
+    "noLocation": "Ingen plats",
+    "loading": "Läser in inventeringar…",
+    "empty": "Inga inventeringar på plats matchar den här vyn ännu.",
+    "columns": {
+      "audit": "Inventering",
+      "client": "Kund",
+      "location": "Plats",
+      "status": "Status",
+      "startedBy": "Startad av",
+      "started": "Startad",
+      "completed": "Slutförd",
+      "expected": "Förväntade",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntade"
+    },
+    "filters": {
+      "client": "Kund",
+      "allLocations": "Alla platser",
+      "allStatuses": "Alla statusar",
+      "started": "Startdatum"
+    },
+    "stats": {
+      "expected": "förväntade",
+      "present": "på plats",
+      "missing": "saknas",
+      "remaining": "återstående",
+      "unexpected": "oväntade"
+    },
+    "segments": {
+      "remaining": "Återstående",
+      "present": "På plats",
+      "missing": "Saknas",
+      "unexpected": "Oväntade",
+      "all": "Alla"
+    },
+    "start": {
+      "title": "Starta inventering på plats",
+      "client": "Kund",
+      "clientPlaceholder": "Välj en kund",
+      "location": "Plats",
+      "locationHint": "Med ”Ingen plats” inventeras kundens enheter som saknar registrerad plats.",
+      "statuses": "Tillgångsstatusar som ingår",
+      "statusesHint": "Om ingen status väljs omfattar inventeringen alla statusar.",
+      "statusesLoading": "Läser in statusar…",
+      "notes": "Anteckningar",
+      "notesPlaceholder": "Syftet med den här inventeringen (valfritt)",
+      "pickClient": "Välj en kund för att se vad som ingår.",
+      "counting": "Räknar enheterna som ingår…",
+      "countUnavailable": "Antalet enheter är inte tillgängligt just nu.",
+      "expected_one": "1 enhet förväntas ingå i den här inventeringen",
+      "expected_other": "{{count}} enheter förväntas ingå i den här inventeringen",
+      "submit": "Starta inventering",
+      "starting": "Startar…"
+    },
+    "detail": {
+      "reference": "Inventering",
+      "untitledClient": "Kund",
+      "location": "Plats",
+      "startedBy": "Startad av",
+      "started": "Startad",
+      "completed": "Slutförd",
+      "scopeStatuses": "Statusar som ingår",
+      "allStatuses": "Alla statusar",
+      "notes": "Anteckningar",
+      "exportCsv": "Exportera CSV",
+      "exportStarted": "CSV-exporten har startat.",
+      "exportEmpty": "Det finns inget att exportera i den här vyn.",
+      "addUnexpected": "Lägg till oväntad tillgång",
+      "addUnexpectedHint": "En enhet som hittas på plats men ligger utanför inventeringens omfattning registreras som oväntad, aldrig som förväntad.",
+      "addUnexpectedPlaceholder": "Sök efter en tillgång…",
+      "addUnexpectedEmpty": "Inga andra tillgångar för den här kunden.",
+      "complete": "Slutför inventering",
+      "completeConfirm_one": "1 omarkerad enhet registreras som saknad.",
+      "completeConfirm_other": "{{count}} omarkerade enheter registreras som saknade.",
+      "cancelAudit": "Avbryt inventering",
+      "cancelConfirm": "Inventeringen avbryts och inga uppgifter sparas på tillgångarna. Det går inte att ångra.",
+      "keepAudit": "Fortsätt inventera"
+    },
+    "items": {
+      "columns": {
+        "asset": "Tillgång",
+        "type": "Typ",
+        "serial": "Serienummer / inventarienummer",
+        "result": "Resultat",
+        "method": "Metod",
+        "markedBy": "Markerad av",
+        "markedAt": "Markerad den",
+        "actions": "Åtgärder"
+      },
+      "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
+      "empty": "Inga tillgångar i den här vyn.",
+      "markPresent": "Markera som på plats",
+      "undoMark": "Ångra",
+      "createTicket": "Skapa ärende",
+      "ticketTitle": "Saknas vid inventering på plats: {{asset}}",
+      "ticketDescription": "Hittades inte vid inventeringen på plats som startades {{date}}."
+    }
+  },
+  "scanLookup": {
+    "title": "Skanna inventarienummer",
+    "input": "Skanna eller ange ett inventarienummer",
+    "loading": "Söker…",
+    "find": "Hitta tillgång",
+    "ambiguous": "Flera synliga tillgångar har detta inventarienummer. Be en administratör att åtgärda dubbletterna.",
+    "notFound": "Ingen synlig tillgång matchar detta inventarienummer exakt.",
+    "failed": "Det gick inte att söka efter detta inventarienummer. Kontrollera dina åtkomsträttigheter och försök igen."
+  },
+  "fullIntake": {
+    "title": "Lägg till tillgång",
+    "description": "Välj ett nummer för klientorganisationen eller behåll en befintlig utskriven etikett.",
+    "back": "Tillbaka till tillgångar"
+  },
+  "labelFirstIntake": {
+    "start": "Mottagning med etikett först",
+    "title": "Starta mottagning med etikett först",
+    "help": "Skapa en beständig tillgångspost med minimala uppgifter och skriv ut två exemplar av etiketten. Skanna något av exemplaren senare för att slutföra samma post.",
+    "client": "Kund",
+    "clientRequired": "Välj en kund för att fortsätta.",
+    "createFailed": "Det gick inte att skapa mottagningsposten.",
+    "name": "Kort beskrivning (valfritt)",
+    "creating": "Skapar…",
+    "createPrint": "Skapa och skriv ut paret"
   }
 }

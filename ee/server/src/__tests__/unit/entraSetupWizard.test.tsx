@@ -72,8 +72,10 @@ vi.mock('@ee/components/settings/integrations/entra/PilotSyncControl', () => ({
 }));
 
 vi.mock('@ee/components/settings/integrations/EntraCippConnectDialog', () => ({
-  EntraCippConnectDialog: ({ open }: { open: boolean }) =>
-    open ? <div id="entra-cipp-connect-dialog-stub" /> : null,
+  EntraCippConnectDialog: ({ open, reconnect }: { open: boolean; reconnect?: unknown }) =>
+    open ? (
+      <div id="entra-cipp-connect-dialog-stub" data-reconnect={JSON.stringify(reconnect ?? null)} />
+    ) : null,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -83,7 +85,7 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Badge', () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Badge: ({ children, id }: { children: React.ReactNode; id?: string }) => <span id={id}>{children}</span>,
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -136,6 +138,71 @@ function renderWizard(status: EntraStatusResponse, cippAvailable = true) {
     />
   );
 }
+
+const CIPP_SECRET = 'super-secret-client-secret';
+
+describe('EntraSetupWizard CIPP connection details', () => {
+  const apiClientStatus = () =>
+    statusOf({
+      status: 'connected',
+      connectionType: 'cipp',
+      connectionDetails: {
+        cippBaseUrl: 'https://cipp-api.example.net',
+        cippAuthType: 'api_client',
+        cippClientId: 'client-id-1',
+        cippDirectoryId: 'tenant-id-1',
+        directTenantId: null,
+        directCredentialSource: null,
+        directProfileId: null,
+        directProfileName: null,
+        directProfileMissing: false,
+      },
+    });
+
+  it('shows auth type, API URL, client ID and tenant ID, and no secret', () => {
+    renderWizard(apiClientStatus());
+    const details = document.getElementById('entra-setup-cipp-connection');
+    expect(details?.textContent).toContain('API client');
+    expect(details?.textContent).toContain('https://cipp-api.example.net/api');
+    expect(details?.textContent).toContain('client-id-1');
+    expect(details?.textContent).toContain('tenant-id-1');
+    expect(document.getElementById('entra-setup-cipp-legacy-badge')).toBeNull();
+    expect(document.body.innerHTML).not.toContain(CIPP_SECRET);
+  });
+
+  it('labels a legacy connection and reconnects through the dialog in reconnect mode', () => {
+    renderWizard(
+      statusOf({
+        status: 'connected',
+        connectionType: 'cipp',
+        connectionDetails: {
+          cippBaseUrl: 'https://cipp-api.example.net',
+          cippAuthType: 'legacy_api_token',
+          cippClientId: null,
+          cippDirectoryId: null,
+          directTenantId: null,
+          directCredentialSource: null,
+          directProfileId: null,
+          directProfileName: null,
+          directProfileMissing: false,
+        },
+      })
+    );
+    expect(document.getElementById('entra-setup-cipp-legacy-badge')?.textContent).toContain('Legacy API key');
+    expect(document.getElementById('entra-cipp-connect-dialog-stub')).toBeNull();
+
+    fireEvent.click(document.getElementById('entra-setup-cipp-reconnect') as HTMLButtonElement);
+
+    const dialog = document.getElementById('entra-cipp-connect-dialog-stub');
+    expect(dialog).not.toBeNull();
+    expect(JSON.parse(dialog?.getAttribute('data-reconnect') ?? 'null')).toEqual({
+      authType: 'legacy_api_token',
+      apiUrl: 'https://cipp-api.example.net/api',
+      clientId: null,
+      tenantId: null,
+    });
+  });
+});
 
 describe('EntraSetupWizard', () => {
   beforeEach(() => {
@@ -245,7 +312,7 @@ describe('EntraSetupWizard', () => {
 
     // Each option states its own prerequisites, so the choice is informed.
     expect(group.textContent).toContain('A partner relationship (GDAP)');
-    expect(group.textContent).toContain('CIPP-API function app host');
+    expect(group.textContent).toContain('Application (client) ID');
   });
 
   it('hides CIPP entirely when the tier or flag does not allow it', () => {

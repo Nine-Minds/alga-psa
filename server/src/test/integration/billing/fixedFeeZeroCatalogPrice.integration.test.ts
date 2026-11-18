@@ -8,6 +8,7 @@ import {
   createTestService,
   ensureClientPlanBundlesTable,
   ensureDefaultBillingSettings,
+  generateInvoiceForCycle,
 } from '../../../../test-utils/billingTestHelpers';
 import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
@@ -120,7 +121,6 @@ type Currency = 'USD' | 'EUR';
 let addContractLine: typeof import('@alga-psa/billing/repositories/contractLineRepository')['addContractLine'];
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions')['createClientContractFromWizard'];
 let copyPresetToContractLine: typeof import('@alga-psa/billing/actions/contractLinePresetActions')['copyPresetToContractLine'];
-let generateInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['generateInvoice'];
 let previewInvoice: typeof import('@alga-psa/billing/actions/invoiceGeneration')['previewInvoice'];
 let syncRecurringServicePeriodsForContractLine: typeof import('@alga-psa/billing/actions/recurringServicePeriodSync')['syncRecurringServicePeriodsForContractLine'];
 
@@ -298,7 +298,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
     ({ addContractLine } = await import('@alga-psa/billing/repositories/contractLineRepository'));
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ copyPresetToContractLine } = await import('@alga-psa/billing/actions/contractLinePresetActions'));
-    ({ generateInvoice, previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
+({ previewInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync'));
   }, HOOK_TIMEOUT);
 
@@ -359,7 +359,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       }
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const invoice = await generateInvoice(cycleId);
+      const invoice = await generateInvoiceForCycle(cycleId);
       const generated = unwrap(invoice) as any;
       expect(generated).toBeTruthy();
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
@@ -398,6 +398,111 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       const { fixed } = await fixedChargesFor(clientId, cycleId);
       expect(sum(fixed.map((charge) => charge.total))).toBe(FEE);
       expect(await estimatedMonthlyCents(created.contract_id as string)).toBe(FEE);
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('inherited line: base_rate has one meaning per basis (c150b8de)', () => {
+    async function createWizardLine(currency: Currency, label: string, fee: number, quantities: [number, number]) {
+      setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+      const { fixture, clientId, cycleId } = await createBillableClient(`${label} Client`, currency);
+      const { serviceA, serviceB } = await createZeroPricedServices(fixture, label);
+      const created = unwrap(
+        await createClientContractFromWizard({
+          contract_name: label,
+          description: label,
+          client_id: clientId,
+          start_date: PREVIOUS_START,
+          end_date: null,
+          billing_frequency: 'monthly',
+          currency_code: currency,
+          enable_proration: false,
+          fixed_base_rate: fee,
+          fixed_services: [
+            { service_id: serviceA, quantity: quantities[0] },
+            { service_id: serviceB, quantity: quantities[1] },
+          ],
+          hourly_services: [],
+          usage_services: [],
+          po_required: false,
+        } as any),
+      );
+      return {
+        clientId,
+        cycleId,
+        serviceA,
+        serviceB,
+        contractId: created.contract_id as string,
+        contractLineId: created.contract_line_id as string,
+      };
+    }
+
+    it('symptom 1: an inherited per-unit 225x1 + 225x3 line bills 225/675, not 450/450', async () => {
+      const w = await createWizardLine('EUR', 'Inherited per-unit', 90000, [1, 3]);
+      // Re-state the line as inherited with a per-unit rate on each member.
+      await table('contract_lines')
+        .where({ contract_line_id: w.contractLineId })
+        .update({ custom_rate: null, rate_provenance: 'inherited' });
+      await db.raw(
+        `UPDATE contract_line_service_fixed_config f
+            SET base_rate = 22500, base_rate_basis = 'per_unit'
+           FROM contract_line_service_configuration c
+          WHERE c.config_id = f.config_id AND c.tenant = f.tenant
+            AND c.tenant = ? AND c.contract_line_id = ?`,
+        [tenantId, w.contractLineId],
+      );
+      await syncPeriods(w.contractLineId);
+
+      const { result, fixed } = await fixedChargesFor(w.clientId, w.cycleId);
+      expect(result.fixedLineBlockers).toBeUndefined();
+      expect(fixed.find((charge) => charge.serviceId === w.serviceA)?.total).toBe(22500);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
+      expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
+
+      const generated = unwrap(await generateInvoiceForCycle(w.cycleId)) as any;
+      const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
+      expect(Number(persisted.subtotal)).toBe(90000);
+      expect(persisted.currency_code).toBe('EUR');
+      // Fixed lines consolidate into one invoice item; the per-service split lives in its details.
+      const details = await table('invoice_charge_details as d')
+        .join('invoice_charges as i', function () {
+          this.on('i.item_id', 'd.item_id').andOn('i.tenant', 'd.tenant');
+        })
+        .where('i.invoice_id', generated.invoice_id)
+        .join('invoice_charge_fixed_details as f', function () {
+          this.on('f.item_detail_id', 'd.item_detail_id').andOn('f.tenant', 'd.tenant');
+        })
+        .select('d.service_id', 'f.allocated_amount');
+      const byService = new Map(details.map((row: any) => [row.service_id, Number(row.allocated_amount)]));
+      expect(byService.get(w.serviceA)).toBe(22500);
+      expect(byService.get(w.serviceB)).toBe(67500);
+    }, HOOK_TIMEOUT);
+
+    it('symptom 2: a wizard line switched to inherited bills the line total, not shares x quantity', async () => {
+      const w = await createWizardLine('USD', 'Wizard then inherited', 90000, [1, 3]);
+      const { default: ContractLineFixedConfig } = await import('@alga-psa/billing/models/contractLineFixedConfig');
+      // The fixed-config editor clears the line rate; the members keep their shares.
+      await new ContractLineFixedConfig(db, tenantId).update(w.contractLineId, { base_rate: null });
+      const line = await table('contract_lines').where({ contract_line_id: w.contractLineId }).first();
+      expect(line.custom_rate).toBeNull();
+      expect(line.rate_provenance).toBe('inherited');
+      const members = await table('contract_line_service_configuration as c')
+        .join('contract_line_service_fixed_config as f', function () {
+          this.on('f.config_id', 'c.config_id').andOn('f.tenant', 'c.tenant');
+        })
+        .where('c.contract_line_id', w.contractLineId)
+        .select('f.base_rate', 'f.base_rate_basis');
+      expect(members.map((row: any) => row.base_rate_basis)).toEqual(['share', 'share']);
+      await syncPeriods(w.contractLineId);
+
+      const { fixed } = await fixedChargesFor(w.clientId, w.cycleId);
+      expect(sum(fixed.map((charge) => charge.total))).toBe(90000);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceA)?.total).toBe(22500);
+      expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
+      expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
+
+      const generated = unwrap(await generateInvoiceForCycle(w.cycleId)) as any;
+      const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
+      expect(Number(persisted.subtotal)).toBe(90000);
     }, HOOK_TIMEOUT);
   });
 
@@ -454,7 +559,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === serviceB)?.total).toBe(60000);
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const generated = unwrap(await generateInvoice(cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(FEE);
     }, HOOK_TIMEOUT);
@@ -474,6 +579,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Template ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -526,7 +632,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === serviceB)?.total).toBe(90000);
       expect(await estimatedMonthlyCents(contractId)).toBe(FEE);
 
-      const generated = unwrap(await generateInvoice(cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(FEE);
     }, HOOK_TIMEOUT);
@@ -546,6 +652,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Unpriceable ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -590,7 +697,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(String(preview.error)).toContain('Unpriceable Fixed line');
       expect(String(preview.error)).not.toBe('Nothing to bill');
 
-      const generation = await generateInvoice(cycleId).catch((error: unknown) => error);
+      const generation = await generateInvoiceForCycle(cycleId).catch((error: unknown) => error);
       const generationText = JSON.stringify(generation instanceof Error ? { message: generation.message } : generation);
       expect(generationText).toContain('Unpriceable Fixed line');
       const invoiceCount = await table('invoices').where({ client_id: clientId });
@@ -611,6 +718,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `NoServices ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,
@@ -643,7 +751,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(String(preview.error)).not.toContain('has no rate');
       expect(String(preview.error)).not.toBe('Nothing to bill');
 
-      const generation = await generateInvoice(cycleId).catch((error: unknown) => error);
+      const generation = await generateInvoiceForCycle(cycleId).catch((error: unknown) => error);
       const generationText = JSON.stringify(generation instanceof Error ? { message: generation.message } : generation);
       expect(generationText).toContain('No Services Fixed line');
       const invoices = await table('invoices').where({ client_id: clientId });
@@ -662,6 +770,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
         tenant: tenantId,
         template_id: templateId,
         template_name: `Zero ${templateId.slice(0, 6)}`,
+        currency_code: 'USD',
       });
       await table('contract_template_lines').insert({
         tenant: tenantId,

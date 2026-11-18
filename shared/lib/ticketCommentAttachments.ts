@@ -2,6 +2,8 @@ import type { Knex } from 'knex';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
+import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
+import { COMMENT_UPLOAD_URL_PATTERN, admitInternalReaderAudienceSql, isKnownStaffReader } from './commentAudience';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -68,16 +70,22 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
   // Intents persisted before ticket events stopped using the ticket id as the actor
   // carry userId/actorUserId === ticketId. Heal them (a narrow data fix, not a schema rule).
   const payload = scrubLegacyTicketIdActor(comment.comment_publication_payload);
-  const { userId: persistedUserId, actorType: _t, actorUserId: _u, actorContactId: _c, ...persisted } = payload;
+  const { userId: persistedUserId, actorType: persistedActorType, actorUserId: _u, actorContactId: _c, actorReference: persistedReference, ...persisted } = payload;
   // Intents persisted before the producer-side fix can be missing the author
   // identity the event schema requires. Heal them here from the comment row so
   // they publish instead of failing validation on every reconcile pass.
   const author = payload.comment?.author ?? await resolveCommentAuthorDisplay(conn, tenant, comment);
   // Identity comes from the persisted real user, else the comment row. No ticket-id fallback.
-  const actor = resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
+  // A qualified (foreign) author has no local user row; keep its persisted collaborator reference.
+  const actor = persistedActorType === 'COLLABORATOR' && persistedReference
+    ? { actorType: 'COLLABORATOR' as const, actorReference: persistedReference }
+    : resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
   await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...persisted,
     ...ticketEventActorFields(actor),
-    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal, author },
+    // The persisted audience (set only on shared-work threads) survives into the published
+    // event; a non-requester audience can never be republished as public.
+    comment: { ...payload.comment, content: comment.note,
+      isInternal: payload.comment?.audience && payload.comment.audience !== 'requester' ? true : comment.is_internal, author },
   } }, { eventId: comment.scheduled_publish_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })
     .whereNull('scheduled_publish_dispatched_at').update({ scheduled_publish_dispatched_at: conn.fn.now() });
@@ -109,28 +117,17 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /** Only server upload URLs are claim candidates; ordinary links never adopt documents. */
 export function commentAttachmentFileIds(note: unknown): string[] {
   if (typeof note !== 'string') return [];
-  const matches = note.matchAll(new RegExp(`/api/documents/(?:view|download)/(${UUID})(?=[^0-9a-f-]|$)`, 'gi'));
+  const matches = note.matchAll(new RegExp(`${COMMENT_UPLOAD_URL_PATTERN.prefix}(${UUID})${COMMENT_UPLOAD_URL_PATTERN.suffix}`, 'gi'));
   return [...new Set(Array.from(matches, match => match[1].toLowerCase()))];
 }
 
-export async function canAccessAttachmentTicket(conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> {
-  const db = tenantDb(conn, tenant);
-  const user = await db.table('users').where({ user_id: userId, is_inactive: false }).first();
-  const ticket = await db.table('tickets').where({ ticket_id: ticketId }).first();
-  if (!user || !ticket) return false;
-  if (user.user_type === 'internal') return true;
-  if (user.user_type !== 'client' || !user.contact_id) return false;
-  const contact = await db.table('contacts').where({ contact_name_id: user.contact_id }).first();
-  if (!contact?.client_id || contact.client_id !== ticket.client_id) return false;
-  if (!contact.portal_visibility_group_id) return true;
-  const group = await db.table('client_portal_visibility_groups').where({
-    group_id: contact.portal_visibility_group_id, client_id: contact.client_id,
-  }).first();
-  if (!group) return false;
-  return Boolean(await db.table('client_portal_visibility_group_boards').where({
-    group_id: group.group_id, board_id: ticket.board_id,
-  }).first());
-}
+/** Thin adapters over the canonical record-scope ticket predicates; see portal/ticketAccess.server. */
+export const canAccessAttachmentTicket = (conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> =>
+  canReadTicket(conn, tenant, userId, ticketId);
+
+/** Write-side gate: attaching, uploading and reconciling need the ticket's update scope, not just read. */
+export const canWriteAttachmentTicket = (conn: Connection, tenant: string, userId: string, ticketId: string): Promise<boolean> =>
+  canWriteTicket(conn, tenant, userId, ticketId);
 
 export async function isPublicAttachmentComment(conn: Connection, tenant: string, commentId: string, ticketId: string): Promise<boolean> {
   const db = tenantDb(conn, tenant);
@@ -154,7 +151,7 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
     if (documentIds.length) builder.orWhereIn('document_id', documentIds);
   }).orderBy('attachment_id').forUpdate();
   if (!rows.length) return;
-  if (!await canAccessAttachmentTicket(trx, tenant, actorId, comment.ticket_id)) throw new Error('Attachment ticket access denied');
+  if (!await canWriteAttachmentTicket(trx, tenant, actorId, comment.ticket_id)) throw new Error('Attachment ticket access denied');
   for (const row of rows) {
     const retained = documentIds.includes(row.document_id) && !comment.deleted_at && comment.publish_state !== 'canceled';
     if (retained) {
@@ -171,17 +168,52 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
   }
 }
 
+/**
+ * The user an attachment is read for: their id, or the user row the request loaded. The row lets
+ * a client user and an internal user no seat assignment binds (`isKnownStaffReader`) pass the
+ * unmapped-document check with no statement; a bare id is always checked.
+ */
+export type AttachmentReader = string | { user_id: string; user_type?: string; seat_reader?: boolean | null };
+
 /** An additional gate, never an alternative to existing document authorization. */
-export async function canReadCommentAttachment(conn: Connection, tenant: string, userId: string, documentId: string): Promise<boolean> {
+export async function canReadCommentAttachment(conn: Connection, tenant: string, reader: AttachmentReader, documentId: string, ticketAccess?: Map<string, Promise<boolean>>): Promise<boolean> {
+  const userId = typeof reader === 'string' ? reader : reader.user_id;
   const db = tenantDb(conn, tenant);
   const row = await db.table('ticket_comment_attachments').where({ document_id: documentId }).first();
-  if (!row) return true; // Existing Documents uploads retain their original policy.
-  if (!await canAccessAttachmentTicket(conn, tenant, userId, row.ticket_id)) return false;
+  if (!row) {
+    // No attachment row: an ordinary Documents upload keeps its original policy, except that an
+    // internal reader also needs every comment that names the file in its note (a legacy inline
+    // image) to be visible to them. Other readers are not decided here, and neither is an
+    // internal user known to be staff.
+    if (typeof reader !== 'string' && ((reader.user_type !== undefined && reader.user_type !== 'internal') || isKnownStaffReader(reader))) return true;
+    const audience = admitInternalReaderAudienceSql(conn, tenant, userId);
+    if (!audience) return true;
+    const found = await db.table('users').where({ user_id: userId, user_type: 'internal' })
+      .first(conn.raw('(?) as document_visible', [audience.documentVisible(conn.raw('?::uuid', [documentId]))]));
+    return !found || found.document_visible === true;
+  }
+  // Callers filtering many attachments share one decision per ticket.
+  let access = ticketAccess?.get(row.ticket_id);
+  if (!access) {
+    access = canAccessAttachmentTicket(conn, tenant, userId, row.ticket_id);
+    ticketAccess?.set(row.ticket_id, access);
+  }
+  if (!await access) return false;
   const user = await db.table('users').where({ user_id: userId }).first();
   if (row.state === 'draft') return row.created_by === userId && new Date(row.expires_at).getTime() > Date.now();
   if (row.state !== 'attached' || !row.comment_id) return false;
-  const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id }).first();
+  // An internal reader also needs the parent comment's audience: MSP staff read every audience, a
+  // seat technician only what their organization may. Decided in the comment read itself.
+  // `null` for an internal user means the row just read says no seat assignment binds them: staff.
+  const audience = user?.user_type === 'internal' ? admitInternalReaderAudienceSql(conn, tenant, user) : null;
+  const comment = await db.table('comments').where({ comment_id: row.comment_id, ticket_id: row.ticket_id })
+    .first('comments.*', ...(audience ? [
+      conn.raw('(?) as audience_visible', [audience.commentVisible('comments.comment_id')]),
+      // Every owner, not only this row's comment: the same rule the activity list applies.
+      conn.raw('(?) as document_visible', [audience.documentVisible(conn.raw('?::uuid', [documentId]))]),
+    ] : []));
   if (!comment || comment.deleted_at || comment.publish_state === 'canceled') return false;
+  if (audience) return comment.audience_visible === true && comment.document_visible === true;
   return user?.user_type === 'internal' || await isPublicAttachmentComment(conn, tenant, row.comment_id, row.ticket_id);
 }
 
@@ -199,8 +231,9 @@ export async function expireCommentAttachmentDrafts(conn: Connection, tenant: st
     .where({ state: 'draft' }).where('expires_at', '<=', new Date()).update({ state: 'removed' });
 }
 
-export async function filterReadableCommentAttachments<T extends { document_id: string }>(conn: Connection, tenant: string, userId: string, documents: T[]): Promise<T[]> {
-  const allowed = await Promise.all(documents.map(doc => canReadCommentAttachment(conn, tenant, userId, doc.document_id)));
+export async function filterReadableCommentAttachments<T extends { document_id: string }>(conn: Connection, tenant: string, reader: AttachmentReader, documents: T[]): Promise<T[]> {
+  const ticketAccess = new Map<string, Promise<boolean>>();
+  const allowed = await Promise.all(documents.map(doc => canReadCommentAttachment(conn, tenant, reader, doc.document_id, ticketAccess)));
   return documents.filter((_, index) => allowed[index]);
 }
 

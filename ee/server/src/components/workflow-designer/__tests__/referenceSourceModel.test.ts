@@ -47,6 +47,26 @@ describe('reference source model', () => {
     expect(byValue.get('vars.ticketDetails')).toMatchObject({ label: 'Entire result', type: 'object' });
   });
 
+  it('offers a variable set to one value as the only thing to pick, typed, not as an object', () => {
+    const scalarVarModel = buildReferenceSourceModel(
+      {
+        payload: [],
+        meta: [],
+        error: [],
+        // "Set variables" pseudo-step: `<step id>:<variable>`, with no fields of its own.
+        vars: [{ stepId: 'set-vars:senderEmail', stepName: 'Set variables', saveAs: 'senderEmail', fields: [] }],
+      },
+      [{ value: 'vars.senderEmail', label: 'vars.senderEmail (Set variables)' }],
+      undefined,
+      { firstItem: '(first item)', lastItem: '(last item)', wholeResult: 'Entire result' }
+    );
+    const group = scalarVarModel.vars.find((step) => step.value === 'senderEmail');
+    expect(group?.label).toBe('Set variables (senderEmail)');
+    expect(group?.fields).toEqual([
+      { value: 'vars.senderEmail', label: 'Entire result', type: 'string' },
+    ]);
+  });
+
   it('treats indexed paths as plain references and reads them back whole', () => {
     expect(isSimpleFieldReferenceExpression('vars.ticketDetails.comments[-1].note')).toBe(true);
     expect(isSimpleFieldReferenceExpression('vars.ticketDetails.comments[0].note')).toBe(true);

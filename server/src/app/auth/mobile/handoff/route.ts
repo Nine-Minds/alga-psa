@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { issueMobileOtt } from '@/lib/mobileAuth/mobileAuthService';
+import { ForbiddenError } from '@/lib/api/middleware/apiMiddleware';
 import { enforceMobileOttIssueLimit } from '@/lib/security/mobileAuthRateLimiting';
 
 function validateRedirectUri(raw: string): URL | null {
@@ -61,8 +62,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(signIn.toString(), { status: 302 });
   }
 
-  if (userType === 'client') {
-    redirectUrl.searchParams.set('error', 'client_not_allowed');
+  if (userType !== 'internal') {
+    // Mobile is for active internal users only: clients and any other type are refused.
+    redirectUrl.searchParams.set('error', userType === 'client' ? 'client_not_allowed' : 'not_allowed');
     redirectUrl.searchParams.set('state', state);
     return NextResponse.redirect(redirectUrl.toString(), { status: 302 });
   }
@@ -77,16 +79,27 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(redirectUrl.toString(), { status: 302 });
   }
 
-  const { ott } = await issueMobileOtt({
-    tenantId,
-    userId,
-    sessionId: sessionId ?? null,
-    state,
-    metadata: {
-      issuedFromHost: req.headers.get('host') ?? null,
-      userAgent: req.headers.get('user-agent') ?? null,
-    },
-  });
+  let ott: string;
+  try {
+    ({ ott } = await issueMobileOtt({
+      tenantId,
+      userId,
+      sessionId: sessionId ?? null,
+      state,
+      metadata: {
+        issuedFromHost: req.headers.get('host') ?? null,
+        userAgent: req.headers.get('user-agent') ?? null,
+      },
+    }));
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      // Deactivated (or otherwise no longer eligible) internal user.
+      redirectUrl.searchParams.set('error', 'not_allowed');
+      redirectUrl.searchParams.set('state', state);
+      return NextResponse.redirect(redirectUrl.toString(), { status: 302 });
+    }
+    throw error;
+  }
 
   redirectUrl.searchParams.set('ott', ott);
   redirectUrl.searchParams.set('state', state);

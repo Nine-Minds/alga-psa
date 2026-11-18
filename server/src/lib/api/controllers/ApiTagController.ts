@@ -126,7 +126,7 @@ export class ApiTagController extends ApiBaseController {
             validatedQuery = tagSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -208,7 +208,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = tagEntitySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -259,7 +259,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = untagEntitySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -305,7 +305,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = tagEntitySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -378,7 +378,7 @@ export class ApiTagController extends ApiBaseController {
             validatedQuery = tagAnalyticsFilterSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -452,7 +452,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = createBulkTagsSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -501,7 +501,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = bulkDeleteTagsSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -543,7 +543,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = bulkMergeTagsSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -587,7 +587,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = bulkTagEntitiesSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -643,7 +643,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = bulkUntagEntitiesSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -687,7 +687,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = updateTagColorSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -738,7 +738,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = updateTagTextSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -781,7 +781,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData = deleteTagsByTextSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }

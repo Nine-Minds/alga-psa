@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/core": "*",
     "@alga-psa/migration-sdk": "*",
     "@alga-psa/migration-spec": "*",
     "exceljs": "^4.4.0",

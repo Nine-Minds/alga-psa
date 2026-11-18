@@ -1,14 +1,18 @@
+'use client';
+
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
 export default function PolicyManagement() {
+  const { t } = useTranslation('msp/settings');
+
   return (
     <div className="space-y-4 rounded-lg border border-dashed border-muted-foreground/40 p-6 text-sm text-muted-foreground">
-      <p className="font-semibold text-foreground">Authorization Bundle Library</p>
+      <p className="font-semibold text-foreground">{t('policyManagement.bundleLibrary.title')}</p>
       <p>
-        Advanced authorization bundle management is available on Pro. Upgrade to
-        configure narrowing bundles for roles, teams, users, and API keys.
+        {t('policyManagement.bundleLibrary.upgradeDescription')}
       </p>
       <p>
-        Built-in authorization protections remain active even when configurable advanced controls are
-        unavailable in this edition or tier.
+        {t('policyManagement.bundleLibrary.protectionsDescription')}
       </p>
     </div>
   );

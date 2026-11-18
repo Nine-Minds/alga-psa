@@ -14,6 +14,18 @@ export interface HuntressSettings {
   accountSubdomain?: string;
   /** Max incident updated_at fully processed (ISO-8601). */
   incidentCursor?: string;
+  /**
+   * Also turn Huntress escalations into tickets. Off by default so enabling
+   * the feature doesn't backfill escalation tickets for existing tenants.
+   * Escalations reuse the incident board/category/priority/auto-close
+   * settings.
+   * TODO: separate board/category for escalations (many are "confirm this
+   * login" requests that may not belong in the security queue).
+   * TODO: skip ticket creation for selected escalation type_codes.
+   */
+  ingestEscalations: boolean;
+  /** Max escalation updated_at fully processed (ISO-8601). */
+  escalationCursor?: string;
   pollIntervalMinutes: number;
   backfillDays: number;
   severityPriorityMap: HuntressSeverityPriorityMap;
@@ -63,6 +75,8 @@ export function parseHuntressSettings(raw: unknown): HuntressSettings {
     accountName: asString(obj.accountName),
     accountSubdomain: asString(obj.accountSubdomain),
     incidentCursor: asString(obj.incidentCursor),
+    ingestEscalations: obj.ingestEscalations === true,
+    escalationCursor: asString(obj.escalationCursor),
     pollIntervalMinutes: Number.isFinite(pollInterval)
       ? clamp(pollInterval, 1, 60)
       : DEFAULT_POLL_INTERVAL_MINUTES,

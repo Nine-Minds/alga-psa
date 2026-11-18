@@ -1,5 +1,6 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 
 export interface EntraIdentityRef {
   entraTenantId: string;
@@ -16,7 +17,7 @@ async function markIdentityInactive(
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
 
-    return knex.transaction(async (trx) => {
+    return withTransaction(knex, async (trx) => {
       const db = tenantDb(trx, tenantId);
       const now = trx.fn.now();
       const links = await db.table('entra_contact_links')
@@ -38,16 +39,18 @@ async function markIdentityInactive(
         contactIds = contacts.map((row: any) => String(row.contact_name_id));
       }
       if (contactIds.length === 0) return 0;
-      await db.table('contacts')
-        .whereIn('contact_name_id', contactIds)
-        .update({
-          is_inactive: true,
-          entra_account_enabled: accountEnabled,
-          entra_sync_status: 'inactive',
-          entra_sync_status_reason: reason,
-          last_entra_sync_at: now,
-          updated_at: now,
-        });
+      await trackContactUpdates(trx, tenantId, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .whereIn('contact_name_id', contactIds)
+          .update({
+            is_inactive: true,
+            entra_account_enabled: accountEnabled,
+            entra_sync_status: 'inactive',
+            entra_sync_status_reason: reason,
+            last_entra_sync_at: now,
+            updated_at: now,
+          })
+      );
 
       const linkUpdateQuery = db.table('entra_contact_links').where({
           entra_tenant_id: identity.entraTenantId,
@@ -163,8 +166,9 @@ export async function selectDeactivatableExcludedEntraIdentities<T extends Entra
     const db = tenantDb(knex, tenantId);
     const eligible: Array<LinkedEntraIdentity<T>> = [];
     for (const identity of identities) {
-      const links = await db.table('entra_contact_links as link')
-        .join('contacts as contact', 'contact.contact_name_id', 'link.contact_name_id')
+      const query = db.table('entra_contact_links as link');
+      db.tenantJoin(query, 'contacts as contact', 'link.contact_name_id', 'contact.contact_name_id');
+      const links = await query
         .where({
           'link.entra_tenant_id': identity.entraTenantId,
           'link.entra_object_id': identity.entraObjectId,
@@ -195,7 +199,7 @@ export async function markExcludedEntraUsersInactive(tenantId: string, identitie
   for (const identity of identities) {
     updated += await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
-      return knex.transaction(async (trx) => {
+      return withTransaction(knex, async (trx) => {
         const db = tenantDb(trx, tenantId);
         const activeLinks = await db.table('entra_contact_links')
           .where({ entra_tenant_id: identity.entraTenantId, entra_object_id: identity.entraObjectId, is_active: true })
@@ -212,15 +216,17 @@ export async function markExcludedEntraUsersInactive(tenantId: string, identitie
         if (eligibleIds.length === 0) return 0;
 
         const now = trx.fn.now();
-        await db.table('contacts').whereIn('contact_name_id', eligibleIds).where({ is_inactive: false })
-          .whereNull('entra_sync_status_reason').update({
-            is_inactive: true,
-            entra_account_enabled: true,
-            entra_sync_status: 'inactive',
-            entra_sync_status_reason: 'excluded_by_filter',
-            last_entra_sync_at: now,
-            updated_at: now,
-          });
+        await trackContactUpdates(trx, tenantId, eligibleIds, ['is_inactive'], () =>
+          db.table('contacts').whereIn('contact_name_id', eligibleIds).where({ is_inactive: false })
+            .whereNull('entra_sync_status_reason').update({
+              is_inactive: true,
+              entra_account_enabled: true,
+              entra_sync_status: 'inactive',
+              entra_sync_status_reason: 'excluded_by_filter',
+              last_entra_sync_at: now,
+              updated_at: now,
+            })
+        );
         await db.table('entra_contact_links')
           .where({ entra_tenant_id: identity.entraTenantId, entra_object_id: identity.entraObjectId, is_active: true })
           .whereIn('contact_name_id', eligibleIds)

@@ -17,6 +17,12 @@ import { getClientAssetById } from '@alga-psa/client-portal/actions';
 import type { Asset, ProductCode } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
+import {
+  originalEmailSourceForTicket,
+  originalEmailToggleLabels,
+} from '@alga-psa/tickets/lib/inboundEmailOriginalView';
+import { useInboundEmailViewPreference } from '@alga-psa/tickets/hooks/useInboundEmailViewPreference';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -102,6 +108,18 @@ export function TicketDetails({
    * workspace clause and answer "Ticket not found".
    */
   const canInteract = (ticket as { can_interact?: boolean }).can_interact !== false;
+  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
+  // Same stored per-user preference as the MSP screen drives the Text / Email
+  // switcher on every inbound-email body below.
+  useInboundEmailViewPreference();
+  // In the Description label row, not above the body, so it costs no height; an
+  // empty description renders no body for the switcher to act on.
+  const emailView = useInboundEmailView({
+    id: 'portal-ticket-description-original-email',
+    src: ticket.attributes?.description ? originalEmailSrc : null,
+    labels: originalEmailToggleLabels(t),
+    switcherClassName: 'ml-auto',
+  });
   // Re-derive on every current-status change: the server seeds the initial list
   // with the ticket's current restricted status, but once the ticket moves the
   // restricted status must stop being offered as a target without a reload.
@@ -877,16 +895,20 @@ export function TicketDetails({
 
             {/* Description */}
             <div>
-              <label className="font-bold text-gray-900 block mb-2">
-                {t('fields.description', 'Description')}
-              </label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="font-bold text-gray-900">
+                  {t('fields.description', 'Description')}
+                </label>
+                {emailView.switcher}
+              </div>
               <div className="prose max-w-none break-words overflow-hidden min-w-0" style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}>
                 {(() => {
                   const description = ticket.attributes?.description;
                   if (!description) {
                     return t('messages.noDescription', 'No description found.');
                   }
-                  return (
+                  // Same endpoint as the MSP view; portal visibility is enforced there.
+                  return emailView.body(
                     <RichTextViewer
                       content={description as string | PartialBlock[]}
                       className="break-words max-w-full min-w-0"

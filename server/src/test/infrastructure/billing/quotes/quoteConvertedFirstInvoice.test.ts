@@ -135,11 +135,21 @@ describe('quote-converted contract first invoice (alga0002168)', () => {
   const mkService = (name: string, rate: number) =>
     createTestService(context, { service_name: name, billing_method: 'fixed', default_rate: rate, tax_region: 'US-NY' });
 
-  async function quoteAndConvert(title: string, recurring: Array<[string, number, number, string]>, oneTime: boolean) {
+  async function quoteAndConvert(
+    title: string,
+    recurring: Array<[string, number, number, string]>,
+    oneTime: boolean,
+    discounts: Array<{ description: string; amount: number; recurringIndex: number }> = [],
+  ) {
     const db = context.db; const tenant = context.tenantId;
     const quote: any = await Quote.create(db as any, tenant, { client_id: context.clientId, title, quote_date: today + 'T00:00:00.000Z', valid_until: today + 'T00:00:00.000Z', subtotal: 0, discount_total: 0, tax: 0, total_amount: 0, currency_code: 'USD', is_template: false } as any);
+    const recurringItemIds: string[] = [];
     for (const [serviceId, quantity, unitPrice, description] of recurring) {
-      await QuoteItem.create(db as any, tenant, { quote_id: quote.quote_id, service_id: serviceId, description, quantity, unit_price: unitPrice, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed', is_discount: false, is_taxable: true } as any);
+      const created: any = await QuoteItem.create(db as any, tenant, { quote_id: quote.quote_id, service_id: serviceId, description, quantity, unit_price: unitPrice, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed', is_discount: false, is_taxable: true } as any);
+      recurringItemIds.push(created.quote_item_id);
+    }
+    for (const discount of discounts) {
+      await QuoteItem.create(db as any, tenant, { quote_id: quote.quote_id, description: discount.description, quantity: 1, unit_price: discount.amount, is_optional: false, is_selected: true, is_recurring: false, is_discount: true, discount_type: 'fixed', applies_to_item_id: recurringItemIds[discount.recurringIndex], is_taxable: false } as any);
     }
     if (oneTime) {
       const onboarding = await mkService('Onboarding ' + title, 250000);
@@ -209,6 +219,36 @@ describe('quote-converted contract first invoice (alga0002168)', () => {
     expect(run.invoicesCreated).toBe(1);
     const contract = await context.db('contracts').where({ tenant: context.tenantId, contract_id: contractId }).first();
     expect(contract.status).toBe('active');
+  }, 180000);
+
+  it('8. QUO-0001 shape: the first recurring invoice bills the accepted (discounted) recurring total', async () => {
+    const s1 = await mkService('Managed IT', 80000);
+    const s2 = await mkService('Security stack', 30000);
+    const s3 = await mkService('Backup', 13900);
+    // Recurring list total 123900 (the $1,239 shape); fixed item-targeted discounts bring it to 52500.
+    const { clientContractId } = await quoteAndConvert(
+      'QUO-0001-shape',
+      [[s1, 1, 80000, 'Managed IT'], [s2, 1, 30000, 'Security stack'], [s3, 1, 13900, 'Backup']],
+      false,
+      [
+        { description: 'Managed IT concession', amount: 60000, recurringIndex: 0 },
+        { description: 'Security concession', amount: 11400, recurringIndex: 1 },
+      ],
+    );
+    expect((await activateClientContractForBilling(clientContractId) as any)?.actionError).toBeUndefined();
+
+    const { cands, run } = await previewAndRun();
+    expect(cands.length).toBeGreaterThan(0);
+    expect(run.failures).toEqual([]);
+    expect(run.invoicesCreated).toBe(1);
+
+    const invoice = await context.db('invoices').where({ tenant: context.tenantId, client_id: context.clientId }).orderBy('created_at', 'desc').first();
+    const charges = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id });
+    const gross = charges.filter((c: any) => c.is_discount !== true).reduce((sum: number, c: any) => sum + Number(c.net_amount), 0);
+    const reductions = charges.filter((c: any) => c.is_discount === true).reduce((sum: number, c: any) => sum + Number(c.net_amount), 0);
+    expect(gross).toBe(123900);
+    expect(reductions).toBe(-71400);
+    expect(Number(invoice.subtotal)).toBe(52500);
   }, 180000);
 
   it('3. a draft quote contract does not block a healthy contract on the same client', async () => {

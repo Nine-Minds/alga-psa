@@ -8,6 +8,7 @@ import {
   setupClientTaxConfiguration,
 } from './billingTestHelpers';
 import { seedBillingCycle } from './billingProfileTestHelpers';
+import { insertTestServiceType } from './serviceTypeFixtures';
 
 /**
  * Fixtures for the per-seat contract-authoring tests (wizard, template, preset,
@@ -139,13 +140,9 @@ export async function createSeatCatalog(
   services: Array<{ name: string; rateCents: number; prices?: Record<string, number> }>,
 ): Promise<SeatCatalogService[]> {
   const serviceTypeId = uuidv4();
-  await tenantTable(db, tenantId, 'service_types').insert({
+  await insertTestServiceType(db, tenantId, {
     id: serviceTypeId,
-    tenant: tenantId,
     name: `Seat Services ${serviceTypeId.slice(0, 8)}`,
-    order_number: Math.floor(Math.random() * 1_000_000),
-    created_at: db.fn.now(),
-    updated_at: db.fn.now(),
   });
 
   const created: SeatCatalogService[] = [];

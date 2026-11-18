@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ViewSwitcherOption<T extends string> = {
   /** Unique identifier for this view. */
@@ -27,6 +28,7 @@ export function ViewSwitcher<T extends string>({
   options,
   style,
 }: ViewSwitcherProps<T>) {
+  const { t } = useTranslation('common');
   const radius = 'var(--alga-radius, 8px)';
   const containerStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -37,7 +39,7 @@ export function ViewSwitcher<T extends string>({
   };
 
   return (
-    <div style={containerStyle} role="group">
+    <div style={containerStyle} role="group" aria-label={t('viewSwitcher.ariaLabel')}>
       {options.map((option, index) => (
         <ViewSwitcherButton
           key={option.value}

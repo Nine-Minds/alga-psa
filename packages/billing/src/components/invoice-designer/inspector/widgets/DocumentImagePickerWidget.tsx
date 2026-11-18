@@ -130,7 +130,7 @@ export default function DocumentImagePickerWidget({ currentSrc, onSourceChange }
             <p className="text-xs text-amber-800 dark:text-amber-300">
               {t('invoiceDesigner.imagePicker.hiddenFromClients', {
                 defaultValue:
-                  '{{document}} is hidden from clients. It will not appear on quotes or invoices viewed through the client portal.',
+                  '{{document}} is hidden from clients, so they cannot open it in the client portal. It still appears on invoices and quote PDFs that use it.',
                 document: visibility.documentName,
               })}
             </p>

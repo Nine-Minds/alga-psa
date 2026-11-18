@@ -227,3 +227,31 @@ describe('hasPermission', () => {
     });
   });
 });
+
+describe('hasPermission for service principals (F022)', () => {
+  it('resolves MSP roles/permissions for a service user', async () => {
+    roleStore['tenant-a:svc-1'] = [role({ msp: true }, [{ resource: 'ticket', action: 'read' }])];
+
+    await expect(
+      hasPermission({ user_id: 'svc-1', user_type: 'service', tenant: 'tenant-a' }, 'ticket', 'read', stubKnex)
+    ).resolves.toBe(true);
+  });
+
+  it('never resolves client-only roles for a service user', async () => {
+    roleStore['tenant-a:svc-1'] = [
+      role({ msp: false, client: true }, [{ resource: 'ticket', action: 'read', msp: true, client: true }]),
+    ];
+
+    await expect(
+      hasPermission({ user_id: 'svc-1', user_type: 'service', tenant: 'tenant-a' }, 'ticket', 'read', stubKnex)
+    ).resolves.toBe(false);
+  });
+
+  it('fails closed for an unknown user type', async () => {
+    roleStore['tenant-a:u-1'] = [role({ msp: true }, [{ resource: 'ticket', action: 'read' }])];
+
+    await expect(
+      hasPermission({ user_id: 'u-1', user_type: 'bogus' as any, tenant: 'tenant-a' }, 'ticket', 'read', stubKnex)
+    ).resolves.toBe(false);
+  });
+});

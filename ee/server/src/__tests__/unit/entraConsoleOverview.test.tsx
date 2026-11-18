@@ -14,6 +14,7 @@ const {
   getEntraSyncScheduleMock,
   saveEntraSyncScheduleMock,
   startEntraSyncMock,
+  validateEntraCippConnectionMock,
 } = vi.hoisted(() => ({
   discoverEntraManagedTenantsMock: vi.fn(),
   getEntraConfirmedMappingsMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   getEntraSyncScheduleMock: vi.fn(),
   saveEntraSyncScheduleMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
+  validateEntraCippConnectionMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -44,7 +46,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   startEntraSync: startEntraSyncMock,
   unmapEntraTenant: vi.fn(),
   updateEntraFieldSyncConfig: vi.fn(),
-  validateEntraCippConnection: vi.fn(),
+  validateEntraCippConnection: validateEntraCippConnectionMock,
   validateEntraDirectConnection: vi.fn(),
 }));
 
@@ -57,7 +59,10 @@ vi.mock('@ee/components/settings/integrations/EntraReconciliationQueue', () => (
   default: () => <div id="entra-review-queue-stub" />,
 }));
 vi.mock('@ee/components/settings/integrations/EntraCippConnectDialog', () => ({
-  EntraCippConnectDialog: () => null,
+  EntraCippConnectDialog: ({ open, reconnect }: { open: boolean; reconnect?: unknown }) =>
+    open ? (
+      <div id="entra-cipp-connect-dialog-stub" data-reconnect={JSON.stringify(reconnect ?? null)} />
+    ) : null,
 }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: ({ isOpen, id }: { isOpen: boolean; id?: string }) =>
@@ -236,6 +241,69 @@ describe('EntraConsole overview', () => {
     expect(table?.textContent).toContain('Contoso Ltd');
     expect(table?.textContent).toContain('Fabrikam Inc');
     expect(table?.textContent).not.toContain('managed-1');
+  });
+
+  it('names the contacts that failed and why under their client, not just a count', async () => {
+    getEntraSyncRunDetailMock.mockResolvedValue({
+      success: true,
+      data: {
+        run: null,
+        tenantResults: [
+          {
+            managedTenantId: 'managed-1',
+            clientId: 'client-1',
+            status: 'completed',
+            created: 5,
+            linked: 1,
+            updated: 1,
+            ambiguous: 0,
+            inactivated: 0,
+            failed: 2,
+            userIssues: [
+              {
+                severity: 'failure',
+                stage: 'create',
+                entraObjectId: 'user-dana',
+                userPrincipalName: 'dana@contoso.com',
+                displayName: 'Dana Whitfield',
+                contactNameId: null,
+                message: 'EMAIL_EXISTS: A contact with this email address already exists in the system',
+              },
+              {
+                severity: 'notice',
+                stage: 'create',
+                entraObjectId: 'user-rosa',
+                userPrincipalName: 'rosa@contoso.com',
+                displayName: 'Rosa Alvarez',
+                contactNameId: 'contact-rosa',
+                field: 'phone_numbers',
+                message: 'Extension "123456789012" was dropped: extensions are 1-10 digits.',
+              },
+            ],
+            errorMessage: null,
+            startedAt: '2026-07-25T03:04:00.000Z',
+            completedAt: '2026-07-25T03:04:30.000Z',
+          },
+        ],
+      },
+    });
+    renderConsole();
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-last-run-issues-managed-1-failures')).not.toBeNull()
+    );
+
+    const failures = document.getElementById('entra-console-last-run-issues-managed-1-failures');
+    expect(failures?.textContent).toContain('Dana Whitfield');
+    expect(failures?.textContent).toContain('EMAIL_EXISTS');
+    // The persisted list held one of the two failures; the other is counted, not dropped.
+    // (The count line is a plural key; this suite's locale mock does not resolve plurals.)
+    const table = document.getElementById('entra-console-last-run-clients');
+    expect(table?.textContent).toContain('and 1 more');
+    // Field notes are listed separately from failures.
+    const notices = document.getElementById('entra-console-last-run-issues-managed-1-notices');
+    expect(notices?.textContent).toContain('Rosa Alvarez');
+    expect(failures?.textContent).not.toContain('Rosa Alvarez');
   });
 
   it('says what the run did in words, not by printing its database status', async () => {
@@ -586,6 +654,109 @@ describe('EntraConsole overview', () => {
     expect(document.getElementById('entra-console-overwrites-inactivate')?.textContent).toContain(
       'left alone'
     );
+  });
+
+  describe('CIPP connection details', () => {
+    const cippStatus = (details: Record<string, unknown>) =>
+      statusOf({
+        connectionType: 'cipp',
+        connectionDetails: {
+          cippBaseUrl: 'https://cipp-api.example.net',
+          directTenantId: null,
+          directCredentialSource: null,
+          directProfileId: null,
+          directProfileName: null,
+          directProfileMissing: false,
+          ...details,
+        } as EntraStatusResponse['connectionDetails'],
+      });
+
+    it('shows API-client identity on the connection tab and never a secret', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      renderConsole(
+        cippStatus({ cippAuthType: 'api_client', cippClientId: 'client-id-1', cippDirectoryId: 'tenant-id-1' })
+      );
+
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-cipp-details')).not.toBeNull()
+      );
+      const details = document.getElementById('entra-console-cipp-details');
+      expect(details?.textContent).toContain('API client');
+      expect(details?.textContent).toContain('client-id-1');
+      expect(details?.textContent).toContain('tenant-id-1');
+      expect(document.getElementById('entra-console-cipp-legacy-badge')).toBeNull();
+      expect(document.getElementById('entra-console-cipp-reconnect')).toBeNull();
+      expect(document.body.innerHTML.toLowerCase()).not.toContain('clientsecret');
+      expect(document.body.innerHTML.toLowerCase()).not.toContain('apitoken');
+    });
+
+    it('labels a legacy connection and Reconnect opens the dialog in reconnect mode', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      renderConsole(cippStatus({ cippAuthType: 'legacy_api_token' }));
+
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-cipp-legacy-badge')).not.toBeNull()
+      );
+      expect(document.getElementById('entra-console-cipp-legacy-badge')?.textContent).toContain(
+        'Legacy API key'
+      );
+      expect(document.getElementById('entra-console-cipp-legacy-notice')?.textContent).toContain(
+        'keeps syncing unchanged'
+      );
+      expect(document.getElementById('entra-cipp-connect-dialog-stub')).toBeNull();
+
+      fireEvent.click(document.getElementById('entra-console-cipp-reconnect') as HTMLButtonElement);
+
+      const dialog = document.getElementById('entra-cipp-connect-dialog-stub');
+      expect(dialog).not.toBeNull();
+      expect(JSON.parse(dialog?.getAttribute('data-reconnect') ?? 'null')).toMatchObject({
+        authType: 'legacy_api_token',
+        apiUrl: 'https://cipp-api.example.net/api',
+      });
+    });
+
+    it('shows the API URL the way CIPP and the connect dialog do, in one row', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      renderConsole(
+        cippStatus({ cippAuthType: 'api_client', cippClientId: 'client-id-1', cippDirectoryId: 'tenant-id-1' })
+      );
+
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-cipp-api-url')).not.toBeNull()
+      );
+      const row = document.getElementById('entra-console-cipp-api-url');
+      expect(row?.textContent).toContain('API URL');
+      expect(row?.textContent).toContain('https://cipp-api.example.net/api');
+      expect(document.body.textContent).not.toContain('CIPP server');
+    });
+
+    it('drops "Healthy" from the header as soon as Test connection fails', async () => {
+      window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+      validateEntraCippConnectionMock.mockResolvedValue({ success: false, error: 'CIPP refused listusers.' });
+      const onStatusChanged = vi.fn(async () => undefined);
+      render(
+        <EntraConsole
+          status={cippStatus({ cippAuthType: 'api_client', cippClientId: 'c', cippDirectoryId: 't' })}
+          cippAvailable
+          onStatusChanged={onStatusChanged}
+        />
+      );
+
+      await waitFor(() => expect(document.getElementById('entra-console-validate')).not.toBeNull());
+      fireEvent.click(document.getElementById('entra-console-validate') as HTMLButtonElement);
+
+      // The server records validation_failed; the console must re-read status
+      // rather than keep the badge it had before the test.
+      await waitFor(() => expect(onStatusChanged).toHaveBeenCalled());
+      expect(validateEntraCippConnectionMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the legacy badge in the overview rail too', async () => {
+      renderConsole(cippStatus({ cippAuthType: 'legacy_api_token' }));
+      await waitFor(() =>
+        expect(document.getElementById('entra-console-rail-cipp-legacy-badge')).not.toBeNull()
+      );
+    });
   });
 });
 

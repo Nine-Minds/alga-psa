@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import { formatTemplateFieldValue } from './fieldFormatting';
 
+describe('formatTemplateFieldValue currency minor units', () => {
+  const format = (value: number, currencyCode: string) =>
+    formatTemplateFieldValue({ value, format: 'currency', currencyCode, locale: 'en-US' }).text?.replace(/\u00a0/g, ' ');
+
+  it('uses the currency exponent: USD 2, JPY 0, KWD 3', () => {
+    expect(format(123456, 'USD')).toBe('$1,234.56');
+    expect(format(123456, 'JPY')).toBe('¥123,456');
+    expect(format(123456, 'KWD')).toBe('KWD 123.456');
+  });
+
+  it('shows the product symbol for a currency Intl spells out', () => {
+    // The picker offers "ZAR (R)", so a rendered invoice must read R too.
+    expect(format(123456, 'ZAR')).toBe('R 1,234.56');
+  });
+});
+
 describe('formatTemplateFieldValue', () => {
   it('preserves date-only calendar values in negative-offset timezones', () => {
     const previousTimeZone = process.env.TZ;

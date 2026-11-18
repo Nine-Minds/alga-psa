@@ -53,6 +53,7 @@ import {
   getDetailedContractLines,
   updateContractLineRate,
 } from "@alga-psa/billing/actions/contractActions";
+import { updateContractLine } from "@alga-psa/billing/actions/contractLineAction";
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
@@ -60,10 +61,16 @@ import {
 import { toPlainDate } from "@alga-psa/core";
 import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEnumOptions";
 import { useCurrencyFormat } from "@alga-psa/ui/lib";
-import { useTemplateNeutralRate } from "./templateNeutralRate";
-import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
+import { useTemplateMoney } from "./useTemplateMoney";
+import { TemplatePricingSection } from "./TemplatePricingSection";
+import { updateContractTemplateCurrency } from "@alga-psa/billing/actions/contractTemplatePriceSetActions";
+import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
+import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
+import { BillingTimingField } from "./BillingTimingField";
+import { isAdvanceTimingAllowedForLineType } from "@shared/billingClients/contractLineTimingRule";
+import { getContractLineBillingTimingLabel } from "./contractLineBillingTimingLabel";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
@@ -74,6 +81,8 @@ import {
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+import TemplatePrepaidBlockPanel from "./TemplatePrepaidBlockPanel";
 
 const ContractSimulator = dynamic(
   async () => (await import("@product/billing/entry")).ContractSimulator,
@@ -132,6 +141,12 @@ type TemplateContractLine = {
   billing_frequency: string;
   billing_timing: "arrears" | "advance";
   rate?: number | null;
+  /** 'PrepaidBlock' for an Hourly template line carrying a block config; otherwise the line type. */
+  display_kind?: string;
+  /** Bundle title on invoices; blank falls back to the line name. */
+  invoice_line_description?: string | null;
+  /** Muted second line under the bundle title (Fixed lines). */
+  invoice_line_subtitle?: string | null;
   services: TemplateLineService[];
 };
 
@@ -141,6 +156,8 @@ type DetailedContractLineRow = {
   contract_line_type: string;
   billing_frequency: string;
   billing_timing?: "arrears" | "advance";
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
 };
 
 type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
@@ -177,14 +194,12 @@ const formatDate = (value?: string | Date | null): string => {
 };
 
 /**
- * Formats a template money amount (minor units) currency-neutrally, or
- * "Not set" when absent. Templates have no currency (a contract created from one
- * uses the client's currency), so the rate is a plain number followed by the
- * "in the client's currency" note - never a symbol or code. Shared by the detail
- * view and the services manager so both render rates identically.
+ * Formats a template money amount (minor units) in the template's own currency,
+ * or "Not set" when absent. Shared by the detail view and the services manager
+ * so both render rates identically.
  */
 const formatTemplateMinorUnits = (
-  formatNeutralRate: (minorUnits: number) => string,
+  formatTemplateAmount: (minorUnits: number) => string,
   t: (key: string, options?: Record<string, unknown>) => string,
   minorUnits?: number | null,
 ): string => {
@@ -193,10 +208,7 @@ const formatTemplateMinorUnits = (
       defaultValue: "Not set",
     });
   }
-  return t("templateReview.fixed.unitRateNeutral", {
-    rate: formatNeutralRate(minorUnits),
-    defaultValue: "{{rate}} in the client's currency",
-  });
+  return formatTemplateAmount(minorUnits);
 };
 
 const humanize = (value?: string | null): string => {
@@ -255,9 +267,6 @@ const ContractTemplateDetail: React.FC = () => {
   const translateRef = useRef(t);
   translateRef.current = t;
   const billingFrequencyOptions = useBillingFrequencyOptions();
-  const formatNeutralRate = useTemplateNeutralRate();
-  const formatTemplateRate = (minorUnits?: number | null) =>
-    formatTemplateMinorUnits(formatNeutralRate, t, minorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get("contractId") ?? undefined;
@@ -266,6 +275,10 @@ const ContractTemplateDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [contract, setContract] = useState<IContract | null>(null);
+  const templateCurrency = contract?.currency_code ?? "USD";
+  const formatTemplateAmount = useTemplateMoney(templateCurrency);
+  const formatTemplateRate = (minorUnits?: number | null) =>
+    formatTemplateMinorUnits(formatTemplateAmount, t, minorUnits);
   const [summary, setSummary] = useState<TemplateSummary | null>(null);
   const [templateLines, setTemplateLines] = useState<TemplateContractLine[]>(
     [],
@@ -294,20 +307,13 @@ const ContractTemplateDetail: React.FC = () => {
 
   const [showServicesEditor, setShowServicesEditor] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
-  const [simulatorClientId, setSimulatorClientId] = useState("profile");
-  const [simulationClients, setSimulationClients] = useState<
-    Array<{ client_id: string; client_name: string }>
-  >([]);
+  // The simulator runs against a hypothetical profile or one real client, picked by server search.
+  const [simulatorMode, setSimulatorMode] = useState<"profile" | "client">("profile");
+  const [simulatorClientId, setSimulatorClientId] = useState<string | null>(null);
+  const [simulatorClientFilter, setSimulatorClientFilter] = useState<"all" | "active" | "inactive">("active");
+  const [simulatorClientType, setSimulatorClientType] = useState<"all" | "company" | "individual">("all");
+  const simulatedClientId = simulatorMode === "client" ? simulatorClientId : null;
   const lastContractIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!showSimulator || simulationClients.length > 0) return;
-    void listContractSimulationClients().then((clients) => {
-      if (Array.isArray(clients)) {
-        setSimulationClients(clients);
-      }
-    });
-  }, [showSimulator, simulationClients.length]);
 
   const templateMetadata = useMemo<TemplateMetadata>(() => {
     if (!contract?.template_metadata) {
@@ -571,6 +577,9 @@ const ContractTemplateDetail: React.FC = () => {
                 | "arrears"
                 | "advance",
               rate: line.rate ?? null,
+              display_kind: (line as { display_kind?: string }).display_kind,
+              invoice_line_description: (line as DetailedContractLineRow).invoice_line_description ?? null,
+              invoice_line_subtitle: (line as DetailedContractLineRow).invoice_line_subtitle ?? null,
               services,
             } as TemplateContractLine;
           }),
@@ -625,6 +634,31 @@ const ContractTemplateDetail: React.FC = () => {
       tags: templateTags.join(", "),
     });
   }, [templateMetadata, templateTags]);
+
+  const [pricingReloadToken, setPricingReloadToken] = useState(0);
+
+  // Relabels the base currency; stored amounts keep their numeric value (no FX).
+  const handleChangeBaseCurrency = useCallback(
+    async (nextCurrency: string) => {
+      if (!contract?.contract_id || !nextCurrency || nextCurrency === contract.currency_code) return;
+      const confirmed = window.confirm(
+        translateRef.current("templateDetail.pricing.changeBaseConfirm", {
+          defaultValue:
+            "Change the base currency to {{currency}}? Existing amounts are NOT converted: they keep their numeric value and are read as {{currency}}.",
+          currency: nextCurrency,
+        }),
+      );
+      if (!confirmed) return;
+      const result = await updateContractTemplateCurrency(contract.contract_id, nextCurrency);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      await loadTemplate(contract.contract_id);
+      setPricingReloadToken((value) => value + 1);
+    },
+    [contract?.contract_id, contract?.currency_code, loadTemplate],
+  );
 
   const handleSaveBasics = useCallback(async () => {
     if (!contract) {
@@ -871,6 +905,7 @@ const ContractTemplateDetail: React.FC = () => {
             <Badge variant="secondary">
               {t("templateDetail.templateBadge", { defaultValue: "Template" })}
             </Badge>
+            <Badge variant="outline">{templateCurrency}</Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Heading
@@ -939,8 +974,8 @@ const ContractTemplateDetail: React.FC = () => {
                 </Label>
                 <CustomSelect
                   id="template-simulation-client"
-                  value={simulatorClientId}
-                  onValueChange={setSimulatorClientId}
+                  value={simulatorMode}
+                  onValueChange={(value) => setSimulatorMode(value === "client" ? "client" : "profile")}
                   options={[
                     {
                       value: "profile",
@@ -948,21 +983,36 @@ const ContractTemplateDetail: React.FC = () => {
                         defaultValue: "Hypothetical client profile",
                       }),
                     },
-                    ...simulationClients.map((client) => ({
-                      value: client.client_id,
-                      label: client.client_name,
-                    })),
+                    {
+                      value: "client",
+                      label: t("templateDetail.simulation.specificClient", {
+                        defaultValue: "A specific client",
+                      }),
+                    },
                   ]}
                 />
+                {simulatorMode === "client" && (
+                  <ClientPicker
+                    id="template-simulation-client-picker"
+                    selectedClientId={simulatorClientId}
+                    onSelect={setSimulatorClientId}
+                    filterState={simulatorClientFilter}
+                    onFilterStateChange={setSimulatorClientFilter}
+                    clientTypeFilter={simulatorClientType}
+                    onClientTypeFilterChange={setSimulatorClientType}
+                    placeholder={t("templateDetail.simulation.pickClient", {
+                      defaultValue: "Select a client",
+                    })}
+                    className="w-full"
+                  />
+                )}
               </div>
               <ContractSimulator
-                key={`${contract.contract_id}:${simulatorClientId}`}
+                key={`${contract.contract_id}:${simulatedClientId ?? "profile"}`}
                 contractId={contract.contract_id}
                 clientContractId={null}
-                clientId={
-                  simulatorClientId === "profile" ? null : simulatorClientId
-                }
-                forceProfile={simulatorClientId === "profile"}
+                clientId={simulatedClientId}
+                forceProfile={simulatedClientId === null}
               />
             </CardContent>
           </Card>
@@ -1257,10 +1307,18 @@ const ContractTemplateDetail: React.FC = () => {
                 <span>
                   {t("common.labels.currency", { defaultValue: "Currency" })}
                 </span>
-                <span className="font-medium">
-                  {t("templateDetail.summary.clientCurrency", {
-                    defaultValue: "Client's currency",
-                  })}
+                <span className="flex items-center gap-2 font-medium">
+                  <Badge variant="outline" id="template-base-currency-badge">
+                    {templateCurrency}
+                  </Badge>
+                  <CurrencyPicker
+                    id="template-base-currency-picker"
+                    value={templateCurrency}
+                    onValueChange={(value) => void handleChangeBaseCurrency(value)}
+                    placeholder={t("templateDetail.pricing.changeBaseCurrency", {
+                      defaultValue: "Change base currency",
+                    })}
+                  />
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -1679,12 +1737,20 @@ const ContractTemplateDetail: React.FC = () => {
       {showServicesEditor && contract && (
         <TemplateServicesManager
           contractId={contract.contract_id}
+          currencyCode={templateCurrency}
           contractLines={templateLines}
           onServicesChanged={() => {
             if (contract.contract_id) {
               void loadTemplate(contract.contract_id);
             }
           }}
+        />
+      )}
+
+      {contract?.contract_id && (
+        <TemplatePricingSection
+          templateId={contract.contract_id}
+          reloadToken={pricingReloadToken + templateLines.length}
         />
       )}
 
@@ -1805,8 +1871,21 @@ const ContractTemplateDetail: React.FC = () => {
                             {line.contract_line_name}
                           </p>
                           <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                            {humanize(line.contract_line_type)} •{" "}
-                            {humanize(line.billing_frequency)}
+                            {line.display_kind === "PrepaidBlock"
+                              ? t("templateDetail.composition.prepaidBlockKind", {
+                                  defaultValue: "Prepaid Block",
+                                })
+                              : humanize(line.contract_line_type)}{" "}
+                            • {humanize(line.billing_frequency)} •{" "}
+                            <span
+                              data-testid={`template-composition-line-billing-timing-${line.contract_line_id}`}
+                            >
+                              {getContractLineBillingTimingLabel(
+                                t,
+                                line.contract_line_type,
+                                line.billing_timing,
+                              )}
+                            </span>
                           </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
@@ -1904,20 +1983,17 @@ const ContractTemplateDetail: React.FC = () => {
                                       { defaultValue: "Recurring amount:" },
                                     )}{" "}
                                     <span className="font-medium">
-                                      {t("templateReview.fixed.unitRateNeutral", {
-                                        rate: t(
-                                          "templateDetail.composition.unitAmountValue",
-                                          {
-                                            count: service.quantity,
-                                            rate: formatNeutralRate(service.unit_rate),
-                                            amount: formatNeutralRate(
-                                              unitFixedServiceAmountCents(service.quantity, service.unit_rate),
-                                            ),
-                                            defaultValue: "{{count}} × {{rate}} = {{amount}}",
-                                          },
-                                        ),
-                                        defaultValue: "{{rate}} in the client's currency",
-                                      })}
+                                      {t(
+                                        "templateDetail.composition.unitAmountValue",
+                                        {
+                                          count: service.quantity,
+                                          rate: formatTemplateAmount(service.unit_rate),
+                                          amount: formatTemplateAmount(
+                                            unitFixedServiceAmountCents(service.quantity, service.unit_rate),
+                                          ),
+                                          defaultValue: "{{count}} × {{rate}} = {{amount}}",
+                                        },
+                                      )}
                                     </span>
                                   </span>
                                 )}
@@ -1987,8 +2063,7 @@ const ContractTemplateDetail: React.FC = () => {
                                                 .overage_rate ?? 0,
                                             ),
                                           ),
-                                          contract.currency_code ??
-                                            defaultCurrency,
+                                          templateCurrency,
                                         ),
                                       },
                                     )}
@@ -1999,6 +2074,21 @@ const ContractTemplateDetail: React.FC = () => {
                           ))
                         )}
                       </div>
+                      {line.contract_line_type === "Hourly" && (
+                        <TemplatePrepaidBlockPanel
+                          templateLineId={line.contract_line_id}
+                          currencyCode={templateCurrency}
+                          onChanged={(hasConfig) =>
+                            setTemplateLines((prev) =>
+                              prev.map((candidate) =>
+                                candidate.contract_line_id === line.contract_line_id
+                                  ? { ...candidate, display_kind: hasConfig ? "PrepaidBlock" : "Hourly" }
+                                  : candidate,
+                              ),
+                            )
+                          }
+                        />
+                      )}
                     </div>
                   ))}
                 </CardContent>
@@ -2013,30 +2103,33 @@ const ContractTemplateDetail: React.FC = () => {
 
 type TemplateServicesManagerProps = {
   contractId: string;
+  currencyCode: string;
   contractLines: TemplateContractLine[];
   onServicesChanged: () => void;
 };
 
 const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractId,
+  currencyCode,
   contractLines,
   onServicesChanged,
 }) => {
   const { t } = useTranslation("msp/contracts");
-  const formatNeutralRate = useTemplateNeutralRate();
+  const formatTemplateAmount = useTemplateMoney(currencyCode);
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(
     null,
   );
 
   // LEVERAGE: pattern template-minor-unit-formatter — parent and manager each bind money/t/currency around one shared helper
   const formatTemplateRate = (minorUnits?: number | null) =>
-    formatTemplateMinorUnits(formatNeutralRate, t, minorUnits);
+    formatTemplateMinorUnits(formatTemplateAmount, t, minorUnits);
 
   const handleSaveRate = async (
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
     invoiceLineDescription: string | null,
+    invoiceLineSubtitle?: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2048,6 +2141,13 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
+      }
+      if (invoiceLineSubtitle !== undefined) {
+        // Template-line branch of updateContractLine: text-only patch.
+        const textResult = await updateContractLine(contractLineId, { invoice_line_subtitle: invoiceLineSubtitle });
+        if (isReturnedActionError(textResult)) {
+          throw new Error(getErrorMessage(textResult));
+        }
       }
       setEditingLine(null);
       onServicesChanged();
@@ -2087,7 +2187,14 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   </p>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     {humanize(line.contract_line_type)} •{" "}
-                    {humanize(line.billing_frequency)}
+                    {humanize(line.billing_frequency)} •{" "}
+                    <span data-testid={`template-line-billing-timing-${line.contract_line_id}`}>
+                      {getContractLineBillingTimingLabel(
+                        t,
+                        line.contract_line_type,
+                        line.billing_timing,
+                      )}
+                    </span>
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2137,9 +2244,26 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                   )}
                 </div>
               </div>
+              {!isAdvanceTimingAllowedForLineType(line.contract_line_type) && (
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {t("billing.labels.timing", {
+                      defaultValue: "Billing Timing",
+                    })}
+                  </p>
+                  {/* Hourly/Usage template lines have no editor; show the fixed value and why. */}
+                  <BillingTimingField
+                    id={`template-billing-timing-${line.contract_line_id}`}
+                    lineType={line.contract_line_type}
+                    value="arrears"
+                    onChange={() => {}}
+                  />
+                </div>
+              )}
               <div className="mt-4">
                 <GenericPlanServicesList
                   contractLineId={line.contract_line_id}
+                  currencyCode={currencyCode}
                   onServicesChanged={onServicesChanged}
                   disableEditing
                 />
@@ -2155,8 +2279,12 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            contract_line_type: editingLine.contract_line_type,
             invoice_line_description: editingLine.invoice_line_description ?? null,
+            invoice_line_subtitle: editingLine.invoice_line_subtitle ?? null,
           }}
+          currencyCode={currencyCode}
+          exactMinorUnits
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
         />

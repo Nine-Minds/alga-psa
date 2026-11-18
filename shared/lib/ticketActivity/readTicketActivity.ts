@@ -14,6 +14,9 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { isCommercialTimeEntry, operationalTimeEntriesOnly } from '@alga-psa/types';
+import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
+import { admitInternalReaderAudienceSql, type InternalReaderAudienceSql, type InternalReaderIdentity } from '../commentAudience';
 
 import type {
   TicketActivityChanges,
@@ -71,6 +74,30 @@ export interface ReadTicketActivityOptions {
   limit?: number;
   /** Filter by event type. */
   eventTypes?: string[];
+  /**
+   * The internal user the activity is read for: their id, or the user row the request loaded.
+   * Named, events about a comment that user's organization may not read (and about a file
+   * attached to one) are omitted in the same statement: MSP staff still see every event, a seat
+   * technician none about a private note. A loaded row that says no seat assignment binds the
+   * user adds nothing to the statement.
+   */
+  internalReaderId?: InternalReaderIdentity;
+}
+
+const UUID_PATTERN = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$';
+
+/**
+ * Activity rows an internal reader may see, by the audience of the comment each row is about.
+ * `entity_id` is free text, so it is read as a uuid only when it is one; a comment event whose
+ * comment cannot be resolved (deleted, malformed) fails closed for everyone but staff.
+ */
+function activityVisibleToInternalReaderSql(knex: Knex | Knex.Transaction, audience: InternalReaderAudienceSql): Knex.Raw {
+  const entityUuid = () => knex.raw('CASE WHEN ticket_audit_logs.entity_id ~ ? THEN ticket_audit_logs.entity_id::uuid END', [UUID_PATTERN]);
+  return knex.raw(`((?) OR CASE ticket_audit_logs.entity_type
+      WHEN 'comment' THEN (?)
+      WHEN 'document' THEN (?)
+      ELSE TRUE END)`,
+  [audience.staff, audience.commentVisible(entityUuid()), audience.documentVisible(entityUuid())]);
 }
 
 function tenantScopedTable(
@@ -97,6 +124,8 @@ export async function readTicketActivity(
       { column: 'audit_id', order: 'desc' },
     ]);
 
+  const audience = opts.internalReaderId ? admitInternalReaderAudienceSql(knex, tenant, opts.internalReaderId) : null;
+  if (audience) q = q.whereRaw('?', [activityVisibleToInternalReaderSql(knex, audience)]);
   if (opts.eventTypes && opts.eventTypes.length > 0) {
     q = q.whereIn('event_type', opts.eventTypes);
   }
@@ -105,7 +134,8 @@ export async function readTicketActivity(
   }
 
   const rows = (await q) as Array<Record<string, unknown>>;
-  return rows.map((row) => normalizeActivityRow(row));
+  const activities = rows.map((row) => normalizeActivityRow(row));
+  return attachViaPrincipalNames(knex, tenant, activities, 'via_principal_user_id');
 }
 
 function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
@@ -122,6 +152,9 @@ function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
     actor_user_id: (row.actor_user_id as string | null) ?? null,
     actor_contact_id: (row.actor_contact_id as string | null) ?? null,
     actor_display_name: (row.actor_display_name as string | null) ?? null,
+    via_principal_user_id: (row.via_principal_user_id as string | null | undefined) ?? null,
+    actor_reference_id: (row.actor_reference_id as string | null) ?? null,
+    actor_organization_name: (row.actor_organization_name as string | null) ?? null,
     source: row.source as string,
     occurred_at:
       row.occurred_at instanceof Date
@@ -145,10 +178,14 @@ export interface BuildUnifiedTimelineOptions {
   includeInternalNotes?: boolean;
   /** Include ticket-linked time entries in the merged timeline. Default false. */
   includeTimeEntries?: boolean;
+  /** Time events are operational entries only (a seat technician's view, S28 / F069): commercial entries are not read. */
+  operationalTimeOnly?: boolean;
   /** Include ticket-linked RMM alerts in the merged timeline. Default false. */
   includeAlerts?: boolean;
   /** Sort order. Default 'desc' (newest first). */
   order?: 'asc' | 'desc';
+  /** The internal user the timeline is read for; see `ReadTicketActivityOptions.internalReaderId`. */
+  internalReaderId?: InternalReaderIdentity;
 }
 
 function normalizeRequiredIso(value: unknown, fieldName: string): string {
@@ -249,7 +286,7 @@ export async function buildUnifiedTicketTimeline(
   const includeTimeEntries = opts.includeTimeEntries ?? false;
   const includeAlerts = opts.includeAlerts ?? false;
 
-  const activityRows = await readTicketActivity(knex, tenant, ticketId);
+  const activityRows = await readTicketActivity(knex, tenant, ticketId, { internalReaderId: opts.internalReaderId });
 
   let commentQuery = tenantScopedTable(knex, 'comments', tenant)
     .where({ ticket_id: ticketId });
@@ -258,6 +295,8 @@ export async function buildUnifiedTicketTimeline(
       qb.where('is_internal', false).orWhereNull('is_internal'),
     );
   }
+  const audience = opts.internalReaderId ? admitInternalReaderAudienceSql(knex, tenant, opts.internalReaderId) : null;
+  if (audience) commentQuery = commentQuery.whereRaw('?', [audience.commentVisible('comments.comment_id')]);
   const commentRows = (await commentQuery) as Array<Record<string, unknown>>;
 
   const activityEntries: TicketTimelineEntry[] = activityRows.map((row) => ({
@@ -293,12 +332,14 @@ export async function buildUnifiedTicketTimeline(
         'te.start_time',
         'te.end_time',
         'te.billable_duration',
+        'te.billing_mode',
         'te.notes',
         'te.work_date',
         knex.raw(
           "NULLIF(TRIM(CONCAT_WS(' ', NULLIF(u.first_name, ''), NULLIF(u.last_name, ''))), '') AS user_display_name",
         ),
       );
+    if (opts.operationalTimeOnly) operationalTimeEntriesOnly(timeEntryQuery, 'te');
     tenantDb(knex, tenant).tenantJoin(timeEntryQuery, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
 
     const timeEntryRows = (await timeEntryQuery) as Array<Record<string, unknown>>;
@@ -310,7 +351,10 @@ export async function buildUnifiedTicketTimeline(
         user_display_name: (row.user_display_name as string | null) ?? null,
         start_time: startTime,
         end_time: normalizeNullableIso(row.end_time, 'time_entries.end_time'),
-        billable_duration: normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration'),
+        // An operational entry is never billable (S28): the Timeline chip follows billing_mode, not the stored minutes.
+        billable_duration: isCommercialTimeEntry({ billing_mode: row.billing_mode as string | null })
+          ? normalizeRequiredNumber(row.billable_duration, 'time_entries.billable_duration')
+          : 0,
         notes: (row.notes as string | null) ?? null,
         work_date: normalizeNullableDate(row.work_date, 'time_entries.work_date'),
       };

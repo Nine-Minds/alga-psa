@@ -9,7 +9,7 @@ import { NumericInput } from '@alga-psa/ui/components/NumericInput';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -220,12 +220,15 @@ export default function SellHourBlockDialog({ clientId, currencyCode, isOpen, on
           ) : (
             <div className="space-y-1.5">
               <Label htmlFor="hb-service">{t('sell.serviceLabel', { defaultValue: 'Service' })}</Label>
-              <CustomSelect
+              <SearchableSelect
                 id="hb-service"
                 options={serviceOptions}
-                value={selectedServiceId || null}
-                onValueChange={setSelectedServiceId}
+                value={selectedServiceId}
+                onChange={setSelectedServiceId}
                 placeholder={t('sell.servicePlaceholder', { defaultValue: 'Select a service' })}
+                searchPlaceholder={t('sell.serviceSearchPlaceholder', { defaultValue: 'Search services...' })}
+                emptyMessage={t('sell.serviceNoResults', { defaultValue: 'No services found' })}
+                dropdownMode="overlay"
               />
             </div>
           )}

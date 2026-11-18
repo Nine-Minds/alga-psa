@@ -400,7 +400,7 @@ export class ApiFinancialController extends ApiBaseController {
 
           const body = await apiRequest.json();
           const taxCalculationSchema = z.object({
-            client_id: z.string().uuid(),
+            client_id: z.string().guid(),
             amount: z.number().min(0),
             tax_region: z.string(),
             date: z.string().optional()
@@ -604,7 +604,8 @@ export class ApiFinancialController extends ApiBaseController {
   // ============================================================================
 
   /**
-   * POST /api/v1/financial/bulk/invoices - Bulk invoice operations
+   * POST /api/v1/financial/bulk/invoices - Bulk finalize or cancel operations.
+   * Bulk send is unsupported until canonical recipient delivery is implemented.
    */
   bulkInvoiceOperations() {
     return async (req: NextRequest): Promise<NextResponse> => {

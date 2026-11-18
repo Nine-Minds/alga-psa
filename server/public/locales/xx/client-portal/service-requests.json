@@ -9,10 +9,7 @@
     "newRequestHeading": "⟦Şŭƀḿīŧ ȧ ƞḗẇ řḗʠŭḗşŧ⟧"
   },
   "detail": {
-    "version": "⟦Ṽḗřşīȯƞ {{version}}⟧",
     "submitted": "⟦Řḗʠŭḗşŧ şŭƀḿīŧŧḗḓ⟧",
-    "requestIdLabel": "⟦Řḗʠŭḗşŧ ĪḒ: ⟧",
-    "ticketIdLabel": "⟦Ŧīƈķḗŧ ĪḒ: ⟧",
     "unableToSubmit": "⟦Ŭƞȧƀŀḗ ŧȯ şŭƀḿīŧ řḗʠŭḗşŧ⟧",
     "formTitle": "⟦Řḗʠŭḗşŧ Ƒȯřḿ⟧",
     "noFields": "⟦Ƞȯ ƒīḗŀḓş ƈȯƞƒīɠŭřḗḓ.⟧",
@@ -20,8 +17,7 @@
     "datePlaceholder": "⟦Şḗŀḗƈŧ ḓȧŧḗ⟧",
     "optionLabel": "⟦Ȯƥŧīȯƞ {{index}}⟧",
     "submit": "⟦Şŭƀḿīŧ Řḗʠŭḗşŧ⟧",
-    "initialValuesTitle": "⟦Īƞīŧīȧŀ Ṽȧŀŭḗş⟧",
-    "noInitialValues": "⟦Ƞȯ şŧȧŧīƈ ḓḗƒȧŭŀŧş ƈȯƞƒīɠŭřḗḓ.⟧"
+    "requiredField": "⟦Ŧħīş ƒīḗŀḓ īş řḗʠŭīřḗḓ.⟧"
   },
   "myRequests": {
     "title": "⟦Ḿẏ Řḗʠŭḗşŧş⟧",
@@ -45,19 +41,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "⟦Ɓȧƈķ ŧȯ Ḿẏ Řḗʠŭḗşŧş⟧",
-    "requestIdLabel": "⟦Řḗʠŭḗşŧ ĪḒ:⟧",
     "statusSection": "⟦Şŧȧŧŭş⟧",
     "submittedAt": "⟦Şŭƀḿīŧŧḗḓ: {{date}}⟧",
-    "executionStatus": "⟦Ḗẋḗƈŭŧīȯƞ şŧȧŧŭş: {{status}}⟧",
-    "ticketLabel": "⟦Ŧīƈķḗŧ:⟧",
-    "workflowLabel": "⟦Ẇȯřķƒŀȯẇ: {{id}}⟧",
     "submittedAnswersTitle": "⟦Şŭƀḿīŧŧḗḓ Ȧƞşẇḗřş⟧",
     "noResponse": "⟦Ƞȯ řḗşƥȯƞşḗ⟧",
     "attachmentsTitle": "⟦Ȧŧŧȧƈħḿḗƞŧş⟧",
     "noAttachments": "⟦Ƞȯ ȧŧŧȧƈħḿḗƞŧş īƞƈŀŭḓḗḓ.⟧",
-    "fileIdLabel": "⟦Ƒīŀḗ ĪḒ: {{id}}⟧",
     "fileTypeLabel": "⟦Ŧẏƥḗ: {{mime}}⟧",
-    "versionLabel": "⟦Ṽḗřşīȯƞ {{version}}⟧",
     "historyTitle": "⟦Ħīşŧȯřẏ⟧",
     "historyEmpty": "⟦Ƞȯ ħīşŧȯřẏ řḗƈȯřḓḗḓ ẏḗŧ.⟧",
     "historyActor": "⟦ƀẏ {{actor}}⟧",
@@ -65,7 +55,8 @@
       "service_request_submission_created": "⟦Řḗʠŭḗşŧ şŭƀḿīŧŧḗḓ⟧",
       "service_request_submission_execution_succeeded": "⟦Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƈȯḿƥŀḗŧḗḓ⟧",
       "service_request_submission_execution_failed": "⟦Řḗʠŭḗşŧ ƥřȯƈḗşşīƞɠ ƒȧīŀḗḓ⟧"
-    }
+    },
+    "unnamedAttachment": "⟦Ȧŧŧȧƈħḿḗƞŧ⟧"
   },
   "recent": {
     "title": "⟦Ẏȯŭř řḗƈḗƞŧ řḗʠŭḗşŧş⟧",
@@ -76,5 +67,12 @@
   },
   "myRequestsAll": {
     "title": "⟦Ẏȯŭř řḗʠŭḗşŧş⟧"
+  },
+  "submittedBanner": {
+    "summary": "⟦{{requestName}}, şŭƀḿīŧŧḗḓ {{date}}⟧"
+  },
+  "ticketReference": {
+    "label": "⟦Ŧīƈķḗŧ⟧",
+    "viewTicket": "⟦Ṽīḗẇ ŧīƈķḗŧ⟧"
   }
 }

@@ -1,4 +1,5 @@
 import { ServerBlockNoteEditor } from '@blocknote/server-util';
+import { splitEmbeddedNewlineBlocks } from '@alga-psa/formatting/normalizeBlocks';
 import { convertMarkdownToBlocks, type BlockNoteBlock } from './markdownToBlocks';
 
 export { convertMarkdownToBlocks };
@@ -216,6 +217,13 @@ function flattenTableBlocks(blocks: BlockNoteBlock[]): BlockNoteBlock[] {
   });
 }
 
+// `<a>url<br><br></a>` and `<a>url</a><br><br>` both parse into a link whose
+// text ends in "\n\n", which stores badly and swallows the following text when
+// re-rendered. Split those into one block per line before the blocks are saved.
+function normalizeNewlines(blocks: BlockNoteBlock[]): BlockNoteBlock[] {
+  return splitEmbeddedNewlineBlocks(blocks as any) as BlockNoteBlock[];
+}
+
 /**
  * Convert HTML to BlockNote blocks using BlockNote's own parser.
  * Handles Outlook CSS, HTML comments, `<style>` blocks, etc. natively.
@@ -260,10 +268,10 @@ export async function convertHtmlToBlockNote(
   const rawMarkdown = extractRawMarkdownFromBlocks(blocks as BlockNoteBlock[]);
   if (rawMarkdown) {
     const mdBlocks = await editor.tryParseMarkdownToBlocks(rawMarkdown);
-    if (mdBlocks.length > 0) return mdBlocks as BlockNoteBlock[];
+    if (mdBlocks.length > 0) return normalizeNewlines(mdBlocks as BlockNoteBlock[]);
   }
 
-  return blocks as BlockNoteBlock[];
+  return normalizeNewlines(blocks as BlockNoteBlock[]);
 }
 
 /**

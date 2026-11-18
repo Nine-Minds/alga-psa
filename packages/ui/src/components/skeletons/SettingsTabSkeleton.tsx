@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../Card';
 import LoadingIndicator from '../LoadingIndicator';
 
@@ -14,8 +17,7 @@ interface SettingsTabSkeletonProps {
 }
 
 const SettingsTabSkeleton = ({ 
-  title = "Settings",
-  description = "Loading settings configuration...",
+  description,
   showTabs = false,
   showTable = true,
   showForm = false,
@@ -23,6 +25,8 @@ const SettingsTabSkeleton = ({
   showTextArea = false,
   noCard = false
 }: SettingsTabSkeletonProps) => {
+  const { t } = useTranslation('common');
+
   const content = (
     <>
       {/* Dropdown Section Skeleton */}
@@ -107,7 +111,7 @@ const SettingsTabSkeleton = ({
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text={description}
+          text={description ?? t('skeletons.settingsTab.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>

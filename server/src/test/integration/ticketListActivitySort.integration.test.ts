@@ -14,7 +14,7 @@ import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecyc
  *
  * The unit tests prove the key is accepted and mapped; only Postgres can prove
  * the expression means what the column claims. The fixture covers every branch
- * of TICKET_LATEST_ACTIVITY_SQL: staggered published comments, a soft-deleted
+ * of ticketLatestActivitySql: staggered published comments, a soft-deleted
  * comment newer than everything (must not count), a scheduled comment newer
  * than everything (must not count), a ticket with no comments at all
  * (GREATEST falls back to updated_at/entered_at rather than sorting as NULL),

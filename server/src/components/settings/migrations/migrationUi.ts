@@ -134,6 +134,11 @@ export function migrationClaimLabel(
   if (!claim) {
     return null;
   }
+  if (claim.matchReason === 'sku_match') {
+    return translate('importExport.migration.results.matchedBySku', {
+      defaultValue: 'Matched existing product by SKU',
+    });
+  }
   if (claim.samePackage) {
     return translate('importExport.migration.results.claimedBySamePackage', {
       defaultValue: 'Already migrated by this package',
@@ -157,6 +162,8 @@ export const MIGRATION_ENTITY_LABELS: Record<AmpEntityType, string> = {
   tickets: 'Tickets',
   ticket_comments: 'Ticket comments',
   assets: 'Assets',
+  products: 'Products',
+  vendor_products: 'Vendor price list',
 };
 
 export function migrationEntityLabel(entityType: string): string {

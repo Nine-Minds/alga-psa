@@ -14,6 +14,7 @@ import {
   buildOutboundEmailQueuedPayload,
   buildOutboundEmailSentPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders';
+import { sameMessageId } from './onWireMessageId';
 import { addGradientFallback } from './branding/gradientFallback';
 import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
@@ -178,6 +179,38 @@ interface CommentThreadReplyHeaderContext {
   references: string[];
 }
 
+// Resend accepts tag names/values of ASCII letters, numbers, underscores and dashes (max 256).
+const PROVIDER_TAG_VALUE = /^[A-Za-z0-9_-]{1,256}$/;
+
+/**
+ * Tags a provider echoes back on its delivery webhooks. The Resend webhook route derives the
+ * tenant from the signed `alga_tenant_id` tag, both for the delivery/bounce workflow events and for
+ * recording the on-wire Message-ID (onWireMessageId.ts); without it every event is a no-op for the
+ * tenant. Values that a provider would reject are left out rather than failing the send.
+ */
+function buildProviderTags(params: {
+  tenantId: string;
+  workflowMessageId: string;
+  correlationId?: unknown;
+  ticketId?: string;
+  threadId?: string;
+}): Record<string, string> {
+  const candidates: Record<string, unknown> = {
+    alga_tenant_id: params.tenantId,
+    alga_workflow_message_id: params.workflowMessageId,
+    alga_correlation_id: params.correlationId,
+    alga_ticket_id: params.ticketId,
+    alga_thread_id: params.threadId,
+  };
+  const tags: Record<string, string> = {};
+  for (const [name, value] of Object.entries(candidates)) {
+    if (value == null) continue;
+    const text = String(value);
+    if (PROVIDER_TAG_VALUE.test(text)) tags[name] = text;
+  }
+  return tags;
+}
+
 function extractDomainFromAddress(address?: string): string | null {
   if (typeof address !== 'string') return null;
   const at = address.lastIndexOf('@');
@@ -187,7 +220,8 @@ function extractDomainFromAddress(address?: string): string | null {
 }
 
 function buildGeneratedRfcMessageId(domain?: string | null): string {
-  const domainPart = (domain && domain.trim()) || 'alga-psa.local';
+  // Lower-case: domains are case-insensitive and inbound lookup forms lower-case them.
+  const domainPart = ((domain && domain.trim()) || 'alga-psa.local').toLowerCase();
   return `<${randomUUID()}@${domainPart}>`;
 }
 
@@ -332,6 +366,112 @@ async function persistCommentThreadReferences(params: {
   }
 }
 
+function normalizeRecipientList(value: unknown): string[] {
+  let list: unknown = value;
+  if (typeof list === 'string') {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      list = [list];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((entry) => (typeof entry === 'string' ? entry : (entry as { email?: unknown } | null)?.email))
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => extractEmailAddress(entry).toLowerCase());
+}
+
+/**
+ * Of the given (lower-cased) addresses, return those that belong to a tenant user with
+ * user_type = 'internal'. Unknown addresses (e.g. contacts) are never in the result.
+ */
+async function findInternalUserEmails(
+  knex: Knex | Knex.Transaction,
+  tenantId: string,
+  addresses: string[]
+): Promise<Set<string>> {
+  const unique = Array.from(new Set(addresses));
+  if (unique.length === 0) return new Set();
+  const rows = await tenantScopedTable(knex, 'users', tenantId)
+    .select('email')
+    .where({ user_type: 'internal' })
+    .whereRaw('lower(email) = ANY(?)', [unique]);
+  return new Set(rows.map((row: { email: string }) => row.email.toLowerCase()));
+}
+
+/**
+ * Drop Message-IDs of internal-only mail from a ticket's accumulated reference chain, for
+ * mail that is going to (or also to) someone who is not an internal user. An id is dropped
+ * when its email_sending_logs row is linked to an internal comment/thread, or when every
+ * recipient of that send is an internal user. Ids with no log row (inbound customer ids,
+ * legacy ids) and the root are always kept. Throws on lookup failure; the caller decides
+ * the fallback.
+ */
+async function filterReferencesForExternalAudience(params: {
+  knex: Knex | Knex.Transaction;
+  tenantId: string;
+  root: string;
+  priorReferences: string[];
+}): Promise<string[]> {
+  const { knex, tenantId, root, priorReferences } = params;
+  const candidates = priorReferences.filter((id) => id !== root);
+  if (candidates.length === 0) return priorReferences;
+
+  const logs = await tenantScopedTable(knex, 'email_sending_logs', tenantId)
+    .select(
+      'rfc_message_id',
+      'comment_id',
+      'comment_thread_id',
+      'to_addresses',
+      'cc_addresses',
+      'bcc_addresses'
+    )
+    .whereIn('rfc_message_id', candidates);
+  if (logs.length === 0) return priorReferences;
+
+  const commentIds = Array.from(new Set(logs.map((l: any) => l.comment_id).filter(Boolean)));
+  const threadIds = Array.from(new Set(logs.map((l: any) => l.comment_thread_id).filter(Boolean)));
+  const recipientsByLog = logs.map((l: any) => [
+    ...normalizeRecipientList(l.to_addresses),
+    ...normalizeRecipientList(l.cc_addresses),
+    ...normalizeRecipientList(l.bcc_addresses),
+  ]);
+
+  const [internalComments, internalThreads, internalEmails] = await Promise.all([
+    commentIds.length > 0
+      ? tenantScopedTable(knex, 'comments', tenantId)
+        .select('comment_id')
+        .where({ is_internal: true })
+        .whereIn('comment_id', commentIds)
+      : Promise.resolve([]),
+    threadIds.length > 0
+      ? tenantScopedTable(knex, 'comment_threads', tenantId)
+        .select('thread_id')
+        .where({ is_internal: true })
+        .whereIn('thread_id', threadIds)
+      : Promise.resolve([]),
+    findInternalUserEmails(knex, tenantId, recipientsByLog.flat()),
+  ]);
+  const internalCommentIds = new Set(internalComments.map((r: any) => r.comment_id));
+  const internalThreadIds = new Set(internalThreads.map((r: any) => r.thread_id));
+
+  const dropped = new Set<string>();
+  logs.forEach((log: any, index: number) => {
+    const recipients = recipientsByLog[index];
+    const linkedInternal =
+      (log.comment_id && internalCommentIds.has(log.comment_id)) ||
+      (log.comment_thread_id && internalThreadIds.has(log.comment_thread_id));
+    const internalOnlyRecipients =
+      recipients.length > 0 && recipients.every((address) => internalEmails.has(address));
+    if (linkedInternal || internalOnlyRecipients) {
+      dropped.add(log.rfc_message_id);
+    }
+  });
+
+  return priorReferences.filter((id) => id === root || !dropped.has(id));
+}
+
 /**
  * Apply ticket-scoped RFC threading headers to ANY outbound ticket email
  * (created/updated/closed/assigned/comment), so every notification for a ticket
@@ -343,6 +483,10 @@ async function persistCommentThreadReferences(params: {
  * once to `tickets.email_metadata.threadRoot`. In-Reply-To points at the most recent
  * prior outbound id (or the root); References accumulates the chain, capped.
  *
+ * Audience-aware: if any to/cc/bcc recipient is not an internal user (or recipients are
+ * omitted), Message-IDs of internal-only mail are removed from the chain so a customer's
+ * copy never references them. Internal-only mail keeps the full chain.
+ *
  * Best-effort: any failure is logged and never blocks the send.
  */
 export async function applyTicketThreadHeaders(params: {
@@ -351,6 +495,8 @@ export async function applyTicketThreadHeaders(params: {
   fromDomain?: string | null;
   headers: Record<string, string>;
   serviceName: string;
+  /** Outgoing recipients; omitted means the audience is treated as external. */
+  recipients?: { to?: string[]; cc?: string[]; bcc?: string[] };
 }): Promise<void> {
   if (!params.tenantId || !params.ticketId) {
     return;
@@ -383,7 +529,40 @@ export async function applyTicketThreadHeaders(params: {
         });
     }
 
-    const priorReferences = Array.isArray(meta.references) ? meta.references : [];
+    let priorReferences: string[] = Array.isArray(meta.references) ? meta.references : [];
+    if (priorReferences.length > 0) {
+      try {
+        const recipientAddresses = params.recipients
+          ? [
+            ...(params.recipients.to ?? []),
+            ...(params.recipients.cc ?? []),
+            ...(params.recipients.bcc ?? []),
+          ].map((address) => extractEmailAddress(address).toLowerCase())
+          : [];
+        const internalEmails = recipientAddresses.length > 0
+          ? await findInternalUserEmails(knex, params.tenantId, recipientAddresses)
+          : new Set<string>();
+        const externalFacing =
+          recipientAddresses.length === 0 ||
+          recipientAddresses.some((address) => !internalEmails.has(address));
+        if (externalFacing) {
+          priorReferences = await filterReferencesForExternalAudience({
+            knex,
+            tenantId: params.tenantId,
+            root,
+            priorReferences,
+          });
+        }
+      } catch (error) {
+        // Leaking internal ids is the defect, so fall back to root-only headers.
+        priorReferences = [];
+        logger.warn(`[${params.serviceName}] Failed to filter ticket thread references; using root-only headers`, {
+          tenantId: params.tenantId,
+          ticketId: params.ticketId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
     const { inReplyTo, references } = buildTicketThreadHeaders(root, priorReferences);
 
     params.headers['In-Reply-To'] = inReplyTo;
@@ -571,6 +750,11 @@ export abstract class BaseEmailService {
           fromDomain,
           headers,
           serviceName: this.getServiceName(),
+          recipients: {
+            to: this.convertToProviderAddressArray(params.to).map((a) => a.email),
+            cc: params.cc ? this.convertToProviderAddressArray(params.cc).map((a) => a.email) : undefined,
+            bcc: params.bcc ? this.convertToProviderAddressArray(params.bcc).map((a) => a.email) : undefined,
+          },
         });
       } else {
         // Non-ticket comment threads keep their existing comment-scoped behavior.
@@ -642,6 +826,13 @@ export abstract class BaseEmailService {
         correlationId: params.correlationId || workflowMessageId,
         actor: workflowActor,
       };
+      emailMessage.tags = buildProviderTags({
+        tenantId,
+        workflowMessageId,
+        correlationId: params.correlationId,
+        ticketId: maybeTicketId,
+        threadId: maybeThreadId,
+      });
 
       try {
         await publishWorkflowEvent({
@@ -864,6 +1055,19 @@ export abstract class BaseEmailService {
         params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
           ? { ...params.providerResult.metadata }
           : {};
+      // On-wire contract (onWireMessageId.ts): when the provider reported an id that is not the one we
+      // stamped on the message, rfc_message_id holds the on-wire id (above) and the generated id is kept
+      // here, so it stays resolvable for References already sent to customers.
+      const generatedHeaderId = getHeaderValue(params.message.headers, 'Message-ID');
+      if (
+        params.providerResult.success &&
+        rfcMessageId &&
+        generatedHeaderId &&
+        !sameMessageId(rfcMessageId, generatedHeaderId) &&
+        typeof baseMetadata.generatedRfcMessageId !== 'string'
+      ) {
+        baseMetadata.generatedRfcMessageId = generatedHeaderId;
+      }
       const existingDiagnostics =
         baseMetadata.algaDiagnostics && typeof baseMetadata.algaDiagnostics === 'object'
           ? baseMetadata.algaDiagnostics

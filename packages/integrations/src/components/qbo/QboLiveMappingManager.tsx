@@ -21,7 +21,7 @@ export function QboLiveMappingManager({ defaultConnection }: QboLiveMappingManag
   }), [defaultConnection]);
 
   const tabStyles = {
-    list: 'grid w-full grid-cols-3',
+    list: 'flex w-full flex-wrap',
     trigger: 'data-[state=active]:shadow-none'
   };
 

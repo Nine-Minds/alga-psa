@@ -163,7 +163,7 @@ function buildBodyHtml(c) {
                     <td style="padding:12px 0;">{{invoice.paymentMethod}}</td>
                   </tr>
                 </table>
-                <a href="{{invoice.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;margin-top:20px;">${c.viewButton}</a>`;
+                {{#if invoice.url}}<a href="{{invoice.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;margin-top:20px;">${c.viewButton}</a>{{/if}}`;
 }
 
 function buildText(c) {
@@ -175,8 +175,8 @@ ${c.invoiceNumberLabel}: {{invoice.number}}
 ${c.amountPaidLabel}: {{invoice.amountPaid}}
 ${c.paymentDateLabel}: {{invoice.paymentDate}}
 ${c.paymentMethodLabel}: {{invoice.paymentMethod}}
-
-${c.viewButton}: {{invoice.url}}`;
+{{#if invoice.url}}
+${c.viewButton}: {{invoice.url}}{{/if}}`;
 }
 
 function getTemplate() {

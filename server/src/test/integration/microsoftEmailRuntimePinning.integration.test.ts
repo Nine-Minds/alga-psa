@@ -78,6 +78,12 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 const MONITORED_FOLDER_ID = vi.hoisted(() => 'monitored-inbox-folder-id');
+const NESTED_FOLDER_ID = vi.hoisted(() => 'nested-alga-inbox-folder-id');
+const capturedFolderFilters = vi.hoisted(() => [] as unknown[]);
+
+/** Mirrors the adapter: a nested filter resolves to the child folder's id. */
+const hasNestedFilter = vi.hoisted(() => (folderFilters: unknown) =>
+  /[\\/]/.test(typeof folderFilters === 'string' ? folderFilters : JSON.stringify(folderFilters ?? [])));
 
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
   MicrosoftSubscriptionError: class MicrosoftSubscriptionError extends Error {
@@ -102,10 +108,13 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     // fetchMicrosoftMessageForPointer rejects any message outside a monitored
     // folder; the resolver/token path under test assumes an in-scope message.
     async getMessageParentFolderId() {
-      return MONITORED_FOLDER_ID;
+      return hasNestedFilter(this.config.provider_config?.folder_filters)
+        ? NESTED_FOLDER_ID
+        : MONITORED_FOLDER_ID;
     }
-    async resolveFolderIds() {
-      return new Set([MONITORED_FOLDER_ID]);
+    async resolveFolderIds(folderFilters: unknown) {
+      capturedFolderFilters.push(folderFilters);
+      return new Set([hasNestedFilter(folderFilters) ? NESTED_FOLDER_ID : MONITORED_FOLDER_ID]);
     }
   },
 }));
@@ -170,6 +179,7 @@ async function seedPinnedProvider(overrides: {
   profileId?: string | null;
   clientSecretRef?: string | null;
   active?: boolean;
+  folderFilters?: string[];
 } = {}): Promise<string> {
   const providerId = uuidv4();
   const now = new Date();
@@ -199,7 +209,7 @@ async function seedPinnedProvider(overrides: {
     redirect_uri: 'https://psa.example.com/api/auth/microsoft/callback',
     auto_process_emails: true,
     max_emails_per_sync: 50,
-    folder_filters: JSON.stringify(['Inbox']),
+    folder_filters: JSON.stringify(overrides.folderFilters ?? ['Inbox']),
     access_token: 'runtime-access',
     refresh_token: 'runtime-refresh',
     token_expires_at: new Date(Date.now() + 3600000).toISOString(),
@@ -290,6 +300,7 @@ describe('Microsoft inbound email runtime issuer pinning (DB-backed)', () => {
 
   beforeEach(() => {
     capturedAdapterConfigs.length = 0;
+    capturedFolderFilters.length = 0;
   });
 
   describe('unified queue worker token path', () => {
@@ -306,6 +317,19 @@ describe('Microsoft inbound email runtime issuer pinning (DB-backed)', () => {
         resolved_client_id: 'profile-client-id',
         resolved_credential_source: 'profile',
       });
+    });
+
+    it('accepts a message living in a nested folder filter (Inbox\\AlgaInbox)', async () => {
+      const providerId = await seedPinnedProvider({ folderFilters: ['Inbox\\AlgaInbox'] });
+
+      const result = await processUnifiedInboundEmailQueueJob(unifiedJob(providerId));
+
+      // The nested filter reaches resolveFolderIds verbatim, and the message
+      // sitting in the resolved child folder passes the monitored-folder gate.
+      expect(result.outcome).toBe('processed');
+      const captured = capturedFolderFilters[capturedFolderFilters.length - 1];
+      const filters = typeof captured === 'string' ? JSON.parse(captured) : captured;
+      expect(filters).toEqual(['Inbox\\AlgaInbox']);
     });
 
     it('fails closed when the pinned profile no longer exists (ms_email_provider_not_found)', async () => {

@@ -62,6 +62,24 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'webhook-endpoint',
+    description:
+      'Create a webhook endpoint with a fixed id and signing secret (deterministic test setup); events are delivered to its current URL signed with that secret',
+    params: z.object({
+      id: z.string().optional(),
+      url: z.string(),
+      enabledEvents: z.array(z.string()).min(1).default(['*']),
+      secret: z.string().optional(),
+      description: z.string().optional(),
+    }),
+    run: ({ id, url, enabledEvents, secret, description }) => {
+      if (id && core.webhookEndpoints.has(id)) core.deleteWebhookEndpoint(id);
+      const created = core.createWebhookEndpoint({ id, url, enabled_events: enabledEvents ?? ['*'], secret, description });
+      return { ...created, secret: redactCredential(created.secret ?? '') };
+    },
+  });
+
+  reg.seeder({
     name: 'customer',
     description: 'Create a Stripe customer directly (deterministic test setup)',
     params: z.object({
@@ -69,7 +87,47 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       name: z.string().optional(),
       id: z.string().optional(),
     }),
-    run: ({ email, name }) => core.createCustomer({ email, name }),
+    run: ({ email, name, id }) => core.createCustomer({ id, email, name }),
+  });
+
+  reg.seeder({
+    name: 'product',
+    description: 'Create or update a product that prices reference (deterministic test setup)',
+    params: z.object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
+    }),
+    run: ({ id, name, description, metadata }) => core.createProduct({ id, name, description, metadata }),
+  });
+
+  reg.seeder({
+    name: 'price',
+    description: 'Create a recurring or one-time price for subscription checkout (deterministic test setup)',
+    params: z.object({
+      id: z.string().optional(),
+      unitAmount: z.number().int().nonnegative(),
+      currency: z.string().optional(),
+      interval: z.enum(['month', 'year']).optional(),
+      product: z.string().optional(),
+    }),
+    run: ({ id, unitAmount, currency, interval, product }) => core.createPrice({ id, unitAmount, currency, interval, product }),
+  });
+
+  reg.seeder({
+    name: 'subscription',
+    description: 'Create a subscription directly for a customer (deterministic test setup)',
+    params: z.object({
+      customer: z.string(),
+      priceId: z.string(),
+      quantity: z.number().int().positive().default(1),
+      metadata: z.record(z.string(), z.string()).optional(),
+      status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'incomplete_expired']).optional(),
+      cancelAtPeriodEnd: z.boolean().optional(),
+    }),
+    run: ({ customer, priceId, quantity, metadata, status, cancelAtPeriodEnd }) =>
+      core.createSubscription({ customer, priceId, quantity, metadata, status, cancelAtPeriodEnd }),
   });
 
   reg.action({
@@ -108,7 +166,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
   reg.fault({
     name: 'operation-fault',
     description:
-      'Fail a specific operation ("customers.list", "customers.create", "customers.retrieve", "checkout.sessions.create", "checkout.sessions.retrieve", "checkout.sessions.expire") with a Stripe error envelope, optionally only N times',
+      'Fail a specific operation (customers.*, checkout.sessions.*, webhook_endpoints.*) with a Stripe error envelope, optionally only N times',
     params: z.object({
       operation: z.enum([
         'customers.list',
@@ -117,6 +175,11 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
         'checkout.sessions.create',
         'checkout.sessions.retrieve',
         'checkout.sessions.expire',
+        'webhook_endpoints.create',
+        'webhook_endpoints.retrieve',
+        'webhook_endpoints.update',
+        'webhook_endpoints.delete',
+        'webhook_endpoints.list',
       ]),
       status: z.number().int().min(400).max(599).default(500),
       code: z.string().default('api_error'),
@@ -157,6 +220,30 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     name: 'payment-intents',
     description: 'Payment intents',
     get: () => [...core.paymentIntents.values()],
+  });
+
+  reg.stateView({
+    name: 'products',
+    description: 'Products',
+    get: () => [...core.products.values()],
+  });
+
+  reg.stateView({
+    name: 'prices',
+    description: 'Prices',
+    get: () => [...core.prices.values()],
+  });
+
+  reg.stateView({
+    name: 'subscriptions',
+    description: 'Subscriptions',
+    get: () => [...core.subscriptions.values()],
+  });
+
+  reg.stateView({
+    name: 'webhook-endpoints',
+    description: 'Webhook endpoints (current URL, enabled events, status); signing secrets are never shown',
+    get: () => core.listWebhookEndpoints().data,
   });
 
   reg.stateView({

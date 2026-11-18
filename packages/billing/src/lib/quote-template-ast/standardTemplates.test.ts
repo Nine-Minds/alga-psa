@@ -121,18 +121,26 @@ describe('standard quote template AST definitions', () => {
     expect(serialized).not.toContain('Monthly Total');
   });
 
-  it('ships a catalog migration whose grouped AST literal matches the code AST', async () => {
+  it('ships a catalog migration whose AST literals match the code ASTs', async () => {
     const migration = await import(
       /* @vite-ignore */ path.resolve(
         __dirname,
-        '../../../../../server/migrations/20260920120000_update_grouped_quote_template_cadence_bands.cjs'
+        '../../../../../server/migrations/20261105120000_update_standard_quote_templates_edited_description.cjs'
       )
     );
-    const literal =
-      (migration as any).__GROUPED_QUOTE_AST ?? (migration as any).default?.__GROUPED_QUOTE_AST;
-    expect(literal).toBeTruthy();
-    // Guards R4: editing buildStandardQuoteGroupedAst without regenerating the
-    // migration literal would leave existing environments on the old layout.
-    expect(literal).toEqual(getStandardQuoteTemplateAstByCode('standard-quote-grouped'));
+    const literals =
+      (migration as any).__STANDARD_QUOTE_TEMPLATE_ASTS ??
+      (migration as any).default?.__STANDARD_QUOTE_TEMPLATE_ASTS;
+    expect(literals).toBeTruthy();
+    expect(Object.keys(literals).sort()).toEqual(Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS).sort());
+
+    // The renderer reads the catalog row before the code AST, so editing a
+    // build*Ast without regenerating the migration literal would leave every
+    // existing environment on the old layout.
+    for (const code of Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS)) {
+      expect(literals[code], `${code} migration literal`).toEqual(
+        getStandardQuoteTemplateAstByCode(code),
+      );
+    }
   });
 });

@@ -19,6 +19,7 @@ describe('TicketService.getTicketDocuments', () => {
   const context = {
     tenant: 'tenant-1',
     userId: 'user-1',
+    user: { user_type: 'internal' },
   } as any;
 
   it('T010: returns the document list for a ticket', async () => {
@@ -41,6 +42,12 @@ describe('TicketService.getTicketDocuments', () => {
       if (table === 'ticket_comment_attachments') {
         // Standalone ticket documents have no lifecycle row and keep their original policy.
         const builder: any = { where: vi.fn(() => builder), first: vi.fn(async () => undefined) };
+        return builder;
+      }
+
+      if (table === 'users') {
+        // An MSP staff reader: no comment that owns the document is hidden from them.
+        const builder: any = { where: vi.fn(() => builder), first: vi.fn(async () => ({ document_visible: true })) };
         return builder;
       }
 

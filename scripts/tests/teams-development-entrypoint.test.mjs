@@ -31,18 +31,30 @@ test('Teams development compose supplies CSS configuration that generates dialog
     });
     assert.equal(generated.status, 0, generated.stderr);
     const { services: { server } } = JSON.parse(readFileSync(path.join(temporary, 'teams-development-compose.json'), 'utf8'));
+    // The development runtime (docker-compose.e2e-development.yaml) mounts the
+    // whole checkout at /app, so the CSS configuration and the source trees
+    // Tailwind scans are the checkout's own; the step's override adds nothing
+    // for them and must not shadow them.
+    const runtime = yaml.load(readFileSync(path.join(root, 'docker-compose.e2e-development.yaml'), 'utf8'));
+    const workspace = runtime.services.server.volumes.find(volume => volume.target === '/app');
+    assert.equal(workspace.type, 'bind');
+    assert.match(workspace.source, /^\$\{E2E_DEVELOPMENT_WORKSPACE/);
+    assert.match(step.run, /export E2E_DEVELOPMENT_WORKSPACE="\$GITHUB_WORKSPACE"/);
+    assert.match(step.run, /COMPOSE_FILE="\$COMPOSE_FILE:docker-compose\.e2e-development\.yaml:/);
+    for (const target of ['/app/packages', '/app/ee', '/app/server/postcss.config.mjs', '/app/server/tailwind.config.ts', '/app/node_modules']) {
+      assert.equal(server.volumes.find(volume => volume.target === target), undefined, `${target} comes from the mounted checkout`);
+    }
     const app = path.join(temporary, 'app');
     mkdirSync(path.join(app, 'server'), { recursive: true });
     symlinkSync(path.join(root, 'node_modules'), path.join(app, 'node_modules'));
     for (const target of ['/app/packages', '/app/ee', '/app/server/postcss.config.mjs', '/app/server/tailwind.config.ts']) {
-      const mount = server.volumes.find(volume => volume.target === target);
-      assert.ok(mount, `Development compiler is missing ${target}`);
-      assert.equal(mount.read_only, true);
-      // Copy configuration so its discovery behaves like a container bind mount,
-      // while the source directories remain available for Tailwind's content scan.
+      // Lay the checkout's files out as the container sees them: configuration
+      // copied so its discovery behaves like the mount, source trees linked so
+      // Tailwind's content scan reaches them.
+      const source = path.join(root, target.slice('/app/'.length));
       const destination = path.join(temporary, target);
-      if (target.endsWith('.mjs') || target.endsWith('.ts')) writeFileSync(destination, readFileSync(mount.source));
-      else symlinkSync(mount.source, destination);
+      if (target.endsWith('.mjs') || target.endsWith('.ts')) writeFileSync(destination, readFileSync(source));
+      else symlinkSync(source, destination);
     }
     writeFileSync(path.join(app, 'server/compile.mjs'), `
       import postcss from 'postcss';

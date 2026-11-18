@@ -54,6 +54,9 @@ vi.mock("@alga-psa/ui/components/CustomTabs", () => ({
 vi.mock("../src/components/settings/billing/QuoteSettings", () => ({
   default: () => null,
 }));
+vi.mock("../src/components/settings/billing/DefaultPaymentTermsSettings", () => ({
+  default: () => null,
+}));
 vi.mock("../src/components/settings/billing/DefaultCurrencySettings", () => ({
   default: () => null,
 }));

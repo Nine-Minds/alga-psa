@@ -9,7 +9,6 @@ import { tenantDb, type TenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeEmailAddress } from '../lib/email/addressUtils';
 import { ContactModel } from '../models/contactModel';
-import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
 
 // =============================================================================
 // INTERFACES
@@ -169,19 +168,6 @@ export interface CreateCommentFromEmailOutput {
   comment_id: string;
   ticket_id: string;
   content: string;
-  created_at: string;
-}
-
-export interface CreateClientFromEmailInput {
-  client_name: string;
-  email: string;
-  source: string;
-}
-
-export interface CreateClientFromEmailOutput {
-  client_id: string;
-  client_name: string;
-  email: string;
   created_at: string;
 }
 
@@ -503,41 +489,6 @@ export class EmailService {
       };
     } catch (error: any) {
       logger.error('Error creating comment from email:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create client from email
-   */
-  async createClientFromEmail(input: CreateClientFromEmailInput): Promise<CreateClientFromEmailOutput> {
-    try {
-      const clientId = uuidv4();
-      const now = new Date();
-
-      await this.db().table('clients').insert({
-        client_id: clientId,
-        tenant: this.tenant,
-        client_name: input.client_name,
-        email: input.email,
-        source: input.source,
-        created_at: now,
-        updated_at: now
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(this.knex, {
-        tenant: this.tenant,
-        clientId,
-      });
-
-      return {
-        client_id: clientId,
-        client_name: input.client_name,
-        email: input.email,
-        created_at: now.toISOString()
-      };
-    } catch (error: any) {
-      logger.error('Error creating client from email:', error);
       throw error;
     }
   }

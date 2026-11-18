@@ -21,7 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'datto' | 'connectwise_automate' | 'huntress';
+// LEVERAGE: pattern rmm-provider-union — RmmProvider is duplicated in three files; every new provider edits all of them
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'tanium' | 'levelio' | 'unifi' | 'datto' | 'connectwise_automate' | 'huntress';
 export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 export interface Asset {
@@ -174,8 +175,10 @@ export interface DiskUsageInfo {
 export interface RmmStorageInfo {
   name: string;
   total_gb: number;
-  free_gb: number;
-  utilization_percent: number;
+  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
+  free_gb?: number | null;
+  /** Absent when free space is unknown; never substitute 0. */
+  utilization_percent?: number | null;
 }
 
 // Cached RMM data structure (returned by getAssetRmmData)
@@ -279,7 +282,7 @@ export interface AssetDocument {
 
 // Maintenance interfaces
 export type MaintenanceFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-export type MaintenanceType = 'preventive' | 'inspection' | 'calibration' | 'replacement';
+export type MaintenanceType = 'preventive' | 'corrective' | 'inspection' | 'calibration' | 'replacement';
 export type MaintenanceStatus = 'due' | 'overdue' | 'upcoming' | 'completed';
 
 export interface AssetMaintenanceSchedule {

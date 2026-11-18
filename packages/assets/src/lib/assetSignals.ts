@@ -84,11 +84,15 @@ export function formatAge(iso: string | null | undefined, now: number, t: TFn): 
   return new Date(iso).toLocaleDateString();
 }
 
-/** The disk the operator cares about is the fullest one. */
+/**
+ * The disk the operator cares about is the fullest one. Disks whose
+ * utilisation is unknown (capacity-only providers) rank below any measured
+ * disk; if none is measured, the first disk is returned.
+ */
 export function worstStorage(storage: RmmStorageInfo[] | undefined): RmmStorageInfo | null {
   if (!storage?.length) return null;
   return storage.reduce((worst, current) =>
-    current.utilization_percent > worst.utilization_percent ? current : worst
+    (current.utilization_percent ?? -1) > (worst.utilization_percent ?? -1) ? current : worst
   );
 }
 

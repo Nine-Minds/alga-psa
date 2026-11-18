@@ -11,6 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { createVendorCore } from '../lib/vendors';
 
 /** Open PO statuses that block deactivating the vendor they belong to. */
 const OPEN_PO_STATUSES: PurchaseOrderStatus[] = ['draft', 'open', 'partially_received'];
@@ -87,33 +88,14 @@ export const createVendor = withAuth(
     if (!(await hasPermission(user, 'vendor', 'create'))) {
       return permissionError('Permission denied: vendor create required', 'features/inventory:errors.permissions.vendorCreate');
     }
-    const vendorName = (input.vendor_name ?? '').trim();
-    if (!vendorName) return actionError('Vendor name is required', 'features/inventory:errors.vendors.nameRequired');
-
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      // vendor_name is unique per tenant; surface a clean error instead of a raw constraint violation.
-      const existing = await trx('vendors')
-        .where({ tenant })
-        .whereRaw('LOWER(vendor_name) = LOWER(?)', [vendorName])
-        .first();
-      if (existing) return actionError(`A vendor named "${vendorName}" already exists`, 'features/inventory:errors.vendors.duplicateName', { name: vendorName });
-
-      const [row] = await trx('vendors')
-        .insert({
-          tenant,
-          vendor_name: vendorName,
-          contact_name: input.contact_name ?? null,
-          email: input.email ?? null,
-          phone: input.phone ?? null,
-          website: input.website ?? null,
-          payment_terms: input.payment_terms ?? null,
-          account_number: input.account_number ?? null,
-          notes: input.notes ?? null,
-          is_active: true,
-        })
-        .returning('*');
-      return row as IVendor;
+      const result = await createVendorCore(trx, tenant, input);
+      if (result.ok === true) return result.vendor;
+      if (result.code === 'name_required') {
+        return actionError('Vendor name is required', 'features/inventory:errors.vendors.nameRequired');
+      }
+      return actionError(`A vendor named "${result.name}" already exists`, 'features/inventory:errors.vendors.duplicateName', { name: result.name });
     });
   },
 );

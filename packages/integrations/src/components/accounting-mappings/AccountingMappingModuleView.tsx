@@ -55,6 +55,9 @@ export function AccountingMappingModuleView({
   const [algaOptions, setAlgaOptions] = useState<AccountingMappingEntityOption[]>([]);
   const [externalOptions, setExternalOptions] = useState<AccountingMappingEntityOption[]>([]);
   const [bulkMode, setBulkMode] = useState(false);
+  // Searched modules read every Alga entity only for the bulk grid, whose rows are those entities.
+  const [bulkAlgaOptions, setBulkAlgaOptions] = useState<AccountingMappingEntityOption[] | null>(null);
+  const [bulkLoadError, setBulkLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,12 +75,19 @@ export function AccountingMappingModuleView({
         ? await overrides.loadData(context)
         : await module.load(context);
 
-      setAlgaOptions(result.algaEntities);
+      // A searched Alga side is named only for the entities that hold a mapping.
+      const algaEntities = module.algaSearch
+        ? await module.algaSearch.resolve(
+            Array.from(new Set(result.mappings.map((mapping) => mapping.alga_entity_id)))
+          )
+        : result.algaEntities;
+
+      setAlgaOptions(algaEntities);
       setExternalOptions(result.externalEntities);
 
       const display = enrichMappings(
         result.mappings,
-        result.algaEntities,
+        algaEntities,
         result.externalEntities,
         module
       );
@@ -92,6 +102,24 @@ export function AccountingMappingModuleView({
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const algaSearch = module.algaSearch;
+  useEffect(() => {
+    if (!bulkMode || !algaSearch || bulkAlgaOptions) return;
+    let cancelled = false;
+    setBulkLoadError(null);
+    algaSearch
+      .loadAll(context)
+      .then((options) => {
+        if (!cancelled) setBulkAlgaOptions(options);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setBulkLoadError(getErrorMessage(loadError));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bulkMode, algaSearch, bulkAlgaOptions, context]);
 
   const handleCreateOrUpdate = useCallback(
     async (rawInput: {
@@ -268,6 +296,16 @@ export function AccountingMappingModuleView({
           return name;
         }
       },
+      ...(module.metadata?.fields ?? []).map((field) => ({
+        title: field.columnLabel ?? field.label,
+        dataIndex: `metadata.${field.key}`,
+        render: (_value: unknown, record: DisplayMapping) => {
+          const value = (record.metadata as Record<string, unknown> | null | undefined)?.[field.key];
+          return typeof value === 'string' && value.trim()
+            ? value
+            : t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' });
+        }
+      })),
       {
         title: t('integrations.accounting.moduleView.actionsColumn', { defaultValue: 'Actions' }),
         dataIndex: 'id',
@@ -322,7 +360,7 @@ export function AccountingMappingModuleView({
         }
       }
     ],
-    [module.labels, module.elements, module.id, t]
+    [module.labels, module.elements, module.id, module.metadata?.fields, t]
   );
 
   if (isLoading) {
@@ -370,10 +408,14 @@ export function AccountingMappingModuleView({
         </Button>
       </div>
 
-      {bulkMode ? (
+      {bulkMode && algaSearch && bulkLoadError ? (
+        <div className="text-destructive">{bulkLoadError}</div>
+      ) : bulkMode && algaSearch && !bulkAlgaOptions ? (
+        <div>{t('integrations.accounting.moduleView.loading', { defaultValue: 'Loading mappings…' })}</div>
+      ) : bulkMode ? (
         <AccountingMappingBulkGrid
           module={module}
-          algaEntities={algaOptions}
+          algaEntities={algaSearch ? bulkAlgaOptions ?? [] : algaOptions}
           externalEntities={externalOptions}
           mappings={mappings}
           onSave={handleBulkSave}

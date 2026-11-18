@@ -9,6 +9,7 @@ import type {
   AccountingExportServicePeriodSource
 } from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 
 /** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
 export type AccountingExportAdapterLookup = {
@@ -66,6 +67,7 @@ type ServiceProjection = {
   tenant: string;
   service_id: string;
   service_name: string;
+  item_kind?: string | null;
 };
 
 function buildLineServicePeriodMetadata(
@@ -165,6 +167,19 @@ export class AccountingExportValidation {
 
     const resolver = await AccountingMappingResolver.create();
     const adapterType = batch.adapter_type;
+    const isQuickBooksDesktop = adapterType === 'quickbooks_desktop';
+    // Desktop invoice lines must name an item (see QuickBooksDesktopAdapter), so a
+    // Desktop service/discount mapping without one blocks the batch like a
+    // missing mapping does, and the export prompt fills the item in.
+    const lacksDesktopItem = (mapping: MappingResolution | null): boolean => {
+      if (!isQuickBooksDesktop || !mapping) return false;
+      const item = mapping.metadata?.qbdItem;
+      return typeof item !== 'string' || item.trim().length === 0;
+    };
+    const desktopMappingRef = (mapping: MappingResolution | null): Record<string, unknown> =>
+      isQuickBooksDesktop && mapping
+        ? { desktop_account: mapping.external_entity_id, desktop_mapping_source: mapping.source }
+        : {};
     const isQuickBooks = adapterType === 'quickbooks_online' || adapterType === 'quickbooks_csv';
     // Company sync and mapping resolution stay period-agnostic. Export validation is the first
     // accounting seam that should care about recurring timing, and it must use canonical
@@ -245,7 +260,7 @@ export class AccountingExportValidation {
         : [];
     const invoiceTaxSourceById = new Map(invoices.map((row) => [row.invoice_id, row.tax_source]));
     const clientIds = new Set<string>();
-    if (isQuickBooks) {
+    if (isQuickBooks || isQuickBooksDesktop) {
       for (const invoice of invoices) {
         if (invoice.client_id) {
           clientIds.add(invoice.client_id);
@@ -333,6 +348,46 @@ export class AccountingExportValidation {
       }
     }
 
+    // QuickBooks Desktop creates any customer name it does not know when it
+    // imports an IIF file, so an unmapped client must be decided explicitly
+    // (link to an existing customer or create it) rather than guessed.
+    if (isQuickBooksDesktop) {
+      const flaggedClients = new Set<string>();
+      for (const invoice of invoices) {
+        if (!invoice.client_id || flaggedClients.has(invoice.client_id)) {
+          continue;
+        }
+        const mapping = await resolver.resolveClientMapping({
+          tenantId: tenant,
+          adapterType,
+          clientId: invoice.client_id,
+          targetRealm: batch.target_realm
+        });
+        flaggedClients.add(invoice.client_id);
+        if (mapping) {
+          continue;
+        }
+        const lineId = firstLineByInvoice.get(invoice.invoice_id);
+        const line = lineId ? lineById.get(lineId) : null;
+        if (lineId) {
+          const clientName = clientsById.get(invoice.client_id)?.client_name ?? invoice.client_id;
+          await repo.addError({
+            batch_id: batchId,
+            line_id: lineId,
+            code: 'missing_client_mapping',
+            message: `No QuickBooks customer mapping for client "${clientName}"`,
+            metadata: mergeErrorMetadata(line, {
+              client_id: invoice.client_id,
+              client_name: clientName,
+              alga_entity_type: 'client',
+              alga_entity_id: invoice.client_id,
+              alga_name: clientName
+            })
+          });
+        }
+      }
+    }
+
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
     const invalidTaxRegions = new Set<string>();
@@ -364,11 +419,14 @@ export class AccountingExportValidation {
     const services =
       serviceIds.size > 0
         ? await db.table<ServiceProjection>('service_catalog')
-            .select('service_id', 'service_name')
+            .select('service_id', 'service_name', 'item_kind')
             .whereIn('service_id', Array.from(serviceIds))
         : [];
     const serviceNameById = new Map<string, string>(
       services.map((row) => [row.service_id, row.service_name])
+    );
+    const serviceKindById = new Map<string, string | null>(
+      services.map((row) => [row.service_id, row.item_kind ?? null])
     );
 
     for (const line of lines) {
@@ -489,14 +547,22 @@ export class AccountingExportValidation {
           adapterType,
           targetRealm: batch.target_realm
         });
-        if (!mapping) {
+        const discountLacksItem = Boolean(mapping) && lacksDesktopItem(mapping);
+        if (!mapping || discountLacksItem) {
           await repo.addError({
             batch_id: batchId,
             line_id: line.line_id,
             code: 'missing_discount_mapping',
-            message:
-              'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
-            metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+            message: discountLacksItem
+              ? 'The QuickBooks Desktop discount mapping has no item name. Set the item on Settings → Integrations → QuickBooks Desktop → Discounts.'
+              : 'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
+            metadata: mergeErrorMetadata(line, {
+              invoice_charge_id: line.document_line_id,
+              alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE,
+              alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
+              alga_name: 'Discount',
+              ...desktopMappingRef(mapping)
+            })
           });
         }
         checkedServiceMappings.add(discountMappingKey);
@@ -510,19 +576,26 @@ export class AccountingExportValidation {
           targetRealm: batch.target_realm,
           serviceId: charge.service_id
         });
+        const serviceLacksItem = Boolean(mapping) && lacksDesktopItem(mapping);
 
-        if (!mapping && !missingServiceMappings.has(serviceMappingKey)) {
+        if ((!mapping || serviceLacksItem) && !missingServiceMappings.has(serviceMappingKey)) {
           const serviceName = serviceNameById.get(charge.service_id) ?? null;
+          const serviceLabel = serviceName ? `"${serviceName}"` : charge.service_id;
           await repo.addError({
             batch_id: batchId,
             line_id: line.line_id,
             code: 'missing_service_mapping',
-            message: serviceName
-              ? `No mapping for service "${serviceName}"`
-              : `No mapping for service ${charge.service_id}`,
+            message: serviceLacksItem
+              ? `The QuickBooks Desktop mapping for service ${serviceLabel} has no item name`
+              : `No mapping for service ${serviceLabel}`,
             metadata: mergeErrorMetadata(line, {
               service_id: charge.service_id,
-              service_name: serviceName
+              service_name: serviceName,
+              alga_entity_type: 'service',
+              alga_entity_id: charge.service_id,
+              alga_name: serviceName,
+              item_kind: serviceKindById.get(charge.service_id) ?? null,
+              ...desktopMappingRef(mapping)
             })
           });
           missingServiceMappings.add(serviceMappingKey);

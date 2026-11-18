@@ -29,6 +29,7 @@ function createRecord(
     verification_details: {},
     certificate_secret_name: null,
     last_synced_resource_version: null,
+    surface: 'client_portal',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

@@ -4,10 +4,10 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import { EmailProviderCard } from './EmailProviderCard';
 
-function buildProvider(overrides: Partial<EmailProvider> = {}): EmailProvider {
+function buildProvider(overrides: Partial<PublicEmailProvider> = {}): PublicEmailProvider {
   return {
     id: 'provider-1',
     tenant: 'tenant-1',
@@ -24,7 +24,7 @@ function buildProvider(overrides: Partial<EmailProvider> = {}): EmailProvider {
   };
 }
 
-function renderCard(provider: EmailProvider, onReconnect = vi.fn()) {
+function renderCard(provider: PublicEmailProvider, onReconnect = vi.fn()) {
   const handlers = {
     onEdit: vi.fn(),
     onDelete: vi.fn(),

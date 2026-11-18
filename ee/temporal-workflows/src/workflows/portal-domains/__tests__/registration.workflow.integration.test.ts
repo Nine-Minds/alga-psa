@@ -22,6 +22,7 @@ describe('portalDomainRegistrationWorkflow', () => {
       verification_details: { expected_cname: 'tenant123.portal.algapsa.com' },
       certificate_secret_name: null,
       last_synced_resource_version: null,
+      surface: 'client_portal',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -103,6 +104,7 @@ describe('portalDomainRegistrationWorkflow', () => {
       verification_details: { expected_cname: 'tenantok.portal.algapsa.com' },
       certificate_secret_name: null,
       last_synced_resource_version: null,
+      surface: 'client_portal',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -204,6 +206,7 @@ describe('portalDomainRegistrationWorkflow', () => {
       verification_details: { expected_cname: 'tenantretry.portal.algapsa.com' },
       certificate_secret_name: null,
       last_synced_resource_version: null,
+      surface: 'client_portal',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

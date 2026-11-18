@@ -21,6 +21,7 @@ import {
   clientLocationCoreFieldsSchema,
   emailFieldSchema
 } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
 // REST API and the server actions accept and reject exactly the same inputs.
@@ -184,18 +185,18 @@ export const clientResponseSchema = z.object({
 
 // Client location schemas
 export const createClientLocationSchema = z.object({
-  location_name: z.string().optional(),
+  location_name: z.string().nullable().optional(),
   // A location may carry only a phone or email (a field tech logging a client
   // from a call); the shared writer and the web quick-add allow an empty street.
   address_line1: z.string().optional().default(''),
-  address_line2: z.string().optional(),
-  address_line3: z.string().optional(),
+  address_line2: z.string().nullable().optional(),
+  address_line3: z.string().nullable().optional(),
   city: z.string().optional().default(''),
-  state_province: z.string().optional(),
-  postal_code: z.string().optional(),
+  state_province: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
   country_code: z.string().min(2).max(3),
   country_name: z.string().min(1, 'Country name is required'),
-  region_code: z.string().optional(),
+  region_code: z.string().nullable().optional(),
   is_billing_address: z.boolean().optional().default(false),
   is_shipping_address: z.boolean().optional().default(false),
   is_default: z.boolean().optional().default(false),
@@ -204,12 +205,12 @@ export const createClientLocationSchema = z.object({
   fax: locationFaxField,
   fax_extension: locationFaxExtensionField,
   email: locationEmailField,
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   is_active: z.boolean().optional().default(true)
 });
 
 // Typed partial (createUpdateSchema takes ZodObject<any>, which would erase the email type).
-export const updateClientLocationSchema = createClientLocationSchema.partial().extend({
+export const updateClientLocationSchema = partialWithoutDefaults(createClientLocationSchema).extend({
   // null clears the email; a blank string is "not sent", matching the shared optional() helper.
   email: z
     .union([z.null(), z.literal('').transform(() => undefined), emailFieldSchema])
@@ -239,6 +240,8 @@ export const clientLocationResponseSchema = z.object({
   email: z.string().nullable(),
   notes: z.string().nullable(),
   is_active: z.boolean(),
+  /** How many contacts work at this location; a non-zero count is why a delete is refused. */
+  contact_count: z.number().int().min(0).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema
@@ -266,8 +269,8 @@ export const clientStatsResponseSchema = z.object({
   total_clients: z.number(),
   active_clients: z.number(),
   inactive_clients: z.number(),
-  clients_by_billing_cycle: z.record(z.number()),
-  clients_by_client_type: z.record(z.number()),
+  clients_by_billing_cycle: z.record(z.string(), z.number()),
+  clients_by_client_type: z.record(z.string(), z.number()),
   total_credit_balance: z.number(),
   average_credit_balance: z.number()
 });
@@ -333,7 +336,7 @@ export const clientMergeResponseSchema = z.object({
   target_client_id: uuidSchema,
   moved_profile_ids: z.array(uuidSchema),
   moved_default_profile_id: uuidSchema.nullable(),
-  counts: z.record(z.number()),
+  counts: z.record(z.string(), z.number()),
   remapped_external_mapping_ids: z.array(z.string()),
   skipped_external_mapping_ids: z.array(z.string()),
   billing_strategy: z.enum(['source_profile', 'target_default']).optional()
@@ -353,6 +356,47 @@ export const billingProfileContactSchema = z.object({
 export const setBillingProfileContactsSchema = z.object({
   contacts: z.array(billingProfileContactSchema)
 });
+
+// ---------------------------------------------------------------------------
+// Billing profiles (read-only)
+// ---------------------------------------------------------------------------
+
+/**
+ * A client billing profile as stored. Settings that are nullable mean
+ * "inherit from the client", so null is returned as null, not resolved.
+ * `*_name` fields are display names for the matching `*_id`; null when the id is unset.
+ * `client_name` is deliberately omitted: the profile is read under /clients/{id}.
+ */
+export const clientBillingProfileResponseSchema = z.object({
+  billing_profile_id: uuidSchema,
+  client_id: uuidSchema,
+  name: z.string(),
+  is_default: z.boolean(),
+  is_system_managed_default: z.boolean(),
+  is_active: z.boolean(),
+  bills_separately: z.boolean(),
+  bill_to_name: z.string().nullable(),
+  bill_to_location_id: uuidSchema.nullable(),
+  bill_to_location_name: z.string().nullable(),
+  billing_contact_id: uuidSchema.nullable(),
+  billing_contact_name: z.string().nullable(),
+  billing_email: z.string().nullable(),
+  is_tax_exempt: z.boolean().nullable(),
+  tax_exemption_certificate: z.string().nullable(),
+  tax_id_number: z.string().nullable(),
+  po_number: z.string().nullable(),
+  po_required: z.boolean().nullable(),
+  invoice_delivery_method: z.string().nullable(),
+  invoice_template_id: uuidSchema.nullable(),
+  invoice_template_name: z.string().nullable(),
+  billing_cycle: z.string().nullable(),
+  payment_terms: z.string().nullable(),
+  preferred_payment_method: z.string().nullable(),
+  created_at: z.string().nullable(),
+  updated_at: z.string().nullable()
+});
+
+export type ClientBillingProfileResponse = z.infer<typeof clientBillingProfileResponseSchema>;
 
 export type ClientMergePreviewRequest = z.infer<typeof clientMergePreviewRequestSchema>;
 export type ClientMergeRequest = z.infer<typeof clientMergeRequestSchema>;

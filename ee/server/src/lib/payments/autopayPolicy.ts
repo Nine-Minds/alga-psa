@@ -47,6 +47,14 @@ export function classifyAutopayFailure(code?: string, declineCode?: string, atte
   return { retryable, hardDecline };
 }
 
+/**
+ * A card that needs the cardholder to authenticate (SCA) cannot be charged off-session until
+ * they re-save it, so it is parked as requires_update just like a hard decline.
+ */
+export function shouldParkPaymentMethod(code?: string, declineCode?: string, hardDecline = false, requiresAction = false): boolean {
+  return hardDecline || requiresAction || code === 'authentication_required' || declineCode === 'authentication_required';
+}
+
 export function retryAt(previousFailureAt: Date, retryDayOffsets: number[], attemptNumber: number): Date | null {
   const days = retryDayOffsets[attemptNumber - 1];
   return days === undefined ? null : new Date(previousFailureAt.getTime() + days * 24 * 60 * 60 * 1000);

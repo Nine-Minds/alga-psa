@@ -1,44 +1,54 @@
 import { z } from 'zod';
 
 /**
- * Per-client overrides of a recurring-ticket definition (plan §4.2).
+ * Overrides of a recurring ticket's fields, at definition level and per client (plan §4.2). One schema serves both layers.
  *
  * Each group is either present (overridden) or absent (inherited from the definition). Groups keep
  * dependent fields consistent: a board override always carries its status (board and status are only
  * meaningful together), and an assignment override can deliberately mean "unassigned".
  */
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 export const recurringTicketOverridesSchema = z
   .object({
-    board: z.object({ board_id: uuid, status_id: uuid.nullable() }).strict().optional(),
-    priority: z.object({ priority_id: uuid }).strict().optional(),
+    board: z.object({ board_id: uuid.describe('Board for created tickets.'), status_id: uuid.nullable().describe('Status on that board; null for the board default.') }).strict().optional().describe('Override board and status together.'),
+    priority: z.object({ priority_id: uuid.describe('Priority for created tickets.') }).strict().optional().describe('Override the priority.'),
     category: z
-      .object({ category_id: uuid.nullable(), subcategory_id: uuid.nullable() })
+      .object({ category_id: uuid.nullable().describe('Category; null for none.'), subcategory_id: uuid.nullable().describe('Subcategory; requires a category.') })
       .strict()
       .refine((value) => value.category_id !== null || value.subcategory_id === null, {
         message: 'A subcategory requires a category',
         path: ['subcategory_id'],
       })
-      .optional(),
+      .optional()
+      .describe('Override category and subcategory together.'),
     assignment: z
       .object({
-        assigned_to: uuid.nullable(),
-        assigned_team_id: uuid.nullable(),
-        additional_agent_ids: z.array(uuid),
+        assigned_to: uuid.nullable().describe('Assignee user UUID; null means unassigned.'),
+        assigned_team_id: uuid.nullable().describe('Assigned team UUID; null for none.'),
+        additional_agent_ids: z.array(uuid).describe('Additional agent user UUIDs.'),
       })
       .strict()
-      .optional(),
+      .optional()
+      .describe('Override assignment (assignee, team and additional agents) as a unit.'),
   })
   .strict();
 
 export type RecurringTicketOverrides = z.infer<typeof recurringTicketOverridesSchema>;
 
-/** The template fields of a definition that a client can override. */
+/**
+ * The ticket fields a recurring ticket resolves, in cascade order (R1/R8):
+ *
+ *   ticket template (content)  ->  definition (dispatch: status, assignment)  ->  definition overrides  ->  client overrides
+ *
+ * The template supplies board, priority and category (all nullable there; a schedule needs a board and a
+ * priority, which the reference check enforces on the EFFECTIVE values). The definition supplies the
+ * dispatch fields. Every further layer is a {@link RecurringTicketOverrides} and replaces whole groups.
+ */
 export interface RecurringTemplateFields {
-  board_id: string;
+  board_id: string | null;
   status_id: string | null;
-  priority_id: string;
+  priority_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
   assigned_to: string | null;
@@ -46,13 +56,13 @@ export interface RecurringTemplateFields {
   additional_agent_ids: string[];
 }
 
-/** Definition defaults, then the client's overridden groups. Group fields are replaced as a unit. */
-export function resolveEffectiveFields(
-  defaults: RecurringTemplateFields,
+/** Applies one override layer: present groups replace their fields as a unit, absent groups inherit. */
+export function applyOverrides(
+  fields: RecurringTemplateFields,
   overrides: RecurringTicketOverrides
 ): RecurringTemplateFields {
   return {
-    ...defaults,
+    ...fields,
     ...(overrides.board ? { board_id: overrides.board.board_id, status_id: overrides.board.status_id } : {}),
     ...(overrides.priority ? { priority_id: overrides.priority.priority_id } : {}),
     ...(overrides.category
@@ -66,4 +76,12 @@ export function resolveEffectiveFields(
         }
       : {}),
   };
+}
+
+/** An n-level fold: `base`, then each override layer in order (later layers win). */
+export function resolveEffectiveFields(
+  base: RecurringTemplateFields,
+  ...layers: RecurringTicketOverrides[]
+): RecurringTemplateFields {
+  return layers.reduce(applyOverrides, base);
 }

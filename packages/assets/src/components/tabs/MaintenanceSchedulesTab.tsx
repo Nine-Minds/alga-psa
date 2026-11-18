@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { describeMaintenanceCadence } from '../../lib/maintenanceCadence';
 import useSWR from 'swr';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -152,14 +153,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                           })}
                         </TableCell>
                         <TableCell className="text-[rgb(var(--color-text-500))]">
-                          {t('maintenanceSchedulesTab.frequency.every', {
-                            defaultValue: 'Every {{count}} {{frequency}}',
-                            count: schedule.frequency_interval,
-                            frequency: t(`maintenanceSchedulesTab.frequency.units.${schedule.frequency}`, {
-                              count: schedule.frequency_interval,
-                              defaultValue: schedule.frequency
-                            })
-                          })}
+                          {describeMaintenanceCadence(t, schedule.frequency, schedule.frequency_interval, schedule.schedule_config)}
                         </TableCell>
                         <TableCell className="text-[rgb(var(--color-text-900))]">
                           {schedule.next_maintenance 

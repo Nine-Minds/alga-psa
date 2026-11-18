@@ -182,6 +182,8 @@ const hoisted = vi.hoisted(() => {
     autoTicketPolicyMock: vi.fn(async () => undefined),
     availabilityMock: vi.fn(async () => ({ enabled: true }) as any),
     providerAvailabilityMock: vi.fn(async (_provider: string) => ({ enabled: true, reason: 'enabled' }) as any),
+    syncThreecxMock: vi.fn(async (): Promise<any> => ({})),
+    logMocks: { error: vi.fn(), warn: vi.fn(), debug: vi.fn(), info: vi.fn() },
     threecxStateMock: vi.fn(async () => ({ provider: '3cx', status: 'not_configured', autoCreateTickets: false }) as any),
     activateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'active', apiKey: 'threecx-key' }) as any),
     deactivateThreecxMock: vi.fn(async () => ({ provider: '3cx', status: 'disabled' }) as any),
@@ -257,7 +259,10 @@ vi.mock('@alga-psa/ee-microsoft-teams/lib', () => ({
   setTeamsPhoneAutoTicketPolicy: hoisted.autoTicketPolicyMock,
 }));
 
+vi.mock('@alga-psa/core/logger', () => ({ default: hoisted.logMocks }));
+
 vi.mock('@alga-psa/ee-threecx/lib', () => ({
+  syncThreecxExtensions: hoisted.syncThreecxMock,
   getThreecxProviderState: hoisted.threecxStateMock,
   // No PBX configured in these scenarios: the 3CX call affordance stays off.
   getThreecxProviderConfig: async () => null,
@@ -293,11 +298,11 @@ import {
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
-  listTelephonyResolutionTargets,
   resolveTelephonyCall,
   setTelephonyAutoCreateTickets,
   setTelephonyAutoTicketPolicy,
   setTelephonyProviderEnabled,
+  syncThreecxExtensions,
 } from './telephonyActions';
 
 describe('telephony link-to-ticket', () => {
@@ -915,74 +920,42 @@ describe('telephony link-to-ticket', () => {
     });
   });
 
-  describe('resolution targets', () => {
-    beforeEach(() => {
-      contacts.push(
-        { tenant: 'tenant-1', contact_name_id: 'contact-1', full_name: 'Glinda', client_id: 'client-1', is_inactive: false, client_name: 'Emerald City' } as any,
-        { tenant: 'tenant-1', contact_name_id: 'contact-2', full_name: 'Toto', client_id: 'client-2', is_inactive: false, client_name: 'Kansas Farms' } as any,
-        { tenant: 'tenant-1', contact_name_id: 'contact-3', full_name: 'Retired Witch', client_id: 'client-2', is_inactive: true, client_name: 'Kansas Farms' } as any,
-        { tenant: 'tenant-2', contact_name_id: 'contact-9', full_name: 'Glinda', client_id: 'client-9', is_inactive: false, client_name: 'Other Tenant' } as any,
-      );
-      clients.push(
-        { tenant: 'tenant-1', client_id: 'client-1', client_name: 'Emerald City', is_inactive: false },
-        { tenant: 'tenant-1', client_id: 'client-2', client_name: 'Kansas Farms', is_inactive: false },
-        { tenant: 'tenant-1', client_id: 'client-3', client_name: 'Closed Co', is_inactive: true },
-      );
+  describe('3CX admin mutation failures', () => {
+    it('returns the PBX error and logs status, excerpt and capability once at warn/error without secrets', async () => {
+      hoisted.logMocks.error.mockClear();
+      hoisted.logMocks.warn.mockClear();
+      const failure = Object.assign(new Error('PBX GET /Users failed (403): Forbidden'), {
+        name: 'ThreecxPbxError',
+        status: 403,
+        body: 'Forbidden',
+        capability: 'users',
+      });
+      hoisted.syncThreecxMock.mockRejectedValueOnce(failure);
+
+      const result = await syncThreecxExtensions();
+
+      expect(result).toEqual({ success: false, error: 'PBX GET /Users failed (403): Forbidden' });
+      // The PBX client owns the primary error line; this action line is warn.
+      expect(hoisted.logMocks.error).not.toHaveBeenCalled();
+      expect(hoisted.logMocks.warn).toHaveBeenCalledTimes(1);
+      const [, fields] = hoisted.logMocks.warn.mock.calls[0];
+      expect(fields).toMatchObject({
+        tenantId: 'tenant-1',
+        actionId: 'syncThreecxExtensions',
+        status: 403,
+        bodyExcerpt: 'Forbidden',
+        capability: 'users',
+      });
     });
 
-    it('T010: offers active contacts and clients so an unmatched call can be attributed', async () => {
-      const result = await listTelephonyResolutionTargets({});
+    it('logs a non-PBX failure as the primary error line', async () => {
+      hoisted.logMocks.error.mockClear();
+      hoisted.syncThreecxMock.mockRejectedValueOnce(new Error('db exploded'));
 
-      expect(result.success).toBe(true);
-      expect(result.targets).toEqual([
-        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
-        { contactId: 'contact-2', clientId: 'client-2', label: 'Toto', sublabel: 'Kansas Farms' },
-        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
+      const result = await syncThreecxExtensions();
 
-    it('T010: the search narrows both contacts and clients', async () => {
-      const result = await listTelephonyResolutionTargets({ search: 'kansas' });
-
-      expect(result.targets).toEqual([
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
-
-    it('T010: supplies the full client-only data source used by ClientPicker', async () => {
-      const result = await listTelephonyResolutionTargets({ clientsOnly: true });
-
-      expect(result.targets).toEqual([
-        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
-
-    it('T010: targets never cross the tenant boundary', async () => {
-      const result = await listTelephonyResolutionTargets({ search: 'Glinda' });
-
-      expect(result.targets).toEqual([
-        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
-      ]);
-    });
-
-    it('T010: a user who may read neither contacts nor clients is denied', async () => {
-      hasPermissionMock.mockResolvedValue(false);
-
-      const result = await listTelephonyResolutionTargets({});
-
-      expect(result.success).toBe(false);
-      expect(result.targets).toEqual([]);
-    });
-
-    it('T010: a user who may read only clients gets clients alone', async () => {
-      hasPermissionMock.mockImplementation(async (_user: unknown, resource: string) => resource === 'client');
-
-      const result = await listTelephonyResolutionTargets({});
-
-      expect(result.targets.every((target) => target.contactId === null)).toBe(true);
-      expect(result.targets).toHaveLength(2);
+      expect(result).toEqual({ success: false, error: 'db exploded' });
+      expect(hoisted.logMocks.error).toHaveBeenCalledTimes(1);
     });
   });
 });

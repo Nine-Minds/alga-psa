@@ -1,13 +1,17 @@
 'use server'
 
-import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { resolveProductCode } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { CLIENT_BILLING_PERMISSION, canReadClientBilling, omitClientBillingColumns, projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
+import type { DeletionValidationResult, IClient, IClientWithLocation, IUserWithRoles } from '@alga-psa/types';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
@@ -15,6 +19,7 @@ import {
   assertMspPermission,
   hasMspOrClientPortalOwnClientPermission,
   hasMspPermission,
+  hasMspPermissions,
   isClientPortalUser,
 } from '../lib/authHelpers';
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync, getClientWideLogoUrlAsync } from '../lib/documentsHelpers';
@@ -32,9 +37,11 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   actionError,
   permissionError,
@@ -47,6 +54,7 @@ import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { queueClientLocationCreated, queueClientLocationUpdated } from '../lib/clientLocationEvents';
 import { mergeClientWebsiteUpdate } from '../lib/clientWebsiteUpdate';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
@@ -86,6 +94,9 @@ function tenantScopedTable(
 }
 
 function updateClientExpectedErrorFrom(error: unknown, clientName?: string | null): ClientUpdateActionError | null {
+  if (error instanceof ClientSeatArrangementError) {
+    return actionError(error.message, error.i18nKey);
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
@@ -350,11 +361,15 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         }
       });
 
-      // Explicitly set fields to null if they're not in updateData but should be cleared
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
+      // Explicitly set fields to null if they're not in updateData but should be cleared.
+      // Absence only means "cleared" for a subject who was shown these columns: a subject without billing
+      // permission reads the client without them (clientBillingProjection), so saving that row back must
+      // leave them untouched.
+      const billingColumnsWereVisible = !isClientPortalUpdate && await canReadClientBilling(user, trx);
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_contact_id')) {
         updateObject.billing_contact_id = null;
       }
-      if (!isClientPortalUpdate && !permittedUpdateData.hasOwnProperty('billing_email')) {
+      if (billingColumnsWereVisible && !permittedUpdateData.hasOwnProperty('billing_email')) {
         updateObject.billing_email = null;
       }
 
@@ -375,6 +390,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
       console.log('Final updateObject being sent to database:', JSON.stringify(updateObject, null, 2));
       console.log('Update contains is_inactive:', 'is_inactive' in updateObject, 'value:', updateObject.is_inactive);
+
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, tenant, clientId, updateObject);
 
       const [updatedClient] = await tenantScopedTable(trx, 'clients', tenant)
         .where({ client_id: clientId })
@@ -525,7 +543,8 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     }
 
     console.log('Updated client data:', updatedClientWithLogo);
-    return updatedClientWithLogo;
+    // Client-portal updates return the portal user's own client unchanged; MSP callers get the billing projection.
+    return isClientPortalUpdate ? updatedClientWithLogo : projectClientForSubject(user, updatedClientWithLogo, db);
   } catch (error) {
     console.error('Error updating client:', error);
     if (error instanceof ClientStructuralError) {
@@ -570,48 +589,12 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       clientData.properties.website = clientData.url ?? clientData.properties.website;
     }
 
-    // When no explicit currency is provided, adopt the tenant's configured default
-    // (default_billing_settings.default_currency_code) instead of leaving it null and
-    // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
-    if (!clientData.default_currency_code) {
-      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
-        .select('default_currency_code')
-        .first();
-      clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
-    }
-
-    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await tenantScopedTable(trx, 'clients', tenant)
-        .insert({
-          ...clientData,
-          tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .returning('*');
-
-      // Every client must have exactly one default billing profile — it is the
-      // terminal step of charge attribution. Provisioned here so it carries the
-      // client's name from the start.
-      await ensureClientDefaultBillingProfile(trx, tenant, created.client_id, {
-        clientName: created.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant,
-        clientId: created.client_id,
-      });
-
-      // Tax initialization must share the client transaction: a failure (for
-      // example, no active tax rate) must not leave a partially created client.
-      // AlgaDesk has no billing tax setup and keeps its existing exemption.
-      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
-      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
-        await createDefaultTaxSettings(trx, tenant, created.client_id);
-      }
-
-      return created;
-    });
+    // The shared seam owns the row insert and every default a client needs:
+    // tenant currency, default billing profile, system-managed default contract
+    // and default tax settings, all in this transaction.
+    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      createClientWithDefaults(trx, tenant, clientData as CreateClientWithDefaultsData)
+    );
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
@@ -753,14 +736,28 @@ function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: strin
     .as('cl');
 }
 
+/**
+ * Which record kinds the client-list search may match through. Asked only when
+ * there is a search term: an unfiltered list never reads these permissions.
+ */
+async function clientListSearchPermissions(user: IUserWithRoles, searchTerm: string | undefined): Promise<string[]> {
+  if (!searchTerm?.trim()) return [];
+  const permissions = ['client:read'];
+  if (await hasMspPermission(user, 'document', 'read')) permissions.push('document:read');
+  if (await hasMspPermission(user, 'interaction', 'read')) permissions.push('interaction:read');
+  return permissions;
+}
+
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
+  // One roles load answers the read check and the billing projection, so the projection costs the
+  // client list (a budgeted hot path) no extra statement.
+  // LEVERAGE: pattern request-scoped-permissions — each hasPermission reloads the user's roles; hot paths batch by hand (here, getConsolidatedTicketData). A per-request permission set would make every later check free.
+  const [canReadClients, billingVisible] = await hasMspPermissions(user, [
+    { resource: 'client', action: 'read' },
+    CLIENT_BILLING_PERMISSION,
+  ]);
+  if (!canReadClients) {
+    throw new Error('Permission denied: Cannot read clients');
   }
 
   const {
@@ -777,6 +774,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     sortDirection = 'asc'
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -787,6 +785,8 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       // Build the base query with client_locations join
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -911,7 +911,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (billingVisible ? clientsWithLogos : clientsWithLogos.map(omitClientBillingColumns)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -929,13 +929,6 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   params: ClientPaginationParams & { dateRange?: BillingCycleDateRange }
 ): Promise<PaginatedClientsResponse> => {
   await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
-  const searchPermissions = ['client:read'];
-  if (await hasMspPermission(user, 'document', 'read')) {
-    searchPermissions.push('document:read');
-  }
-  if (await hasMspPermission(user, 'interaction', 'read')) {
-    searchPermissions.push('interaction:read');
-  }
 
   const {
     page = 1,
@@ -951,6 +944,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     dateRange
   } = params;
 
+  const searchPermissions = await clientListSearchPermissions(user, searchTerm);
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -959,6 +953,8 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
       scopedDb.tenantJoin(baseQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
       scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant), 'c.client_id', 'cl.client_id', {
         type: 'left',
@@ -1084,7 +1080,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     }
 
     return {
-      clients: clientsWithLogos as IClient[],
+      clients: (await projectClientsForSubject(user, clientsWithLogos)) as IClient[],
       totalCount: result.totalCount,
       page,
       pageSize,
@@ -1165,9 +1161,12 @@ function tailorClientDeleteAlternatives(
   const contactDependency = result.dependencies.find((d) => d.type === 'contact');
   const hasContacts = (contactDependency?.count ?? 0) > 0;
 
+  // A live seat arrangement refuses inactivation too, so it is not offered as the way out.
+  const hasSeatArrangement = result.dependencies.some((d) => d.type === 'co_managed_seat_arrangement' && d.count > 0);
+
   const alternatives = result.alternatives.flatMap((alt) => {
     if (alt.action !== 'deactivate') return [alt];
-    if (clientIsInactive) return [];
+    if (clientIsInactive || hasSeatArrangement) return [];
     if (hasContacts) {
       return [
         {
@@ -1289,6 +1288,15 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       // settings, cycles, contracts, locations — and before the client itself.
       // A restrict-mode FK means a missed reference surfaces here rather than
       // leaving an orphan.
+      // RMM organisations stay mapped to nothing; the client's maintenance
+      // windows go with it. Neither foreign key acts on its own on Citus.
+      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
+        .where({ client_id: clientId })
+        .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+      await tenantScopedTable(trx, 'rmm_maintenance_windows', tenantId)
+        .where({ client_id: clientId })
+        .delete();
+
       const deletedBillingProfiles = await tenantScopedTable(trx, 'client_billing_profiles', tenantId)
         .where({ client_id: clientId })
         .delete();
@@ -1337,6 +1345,10 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       }
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
+
+      // Client-scoped checklist and ticket templates are deactivated and detached first (no SET NULL on Citus).
+      await deactivateClientScopedChecklistTemplates(trx, tenantId, clientId);
+      await deactivateClientScopedTicketTemplates(trx, tenantId, clientId);
 
       const deleted = await tenantScopedTable(trx, 'clients', tenantId)
         .where({ client_id: clientId })
@@ -1402,8 +1414,25 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
   const { knex } = await createTenantKnex();
 
   const exportData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Fetch location data for all clients
-    const clientIds = clients.map(c => c.client_id);
+    // The browser names WHICH clients to export; it is never trusted for WHAT they contain or whether the caller
+    // may read them. Re-read the requested clients through the same narrowed client query the list uses: an id
+    // outside the caller's client scope (or one that does not exist) is dropped, and every exported value comes
+    // from the database. Rows keep the order the caller asked for.
+    const requestedIds = Array.from(new Set(
+      (Array.isArray(clients) ? clients : [])
+        .map((client) => client?.client_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    ));
+    const readableQuery = tenantDb(trx, tenant).table('clients as c').whereIn('c.client_id', requestedIds);
+    (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(readableQuery);
+    const readableRows: IClient[] = requestedIds.length > 0 ? await readableQuery.select('c.*') : [];
+    const readableById = new Map(readableRows.map((row) => [row.client_id, row]));
+    const exportClients = requestedIds
+      .map((id) => readableById.get(id))
+      .filter((client): client is IClient => Boolean(client));
+
+    // Fetch location data for the readable clients
+    const clientIds = exportClients.map(c => c.client_id);
     const locations = await tenantScopedTable(trx, 'client_locations', tenant)
       .whereIn('client_id', clientIds)
       .andWhere('is_default', true);
@@ -1432,7 +1461,7 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     });
 
     // Prepare export data with location fields
-    return clients.map(client => {
+    return exportClients.map(client => {
       const location = locationMap.get(client.client_id) || {};
       const clientTags = tagMap.get(client.client_id) || [];
       const tagNames = clientTags.join(', ');
@@ -1556,6 +1585,8 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
       // Build the base query - same filtering logic as getAllClientsPaginated
       const scopedDb = tenantDb(trx, tenant);
       let baseQuery = scopedDb.table('clients as c');
+      // Bundle client scope: part of the query, so the count and the page agree.
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('client', 'c')).apply(baseQuery);
 
       // Join with locations for search if needed
       if (searchTerm) {
@@ -1631,7 +1662,29 @@ export const checkExistingClients = withAuth(async (
       .whereIn('client_name', clientNames)
   });
 
-  return existingClients;
+  return projectClientsForSubject(user, existingClients);
+});
+
+/**
+ * Resolve client names (exact, case-sensitive match) to ids. Used by the contacts CSV import so it
+ * never needs the whole client list. Returns `{ client_id, client_name }` only.
+ */
+export const findClientsByNames = withAuth(async (
+  user,
+  { tenant },
+  names: string[]
+): Promise<Array<{ client_id: string; client_name: string }>> => {
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+
+  const distinctNames = Array.from(new Set((names ?? []).filter((name) => typeof name === 'string' && name.length > 0)));
+  if (distinctNames.length === 0) return [];
+
+  const { knex: db } = await createTenantKnex();
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await tenantScopedTable(trx, 'clients', tenant)
+      .select('client_id', 'client_name')
+      .whereIn('client_name', distinctNames);
+  });
 });
 
 export interface ImportClientResult {
@@ -1652,6 +1705,64 @@ function clientImportFailureResults(
     message,
     originalData,
   }));
+}
+
+/**
+ * CSV import writes clients directly (not through createClient/updateClient), so it reports its own
+ * lifecycle events. Publishing waits for the row's transaction to commit.
+ */
+function queueImportedClientEvents(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  change: { created: true; after: IClient } | { created: false; before: IClient; after: IClient; updatedFieldKeys: string[] },
+): void {
+  const occurredAt = new Date().toISOString();
+  const actor = maybeUserActor({ user_id: userId });
+  const clientId = change.after.client_id;
+  const ctx = { tenantId: tenant, occurredAt, actor };
+
+  // `in` narrows the union regardless of strictNullChecks (the ee tsconfig is non-strict).
+  if (!('before' in change)) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId,
+        clientName: change.after.client_name,
+        createdByUserId: userId,
+        createdAt: occurredAt,
+        status: change.after.is_inactive ? 'inactive' : 'active',
+      }),
+      ctx,
+      idempotencyKey: `client_created:${clientId}`,
+    }), `CLIENT_CREATED client=${clientId}`);
+    return;
+  }
+
+  if (!change.before.is_inactive && change.after.is_inactive) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_ARCHIVED',
+      payload: buildClientArchivedPayload({ clientId, archivedByUserId: userId, archivedAt: occurredAt }),
+      ctx,
+      idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+    }), `CLIENT_ARCHIVED client=${clientId}`);
+  }
+
+  const updatedPayload = buildClientUpdatedPayload({
+    clientId,
+    before: change.before as any,
+    after: change.after as any,
+    updatedFieldKeys: change.updatedFieldKeys,
+    updatedAt: occurredAt,
+  });
+  if (((updatedPayload as any).updatedFields ?? []).length) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_UPDATED',
+      payload: updatedPayload,
+      ctx,
+      idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+    }), `CLIENT_UPDATED client=${clientId}`);
+  }
 }
 
 export const importClientsFromCSV = withAuth(async (
@@ -1840,10 +1951,18 @@ export const importClientsFromCSV = withAuth(async (
             updateData.client_since = clientSince;
           }
 
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await assertClientPatchKeepsSeatArrangement(trx, tenant, existingClient.client_id, updateData);
           [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
+          queueImportedClientEvents(trx, tenant, user.user_id, {
+            created: false,
+            before: existingClient as IClient,
+            after: savedClient as IClient,
+            updatedFieldKeys: Object.keys(updateData),
+          });
 
           if (hasLocationData(clientData)) {
             const defaultLocation = await tenantScopedTable(trx, 'client_locations', tenant)
@@ -1851,14 +1970,16 @@ export const importClientsFromCSV = withAuth(async (
               .first();
 
             if (defaultLocation) {
-              await tenantScopedTable(trx, 'client_locations', tenant)
+              const [updatedLocation] = await tenantScopedTable(trx, 'client_locations', tenant)
                 .where({ location_id: defaultLocation.location_id })
                 .update({
                   ...locationFieldsFromRow(clientData, rowCountry),
                   updated_at: new Date().toISOString()
-                });
+                })
+                .returning('*');
+              queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: user.user_id });
             } else {
-              await tenantScopedTable(trx, 'client_locations', tenant).insert({
+              const [insertedLocation] = await tenantScopedTable(trx, 'client_locations', tenant).insert({
                 location_id: trx.raw('gen_random_uuid()'),
                 client_id: existingClient.client_id,
                 tenant: tenant,
@@ -1869,7 +1990,8 @@ export const importClientsFromCSV = withAuth(async (
                 is_active: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
-              });
+              }).returning('*');
+              queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: user.user_id });
             }
           }
         } else {
@@ -1904,25 +2026,22 @@ export const importClientsFromCSV = withAuth(async (
             auto_invoice: clientData.auto_invoice || false,
             invoice_delivery_method: clientData.invoice_delivery_method || '',
             region_code: clientData.region_code || null,
-            default_currency_code: clientData.default_currency_code || tenantDefaultCurrencyCode,
+            default_currency_code: clientData.default_currency_code || undefined,
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
             client_since: clientSince,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
-            .insert(clientToCreate)
-            .returning('*');
-
-          await ensureClientDefaultBillingProfile(trx, tenant, savedClient!.client_id, {
-            clientName: savedClient!.client_name,
+          // Imported rows get the same defaults as a hand-created client; the
+          // batch's currency lookup is passed through so it is not repeated per row.
+          savedClient = await createClientWithDefaults(trx, tenant, clientToCreate as CreateClientWithDefaultsData, {
+            defaultCurrencyCode: tenantDefaultCurrencyCode,
           });
+          queueImportedClientEvents(trx, tenant, user.user_id, { created: true, after: savedClient as IClient });
 
           if (hasLocationData(clientData)) {
-            await tenantScopedTable(trx, 'client_locations', tenant).insert({
+            const [insertedLocation] = await tenantScopedTable(trx, 'client_locations', tenant).insert({
               location_id: trx.raw('gen_random_uuid()'),
               client_id: savedClient!.client_id,
               tenant: tenant,
@@ -1933,7 +2052,8 @@ export const importClientsFromCSV = withAuth(async (
               is_active: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
-            });
+            }).returning('*');
+            queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: user.user_id });
           }
         }
       });
@@ -1946,6 +2066,28 @@ export const importClientsFromCSV = withAuth(async (
           originalData: clientData
         });
         continue;
+      }
+
+      // Imported clients announce themselves exactly as hand-created ones do,
+      // after the row commits so a subscriber cannot read a rolled-back client.
+      if (created && savedClient) {
+        const createdAt = savedClient.created_at ?? new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'CLIENT_CREATED',
+          payload: buildClientCreatedPayload({
+            clientId: savedClient.client_id,
+            clientName: savedClient.client_name,
+            createdByUserId: user.user_id,
+            createdAt,
+            status: (savedClient as any)?.properties?.status ?? (savedClient.is_inactive ? 'inactive' : 'active'),
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: createdAt,
+            actor: maybeUserActor(user),
+          },
+          idempotencyKey: `client_created:${savedClient.client_id}`,
+        });
       }
 
       // Tags run after the row commits: createTag opens its own connection, so
@@ -2161,10 +2303,12 @@ export const deactivateClientContacts = withAuth(async (
         return { contactsDeactivated: 0 };
       }
 
-      // Deactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: false })
-        .update({ is_inactive: true });
+      // Deactivate all contacts (contact.deactivated per contact, queued for after commit)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: false })
+          .update({ is_inactive: true }),
+        { actorUserId: user.user_id });
 
       // Deactivate all users associated with these contacts
       await db.table('users')
@@ -2212,6 +2356,11 @@ export const markClientInactiveWithContacts = withAuth(async (
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       let contactsDeactivated = 0;
+      let deactivatedContactIds: string[] = [];
+
+      // Before the contact cascade, so a refusal leaves the client's contacts and their users alone.
+      // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+      await assertClientPatchKeepsSeatArrangement(trx, tenant, clientId, { is_inactive: true });
 
       if (deactivateContacts) {
         // Get all active contact IDs for this client
@@ -2234,6 +2383,7 @@ export const markClientInactiveWithContacts = withAuth(async (
             .update({ is_inactive: true });
 
           contactsDeactivated = contactIds.length;
+          deactivatedContactIds = contactIds;
         }
       }
 
@@ -2242,7 +2392,7 @@ export const markClientInactiveWithContacts = withAuth(async (
         .where({ client_id: clientId })
         .update({ is_inactive: true, updated_at: occurredAt });
 
-      return { contactsDeactivated };
+      return { contactsDeactivated, deactivatedContactIds };
     });
 
     revalidatePath(`/msp/clients/${clientId}`);
@@ -2258,6 +2408,21 @@ export const markClientInactiveWithContacts = withAuth(async (
       ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
       idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
     });
+
+    // Each contact the cascade deactivated is a real contact.deactivated.
+    for (const contactId of result.deactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId,
+          archivedByUserId: user.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
+      });
+    }
 
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
@@ -2289,14 +2454,39 @@ export const markClientActiveWithContacts = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       let contactsReactivated = 0;
 
+      // Read the prior state so client.updated[is_inactive] is only emitted on a real inactive -> active flip.
+      const existing = await db.table('clients')
+        .select('is_inactive')
+        .where({ client_id: clientId })
+        .first();
+
       // Mark the client as active first
       await db.table('clients')
         .where({ client_id: clientId })
-        .update({ is_inactive: false, updated_at: new Date().toISOString() });
+        .update({ is_inactive: false, updated_at: occurredAt });
+
+      if (existing && existing.is_inactive) {
+        const updatedPayload = buildClientUpdatedPayload({
+          clientId,
+          before: { is_inactive: true } as any,
+          after: { is_inactive: false } as any,
+          updatedFieldKeys: ['is_inactive'],
+          updatedAt: occurredAt,
+        });
+        if (((updatedPayload as any).updatedFields ?? []).length) {
+          registerAfterCommit(trx, () => publishWorkflowEvent({
+            eventType: 'CLIENT_UPDATED',
+            payload: updatedPayload,
+            ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+            idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+          }), `CLIENT_UPDATED client=${clientId}`);
+        }
+      }
 
       if (reactivateContacts) {
         // Get all inactive contact IDs for this client
@@ -2307,10 +2497,12 @@ export const markClientActiveWithContacts = withAuth(async (
         const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
-          // Reactivate all contacts
-          await db.table('contacts')
-            .where({ client_id: clientId, is_inactive: true })
-            .update({ is_inactive: false });
+          // Reactivate all contacts (contact.updated with is_inactive per contact)
+          await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+            db.table('contacts')
+              .where({ client_id: clientId, is_inactive: true })
+              .update({ is_inactive: false }),
+            { actorUserId: user.user_id });
 
           // Reactivate all users associated with these contacts
           await db.table('users')
@@ -2365,10 +2557,12 @@ export const reactivateClientContacts = withAuth(async (
         return { contactsReactivated: 0 };
       }
 
-      // Reactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: true })
-        .update({ is_inactive: false });
+      // Reactivate all contacts (contact.updated with is_inactive per contact)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: true })
+          .update({ is_inactive: false }),
+        { actorUserId: user.user_id });
 
       // Reactivate all users associated with these contacts
       await db.table('users')

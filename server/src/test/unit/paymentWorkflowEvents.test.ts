@@ -31,7 +31,9 @@ describe('payment workflow event payload builders', () => {
       method: 'manual',
       receivedByUserId: USER_ID,
       gatewayTransactionId: 'ref_123',
+      source: 'manual',
     });
+    expect((payload as any).source).toBe('manual');
 
     paymentRecordedEventPayloadSchema.parse(
       buildWorkflowPayload(payload as any, {

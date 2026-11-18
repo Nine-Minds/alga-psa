@@ -9,6 +9,8 @@
  * English strings and bypass `t()`, so **do not import them into new code**.
  */
 
+import type { CanonicalRecurringFrequency } from '@alga-psa/shared/billingClients/recurringMemberRate';
+
 export const CONTRACT_LINE_TYPE_VALUES = ['Fixed', 'Hourly', 'Usage'] as const;
 export type ContractLineType = (typeof CONTRACT_LINE_TYPE_VALUES)[number];
 
@@ -47,6 +49,20 @@ export const BILLING_FREQUENCY_LABEL_DEFAULTS: Record<BillingFrequency, string> 
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annually: 'Annually',
+};
+
+/**
+ * English fallbacks for a cadence written as the period an amount covers
+ * ("A$1,723.92 per year"). Keyed by the canonical cadence from
+ * `canonicalRecurringFrequency`, which also covers `semi-annually` on stored
+ * lines. Consumed as `defaultValue` by `useFormatBillingPeriod`.
+ */
+export const BILLING_PERIOD_LABEL_DEFAULTS: Record<CanonicalRecurringFrequency, string> = {
+  weekly: 'per week',
+  monthly: 'per month',
+  quarterly: 'per quarter',
+  'semi-annually': 'per half-year',
+  annually: 'per year',
 };
 
 /**

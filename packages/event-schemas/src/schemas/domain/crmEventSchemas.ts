@@ -13,22 +13,22 @@ const tagIdSchema = uuidSchema('Tag ID');
 const contactEmailCanonicalTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const contactEmailAddressSchema = z.object({
-  contact_additional_email_address_id: z.string().uuid(),
+  contact_additional_email_address_id: z.string().guid(),
   email_address: z.string().email(),
   normalized_email_address: z.string(),
   canonical_type: contactEmailCanonicalTypeSchema.nullable(),
-  custom_email_type_id: z.string().uuid().nullable().optional(),
+  custom_email_type_id: z.string().guid().nullable().optional(),
   custom_type: z.string().nullable(),
   display_order: z.number().int().min(0),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
 });
 const contactPhoneNumberSchema = z.object({
-  contact_phone_number_id: z.string().uuid(),
+  contact_phone_number_id: z.string().guid(),
   phone_number: z.string().min(1),
   normalized_phone_number: z.string(),
   canonical_type: contactPhoneCanonicalTypeSchema.nullable(),
-  custom_phone_type_id: z.string().uuid().nullable().optional(),
+  custom_phone_type_id: z.string().guid().nullable().optional(),
   custom_type: z.string().nullable(),
   is_default: z.boolean(),
   display_order: z.number().int().min(0),
@@ -103,7 +103,7 @@ export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   fullName: z.string().min(1),
   email: z.string().email().optional(),
   primaryEmailCanonicalType: contactEmailCanonicalTypeSchema.nullable().optional(),
-  primaryEmailCustomTypeId: z.string().uuid().nullable().optional(),
+  primaryEmailCustomTypeId: z.string().guid().nullable().optional(),
   primaryEmailType: z.string().nullable().optional(),
   additionalEmailAddresses: z.array(contactEmailAddressSchema).optional(),
   phoneNumbers: z.array(contactPhoneNumberSchema).optional(),
@@ -176,7 +176,7 @@ const noteEntityTypeSchema = z.enum(['client', 'contact']).describe('Note entity
 export const noteCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   noteId: noteIdSchema,
   entityType: noteEntityTypeSchema,
-  entityId: z.string().uuid(),
+  entityId: z.string().guid(),
   createdByUserId: userIdSchema.optional(),
   createdAt: z.string().datetime().optional(),
   visibility: noteVisibilitySchema.optional(),
@@ -240,3 +240,45 @@ export const contactDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 }).describe('Payload for CONTACT_DELETED');
 
 export type ContactDeletedEventPayload = z.infer<typeof contactDeletedEventPayloadSchema>;
+
+const clientLocationIdSchema = uuidSchema('Client Location ID');
+
+export const clientLocationCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  isDefault: z.boolean().optional(),
+  createdByUserId: userIdSchema.optional(),
+  createdAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_CREATED');
+
+export type ClientLocationCreatedEventPayload = z.infer<typeof clientLocationCreatedEventPayloadSchema>;
+
+export const clientLocationUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  updatedByUserId: userIdSchema.optional(),
+  updatedAt: z.string().datetime().optional(),
+  updatedFields: updatedFieldsSchema,
+  changes: changesSchema,
+}).describe('Payload for CLIENT_LOCATION_UPDATED');
+
+export type ClientLocationUpdatedEventPayload = z.infer<typeof clientLocationUpdatedEventPayloadSchema>;
+
+// Published only when `is_active` flips true -> false. Re-activation is reported as CLIENT_LOCATION_UPDATED.
+export const clientLocationDeactivatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  deactivatedByUserId: userIdSchema.optional(),
+  deactivatedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_DEACTIVATED');
+
+export type ClientLocationDeactivatedEventPayload = z.infer<typeof clientLocationDeactivatedEventPayloadSchema>;
+
+export const clientLocationDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  locationId: clientLocationIdSchema,
+  clientId: clientIdSchema,
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_LOCATION_DELETED');
+
+export type ClientLocationDeletedEventPayload = z.infer<typeof clientLocationDeletedEventPayloadSchema>;

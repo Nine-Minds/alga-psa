@@ -1,6 +1,7 @@
 import type { NormalizedRmmAlertEvent, RmmAlertProcessingContext } from './contracts';
 import { tenantDb } from '@alga-psa/db';
 import { processRmmAlertEvent } from './processRmmAlertEvent';
+import { acknowledgeConditionTransition } from './conditionLifecycle';
 
 /**
  * Marker stamped into the raw payload of poller-ingested alerts. Stale-alert
@@ -11,9 +12,27 @@ import { processRmmAlertEvent } from './processRmmAlertEvent';
  */
 export const RECONCILIATION_INGEST_MARKER = '__alga_ingest_source';
 
+export interface RmmActiveAlertSnapshot {
+  /** Alerts to ingest as triggered events. */
+  events: NormalizedRmmAlertEvent[];
+  /**
+   * Ids of alerts still open in the RMM that the fetcher deliberately left out
+   * of `events` (muted, or from a site the tenant does not manage). They are
+   * not ingested, but they have not cleared either, so the stale pass must not
+   * synthesize a reset for them.
+   */
+  heldExternalAlertIds: string[];
+}
+
 export interface RmmActiveAlertFetcher {
   /** Returns every currently-active alert in the RMM as a triggered event. */
   fetchActiveAlerts(args: { tenantId: string; integrationId: string }): Promise<NormalizedRmmAlertEvent[]>;
+  /**
+   * Optional richer form for fetchers that filter what they ingest. When
+   * present, reconciliation uses it instead of fetchActiveAlerts so filtered
+   * alerts still count as active for stale detection.
+   */
+  fetchActiveAlertSnapshot?(args: { tenantId: string; integrationId: string }): Promise<RmmActiveAlertSnapshot>;
 }
 
 const fetchers = new Map<string, RmmActiveAlertFetcher>();
@@ -43,7 +62,8 @@ export interface ReconciliationResult {
  *    ended re-enter processing via reprocessSuppressed).
  * 2. Poller-ingested local alerts no longer active in the RMM get synthesized
  *    resets — catching missed reset webhooks, the main source of stale
- *    tickets.
+ *    tickets. Alerts the fetcher held back from ingestion still count as
+ *    active here: filtered out is not the same as cleared.
  */
 export async function runRmmAlertReconciliation(
   ctx: RmmAlertProcessingContext,
@@ -55,10 +75,11 @@ export async function runRmmAlertReconciliation(
     return { skipped: true, remoteActive: 0, ingested: 0, resetsSynthesized: 0, warnings };
   }
 
-  const remote = await fetcher.fetchActiveAlerts({
-    tenantId: args.tenantId,
-    integrationId: args.integrationId,
-  });
+  const fetchArgs = { tenantId: args.tenantId, integrationId: args.integrationId };
+  const snapshot: RmmActiveAlertSnapshot = fetcher.fetchActiveAlertSnapshot
+    ? await fetcher.fetchActiveAlertSnapshot(fetchArgs)
+    : { events: await fetcher.fetchActiveAlerts(fetchArgs), heldExternalAlertIds: [] };
+  const remote = snapshot.events;
 
   let ingested = 0;
   for (const event of remote) {
@@ -69,24 +90,50 @@ export async function runRmmAlertReconciliation(
     // One bad alert must not abort the cycle for every alert behind it.
     try {
       const result = await processRmmAlertEvent(ctx, stamped, { reprocessSuppressed: true });
+      if (stamped.raw.__alga_condition_lifecycle === true && stamped.raw.transitionId && result.outcome !== 'deferred') {
+        await acknowledgeConditionTransition(ctx, {
+          tenantId: args.tenantId, integrationId: args.integrationId, transitionId: String(stamped.raw.transitionId),
+        });
+      }
       warnings.push(...result.warnings);
-      if (result.outcome !== 'skipped') ingested += 1;
+      if (result.outcome !== 'skipped' && result.outcome !== 'deferred') ingested += 1;
     } catch (error) {
       warnings.push(`Failed to ingest alert ${event.externalAlertId}: ${errorMessage(error)}`);
     }
   }
 
-  const remoteIds = new Set(remote.map((event) => event.externalAlertId));
+  const remoteIds = new Set([
+    ...remote.map((event) => event.externalAlertId),
+    ...snapshot.heldExternalAlertIds,
+  ]);
   const db = tenantDb(ctx.knex, args.tenantId);
   const locals = await db.table('rmm_alerts')
     .where({ integration_id: args.integrationId })
     .whereIn('status', ['active', 'acknowledged', 'suppressed'])
     .select('external_alert_id', 'metadata');
+  const candidates = locals.filter((row: { external_alert_id: string }) => !remoteIds.has(row.external_alert_id));
+  const candidateIds = candidates.map((row: { external_alert_id: string }) => row.external_alert_id);
+  const lifecycleOwned = new Set<string>();
+  if (candidateIds.length > 0) {
+    const lifecycleCurrent = await db.table('rmm_condition_states')
+      .where({ integration_id: args.integrationId })
+      .whereIn('current_external_alert_id', candidateIds)
+      .select('current_external_alert_id');
+    const lifecycleHistory = await db.table('rmm_condition_transitions')
+      .where({ integration_id: args.integrationId, status: 'pending' })
+      .whereIn('external_alert_id', candidateIds)
+      .select('external_alert_id');
+    for (const row of lifecycleCurrent) lifecycleOwned.add(row.current_external_alert_id);
+    for (const row of lifecycleHistory) lifecycleOwned.add(row.external_alert_id);
+  }
 
   let resetsSynthesized = 0;
   const now = new Date().toISOString();
-  for (const row of locals) {
-    if (remoteIds.has(row.external_alert_id)) continue;
+  for (const row of candidates) {
+    // Condition outages are closed only by the durable, explicit healthy
+    // transition. An omission from a delayed or partial snapshot is not
+    // recovery evidence for a lifecycle-owned alert.
+    if (lifecycleOwned.has(row.external_alert_id)) continue;
     const metadata = typeof row.metadata === 'string' ? safeParse(row.metadata) : row.metadata;
     const pollerIngested =
       metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>)[RECONCILIATION_INGEST_MARKER];

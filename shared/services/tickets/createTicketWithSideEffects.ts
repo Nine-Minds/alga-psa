@@ -1,10 +1,14 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
-import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
+import { TicketModel, type CreateTicketInput, type IAnalyticsTracker } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
-import { applyChecklistTemplateToTicket } from '../../lib/ticketChecklists';
+import {
+  applyChecklistTemplateToTicket,
+  insertChecklistItemsReplacingTemplates,
+  type ChecklistItemToInsert,
+} from '../../lib/ticketChecklists';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -12,6 +16,10 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '../../lib/ticketActivity';
+import {
+  persistExternalLinksForCreate,
+  publishExternalLinkEvent,
+} from './externalLinkPersistence';
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore, type TicketAdditionalAgentEvent } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
@@ -76,6 +84,117 @@ export function resolveActorEffects(actor: CreateTicketActor): CreateTicketActor
   }
 }
 
+/** A checklist item the ticket owns outright (a snapshot, e.g. from a ticket template). */
+export interface OwnedChecklistItemInput {
+  item_name: string;
+  description?: string | null;
+  is_required: boolean;
+  /** Checklist template the item was copied from; the replacement rule drops auto-applied rows for it. */
+  checklist_template_id?: string | null;
+}
+
+/** Provenance of a ticket created from a ticket template (written as TICKET_CREATED_FROM_TEMPLATE). */
+export interface CreatedFromTemplateInput {
+  template_id: string;
+  template_name: string;
+  custom_fields_copied: number;
+}
+
+/**
+ * A documentation link a ticket template carries. Always created on the ticket as a `reference`:
+ * stored values are copied verbatim, nothing is resolved or fetched at creation time.
+ */
+export interface TemplateLinkInput {
+  system: string;
+  external_id: string;
+  realm?: string | null;
+  url?: string | null;
+  title?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export function ownedChecklistItemsToInsert(items: readonly OwnedChecklistItemInput[]): ChecklistItemToInsert[] {
+  return items.map((item) => ({
+    item_name: item.item_name,
+    description: item.description ?? null,
+    is_required: item.is_required,
+    assigned_to: null,
+    source: item.checklist_template_id ? 'template' : 'manual',
+    template_id: item.checklist_template_id ?? null,
+  }));
+}
+
+/**
+ * The effects of "created from a ticket template" once the ticket row exists: the owned checklist items
+ * (replacement rule, plus a CHECKLIST_TEMPLATE_APPLIED activity per carried checklist template that auto-apply
+ * had not applied), the template's documentation links (as `reference` external links, with a
+ * TICKET_EXTERNAL_LINK_ADDED event after commit) and the TICKET_CREATED_FROM_TEMPLATE activity. This is the one
+ * choke point all three template paths share (recurring generator, REST/MCP instantiate, in-app New ticket from
+ * template), so the links are copied here and nowhere else. Used by `createTicketWithSideEffects` and by
+ * `addTicket`, which composes its own create but must record the same provenance.
+ */
+export async function applyCreatedFromTemplateEffects(
+  trx: Knex.Transaction,
+  tenant: string,
+  args: {
+    ticketId: string;
+    actor: CreateTicketActor;
+    checklistItems: readonly OwnedChecklistItemInput[];
+    /** The template's links, in template order. */
+    links?: readonly TemplateLinkInput[];
+    fromTemplate: CreatedFromTemplateInput;
+  }
+): Promise<{ checklistItemsCopied: number; linksCopied: number }> {
+  const { actorUserId, activityActor, activitySource } = resolveActorEffects(args.actor);
+  const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
+    targetTicketId: args.ticketId,
+    items: ownedChecklistItemsToInsert(args.checklistItems),
+    userId: actorUserId,
+    audit: { actor: activityActor, source: activitySource },
+  });
+  const links = args.links ?? [];
+  // Throws ExternalLinkValidationError when a stored link is no longer valid; that rolls the ticket back.
+  const insertedLinks = await persistExternalLinksForCreate(
+    trx,
+    tenant,
+    args.ticketId,
+    links.map((link) => ({
+      system: link.system,
+      external_id: link.external_id,
+      realm: link.realm ?? null,
+      url: link.url ?? null,
+      title: link.title ?? null,
+      metadata: link.metadata ?? null,
+      relationship: 'reference' as const,
+    })),
+    args.actor,
+  );
+  for (const row of insertedLinks) {
+    registerAfterCommit(
+      trx,
+      () => publishExternalLinkEvent('TICKET_EXTERNAL_LINK_ADDED', tenant, row, actorUserId),
+      `TICKET_EXTERNAL_LINK_ADDED ticket=${args.ticketId} link=${row.link_id}`,
+    );
+  }
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: args.ticketId,
+    eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: args.ticketId,
+    actor: activityActor,
+    source: activitySource,
+    details: {
+      template_id: args.fromTemplate.template_id,
+      template_name: args.fromTemplate.template_name,
+      checklist_items_copied: checklistItemsCopied,
+      links_copied: insertedLinks.length,
+      custom_fields_copied: args.fromTemplate.custom_fields_copied,
+    },
+  });
+  return { checklistItemsCopied, linksCopied: insertedLinks.length };
+}
+
 export interface CreateTicketWithSideEffectsInput {
   actor: CreateTicketActor;
   /** Core ticket fields. `entered_by` is derived from `actor`; do not set it. */
@@ -90,6 +209,12 @@ export interface CreateTicketWithSideEffectsInput {
   assetIds?: string[];
   /** Checklist template applied in addition to any auto-applying templates. */
   checklistTemplateId?: string | null;
+  /** Owned checklist items applied with the replacement rule (they win over auto-applied rows for the same checklist template). */
+  checklistItems?: OwnedChecklistItemInput[];
+  /** When set, the ticket records that it was created from a ticket template (activity row inside this layer). */
+  fromTemplate?: CreatedFromTemplateInput;
+  /** The template's documentation links, copied as `reference` external links. Only used with `fromTemplate`. */
+  templateLinks?: TemplateLinkInput[];
   /**
    * Notification suppression carried on every published ticket event
    * (TICKET_CREATED, TICKET_ASSIGNED and the additional-agent events). The
@@ -100,6 +225,13 @@ export interface CreateTicketWithSideEffectsInput {
     suppressContactNotifications?: boolean;
     suppressInternalNotifications?: boolean;
   };
+  /**
+   * Extra fields merged into the TICKET_CREATED payload only (not the other ticket events). Used to
+   * hand facts known before the ticket exists, like the recurring schedule that is generating it.
+   */
+  eventPayload?: { recurrence?: { definitionId: string; occurrenceId: string; occurrenceDate?: string } };
+  /** Records `ticket_created` analytics. Omit for callers that do not track it (e.g. the scheduler). */
+  analyticsTracker?: IAnalyticsTracker;
 }
 
 export interface CreateTicketWithSideEffectsResult {
@@ -136,9 +268,10 @@ export async function createTicketWithSideEffects(
     suppressInternalNotifications: input.notificationSuppression?.suppressInternalNotifications === true,
   };
   const eventExtras = { ...suppressionPayload, ...provenance };
+  const createdEventExtras = { ...eventExtras, ...(input.eventPayload?.recurrence ? { recurrence: input.eventPayload.recurrence } : {}) };
 
   const eventPublisher = new TicketModelEventPublisher(trx, {
-    ticketCreatedPayload: eventExtras,
+    ticketCreatedPayload: createdEventExtras,
   });
 
   const created = await TicketModel.createTicketWithRetry(
@@ -147,7 +280,7 @@ export async function createTicketWithSideEffects(
     trx,
     {},
     eventPublisher,
-    undefined,
+    input.analyticsTracker,
     actorUserId ?? undefined,
     3,
   );
@@ -187,6 +320,7 @@ export async function createTicketWithSideEffects(
       ticketId,
       agentId,
       ADDITIONAL_AGENT_ROLE,
+      { kind: 'creation', ticketId },
       suppressionPayload,
     );
     if (result.resource && result.event.eventType === 'TICKET_ADDITIONAL_AGENT_ASSIGNED') agentEvents.push(result.event);
@@ -210,7 +344,16 @@ export async function createTicketWithSideEffects(
   }
 
   if (input.checklistTemplateId) {
-    await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    // A client-scoped template that doesn't match the new ticket's client is skipped, not fatal:
+    // ticket creation must never fail because of an optional checklist.
+    const checklistResult = await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    if (checklistResult.reason) {
+      console.warn('[createTicketWithSideEffects] checklist template not applied', {
+        ticketId,
+        templateId: input.checklistTemplateId,
+        reason: checklistResult.reason,
+      });
+    }
   }
 
   const fullTicket = await db.table('tickets').where({ ticket_id: ticketId }).first();
@@ -237,6 +380,23 @@ export async function createTicketWithSideEffects(
       ticket_origin: fullTicket.ticket_origin,
     },
   });
+
+  if (input.fromTemplate) {
+    await applyCreatedFromTemplateEffects(trx, tenant, {
+      ticketId,
+      actor: input.actor,
+      checklistItems: input.checklistItems ?? [],
+      links: input.templateLinks ?? [],
+      fromTemplate: input.fromTemplate,
+    });
+  } else if (input.checklistItems?.length) {
+    await insertChecklistItemsReplacingTemplates(trx, tenant, {
+      targetTicketId: ticketId,
+      items: ownedChecklistItemsToInsert(input.checklistItems),
+      userId: actorUserId,
+      audit: { actor: activityActor, source: activitySource },
+    });
+  }
 
   const eventCtx = (extra: { occurredAt?: string } = {}) => ({
     ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },

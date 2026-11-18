@@ -219,6 +219,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
+          initialDisplayTags={ticketData.displayTags}
           {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
@@ -228,7 +229,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           currentUser={currentUser}
         />

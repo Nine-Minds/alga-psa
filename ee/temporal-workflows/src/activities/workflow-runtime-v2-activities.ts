@@ -50,14 +50,33 @@ const systemCatalogTenant = (tenantId: string | null | undefined): string => {
   return tenant || WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT;
 };
 
+/**
+ * Loads a run by id, routed to its tenant's shard when the workflow passes the
+ * tenant. An unscoped run_id lookup fans out to every Citus shard and opens
+ * internal connections against the shared connection budget. A scoped miss
+ * falls back to the unscoped lookup so a run is never reported missing.
+ */
+async function getRunForActivity(
+  knex: Parameters<typeof WorkflowRunModelV2.getById>[0],
+  runId: string,
+  tenantId: string | null | undefined,
+) {
+  if (tenantId) {
+    const run = await WorkflowRunModelV2.getById(knex, runId, tenantId);
+    if (run) return run;
+  }
+  return WorkflowRunModelV2.getById(knex, runId);
+}
+
 export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
   runId: string;
+  tenantId?: string | null;
   workflowId: string;
   workflowVersion: number;
 }): Promise<{ definition: WorkflowDefinition; initialScopes: WorkflowRuntimeV2ScopeState }> {
   const knex = await getAdminConnection();
 
-  const run = await WorkflowRunModelV2.getById(knex, input.runId);
+  const run = await getRunForActivity(knex, input.runId, input.tenantId);
   if (!run) {
     throw new Error(`Run ${input.runId} not found`);
   }
@@ -114,12 +133,13 @@ export async function loadWorkflowRuntimeV2PinnedDefinition(input: {
 
 export async function completeWorkflowRuntimeV2Run(input: {
   runId: string;
+  tenantId?: string | null;
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 }): Promise<void> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       if (!run) return;
       await WorkflowRunModelV2.update(knex, input.runId, {
         status: input.status,
@@ -133,13 +153,14 @@ export async function completeWorkflowRuntimeV2Run(input: {
 
 export async function projectWorkflowRuntimeV2StepStart(input: {
   runId: string;
+  tenantId?: string | null;
   stepPath: string;
   definitionStepId: string;
 }): Promise<{ stepId: string | null; quotaPaused?: boolean }> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       if (!run) {
         throw new Error(`Run ${input.runId} not found`);
       }
@@ -224,6 +245,7 @@ export async function projectWorkflowRuntimeV2StepStart(input: {
 
 export async function projectWorkflowRuntimeV2StepCompletion(input: {
   runId: string;
+  tenantId?: string | null;
   stepId: string;
   stepPath: string;
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
@@ -236,7 +258,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
       const knex = await getAdminConnection();
       return knex.transaction(async (trx) => {
         const now = new Date().toISOString();
-        const run = await WorkflowRunModelV2.getById(trx, input.runId);
+        const run = await getRunForActivity(trx, input.runId, input.tenantId);
         if (!run) {
           throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
         }
@@ -311,6 +333,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
 
 export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
   runId: string;
+  tenantId?: string | null;
   stepPath: string;
   dueAt: string;
   payload: {
@@ -322,7 +345,7 @@ export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       const wait = await WorkflowRunWaitModelV2.create(knex, {
         run_id: input.runId,
         tenant: run?.tenant ?? undefined,
@@ -344,13 +367,14 @@ export async function projectWorkflowRuntimeV2TimeWaitStart(input: {
 export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
   waitId: string;
   runId: string;
+  tenantId?: string | null;
   status: 'RESOLVED' | 'CANCELED';
 }): Promise<void> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       await WorkflowRunWaitModelV2.update(knex, input.waitId, {
         status: input.status,
         resolved_at: now,
@@ -362,6 +386,7 @@ export async function projectWorkflowRuntimeV2TimeWaitResolved(input: {
 
 export async function projectWorkflowRuntimeV2EventWaitStart(input: {
   runId: string;
+  tenantId?: string | null;
   stepPath: string;
   eventName: string;
   correlationKey: string | null;
@@ -376,7 +401,7 @@ export async function projectWorkflowRuntimeV2EventWaitStart(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       const wait = await WorkflowRunWaitModelV2.create(knex, {
         run_id: input.runId,
         tenant: run?.tenant ?? undefined,
@@ -400,6 +425,7 @@ export async function projectWorkflowRuntimeV2EventWaitStart(input: {
 export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
   waitId: string;
   runId: string;
+  tenantId?: string | null;
   status: 'RESOLVED' | 'CANCELED';
   matchedEventId?: string | null;
 }): Promise<void> {
@@ -407,7 +433,7 @@ export async function projectWorkflowRuntimeV2EventWaitResolved(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       const waitQuery = run?.tenant
         ? tenantDb(knex, run.tenant).table('workflow_run_waits')
         : tenantDb(knex, '__workflow_event_wait_resolution_discovery__')
@@ -488,6 +514,7 @@ export async function startWorkflowRuntimeV2HumanTaskWait(input: {
 export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
   waitId: string;
   runId: string;
+  tenantId?: string | null;
   status: 'RESOLVED' | 'CANCELED';
   payload: Record<string, unknown>;
 }): Promise<void> {
@@ -495,7 +522,7 @@ export async function resolveWorkflowRuntimeV2HumanTaskWait(input: {
     async () => {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
-      const run = await WorkflowRunModelV2.getById(knex, input.runId);
+      const run = await getRunForActivity(knex, input.runId, input.tenantId);
       const waitQuery = run?.tenant
         ? tenantDb(knex, run.tenant).table('workflow_run_waits')
         : tenantDb(knex, '__workflow_human_wait_resolution_discovery__')
@@ -723,7 +750,7 @@ export async function startWorkflowRuntimeV2ChildRun(input: {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const parentRun = await WorkflowRunModelV2.getById(knex, input.parentRunId);
+      const parentRun = await getRunForActivity(knex, input.parentRunId, input.tenantId);
   if (!parentRun) {
     throw new Error(`Parent workflow run not found: ${input.parentRunId}`);
   }

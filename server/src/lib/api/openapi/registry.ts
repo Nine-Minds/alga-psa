@@ -7,6 +7,7 @@ import {
   RegistryMetadata,
 } from './types';
 import { getApiMetadataProducts } from '../../productSurfaceRegistry';
+import { includeNullInNullableEnums } from './nullableEnums';
 
 type OpenApiBodyContent = Record<string, { schema: ZodTypeAny; description?: string }>;
 
@@ -19,14 +20,28 @@ extendZodWithOpenApi(z);
 
 export type RegistryEdition = 'ce' | 'ee';
 
+/**
+ * Edition extension point: every route is passed through the decorators, in
+ * order, before it is registered. An edition (or product) that needs to document
+ * cross-cutting request/response behaviour on the routes it affects supplies a
+ * decorator; the registry itself stays ignorant of what it adds.
+ */
+export type RouteDecorator = (route: ApiRouteSpec) => ApiRouteSpec;
+
 export class ApiOpenApiRegistry {
   private readonly registry: OpenAPIRegistry;
   private readonly routes: ApiRouteSpec[] = [];
   private readonly edition: RegistryEdition;
+  private readonly routeDecorators: RouteDecorator[];
 
-  constructor(edition: RegistryEdition = 'ce') {
+  constructor(edition: RegistryEdition = 'ce', routeDecorators: RouteDecorator[] = []) {
     this.registry = new OpenAPIRegistry();
     this.edition = edition;
+    this.routeDecorators = routeDecorators;
+  }
+
+  private decorate(route: ApiRouteSpec): ApiRouteSpec {
+    return this.routeDecorators.reduce((current, decorator) => decorator(current), route);
   }
 
   registerSchema<TSchema extends ZodTypeAny>(name: string, schema: TSchema): TSchema {
@@ -42,10 +57,11 @@ export class ApiOpenApiRegistry {
     return component;
   }
 
-  registerRoute(route: ApiRouteSpec): void {
-    if (!this.shouldIncludeRoute(route)) {
+  registerRoute(undecorated: ApiRouteSpec): void {
+    if (!this.shouldIncludeRoute(undecorated)) {
       return;
     }
+    const route = this.decorate(undecorated);
 
     this.routes.push(route);
     const request = this.buildRequest(route);
@@ -108,7 +124,7 @@ export class ApiOpenApiRegistry {
 
     const tags = options.tags ?? this.collectTags();
 
-    return generator.generateDocument({
+    const document = generator.generateDocument({
       openapi: '3.1.0',
       info: {
         title: options.title,
@@ -118,6 +134,8 @@ export class ApiOpenApiRegistry {
       servers: options.servers,
       tags,
     });
+
+    return includeNullInNullableEnums(document);
   }
 
   getRegisteredRoutes(): ApiRouteSpec[] {
@@ -233,13 +251,14 @@ export interface ControllerRouteRegistrar {
 
 export interface RegistryInitOptions {
   edition?: RegistryEdition;
+  routeDecorators?: RouteDecorator[];
 }
 
 export function createRegistry(
   registrars: ControllerRouteRegistrar[] = [],
   options: RegistryInitOptions = {},
 ) {
-  const registry = new ApiOpenApiRegistry(options.edition ?? 'ce');
+  const registry = new ApiOpenApiRegistry(options.edition ?? 'ce', options.routeDecorators ?? []);
   for (const registrar of registrars) {
     registrar(registry);
   }

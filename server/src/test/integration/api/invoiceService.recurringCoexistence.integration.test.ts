@@ -404,5 +404,53 @@ describe('InvoiceService recurring coexistence integration', () => {
       recurring_cadence_source: 'contract_anniversary',
     });
     expect(canonicalInvoice).not.toHaveProperty('billing_cycle');
+
+    // Recurring summary dates come from the separate rsp query and are merged in JS.
+    expect(toDateOnly(canonicalListRow?.recurring_service_period_start)).toBe('2025-02-01');
+    expect(toDateOnly(canonicalListRow?.recurring_service_period_end)).toBe('2025-03-01');
+    expect(toDateOnly(canonicalListRow?.recurring_invoice_window_start)).toBe('2025-02-01');
+    expect(toDateOnly(canonicalListRow?.recurring_invoice_window_end)).toBe('2025-03-01');
+    expect(toDateOnly(canonicalInvoice?.recurring_service_period_start)).toBe('2025-02-01');
+    expect(legacyListRow?.recurring_service_period_start ?? null).toBeNull();
+    expect(legacyListRow?.recurring_invoice_window_end ?? null).toBeNull();
+
+    // Cadence filters return the right rows AND the right total.
+    const contractFiltered = await service.list(
+      { page: 1, limit: 10 } as any,
+      context,
+      { cadence_source: 'contract_anniversary' } as any,
+    );
+    expect(contractFiltered.data.map((invoice) => invoice.invoice_id)).toEqual([canonicalInvoiceId]);
+    expect(contractFiltered.total).toBe(1);
+    expect(contractFiltered.data[0]?.recurring_execution_window_kind).toBe('contract_cadence_window');
+
+    const contractKindFiltered = await service.list(
+      { page: 1, limit: 10 } as any,
+      context,
+      { execution_window_kind: 'contract_cadence_window' } as any,
+    );
+    expect(contractKindFiltered.data.map((invoice) => invoice.invoice_id)).toEqual([canonicalInvoiceId]);
+    expect(contractKindFiltered.total).toBe(1);
+
+    const clientFiltered = await service.list(
+      { page: 1, limit: 10 } as any,
+      context,
+      { cadence_source: 'client_schedule' } as any,
+    );
+    expect(clientFiltered.data).toEqual([]);
+    expect(clientFiltered.total).toBe(0);
+
+    // Unrecognised values stay no-ops.
+    const unfiltered = await service.list(
+      { page: 1, limit: 10 } as any,
+      context,
+      { cadence_source: 'not-a-source' } as any,
+    );
+    expect(unfiltered.total).toBe(2);
+
+    // Statistics accept the cadence filter without referencing a missing alias.
+    await expect(
+      service.getStatistics(context, { cadence_source: 'contract_anniversary' } as any),
+    ).resolves.toBeTruthy();
   }, HOOK_TIMEOUT);
 });

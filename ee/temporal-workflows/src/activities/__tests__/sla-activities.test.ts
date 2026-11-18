@@ -12,7 +12,7 @@ import {
 const { publishToStream, checkEscalationNeeded, escalateTicket, withTransaction } = vi.hoisted(() => ({
   publishToStream: vi.fn(), checkEscalationNeeded: vi.fn(), escalateTicket: vi.fn(), withTransaction: vi.fn(),
 }));
-vi.mock('@temporalio/activity', () => ({ Context: { current: () => ({ log: { info: vi.fn() } }) } }));
+vi.mock('@temporalio/activity', () => ({ Context: { current: () => ({ log: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }) } }));
 vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({ ...((await importOriginal()) as any), getRedisStreamClient: () => ({ publishToStream }) }));
 vi.mock('@alga-psa/sla/services/escalationService', () => ({ checkEscalationNeeded, escalateTicket }));
 vi.mock('@alga-psa/db', () => ({
@@ -145,6 +145,16 @@ describe('sla activities', () => {
     expect(result).toBe('2024-01-01T10:00:00.000Z');
   });
 
+  it('calculateNextWakeTime preserves fractional business minutes and pause time', async () => {
+    const result = await calculateNextWakeTime({
+      currentTime: '2024-01-01T09:00:00.000Z',
+      targetMinutes: 1.4,
+      schedule: { ...scheduleWeekdays, is_24x7: true, entries: [] },
+      pauseMinutes: 0.1,
+    });
+    expect(result).toBe('2024-01-01T09:01:30.000Z');
+  });
+
   it('calculateNextWakeTime handles timezone correctly for America/New_York', async () => {
     const result = await calculateNextWakeTime({
       currentTime: '2024-01-01T14:00:00.000Z',
@@ -205,6 +215,7 @@ describe('sla activities', () => {
 
   it('checkAndEscalate activity calls escalationService.escalateTicket() when needed', async () => {
     checkEscalationNeeded.mockResolvedValue(2);
+    escalateTicket.mockResolvedValue({ success: true, escalationLevel: 2, managerId: 'm-1', resourceAdded: true, notificationsSent: { inApp: true, email: true } });
     await checkAndEscalate({
       tenantId: 'tenant-1',
       ticketId: 'ticket-1',
@@ -212,6 +223,26 @@ describe('sla activities', () => {
       thresholdPercent: 90,
     });
     expect(escalateTicket).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'ticket-1', 2);
+  });
+
+  it('checkAndEscalate rejects when escalateTicket returns success: false', async () => {
+    checkEscalationNeeded.mockResolvedValue(1);
+    escalateTicket.mockResolvedValue({ success: false, escalationLevel: 1, error: 'boom' });
+    await expect(
+      checkAndEscalate({ tenantId: 'tenant-1', ticketId: 'ticket-1', phase: 'response', thresholdPercent: 75 })
+    ).rejects.toThrow('SLA escalation failed for ticket ticket-1 (level 1): boom');
+  });
+
+  it('checkAndEscalate resolves for the "already at or above" no-op', async () => {
+    checkEscalationNeeded.mockResolvedValue(1);
+    escalateTicket.mockResolvedValue({
+      success: true,
+      escalationLevel: 1,
+      error: 'Ticket already at or above this escalation level',
+    });
+    await expect(
+      checkAndEscalate({ tenantId: 'tenant-1', ticketId: 'ticket-1', phase: 'response', thresholdPercent: 75 })
+    ).resolves.toBeUndefined();
   });
 
   it('updateSlaStatus activity updates ticket sla_response_met field', async () => {

@@ -59,7 +59,7 @@ export type ProjectTaskUpdatedEventPayload = z.infer<typeof projectTaskUpdatedEv
 export const projectTaskAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   taskId: taskIdSchema,
   projectId: projectIdSchema,
-  assignedToId: z.string().uuid(),
+  assignedToId: z.string().guid(),
   assignedToType: assignedToTypeSchema,
   assignedByUserId: userIdSchema.optional(),
   assignedByName: z.string().optional().describe('Display name of the user who assigned the task'),
@@ -110,7 +110,7 @@ export type ProjectTaskDependencyUnblockedEventPayload = z.infer<
 >;
 
 export const projectApprovalRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  approvalId: z.string().uuid(),
+  approvalId: z.string().guid(),
   projectId: projectIdSchema,
   approvalType: z.string().min(1),
   requestedByUserId: userIdSchema.optional(),
@@ -121,7 +121,7 @@ export const projectApprovalRequestedEventPayloadSchema = BaseDomainEventPayload
 export type ProjectApprovalRequestedEventPayload = z.infer<typeof projectApprovalRequestedEventPayloadSchema>;
 
 export const projectApprovalGrantedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  approvalId: z.string().uuid(),
+  approvalId: z.string().guid(),
   projectId: projectIdSchema,
   approvalType: z.string().min(1),
   approvedByUserId: userIdSchema.optional(),
@@ -132,7 +132,7 @@ export const projectApprovalGrantedEventPayloadSchema = BaseDomainEventPayloadSc
 export type ProjectApprovalGrantedEventPayload = z.infer<typeof projectApprovalGrantedEventPayloadSchema>;
 
 export const projectApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  approvalId: z.string().uuid(),
+  approvalId: z.string().guid(),
   projectId: projectIdSchema,
   approvalType: z.string().min(1),
   rejectedByUserId: userIdSchema.optional(),
@@ -148,7 +148,7 @@ export type ProjectApprovalRejectedEventPayload = z.infer<typeof projectApproval
 
 export const projectAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   projectId: projectIdSchema,
-  assignedToId: z.string().uuid().optional(),
+  assignedToId: z.string().guid().optional(),
   assignedToType: assignedToTypeSchema.optional(),
   assignedByUserId: userIdSchema.optional(),
   assignedAt: z.string().datetime().optional(),
@@ -235,7 +235,7 @@ export const projectBillingConfigEventPayloadSchema = BaseDomainEventPayloadSche
   billingModel: z.enum(['fixed_price', 'time_and_materials']),
   invoiceMode: z.enum(['recurring', 'standalone']),
   userId: userIdSchema.optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 }).describe('Payload for project billing configuration lifecycle events');
 
 export const projectBillingScheduleEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
@@ -247,7 +247,7 @@ export const projectBillingScheduleEventPayloadSchema = BaseDomainEventPayloadSc
   previousStatus: projectBillingStatusSchema.nullable().optional(),
   requiresPaymentBeforeWork: z.boolean(),
   userId: userIdSchema.optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 }).describe('Payload for project billing schedule lifecycle events');
 
 export const projectBillingPaymentStatusEventPayloadSchema = BaseDomainEventPayloadSchema.extend({

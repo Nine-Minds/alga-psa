@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { useTranslation } from '../lib/i18n/client'
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister'
 import { ButtonComponent, AutomationProps } from '../ui-reflection/types'
 import { CommonActions } from '../ui-reflection/actionBuilders'
@@ -41,6 +42,7 @@ function CollapseToggleButton({
   'aria-label': ariaLabelProp,
   ...props
 }: CollapseToggleButtonProps) {
+  const { t } = useTranslation('common')
   const buttonRef = React.useRef<HTMLButtonElement | null>(null)
   const resolvedLabel = label ?? (isCollapsed ? collapsedLabel : expandedLabel)
   const ariaLabel = ariaLabelProp ?? resolvedLabel
@@ -74,8 +76,8 @@ function CollapseToggleButton({
     disabled,
     variant: 'collapse-toggle'
   }, () => [
-    CommonActions.click(resolvedLabel ? `Click ${resolvedLabel}` : 'Click this button'),
-    CommonActions.focus('Focus this button')
+    CommonActions.click(resolvedLabel ? t('button.actions.clickLabel', { label: resolvedLabel }) : t('button.actions.click')),
+    CommonActions.focus(t('button.actions.focus'))
   ])
 
   React.useEffect(() => {

@@ -62,14 +62,17 @@
       "phoneNumber": "Número de teléfono",
       "client": "Cliente",
       "tags": "Etiquetas",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "location": "Ubicación"
     },
     "lastPhoneTypeUsage": {
       "title": "Último uso del tipo de teléfono",
       "message_one": "El siguiente tipo de teléfono personalizado ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo o conservarla para uso futuro?",
       "message_other": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
       "deleteType": "Eliminar tipo",
-      "keepType": "Conservar tipo"
+      "keepType": "Conservar tipo",
+      "message_few": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
+      "message_many": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?"
     },
     "print": {
       "title": "Contactos",
@@ -180,7 +183,10 @@
       "role": "Cargo",
       "notes": "Notas",
       "primaryEmailLabel": "Etiqueta del correo principal",
-      "additionalEmails": "Direcciones de correo adicionales"
+      "additionalEmails": "Direcciones de correo adicionales",
+      "workArrangement": "Modalidad de trabajo",
+      "locations": "Ubicaciones",
+      "primaryLocation": "Ubicación principal"
     },
     "unassigned": "Seleccionar campo",
     "errors": {
@@ -412,7 +418,10 @@
       "refreshing": "Actualizando...",
       "resend": "Reenviar",
       "resending": "Reenviando...",
-      "revoke": "Revocar"
+      "revoke": "Revocar",
+      "cancel": "Cancelar",
+      "edit": "Editar",
+      "delete": "Eliminar"
     },
     "toast": {
       "successTitle": "Éxito",
@@ -454,8 +463,11 @@
         "noBaseUrl": "La URL base no está configurada para las invitaciones al portal.",
         "invitationNotFound": "Invitación no encontrada o ya utilizada."
       },
-      "userNotFound": "No se encontró el usuario del cliente"
-    }
+      "userNotFound": "No se encontró el usuario del cliente",
+      "validationErrorTitle": "Error de validación"
+    },
+    "boardCount_few": "{{count}} tableros",
+    "boardCount_many": "{{count}} tableros"
   },
   "quickAddContact": {
     "title": "Añadir contacto nuevo",
@@ -626,14 +638,17 @@
       "email": "Correo electrónico",
       "phoneNumber": "Número de teléfono",
       "actions": "Acciones",
-      "role": "Rol"
+      "role": "Rol",
+      "location": "Ubicación"
     },
     "filter": {
       "show": "Mostrar:",
       "active": "Contactos activos",
       "inactive": "Contactos inactivos",
       "all": "Todos los contactos",
-      "searchPlaceholder": "Buscar contactos..."
+      "searchPlaceholder": "Buscar contactos...",
+      "allLocations": "Todas las ubicaciones",
+      "noLocation": "Sin ubicación"
     },
     "actions": {
       "openMenu": "Abrir menú",
@@ -712,6 +727,118 @@
       "saved": "Contacto actualizado",
       "saveFailed": "No se pudo actualizar el contacto",
       "saveFailedDescription": "No se pudo actualizar el contacto. Inténtelo de nuevo."
+    },
+    "relative": {
+      "today": "hoy",
+      "yesterday": "ayer",
+      "daysAgo": "hace {{count}} d"
+    },
+    "emailType": {
+      "primary": "Principal",
+      "other": "otro"
+    },
+    "phoneType": {
+      "other": "Otro"
+    },
+    "ticketPill": {
+      "closed": "Cerrado",
+      "urgent": "Urgente",
+      "open": "Abierto"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "role": {
+      "add": "Agregar rol",
+      "editTitle": "Haga clic para editar el rol"
+    },
+    "atClient": "en",
+    "noClient": "Sin cliente",
+    "noPrimaryEmail": "Sin correo electrónico principal",
+    "noPhoneNumber": "Sin número de teléfono",
+    "contactSince": "Contacto desde {{date}}",
+    "lastTouch": "Última interacción",
+    "editContact": "Editar contacto",
+    "openFullPage": "Abrir página completa",
+    "viewAll": "Ver todas",
+    "viewAllCount": "Ver todos ({{count}})",
+    "reach": {
+      "title": "Datos de contacto",
+      "add": "Agregar correo electrónico o teléfono",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "primaryMeta": "principal",
+      "noEmails": "Sin direcciones de correo electrónico",
+      "addEmail": "Agregar un correo electrónico",
+      "noPhones": "Sin números de teléfono",
+      "addPhone": "Agregar un número de teléfono"
+    },
+    "portalChip": {
+      "deactivated": "Portal · desactivado",
+      "signedIn": "Portal · inició sesión {{when}}",
+      "neverSignedIn": "Portal · nunca inició sesión",
+      "invited": "Portal · invitado",
+      "noAccess": "Sin acceso al portal"
+    },
+    "portal": {
+      "title": "Acceso al portal",
+      "manage": "Gestionar",
+      "status": "Estado",
+      "role": "Rol",
+      "clientAdmin": "Administrador del cliente",
+      "standard": "Estándar",
+      "lastSignIn": "Último inicio de sesión",
+      "invited": "Invitado",
+      "noClientAssigned": "Sin cliente asignado",
+      "deactivated": "Desactivado",
+      "activeAccount": "Cuenta activa",
+      "invitationSent": "Invitación enviada",
+      "noAccess": "Sin acceso"
+    },
+    "tickets": {
+      "title": "Tickets",
+      "create": "Crear ticket",
+      "createFirst": "Crear un ticket",
+      "empty": "Aún no hay tickets",
+      "fallbackTitle": "Ticket {{number}}"
+    },
+    "interactions": {
+      "title": "Interacciones",
+      "log": "Registrar interacción",
+      "logFirst": "Registrar una interacción",
+      "empty": "No hay interacciones registradas",
+      "fallbackTitle": "Interacción",
+      "loadError": "No se pudieron cargar las interacciones. Inténtelo de nuevo."
+    },
+    "documents": {
+      "title": "Documentos",
+      "add": "Agregar documento",
+      "addFirst": "Agregar un documento",
+      "empty": "Aún no hay documentos",
+      "fallbackTitle": "Documento",
+      "dialogTitle": "Documentos del contacto"
+    },
+    "relatedWork": {
+      "title": "Trabajo relacionado",
+      "projects": "Proyectos",
+      "quotes": "Cotizaciones",
+      "noProjects": "Sin proyectos",
+      "noQuotes": "Sin cotizaciones",
+      "noStatus": "Sin estado",
+      "noStatusLower": "sin estado",
+      "projectFallback": "Proyecto {{number}}",
+      "quoteFallback": "Cotización",
+      "empty": "No hay proyectos ni cotizaciones relacionados"
+    },
+    "notes": {
+      "title": "Notas",
+      "edit": "Editar",
+      "openDocument": "Abrir documento de notas",
+      "save": "Guardar notas",
+      "cancel": "Cancelar",
+      "empty": "Aún no hay notas",
+      "add": "Agregar notas"
     }
   },
   "errors": {
@@ -734,7 +861,70 @@
       "visibilityDuplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "visibilityInvalidData": "Se proporcionaron datos de grupo de visibilidad no válidos. Compruebe los datos del grupo y los tableros seleccionados.",
       "groupNameRequired": "El nombre del grupo es obligatorio",
-      "readPermission": "Permiso denegado: no se pueden leer contactos"
+      "readPermission": "Permiso denegado: no se pueden leer contactos",
+      "idRequired": "El ID del contacto es obligatorio",
+      "schemaError": "Error en el esquema de la base de datos; contacte con soporte",
+      "readFailed": "Ocurrió un error inesperado al obtener la información del contacto",
+      "deleteRecordFailed": "No se encontró el registro del contacto o no se pudo eliminar",
+      "updateIdRequired": "El ID del contacto es obligatorio para las actualizaciones",
+      "clientMissing": "El cliente seleccionado ya no existe",
+      "destinationMissing": "El destino seleccionado para tickets entrantes ya no existe",
+      "updateMissing": "El contacto que intenta actualizar ya no existe",
+      "updateRecordMissing": "La actualización del contacto se completó sin devolver el registro actualizado",
+      "clientIdRequired": "El ID del cliente es obligatorio",
+      "specifiedClientMissing": "El cliente especificado no existe",
+      "updateDataRequired": "No se proporcionaron datos de actualización",
+      "emailInvalid": "Introduzca una dirección de correo electrónico válida",
+      "bulkUpdateFailed": "La actualización de contactos del cliente se completó sin modificar ningún registro",
+      "updateFailed": "Ocurrió un error inesperado al actualizar los contactos del cliente",
+      "importMultipleMatches": "Las direcciones de correo electrónico importadas coinciden con varios contactos existentes",
+      "updatePermission": "No se pueden actualizar los contactos",
+      "importDataRequired": "No se proporcionaron datos de contactos",
+      "fullNameRequired": "El nombre completo es obligatorio",
+      "importFailed": "Ocurrió un error inesperado al importar contactos",
+      "emailsRequired": "No se proporcionaron direcciones de correo electrónico",
+      "validEmailsRequired": "No se proporcionaron direcciones de correo electrónico válidas",
+      "checkEmailsFailed": "Ocurrió un error inesperado al verificar las direcciones de correo electrónico existentes",
+      "portalAdminRequired": "Se requiere acceso de administrador al portal del cliente",
+      "assignedGroupInvalid": "El grupo de visibilidad asignado no es válido para este contacto",
+      "groupNotFound": "No se encontró el grupo de visibilidad",
+      "boardsInvalid": "Uno o más tableros no son válidos para este inquilino",
+      "groupCreateFailed": "La creación del grupo de visibilidad se completó sin devolver un ID de grupo",
+      "groupInUse": "No se puede eliminar el grupo de visibilidad mientras esté asignado a contactos",
+      "importEmailInvalid": "Formato de correo electrónico inválido para el contacto: {{name}}",
+      "importClientMissing": "No se encontró el cliente del contacto: {{name}}",
+      "invalidEmailValue": "Formato de correo electrónico inválido: {{email}}",
+      "invalidData": "Datos de contacto inválidos",
+      "phoneExtensionInvalid": "Teléfono {{index}}: Ingrese una extensión válida",
+      "phoneNumberInvalid": "Teléfono {{index}}: Ingrese un número de teléfono válido",
+      "phoneCountryRequired": "Teléfono {{index}}: Incluya el código de país, comenzando con +",
+      "tenantEmailExists": "Ya existe una dirección de correo electrónico de contacto en este inquilino",
+      "importRowFailed": "No se pudo importar este contacto. Revise los campos obligatorios y las referencias de clientes.",
+      "deleteMissing": "El contacto que intenta eliminar ya no existe.",
+      "deleteFailed": "No se pudo eliminar el contacto. Intente de nuevo.",
+      "deleteDependencies": "No se puede eliminar el contacto porque tiene registros asociados",
+      "connectionFailed": "Problema de conexión con la base de datos. Intente de nuevo.",
+      "deleteUnexpected": "Ocurrió un error inesperado al eliminar el contacto",
+      "importFileFailed": "No se pudieron importar los contactos. Revise el archivo e intente de nuevo.",
+      "portalAdminUpdateFailed": "No se pudo actualizar el estado de administrador del portal. Actualice la página e intente de nuevo.",
+      "userLoadFailed": "No se pudo obtener el usuario",
+      "sharedMailboxAdmin": "Los contactos de buzones compartidos no pueden ser administradores de clientes.",
+      "createFailed": "Ocurrió un error inesperado al crear el contacto",
+      "importDuplicateEmail": "Ya existe un contacto con este correo electrónico: {{value}}",
+      "importDuplicateName": "Ya existe un contacto con este nombre: {{value}}",
+      "permissions": {
+        "readContacts": "No se pueden leer los contactos",
+        "deleteContacts": "No se pueden eliminar los contactos",
+        "createContacts": "No se pueden crear contactos",
+        "updateContacts": "No se pueden actualizar los contactos",
+        "managePhoneTypes": "No se pueden administrar los tipos de teléfono",
+        "updateClientUsers": "No tiene permiso para actualizar usuarios de clientes",
+        "viewClientUsers": "No tiene permiso para ver usuarios de clientes"
+      },
+      "field": "campo",
+      "locationClientMismatch": "Esa ubicación pertenece a otro cliente.",
+      "importLocationUnknown": "No se puede importar {{name}}: la ubicación «{{location}}» no existe para ese cliente",
+      "importLocationNoClient": "No se puede importar {{name}}: las ubicaciones necesitan un cliente en la misma fila"
     }
   },
   "portal": {
@@ -759,8 +949,77 @@
       "scopeSummaryAll": "Todos",
       "scopeSummaryOwn": "Propios",
       "managerScopeNote_one": "Su vista también incluye los registros de {{count}} persona que depende de ella.",
+      "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
+      "managerScopeNote_few": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
       "managerScopeNote_many": "Su vista también incluye los registros de {{count}} de personas que dependen de ella.",
-      "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella."
+      "assignmentLabel": "Grupo de visibilidad de tickets",
+      "assignmentPlaceholder": "Seleccione una asignación de visibilidad",
+      "assignmentUpdated": "Asignación de visibilidad del contacto actualizada",
+      "assignFailed": "No se pudo asignar el grupo de visibilidad",
+      "manageLabel": "Grupos de visibilidad del cliente",
+      "manageHelp": "Cree o edite grupos de tableros y asígnelos a contactos.",
+      "nameLabel": "Nombre del grupo",
+      "nameRequired": "El nombre del grupo de visibilidad es obligatorio",
+      "descriptionLabel": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional",
+      "boardsLabel": "Tableros",
+      "noBoards": "No hay tableros disponibles",
+      "createGroup": "Crear grupo",
+      "updateGroup": "Actualizar grupo",
+      "created": "Grupo de visibilidad creado",
+      "updated": "Grupo de visibilidad actualizado",
+      "deleted": "Grupo de visibilidad eliminado",
+      "deleteConfirm": "¿Eliminar este grupo de visibilidad?",
+      "deleteFailed": "No se pudo eliminar el grupo de visibilidad",
+      "saveFailed": "No se pudo guardar el grupo de visibilidad",
+      "loadFailed": "No se pudo cargar el grupo de visibilidad para editarlo",
+      "empty": "Aún no hay grupos de visibilidad",
+      "fullAccess": "Acceso completo"
+    }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contacto actualizado correctamente",
+      "created": "Contacto creado correctamente"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Exploradora principal",
+    "explorerNotes": "Cayó en una madriguera de conejo y descubrió un mundo completamente nuevo",
+    "explorerTags": "Curiosa, Aventurera, Valiente",
+    "teaRole": "Experto principal en ceremonias del té",
+    "teaNotes": "Sabe por qué un cuervo se parece a un escritorio",
+    "teaTags": "Creativo, Excéntrico, Experto en té"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · última sincronización: {{date}}",
+    "description": "Este contacto se sincroniza con una cuenta del directorio.",
+    "signInName": "Nombre de inicio de sesión: {{name}}",
+    "lastSynced": "Última sincronización: {{date}}",
+    "deleted": "Inactivo — la cuenta de Microsoft se eliminó.",
+    "disabled": "Inactivo — la cuenta de Microsoft está deshabilitada."
+  },
+  "contactLocations": {
+    "locations": "Ubicaciones",
+    "addLocation": "Añadir ubicación",
+    "workArrangement": "Modalidad de trabajo",
+    "primary": "Principal",
+    "none": "Sin ubicaciones",
+    "inactiveMarker": "(inactiva)",
+    "extraCount": "+{{count}}",
+    "chooseClientFirst": "Elija primero un cliente para seleccionar sus ubicaciones.",
+    "loading": "Cargando ubicaciones…",
+    "noneForClient": "Este cliente aún no tiene ubicaciones.",
+    "arrangement": {
+      "unset": "Sin definir",
+      "on_site": "En la oficina",
+      "hybrid": "Híbrida",
+      "remote": "Remota"
+    },
+    "clientChange": {
+      "title": "¿Cambiar de cliente?",
+      "message": "Esto elimina {{count}} vínculo(s) de ubicación. Las ubicaciones pertenecen a un cliente, por lo que no pueden seguir al contacto.",
+      "confirm": "Cambiar de cliente"
     }
   }
 }

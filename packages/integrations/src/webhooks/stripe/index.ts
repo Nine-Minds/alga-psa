@@ -124,9 +124,27 @@ export async function POST(req: NextRequest) {
         stack: error instanceof Error ? error.stack : undefined,
       });
 
-      // Return 200 to acknowledge receipt even if processing failed
-      // This prevents Stripe from retrying immediately
-      // The error is logged and recorded in stripe_webhook_events table
+      // Two failure paths:
+      // 1. Appliance lifecycle sync failures (ApplianceLifecycleSyncError, marked
+      //    `retryable`) return HTTP 500 so Stripe redelivers the event. That path
+      //    returns before any stripe_webhook_events bookkeeping, so the retry is
+      //    not deduplicated away. Detected by duck-typing: this package must not
+      //    import EE classes, so `instanceof` is not available.
+      // 2. Every other error (hosted tenant processing) returns 200 to
+      //    acknowledge receipt; the failure is logged and recorded in the
+      //    stripe_webhook_events table.
+      if ((error as any)?.retryable === true || (error as any)?.name === 'ApplianceLifecycleSyncError') {
+        return NextResponse.json(
+          {
+            received: true,
+            processed: false,
+            retryable: true,
+            error: 'Processing failed (will be retried)',
+          },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
         {
           received: true,

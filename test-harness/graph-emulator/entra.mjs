@@ -22,7 +22,36 @@ export const entraState = {
   groups: new Map(),
   /** When set, CIPP requests must present this key; when null, any key passes. */
   cippApiKey: null,
+  /**
+   * CIPP API-client mode. When `cippClient` is set, CIPP calls must carry a
+   * Bearer token minted by the client-credentials endpoint below; X-API-KEY is
+   * ignored, as it is by real CIPP-API once an API client is in use. With it
+   * null, the legacy api-key behaviour above applies unchanged.
+   */
+  cippClient: null, // { tenantId, clientId, clientSecret }
+  cippTokens: new Map(), // token -> { expiresAt }
+  cippMintCount: 0,
+  cippFaults: defaultCippFaults(),
 };
+
+function defaultCippFaults() {
+  return {
+    /** expires_in (seconds) on minted tokens, and how long the emulator honours them. */
+    tokenTtlSeconds: 3600,
+    /** Every authority lookup answers AADSTS90002, whatever the tenant. */
+    tenantNotFound: false,
+    /** The token request answers AADSTS500011: api://{clientId} does not resolve. */
+    missingIdentifierUri: false,
+    /** Every CIPP endpoint answers 403, listtenants included (IP allowlist). */
+    ipBlocked: false,
+    /** Endpoint names (lowercase, e.g. 'listusers') that answer 403 while the rest work (Custom Role). */
+    blockedEndpoints: [],
+    /** /api/* answers 200 text/html, as when the URL points at the CIPP web UI. */
+    htmlAtApi: false,
+    /** The token endpoint answers AADSTS65001 (admin consent missing). */
+    consentRequired: false,
+  };
+}
 
 export function resetEntra() {
   entraState.organization = null;
@@ -30,6 +59,10 @@ export function resetEntra() {
   entraState.users.clear();
   entraState.groups.clear();
   entraState.cippApiKey = null;
+  entraState.cippClient = null;
+  entraState.cippTokens.clear();
+  entraState.cippMintCount = 0;
+  entraState.cippFaults = defaultCippFaults();
 }
 
 function normalizeUser(input, tenantId) {
@@ -206,6 +239,9 @@ export function summarizeEntra() {
     userCount: entraState.users.size,
     groupCount: entraState.groups.size,
     cippApiKeyPinned: Boolean(entraState.cippApiKey),
+    cippApiClientMode: Boolean(entraState.cippClient),
+    cippMintCount: entraState.cippMintCount,
+    cippFaults: entraState.cippFaults,
   };
 }
 
@@ -313,10 +349,67 @@ export async function handleEntraGraph(req, res, graphPath, url, json, access = 
 
 function cippAuthorized(req) {
   const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+
+  if (entraState.cippClient) {
+    // API-client mode: only a live minted token counts. A legacy key, or a
+    // token past its expires_in, is a 401 — which is what makes a sync that
+    // outlives its token fail here unless the client re-mints.
+    const token = entraState.cippTokens.get(bearer);
+    return Boolean(token && token.expiresAt > Date.now());
+  }
+
   const apiKey = String(req.headers['x-api-key'] || '').trim();
   const presented = apiKey || bearer;
   if (!presented) return false;
   return entraState.cippApiKey ? presented === entraState.cippApiKey : true;
+}
+
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function aadError(status, error, code, description) {
+  return {
+    status,
+    body: {
+      error,
+      error_description: `AADSTS${code}: ${description}\r\nTrace ID: 00000000-0000-0000-0000-000000000000\r\nCorrelation ID: 00000000-0000-0000-0000-000000000001`,
+      error_codes: [code],
+    },
+  };
+}
+
+/**
+ * The client-credentials grant a CIPP API client uses:
+ * POST /{directoryId}/oauth2/v2.0/token with scope api://{clientId}/.default.
+ * Returns {status, body}; the AADSTS texts mirror Microsoft's.
+ */
+export function issueCippClientToken(authorityTenant, input) {
+  const faults = entraState.cippFaults;
+  const client = entraState.cippClient;
+
+  if (faults.tenantNotFound || (!GUID.test(authorityTenant) && authorityTenant !== client?.tenantId)) {
+    return aadError(400, 'invalid_request', 90002, `Tenant '${authorityTenant}' not found. Check to make sure you have the correct tenant ID and are signing into the correct cloud.`);
+  }
+  if (!client || input.client_id !== client.clientId || authorityTenant !== client.tenantId) {
+    return aadError(401, 'unauthorized_client', 700016, `Application with identifier '${input.client_id}' was not found in the directory '${authorityTenant}'. This can happen if the application has not been installed by the administrator of the tenant or consented to by any user in the tenant.`);
+  }
+  if (input.client_secret !== client.clientSecret) {
+    return aadError(401, 'invalid_client', 7000215, 'Invalid client secret provided. Ensure the secret being sent in the request is the client secret value, not the client secret ID, for a secret added to app.');
+  }
+  if (faults.consentRequired) {
+    return aadError(400, 'invalid_grant', 65001, `The user or administrator has not consented to use the application with ID '${client.clientId}'.`);
+  }
+  if (faults.missingIdentifierUri || input.scope !== `api://${client.clientId}/.default`) {
+    return aadError(400, 'invalid_resource', 500011, `The resource principal named api://${client.clientId} was not found in the tenant named '${authorityTenant}'. This can happen if the application has not been installed by the administrator of the tenant or consented to by any user in the tenant.`);
+  }
+
+  const ttl = Math.max(1, Number(faults.tokenTtlSeconds) || 3600);
+  const token = `cipp-at-${randomUUID()}`;
+  entraState.cippTokens.set(token, { expiresAt: Date.now() + ttl * 1000 });
+  entraState.cippMintCount += 1;
+  return {
+    status: 200,
+    body: { token_type: 'Bearer', expires_in: ttl, ext_expires_in: ttl, access_token: token },
+  };
 }
 
 /** The CIPP-API surface, over the same directory. */
@@ -325,8 +418,33 @@ export function handleCippApi(req, res, url, json) {
     return false;
   }
 
+  const faults = entraState.cippFaults;
+  const endpoint = url.pathname.replace(/^\/api\//, '').toLowerCase();
+
+  // The CIPP web UI answering where /api should be: a 200 page, not JSON.
+  if (faults.htmlAtApi) {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end('<!DOCTYPE html><html><head><title>CIPP</title></head><body><div id="root"></div></body></html>');
+    return true;
+  }
+
+  // The IP allowlist is enforced before anything else, authentication included.
+  if (faults.ipBlocked) {
+    json(res, 403, { error: 'Forbidden', message: 'Your IP address is not in the allowed range for this API client.' });
+    return true;
+  }
+
   if (!cippAuthorized(req)) {
-    json(res, 401, { error: 'Unauthorized', message: 'A valid CIPP API key is required.' });
+    json(res, 401, {
+      error: 'Unauthorized',
+      message: entraState.cippClient ? 'A valid access token is required.' : 'A valid CIPP API key is required.',
+    });
+    return true;
+  }
+
+  // A Custom Role refuses one endpoint while the others keep working.
+  if (faults.blockedEndpoints.map((name) => String(name).toLowerCase()).includes(endpoint)) {
+    json(res, 403, { error: 'Forbidden', message: `Your role does not allow access to ${endpoint}.` });
     return true;
   }
 
@@ -394,6 +512,19 @@ export function handleCippApi(req, res, url, json) {
         DisplayName: group.displayName,
         SecurityGroup: group.securityEnabled,
         calculatedGroupType: group.securityEnabled ? 'generic' : 'distributionList',
+      })));
+    return true;
+  }
+
+  if (req.method === 'GET' && url.pathname.toLowerCase() === '/api/listmailboxes') {
+    const tenantFilter = requireTenantFilter();
+    if (tenantFilter === null) return true;
+    json(res, 200, usersForTenant(tenantFilter)
+      .filter((user) => user.mail)
+      .map((user) => ({
+        UPN: user.userPrincipalName,
+        externalDirectoryObjectId: user.id,
+        recipientTypeDetails: 'UserMailbox',
       })));
     return true;
   }
@@ -479,6 +610,42 @@ export async function handleEntraControl(req, res, url, readBody, json) {
     const input = await readBody(req);
     entraState.cippApiKey = input.apiKey ? String(input.apiKey) : null;
     json(res, 200, { ok: true, pinned: Boolean(entraState.cippApiKey) });
+    return true;
+  }
+
+  // Switch CIPP to API-client mode ({tenantId, clientId, clientSecret}), or
+  // back to the api-key mode with {clientId: null}.
+  if (req.method === 'POST' && url.pathname === '/__control/entra/cipp-client') {
+    const input = await readBody(req);
+    entraState.cippTokens.clear();
+    entraState.cippMintCount = 0;
+    entraState.cippClient = input.clientId
+      ? {
+          tenantId: String(input.tenantId || input.directoryId),
+          clientId: String(input.clientId),
+          clientSecret: String(input.clientSecret),
+        }
+      : null;
+    json(res, 200, { ok: true, apiClientMode: Boolean(entraState.cippClient) });
+    return true;
+  }
+
+  // Fault knobs for API-client mode; see defaultCippFaults() for the names.
+  // Merges into the current set; {reset: true} restores the defaults.
+  if (req.method === 'POST' && url.pathname === '/__control/entra/cipp-faults') {
+    const input = await readBody(req);
+    entraState.cippFaults = input.reset
+      ? defaultCippFaults()
+      : { ...entraState.cippFaults, ...input };
+    json(res, 200, { ok: true, faults: entraState.cippFaults });
+    return true;
+  }
+
+  // Invalidate every live token without waiting for expiry, so the next CIPP
+  // call 401s once and a client that re-mints recovers.
+  if (req.method === 'POST' && url.pathname === '/__control/entra/cipp-revoke-tokens') {
+    entraState.cippTokens.clear();
+    json(res, 200, { ok: true });
     return true;
   }
 

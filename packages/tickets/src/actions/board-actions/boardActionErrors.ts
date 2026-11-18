@@ -2,10 +2,30 @@ import {
   actionError,
   permissionError,
   type ActionMessageError,
+  type ActionMessageParams,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
 export type BoardActionError = ActionMessageError | ActionPermissionError;
+
+/**
+ * An expected, user-correctable validation failure that carries its own translation key
+ * (`features/tickets:errors.board.*`). Thrown inside action transactions so they roll back.
+ */
+export class BoardActionMessageError extends Error {
+  constructor(
+    message: string,
+    readonly messageKey: string,
+    readonly messageParams?: ActionMessageParams,
+  ) {
+    super(message);
+    this.name = 'BoardActionMessageError';
+  }
+}
+export const CO_MANAGED_ESCALATION_QUEUE_MESSAGE =
+  'This board receives escalated tickets from a co-managed IT workspace, so it cannot be deactivated while that workspace is being set up or is active.';
+export const CO_MANAGED_SHARED_BOARD_MESSAGE =
+  'This board is shared with your MSP under co-managed IT, so it cannot be deactivated while the relationship is active.';
 
 const EXPECTED_BOARD_MESSAGES = [
   'Board not found',
@@ -27,6 +47,8 @@ const EXPECTED_BOARD_MESSAGES = [
   'Target status must be a closed status',
   'An auto-close rule for this status already exists on this board',
   'Auto-close rule not found',
+  // Also covers the email-recipient messages ("Notification rule N: ..."), which are raised as
+  // BoardActionMessageError and carry their own translation keys.
   'Notification rule',
   'Notification recipients and default watchers must be',
   // Matched by prefix (see below), so the Zod detail after the em dash reaches
@@ -36,9 +58,18 @@ const EXPECTED_BOARD_MESSAGES = [
 ];
 
 export function boardActionErrorFrom(error: unknown): BoardActionError | null {
+  if (error instanceof BoardActionMessageError) {
+    return actionError(error.message, error.messageKey, error.messageParams);
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
+    }
+    if (error.message === CO_MANAGED_ESCALATION_QUEUE_MESSAGE || error.message === CO_MANAGED_SHARED_BOARD_MESSAGE) {
+      return actionError(error.message);
+    }
+    if (error.message === CO_MANAGED_ESCALATION_QUEUE_MESSAGE || error.message === CO_MANAGED_SHARED_BOARD_MESSAGE) {
+      return actionError(error.message);
     }
     if (EXPECTED_BOARD_MESSAGES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);

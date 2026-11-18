@@ -207,3 +207,46 @@ export interface FleetSoftwareSummary {
   by_category: Record<string, number>;
   unmanaged_security_software: number; // Security software not marked as managed
 }
+
+/**
+ * Client-level software inventory (aggregate across one client's assets)
+ */
+export const CLIENT_SOFTWARE_PAGE_SIZE = 50;
+export const CLIENT_SOFTWARE_ASSET_PREVIEW_LIMIT = 10;
+
+export type ClientSoftwareSortField = 'title' | 'assets';
+
+export interface ClientSoftwareSummaryParams {
+  clientId: string;
+  /** ILIKE filter on the catalog title. */
+  search?: string;
+  /** 1-based page (50 titles per page), or 'all' for export. */
+  page?: number | 'all';
+  sortBy?: ClientSoftwareSortField;
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface ClientSoftwareAssetRef {
+  asset_id: string;
+  name: string;
+}
+
+export interface ClientSoftwareSummaryRow {
+  software_id: string;
+  title: string;
+  /** Distinct non-null versions currently installed across the client's assets. */
+  versions: string[];
+  /** Distinct assets with the title currently installed (equals install count: PK is tenant+asset+software). */
+  asset_count: number;
+  /** First assets by name, capped at CLIENT_SOFTWARE_ASSET_PREVIEW_LIMIT; asset_count is the total. */
+  assets: ClientSoftwareAssetRef[];
+  last_seen: string | null;
+}
+
+export interface ClientSoftwareSummaryResponse {
+  rows: ClientSoftwareSummaryRow[];
+  /** Total titles matching the search (not just this page). */
+  total: number;
+  page: number | 'all';
+  limit: number;
+}

@@ -27,6 +27,7 @@ export const IDS = {
   priority: '99999999-9999-4999-8999-000000000001',
   otherPriority: '99999999-9999-4999-8999-000000000002',
   client: 'cccccccc-cccc-4ccc-8ccc-000000000001',
+  location: 'cccccccc-cccc-4ccc-8ccc-000000000002',
   team: 'dddddddd-dddd-4ddd-8ddd-000000000001',
   timeEntry: 'eeeeeeee-eeee-4eee-8eee-000000000001',
   project: 'f0f0f0f0-0000-4000-8000-000000000001',

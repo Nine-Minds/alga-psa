@@ -10,7 +10,8 @@ describe('ticket comment outbound inline-image end-to-end contract', () => {
     );
     const source = fs.readFileSync(subscriberPath, 'utf-8');
 
-    expect(source).toContain('const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({');
+    expect(source).toContain('const inlineCommentImageRewrite = await optionalEmailData(');
+    expect(source).toContain('() => rewriteTicketCommentImagesToCid({');
     expect(source).toContain('content: inlineCommentImageRewrite.html');
     expect(source).toContain('html: inlineCommentImageRewrite.html');
     expect(source).toContain('const inlineCommentImageAttachments = inlineCommentImageRewrite.attachments');

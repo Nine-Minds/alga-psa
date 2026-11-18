@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allowsContactSenderAttribution,
   allowsInternalSenderAttribution,
+  isMicrosoftIntraOrgSender,
   verifySenderAuthentication,
 } from '../senderAuthVerification';
 
@@ -95,5 +96,25 @@ describe('verifySenderAuthentication', () => {
     );
     expect(result?.dmarc).toBe('fail');
     expect(allowsInternalSenderAttribution(result)).toBe(false);
+  });
+});
+
+describe('isMicrosoftIntraOrgSender', () => {
+  it('trusts the Exchange internal-auth stamp on a Microsoft provider regardless of header casing', () => {
+    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(true);
+    expect(isMicrosoftIntraOrgSender('microsoft', { 'x-ms-exchange-organization-authas': ' internal ' })).toBe(true);
+  });
+
+  it('ignores the stamp for non-Microsoft providers, which do not strip it from external mail', () => {
+    expect(isMicrosoftIntraOrgSender('google', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
+    expect(isMicrosoftIntraOrgSender('imap', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
+    expect(isMicrosoftIntraOrgSender(undefined, { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
+  });
+
+  it('requires the value to be Internal and fails closed without headers', () => {
+    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthAs': 'Anonymous' })).toBe(false);
+    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthSource': 'host.outlook.com' })).toBe(false);
+    expect(isMicrosoftIntraOrgSender('microsoft', undefined)).toBe(false);
+    expect(isMicrosoftIntraOrgSender('microsoft', {})).toBe(false);
   });
 });

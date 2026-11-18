@@ -26,6 +26,8 @@ This starts every emulator on its default port and the console at
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
 | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
+| `levelio` | `@alga-psa/emulator-levelio` | 4080 | Level v2 REST API (groups, devices, alerts, updates) with API-key auth and cursor pagination; sends Level's native webhooks (signed envelopes, retries, re-run) and monitor-automation HTTP Request actions rendered with Level's system variables |
+| `huntress` | `@alga-psa/emulator-huntress` | 4090 | Huntress v1 API (account, organizations, agents, incident reports, escalations + escalation resolution) with HTTP Basic auth, `page_token` pagination and the documented `sort_field`/`sort_direction` ordering |
 | `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX both ways: the CRM engine client that dials the AlgaPSA 3CX routes (lookup, search, report-call, contacts, report-chat) with the bearer key, and the PBX that AlgaPSA dials back — `/connect/token`, XAPI (users, contacts, call history, recordings), call control with its WebSocket event feed |
 
 The control API and console share port 9500. Override ports with
@@ -62,9 +64,12 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
 | Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_OAUTH_REVOKE_URL=http://localhost:4060/connect/revocation`, `XERO_REVOCATION_URL=http://localhost:4060/connect/revocation`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
+| Google Calendar | `GOOGLE_CALENDAR_API_ROOT_URL=http://localhost:4100/`, `GOOGLE_OAUTH_TOKEN_URL=http://localhost:4100/token`, then connect a Google calendar provider whose refresh token is `emulated-refresh-token` (or seed your own with `seed/oauth-client`) |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 | 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
+| Level | `LEVELIO_API_BASE_URL=http://localhost:4080`, then save `algasim-level-key` as the Level API key. Webhooks and automations go outbound: register their target URL in the emulator (see [Level](#level)) |
+| Huntress | `HUNTRESS_API_BASE_URL=http://localhost:4090`, then connect with API key `algasim-huntress-key` and secret `algasim-huntress-secret`. No env var is needed either way: the connect card's **Base URL** field is stored as `rmm_integrations.instance_url` and wins over the env default (see [Huntress](#huntress)) |
 
 `TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
 deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
@@ -254,6 +259,7 @@ checks run in the normal msgraph Vitest suite against local HTTP listeners.
 
 | Surface | Contract evidence | Remaining limitation |
 | --- | --- | --- |
+| Recurring series expansion | `calendar.test.ts` expands weekly/relative-monthly/counted/until series through `calendarView/delta`, asserts type/seriesMasterId/originalStart, `$select` projection, occurrence GET/DELETE, cancellation as `@removed` and an overridden instance as `type: 'exception'` | UTC-only expansion, synthetic occurrence ids, no Outlook-side series-split (`_R`) behaviour |
 | Calendar create/error responses | `tests/contracts/calendar.ts` and real HTTP checks in `calendar.test.ts`; malformed event/error bodies and wrong create status fail | Consumed fields only; no full event schema or live sandbox comparison |
 | OAuth token responses | `tests/contracts/oauth.ts` applied to code, refresh and client-credential responses in `smoke.test.ts`; wrong expiry type and bearer type fail | Opaque token envelope only; does not establish Entra signatures, consent, PKCE, SSO, or complete scope-dependent token issuance parity |
 | Subscription validation | `calendar.test.ts` verifies request method/content type, accepts only 200/plain-text matching token responses, and verifies rejected callbacks leave no subscription | HTTP loopback transport; real HTTPS trust and tenant registration require application/sandbox coverage |
@@ -306,6 +312,28 @@ mailbox message. Only unexpired mail subscriptions requesting `created` receive
 it. Delivery has a ten-second timeout and does not follow redirects. The existing
 `message` seeder still creates a message and sends its initial notification.
 
+A series master (an event with a Graph `recurrence` object) is expanded by
+`calendarView/delta` into the occurrences overlapping the requested window,
+each carrying `type: 'occurrence'`, its `seriesMasterId`, the `originalStart`
+slot and `recurrence: null`; the master itself is never returned from
+calendarView, and is served with its recurrence intact by
+`GET /me/events/{id}` and `GET /me/calendar/events/{id}`. Daily, weekly,
+absolute/relative monthly and absolute/relative yearly patterns are modelled
+with `noEnd`, `endDate` and `numbered` ranges; anything else answers
+`400 Request_UnsupportedQuery` rather than silently expanding wrongly. Use the
+`calendar-occurrence` control action (`action: 'cancel' | 'override'`) to
+cancel one instance — reported as an `@removed` item for that occurrence id —
+or to move/rename one, which is then expanded as `type: 'exception'`.
+
+An occurrence or exception also resolves through `GET /me/events/{id}` and
+`GET /me/calendar/events/{id}` even though nothing is stored for it, and a
+`DELETE` on that id cancels just that slot; once cancelled the id answers 404,
+which is the pair of behaviours a client needs to tell "this occurrence moved"
+from "this occurrence is gone". `$select` is honoured on `calendarView/delta`
+(projected fields plus `id`, `@removed` items untouched) and carried into the
+next/delta link, which is how a client asks for `type`/`seriesMasterId`/
+`originalStart`.
+
 Use the `calendar-change` control action to create/update/delete vendor events;
 it returns the event and each matching webhook delivery's HTTP status. Supply
 `changeType`, an `event` object for creation/update, and `eventId` for update/delete.
@@ -319,8 +347,10 @@ This delta model handles single-instance UTC and IANA-zone events. Explicit
 ISO offsets identify instants; offset-free event dates use the supplied zone,
 including its winter/summer offset. Delta responses normalize dates to UTC
 without mutating vendor state. Windows timezone names, ambiguous/nonexistent
-local times, recurrence expansion and unsupported query options remain explicit
-model limitations; refusal does not claim Graph rejects those cases. The separate
+local times and unsupported query options remain explicit model limitations;
+refusal does not claim Graph rejects those cases. Series expansion is UTC-only
+and occurrence ids are `<masterId>_<compact ISO slot>`, where real Graph uses
+opaque ids — resolve instances through `seriesMasterId`, never by parsing an id. The separate
 legacy event-list filter still models UTC values only.
 It reports deletions for previously tracked events; it does not reproduce Graph's
 optional tombstones for unrelated changes outside the window. Tokens are bound
@@ -331,6 +361,40 @@ instead of disabling that check. Browser configuration, callback persistence and
 worker synchronization require their own full application journey.
 
 Protocol references: [Graph dateTimeTimeZone](https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0) and [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
+
+### Google Calendar synchronization
+
+The Google adapter honours `GOOGLE_CALENDAR_API_ROOT_URL` (and
+`GOOGLE_OAUTH_TOKEN_URL`), so no adapter change is needed to point it here. The
+emulator serves `calendar/v3` as the googleapis client calls it: calendar
+metadata and `calendarList`, `events.list`, `events.get/insert/patch/put/delete`,
+`events.instances`, `events.watch` and `channels.stop`, plus the OAuth token
+refresh on `/token` (JSON or form-encoded).
+
+`events.list` models the parts incremental sync depends on: `singleEvents`
+true/false, `timeMin`/`timeMax`, `showDeleted`, `maxResults` with
+`pageToken`/`nextPageToken`, and `nextSyncToken` — an incremental round returns
+only the events whose version changed plus cancelled tombstones, and an expired
+token answers `410 fullSyncRequired` (arm it with the `expire-sync-tokens`
+action). With `singleEvents=true` a series master is expanded into instances
+with ids `<masterId>_<YYYYMMDDTHHMMSSZ>` (`<masterId>_<YYYYMMDD>` for an all-day
+series), each carrying `recurringEventId` and `originalStartTime` and no
+`recurrence`; the master itself only appears with `singleEvents=false`. Series
+are expanded in the master's own `start.timeZone`, so a 10:15 America/New_York
+series alternates 14:15Z and 15:15Z across DST, exactly as production did.
+
+An unbounded series is capped by instance count — default 730, Google's observed
+answer for the production case — and `seed/expansion-cap` changes it. Deleting
+or `seed/cancel-occurrence`-ing one instance cancels that occurrence (it then
+lists only with `showDeleted=true`, as a tombstone); patching one materializes it
+as a stored exception that keeps its original slot; `EXDATE` lines in the
+master's `recurrence[]` are honoured; and a `<base>_R<timestamp>` split master is
+an ordinary separate master whose instances point at it.
+
+Contract checks live in `google-calendar/tests/contracts/events.ts` and run
+against the real HTTP responses in `google-calendar/tests/calendar.test.ts`.
+Limits: one primary calendar, no push-notification delivery (channels are
+recorded, not called back), no attendee/ACL semantics, and no reminders.
 
 ### Teams meetings and recordings
 
@@ -501,6 +565,165 @@ algasim action threecx pbx-hangup -p '{"participantId":1}'
 Click-to-call from a ticket lands in `algasim state threecx makecalls`; call
 history import reads whatever `cdr-segment` rows you seeded; phonebook push
 shows up in `pbx-contacts`.
+
+### Level
+
+The `levelio` emulator on port 4080 covers both directions of the Level
+integration.
+
+**REST API (inbound).** Alga's `LevelIoApiClient` talks to it unmodified once
+`LEVELIO_API_BASE_URL` points here. The key goes in the `Authorization` header
+with no scheme prefix, as Level documents. A missing, unknown or
+`Bearer`-prefixed key answers `401 {"error":"Access denied"}`.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /v2/groups`, `GET /v2/groups/:id` | Groups with `parent_id`, `child_ids`, `device_count`, `descendent_device_count`. `parent_id=null` lists roots |
+| `GET /v2/devices`, `GET /v2/devices/:id` | Filters `group_id` (`null` = ungrouped), `ancestor_group_id` (the group and everything below it), `tag_id`, `hostname`, `serial_number`. Detail sections (`operating_system`, `cpus`, `memory`, `disks`, `network_interfaces`, `motherboard`, `security`) appear only when their `include_*` flag is `true` |
+| `GET /v2/alerts`, `GET /v2/alerts/:id` | Filters `device_id` and `status` (`active` / `resolved`) |
+| `POST /v2/alerts/:id/resolve` | Resolves the alert and emits `alert_resolved` |
+| `GET /v2/updates`, `GET /v2/updates/:id` | Filters `device_id`, `status` (`available` / `installed`), `category` |
+| any other `/v2` route | `501` with `code: EmulatorUnsupportedOperation` |
+
+Every list is cursor-paginated: `limit` 1–100 (default 20), `starting_after`
+or `ending_before` an item id, `{ data, has_more }` back. Ids use Level's form,
+unpadded base64 of `gid://level/<Type>/<n>`. An online device reports
+`last_seen_at` as the current (virtual) time, as Level does. Use
+`device-offline` to freeze it, which is what Alga's incremental device sync
+filters on.
+
+**Native webhooks (outbound).** `seed webhook` registers what a Level admin
+sets up under Settings → Webhooks: a URL, an optional secret and the selected
+event types (`alert_active`, `alert_resolved`, `device_created/updated/deleted`,
+`group_created/updated/deleted`; all of them by default). Each delivery is a
+JSON POST of `{ event_type, event_id, occurred_at, data }`. With a secret it
+carries `X-Level-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; without
+one there is no signature header. There is no way to add other headers. A
+non-2xx answer, a redirect, a network error or a 10-second timeout is a failed
+delivery. Level then retries up to 3 times with exponential backoff and
+jitter, starting at 2 minutes, and the `event_id` and bytes stay the same.
+Retries run on the virtual clock: `clock advance 10m` and the background pump
+(or `action levelio deliver-due-retries`) sends whatever is due.
+`rerun-delivery { deliveryId }` is the request log's "Re-run request".
+
+The lifecycle controls emit the matching events: the `group` and `device`
+seeders, `update-group`, `delete-group`, `update-device`, `delete-device`,
+`fire-alert` and `resolve-alert`. `device-checkin` and `device-offline` change
+`last_seen_at` without a webhook.
+
+**Automation HTTP Request action (outbound).** `seed automation` creates a
+monitor automation: a URL, method, content type, header rows and a body, plus
+optional automation `variables`, `alertNames` and `groupIds` filters and a
+`retries` count. When `fire-alert` raises a matching alert, the action runs
+for that device. URL, header keys and values, and body render
+`{{level_device_id}}`, `{{level_group_name}}` and the rest of Level's
+[system variables](https://docs.level.io/en/articles/11321970-system-variables).
+A `{{token}}` that names no variable is sent as literal text. That is what
+Level does in production: Alga's old `{{alert_id}}` template reached the route
+unrendered. `run-automation` runs an action by hand.
+
+```bash
+algasim seed levelio group -p '{"name":"Acme Corp"}'
+algasim seed levelio device -p '{"hostname":"WS-01","groupId":"<group id>"}'
+algasim seed levelio webhook -p '{"url":"http://localhost:3000/api/webhooks/levelio?tenant=<tenant>","secret":"s3cret","eventTypes":["alert_active","alert_resolved"]}'
+algasim action levelio fire-alert -p '{"deviceId":"<device id>","name":"CPU","severity":"critical"}'
+algasim state levelio webhook-deliveries     # status, attempt, signature, response excerpt
+algasim state levelio automation-runs        # rendered request + unresolved {{tokens}}
+```
+
+Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
+`Retry-After`; `operation-fault { operation, status, remaining }` fails one
+route (`"GET /v2/devices"`, `"*"` for all). The transport faults apply too.
+
+State views: `config`, `groups`, `devices`, `alerts`, `updates`, `webhooks`
+(secrets masked), `events`, `webhook-deliveries`, `pending-retries`,
+`automations`, `automation-runs`, `operation-faults`.
+
+Two scenarios reproduce the alert-ingestion failures seen in production on
+2026-10-15. Both send to `http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant`
+(webhook-sink) by default:
+
+- `levelio-native-webhook-signed`: a native webhook with a secret. The route of
+  that date accepts only `X-Alga-Webhook-Secret`, so every delivery is a 401.
+- `levelio-automation-alga-template`: an automation posting the template Alga's
+  settings screen handed out. Three different alerts arrive byte-identical, so
+  the route records one alert and creates no ticket.
+
+`retargetScenario` (exported by the package) rewrites those URLs.
+[levelioEmulatorRoute.integration.test.ts](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts)
+uses it to run both scenarios against the real route and database. The
+failure assertions in that test describe the route as of 2026-10-15 and are
+meant to flip to ticket-creation assertions once the route is fixed.
+
+### Huntress
+
+The `huntress` emulator on port 4090 serves the Huntress v1 API Alga's
+`HuntressClient` polls. Auth is HTTP Basic:
+`Authorization: Basic base64(algasim-huntress-key:algasim-huntress-secret)`.
+A missing, malformed or unknown credential answers
+`403 {"error":"There was an issue with your API credential or permissions."}` —
+the status every documented operation declares.
+
+| Route | Behaviour |
+| --- | --- |
+| `GET /v1/account` | `{ account: { id, name, subdomain, status, support_type, neighborhood_watch, billing_address, shipping_address } }` — note the documented wrapper |
+| `GET /v1/organizations`, `GET /v1/organizations/:id` | Filters `name`, `key`; sort `id`/`created_at`/`updated_at`/`name`/`key`. The detail response is `OrganizationWithActualProductUsages`, so `actual_usages` (when seeded) appears there only |
+| `GET /v1/agents`, `GET /v1/agents/:id` | Filters `organization_id`, `platform`, `hostname`, `os`, `version`; sort `id`/`created_at`/`updated_at`. `ipv4_address` is the primary entry of `ipv4_addresses` |
+| `GET /v1/incident_reports`, `GET /v1/incident_reports/:id` | Filters `indicator_type`, `status`, `severity`, `platform`, `organization_id`, `agent_id`, `psa_ticket_eid`; sort `id`/`created_at`/`updated_at`. `remediations` carries the first 10 items plus `total_count`/`has_more`. A `draft` report is served by the by-id route only, as documented |
+| `GET /v1/escalations`, `GET /v1/escalations/:id` | Filters `status`, `severity`, `subtype`, `organization_id`, `psa_ticket_eid`; sort `id`/`severity`/`due_at`/`created_at`/`updated_at`. The list serves `Escalation`; only the by-id route adds `entities` |
+| `POST /v1/escalations/:id/resolution` | 201 `{ escalation, resolution_method: rule\|dismiss\|direct }`; 400 invalid parameters, 403 read-only credential, 409 already resolved, 422 not API-resolvable |
+| any other `/v1` route | `501` with `code: EmulatorUnsupportedOperation` |
+
+Every list is cursor-paginated: `limit` 1–500 (clamped, default 10), an opaque
+`page_token`, and a `pagination` object whose `next_page_token` is `null` on the
+last page (`next_page_url` only appears while another page exists). Ties on the
+sort field break on `id`, so a `updated_at desc` walk never repeats or skips a
+row — which is what Alga's `cursorWalk` depends on. Every mutation moves
+`updated_at` on the virtual clock, so `clock advance` plus `touch-incident` is
+the "updated but unchanged" path.
+
+Seeders: `account`, `credential { key, secret, escalationsWrite }`,
+`organization` (`count` seeds that many numbered organizations for multi-page
+walks), `agent`, `incident` (with `remediations`), `escalation` (zero, one or
+many `organization_ids`, `Agent`/`Identity` `entities`, `type`/`type_code`/
+`subtype`, `due_at`, `api_resolvable`).
+
+Actions: `configure` (credential pairs, account name/subdomain/status),
+`update-incident` (status change: stamps `status_updated_at`, sets `closed_at`
+for `closed`), `touch-incident` (bump `updated_at` only), `update-agent`,
+`update-escalation` (status, add/remove/replace organizations, replace
+entities), `resolve-escalation`, `delete-agent`, `delete-organization` (the
+"host/org dropped off" paths that make a by-id call answer 404).
+
+```bash
+algasim seed huntress organization -p '{"name":"Acme Inc.","key":"acme"}'
+algasim seed huntress agent -p '{"hostname":"laptop01","organization_id":1,"ipv4_address":"10.0.0.5"}'
+algasim seed huntress incident -p '{"organization_id":1,"agent_id":1,"severity":"high","subject":"HIGH - Incident on laptop01"}'
+algasim clock advance 1h
+algasim action huntress update-incident -p '{"incidentId":1,"status":"closed"}'
+algasim state huntress incidents            # including drafts the list endpoint hides
+algasim state huntress auth-failures        # every 403, with method, path and reason
+```
+
+Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
+`Retry-After` (Huntress limits every account to 60 requests/minute on a sliding
+window); `operation-fault { operation, status, message, retryAfterSeconds,
+remaining }` fails one operation (`"GET /v1/incident_reports"`, a trailing-`*`
+prefix, or `"*"`). The transport faults apply too.
+
+State views: `config` (secrets masked), `organizations`, `agents`, `incidents`,
+`escalations`, `auth-failures`, `operation-faults`.
+
+Two bundled scenarios: `huntress-incident-lifecycle` (the poll-twice
+ticket-then-close walk: seed org/agent/incident, advance the clock, close the
+incident) and `huntress-escalation-multi-org` (one escalation across two
+organizations with `Agent` and `Identity` entities, moved to `overdue` and then
+resolved). Wire-contract coverage lives in
+[huntress/tests/](huntress/tests/); Alga's own client and poller run against
+this emulator in
+[huntressEmulatorApiClient.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorApiClient.integration.test.ts)
+and
+[huntressEmulatorPoller.integration.test.ts](../../ee/server/src/__tests__/integration/huntressEmulatorPoller.integration.test.ts).
 
 ### Living with the emulator
 

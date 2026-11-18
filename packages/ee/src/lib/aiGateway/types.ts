@@ -75,3 +75,11 @@ export interface AiAccountSummary {
     revokedBy: string | null;
   };
 }
+
+/**
+ * Result of an AI usage server action. Actions return `unavailable` instead of
+ * throwing when the AI gateway is not configured for this deployment, so
+ * callers can hide the AI billing UI without producing a server-action 500.
+ */
+export type AiGatewayUnavailable = { status: 'unavailable'; reason: 'not_configured' };
+export type AiGatewayResult<T> = { status: 'ok'; data: T } | AiGatewayUnavailable;

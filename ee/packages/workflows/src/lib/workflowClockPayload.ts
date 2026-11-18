@@ -66,7 +66,7 @@ export const resolveWorkflowVersionPayloadSchemaRef = async (
   workflowId: string,
   workflowVersion: number
 ): Promise<string | null> => {
-  const version = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion);
+  const version = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(knex, workflowId, workflowVersion, tenantId);
   const definition = version?.definition_json as Record<string, unknown> | null;
   if (definition && typeof definition.payloadSchemaRef === 'string') {
     return definition.payloadSchemaRef;

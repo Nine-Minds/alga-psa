@@ -68,8 +68,10 @@ function collectPages(rootRelativePath: string): string[] {
   }
 
   walk(rootPath);
+  // Parallel-slot pages (@modal, @surface, ...) render beside the routed page and never own the document
+  // title; the routed page's own metadata does.
   return pagePaths
-    .filter((relativePath) => !relativePath.includes('/@modal/'))
+    .filter((relativePath) => !/\/@[^/]+\//.test(relativePath))
     .sort();
 }
 
@@ -288,6 +290,7 @@ describe('route title metadata coverage', () => {
       ['server/src/app/client-portal/billing/invoices/[invoiceId]/payment-success/page.tsx', 'Payment Success'],
       ['server/src/app/client-portal/billing/payment-methods/setup-complete/page.tsx', 'Card Setup'],
       ['server/src/app/payment-methods/setup-complete/page.tsx', 'Card Setup'],
+      ['server/src/app/pay/[token]/page.tsx', 'Pay Invoice'],
     ] as const;
 
     for (const [relativePath, title] of staticDynamicRoutes) {

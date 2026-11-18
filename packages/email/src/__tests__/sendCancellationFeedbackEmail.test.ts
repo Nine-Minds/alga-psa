@@ -39,4 +39,31 @@ describe('sendCancellationFeedbackEmail', () => {
     expect(message.html).not.toContain('<img');
     expect(message.text).toContain('<img src=x onerror=alert(1)>');
   });
+
+  const data = {
+    tenantName: 'Acme',
+    tenantEmail: 'owner@example.test',
+    reasonText: 'Too expensive',
+    licenseCount: 1,
+    monthlyCost: 25,
+    cancelAt: 'tomorrow',
+  };
+
+  it('throws with the provider error when sendEmail resolves { success: false }', async () => {
+    mocks.sendEmail.mockResolvedValue({ success: false, error: 'SMTP connection refused' });
+
+    await expect(sendCancellationFeedbackEmail(data)).rejects.toThrow('SMTP connection refused');
+  });
+
+  it('throws when sendEmail resolves { success: false } without an error message', async () => {
+    mocks.sendEmail.mockResolvedValue({ success: false });
+
+    await expect(sendCancellationFeedbackEmail(data)).rejects.toThrow('Failed to send cancellation feedback email');
+  });
+
+  it('resolves when sendEmail resolves { success: true }', async () => {
+    mocks.sendEmail.mockResolvedValue({ success: true });
+
+    await expect(sendCancellationFeedbackEmail(data)).resolves.toBeUndefined();
+  });
 });

@@ -33,6 +33,8 @@ import {
   type SeparateProjectProductInvoiceReview,
 } from '../context/ProjectBillingIntegrationContext';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { isStockConflictResult, type StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import {
   getProductAvailability,
   type ProductAvailability,
@@ -50,19 +52,20 @@ const isReturnedActionError = (result: unknown) => (
   isActionMessageError(result) || isActionPermissionError(result)
 );
 
-// On-hand badge for tracked products in the picker (F016): red at zero, amber at/below
-// reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
-// loaded yet (undefined) get no badge.
+// Free-stock badge for tracked products in the picker: red at zero, amber at/below reorder
+// point, plain otherwise. Shows free stock (on hand - reserved - held at the location a
+// material add consumes from) so it agrees with the add-time refusal (B1).
+// LEVERAGE: pattern material-picker-stock-ui — onHandBadge, the add handler with reservedConflict/override retry, and the stockConflict dialog are duplicated in TicketMaterialsCard; a shared material-add component in a layer below tickets/projects is missing.
 function onHandBadge(fields: {
   track_stock?: boolean;
-  on_hand_total?: number | null;
+  free_total?: number | null;
   reorder_point?: number | null;
-}): SelectOption['badge'] | undefined {
-  if (!fields.track_stock || fields.on_hand_total == null) return undefined;
-  const onHand = fields.on_hand_total;
+}, label: (count: number) => string): SelectOption['badge'] | undefined {
+  if (!fields.track_stock || fields.free_total == null) return undefined;
+  const free = fields.free_total;
   const variant =
-    onHand <= 0 ? 'danger' : fields.reorder_point != null && onHand <= fields.reorder_point ? 'warning' : 'secondary';
-  return { text: `On hand: ${onHand}`, variant };
+    free <= 0 ? 'danger' : fields.reorder_point != null && free <= fields.reorder_point ? 'warning' : 'secondary';
+  return { text: label(free), variant };
 }
 
 export default function ProjectMaterialsDrawer({
@@ -100,6 +103,8 @@ export default function ProjectMaterialsDrawer({
   const [availability, setAvailability] = useState<ProductAvailability | null>(null);
   // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
   const [addError, setAddError] = useState<string | null>(null);
+  // Soft-reservation refusal awaiting the user's override confirmation (B1).
+  const [reservedConflict, setReservedConflict] = useState<StockConflictResult['stockConflict'] | null>(null);
   const [editingMaterialId, setEditingMaterialId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState<number>(0);
   const [editDestination, setEditDestination] = useState<ProjectMaterialBillingDestination>('next_project_invoice');
@@ -163,7 +168,7 @@ export default function ProjectMaterialsDrawer({
           value: item.service_id,
           label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
           secondaryLabel: item.product_category || undefined,
-          badge: onHandBadge(item),
+          badge: onHandBadge(item, (available) => materialsT('availableBadge', 'Available: {{available}}', { available })),
         };
       });
 
@@ -287,7 +292,7 @@ export default function ProjectMaterialsDrawer({
     setAddError(null);
   };
 
-  const handleAddMaterial = async () => {
+  const handleAddMaterial = async (allowReservedOverride = false) => {
     if (!clientId || !selectedProductId) {
       toast.error(materialsT('selectProductError', 'Please select a product'));
       return;
@@ -322,7 +327,27 @@ export default function ProjectMaterialsDrawer({
         unit_id: selectedUnitId || null,
         billing_destination: billingDestination,
         billing_schedule_entry_id: billingDestination === 'schedule_entry' ? billingScheduleEntryId : null,
+        ...(allowReservedOverride ? { allow_reserved_override: true } : {}),
       });
+      if (isStockConflictResult(result)) {
+        const conflict = result.stockConflict;
+        if (conflict.overrideable) {
+          setReservedConflict(conflict); // confirm → retry with the override
+        } else if (conflict.reason === 'held') {
+          setAddError(materialsT(
+            'stockHeld',
+            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can\'t be used here.',
+            { free: Math.max(0, conflict.free), held: conflict.held },
+          ));
+        } else {
+          setAddError(materialsT(
+            'stockInsufficient',
+            'Only {{onHand}} on hand, {{requested}} requested.',
+            { onHand: conflict.onHand, requested: conflict.requested },
+          ));
+        }
+        return;
+      }
       if (isReturnedActionError(result)) {
         setAddError(getErrorMessage(result));
         return;
@@ -656,11 +681,13 @@ export default function ProjectMaterialsDrawer({
 
             {availability?.track_stock && availability.locations.length > 0 && (
               <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
-                <div className="font-medium text-gray-600">{materialsT('onHandByLocation', 'On hand by location')}</div>
+                <div className="font-medium text-gray-600">{materialsT('availableByLocation', 'Free stock by location')}</div>
                 {availability.locations.map((loc) => (
                   <div key={loc.location_id} className="flex justify-between">
                     <span>{loc.location_name}</span>
-                    <span className="tabular-nums">{loc.on_hand}</span>
+                    <span className="tabular-nums">
+                      {materialsT('freeOfOnHand', '{{free}} free of {{onHand}}', { free: loc.free, onHand: loc.on_hand })}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -684,7 +711,7 @@ export default function ProjectMaterialsDrawer({
               <Button
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
                 size="sm"
-                onClick={handleAddMaterial}
+                onClick={() => handleAddMaterial()}
                 disabled={isAdding}
               >
                 {isAdding ? (
@@ -736,6 +763,15 @@ export default function ProjectMaterialsDrawer({
                         </div>
                         {material.description && (
                           <div className="text-xs text-gray-500">{material.description}</div>
+                        )}
+                        {material.from_staging_line_id && (
+                          <Badge
+                            variant="info"
+                            className="mt-1"
+                            {...withDataAutomationId({ id: `${id}-from-staging-${material.project_material_id}` })}
+                          >
+                            {materialsT('fromStaging', 'From staging')}
+                          </Badge>
                         )}
                       </td>
                       <td className="py-2 text-right">{material.quantity}</td>
@@ -972,6 +1008,24 @@ export default function ProjectMaterialsDrawer({
             {materialsT('noClientAssigned', 'A client must be assigned to this project before materials can be added.')}
           </div>
         )}
+        <ConfirmationDialog
+          id={`${id}-reserved-stock-confirm`}
+          isOpen={reservedConflict !== null}
+          onClose={() => setReservedConflict(null)}
+          title={materialsT('reservedStockTitle', 'Stock is reserved for a sales order or project')}
+          message={reservedConflict ? materialsT(
+            'reservedStockMessage',
+            'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.',
+            { free: Math.max(0, reservedConflict.free), reserved: reservedConflict.reserved, requested: reservedConflict.requested },
+          ) : ''}
+          confirmLabel={materialsT('reservedStockConfirm', 'Add anyway')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
+          isConfirming={isAdding}
+          onConfirm={async () => {
+            setReservedConflict(null);
+            await handleAddMaterial(true);
+          }}
+        />
       </div>
     </ReflectionContainer>
   );

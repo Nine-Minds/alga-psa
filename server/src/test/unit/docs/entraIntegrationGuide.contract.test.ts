@@ -15,13 +15,33 @@ describe('Entra integration guide contracts', () => {
     expect(guide).toContain('1. `direct` (Microsoft OAuth)');
     expect(guide).toContain('2. `cipp` (CIPP API)');
     expect(guide).toContain('Choose one connection type per tenant');
+    // The CIPP path is API-client auth, with the dialog's field labels.
+    for (const label of ['API URL', 'Application (client) ID', 'Client secret', 'Tenant ID']) {
+      expect(guide).toContain(label);
+    }
+    expect(guide).toContain('Integrations > CIPP-API');
   });
 
   it('T136: docs list Entra secret names and secret-provider/vault compatibility', () => {
     expect(guide).toContain('## Required Secret Names');
     expect(guide).toContain('microsoft_client_id');
     expect(guide).toContain('entra_direct_access_token');
-    expect(guide).toContain('entra_cipp_api_token');
+    for (const key of [
+      'entra_cipp_auth_type',
+      'entra_cipp_base_url',
+      'entra_cipp_client_id',
+      'entra_cipp_client_secret',
+      'entra_cipp_directory_id',
+    ]) {
+      expect(guide).toContain(`\`${key}\``);
+    }
+    // The static API key is still named, but only as a deprecated legacy path.
+    expect(guide).toMatch(/- `entra_cipp_api_token`: \*\*deprecated\*\*/);
+    expect(guide).toContain('deprecated legacy path');
+    // CIPP no longer has a Settings > CIPP > API access page.
+    expect(guide).not.toMatch(/Settings\s*(>|→)\s*CIPP\s*(>|→)\s*API access/);
+    expect(guide).not.toContain('API access');
+    expect(guide).not.toContain('CIPP-API host and API key');
     expect(guide).toContain('getSecretProviderInstance()');
     expect(guide).toContain('env/filesystem/vault provider chains');
   });

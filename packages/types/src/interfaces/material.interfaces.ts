@@ -45,6 +45,8 @@ export interface IProjectMaterial extends TenantEntity {
   /** Read-only catalog context; never persisted on the material row. */
   catalog_unit_cost?: number | null;
   catalog_cost_currency?: string | null;
+  /** Read-only: the project staging line this material was installed from (C6), if any. */
+  from_staging_line_id?: string | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

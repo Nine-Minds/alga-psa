@@ -110,7 +110,8 @@ vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
 }));
 
-vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
+vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/hooks/useBillingEnumOptions')>()),
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],
   useFormatBillingFrequency: () => (value: string) => value,
 }));
@@ -130,12 +131,10 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
 }));
 
 const billingClients = vi.hoisted(() => ({
-  getAllClientsForBilling: vi.fn(),
   getClientByIdForBilling: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
-  getAllClientsForBilling: billingClients.getAllClientsForBilling,
   getClientByIdForBilling: billingClients.getClientByIdForBilling,
 }));
 
@@ -162,9 +161,6 @@ describe('ContractWizard contract-wide discounts', () => {
     cleanup();
     vi.clearAllMocks();
     simulator.drafts.length = 0;
-    billingClients.getAllClientsForBilling.mockResolvedValue([
-      { client_id: 'client-cool', client_name: 'Cool Cars', default_currency_code: 'USD' },
-    ]);
     billingClients.getClientByIdForBilling.mockResolvedValue({ client_name: 'Cool Cars' });
   });
 

@@ -16,9 +16,11 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import type { UserRoleFloorChange } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
+import { unservedPermissionResources, unservedRoles } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -62,6 +64,25 @@ import { hasPermission, checkMultiplePermissions } from '../../auth/rbac';
 import logger from '@alga-psa/core/logger';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
+/**
+ * Both role floors, reported the API way: a last-role refusal is a 400 the
+ * caller fixes by assigning another role first, a last-admin refusal is a 409
+ * on the tenant's state. Runs inside the caller's write transaction.
+ */
+async function enforceUserRoleFloor(
+  trx: Knex.Transaction,
+  tenant: string,
+  change: UserRoleFloorChange
+): Promise<void> {
+  const floor = await assertUserRoleFloor(trx, tenant, change);
+  if (isUserRoleFloorRejected(floor)) {
+    if (floor.violation === 'last_msp_admin') {
+      throw new ConflictError(floor.message);
+    }
+    throw new ValidationError(floor.message);
+  }
+}
+
 export interface HateoasLink {
   rel: string;
   href: string;
@@ -92,26 +113,21 @@ export class PermissionRoleService extends BaseService<IRole> {
     });
   }
 
-  /**
-   * Override to exclude created_by and updated_by fields which don't exist in roles table
-   */
-  protected addCreateAuditFields(data: any, context: ServiceContext): any {
-    const now = new Date().toISOString();
-    return {
-      ...data,
-      [this.auditFields.createdAt]: now,
-      [this.auditFields.updatedAt]: now,
-      [this.tenantColumn]: context.tenant
-    };
-  }
+  // The base audit helpers filter the stamped fields against the target table's
+  // columns, so `roles` (which has created_at/updated_at but not
+  // created_by/updated_by) no longer needs an override.
 
   /**
-   * Override to exclude updated_by field which doesn't exist in roles table
+   * The role list joins `user_roles`, which also has created_at/updated_at, so
+   * the range columns must be qualified to `r.`. Unsupported range keys throw.
    */
-  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
+  protected rangeFilterColumns(): Record<string, string> {
     return {
-      ...data,
-      [this.auditFields.updatedAt]: new Date().toISOString()
+      ...super.rangeFilterColumns(),
+      created_from: 'r.created_at',
+      created_to: 'r.created_at',
+      updated_from: 'r.updated_at',
+      updated_to: 'r.updated_at',
     };
   }
 
@@ -130,6 +146,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { filters = {} as PermissionFilterData, categorize = false } = options;
 
     let query = tenantDb(knex, context.tenant).table('permissions');
+
+    // Capability-gated permissions are listed only for tenants served for the capability
+    // (an ended sponsorship or a kill switch leaves the rows in place).
+    const hidden = await unservedPermissionResources(context.tenant);
+    if (hidden.length) query = query.whereNotIn('resource', hidden);
 
     // Apply filters
     if (filters.resource) {
@@ -392,6 +413,19 @@ export class PermissionRoleService extends BaseService<IRole> {
 
     let countQuery = scopedDb.table('roles as r');
 
+    // A role that exists only for a capability is listed only for tenants served for it
+    // (an ended arrangement or a kill switch leaves the row in place).
+    for (const hidden of await unservedRoles(context.tenant)) {
+      const visible = (query: Knex.QueryBuilder) => query.whereNot((role) =>
+        role.where({ 'r.role_name': hidden.role_name, 'r.msp': hidden.msp, 'r.client': hidden.client }));
+      dataQuery = visible(dataQuery);
+      countQuery = visible(countQuery);
+    }
+
+    // Common created_*/updated_* range filters (qualified to the roles alias).
+    this.applyRangeFilters(dataQuery, filters);
+    this.applyRangeFilters(countQuery, filters);
+
     // Apply filters
     if (filters.role_name) {
       dataQuery = dataQuery.whereILike('r.role_name', `%${filters.role_name}%`);
@@ -577,7 +611,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      roleData = this.addCreateAuditFields(roleData, context);
+      roleData = await this.addCreateAuditFields(trx, roleData, context, 'roles');
       const [role] = await tenantDb(trx, context.tenant).table('roles').insert(roleData).returning('*');
 
       // Handle permissions assignment
@@ -655,7 +689,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      const updateData = this.addUpdateAuditFields(data, context);
+      const updateData = await this.addUpdateAuditFields(trx, data, context, 'roles');
       
       const [role] = await tenantDb(trx, context.tenant).table('roles')
         .where('role_id', roleId)
@@ -1064,6 +1098,9 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
       }
 
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
+
       // Get current roles to avoid duplicates
       const currentRoles = await tenantDb(trx, context.tenant).table('user_roles')
         .where('user_id', userId)
@@ -1128,21 +1165,15 @@ export class PermissionRoleService extends BaseService<IRole> {
         throw new NotFoundError('User not found');
       }
 
+      // Refuse before the delete: leaving the user with no role, or the tenant
+      // with no active MSP admin, is not a warning but a rejection.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
+
       // Remove the roles
       const deletedCount = await tenantDb(trx, context.tenant).table('user_roles')
         .where('user_id', userId)
         .whereIn('role_id', roleIds)
         .delete();
-
-      // Check if user still has at least one role
-      const remainingRoles = await tenantDb(trx, context.tenant).table('user_roles')
-        .where('user_id', userId)
-        .count('* as count')
-        .first();
-      
-      if (parseInt(remainingRoles?.count as string) === 0) {
-        logger.warn(`User ${userId} has no roles after role removal`);
-      }
 
       // Log audit event
       await this.logAuditEvent({
@@ -1195,6 +1226,11 @@ export class PermissionRoleService extends BaseService<IRole> {
           throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
         }
       }
+
+      // The final set decides, which is also what rejects an empty roleIds.
+      await enforceUserRoleFloor(trx, context.tenant, { kind: 'set_roles', userId, roleIds });
+      // A live seat technician holds the seat role and no other.
+      await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
       // Remove all current roles
       await tenantDb(trx, context.tenant).table('user_roles')

@@ -9,7 +9,7 @@
  */
 
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
   AssetSoftwareDisplayItem,
   AssetSoftwareListResponse,
@@ -21,20 +21,102 @@ import {
   SoftwareCategory,
   SoftwareType,
   UpdateSoftwareCatalogRequest,
+  ClientSoftwareSummaryParams,
+  ClientSoftwareSummaryResponse,
+  ClientSoftwareSummaryRow,
+  IUserWithRoles,
+  CLIENT_SOFTWARE_PAGE_SIZE,
+  CLIENT_SOFTWARE_ASSET_PREVIEW_LIMIT,
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
+import {
+  createAssetReadContext,
+  filterReadableAssets,
+  isAssetReadAllowed,
+} from '../lib/assetReadAuthorization';
 
 function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.QueryBuilder<any, any> {
   return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
 }
 
+/** ILIKE pattern that matches `term` literally (escapes %, _ and \\). */
+function containsPattern(term: string): string {
+  return `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+/** Resolve and authorize an asset before any software inventory query can run. */
+async function authorizeSoftwareAssetRead(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+  assetId: string
+): Promise<boolean> {
+  if (!await hasPermission(user, 'asset', 'read')) {
+    throw new Error('Permission denied: Cannot read assets');
+  }
+
+  const asset = await tenantScopedTable(knex, tenant, 'assets')
+    .where({ asset_id: assetId })
+    .first('asset_id', 'client_id');
+  if (!asset?.client_id) return false;
+
+  const client = await tenantScopedTable(knex, tenant, 'clients')
+    .where({ client_id: asset.client_id })
+    .first('client_id');
+  if (!client) return false;
+
+  const context = await createAssetReadContext(knex, tenant, user);
+  return isAssetReadAllowed(knex, tenant, context, {
+    asset_id: asset.asset_id,
+    client_id: asset.client_id,
+  });
+}
+
+function emptyAssetSoftwareSummary(): AssetSoftwareSummary {
+  return {
+    total_installed: 0,
+    by_category: {},
+    by_type: { application: 0, driver: 0, update: 0, system: 0 },
+    security_software_count: 0,
+    managed_software_count: 0,
+    recently_installed_count: 0,
+  };
+}
+
+/** The one catalog mutation path; callers cannot write without asset:update. */
+async function updateSoftwareCatalogEntryAuthorized(
+  knex: Knex,
+  tenant: string,
+  user: Parameters<typeof hasPermission>[0],
+  softwareId: string,
+  updates: UpdateSoftwareCatalogRequest
+): Promise<void> {
+  if (!await hasPermission(user, 'asset', 'update')) {
+    throw new Error('Permission denied: Cannot update assets');
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (updates.category !== undefined) updateData.category = updates.category;
+  if (updates.is_managed !== undefined) updateData.is_managed = updates.is_managed;
+  if (updates.is_security_relevant !== undefined) updateData.is_security_relevant = updates.is_security_relevant;
+
+  if (Object.keys(updateData).length > 0) {
+    // No trigger stamps this where the table is Citus-distributed.
+    updateData.updated_at = new Date();
+    await tenantScopedTable(knex, tenant, 'software_catalog')
+      .where({ software_id: softwareId })
+      .update(updateData);
+  }
+}
+
 /**
- * Get software installed on an asset
- * Uses the normalized asset_software table with software_catalog join
+ * Get software installed on an asset. Requires asset:read.
+ * Uses the normalized asset_software table with software_catalog join — the
+ * same source as the client-level software view, so its drill lands on matching rows.
  */
 export const getAssetSoftware = withAuth(async (
-  _user,
+  user,
   { tenant },
   params: AssetSoftwareQueryParams
 ): Promise<AssetSoftwareListResponse | AssetActionError> => {
@@ -51,6 +133,10 @@ export const getAssetSoftware = withAuth(async (
   } = params;
 
   try {
+    if (!await authorizeSoftwareAssetRead(knex, tenant, user, asset_id)) {
+      return { software: [], total: 0, page, limit };
+    }
+
     // Base query using the view for convenience
     let query = tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', asset_id);
@@ -71,10 +157,12 @@ export const getAssetSoftware = withAuth(async (
     }
 
     // Search filter
-    if (search) {
+    const term = search?.trim();
+    if (term) {
+      const pattern = containsPattern(term);
       query = query.where(function() {
-        this.whereILike('software_name', `%${search}%`)
-          .orWhereILike('publisher', `%${search}%`);
+        this.whereILike('software_name', pattern)
+          .orWhereILike('publisher', pattern);
       });
     }
 
@@ -135,12 +223,59 @@ export const getAssetSoftware = withAuth(async (
 });
 
 /**
+ * Raw input for the REST asset gate. The route checks record access before calling this action and projects every
+ * returned row under that retained decision before filtering, counting, or serializing it.
+ */
+export const getAssetSoftwareForApi = withAuth(async (
+  user,
+  { tenant },
+  assetId: string,
+): Promise<AssetSoftwareDisplayItem[] | AssetActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+    if (!await authorizeSoftwareAssetRead(knex, tenant, user, assetId)) return [];
+    const rows = await tenantScopedTable(knex, tenant, 'v_asset_software_details')
+      .where('asset_id', assetId)
+      .select(
+        'software_id', 'software_name as name', 'publisher', 'category', 'software_type', 'version',
+        'install_date', 'size_bytes', 'first_seen_at', 'is_current', 'is_managed', 'is_security_relevant',
+      )
+      .orderBy('software_name');
+    return rows.map((row: any) => ({
+      software_id: row.software_id,
+      name: row.name,
+      publisher: row.publisher,
+      category: row.category as SoftwareCategory,
+      software_type: row.software_type as SoftwareType,
+      version: row.version,
+      install_date: row.install_date,
+      size_bytes: row.size_bytes,
+      first_seen_at: row.first_seen_at,
+      is_current: row.is_current,
+      is_managed: row.is_managed,
+      is_security_relevant: row.is_security_relevant,
+    }));
+  } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
  * Get software summary statistics for an asset
  */
-export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
+export const getAssetSoftwareSummary = withAuth(async (user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
+    if (!await authorizeSoftwareAssetRead(knex, tenant, user, assetId)) {
+      return emptyAssetSoftwareSummary();
+    }
+
     const baseQuery = () => tenantScopedTable(knex, tenant, 'v_asset_software_details')
       .where('asset_id', assetId)
       .where('is_current', true);
@@ -223,7 +358,7 @@ export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetI
  * Search for software across all assets (fleet-wide)
  */
 export const searchSoftwareFleetWide = withAuth(async (
-  _user,
+  user,
   { tenant },
   params: SoftwareSearchParams
 ): Promise<SoftwareSearchResponse | AssetActionError> => {
@@ -241,6 +376,16 @@ export const searchSoftwareFleetWide = withAuth(async (
   } = params;
 
   try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+
+    const allAssets = await tenantScopedTable(knex, tenant, 'assets')
+      .select('asset_id', 'client_id');
+    const readContext = await createAssetReadContext(knex, tenant, user);
+    const readableAssets = await filterReadableAssets(knex, tenant, readContext, allAssets);
+    const readableAssetIds = readableAssets.map((asset) => asset.asset_id);
+
     // Build base query for software catalog
     const db = tenantDb(knex, tenant);
     let catalogQuery = db.table('software_catalog as sc');
@@ -269,17 +414,42 @@ export const searchSoftwareFleetWide = withAuth(async (
       catalogQuery = catalogQuery.where('sc.is_security_relevant', is_security_relevant);
     }
 
-    // Get count of matching software entries
-    const countResult = await catalogQuery.clone().countDistinct('sc.software_id as count').first();
+    // Compile the caller's record-level authorization into the install subquery.
+    // Every aggregate, count, and preview is consequently based on readable assets.
+    const currentAssetSoftware = db.table('asset_software as scoped_asw')
+      .select('tenant', 'software_id', 'asset_id')
+      .where('scoped_asw.is_current', true)
+      .whereIn('scoped_asw.asset_id', readableAssetIds)
+      .as('asw');
+    let authorizedCatalogQuery = catalogQuery.clone();
+    authorizedCatalogQuery = db.tenantJoinSubquery(authorizedCatalogQuery, currentAssetSoftware, 'asw.software_id', 'sc.software_id', {
+      type: 'inner',
+      rootTenantColumn: 'sc.tenant',
+      joinedTenantColumn: 'asw.tenant',
+    });
+
+    // Client filtering participates in the same aggregate used for ranking and totals.
+    const scopedAssets = db.table('assets as scoped_a')
+      .select('tenant', 'asset_id', 'client_id')
+      .whereIn('scoped_a.asset_id', readableAssetIds)
+      .as('a');
+    authorizedCatalogQuery = db.tenantJoinSubquery(authorizedCatalogQuery, scopedAssets, 'a.asset_id', 'asw.asset_id', {
+      type: 'inner',
+      rootTenantColumn: 'asw.tenant',
+      joinedTenantColumn: 'a.tenant',
+    });
+
+    if (client_id) {
+      authorizedCatalogQuery = authorizedCatalogQuery.where('a.client_id', client_id);
+    }
+
+    const countResult = await authorizedCatalogQuery.clone().countDistinct('sc.software_id as count').first();
     const total = parseInt(String(countResult?.count || 0), 10);
 
-    // Get paginated software entries with install counts
+    // Get paginated software entries with authorized install counts.
     const offset = (page - 1) * limit;
-    const currentAssetSoftware = db.table('asset_software')
-      .select('software_id', 'asset_id')
-      .where('is_current', true)
-      .as('asw');
-    let softwareQuery = catalogQuery.clone()
+
+    const softwareRows = await authorizedCatalogQuery.clone()
       .select(
         'sc.software_id',
         'sc.name',
@@ -289,19 +459,6 @@ export const searchSoftwareFleetWide = withAuth(async (
         'sc.is_managed',
         'sc.is_security_relevant'
       )
-      .leftJoin(currentAssetSoftware, 'asw.software_id', 'sc.software_id');
-
-    // Filter by client if specified
-    if (client_id) {
-      const tenantAssets = db.table('assets')
-        .select('asset_id', 'client_id')
-        .as('a');
-      softwareQuery = softwareQuery
-        .leftJoin(tenantAssets, 'a.asset_id', 'asw.asset_id')
-        .where('a.client_id', client_id);
-    }
-
-    const softwareRows = await softwareQuery
       .count('asw.asset_id as install_count')
       .groupBy('sc.software_id', 'sc.name', 'sc.publisher', 'sc.category', 'sc.software_type', 'sc.is_managed', 'sc.is_security_relevant')
       .orderBy('install_count', 'desc')
@@ -313,7 +470,8 @@ export const searchSoftwareFleetWide = withAuth(async (
     for (const sw of softwareRows) {
       let assetsQuery = tenantScopedTable(knex, tenant, 'v_asset_software_details')
         .where('software_id', sw.software_id)
-        .where('is_current', true);
+        .where('is_current', true)
+        .whereIn('asset_id', readableAssetIds);
 
       if (client_id) {
         assetsQuery = assetsQuery.where('client_id', client_id);
@@ -372,7 +530,7 @@ export const searchSoftwareFleetWide = withAuth(async (
  * Update a software catalog entry (e.g., set category, managed flag)
  */
 export const updateSoftwareCatalogEntry = withAuth(async (
-  _user,
+  user,
   { tenant },
   softwareId: string,
   updates: UpdateSoftwareCatalogRequest
@@ -380,23 +538,7 @@ export const updateSoftwareCatalogEntry = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    const updateData: Record<string, unknown> = {};
-
-    if (updates.category !== undefined) {
-      updateData.category = updates.category;
-    }
-    if (updates.is_managed !== undefined) {
-      updateData.is_managed = updates.is_managed;
-    }
-    if (updates.is_security_relevant !== undefined) {
-      updateData.is_security_relevant = updates.is_security_relevant;
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await tenantScopedTable(knex, tenant, 'software_catalog')
-        .where({ software_id: softwareId })
-        .update(updateData);
-    }
+    await updateSoftwareCatalogEntryAuthorized(knex, tenant, user, softwareId, updates);
   } catch (error) {
     const expected = assetActionErrorFrom(error);
     if (expected) {
@@ -411,7 +553,7 @@ export const updateSoftwareCatalogEntry = withAuth(async (
  * Get recently changed software (installs/uninstalls) for an asset
  */
 export const getRecentSoftwareChanges = withAuth(async (
-  _user,
+  user,
   { tenant },
   assetId: string,
   days: number = 30
@@ -422,6 +564,10 @@ export const getRecentSoftwareChanges = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    if (!await authorizeSoftwareAssetRead(knex, tenant, user, assetId)) {
+      return { installed: [], uninstalled: [] };
+    }
+
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - days);
 
@@ -503,6 +649,114 @@ export const getRecentSoftwareChanges = withAuth(async (
       return expected;
     }
     console.error('Error getting recent software changes:', error);
+    throw error;
+  }
+});
+
+/**
+ * Shared query builder for the client-level software summary (grid + export).
+ * Only is_current installs count. Every table root and join carries the tenant
+ * predicate via tenantDb; assets are filtered to the client.
+ */
+function buildClientSoftwareQuery(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+  search?: string
+): Knex.QueryBuilder<any, any> {
+  const db = tenantDb(knex, tenant);
+  let query = db.table('asset_software as asw');
+  query = db.tenantJoin(query, 'assets as a', 'a.asset_id', 'asw.asset_id');
+  query = db.tenantJoin(query, 'software_catalog as sc', 'sc.software_id', 'asw.software_id');
+  query = query.where('a.client_id', clientId).where('asw.is_current', true);
+
+  const term = search?.trim();
+  if (term) {
+    query = query.whereILike('sc.name', containsPattern(term));
+  }
+  return query;
+}
+
+/**
+ * Software installed across all of one client's assets, grouped by catalog
+ * software_id (never the raw title). MSP-side, read-only, requires asset:read.
+ *
+ * "Installs" is intentionally not returned: asset_software is keyed on
+ * (tenant, asset_id, software_id), so installs always equals asset_count.
+ */
+export const getClientSoftwareSummary = withAuth(async (
+  user,
+  { tenant },
+  params: ClientSoftwareSummaryParams
+): Promise<ClientSoftwareSummaryResponse | AssetActionError> => {
+  const { knex } = await createTenantKnex();
+  const { clientId, search, page = 1, sortBy = 'title', sortDir } = params;
+
+  try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+
+    const client = await tenantScopedTable(knex, tenant, 'clients')
+      .where({ client_id: clientId })
+      .first('client_id');
+    if (!client) {
+      throw new Error('Client not found');
+    }
+
+    const countRow = await buildClientSoftwareQuery(knex, tenant, clientId, search)
+      .countDistinct('sc.software_id as count')
+      .first();
+    const total = parseInt(String(countRow?.count || 0), 10);
+
+    const direction = (sortDir ?? (sortBy === 'assets' ? 'desc' : 'asc')) === 'desc' ? 'desc' : 'asc';
+    let rowsQuery = buildClientSoftwareQuery(knex, tenant, clientId, search)
+      .select('sc.software_id', 'sc.name as title')
+      .select(
+        knex.raw('array_remove(array_agg(DISTINCT asw.version), NULL) as versions'),
+        knex.raw('count(DISTINCT asw.asset_id) as asset_count'),
+        knex.raw(
+          `(array_agg(jsonb_build_object('asset_id', a.asset_id, 'name', a.name) ORDER BY a.name, a.asset_id))[1:${CLIENT_SOFTWARE_ASSET_PREVIEW_LIMIT}] as assets`
+        ),
+        knex.raw('max(asw.last_seen_at) as last_seen')
+      )
+      .groupBy('sc.software_id', 'sc.name');
+
+    rowsQuery = sortBy === 'assets'
+      ? rowsQuery.orderByRaw(`count(DISTINCT asw.asset_id) ${direction}`).orderBy('sc.name', 'asc')
+      : rowsQuery.orderBy('sc.name', direction);
+    rowsQuery = rowsQuery.orderBy('sc.software_id', 'asc');
+
+    if (page !== 'all') {
+      const safePage = Math.max(1, Math.floor(page) || 1);
+      rowsQuery = rowsQuery.limit(CLIENT_SOFTWARE_PAGE_SIZE).offset((safePage - 1) * CLIENT_SOFTWARE_PAGE_SIZE);
+    }
+
+    const rows = await rowsQuery;
+    const mapped: ClientSoftwareSummaryRow[] = rows.map((row: any) => ({
+      software_id: String(row.software_id),
+      title: String(row.title),
+      versions: ((row.versions ?? []) as string[]).slice().sort(),
+      asset_count: parseInt(String(row.asset_count), 10),
+      assets: ((row.assets ?? []) as Array<{ asset_id: string; name: string }>).map((asset) => ({
+        asset_id: asset.asset_id,
+        name: asset.name,
+      })),
+      last_seen: row.last_seen ? new Date(row.last_seen).toISOString() : null,
+    }));
+
+    return {
+      rows: mapped,
+      total,
+      page: page === 'all' ? 'all' : Math.max(1, Math.floor(page) || 1),
+      limit: page === 'all' ? total : CLIENT_SOFTWARE_PAGE_SIZE,
+    };
+  } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error getting client software summary:', error);
     throw error;
   }
 });

@@ -9,9 +9,12 @@ if (typeof window !== 'undefined') {
   // so configure through the react entry point (which re-exports configure from
   // the copy it actually uses) as well as the top-level dom package.
   const { configure } = await import('@testing-library/dom');
-  configure({ asyncUtilTimeout: 10_000 });
+  // 20s: ManualInvoices.expandedSave waited the full 10s for its first render
+  // on a saturated runner. testTimeout stays above this so the wait reports
+  // its own failure instead of a bare test timeout.
+  configure({ asyncUtilTimeout: 20_000 });
   const { configure: configureReact } = await import('@testing-library/react');
-  configureReact({ asyncUtilTimeout: 10_000 });
+  configureReact({ asyncUtilTimeout: 20_000 });
 
   const storage = new Map<string, string>();
   const localStorageMock: Storage = {

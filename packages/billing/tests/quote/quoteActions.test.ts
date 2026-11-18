@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Quote from '../../src/models/quote';
 import QuoteActivity from '../../src/models/quoteActivity';
 import QuoteItem from '../../src/models/quoteItem';
@@ -29,16 +29,23 @@ const getTenantEmailServiceInstance = vi.fn(() => ({ sendEmail: (...args: any[])
 const generatePDFMock = vi.fn();
 const generateAndStoreMock = vi.fn();
 const approvalSettingsMock = vi.fn();
+const emailLinkReviewSettingsMock = vi.fn();
+const mintLinkMock = vi.fn();
+const revokeLinkMock = vi.fn();
 const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
 const fetchTenantPartyMock = vi.fn();
 const resolveEmailLocaleMock = vi.fn();
+const buildTenantPortalUrlMock = vi.fn();
 // Rows returned by the quote email template lookup, keyed by table so tests
 // can exercise the tenant-override-before-system-template precedence.
 const emailTemplateRows: Record<string, any> = {};
 // Filters the email template lookups ran with, so tests can assert the
 // recipient's locale reaches the query rather than a hard-coded 'en'.
 const emailTemplateLookups: Array<{ table: string; filter: any }> = [];
+// Locations the quote client owns, as returned by the `client_locations`
+// lookup. Create-from-template nulls any item location outside this set.
+let clientLocationRows: Array<{ location_id: string }> = [];
 
 const makeQuery = (result: any) => {
   const chain: any = {};
@@ -100,6 +107,10 @@ vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: any[]) => fetchTenantPartyMock(...args),
 }));
 
+vi.mock('@alga-psa/tenancy/server', () => ({
+  buildTenantPortalUrl: (...args: any[]) => buildTenantPortalUrlMock(...args),
+}));
+
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   resolveEmailLocale: (...args: any[]) => resolveEmailLocaleMock(...args),
 }));
@@ -109,11 +120,22 @@ vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
   return {
     ...actual,
     getQuoteApprovalWorkflowSettings: (...args: any[]) => approvalSettingsMock(...args),
+    getQuoteEmailLinkReviewSettings: (...args: any[]) => emailLinkReviewSettingsMock(...args),
   };
 });
 
+vi.mock('../../src/services/quoteAccessLinks', () => ({
+  mint: (...args: any[]) => mintLinkMock(...args),
+  revoke: (...args: any[]) => revokeLinkMock(...args),
+}));
+
 vi.mock('../../src/services/quoteCalculationService', () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+}));
+
+const decideQuoteMock = vi.fn();
+vi.mock('../../src/services/quoteDecisionService', () => ({
+  decideQuote: (...args: any[]) => decideQuoteMock(...args),
 }));
 
 vi.mock('../../src/services', () => ({
@@ -254,7 +276,7 @@ describe('quoteActions', () => {
         return makeQuery({ email: null });
       }
       if (table === 'client_locations') {
-        return makeListQuery([]);
+        return makeListQuery(clientLocationRows);
       }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
@@ -266,7 +288,9 @@ describe('quoteActions', () => {
     delete emailTemplateRows.tenant_email_templates;
     delete emailTemplateRows.system_email_templates;
     emailTemplateLookups.length = 0;
+    clientLocationRows = [];
     resolveEmailLocaleMock.mockResolvedValue('en');
+    buildTenantPortalUrlMock.mockImplementation(async (_tenant: string, path: string) => `https://helpdesk.digitalchk.com${path}`);
     fetchTenantPartyMock.mockResolvedValue({
       name: 'Acme MSP',
       address: null,
@@ -281,6 +305,11 @@ describe('quoteActions', () => {
     documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' });
     sendEmailMock.mockResolvedValue({ success: true, messageId: 'message-1' });
     approvalSettingsMock.mockResolvedValue({ approvalRequired: false });
+    // Email-link review is off by default in this file so the legacy single-send path is what
+    // the existing tests exercise; the per-recipient path has its own test file.
+    emailLinkReviewSettingsMock.mockResolvedValue({ enabled: false, linkLifetimeHours: null });
+    mintLinkMock.mockReset();
+    revokeLinkMock.mockReset();
     vi.spyOn(Quote, 'create').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'update').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'getById').mockResolvedValue({ quote_id: QUOTE_ID, quote_number: 'Q-0001' } as any);
@@ -390,7 +419,7 @@ describe('quoteActions', () => {
   });
 
   it('T044: updateQuote enforces status transition rules', async () => {
-    vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Invalid quote status transition from draft to accepted'));
+    decideQuoteMock.mockResolvedValue({ status: 'not_pending', currentStatus: 'draft' });
 
     const { updateQuote } = await import('../../src/actions/quoteActions');
 
@@ -598,6 +627,60 @@ describe('quoteActions', () => {
         currency_code: 'USD',
       })
     );
+  });
+
+  describe('createQuoteFromTemplate document layout (alga-2026-0002902)', () => {
+    const CALLER_LAYOUT_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const TEMPLATE_LAYOUT_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+    const stubLayoutTemplateLoad = () => {
+      vi.spyOn(Quote, 'getById')
+        .mockResolvedValueOnce({ ...templateQuote, template_id: TEMPLATE_LAYOUT_ID } as any)
+        .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0300', is_template: false, quote_items: [] } as any);
+    };
+
+    const createdLayoutId = () => (Quote.create as any).mock.calls[0][2].template_id;
+
+    it('T902d: keeps the layout the caller picked', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        template_id: CALLER_LAYOUT_ID,
+      } as any);
+
+      expect(createdLayoutId()).toBe(CALLER_LAYOUT_ID);
+    });
+
+    it('T902e: honours an explicit "use default layout" over the template layout', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        template_id: null,
+      } as any);
+
+      expect(createdLayoutId()).toBeNull();
+    });
+
+    it('T902f: inherits the template layout when the caller supplies none', async () => {
+      stubLayoutTemplateLoad();
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(createdLayoutId()).toBe(TEMPLATE_LAYOUT_ID);
+    });
   });
 
   it('T050c: createQuoteFromTemplate returns a newly numbered draft quote', async () => {
@@ -1161,6 +1244,107 @@ describe('quoteActions', () => {
     expect((discountCall![2] as any).applies_to_item_id).toBe('new-base-1');
   });
 
+  describe('createQuoteFromTemplate locations (alga-2026-0002902)', () => {
+    const OWNED_LOCATION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const FOREIGN_LOCATION_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+    const stubTemplateLoad = (quoteItems: any[]) => {
+      vi.spyOn(Quote, 'getById')
+        .mockResolvedValueOnce({ ...templateQuote, is_template: true, quote_items: quoteItems } as any)
+        .mockResolvedValueOnce({ quote_id: QUOTE_ID, quote_number: 'Q-0200', is_template: false, quote_items: [] } as any);
+      vi.spyOn(Quote, 'create').mockResolvedValueOnce({ quote_id: QUOTE_ID } as any);
+    };
+
+    const locationOfCreatedItem = (description: string) =>
+      (QuoteItem.create as any).mock.calls
+        .map((call: any[]) => call[2])
+        .find((input: any) => input.description === description)?.location_id;
+
+    it('T902a: nulls a template item location the quote client does not own and keeps one it does', async () => {
+      clientLocationRows = [{ location_id: OWNED_LOCATION_ID }];
+      stubTemplateLoad([
+        { ...templateQuote.quote_items[0], location_id: FOREIGN_LOCATION_ID },
+        { ...templateQuote.quote_items[1], location_id: OWNED_LOCATION_ID },
+      ]);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(locationOfCreatedItem('Managed Endpoint')).toBeNull();
+      expect(locationOfCreatedItem('Onboarding')).toBe(OWNED_LOCATION_ID);
+    });
+
+    it('T902b: honours the item override, remapping discount local ids and sanitizing locations', async () => {
+      clientLocationRows = [{ location_id: OWNED_LOCATION_ID }];
+      stubTemplateLoad(templateQuote.quote_items);
+      stubItemCreateWithSequentialIds(['new-site-a', 'new-site-b', 'new-discount']);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+        items: [
+          {
+            local_id: 'local-a',
+            description: 'Site A monitoring',
+            quantity: 1,
+            unit_price: 2500,
+            location_id: OWNED_LOCATION_ID,
+          },
+          {
+            local_id: 'local-b',
+            description: 'Site B monitoring',
+            quantity: 2,
+            unit_price: 1500,
+            location_id: FOREIGN_LOCATION_ID,
+          },
+          {
+            local_id: 'local-discount',
+            description: 'Loyalty discount',
+            quantity: 1,
+            unit_price: 0,
+            is_discount: true,
+            discount_type: 'percentage',
+            discount_percentage: 10,
+            applies_to_item_id: 'local-a',
+          },
+        ],
+      } as any);
+
+      // The template's own rows are not copied when drafts are supplied.
+      const createdDescriptions = (QuoteItem.create as any).mock.calls.map((call: any[]) => call[2].description);
+      expect(createdDescriptions).toEqual(['Site A monitoring', 'Site B monitoring', 'Loyalty discount']);
+      expect(locationOfCreatedItem('Site A monitoring')).toBe(OWNED_LOCATION_ID);
+      expect(locationOfCreatedItem('Site B monitoring')).toBeNull();
+
+      const discountCall = (QuoteItem.create as any).mock.calls
+        .map((call: any[]) => call[2])
+        .find((input: any) => input.is_discount === true);
+      expect(discountCall.applies_to_item_id).toBe('new-site-a');
+      // Draft order is preserved regardless of the base-then-discount phases.
+      expect(discountCall.display_order).toBe(2);
+    });
+
+    it('T902c: nulls every item location when the quote client owns none', async () => {
+      clientLocationRows = [];
+      stubTemplateLoad([{ ...templateQuote.quote_items[0], location_id: FOREIGN_LOCATION_ID }]);
+
+      const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+      await createQuoteFromTemplate(templateQuote.quote_id, {
+        client_id: baseQuoteInput.client_id,
+        quote_date: baseQuoteInput.quote_date,
+        valid_until: baseQuoteInput.valid_until,
+      } as any);
+
+      expect(locationOfCreatedItem('Managed Endpoint')).toBeNull();
+    });
+  });
+
   it('T141: duplicateQuote remaps item-targeted discounts onto the copied base item', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({ ...templateQuote, quote_id: QUOTE_ID, quote_number: 'Q-0102', is_template: false, quote_items: targetedItems(false) } as any)
@@ -1660,5 +1844,327 @@ describe('quoteActions', () => {
       messageKey: 'msp/quotes:errors.permissions.update',
     });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
+  });
+
+  describe('quote email portal links (alga-2026-0002724)', () => {
+    const portalQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2099-03-20',
+      status: 'sent',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    const deepLink = `https://helpdesk.digitalchk.com/client-portal/billing/quotes/${QUOTE_ID}`;
+    const emailBody = () => JSON.stringify(sendEmailMock.mock.calls[0][0]);
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('%s links to the quote on the tenant portal origin', async (action, status) => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status } as any);
+
+      const actions = await import('../../src/actions/quoteActions');
+      await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+      expect(buildTenantPortalUrlMock).toHaveBeenCalledWith(TENANT_ID, `/client-portal/billing/quotes/${QUOTE_ID}`);
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      expect(emailBody()).toContain(deepLink);
+      expect(emailBody()).not.toContain('localhost');
+    });
+
+    it.each(['sendQuote', 'resendQuote', 'sendQuoteReminder'])(
+      '%s sends without a link when no public origin exists',
+      async (action) => {
+        buildTenantPortalUrlMock.mockResolvedValue(null);
+        vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status: action === 'sendQuote' ? 'draft' : 'sent' } as any);
+
+        const actions = await import('../../src/actions/quoteActions');
+        await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        expect(emailBody()).not.toMatch(/client-portal|localhost|href=/);
+      },
+    );
+  });
+  describe('per-recipient quote review links (alga-2026-0002820)', () => {
+    const reviewQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2099-03-20',
+      status: 'sent',
+      is_template: false,
+      client_id: 'client-1',
+      contact_id: null,
+    };
+    const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    let linkCounter = 0;
+    let usersWithPortalAccess: string[] = [];
+    // email (lowercase) -> contact id, for the "contacts" lookup
+    let contactsByEmail: Record<string, string> = {};
+    const activityMetadata = () => (QuoteActivity.create as any).mock.calls.at(-1)[2].metadata;
+    const bodyOf = (call: number) => JSON.stringify(sendEmailMock.mock.calls[call][0]);
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.com';
+      linkCounter = 0;
+      usersWithPortalAccess = [];
+      contactsByEmail = {};
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: true, linkLifetimeHours: null });
+      mintLinkMock.mockImplementation(async (_trx: any, _tenant: string, input: any) => {
+        linkCounter += 1;
+        return { link: { link_id: `link-${linkCounter}`, recipient_email: input.recipient.email }, token: `token-${linkCounter}-secretvalue` };
+      });
+      revokeLinkMock.mockResolvedValue(1);
+      const base = mockKnex.getMockImplementation()!;
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'contacts') {
+          let looked: string | undefined;
+          const chain: any = {};
+          chain.select = vi.fn(() => chain);
+          chain.where = vi.fn(() => chain);
+          chain.whereRaw = vi.fn((_sql: string, params: string[]) => { looked = params[0]; return chain; });
+          chain.first = vi.fn(async () => (looked && contactsByEmail[looked] ? { contact_name_id: contactsByEmail[looked] } : (looked ? undefined : { email: null })));
+          return chain;
+        }
+        if (table === 'users') {
+          // Authorization lookups use this table too; only the portal-access query
+          // (filtered by contact_id) is answered here.
+          const baseChain = base(table);
+          const originalWhere = baseChain.where;
+          baseChain.where = vi.fn((filter: any) => {
+            if (filter && 'contact_id' in filter) {
+              const chain: any = {};
+              chain.select = vi.fn(() => chain);
+              chain.first = vi.fn(async () => (usersWithPortalAccess.includes(filter.contact_id) ? { user_id: 'u1' } : undefined));
+              return chain;
+            }
+            return originalWhere(filter);
+          });
+          return baseChain;
+        }
+        return base(table);
+      });
+      vi.spyOn(Quote, 'getById').mockResolvedValue(reviewQuote as any);
+    });
+
+    afterEach(() => {
+      if (originalBaseUrl === undefined) delete process.env.NEXT_PUBLIC_BASE_URL;
+      else process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+    });
+
+    it('setting on: one email, one distinct link per recipient; duplicates differing in case collapse', async () => {
+      contactsByEmail = { 'known@example.com': 'contact-1' };
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['Known@Example.com', 'known@example.com ', 'other@example.com'] });
+
+      expect(sendEmailMock).toHaveBeenCalledTimes(2);
+      expect(mintLinkMock).toHaveBeenCalledTimes(2);
+      const [first, second] = mintLinkMock.mock.calls.map((c) => c[2]);
+      expect(first.recipient).toEqual({ contactId: 'contact-1', email: 'known@example.com' });
+      expect(second.recipient).toEqual({ contactId: null, email: 'other@example.com' });
+
+      expect(sendEmailMock.mock.calls[0][0].to).toEqual(['known@example.com']);
+      expect(sendEmailMock.mock.calls[1][0].to).toEqual(['other@example.com']);
+      expect(bodyOf(0)).toContain('https://helpdesk.digitalchk.com/quote/token-1-secretvalue');
+      expect(bodyOf(0)).not.toContain('token-2-secretvalue');
+      expect(bodyOf(1)).toContain('https://helpdesk.digitalchk.com/quote/token-2-secretvalue');
+      expect(bodyOf(1)).not.toContain('token-1-secretvalue');
+    });
+
+    it('setting on: portal link is secondary and only for recipients with portal access', async () => {
+      contactsByEmail = { 'portal@example.com': 'contact-p' };
+      usersWithPortalAccess = ['contact-p'];
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['portal@example.com', 'nologin@example.com'] });
+
+      const portalUrl = `/client-portal/billing/quotes/${QUOTE_ID}`;
+      expect(bodyOf(0)).toContain(portalUrl);
+      expect(bodyOf(1)).not.toContain(portalUrl);
+      expect(bodyOf(1)).toContain('/quote/token-2-secretvalue');
+    });
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('%s supersedes only that recipient\'s links before minting, in one transaction', async (action, status) => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status } as any);
+      const { [action]: run } = (await import('../../src/actions/quoteActions')) as any;
+      await run(QUOTE_ID, { email_addresses: ['A@example.com', 'b@example.com'] });
+
+      expect(revokeLinkMock.mock.calls.map((c) => [c[0], c[2], c[3]])).toEqual([
+        [mockTrx, { quoteId: QUOTE_ID, recipientEmail: 'a@example.com' }, 'superseded'],
+        [mockTrx, { quoteId: QUOTE_ID, recipientEmail: 'b@example.com' }, 'superseded'],
+      ]);
+      expect(mintLinkMock.mock.calls.every((c) => c[0] === mockTrx)).toBe(true);
+      expect(revokeLinkMock.mock.invocationCallOrder[0]).toBeLessThan(mintLinkMock.mock.invocationCallOrder[0]);
+    });
+
+    it('setting on: honours the configured link lifetime', async () => {
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: true, linkLifetimeHours: 48 });
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+      expect(mintLinkMock.mock.calls[0][2].lifetimeHours).toBe(48);
+    });
+
+    it('partial failure: successful emails stay sent, the failed recipient link is revoked and recorded, status is not touched', async () => {
+      sendEmailMock
+        .mockResolvedValueOnce({ success: true, messageId: 'm-a' })
+        .mockResolvedValueOnce({ success: false, error: 'mailbox full' });
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      const result: any = await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+
+      expect(revokeLinkMock).toHaveBeenCalledWith(expect.anything(), TENANT_ID, { linkId: 'link-2' }, 'manual');
+      expect(result.email_delivery).toEqual({
+        sent: ['a@example.com'],
+        failed: [{ email: 'b@example.com', error: 'mailbox full' }],
+      });
+      const metadata = activityMetadata();
+      expect(metadata.failed_recipients).toEqual(['b@example.com']);
+      expect(metadata.deliveries).toEqual([
+        { email: 'a@example.com', success: true, message_id: 'm-a', link_id: 'link-1' },
+        { email: 'b@example.com', success: false, message_id: null, link_id: null, error: 'mailbox full' },
+      ]);
+      expect(QuoteActivity.create).toHaveBeenCalledTimes(1);
+      expect(Quote.update).not.toHaveBeenCalled();
+    });
+
+    it('sendQuote transitions the quote to sent once, regardless of recipient count', async () => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status: 'draft' } as any);
+      const { sendQuote } = await import('../../src/actions/quoteActions');
+      await sendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+      expect(Quote.update).toHaveBeenCalledTimes(1);
+      expect(QuoteActivity.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('never writes the raw token to the activity log or message metadata', async () => {
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+      expect(JSON.stringify((QuoteActivity.create as any).mock.calls)).not.toContain('secretvalue');
+      for (const [payload] of sendEmailMock.mock.calls) {
+        const { html, text, attachments, ...meta } = payload;
+        expect(JSON.stringify(meta)).not.toContain('secretvalue');
+      }
+    });
+
+    describe('tenant template overrides (F1)', () => {
+      const portalUrl = `/client-portal/billing/quotes/${QUOTE_ID}`;
+      const setOverride = (html: string, text: string) => {
+        emailTemplateRows.tenant_email_templates = { subject: 'Quote {{quote.number}}', html_content: html, text_content: text };
+      };
+
+      it('override without {{quoteReviewLink}}: nothing minted or revoked, portal link kept, skip recorded', async () => {
+        // The variable only appears in a comment and in plain text, which must not count.
+        setOverride('<p>{{!-- {{quoteReviewLink}} --}}quoteReviewLink <a href="{{portalLink}}">Open</a></p>', 'See {{portalLink}}');
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['nologin@example.com'] });
+
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        const payload = sendEmailMock.mock.calls[0][0];
+        expect(payload.html).toContain(`https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(payload.text).toContain(`https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(activityMetadata().deliveries).toEqual([
+          expect.objectContaining({ email: 'nologin@example.com', success: true, link_id: null, review_link: 'not_rendered' }),
+        ]);
+        expect(JSON.stringify(activityMetadata())).not.toMatch(/\/quote\/|secretvalue/);
+      });
+
+      it('override with the variable: minted; portal link blanked for non-portal recipient, kept for portal recipient', async () => {
+        setOverride('<p><a href="{{quoteReviewLink}}">Review</a> <a href="{{portalLink}}">Portal</a></p>', '{{quoteReviewLink}} | portal:{{portalLink}}');
+        contactsByEmail = { 'portal@example.com': 'contact-p' };
+        usersWithPortalAccess = ['contact-p'];
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['portal@example.com', 'nologin@example.com'] });
+
+        expect(mintLinkMock).toHaveBeenCalledTimes(2);
+        const [portal, nologin] = [0, 1].map((i) => sendEmailMock.mock.calls[i][0]);
+        expect(portal.html).toContain(portalUrl);
+        expect(portal.text).toContain(`portal:https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(nologin.html).toContain('/quote/token-2-secretvalue');
+        expect(nologin.html).not.toContain(portalUrl);
+        expect(nologin.text).toContain('portal:');
+        expect(nologin.text).not.toContain(portalUrl);
+        expect(activityMetadata().deliveries[1].review_link).toBeUndefined();
+      });
+
+      it('variable only in html: token minted, html blanks the portal link, text keeps it', async () => {
+        setOverride('<a href="{{quoteReviewLink}}">Review</a> {{portalLink}}', 'Quote {{quote.number}} {{portalLink}}');
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['nologin@example.com'] });
+
+        expect(mintLinkMock).toHaveBeenCalledTimes(1);
+        const payload = sendEmailMock.mock.calls[0][0];
+        expect(payload.html).toContain('/quote/token-1-secretvalue');
+        expect(payload.html).not.toContain(portalUrl);
+        expect(payload.text).toContain(portalUrl);
+        expect(payload.text).not.toContain('secretvalue');
+      });
+
+      it('resend with an override lacking the variable does not revoke earlier links', async () => {
+        setOverride('<p>{{portalLink}}</p>', '{{portalLink}}');
+        const { sendQuoteReminder } = await import('../../src/actions/quoteActions');
+        await sendQuoteReminder(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(sendEmailMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('resolves the template before any token is touched', async () => {
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(emailTemplateLookups.length).toBeGreaterThan(0);
+        expect(mintLinkMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('review link host (buildTenantPortalUrl)', () => {
+      it('uses the tenant custom domain, not NEXT_PUBLIC_BASE_URL', async () => {
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(buildTenantPortalUrlMock).toHaveBeenCalledWith(TENANT_ID, '/quote/token-1-secretvalue');
+        expect(bodyOf(0)).toContain('https://helpdesk.digitalchk.com/quote/token-1-secretvalue');
+        expect(bodyOf(0)).not.toContain('app.example.com');
+      });
+
+      it('builder returning null: nothing is minted or revoked, the email still goes out with the portal link', async () => {
+        buildTenantPortalUrlMock.mockResolvedValue(null);
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('setting OFF (%s): no mint, no revoke, one combined send with no review link - identical to before', async (action, status) => {
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: false, linkLifetimeHours: null });
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status } as any);
+      const { [action]: run } = (await import('../../src/actions/quoteActions')) as any;
+      const result = await run(QUOTE_ID, { email_addresses: ['One@example.com', 'two@example.com'] });
+
+      expect(mintLinkMock).not.toHaveBeenCalled();
+      expect(revokeLinkMock).not.toHaveBeenCalled();
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      const payload = sendEmailMock.mock.calls[0][0];
+      expect(payload.to).toEqual(['One@example.com', 'two@example.com']);
+      expect(JSON.stringify(payload)).not.toMatch(/quoteReviewLink|\/quote\/|Review and approve/);
+      expect(payload.html).toContain(`/client-portal/billing/quotes/${QUOTE_ID}`);
+      expect(result.email_delivery).toBeUndefined();
+      expect(Object.keys(activityMetadata()).sort()).toEqual(['email_sent', 'message_id', 'recipients']);
+    });
   });
 });

@@ -28,6 +28,12 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   },
 }));
 
+const loadTenantAuthPolicy = vi.hoisted(() => vi.fn());
+vi.mock('./authPolicyStore', () => ({
+  loadTenantAuthPolicy,
+  recordLoginRefusal: vi.fn(),
+}));
+
 import { getSession, getSessionWithRevocationCheck } from './getSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
@@ -52,6 +58,15 @@ beforeEach(() => {
   vi.mocked(UserSession.isRevokedOrIdentityMismatch).mockReset();
   vi.mocked(UserSession.getRejectionReason).mockReset();
   vi.mocked(logger.warn).mockReset();
+  loadTenantAuthPolicy.mockReset();
+  loadTenantAuthPolicy.mockResolvedValue({
+    requireSsoForInternalUsers: false,
+    require2faForInternalUsers: false,
+    require2faForClientUsers: false,
+    allowKnownDevice2faSkip: false,
+    passwordBreakGlassUserIds: [],
+    passwordAuthDisabledAt: null,
+  });
   vi.mocked(logger.error).mockReset();
   requestHeaders.current = new Headers({ 'x-request-id': 'req-safe-1' });
 });
@@ -182,5 +197,71 @@ describe('getSessionWithRevocationCheck', () => {
     vi.mocked(UserSession.getRejectionReason).mockResolvedValue('revoked');
 
     await expect(getSessionWithRevocationCheck()).resolves.toBeNull();
+  });
+});
+
+describe('getSession login policy (SSO required)', () => {
+  const cutoff = Date.parse('2026-01-01T00:00:00Z');
+  const ssoPolicy = (breakGlass: string[] = []) => ({
+    requireSsoForInternalUsers: true,
+    require2faForInternalUsers: false,
+    require2faForClientUsers: false,
+    allowKnownDevice2faSkip: false,
+    passwordBreakGlassUserIds: breakGlass,
+    passwordAuthDisabledAt: new Date(cutoff).toISOString(),
+  });
+  const sessionWith = (overrides: Record<string, unknown>, user: Record<string, unknown> = {}) => ({
+    ...trackedSession,
+    user: { ...trackedSession.user, ...user },
+    login_method: 'credentials',
+    auth_issued_at: cutoff - 1000,
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    vi.mocked(UserSession.getRejectionReason).mockResolvedValue(null);
+  });
+
+  it('rejects a pre-cutoff internal password session', async () => {
+    loadTenantAuthPolicy.mockResolvedValue(ssoPolicy());
+    vi.mocked(edgeAuth).mockResolvedValue(sessionWith({}));
+
+    expect(await getSession()).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith('[auth] session_rejected', expect.objectContaining({ reason: 'login_policy_sso_required' }));
+  });
+
+  it('rejects a password session with no auth_issued_at claim', async () => {
+    loadTenantAuthPolicy.mockResolvedValue(ssoPolicy());
+    vi.mocked(edgeAuth).mockResolvedValue(sessionWith({ auth_issued_at: undefined }));
+
+    expect(await getSession()).toBeNull();
+  });
+
+  it('accepts break-glass, SSO, post-cutoff and client sessions', async () => {
+    loadTenantAuthPolicy.mockResolvedValue(ssoPolicy(['user-1']));
+    const breakGlass = sessionWith({});
+    vi.mocked(edgeAuth).mockResolvedValue(breakGlass);
+    expect(await getSession()).toBe(breakGlass);
+
+    loadTenantAuthPolicy.mockResolvedValue(ssoPolicy());
+    const sso = sessionWith({ login_method: 'google' });
+    vi.mocked(edgeAuth).mockResolvedValue(sso);
+    expect(await getSession()).toBe(sso);
+
+    const fresh = sessionWith({ auth_issued_at: cutoff + 1000 });
+    vi.mocked(edgeAuth).mockResolvedValue(fresh);
+    expect(await getSession()).toBe(fresh);
+
+    const client = sessionWith({}, { user_type: 'client' });
+    vi.mocked(edgeAuth).mockResolvedValue(client);
+    expect(await getSession()).toBe(client);
+  });
+
+  it('fails open when the policy cannot be read', async () => {
+    loadTenantAuthPolicy.mockRejectedValue(new Error('db down'));
+    const session = sessionWith({});
+    vi.mocked(edgeAuth).mockResolvedValue(session);
+
+    expect(await getSession()).toBe(session);
   });
 });

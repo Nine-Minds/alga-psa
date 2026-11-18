@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { IUser, ITeam } from '@alga-psa/types';
+import { FocusScope } from '@radix-ui/react-focus-scope';
+import { IUser, ITeam, isInteractiveUserType } from '@alga-psa/types';
 import { ChevronDown, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import TeamAvatar from './TeamAvatar';
@@ -14,6 +15,7 @@ import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent'
 import { CommonActions } from '../ui-reflection/actionBuilders';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -48,6 +50,12 @@ interface UserAndTeamPickerProps {
    * false so every existing consumer keeps today's behavior.
    */
   hideNotAssignedOption?: boolean;
+  /**
+   * Lists the named users under their own heading after everyone else, in the order given. A user
+   * in no group stays in the main list; an id that is not in `users` is ignored. Groups are
+   * display only: search, selection and filtering apply to every user as before.
+   */
+  userGroups?: ReadonlyArray<{ label: string; userIds: readonly string[] }>;
 }
 
 interface OptionButtonProps {
@@ -100,6 +108,7 @@ const UserAndTeamPicker = ({
   userTypeFilter = 'internal',
   modal = true,
   hideNotAssignedOption = false,
+  userGroups,
   'data-automation-id': dataAutomationId,
   'data-automation-type': dataAutomationType = 'user-and-team-picker'
 }: UserAndTeamPickerProps & AutomationProps) => {
@@ -129,7 +138,7 @@ const UserAndTeamPicker = ({
     teamAvatarUrls[teamId] ?? initialTeamAvatarUrls?.[teamId] ?? null;
 
   const applyUserTypeFilter = (user: IUser) => {
-    if (userTypeFilter === null) return true;
+    if (userTypeFilter === null) return isInteractiveUserType(user.user_type); // all interactive types only
     if (Array.isArray(userTypeFilter)) return userTypeFilter.includes(user.user_type);
     return user.user_type === userTypeFilter;
   };
@@ -154,8 +163,11 @@ const UserAndTeamPicker = ({
   const filteredTeams = teamEntries
     .filter(team => {
       if (!searchQuery) return true;
+      const needle = searchQuery.toLowerCase();
       const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
+      return `${team.team_name || ''}`.toLowerCase().includes(needle)
+        || leadName.includes(needle)
+        || (team.description || '').toLowerCase().includes(needle);
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
 
@@ -322,6 +334,26 @@ const UserAndTeamPicker = ({
     }
   }, [isOpen]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the search
+  // box cannot stop them and the surrounding dialog closed too - taking any
+  // unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsOpen(false);
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
+
   const updateDropdownPosition = useCallback(() => {
     if (!buttonRef.current) return;
 
@@ -398,7 +430,49 @@ const UserAndTeamPicker = ({
     setIsOpen(false);
   };
 
+  const renderUserOption = (user: IUser): React.JSX.Element => {
+    const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');
+    return (
+      <OptionButton
+        key={user.user_id}
+        id={`${pickerId}-option-${user.user_id}`}
+        label={userName}
+        onClick={() => handleSelectUser(user.user_id)}
+        className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
+        parentId={pickerId}
+      >
+        <div className="flex items-center gap-2">
+          <UserAvatar
+            userId={user.user_id}
+            userName={userName}
+            avatarUrl={resolveUserAvatar(user.user_id)}
+            size="xs"
+          />
+          <span>{userName}</span>
+        </div>
+      </OptionButton>
+    );
+  };
+
   const dropdownContent = (
+    // The dropdown is portaled to document.body, so inside a modal dialog it sits
+    // outside that dialog's focus scope: without a scope of its own the dialog's
+    // trap yanks focus out of the search box on the first keystroke. A nested
+    // trapped scope pauses the dialog's, same as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        // Only reclaim focus when closing left it nowhere (option picked); a click
+        // that landed on another field keeps it.
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-[10000] pointer-events-auto"
@@ -454,29 +528,30 @@ const UserAndTeamPicker = ({
             </OptionButton>
           )}
 
-          {filteredUsers.map((user): React.JSX.Element => {
-            const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || t('pickers.unnamedUser', 'Unnamed User');
+          {(() => {
+            const groupOf = new Map<string, string>();
+            for (const group of userGroups ?? []) for (const userId of group.userIds) if (!groupOf.has(userId)) groupOf.set(userId, group.label);
+            const ungrouped = filteredUsers.filter((user) => !groupOf.has(user.user_id));
+            const groups = (userGroups ?? [])
+              .map((group) => ({ label: group.label, members: filteredUsers.filter((user) => groupOf.get(user.user_id) === group.label) }))
+              .filter((group) => group.members.length > 0);
             return (
-              <OptionButton
-                key={user.user_id}
-                id={`${pickerId}-option-${user.user_id}`}
-                label={userName}
-                onClick={() => handleSelectUser(user.user_id)}
-                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
-                parentId={pickerId}
-              >
-                <div className="flex items-center gap-2">
-                  <UserAvatar
-                    userId={user.user_id}
-                    userName={userName}
-                    avatarUrl={resolveUserAvatar(user.user_id)}
-                    size="xs"
-                  />
-                  <span>{userName}</span>
-                </div>
-              </OptionButton>
+              <>
+                {ungrouped.map(renderUserOption)}
+                {groups.map((group, groupIndex) => (
+                  <React.Fragment key={`group:${group.label}`}>
+                    <div
+                      data-automation-id={`${pickerId}-group-${groupIndex}`}
+                      className="px-3 pt-2 pb-1 text-xs uppercase text-gray-500 tracking-wide"
+                    >
+                      {group.label}
+                    </div>
+                    {group.members.map(renderUserOption)}
+                  </React.Fragment>
+                ))}
+              </>
             );
-          })}
+          })()}
 
           {filteredTeams.length > 0 && (
             <div className="px-3 pt-2 pb-1 text-xs uppercase text-gray-500 tracking-wide">Teams</div>
@@ -494,16 +569,21 @@ const UserAndTeamPicker = ({
                 className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full min-w-0">
                   <TeamAvatar
                     teamId={team.team_id}
                     teamName={team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
                     avatarUrl={resolveTeamAvatar(team.team_id)}
                     size="sm"
                   />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span>{team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}</span>
                     <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
+                    {team.description && (
+                      <span className="text-xs text-gray-500 truncate" title={team.description}>
+                        {truncateTeamDescription(team.description)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </OptionButton>
@@ -516,6 +596,7 @@ const UserAndTeamPicker = ({
         </div>
       </div>
     </div>
+    </FocusScope>
   );
 
   return (
@@ -543,7 +624,10 @@ const UserAndTeamPicker = ({
         className={`inline-flex items-center justify-between rounded-lg font-medium ${
           size === 'xs'
             ? 'p-1 h-7 text-xs min-w-0 gap-1'
-            : 'p-2 h-10 text-sm'
+            : size === 'sm'
+              // Matches CustomSelect's trigger so a row of mixed pickers reads as one control family.
+              ? 'p-2 h-9 text-sm !font-normal !border-border'
+              : 'p-2 h-10 text-sm'
         } ${
           buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[min(150px,100%)] max-w-full'
         }`}

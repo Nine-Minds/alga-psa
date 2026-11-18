@@ -1,8 +1,8 @@
 # Alga Migration Package (AMP)
 
 An AMP is a single SQLite file that carries an MSP's book of business —
-organizations, locations, contacts, tickets, ticket comments, and assets —
-from any source system into AlgaPSA. The product is the contract, not the
+organizations, locations, contacts, tickets, ticket comments, assets,
+products, and vendor price lists — from any source system into AlgaPSA. The product is the contract, not the
 container: SQLite is only a portable relational file that consumers read with
 parameterized SELECTs. It is never attached to Postgres, never executed, and
 never trusted.

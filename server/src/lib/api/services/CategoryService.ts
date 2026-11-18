@@ -96,6 +96,14 @@ export class CategoryService extends BaseService {
     return withTransaction(knex, async (trx) => {
       let query = tenantDb(trx, context.tenant).table('service_categories');
 
+      // Common created_*/updated_* range filters (service_categories has both).
+      this.applyRangeFilters(query, filters as Record<string, any>, {
+        created_from: 'service_categories.created_at',
+        created_to: 'service_categories.created_at',
+        updated_from: 'service_categories.updated_at',
+        updated_to: 'service_categories.updated_at',
+      });
+
       // Apply filters
       if (filters.search) {
         const searchTerm = `%${filters.search.toLowerCase()}%`;
@@ -285,6 +293,15 @@ export class CategoryService extends BaseService {
     
     return withTransaction(knex, async (trx) => {
       let query = this.buildTenantScopedQuery(trx, context);
+
+      // The `categories` table has created_at but no updated_at, so created_*
+      // maps and updated_* is declared unsupported (null) and rejected.
+      this.applyRangeFilters(query, filters as Record<string, any>, {
+        created_from: 'categories.created_at',
+        created_to: 'categories.created_at',
+        updated_from: null,
+        updated_to: null,
+      });
 
       // Apply board filter if provided
       if (filters.board_id) {

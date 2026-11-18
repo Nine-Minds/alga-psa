@@ -33,8 +33,13 @@ export function resolveRecurringUnitKind(
   input: RecurringUnitCapabilityInput,
 ): RecurringUnitKind | null {
   if (input.configurationType !== 'Fixed') return null;
-  if (input.pricingBasis === 'unit') return 'service';
+  // A catalog product is always the 'product' kind, whatever its stored
+  // pricing_basis: the wizard persists product members as 'unit' (quantity x
+  // rate) so the UI never calls them a bundle allocation, but the product
+  // rate chain (never the fixed base_rate; no legacy default_rate fallback in
+  // revisions) must keep governing them.
   if (input.itemKind === 'product') return 'product';
+  if (input.pricingBasis === 'unit') return 'service';
   return null;
 }
 

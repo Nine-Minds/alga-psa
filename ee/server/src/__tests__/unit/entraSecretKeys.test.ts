@@ -20,6 +20,10 @@ describe('Entra secret key constants', () => {
     expect(ENTRA_CIPP_SECRET_KEYS).toEqual({
       baseUrl: 'entra_cipp_base_url',
       apiToken: 'entra_cipp_api_token',
+      authType: 'entra_cipp_auth_type',
+      clientId: 'entra_cipp_client_id',
+      clientSecret: 'entra_cipp_client_secret',
+      directoryId: 'entra_cipp_directory_id',
     });
 
     const allKeys = [...ENTRA_ALL_SECRET_KEYS];

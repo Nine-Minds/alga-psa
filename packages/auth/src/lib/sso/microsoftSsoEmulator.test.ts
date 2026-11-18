@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getMicrosoftSsoEmulatorEndpoints,
+  getMicrosoftSsoEmulatorIssuer,
   isMicrosoftSsoEmulatorEnabled,
 } from './microsoftSsoEmulator';
 
@@ -33,6 +34,11 @@ describe('Microsoft SSO simulator gate', () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('MICROSOFT_SSO_EMULATOR_MODE', 'true');
     expect(isMicrosoftSsoEmulatorEnabled()).toBe(false);
+  });
+
+  it('uses a tenant-qualified discovery issuer for signed OIDC', () => {
+    vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', 'http://127.0.0.1:4010/');
+    expect(getMicrosoftSsoEmulatorIssuer('customer-tenant')).toBe('http://127.0.0.1:4010/customer-tenant/v2.0');
   });
 
   it('builds login and Graph endpoints from the simulator base URLs', () => {

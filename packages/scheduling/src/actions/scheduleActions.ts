@@ -1,5 +1,7 @@
 'use server'
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
+import { scheduleSeam } from '../lib/sharedWorkScheduling';
+import { publishScheduleEvent, resolveSharedWorkBrowserActor } from '../lib/sharedWorkActor';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -52,6 +54,7 @@ import {
 import { resolveAppointmentTeamsMeetingContext } from '../lib/teamsMeetingContent';
 import {
   applyEntryAccess,
+  assertEditableGroupCalendar,
   buildVisibilityFilter,
   canAssignUser,
   evaluateEntryAccess,
@@ -60,6 +63,8 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '../lib/calendarAccess';
+import { createScheduleEntryReadScope } from '@alga-psa/authorization/scheduleEntryReadAuthorization';
+import { delegatedViewAccess, maskEntriesOutsideReadScope } from '../lib/scheduleEntryReadMask';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -68,6 +73,8 @@ export type ScheduleActionResult<T> =
 type ScheduleActionError = ActionMessageError | ActionPermissionError;
 
 function scheduleActionErrorMessage(error: unknown, fallback: string): string {
+  // Provider-side errors are matched by discriminator; native code never imports the provider package.
+  if (error instanceof Error && (error.name === 'NativeScheduleError' || error.name === 'NativeScheduleRelationError')) return error.message;
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
   if (message.startsWith('Permission denied')) {
@@ -126,6 +133,18 @@ async function getTicketIdForAppointmentRequest(
   return row?.ticket_id || undefined;
 }
 
+function nativeScheduleView(entry: any): IScheduleEntry {
+  const pattern = typeof entry.recurrence_pattern === 'string' ? JSON.parse(entry.recurrence_pattern) : entry.recurrence_pattern;
+  return { ...entry, scheduled_start: new Date(entry.scheduled_start), scheduled_end: new Date(entry.scheduled_end),
+    ...(entry.created_at ? { created_at: new Date(entry.created_at) } : {}),
+    ...(entry.updated_at ? { updated_at: new Date(entry.updated_at) } : {}),
+    recurrence_pattern: pattern ? { ...pattern, startDate: new Date(pattern.startDate),
+      ...(pattern.endDate ? { endDate: new Date(pattern.endDate) } : {}),
+      ...(pattern.exceptions ? { exceptions: pattern.exceptions.map((value: string | Date) => new Date(value)) } : {}),
+    } : null,
+  };
+}
+
 /**
  * Fetches schedule entries visible to the viewer for a date range.
  *
@@ -149,6 +168,23 @@ export const getScheduleEntries = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
+    const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), {
+      calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
+    }));
+    if (current.handled) {
+      // The delegated reader admitted these entries; the viewer's own client scope still decides what shows of the work item.
+      // An empty result has nothing to mask, so it costs no policy resolution and no transaction.
+      if (current.entries.length === 0) return { success: true, entries: [] };
+      const delegated = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          current.entries.map(nativeScheduleView),
+          delegatedViewAccess(user.user_id)
+        ));
+      return { success: true, entries: delegated };
+    }
+
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
         console.warn(`User ${user.user_id} lacks user_schedule:read permission.`);
@@ -165,15 +201,17 @@ export const getScheduleEntries = withAuth(async (
 
       const narrowByPeople = technicianIds && technicianIds.length > 0;
       const narrowByCalendars = calendarIds && calendarIds.length > 0;
-      if (!narrowByPeople && !narrowByCalendars) {
-        return visible;
-      }
+      const shown = !narrowByPeople && !narrowByCalendars
+        ? visible
+        : visible.filter(entry =>
+            (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
+            (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
+            (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
+          );
 
-      return visible.filter(entry =>
-        (narrowByPeople && entry.assigned_user_ids.some(assignedId => technicianIds!.includes(assignedId))) ||
-        (narrowByCalendars && !!entry.calendar_id && calendarIds!.includes(entry.calendar_id)) ||
-        (canUpdate && entry.assigned_user_ids.length === 0 && entry.work_item_type === 'appointment_request')
-      );
+      // The viewer's own policy, resolved once for the request: work items they may not read become busy time.
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      return maskEntriesOutsideReadScope(trx, readScope, shown, access);
     });
 
     return { success: true, entries };
@@ -183,28 +221,6 @@ export const getScheduleEntries = withAuth(async (
     return { success: false, error: message };
   }
 });
-
-/**
- * Validate a target group calendar for an entry: it must exist, be a
- * non-archived group calendar, and the viewer must have edit or higher on it.
- */
-async function assertEditableGroupCalendar(
-  trx: Knex.Transaction,
-  tenant: string,
-  calendarId: string,
-  access: CalendarAccess
-): Promise<string | null> {
-  const calendar = await tenantDb(trx, tenant).table('calendars')
-    .where({ calendar_id: calendarId })
-    .first('calendar_type', 'is_archived');
-  if (!calendar || calendar.calendar_type !== 'group' || calendar.is_archived) {
-    return 'The selected calendar is not available.';
-  }
-  if (!levelAtLeast(access.groupLevels.get(calendarId)?.level, 'edit')) {
-    return 'Permission denied to add entries to this calendar.';
-  }
-  return null;
-}
 
 // Removed getScheduleEntriesByUser and getCurrentUserScheduleEntries as getScheduleEntries now handles permissions.
 
@@ -218,6 +234,11 @@ export const addScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const current = await scheduleSeam.delegate(tenant, p => p.commandSchedule(db, tenant, { action: 'create', data: { ...entry,
+      assigned_user_ids: entry.assigned_user_ids?.length ? entry.assigned_user_ids : options?.assignedUserIds?.length ? options.assignedUserIds : [user.user_id],
+    } }, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (current.handled) return { success: true, entry: nativeScheduleView(current.entry) };
 
     // Basic check: Must have at least read permission to add own entry
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
@@ -563,6 +584,10 @@ export const updateScheduleEntry = withAuth(async (
 ) => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await scheduleSeam.delegate(tenant, p => p.commandSchedule(db, tenant, { action: 'update', id: entry_id, data: entry, scope: entry.updateType },
+      () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (current.handled) return { success: true, entry: nativeScheduleView(current.entry) };
+
     // Mutating a schedule entry requires read (the floor for any schedule
     // access); whether the viewer may actually change *this* entry is decided
     // below by evaluateEntryAccess, which honours per-calendar edit shares.
@@ -914,6 +939,10 @@ export const deleteScheduleEntry = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await scheduleSeam.delegate(tenant, p => p.commandSchedule(db, tenant, { action: 'delete', id: entry_id, scope: deleteType },
+      () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (current.handled) return { success: true, deleted: true, canDelete: true, dependencies: [], alternatives: [] };
+
     // Read is the floor; the share-aware evaluateEntryAccess decision below
     // (via canUpdateGlobally) decides whether this viewer may delete this
     // entry. Requiring the global user_schedule:update here would lock out
@@ -1235,6 +1264,19 @@ export const getScheduleEntryById = withAuth(async (
 ): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: entryId }));
+    if (current.handled) {
+      const entry = current.entries[0];
+      if (!entry) return null;
+      const [masked] = await withTransaction(db, async (trx: Knex.Transaction) =>
+        maskEntriesOutsideReadScope(
+          trx,
+          await createScheduleEntryReadScope(trx, tenant, user),
+          [nativeScheduleView(entry)],
+          delegatedViewAccess(user.user_id)
+        ));
+      return masked;
+    }
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {
       return permissionError('Permission denied to view schedule entries.');
@@ -1276,11 +1318,12 @@ export const getScheduleEntryById = withAuth(async (
       if (decision.access === 'none') {
         return null;
       }
-      if (decision.access === 'busy') {
-        return maskEntry(scheduleEntry, access);
-      }
-
-      return { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const readScope = await createScheduleEntryReadScope(trx, tenant, user);
+      const shown: IScheduleEntry = decision.access === 'busy'
+        ? maskEntry(scheduleEntry, access)
+        : { ...scheduleEntry, access: 'full', can_edit: decision.canEdit };
+      const [masked] = await maskEntriesOutsideReadScope(trx, readScope, [shown], access);
+      return masked;
     });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);

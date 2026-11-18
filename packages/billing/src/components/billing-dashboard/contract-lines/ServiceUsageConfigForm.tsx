@@ -40,6 +40,8 @@ interface ServiceUsageConfigFormProps {
     disabled?: boolean;
     onConfigChange: (serviceId: string, field: keyof ServiceUsageConfig, value: any) => void;
     onTiersChange: (serviceId: string, tiers: TierConfig[]) => void; // Specific handler for tiers array
+    /** Contract currency code; drives the in-field symbol. */
+    currencyCode: string;
 }
 
 export function ServiceUsageConfigForm({
@@ -51,6 +53,7 @@ export function ServiceUsageConfigForm({
     disabled = false,
     onConfigChange,
     onTiersChange,
+    currencyCode,
 }: ServiceUsageConfigFormProps) {
     const { t } = useTranslation('msp/contract-lines');
     const { symbol } = useCurrencyFormat();
@@ -108,36 +111,34 @@ export function ServiceUsageConfigForm({
                             <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
                         </Tooltip>
                     </Label>
-                    <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
-                        <Input
-                            id={`usage-contract-line-base-rate-${serviceId}`}
-                            type="text"
-                            inputMode="decimal"
-                            value={baseRateInput}
-                            onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '');
-                                const decimalCount = (value.match(/\./g) || []).length;
-                                if (decimalCount <= 1) {
-                                    setBaseRateInput(value);
-                                }
-                            }}
-                            onBlur={() => {
-                                if (baseRateInput.trim() === '' || baseRateInput === '.') {
-                                    setBaseRateInput('');
-                                    onConfigChange(serviceId, 'base_rate', undefined);
-                                } else {
-                                    const dollars = parseFloat(baseRateInput) || 0;
-                                    const cents = Math.round(dollars * 100);
-                                    onConfigChange(serviceId, 'base_rate', cents);
-                                    setBaseRateInput((cents / 100).toFixed(2));
-                                }
-                            }}
-                            placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
-                            disabled={disabled || isTiered}
-                            className={`pl-10 ${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
-                        />
-                    </div>
+                    <Input
+                        leadingAdornment={symbol(currencyCode)}
+                        id={`usage-contract-line-base-rate-${serviceId}`}
+                        type="text"
+                        inputMode="decimal"
+                        value={baseRateInput}
+                        onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.]/g, '');
+                            const decimalCount = (value.match(/\./g) || []).length;
+                            if (decimalCount <= 1) {
+                                setBaseRateInput(value);
+                            }
+                        }}
+                        onBlur={() => {
+                            if (baseRateInput.trim() === '' || baseRateInput === '.') {
+                                setBaseRateInput('');
+                                onConfigChange(serviceId, 'base_rate', undefined);
+                            } else {
+                                const dollars = parseFloat(baseRateInput) || 0;
+                                const cents = Math.round(dollars * 100);
+                                onConfigChange(serviceId, 'base_rate', cents);
+                                setBaseRateInput((cents / 100).toFixed(2));
+                            }
+                        }}
+                        placeholder={t('common.moneyPlaceholder', { defaultValue: '0.00' })}
+                        disabled={disabled || isTiered}
+                        className={`${saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''}`}
+                    />
                     {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}
                 </div>
                 <div>

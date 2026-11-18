@@ -9,12 +9,13 @@ import { tenantHasAddOn } from './addOns';
 
 describe('productCodes', () => {
   it('exports supported product codes', () => {
-    expect(PRODUCT_CODES).toEqual(['psa', 'algadesk']);
+    expect(PRODUCT_CODES).toEqual(['psa', 'algadesk', 'co_managed']);
   });
 
   it('validates product codes', () => {
     expect(isValidProductCode('psa')).toBe(true);
     expect(isValidProductCode('algadesk')).toBe(true);
+    expect(isValidProductCode('co_managed')).toBe(true);
     expect(isValidProductCode('invalid')).toBe(false);
     expect(isValidProductCode(null)).toBe(false);
   });
@@ -27,6 +28,7 @@ describe('productCodes', () => {
   it('returns valid configured values', () => {
     expect(resolveProductCode('psa')).toEqual({ productCode: 'psa', isMisconfigured: false });
     expect(resolveProductCode('algadesk')).toEqual({ productCode: 'algadesk', isMisconfigured: false });
+    expect(resolveProductCode('co_managed')).toEqual({ productCode: 'co_managed', isMisconfigured: false });
   });
 
   it('fails closed for unknown non-null values', () => {

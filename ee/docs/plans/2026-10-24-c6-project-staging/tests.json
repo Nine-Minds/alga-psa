@@ -1,0 +1,182 @@
+[
+  {
+    "id": "T001",
+    "name": "T-reserve-availability (DB)",
+    "description": "Reserve refuses when qty exceeds free (on_hand-reserved-held) counting SO soft and hard claims; exact-to-free succeeds; two concurrent reserves of last units: one wins, one typed refusal; serialized unit claimed by SO or project or not in_stock refused; FIFO reserve of N fails whole when fewer than N free",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T001 describe, incl. committed-fixture concurrency case)"
+  },
+  {
+    "id": "T002",
+    "name": "T-shared-counter (DB)",
+    "description": "After project reserve, SO allocateLine, queryProductAvailability and consume guard all see less free stock; staging moves claim reserved to held and consume then refuses even with the override",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T002)"
+  },
+  {
+    "id": "T003",
+    "name": "T-reconcile (DB)",
+    "description": "Rebuild stock caches preserves project reserved and held claims and clears drift; written to fail before the change",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T003)"
+  },
+  {
+    "id": "T004",
+    "name": "T-poach (DB)",
+    "description": "SO fulfillment never picks a project-claimed unit by FIFO or explicit pick; picker shows it not selectable; non-serialized warn-only behaviour documented",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T004)"
+  },
+  {
+    "id": "T005",
+    "name": "T-install (DB)",
+    "description": "Install consumes once at the claim location, releases claim, creates one project_materials row with planned billing fields; serialized delivers claimed unit and creates asset after commit; undo restores hard claim; deleting material releases line",
+    "featureIds": [
+      "F016"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T005)"
+  },
+  {
+    "id": "T006",
+    "name": "T-no-side-effects (DB)",
+    "description": "Rendering box labels, mixed bulk labels and manifests leaves row counts and checksums unchanged for stock_levels, stock_movements, stock_units, project_materials, project_staging_lines, staging_*, invoices, invoice_charges, documents, time entries, assets; only SELECT statements issued; no events published",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": true,
+    "evidence": "server/src/test/integration/projectStagingLabels.integration.test.ts (T006/T011)"
+  },
+  {
+    "id": "T007",
+    "name": "T-reserve-is-not-consume (DB)",
+    "description": "Reserve, stage and pack write no stock_movements and no project_materials; billing run preview shows no charge for staged lines",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T007); billing reads project_materials only, and none is written"
+  },
+  {
+    "id": "T008",
+    "name": "T-client-items (DB)",
+    "description": "Client lines never create stock_units, movements or levels, never billable; client_asset of another client refused",
+    "featureIds": [
+      "F019"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T008)"
+  },
+  {
+    "id": "T009",
+    "name": "T-boxes (DB)",
+    "description": "Member quantity sums <= line quantity; serialized/client-asset line in at most one box; sealed box refuses changes; delete only when empty; n of m correct after deletions; packing stages the line",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T009)"
+  },
+  {
+    "id": "T010",
+    "name": "T-authz",
+    "description": "Missing and forbidden box in label and manifest requests both 404 identically; no record-level project read gets nothing; mutations need project:update plus record check",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": true,
+    "evidence": "server/src/test/integration/projectStagingLabels.integration.test.ts (T010) and packages/projects/src/actions/stagingActions.db.test.ts"
+  },
+  {
+    "id": "T011",
+    "name": "T-labels",
+    "description": "Mixed-item printLabels keeps order and all-or-nothing; recordLinks round-trips staging_container; mobile parity test passes; sequence binding renders n of m",
+    "featureIds": [
+      "F028"
+    ],
+    "implemented": true,
+    "evidence": "server/src/test/unit/labels.printLabels.test.ts (mixed items), packages/types/src/lib/recordLinks.test.ts, packages/billing/src/lib/label-batch/buildLabelModel.test.ts, previewSheet.e2e.test.ts, packages/projects/src/lib/stagingPrintItems.test.ts"
+  },
+  {
+    "id": "T012",
+    "name": "T-sales-order-unchanged",
+    "description": "alloc.db.test.ts, flows.db.test.ts, salesOrderGuards.db.test.ts pass unmodified after the allocation.ts extraction",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": true,
+    "evidence": "alloc.db.test.ts, flows.db.test.ts, salesOrderGuards.db.test.ts unmodified and green"
+  },
+  {
+    "id": "T013",
+    "name": "T-migration (DB)",
+    "description": "Migrations apply on a clean schema; CHECK blocks a unit with both allocated_so_line_id and allocated_staging_line_id; serialized staging line quantity must be 1",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T013)"
+  },
+  {
+    "id": "T014",
+    "name": "T-task-delete-release (DB)",
+    "description": "deleteTask with reserved + staged non-serialized lines and a staged serial unit returns counters/unit, empties boxes, cache agrees with computeAllocationsFromTruth; sealed-box line released; DB refuses a task delete that skips the helper",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T015",
+    "name": "T-task-delete-detach (DB)",
+    "description": "Boxes are detached and installed lines stay as history (task_id null, material kept, stock stays consumed); no FK error",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T016",
+    "name": "T-phase-project-delete (DB)",
+    "description": "ProjectModel.deletePhase and ProjectModel.delete return every staging claim and remove project staging rows",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingTaskDelete.db.test.ts"
+  },
+  {
+    "id": "T017",
+    "name": "T-gates-repair (DB)",
+    "description": "install needs billing:create (denied consumes nothing); availability needs inventory:read; client items with asset_id need asset:read without revealing the asset",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/projects/src/actions/stagingActions.db.test.ts"
+  },
+  {
+    "id": "T018",
+    "name": "T-low-stock-claim-location (DB)",
+    "description": "Low-stock signal after a staging install names the claimed-from (non-default) location",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true,
+    "evidence": "packages/inventory/src/lib/staging.db.test.ts (T005 describe)"
+  }
+]

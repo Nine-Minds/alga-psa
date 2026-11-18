@@ -9,6 +9,12 @@ import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
+import { audienceTagIds, isEditorAudience, validateAudienceReferences } from './definitionAudience';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { predicateGroupSchema } from '@alga-psa/predicates';
+import { deleteEntityWithValidation, getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
+import type { DeletionValidationResult } from '@alga-psa/types';
+import { deleteTagReferences, replaceTagReferences } from '@alga-psa/tags/lib/tagReferences';
 
 /**
  * Template provider whose templates author the in-app appliance-license purchase
@@ -45,6 +51,7 @@ interface ServiceRequestDefinitionSourceRow extends ServiceRequestDefinitionMana
   form_behavior_config: Record<string, unknown>;
   visibility_provider: string;
   visibility_config: Record<string, unknown>;
+  audience: PredicateGroup;
 }
 
 interface ServiceRequestDefinitionVersionSourceRow {
@@ -339,7 +346,9 @@ export async function duplicateServiceRequestDefinition({
     );
   }
 
-  const [created] = (await db.table('service_request_definitions')
+  const created = await knex.transaction(async (trx) => {
+    const trxDb = tenantDb(trx, tenant);
+    const [row] = (await trxDb.table('service_request_definitions')
     .insert({
       tenant,
       name: `${source.name} (Copy)`,
@@ -357,6 +366,7 @@ export async function duplicateServiceRequestDefinition({
       form_behavior_config: source.form_behavior_config,
       visibility_provider: source.visibility_provider,
       visibility_config: source.visibility_config,
+      audience: JSON.stringify(source.audience),
       lifecycle_state: 'draft',
       published_by: null,
       published_at: null,
@@ -364,6 +374,10 @@ export async function duplicateServiceRequestDefinition({
       updated_by: createdBy,
     })
     .returning('*')) as ServiceRequestDefinitionManagementRow[];
+
+    await replaceTagReferences(trx, tenant, 'service_request_audience', row.definition_id, audienceTagIds(source.audience));
+    return row;
+  });
 
   await publishServiceRequestDefinitionSearchEvent(
     'SERVICE_REQUEST_DEFINITION_CREATED',
@@ -557,27 +571,76 @@ export async function unarchiveServiceRequestDefinitionFromManagement(
   );
 }
 
+export type ServiceRequestDefinitionDeleteResult = DeletionValidationResult & { deleted: boolean };
+
+/**
+ * Permanently deletes a never-submitted definition via the platform deletion
+ * engine. The engine validates (submissions, checklist apply rules) and deletes
+ * in one transaction; versions and answer mappings cascade through their FKs.
+ * A submission landing between validation and delete trips the RESTRICT FK
+ * (23503); that is re-validated and returned as a normal blocked result.
+ */
 export async function deleteServiceRequestDefinitionFromManagement(
   knex: Knex,
   tenant: string,
   definitionId: string,
   deletedBy?: string | null
-): Promise<boolean> {
-  const db = tenantDb(knex, tenant);
-  const existing = await db.table('service_request_definitions')
+): Promise<ServiceRequestDefinitionDeleteResult> {
+  const existing = await tenantDb(knex, tenant).table('service_request_definitions')
     .where({ definition_id: definitionId })
     .select('lifecycle_state')
     .first<{ lifecycle_state: string }>();
 
   if (!existing) {
-    return false;
+    return {
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Service request definition not found.',
+      dependencies: [],
+      alternatives: [],
+      deleted: false,
+    };
   }
 
-  const deleted = await db.table('service_request_definitions')
-    .where({ definition_id: definitionId })
-    .delete();
+  let result: DeletionValidationResult & { deleted?: boolean };
+  try {
+    result = await deleteEntityWithValidation(
+      'service_request_definition',
+      definitionId,
+      knex,
+      tenant,
+      async (trx) => {
+        await deleteTagReferences(trx, tenant, 'service_request_audience', definitionId);
+        await tenantDb(trx, tenant).table('service_request_definitions')
+          .where({ definition_id: definitionId })
+          .delete();
+      },
+    );
+  } catch (error) {
+    if ((error as { code?: string } | null)?.code !== '23503') {
+      throw error;
+    }
+    // The failed transaction rolled back (tag cleanup included). Re-validate on
+    // a fresh connection and report what blocks the delete.
+    const config = getDeletionConfig('service_request_definition');
+    const revalidated = config
+      ? await validateDeletion(knex, config, definitionId, tenant)
+      : null;
+    if (revalidated && !revalidated.canDelete) {
+      return { ...revalidated, deleted: false };
+    }
+    return {
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'This service request definition is still referenced by other records and cannot be deleted.',
+      dependencies: [],
+      alternatives: [],
+      deleted: false,
+    };
+  }
 
-  if (deleted > 0) {
+  const deleted = result.deleted === true;
+  if (deleted) {
     await publishServiceRequestDefinitionSearchEvent(
       'SERVICE_REQUEST_DEFINITION_DELETED',
       tenant,
@@ -589,5 +652,31 @@ export async function deleteServiceRequestDefinitionFromManagement(
     );
   }
 
-  return deleted > 0;
+  return { ...result, deleted };
+}
+
+export interface SaveServiceRequestDefinitionAudienceInput {
+  knex: Knex;
+  tenant: string;
+  definitionId: string;
+  updatedBy?: string | null;
+  audience: PredicateGroup;
+}
+
+export async function saveServiceRequestDefinitionAudience({ knex, tenant, definitionId, updatedBy = null, audience }: SaveServiceRequestDefinitionAudienceInput): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const definition = await db.table('service_request_definitions').where({ definition_id: definitionId }).first('audience');
+    if (!definition) throw new ServiceRequestDefinitionBusinessError('DEFINITION_NOT_FOUND', 'Service request definition not found');
+    const unchanged = JSON.stringify(definition.audience) === JSON.stringify(audience);
+    const parsed = predicateGroupSchema.safeParse(audience);
+    if (!parsed.success || (!isEditorAudience(audience) && !unchanged)) {
+      throw new ServiceRequestDefinitionBusinessError('INVALID_AUDIENCE', 'Audience has an unsupported shape');
+    }
+    const errors = await validateAudienceReferences(trx, tenant, audience);
+    if (errors.length) throw new ServiceRequestDefinitionBusinessError('INVALID_AUDIENCE', errors.join('; '));
+    await db.table('service_request_definitions').where({ definition_id: definitionId })
+      .update({ audience: JSON.stringify(audience), updated_by: updatedBy, updated_at: trx.fn.now() });
+    await replaceTagReferences(trx, tenant, 'service_request_audience', definitionId, audienceTagIds(parsed.data));
+  });
 }

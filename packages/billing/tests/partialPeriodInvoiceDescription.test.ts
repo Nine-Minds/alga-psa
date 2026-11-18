@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { buildPartialPeriodInvoiceDescription } from '../src/lib/billing/partialPeriodInvoiceDescription';
 import { resolveSourceDerivedPartialPeriod } from '../src/lib/billing/compute/contractInvoiceAdjustments';
 
@@ -14,7 +15,7 @@ describe('partial-period customer descriptions', () => {
       sourceDescription: 'SMOKE Prod Users', direction: 'increase', units: 3,
       start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 10_000,
       coveredDays: 16, fullPeriodDays: 31, currencyCode: 'USD',
-      formatCurrency: (amount) => `$${amount.toFixed(2)}`, describe: describeLine,
+      formatCurrency: (minorUnits, currency) => formatCurrencyFromMinorUnits(minorUnits, 'en-US', currency), describe: describeLine,
     });
     expect(amount).toBe(15_483);
     expect(description).toBe('SMOKE Prod Users — additional 3 users, Aug 16–31, 2026 — 3 × $100.00 × 16/31');
@@ -26,10 +27,24 @@ describe('partial-period customer descriptions', () => {
       sourceDescription: 'SMOKE Prod Users', direction: 'decrease', units: 3,
       start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 10_000,
       coveredDays: 16, fullPeriodDays: 31, currencyCode: 'USD',
-      formatCurrency: (amount) => `$${amount.toFixed(2)}`, describe: describeLine,
+      formatCurrency: (minorUnits, currency) => formatCurrencyFromMinorUnits(minorUnits, 'en-US', currency), describe: describeLine,
     });
     expect(amount).toBe(-15_483);
     expect(description).toBe('SMOKE Prod Users — credit for 3 fewer users, Aug 16–31, 2026 — 3 × $100.00 × 16/31');
+  });
+
+  // The customer-facing calculation is written onto the invoice line, so it has to read
+  // the stored unit price the way the invoice does: ¥15,000 is not ¥150.00.
+  it('states a zero-decimal unit price in whole units', () => {
+    const description = buildPartialPeriodInvoiceDescription({
+      sourceDescription: 'Emerald Seats', direction: 'increase', units: 3,
+      start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 15_000,
+      coveredDays: 16, fullPeriodDays: 31, currencyCode: 'JPY',
+      formatCurrency: (minorUnits, currency) => formatCurrencyFromMinorUnits(minorUnits, 'en-US', currency),
+      describe: describeLine,
+    });
+
+    expect(description).toContain('3 × ¥15,000 × 16/31');
   });
 
   it('uses different years and months accurately when the half-open interval crosses boundaries', () => {
@@ -37,7 +52,7 @@ describe('partial-period customer descriptions', () => {
       sourceDescription: 'Service', direction: 'increase', units: 1,
       start: '2026-12-28', exclusiveEnd: '2027-01-04', unitPrice: 1_000,
       coveredDays: 7, fullPeriodDays: 31, currencyCode: 'USD',
-      formatCurrency: (amount) => `$${amount.toFixed(2)}`, describe: describeLine,
+      formatCurrency: (minorUnits, currency) => formatCurrencyFromMinorUnits(minorUnits, 'en-US', currency), describe: describeLine,
     });
     expect(description).toContain('Dec 28, 2026–Jan 3, 2027');
   });

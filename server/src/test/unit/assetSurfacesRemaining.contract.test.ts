@@ -143,8 +143,8 @@ describe('client portal asset surfaces (FR-E7)', () => {
     // `assets` stores a contact id and no group, so a bare `assets.*` read
     // renders every device as "Unassigned".
     expect(text).toMatch(/'contacts\.full_name as contact_name'/);
-    expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
-    expect(text).toContain('await getAssetGroupSummary(trx, tenant, assetId)');
+    expect(text).toMatch(/getAuthorizedAssetGroupSummariesForAssets\(\s*trx,\s*tenant,\s*assetGroupAuthUser\(user\),/);
+    expect(text).toMatch(/getAuthorizedAssetGroupSummary\(\s*trx,\s*tenant,\s*assetGroupAuthUser\(user\),\s*assetId,\s*portalAssetReadCheck\(tenant, visibility\),/);
     // Every row read goes through the joining helper.
     expect(text).toMatch(/withAssigneeName\(trx, tenant, baseQuery\(\)\)/);
     expect(
@@ -224,7 +224,7 @@ describe('status slug never reaches the screen (F021)', () => {
   it('T030: the asset list Coverage cell reads the status through the registry', () => {
     const text = source('packages/assets/src/components/assetListCells.tsx');
 
-    expect(text).toMatch(/resolveAssetStatusLabel\(t, asset\.status, statuses\)/);
+    expect(text).toMatch(/assetStatusLabel\(t, asset\.status, statuses\)/);
     // The cell cannot fetch per row, so both lists hand it the registry they
     // already hold.
     expect(source('packages/assets/src/components/AssetDashboardClient.tsx'))
@@ -235,9 +235,9 @@ describe('status slug never reaches the screen (F021)', () => {
 
   it('T030: the contact Assets tile and the printable header resolve the label too', () => {
     expect(source('packages/assets/src/components/ContactAssetsSection.tsx'))
-      .toMatch(/resolveAssetStatusLabel\(t, row\.asset_status, assetStatuses\)/);
+      .toMatch(/assetStatusLabel\(t, row\.asset_status, assetStatuses\)/);
     expect(source('packages/assets/src/components/AssetDetailView.tsx'))
-      .toMatch(/resolveAssetStatusLabel\(t, asset\.status, assetStatuses\)/);
+      .toMatch(/assetStatusLabel\(t, asset\.status, assetStatuses\)/);
   });
 
   it('T030: the drawer summary grid shows the same label as its badge', () => {

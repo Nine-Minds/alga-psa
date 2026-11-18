@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Input } from '@alga-psa/ui/components/Input';
 import { QuantityInput } from '../../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
@@ -190,6 +191,33 @@ export function TemplateFixedFeeServicesStep({
           </p>
         </div>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="template-fixed-invoice-title" className="text-sm">
+              {t('templateFixed.invoiceTitleLabel', { defaultValue: 'Invoice title (optional)' })}
+            </Label>
+            <Input
+              id="template-fixed-invoice-title"
+              value={data.invoice_line_description ?? ''}
+              onChange={(event) => updateData({ invoice_line_description: event.target.value })}
+              placeholder={t('templateFixed.invoiceTitlePlaceholder', { defaultValue: 'Defaults to the line name' })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="template-fixed-invoice-subtitle" className="text-sm">
+              {t('templateFixed.invoiceSubtitleLabel', { defaultValue: 'Invoice subtitle (optional)' })}
+            </Label>
+            <Input
+              id="template-fixed-invoice-subtitle"
+              value={data.invoice_line_subtitle ?? ''}
+              onChange={(event) => updateData({ invoice_line_subtitle: event.target.value })}
+              placeholder={t('templateFixed.invoiceSubtitlePlaceholder', {
+                defaultValue: 'e.g. Managed endpoint and backup services',
+              })}
+            />
+          </div>
+        </div>
+
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md">
           <p className="text-sm text-accent-900">
             <strong>
@@ -228,7 +256,7 @@ export function TemplateFixedFeeServicesStep({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="template-fixed-billing-timing" className="text-sm font-medium">
-              {t('templateFixed.fields.billingTiming', { defaultValue: 'Billing Timing' })}
+              {t('templateFixed.fields.billingTiming', { defaultValue: 'Billing timing for fixed-fee lines' })}
             </Label>
             <CustomSelect
               id="template-fixed-billing-timing"
@@ -381,6 +409,7 @@ export function TemplateFixedFeeServicesStep({
 
                 <FixedServiceConfigPanel
                   idPrefix={`template-fixed-${index}-`}
+                  currencyCode={data.currency_code || undefined}
                   configuration={{ pricing_basis: service.pricing_basis ?? 'bundle', base_rate: service.unit_rate }}
                   quantity={service.quantity ?? 1}
                   planFixedConfig={{ enable_proration: data.enable_proration }}
@@ -393,7 +422,7 @@ export function TemplateFixedFeeServicesStep({
                   <p className="text-xs text-[rgb(var(--color-text-400))]" id={`template-fixed-unit-rate-help-${index}`}>
                     {t('templateFixed.help.unitRateOptional', {
                       defaultValue:
-                        "Optional. Leave the unit rate empty to use this service's catalog price in the client's currency when a contract is created.",
+                        "Optional. The unit rate is in the template's base currency. Leave it empty to use this service's catalog price in that currency.",
                     })}
                   </p>
                 )}

@@ -24,4 +24,15 @@ describe('PSA preservation contract', () => {
     expect(portalLayout).toContain("productCode = 'psa'");
     expect(portalLayout).toContain("productCode === 'algadesk'");
   });
+
+  // MSP shell selection and sidebar state are exercised by rendering
+  // MspLayoutClient in layout/MspLayoutClient.productShell.test.tsx.
+
+  it('contributes the Co-managed IT group through the slot only, never a menuConfig row', () => {
+    const menuConfig = readFileSync(join(repoRoot, 'server/src/config/menuConfig.ts'), 'utf8');
+    const sidebar = readFileSync(join(repoRoot, 'server/src/components/layout/SidebarWithFeatureFlags.tsx'), 'utf8');
+    expect(menuConfig).not.toContain('/msp/co-managed');
+    expect(sidebar).toContain("'msp.navigation.group'");
+    expect(sidebar).not.toMatch(/item\.name !== 'Co-managed/);
+  });
 });

@@ -11,11 +11,13 @@
  */
 
 import { getSession } from '@alga-psa/auth';
-import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import { checkAccountManagementUpdatePermission } from '@alga-psa/auth/actions';
 import logger from '@alga-psa/core/logger';
 import type {
   AiAccountSummary,
   AiAutoTopupSettings,
+  AiGatewayResult,
+  AiGatewayUnavailable,
   AiUsageActions,
   AiUsagePage,
   AiUsageQuery,
@@ -24,6 +26,7 @@ import {
   aiGatewayFetchAccount,
   aiGatewayFetchUsage,
   aiGatewaySetAutoTopup,
+  isAiGatewayConfigured,
 } from '../aiGateway/client';
 import {
   createAiAddonCheckoutSession,
@@ -49,38 +52,66 @@ async function requireTenant(): Promise<string> {
  */
 async function requireBillingTenant(): Promise<string> {
   const tenantId = await requireTenant();
-  if (!(await checkAccountManagementPermission())) {
+  if (!(await checkAccountManagementUpdatePermission())) {
     throw new Error('You do not have permission to manage AI usage billing');
   }
   return tenantId;
 }
 
-export async function getAiAccountSummary(): Promise<AiAccountSummary> {
+const UNAVAILABLE: AiGatewayUnavailable = { status: 'unavailable', reason: 'not_configured' };
+
+/**
+ * Returns the unavailable result (and logs once at debug level) when the AI
+ * gateway is not configured, so unconfigured deployments never throw.
+ */
+async function gatewayUnavailable(action: string): Promise<AiGatewayUnavailable | null> {
+  if (await isAiGatewayConfigured()) {
+    return null;
+  }
+  logger.debug(`[${action}] AI gateway is not configured; returning unavailable`);
+  return UNAVAILABLE;
+}
+
+export async function getAiAccountSummary(): Promise<AiGatewayResult<AiAccountSummary>> {
   const tenantId = await requireTenant();
-  return aiGatewayFetchAccount(tenantId);
+  const unavailable = await gatewayUnavailable('getAiAccountSummary');
+  if (unavailable) return unavailable;
+  return { status: 'ok', data: await aiGatewayFetchAccount(tenantId) };
 }
 
-export async function getAiUsageHistory(query: AiUsageQuery): Promise<AiUsagePage> {
+export async function getAiUsageHistory(query: AiUsageQuery): Promise<AiGatewayResult<AiUsagePage>> {
   const tenantId = await requireTenant();
-  return aiGatewayFetchUsage(tenantId, query);
+  const unavailable = await gatewayUnavailable('getAiUsageHistory');
+  if (unavailable) return unavailable;
+  return { status: 'ok', data: await aiGatewayFetchUsage(tenantId, query) };
 }
 
-export async function setAiAutoTopup(settings: AiAutoTopupSettings): Promise<AiAccountSummary> {
+export async function setAiAutoTopup(
+  settings: AiAutoTopupSettings,
+): Promise<AiGatewayResult<AiAccountSummary>> {
   const tenantId = await requireBillingTenant();
-  return aiGatewaySetAutoTopup(tenantId, settings);
+  const unavailable = await gatewayUnavailable('setAiAutoTopup');
+  if (unavailable) return unavailable;
+  return { status: 'ok', data: await aiGatewaySetAutoTopup(tenantId, settings) };
 }
 
-export async function startAiAddonCheckout(): Promise<{ checkoutUrl: string }> {
+export async function startAiAddonCheckout(): Promise<AiGatewayResult<{ checkoutUrl: string }>> {
   const tenantId = await requireBillingTenant();
-  return createAiAddonCheckoutSession(tenantId);
+  const unavailable = await gatewayUnavailable('startAiAddonCheckout');
+  if (unavailable) return unavailable;
+  return { status: 'ok', data: await createAiAddonCheckoutSession(tenantId) };
 }
 
-export async function startAiTopupCheckout(packPriceId: string): Promise<{ checkoutUrl: string }> {
+export async function startAiTopupCheckout(
+  packPriceId: string,
+): Promise<AiGatewayResult<{ checkoutUrl: string }>> {
   const tenantId = await requireBillingTenant();
   if (!packPriceId || typeof packPriceId !== 'string') {
     throw new Error('A top-up pack must be selected');
   }
-  return createAiTopupCheckoutSession(tenantId, packPriceId);
+  const unavailable = await gatewayUnavailable('startAiTopupCheckout');
+  if (unavailable) return unavailable;
+  return { status: 'ok', data: await createAiTopupCheckoutSession(tenantId, packPriceId) };
 }
 
 /**

@@ -20,6 +20,7 @@ vi.mock('@alga-psa/ui/context', () => ({ useQuickAddClient: () => ({ renderQuick
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ __esModule: true, default: ({ id, options = [], value, onValueChange }: any) => <select id={id} value={value ?? ''} onChange={(e) => onValueChange(e.target.value)}><option value="">Select</option>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({ default: () => null }));
+vi.mock('./contracts/ServicePicker', () => ({ ServicePicker: ({ id, options = [], value, onChange }: any) => <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}><option value="">Select</option>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
@@ -31,7 +32,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k
 import ManualInvoices from './ManualInvoices';
 afterEach(cleanup);
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => {
     const invoiceId = requestedInvoiceId ?? invoice.invoice_id;
     const invoiceCharges = await mocks.lineItems(invoiceId);
@@ -48,7 +49,7 @@ const invoice: any = {
   invoice_charges: [{ item_id: 'generated-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Recurring', quantity: 1, unit_price: 390000, total_price: 390000, net_amount: 390000, tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false }],
 };
 const services: any[] = [{ service_id: 'svc-1', service_name: 'Support', item_kind: 'service', is_active: true, default_rate: 5000, prices: [{ currency_code: 'USD', rate: 5000 }] }];
-const renderDraft = (draft = invoice, onSaved?: () => void | Promise<void>) => render(<ManualInvoices clients={[]} services={services} invoice={draft} variant="draftAdjustments" onSaved={onSaved} onGenerateSuccess={vi.fn()} />);
+const renderDraft = (draft = invoice, onSaved?: () => void | Promise<void>) => render(<ManualInvoices services={services} invoice={draft} variant="draftAdjustments" onSaved={onSaved} onGenerateSuccess={vi.fn()} />);
 const fillCharge = async (description: string) => {
   await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
   fireEvent.click(document.getElementById('add-line-item-button')!);
@@ -396,7 +397,7 @@ describe('expanded invoice adjustment global save', () => {
     mocks.lineItems.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; })).mockResolvedValueOnce([newLine] as any);
     const view = renderDraft({ ...invoice, invoice_charges: [oldLine] });
     await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(1));
-    view.rerender(<ManualInvoices clients={[]} services={services} invoice={{ ...invoice, invoice_id: 'invoice-2', invoice_charges: [newLine] }} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
+    view.rerender(<ManualInvoices services={services} invoice={{ ...invoice, invoice_id: 'invoice-2', invoice_charges: [newLine] }} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
     await waitFor(() => expect(mocks.lineItems).toHaveBeenCalledTimes(2));
     resolveOld([oldLine]);
     await waitFor(() => expect(screen.getByText('New invoice row')).toBeTruthy());

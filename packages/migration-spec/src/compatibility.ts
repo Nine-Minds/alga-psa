@@ -5,13 +5,13 @@
  * version is refused.
  */
 
-export const AMP_FORMAT_VERSION = '1.0.0';
+export const AMP_FORMAT_VERSION = '1.1.0';
 
 export const AMP_COMPATIBILITY = {
   /** Format major version this implementation understands. */
   supportedMajor: 1,
   /** Highest minor version this implementation understands within the major. */
-  supportedMinor: 0,
+  supportedMinor: 1,
 } as const;
 
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;

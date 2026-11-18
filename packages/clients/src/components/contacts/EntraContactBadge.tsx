@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { readEntraContactLinkage, readEntraInactiveReason } from './entraContactLinkage';
 
 interface EntraContactBadgeProps {
@@ -9,10 +10,10 @@ interface EntraContactBadgeProps {
   variant?: 'chip' | 'detail';
 }
 
-function formatDateTime(value: string | null): string | null {
+function formatDateTime(value: string | null, formatDate: ReturnType<typeof useFormatters>['formatDate']): string | null {
   if (!value) return null;
   const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? value : new Date(parsed).toLocaleString();
+  return Number.isNaN(parsed) ? value : formatDate(new Date(parsed), { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
 }
 
 /**
@@ -24,13 +25,15 @@ export function EntraContactBadge({
   contact,
   variant = 'chip',
 }: EntraContactBadgeProps): React.JSX.Element | null {
+  const { t } = useTranslation('msp/contacts');
+  const { formatDate } = useFormatters();
   const linkage = readEntraContactLinkage(contact);
   if (!linkage.isLinked) {
     return null;
   }
 
   const inactiveReason = readEntraInactiveReason(contact);
-  const lastSynced = formatDateTime(linkage.lastSyncedAt);
+  const lastSynced = formatDateTime(linkage.lastSyncedAt, formatDate);
 
   if (variant === 'chip') {
     return (
@@ -39,7 +42,7 @@ export function EntraContactBadge({
         id="entra-contact-chip"
         title={
           lastSynced
-            ? `Microsoft Entra · last synced ${lastSynced}`
+            ? t('entraContactBadge.lastSyncedTitle', { date: lastSynced })
             : 'Microsoft Entra'
         }
       >
@@ -57,18 +60,18 @@ export function EntraContactBadge({
         Microsoft Entra
       </p>
       <div className="mt-1 space-y-0.5 text-sm text-[rgb(var(--color-text-600))]">
-        <p>This contact is kept in step with a directory account.</p>
+        <p>{t('entraContactBadge.description')}</p>
         {linkage.userPrincipalName ? (
           <p className="min-w-0 truncate" id="entra-contact-upn">
-            Sign-in name: {linkage.userPrincipalName}
+            {t('entraContactBadge.signInName', { name: linkage.userPrincipalName })}
           </p>
         ) : null}
-        {lastSynced ? <p id="entra-contact-last-synced">Last synced {lastSynced}</p> : null}
+        {lastSynced ? <p id="entra-contact-last-synced">{t('entraContactBadge.lastSynced', { date: lastSynced })}</p> : null}
         {inactiveReason ? (
           <p className="font-medium text-[rgb(var(--color-text-700))]" id="entra-contact-inactive-reason">
             {inactiveReason === 'deleted_upstream'
-              ? 'Inactive — the Microsoft account was deleted.'
-              : 'Inactive — the Microsoft account is disabled.'}
+              ? t('entraContactBadge.deleted')
+              : t('entraContactBadge.disabled')}
           </p>
         ) : null}
       </div>

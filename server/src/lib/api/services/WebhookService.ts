@@ -13,7 +13,6 @@ import {
   WebhookTest,
   WebhookTestResult,
   WebhookTemplate,
-  WebhookSubscription,
   WebhookAnalytics,
   WebhookEvent,
   WebhookSecurityConfig,
@@ -21,9 +20,8 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
-import { webhookEventTypeSchema } from '../schemas/webhookSchemas';
+import { disallowedEventTypes } from '../../webhooks/eventRegistry';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
-import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '@alga-psa/validation';
 import { EventBusService } from './EventBusService';
@@ -34,23 +32,87 @@ import {
   addHateoasLinks 
 } from '../utils/responseHelpers';
 import { randomBytes } from 'node:crypto';
-import { webhookModel } from '../../webhooks/webhookModel';
+import { webhookModel, type ListWebhooksFilters, type WebhookDeliveryRecord, type WebhookRecord } from '../../webhooks/webhookModel';
 import { enqueueDeliveryRetry, retryFailedDeliveriesForWebhook } from '../../webhooks/deliveryRetry';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { computeBackoff } from '../../webhooks/backoff';
 import {
   ConflictError,
   NotFoundError,
+  NotImplementedError,
   UnprocessableEntityError,
   ValidationError,
 } from '../middleware/apiMiddleware';
 
 export class WebhookService {
+  // Persistence is webhookModel (tenant-scoped). The event bus and audit log are optional collaborators:
+  // the REST controller does not wire them, so every use below is guarded.
   constructor(
-    private db: DatabaseService,
-    private eventBus: EventBusService,
-    private auditLog: AuditLogService
+    private eventBus?: EventBusService,
+    private auditLog?: AuditLogService
   ) {}
+
+  /** Map a webhookModel record to the snake_case REST representation. */
+  private toWebhookResponse(webhook: WebhookRecord): WebhookResponse {
+    return {
+      webhook_id: webhook.webhookId,
+      tenant: webhook.tenant,
+      name: webhook.name,
+      description: null,
+      url: webhook.url,
+      method: webhook.method,
+      event_types: webhook.eventTypes,
+      custom_headers: webhook.customHeaders,
+      event_filter: webhook.eventFilter,
+      payload_fields: webhook.payloadFields,
+      retry_config: webhook.retryConfig,
+      is_active: webhook.isActive,
+      verify_ssl: webhook.verifySsl,
+      rate_limit: {
+        enabled: true,
+        requests_per_minute: webhook.rateLimitPerMin,
+        burst_limit: null,
+      },
+      total_deliveries: webhook.totalDeliveries,
+      successful_deliveries: webhook.successfulDeliveries,
+      failed_deliveries: webhook.failedDeliveries,
+      last_delivery_at: webhook.lastDeliveryAt ?? undefined,
+      last_success_at: webhook.lastSuccessAt ?? undefined,
+      last_failure_at: webhook.lastFailureAt ?? undefined,
+      created_at: webhook.createdAt,
+      updated_at: webhook.updatedAt,
+    } as unknown as WebhookResponse;
+  }
+
+  /** Map a webhookModel delivery record to the snake_case REST representation. */
+  private toDeliveryResponse(delivery: WebhookDeliveryRecord, webhook: WebhookRecord): WebhookDelivery {
+    return {
+      delivery_id: delivery.deliveryId,
+      webhook_id: delivery.webhookId,
+      event_id: delivery.eventId,
+      event_type: delivery.eventType,
+      request_url: webhook.url,
+      request_method: webhook.method,
+      request_headers: delivery.requestHeaders ?? undefined,
+      request_body:
+        delivery.requestBody === null || delivery.requestBody === undefined
+          ? undefined
+          : typeof delivery.requestBody === 'string'
+            ? delivery.requestBody
+            : JSON.stringify(delivery.requestBody),
+      response_status: delivery.responseStatusCode ?? undefined,
+      response_headers: delivery.responseHeaders ?? undefined,
+      response_body: delivery.responseBody ?? undefined,
+      status: delivery.status,
+      attempt_number: delivery.attemptNumber,
+      duration_ms: delivery.durationMs ?? undefined,
+      error_message: delivery.errorMessage ?? undefined,
+      attempted_at: delivery.attemptedAt,
+      completed_at: delivery.completedAt ?? undefined,
+      next_retry_at: delivery.nextRetryAt ?? undefined,
+      tenant: delivery.tenant,
+    } as unknown as WebhookDelivery;
+  }
 
   // ============================================================================
   // WEBHOOK CRUD OPERATIONS
@@ -77,9 +139,7 @@ export class WebhookService {
     await this.validateWebhookUrl(data.url);
 
     // Validate event types
-    for (const eventType of data.event_types) {
-      await this.validateEventType(eventType);
-    }
+    this.assertEventTypesAllowed(data.event_types, []);
 
     const signingSecret = randomBytes(32).toString('base64url');
     const created = await webhookModel.insert({
@@ -149,18 +209,15 @@ export class WebhookService {
     ): Promise<SuccessResponse<WebhookResponse>> {
       await validateTenantAccess(tenantId);
   
-      const webhook = await this.db.findOne('webhooks', {
-        webhook_id: webhookId,
-        tenant: tenantId
-      });
+      const record = await webhookModel.getById(webhookId, tenantId);
   
-      if (!webhook) {
+      if (!record) {
         throw new NotFoundError('Webhook not found');
       }
   
       // Get recent delivery statistics
-      const recentStats = await this.getRecentDeliveryStats(webhookId);
-      webhook.recent_stats = recentStats;
+      const recentStats = await this.getRecentDeliveryStats(webhookId, tenantId);
+      const webhook = { ...this.toWebhookResponse(record), recent_stats: recentStats };
   
       // Generate HATEOAS links
       const links = generateComprehensiveLinks('webhooks', webhookId, '/api/v1', {
@@ -177,13 +234,7 @@ export class WebhookService {
         }
       });
   
-      const responseData = {
-        ...webhook,
-        last_delivery_at: webhook.last_delivery_at || undefined,
-        last_failure_at: webhook.last_failure_at || undefined,
-        last_success_at: webhook.last_success_at || undefined,
-        description: webhook.description || null
-      } as unknown as WebhookResponse;
+      const responseData = webhook as unknown as WebhookResponse;
   
       return {
         success: true,
@@ -200,10 +251,7 @@ export class WebhookService {
   ): Promise<SuccessResponse<WebhookResponse>> {
     await validateTenantAccess(tenantId);
 
-    const existing = await this.db.findOne('webhooks', {
-      webhook_id: webhookId,
-      tenant: tenantId
-    });
+    const existing = await webhookModel.getById(webhookId, tenantId);
 
     if (!existing) {
       throw new NotFoundError('Webhook not found');
@@ -215,30 +263,38 @@ export class WebhookService {
     }
 
     // Validate event types if being updated
-    if (data.event_types) {
-      for (const eventType of data.event_types) {
-        await this.validateEventType(eventType);
-      }
+    // Legacy names already stored on the webhook pass through; names newly added must be registered.
+    // (createUpdateSchema erases the inferred field types, hence the explicit string[] view.)
+    const requestedEventTypes = data.event_types as string[] | undefined;
+    if (requestedEventTypes) {
+      this.assertEventTypesAllowed(
+        requestedEventTypes,
+        existing.eventTypes
+      );
     }
 
-    const updated = {
-      ...existing,
-      ...data,
-      updated_at: new Date().toISOString()
-    };
+    // Event subscriptions are the event_types column on the webhook row, so one tenant-scoped update covers them.
+    // Fields without a column (description, security, payload_format, ...) are not persisted.
+    const updated = await webhookModel.update(webhookId, tenantId, {
+      name: data.name,
+      url: data.url,
+      method: data.method,
+      eventTypes: requestedEventTypes,
+      customHeaders: data.custom_headers,
+      eventFilter: data.event_filter as Record<string, unknown> | undefined,
+      payloadFields: data.payload_fields,
+      retryConfig: data.retry_config as Record<string, unknown> | undefined,
+      verifySsl: data.verify_ssl,
+      rateLimitPerMin: data.rate_limit?.requests_per_minute,
+      isActive: data.is_active,
+    });
 
-    await this.db.update('webhooks',
-      { webhook_id: webhookId, tenant: tenantId },
-      updated
-    );
-
-    // Update event subscriptions if event types changed
-    if (data.event_types) {
-      await this.updateEventSubscriptions(webhookId, data.event_types, tenantId);
+    if (!updated) {
+      throw new NotFoundError('Webhook not found');
     }
 
     // Publish event
-    await this.eventBus.publish('webhook.updated', {
+    await this.eventBus?.publish('webhook.updated', {
       webhookId,
       tenantId,
       webhookName: updated.name,
@@ -247,7 +303,7 @@ export class WebhookService {
     });
 
     // Audit log
-    await this.auditLog.log({
+    await this.auditLog?.log({
       action: 'webhook_updated',
       entityType: 'webhook',
       entityId: webhookId,
@@ -259,7 +315,7 @@ export class WebhookService {
 
     return {
       success: true,
-      data: updated as WebhookResponse
+      data: this.toWebhookResponse(updated)
     };
   }
 
@@ -270,24 +326,16 @@ export class WebhookService {
   ): Promise<SuccessResponse<{}>> {
     await validateTenantAccess(tenantId);
 
-    const existing = await this.db.findOne('webhooks', {
-      webhook_id: webhookId,
-      tenant: tenantId
-    });
+    // webhookModel.delete is tenant-scoped; it removes the row (deliveries go with it through the
+    // (tenant, webhook_id) ON DELETE CASCADE foreign key) and the vault signing secret.
+    const existing = await webhookModel.delete(webhookId, tenantId);
 
     if (!existing) {
       throw new NotFoundError('Webhook not found');
     }
 
-    // Delete webhook and related data
-    await Promise.all([
-      this.db.delete('webhooks', { webhook_id: webhookId, tenant: tenantId }),
-      this.db.delete('webhook_subscriptions', { webhook_id: webhookId }),
-      this.db.delete('webhook_deliveries', { webhook_id: webhookId })
-    ]);
-
     // Publish event
-    await this.eventBus.publish('webhook.deleted', {
+    await this.eventBus?.publish('webhook.deleted', {
       webhookId,
       tenantId,
       webhookName: existing.name,
@@ -295,7 +343,7 @@ export class WebhookService {
     });
 
     // Audit log
-    await this.auditLog.log({
+    await this.auditLog?.log({
       action: 'webhook_deleted',
       entityType: 'webhook',
       entityId: webhookId,
@@ -315,17 +363,16 @@ export class WebhookService {
       ): Promise<PaginatedResponse<WebhookResponse>> {
         await validateTenantAccess(tenantId);
     
-        const conditions = { tenant: tenantId, ...filters };
-        const offset = (page - 1) * limit;
-    
-        const [webhooks, total] = await Promise.all([
-          this.db.findMany('webhooks', conditions, {
-            limit,
-            offset,
-            orderBy: { created_at: 'desc' }
-          }),
-          this.db.count('webhooks', conditions)
-        ]);
+        const result = await webhookModel.listPage(tenantId, {
+          page,
+          limit,
+          filters: this.toModelFilters(filters)
+        });
+        const webhooks = result.data.map(record => this.toWebhookResponse(record));
+        const total = result.total;
+        // The model clamps page/limit; report what was applied.
+        page = result.page;
+        limit = result.limit;
   
         const totalPages = Math.ceil(total / limit);
         
@@ -366,6 +413,45 @@ export class WebhookService {
 
 
 
+  /**
+   * The list route passes raw query-string values (strings), so booleans and dates are parsed here.
+   * Keys that are not webhook list filters (including unknown ones) are ignored rather than becoming columns.
+   */
+  private toModelFilters(filters: WebhookFilterData): ListWebhooksFilters {
+    const raw = filters as Record<string, unknown>;
+    const toBool = (value: unknown): boolean | undefined => {
+      if (value === undefined || value === '') return undefined;
+      if (value === true || value === 'true') return true;
+      if (value === false || value === 'false') return false;
+      throw new ValidationError('Invalid boolean filter value');
+    };
+    const toDate = (value: unknown): Date | undefined => {
+      if (value === undefined || value === '') return undefined;
+      const date = new Date(String(value));
+      if (Number.isNaN(date.getTime())) {
+        throw new ValidationError('Invalid date filter value');
+      }
+      return date;
+    };
+    const toText = (value: unknown): string | undefined =>
+      typeof value === 'string' && value !== '' ? value : undefined;
+
+    return {
+      search: toText(raw.search),
+      name: toText(raw.name),
+      url: toText(raw.url),
+      eventType: toText(raw.event_type),
+      isActive: toBool(raw.is_active),
+      createdFrom: toDate(raw.created_from),
+      createdTo: toDate(raw.created_to),
+      updatedFrom: toDate(raw.updated_from),
+      updatedTo: toDate(raw.updated_to),
+      lastDeliveryFrom: toDate(raw.last_delivery_from),
+      lastDeliveryTo: toDate(raw.last_delivery_to),
+      hasFailures: toBool(raw.has_failures),
+    };
+  }
+
   // ============================================================================
   // WEBHOOK TESTING
   // ============================================================================
@@ -377,14 +463,11 @@ export class WebhookService {
   ): Promise<SuccessResponse<WebhookTestResult>> {
     await validateTenantAccess(tenantId);
 
-    let webhook;
+    let webhook: WebhookRecord | null = null;
     let testUrl = data.override_url;
 
     if (data.webhook_id) {
-      webhook = await this.db.findOne('webhooks', {
-        webhook_id: data.webhook_id,
-        tenant: tenantId
-      });
+      webhook = await webhookModel.getById(data.webhook_id, tenantId);
 
       if (!webhook) {
         throw new NotFoundError('Webhook not found');
@@ -409,11 +492,10 @@ export class WebhookService {
         webhook_id: data.webhook_id || testId,
         url: testUrl,
         method: webhook?.method || 'POST',
-        headers: webhook?.custom_headers || {},
+        headers: webhook?.customHeaders || {},
         payload: testPayload,
-        security: webhook?.security,
-        retry_config: webhook?.retry_config,
-        verify_ssl: webhook?.verify_ssl !== false
+        retry_config: webhook?.retryConfig,
+        verify_ssl: webhook?.verifySsl !== false
       });
 
       const responseTime = Date.now() - startTime;
@@ -428,16 +510,30 @@ export class WebhookService {
         tested_at: new Date().toISOString()
       };
 
-      // Store test result
-      await this.db.insert('webhook_test_results', {
-        ...testResult,
-        webhook_id: data.webhook_id,
-        tenant: tenantId,
-        tested_by: userId
-      });
+      // Record the test as a delivery flagged is_test (as the settings UI does). A test against an
+      // override URL with no stored webhook has no row to hang a delivery on, so nothing is recorded.
+      if (webhook) {
+        await webhookModel.recordDelivery({
+          tenant: tenantId,
+          webhookId: webhook.webhookId,
+          eventId: testPayload.event_id ?? crypto.randomUUID(),
+          eventType: 'webhook.test',
+          requestHeaders: webhook.customHeaders,
+          requestBody: testPayload,
+          responseStatusCode: deliveryResult.status_code ?? null,
+          responseHeaders: deliveryResult.response_headers ?? null,
+          responseBody: deliveryResult.response_body ?? null,
+          status: deliveryResult.success ? 'delivered' : 'abandoned',
+          attemptNumber: 1,
+          durationMs: deliveryResult.duration_ms ?? null,
+          errorMessage: deliveryResult.error_message ?? null,
+          isTest: true,
+          completedAt: new Date(),
+        });
+      }
 
       // Publish event
-      await this.eventBus.publish('webhook.tested', {
+      await this.eventBus?.publish('webhook.tested', {
         webhookId: data.webhook_id,
         testId,
         tenantId,
@@ -473,17 +569,14 @@ export class WebhookService {
     webhookId: string,
     tenantId: string
   ): Promise<void> {
-    const webhook = await this.db.findOne('webhooks', {
-      webhook_id: webhookId,
-      tenant: tenantId
-    });
+    const webhook = await webhookModel.getById(webhookId, tenantId);
 
-    if (!webhook || !webhook.is_active) {
+    if (!webhook || !webhook.isActive) {
       return;
     }
 
     // Check if event matches webhook filters
-    if (!this.eventMatchesFilters(event, webhook.event_filter)) {
+    if (!this.eventMatchesFilters(event, (webhook.eventFilter ?? undefined) as EventFilter | undefined)) {
       return;
     }
 
@@ -494,59 +587,52 @@ export class WebhookService {
     }
 
     const deliveryId = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const now = new Date();
 
     try {
-      // Transform payload if needed
-      const payload = await this.transformPayload(event, webhook.payload_transformation);
+      // Transform payload if needed (no stored transformation column: the event is sent as-is)
+      const payload = await this.transformPayload(event, undefined);
 
       // Perform delivery
       const deliveryResult = await this.performWebhookDelivery({
         webhook_id: webhookId,
         url: webhook.url,
         method: webhook.method,
-        headers: webhook.custom_headers || {},
+        headers: webhook.customHeaders || {},
         payload,
-        security: webhook.security,
-        retry_config: webhook.retry_config,
-        verify_ssl: webhook.verify_ssl
+        retry_config: webhook.retryConfig,
+        verify_ssl: webhook.verifySsl
       });
 
-      // Record delivery
-      const delivery: WebhookDelivery = {
-        delivery_id: deliveryId,
-        webhook_id: webhookId,
-        event_id: event.event_id,
-        event_type: event.event_type,
-        request_url: webhook.url,
-        request_method: webhook.method,
-        request_headers: webhook.custom_headers,
-        request_body: JSON.stringify(payload),
-        response_status: deliveryResult.status_code,
-        response_headers: deliveryResult.response_headers,
-        response_body: deliveryResult.response_body,
-        status: deliveryResult.success ? 'delivered' : 'failed',
-        attempt_number: 1,
-        duration_ms: deliveryResult.duration_ms,
-        error_message: deliveryResult.error_message,
-        attempted_at: now,
-        completed_at: now,
-        next_retry_at: undefined,
-        tenant: tenantId
-      };
+      // A failed delivery with retries configured is recorded as retrying with its next attempt time.
+      const retryConfig = webhook.retryConfig as RetryConfig | null;
+      const willRetry = !deliveryResult.success && (retryConfig?.max_attempts ?? 0) > 1;
 
-      await this.db.insert('webhook_deliveries', delivery);
+      await webhookModel.recordDelivery({
+        tenant: tenantId,
+        deliveryId,
+        webhookId,
+        eventId: event.event_id,
+        eventType: event.event_type,
+        requestHeaders: webhook.customHeaders,
+        requestBody: payload,
+        responseStatusCode: deliveryResult.status_code ?? null,
+        responseHeaders: deliveryResult.response_headers ?? null,
+        responseBody: deliveryResult.response_body ?? null,
+        status: deliveryResult.success ? 'delivered' : willRetry ? 'retrying' : 'failed',
+        attemptNumber: 1,
+        durationMs: deliveryResult.duration_ms ?? null,
+        errorMessage: deliveryResult.error_message ?? null,
+        nextRetryAt: willRetry ? this.calculateNextRetryTime(1, retryConfig as RetryConfig) : null,
+        attemptedAt: now,
+        completedAt: now,
+      });
 
       // Update webhook statistics
-      await this.updateWebhookStats(webhookId, deliveryResult.success);
-
-      // Schedule retry if failed and retry is configured
-      if (!deliveryResult.success && webhook.retry_config?.max_attempts > 1) {
-        await this.scheduleRetry(delivery, webhook.retry_config);
-      }
+      await this.updateWebhookStats(webhookId, tenantId, deliveryResult.success);
 
       // Publish delivery event
-      await this.eventBus.publish('webhook.delivered', {
+      await this.eventBus?.publish('webhook.delivered', {
         webhookId,
         deliveryId,
         tenantId,
@@ -556,24 +642,19 @@ export class WebhookService {
 
     } catch {
       // Record failed delivery
-      const delivery: WebhookDelivery = {
-        delivery_id: deliveryId,
-        webhook_id: webhookId,
-        event_id: event.event_id,
-        event_type: event.event_type,
-        request_url: webhook.url,
-        request_method: webhook.method,
+      await webhookModel.recordDelivery({
+        tenant: tenantId,
+        deliveryId,
+        webhookId,
+        eventId: event.event_id,
+        eventType: event.event_type,
         status: 'failed',
-        attempt_number: 1,
-        error_message: 'Webhook delivery failed.',
-        attempted_at: now,
-        completed_at: now,
-        next_retry_at: undefined,
-        tenant: tenantId
-      };
-
-      await this.db.insert('webhook_deliveries', delivery);
-      await this.updateWebhookStats(webhookId, false);
+        attemptNumber: 1,
+        errorMessage: 'Webhook delivery failed.',
+        attemptedAt: now,
+        completedAt: now,
+      });
+      await this.updateWebhookStats(webhookId, tenantId, false);
     }
   }
 
@@ -669,26 +750,21 @@ export class WebhookService {
     ): Promise<PaginatedResponse<WebhookDelivery>> {
       await validateTenantAccess(tenantId);
   
-      const conditions = { webhook_id: webhookId, tenant: tenantId };
-      const offset = (page - 1) * limit;
-  
-      const [deliveries, total] = await Promise.all([
-        this.db.findMany('webhook_deliveries', conditions, {
-          limit,
-          offset,
-          orderBy: { attempted_at: 'desc' }
-        }),
-        this.db.count('webhook_deliveries', conditions)
-      ]);
+      const webhook = await webhookModel.getById(webhookId, tenantId);
+      if (!webhook) {
+        throw new NotFoundError('Webhook not found');
+      }
+
+      const result = await webhookModel.listDeliveries(tenantId, webhookId, { page, limit });
   
       return {
         success: true,
-        data: deliveries as WebhookDelivery[],
+        data: result.data.map(delivery => this.toDeliveryResponse(delivery, webhook)),
         pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit)
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / result.limit)
         }
       };
     }
@@ -697,111 +773,71 @@ export class WebhookService {
   // ============================================================================
   // WEBHOOK TEMPLATES
   // ============================================================================
+  // There is no webhook_templates table: templates are not a persisted concept. The list is therefore
+  // always empty, a template id never resolves (404), and the template create / update / delete / use
+  // operations are explicitly not implemented (501).
 
   async createWebhookTemplate(
-    template: Omit<WebhookTemplate, 'template_id' | 'created_at' | 'updated_at'>,
+    _template: Omit<WebhookTemplate, 'template_id' | 'created_at' | 'updated_at'>,
     tenantId: string,
-    userId?: string
+    _userId?: string
   ): Promise<SuccessResponse<WebhookTemplate>> {
     await validateTenantAccess(tenantId);
 
-    const templateId = crypto.randomUUID();
-    const now = new Date().toISOString();
-
-    const webhookTemplate: WebhookTemplate = {
-      template_id: templateId,
-      created_at: now,
-      updated_at: now,
-      tenant: tenantId,
-      ...template
-    };
-
-    await this.db.insert('webhook_templates', webhookTemplate);
-
-    // Audit log
-    await this.auditLog.log({
-      action: 'webhook_template_created',
-      entityType: 'webhook_template',
-      entityId: templateId,
-      userId,
-      tenantId,
-      changes: webhookTemplate
-    });
-
-    return {
-      success: true,
-      data: webhookTemplate
-    };
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
   }
 
   async listWebhookTemplates(
     tenantId: string,
-    category?: string
+    _category?: string
   ): Promise<SuccessResponse<WebhookTemplate[]>> {
     await validateTenantAccess(tenantId);
 
-    const conditions: any = {
-      $or: [
-        { tenant: tenantId },
-        { is_system_template: true }
-      ]
-    };
-
-    if (category) {
-      conditions.category = category;
-    }
-
-    const templates = await this.db.findMany('webhook_templates', conditions, {
-      orderBy: { name: 'asc' }
-    });
-
     return {
       success: true,
-      data: templates as WebhookTemplate[]
+      data: []
     };
   }
 
-  async createWebhookFromTemplate(
-    templateId: string,
-    customization: Partial<CreateWebhookData>,
+  async getWebhookTemplate(
+    _templateId: string,
+    tenantId: string
+  ): Promise<SuccessResponse<WebhookTemplate>> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotFoundError('Webhook template not found');
+  }
+
+  async updateWebhookTemplate(
+    _templateId: string,
+    _template: Partial<WebhookTemplate>,
     tenantId: string,
-    userId?: string
+    _userId?: string
+  ): Promise<SuccessResponse<WebhookTemplate>> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
+  }
+
+  async deleteWebhookTemplate(
+    _templateId: string,
+    tenantId: string,
+    _userId?: string
+  ): Promise<void> {
+    await validateTenantAccess(tenantId);
+
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
+  }
+
+  async createWebhookFromTemplate(
+    _templateId: string,
+    _customization: Partial<CreateWebhookData>,
+    tenantId: string,
+    _userId?: string
   ): Promise<SuccessResponse<WebhookResponse>> {
     await validateTenantAccess(tenantId);
 
-    const template = await this.db.findOne('webhook_templates', {
-      template_id: templateId,
-      $or: [
-        { tenant: tenantId },
-        { is_system_template: true }
-      ]
-    });
-
-    if (!template) {
-      throw new NotFoundError('Webhook template not found');
-    }
-
-    // Merge template configuration with customization
-    const webhookData = {
-      name: String(customization.name || template.name),
-      description: customization.description || template.description || null,
-      url: String(customization.url || template.default_config?.url_template || ''),
-      method: (customization.method || template.default_config?.method || 'POST') as any,
-      event_types: (customization.event_types || template.supported_events || []) as any,
-      custom_headers: {
-        ...template.default_config.headers,
-        ...customization.custom_headers
-      },
-      security: customization.security || {
-        type: template.default_config.security_type || 'none',
-        header_name: 'Authorization',
-        algorithm: 'sha256' as const,
-        signature_header: 'X-Signature'
-      },
-      ...customization
-    };
-
-    return await this.createWebhook(webhookData as CreateWebhookData, tenantId, userId);
+    throw new NotImplementedError('Webhook templates are not supported: there is no template storage');
   }
 
   // ============================================================================
@@ -896,43 +932,10 @@ export class WebhookService {
     }
   }
 
-  private async validateEventType(eventType: string): Promise<void> {
-    if (!webhookEventTypeSchema.safeParse(eventType).success) {
-      throw new ValidationError(`Unsupported event type: ${eventType}`);
-    }
-  }
-
-  private async createEventSubscription(
-    webhookId: string,
-    eventType: string,
-    tenantId: string
-  ): Promise<void> {
-    const subscription: WebhookSubscription = {
-      subscription_id: crypto.randomUUID(),
-      webhook_id: webhookId,
-      entity_type: eventType.split('.')[0],
-      event_types: [eventType as any],
-      is_active: true,
-      expires_at: undefined,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      tenant: tenantId
-    };
-
-    await this.db.insert('webhook_subscriptions', subscription);
-  }
-
-  private async updateEventSubscriptions(
-    webhookId: string,
-    eventTypes: string[],
-    tenantId: string
-  ): Promise<void> {
-    // Remove existing subscriptions
-    await this.db.delete('webhook_subscriptions', { webhook_id: webhookId });
-
-    // Create new subscriptions
-    for (const eventType of eventTypes) {
-      await this.createEventSubscription(webhookId, eventType, tenantId);
+  private assertEventTypesAllowed(requested: readonly string[], existing: readonly string[]): void {
+    const rejected = disallowedEventTypes(requested, existing);
+    if (rejected.length > 0) {
+      throw new ValidationError(`Unsupported event type: ${rejected.join(', ')}`);
     }
   }
 
@@ -1056,40 +1059,8 @@ export class WebhookService {
     return result.allowed;
   }
 
-  private async updateWebhookStats(webhookId: string, success: boolean): Promise<void> {
-    const updates: any = {
-      total_deliveries: { $inc: 1 },
-      last_delivery_at: new Date().toISOString()
-    };
-
-    if (success) {
-      updates.successful_deliveries = { $inc: 1 };
-      updates.last_success_at = new Date().toISOString();
-    } else {
-      updates.failed_deliveries = { $inc: 1 };
-      updates.last_failure_at = new Date().toISOString();
-    }
-
-    await this.db.update('webhooks', { webhook_id: webhookId }, updates);
-  }
-
-  private async scheduleRetry(
-    delivery: WebhookDelivery,
-    retryConfig: RetryConfig
-  ): Promise<void> {
-    // Implementation would schedule retry based on strategy
-    const nextRetryAt = this.calculateNextRetryTime(
-      delivery.attempt_number,
-      retryConfig
-    );
-
-    await this.db.update('webhook_deliveries',
-      { delivery_id: delivery.delivery_id },
-      {
-        status: 'retrying',
-        next_retry_at: nextRetryAt.toISOString()
-      }
-    );
+  private async updateWebhookStats(webhookId: string, tenantId: string, success: boolean): Promise<void> {
+    await webhookModel.updateStats({ tenant: tenantId, webhookId, succeeded: success });
   }
 
   private calculateNextRetryTime(
@@ -1099,24 +1070,13 @@ export class WebhookService {
     return new Date(Date.now() + computeBackoff(attemptNumber));
   }
 
-  private async getRecentDeliveryStats(webhookId: string): Promise<any> {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  private async getRecentDeliveryStats(webhookId: string, tenantId: string): Promise<any> {
+    const attemptedFrom = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const [total, successful, failed] = await Promise.all([
-      this.db.count('webhook_deliveries', {
-        webhook_id: webhookId,
-        attempted_at: { gte: twentyFourHoursAgo.toISOString() }
-      }),
-      this.db.count('webhook_deliveries', {
-        webhook_id: webhookId,
-        status: 'delivered',
-        attempted_at: { gte: twentyFourHoursAgo.toISOString() }
-      }),
-      this.db.count('webhook_deliveries', {
-        webhook_id: webhookId,
-        status: 'failed',
-        attempted_at: { gte: twentyFourHoursAgo.toISOString() }
-      })
+      webhookModel.countDeliveries(tenantId, { webhookId, attemptedFrom }),
+      webhookModel.countDeliveries(tenantId, { webhookId, attemptedFrom, status: 'delivered' }),
+      webhookModel.countDeliveries(tenantId, { webhookId, attemptedFrom, status: 'failed' })
     ]);
 
     return {
@@ -1137,21 +1097,16 @@ export class WebhookService {
   ): Promise<WebhookAnalytics> {
     // Implementation would calculate comprehensive analytics
     // This is a simplified version
-    const conditions: any = { tenant: tenantId };
-    
-    if (webhookId) {
-      conditions.webhook_id = webhookId;
-    }
-
-    conditions.attempted_at = {
-      gte: dateFrom,
-      lte: dateTo
+    const conditions = {
+      webhookId,
+      attemptedFrom: new Date(dateFrom),
+      attemptedTo: new Date(dateTo)
     };
 
     const [totalDeliveries, successfulDeliveries, failedDeliveries] = await Promise.all([
-      this.db.count('webhook_deliveries', conditions),
-      this.db.count('webhook_deliveries', { ...conditions, status: 'delivered' }),
-      this.db.count('webhook_deliveries', { ...conditions, status: 'failed' })
+      webhookModel.countDeliveries(tenantId, conditions),
+      webhookModel.countDeliveries(tenantId, { ...conditions, status: 'delivered' }),
+      webhookModel.countDeliveries(tenantId, { ...conditions, status: 'failed' })
     ]);
 
     const successRate = totalDeliveries > 0 ? (successfulDeliveries / totalDeliveries) * 100 : 0;
