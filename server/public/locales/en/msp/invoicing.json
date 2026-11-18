@@ -605,7 +605,8 @@
       "unfinalizeSelected": "Unfinalize Selected",
       "downloadPdf": "Download PDF",
       "sendEmail": "Send Email",
-      "unfinalize": "Unfinalize"
+      "unfinalize": "Unfinalize",
+      "recordPayment": "Record Payment"
     },
     "status": {
       "finalized": "Finalized"
@@ -2911,6 +2912,17 @@
       "missingField": "Missing required invoice template field.",
       "missingFieldNamed": "Missing required invoice template field: {{field}}.",
       "evaluationFailed": "Template data binding failed: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Permission denied: recording invoice payments requires the invoice payment permission.",
+      "invoiceNotFound": "Invoice not found. It may have been updated or deleted. Please refresh and try again.",
+      "amountPositive": "Enter a payment amount greater than zero.",
+      "methodRequired": "Choose a payment method.",
+      "invalidDate": "Enter a valid payment date.",
+      "noBalanceDue": "This invoice has no balance due.",
+      "statusNotPayable": "Cannot record a payment for an invoice with status: {{status}}.",
+      "overpaymentNotConfirmed": "This payment is more than the balance due. Confirm the overpayment to record it.",
+      "recordFailed": "Failed to record the payment. Please try again."
     }
   },
   "periodTotal": {
@@ -2933,6 +2945,43 @@
     "blocked": {
       "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.",
       "exporting": "An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice."
+    }
+  },
+  "recordPayment": {
+    "title": "Record Payment",
+    "titleForInvoice": "Record Payment — {{invoiceNumber}}",
+    "loading": "Loading invoice balance...",
+    "summary": {
+      "balanceDue": "Balance due",
+      "alreadyPaid": "Already paid"
+    },
+    "fields": {
+      "amount": "Amount",
+      "paymentDate": "Payment date",
+      "method": "Payment method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "reference": "Check or transaction number"
+    },
+    "methods": {
+      "manual": "Manual",
+      "check": "Check",
+      "bank_transfer": "Bank Transfer",
+      "cash": "Cash",
+      "other": "Other"
+    },
+    "overpayment": {
+      "warning": "This payment is {{excess}} more than the balance due of {{balanceDue}}.",
+      "confirm": "Record this overpayment anyway"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "record": "Record Payment"
+    },
+    "toasts": {
+      "recorded": "Payment recorded"
     }
   }
 }

@@ -1,4 +1,41 @@
 {
+  "recordPayment": {
+    "title": "Registrar pago",
+    "titleForInvoice": "Registrar pago — {{invoiceNumber}}",
+    "loading": "Cargando el saldo de la factura...",
+    "summary": {
+      "balanceDue": "Saldo pendiente",
+      "alreadyPaid": "Ya pagado"
+    },
+    "fields": {
+      "amount": "Importe",
+      "paymentDate": "Fecha de pago",
+      "method": "Método de pago",
+      "reference": "Referencia",
+      "notes": "Notas"
+    },
+    "placeholders": {
+      "reference": "Número de cheque o de transacción"
+    },
+    "methods": {
+      "manual": "Manual",
+      "check": "Cheque",
+      "bank_transfer": "Transferencia bancaria",
+      "cash": "Efectivo",
+      "other": "Otro"
+    },
+    "overpayment": {
+      "warning": "Este pago supera en {{excess}} el saldo pendiente de {{balanceDue}}.",
+      "confirm": "Registrar este pago en exceso de todos modos"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "record": "Registrar pago"
+    },
+    "toasts": {
+      "recorded": "Pago registrado"
+    }
+  },
   "automaticInvoices": {
     "monthEndClose": {
       "action": "Generar factura de fin de mes",
@@ -605,7 +642,8 @@
       "unfinalizeSelected": "Desfinalizar seleccionado",
       "downloadPdf": "Descargar PDF",
       "sendEmail": "Enviar correo electrónico",
-      "unfinalize": "Desfinalizar"
+      "unfinalize": "Desfinalizar",
+      "recordPayment": "Registrar pago"
     },
     "status": {
       "finalized": "Finalizada"
@@ -2854,6 +2892,17 @@
     }
   },
   "errors": {
+    "recordPayment": {
+      "permissionDenied": "Permiso denegado: para registrar pagos de facturas necesita el permiso de pago de facturas.",
+      "invoiceNotFound": "No se encontró la factura. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "amountPositive": "Ingrese un importe de pago mayor que cero.",
+      "methodRequired": "Elija un método de pago.",
+      "invalidDate": "Ingrese una fecha de pago válida.",
+      "noBalanceDue": "Esta factura no tiene saldo pendiente.",
+      "statusNotPayable": "No se puede registrar un pago para una factura con estado: {{status}}.",
+      "overpaymentNotConfirmed": "Este pago es mayor que el saldo pendiente. Confirme el pago en exceso para registrarlo.",
+      "recordFailed": "No se pudo registrar el pago. Inténtelo de nuevo."
+    },
     "permissions": {
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
