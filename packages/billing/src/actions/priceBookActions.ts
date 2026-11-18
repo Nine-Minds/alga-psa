@@ -143,9 +143,15 @@ export const previewMakePriceBookActiveAgainAction = withAuth(async (
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const found = await reactivationRates(trx, tenant, sourcePriceBookId);
     if (!found) return actionError('Only an applied price book can be made active again.', 'msp/billing-settings:priceBooks.errors.notApplied');
+    // Only prices that differ from what will be in effect on that date reach contracts,
+    // the same rule the import preview uses; an unchanged price is not a contract change.
+    const inEffect = await loadCatalogAsOf(trx, tenant, effectiveDate, null);
+    const rateOnDate = new Map(inEffect.map((row) => [`${row.serviceId}|${row.currency}`, row.rateMinor]));
     const impact = await previewCatalogPriceChanges(
       trx, tenant,
-      found.asOf.map((row) => ({ serviceId: row.serviceId, currency: row.currency, newRateCents: row.rateMinor })),
+      found.asOf
+        .filter((row) => rateOnDate.get(`${row.serviceId}|${row.currency}`) !== row.rateMinor)
+        .map((row) => ({ serviceId: row.serviceId, currency: row.currency, newRateCents: row.rateMinor })),
       effectiveDate,
     );
     return {

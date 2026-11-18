@@ -4,7 +4,7 @@ import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../test-utils/testContext';
-import { createTestService } from '../../../../test-utils/billingTestHelpers';
+import { createFixedPlanAssignment, createTestService } from '../../../../test-utils/billingTestHelpers';
 
 vi.mock('@alga-psa/core/server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/core/server')>()),
@@ -148,6 +148,21 @@ describe('price book lifecycle (T12–T14) and RBAC of the actions (T15)', () =>
     const date = addDays(TODAY, 20);
     const preview = await previewMakePriceBookActiveAgainAction(b2024, date);
     expect('impact' in preview).toBe(true);
+    // An inherited line on the rolled-back item changes 120 -> 110; a line on an item whose
+    // rate is the same on both dates is not listed as a change.
+    const steady = await createTestService(context, { service_name: 'Steady item', billing_method: 'fixed', default_rate: 300 });
+    const moving = await createFixedPlanAssignment(context, serviceId, { planName: 'Follows catalog' });
+    const still = await createFixedPlanAssignment(context, steady, { planName: 'Steady line' });
+    await context.db('contract_lines').whereIn('contract_line_id', [moving.contractLineId, still.contractLineId])
+      .update({ rate_provenance: 'inherited', custom_rate: null });
+    await context.db('contract_line_service_fixed_config').whereIn('config_id',
+      context.db('contract_line_service_configuration').select('config_id').whereIn('contract_line_id', [moving.contractLineId, still.contractLineId]))
+      .update({ rate_provenance: 'inherited', base_rate: null, base_rate_basis: null });
+    const scoped = await previewMakePriceBookActiveAgainAction(b2024, date);
+    if (!('impact' in scoped)) throw new Error('preview failed');
+    const listed = [...scoped.impact.willChange, ...scoped.impact.custom, ...scoped.impact.unreviewed].map((line) => line.contractLineId);
+    expect(listed).toContain(moving.contractLineId);
+    expect(listed).not.toContain(still.contractLineId);
 
     const result = await makePriceBookActiveAgainAction(b2024, { effectiveDate: date });
     expect('priceBookId' in result).toBe(true);
