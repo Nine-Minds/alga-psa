@@ -16,6 +16,8 @@ export * from './lib/co-managed-capacity';
 export * from './lib/co-managed-reservation';
 export * from './lib/co-managed-entitlements';
 export * from './lib/co-managed-purchases';
+export * from './lib/co-managed-first-purchase';
+export * from './entitlement-operational';
 export * from './lib/co-managed-purchase-surface';
 export * from './lib/co-managed-hosted-reconcile';
 export * from './lib/co-managed-admission';
