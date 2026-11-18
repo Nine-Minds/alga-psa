@@ -46,11 +46,11 @@ export interface ActivityFilterState {
 export function useActivityFilterState(
   opts: { initialOverride?: ActivityFilters } = {}
 ): ActivityFilterState {
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   const {
     value: savedFilters,
     setValue: setSavedFilters,
     hasResolved: filtersResolved,
-  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   } = useUserPreference<ActivityFilters>('activitiesTableFilters', {
     defaultValue: DEFAULT_ACTIVITY_FILTERS,
     localStorageKey: 'activitiesTableFilters',
