@@ -30,6 +30,19 @@ const HOOK_TIMEOUT = 180_000;
 // The price book appliers re-check RBAC. The fixture user has no roles, so the
 // permission answer is a per-test allow list rather than a seeded role graph.
 const permissionGrants = vi.hoisted(() => ({ allowed: new Set<string>(), asked: [] as string[] }));
+const sessionUser = vi.hoisted(() => ({ value: null as null | { user_id: string; tenant: string } }));
+vi.mock('@alga-psa/user-composition/actions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/user-composition/actions')>()),
+  getCurrentUser: vi.fn(async () => sessionUser.value),
+}));
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/auth')>()),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) => permissionGrants.allowed.has(`${resource}:${action}`)),
+}));
+vi.mock('@alga-psa/core/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core/server')>()),
+  featureFlags: { isEnabled: vi.fn(async () => true) },
+}));
 vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/auth/rbac')>()),
   hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) => {
@@ -1778,6 +1791,25 @@ describe('AMP migration pipeline integration', () => {
       expect((await planOf(fixture, second.migrationJobId)).rows[0]).toMatchObject({ outcome: 'update', currentRateMinor: 2000 });
       await apply(fixture, second.migrationJobId);
       expect((await pricesOf(fixture, productId)).map((r: any) => Number(r.rate))).toEqual([1000, 2200]);
+    }, HOOK_TIMEOUT);
+
+    it('T15: the server actions need billing:read to preview and service:update to apply, and refuse before touching the job', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const { migrationJobId } = await stageImport(fixture, 'SKU,Name,Price\nNEW-ACT,Action Item,5.00\n', { serviceTypeId: typeId });
+      sessionUser.value = { user_id: fixture.ownerUserId, tenant: fixture.tenantId };
+      const { previewPriceBookImport, applyPriceBookImport } = await import('../../lib/migrations/priceBookImportActions');
+
+      permissionGrants.allowed = new Set(['import_export:manage']);
+      expect(await previewPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/billing:read/) });
+      permissionGrants.allowed = new Set(['import_export:manage', 'billing:read']);
+      expect(await applyPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/service:update/) });
+      // A job that creates items also needs service:create.
+      permissionGrants.allowed = new Set(['import_export:manage', 'billing:read', 'service:update']);
+      expect(await applyPriceBookImport(migrationJobId)).toEqual({ error: expect.stringMatching(/service:create/) });
+      const job = await tenantTable(fixture.tenantId, 'migration_jobs').where({ migration_job_id: migrationJobId }).first();
+      expect(job.state).not.toBe('queued');
+      sessionUser.value = null;
     }, HOOK_TIMEOUT);
 
     it('T15: the applier re-checks RBAC: no service:update fails the run; no service:create creates nothing', async () => {
