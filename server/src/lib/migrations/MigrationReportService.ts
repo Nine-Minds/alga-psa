@@ -2,12 +2,15 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import type {
+  CatalogPricePlan,
+  CatalogPriceReportRow,
   MigrationOutcomeRecord,
   MigrationOutcomeSummary,
   MigrationSkipProvenance,
   PreflightResult,
 } from './types';
-import { SKU_MATCH_WARNING_PREFIX } from './types';
+import { CATALOG_PRICE_OUTCOME_PREFIX, SKU_MATCH_WARNING_PREFIX } from './types';
+import { sourceRowOf } from './catalogPricePlan';
 
 /**
  * Builds operator-facing reports from the plan and the outcome ledger. All
@@ -30,6 +33,87 @@ export class MigrationReportService {
       return null;
     }
     return (typeof row.summary === 'string' ? JSON.parse(row.summary) : row.summary) as PreflightResult;
+  }
+
+  /** The row-level price plan the last preflight stored; null before a preflight. */
+  async getCatalogPricePlan(migrationJobId: string): Promise<CatalogPricePlan | null> {
+    const db = tenantDb(this.knex, this.tenant);
+    const row = await db
+      .table('migration_reports')
+      .where({ migration_job_id: migrationJobId, report_type: 'catalog_price_plan' })
+      .first();
+    if (!row) return null;
+    return (typeof row.summary === 'string' ? JSON.parse(row.summary) : row.summary) as CatalogPricePlan;
+  }
+
+  /**
+   * Price outcomes in upload row order: what each row did (created / updated /
+   * unchanged / blocked:<code> / failed), with the old and new rate and the
+   * currency. A row skipped because an earlier run of the same file already
+   * applied it reports `unchanged (already applied)`.
+   */
+  async getPriceReport(migrationJobId: string): Promise<CatalogPriceReportRow[]> {
+    const db = tenantDb(this.knex, this.tenant);
+    const plan = await this.getCatalogPricePlan(migrationJobId);
+    const planByRecord = new Map((plan?.rows ?? []).map((row) => [row.packageRecordId, row]));
+    const staged = await db
+      .table('migration_staged_records')
+      .where({ migration_job_id: migrationJobId, entity_type: 'catalog_prices' })
+      .select('migration_staged_record_id', 'package_record_id', 'source_record_id', 'validation_state', 'validation_errors', 'payload');
+    const outcomes = await db
+      .table('migration_record_outcomes')
+      .where({ migration_job_id: migrationJobId })
+      .whereIn('migration_staged_record_id', staged.map((row: any) => row.migration_staged_record_id))
+      .orderBy('attempt', 'asc')
+      .select('migration_staged_record_id', 'action', 'errors', 'warnings');
+    const latest = new Map<string, any>();
+    for (const outcome of outcomes as any[]) latest.set(outcome.migration_staged_record_id, outcome);
+
+    const rows: CatalogPriceReportRow[] = staged.map((record: any) => {
+      const payload = typeof record.payload === 'string' ? JSON.parse(record.payload) : record.payload;
+      const planned = planByRecord.get(record.package_record_id);
+      const base: CatalogPriceReportRow = {
+        sourceRow: sourceRowOf(record.source_record_id),
+        currency: payload.currency ?? planned?.currency ?? null,
+        itemName: planned?.itemName ?? payload.name ?? null,
+        itemKind: planned?.itemKind ?? payload.item_kind ?? null,
+        result: 'pending',
+        oldRateMinor: planned?.currentRateMinor ?? null,
+        newRateMinor: payload.rate_minor ?? null,
+        message: null,
+      };
+      const outcome = latest.get(record.migration_staged_record_id);
+      if (outcome) {
+        const errors = this.parseWarnings(outcome.errors);
+        const detail = this.parseWarnings(outcome.warnings)
+          .filter((w) => w.startsWith(CATALOG_PRICE_OUTCOME_PREFIX))
+          .map((w) => JSON.parse(w.slice(CATALOG_PRICE_OUTCOME_PREFIX.length)))[0];
+        if (outcome.action === 'failed') return { ...base, result: 'failed', message: errors.join('; ') || null };
+        if (detail) {
+          const already = outcome.action === 'skipped' && detail.message === 'Already applied.';
+          return {
+            ...base,
+            result: already ? 'unchanged (already applied)' : detail.outcome,
+            currency: detail.currency ?? base.currency,
+            itemName: detail.itemName ?? base.itemName,
+            itemKind: detail.itemKind ?? base.itemKind,
+            oldRateMinor: detail.oldRateMinor ?? null,
+            newRateMinor: detail.newRateMinor ?? base.newRateMinor,
+            message: detail.message ?? null,
+          };
+        }
+        // Skipped by the ledger: an earlier run of the same file applied it.
+        return { ...base, result: 'unchanged (already applied)', message: 'Already applied.' };
+      }
+      if (record.validation_state === 'blocked') {
+        const reasons = typeof record.validation_errors === 'string' ? JSON.parse(record.validation_errors) : record.validation_errors ?? [];
+        const first = reasons[0] ?? {};
+        return { ...base, result: `blocked:${first.code ?? 'BLOCKED'}`, message: first.message ?? null };
+      }
+      if (planned?.alreadyApplied) return { ...base, result: 'unchanged (already applied)', message: planned.message };
+      return base;
+    });
+    return rows.sort((a, b) => a.sourceRow - b.sourceRow || (a.currency ?? '').localeCompare(b.currency ?? ''));
   }
 
   async getOutcomeSummary(migrationJobId: string): Promise<MigrationOutcomeSummary[]> {

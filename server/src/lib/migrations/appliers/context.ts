@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { getUserWithRoles, tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import { MigrationLedger } from '../MigrationLedger';
 import type { MigrationJobConfiguration } from '../types';
@@ -23,6 +24,23 @@ export class ApplierContext {
     readonly configuration: MigrationJobConfiguration,
     readonly ledger: MigrationLedger
   ) {}
+
+  private actor: Awaited<ReturnType<typeof getUserWithRoles>> | undefined;
+
+  /**
+   * Re-checks the actor's permission inside the apply run. The AMP run is
+   * asynchronous, so the server action's check alone is not enough: the
+   * permission may have changed, or the job may have been scheduled by other
+   * means. Throws when the actor lacks it.
+   */
+  async requirePermission(trx: Knex.Transaction, resource: string, action: string): Promise<void> {
+    if (this.actor === undefined) {
+      this.actor = await getUserWithRoles(this.actorUserId, this.tenant);
+    }
+    if (!this.actor || !(await hasPermission(this.actor, resource, action, trx))) {
+      throw new Error(`Permission denied: ${resource}:${action} is required to apply this import.`);
+    }
+  }
 
   async assetTypeFields(trx: Knex.Transaction, slug: string): Promise<AssetTypeField[]> {
     const cached = this.assetTypeFieldCache.get(slug);

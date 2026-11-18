@@ -306,6 +306,9 @@ export async function writeServiceCatalogPricing(
    *  - dated today: merge the rate into it (a price book row is detached and
    *    the detachment audited, because the key leaves room for one row);
    *  - dated earlier with the same rate: keep it, only refresh the order;
+   *  - no row at or before today for the currency (a new item or a newly added
+   *    currency): insert the baseline at the epoch, as before, so the price
+   *    applies to periods that started before today;
    *  - otherwise: insert a new row at today and keep the earlier one.
    */
   const upsertAtToday = async (currency: string, rate: number, displayOrder: number): Promise<void> => {
@@ -368,7 +371,7 @@ export async function writeServiceCatalogPricing(
         service_id: serviceId,
         currency_code: currency,
         rate,
-        effective_date: today,
+        effective_date: latest ? today : EPOCH_EFFECTIVE_DATE,
         display_order: displayOrder,
         price_book_id: null,
         created_by: actor,
@@ -521,4 +524,45 @@ export async function writeServiceCatalogPricing(
   }
 
   return { prices: [...written, ...unchanged], unchangedPrices: unchanged, servicePatch };
+}
+
+/**
+ * Corrects one row of a price book that has not taken effect yet. This is the
+ * only update the pricebook import makes to an existing row: a different file
+ * for the same price book date may revise a rate nobody has been billed at, and
+ * only while the row's date is still in the future. It goes through the billing
+ * lock like every other catalog price write.
+ */
+export async function reviseScheduledPriceBookRate(
+  trx: Knex.Transaction,
+  tenant: string,
+  serviceId: string,
+  input: { priceBookId: string; currency: string; effectiveDate: string; rate: number; today?: string },
+): Promise<IServicePrice> {
+  const today = input.today ?? todayCalendarDate();
+  const rate = parseOrThrow(
+    minorUnitRateSchema as z.ZodType<number, unknown>, input.rate, 'rate',
+  );
+  if (!(input.effectiveDate > today)) {
+    throw new ServiceCatalogPricingError([
+      `the ${input.currency} price dated ${input.effectiveDate} is already in effect and cannot be revised; use a new price book with a later date`,
+    ]);
+  }
+  await lockTenantBilling(trx, tenant);
+  const [updated] = await tenantDb(trx, tenant)
+    .table<PriceRow>('service_prices')
+    .where({
+      service_id: serviceId,
+      currency_code: input.currency,
+      effective_date: input.effectiveDate,
+      price_book_id: input.priceBookId,
+    })
+    .update({ rate, updated_at: trx.fn.now() })
+    .returning('*');
+  if (!updated) {
+    throw new ServiceCatalogPricingError([
+      `no ${input.currency} price dated ${input.effectiveDate} belongs to price book ${input.priceBookId}`,
+    ]);
+  }
+  return updated;
 }

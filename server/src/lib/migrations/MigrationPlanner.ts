@@ -3,6 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { AmpEntityType } from '@alga-psa/migration-spec';
 import { getAssetTypeBySlug } from '@alga-psa/assets/lib/assetTypeRegistry';
 import { coerceAttributeValue, isBuiltinAssetTypeSlug } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { planCatalogPrices } from './catalogPricePlan';
 import {
   MIGRATION_PHASE_ORDER,
   type MigrationJobConfiguration,
@@ -44,6 +45,12 @@ export class MigrationPlanner {
     if ((stagedCounts.assets ?? 0) > 0) {
       issues.push(...(await this.checkAssetConfiguration(migrationJobId, configuration)));
     }
+    let serviceMatched = 0;
+    if ((stagedCounts.services ?? 0) > 0 || (stagedCounts.catalog_prices ?? 0) > 0) {
+      const priceChecks = await this.checkCatalogPriceConfiguration(migrationJobId, configuration, stagedCounts);
+      issues.push(...priceChecks.issues);
+      serviceMatched = priceChecks.servicesMatched;
+    }
     let productSkuMatched = 0;
     if ((stagedCounts.products ?? 0) > 0 || (stagedCounts.vendor_products ?? 0) > 0) {
       const productChecks = await this.checkProductConfiguration(migrationJobId, configuration, stagedCounts);
@@ -63,7 +70,10 @@ export class MigrationPlanner {
       // SKU-matched products are mapped to the existing product and left
       // unchanged (a skip), so they are not creates. Already identity-mapped
       // rows are excluded from skuMatchedCount, so nothing is counted twice.
-      const skipped = (skipCounts[entityType] ?? 0) + (entityType === 'products' ? productSkuMatched : 0);
+      const skipped =
+        (skipCounts[entityType] ?? 0) +
+        (entityType === 'products' ? productSkuMatched : 0) +
+        (entityType === 'services' ? serviceMatched : 0);
       const blocked = blockedCounts[entityType] ?? 0;
       return {
         entityType,
@@ -160,6 +170,84 @@ export class MigrationPlanner {
       .whereRaw(`payload ->> ? IS NOT NULL`, [field])
       .distinct(this.knex.raw(`payload ->> ? AS value`, [field]));
     return rows.map((row: { value: string }) => row.value);
+  }
+
+  /**
+   * Dry-run checks for a price book import: new services need a service type
+   * and billing method, and every price row resolves to one outcome with the
+   * same `resolveCatalogItemKey` the applier calls. Rows that cannot be imported
+   * are marked blocked (a warning, since the rest still applies); a missing
+   * currency or price book blocks the whole job. The row-level plan is stored as
+   * its own report so the preview can page it.
+   */
+  async checkCatalogPriceConfiguration(
+    migrationJobId: string,
+    configuration: MigrationJobConfiguration,
+    _stagedCounts: Partial<Record<AmpEntityType, number>>
+  ): Promise<{ issues: PreflightIssue[]; servicesMatched: number }> {
+    const db = tenantDb(this.knex, this.tenant);
+    const result = await planCatalogPrices(this.knex, this.tenant, migrationJobId, configuration);
+    const issues = [...result.issues];
+
+    const grouped = new Map<string, { entityType: AmpEntityType; code: string; message: string; ids: string[] }>();
+    for (const block of result.blocks) {
+      const key = `${block.entityType}|${block.code}|${block.message}`;
+      const entry = grouped.get(key) ?? { entityType: block.entityType, code: block.code, message: block.message, ids: [] };
+      entry.ids.push(block.packageRecordId);
+      grouped.set(key, entry);
+    }
+    for (const { entityType, code, message, ids } of grouped.values()) {
+      for (let offset = 0; offset < ids.length; offset += 1000) {
+        await this.blockRecords(
+          migrationJobId,
+          entityType,
+          (query) => query.whereIn('package_record_id', ids.slice(offset, offset + 1000)),
+          { code, message }
+        );
+      }
+    }
+
+    if (result.servicesToCreate > 0) {
+      const services = configuration.services;
+      if (!services?.serviceTypeId) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_SERVICE_TYPE_REQUIRED',
+          message: `${result.servicesToCreate} new service(s) need a service type; choose one in Configure.`,
+          entityType: 'services',
+        });
+      } else {
+        const type = await db.table('service_types').where({ id: services.serviceTypeId, is_active: true }).first();
+        if (!type) {
+          issues.push({
+            severity: 'blocking',
+            code: 'CONFIG_SERVICE_TYPE_NOT_FOUND',
+            message: 'The configured service type does not exist or is inactive in this tenant.',
+            entityType: 'services',
+          });
+        }
+      }
+      if (!services?.billingMethod || !['fixed', 'hourly', 'usage'].includes(services.billingMethod)) {
+        issues.push({
+          severity: 'blocking',
+          code: 'CONFIG_SERVICE_BILLING_METHOD_REQUIRED',
+          message: `${result.servicesToCreate} new service(s) need a billing method; choose one in Configure.`,
+          entityType: 'services',
+        });
+      }
+    }
+
+    await withTransaction(this.knex, async (trx) => {
+      const tx = tenantDb(trx, this.tenant);
+      await tx.table('migration_reports').where({ migration_job_id: migrationJobId, report_type: 'catalog_price_plan' }).delete();
+      await tx.table('migration_reports').insert({
+        tenant: this.tenant,
+        migration_job_id: migrationJobId,
+        report_type: 'catalog_price_plan',
+        summary: JSON.stringify(result.plan),
+      });
+    });
+    return { issues, servicesMatched: result.servicesMatched };
   }
 
   private async checkTicketConfiguration(
