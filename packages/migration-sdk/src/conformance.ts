@@ -131,6 +131,32 @@ export function sampleEntityRows(): AmpPackageRows {
         is_active: 1,
       },
     ],
+    services: [
+      {
+        package_record_id: 'service-onboarding',
+        source_record_id: 'src-service-1',
+        external_identifier_namespace: 'fixture:instance-1',
+        name: 'Managed Onboarding',
+        sku: 'SVC-ONB',
+        service_type_name: 'Professional Services',
+        category_name: 'Onboarding',
+        unit_of_measure: 'each',
+        description: 'Fixed-fee onboarding.',
+        is_active: 1,
+      },
+    ],
+    catalog_prices: [
+      {
+        package_record_id: 'catalog-price-1',
+        source_record_id: 'src-catalog-price-1',
+        external_identifier_namespace: 'fixture:instance-1',
+        product_package_record_id: 'product-fw-license',
+        item_kind: 'product',
+        sku: 'FC-10-0060F-950-02-12',
+        currency: 'USD',
+        rate_minor: 134900,
+      },
+    ],
     vendor_products: [
       {
         package_record_id: 'vendor-product-1',

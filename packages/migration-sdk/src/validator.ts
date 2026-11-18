@@ -47,6 +47,8 @@ const ENTITY_REQUIRED_TEXT: Record<AmpEntityType, readonly string[]> = {
   ticket_comments: ['ticket_package_record_id', 'body'],
   assets: ['name'],
   products: ['name'],
+  services: ['name'],
+  catalog_prices: [],
   vendor_products: ['vendor_name'],
 };
 
@@ -55,12 +57,13 @@ const ENTITY_INTEGER_COLUMNS: Record<string, { min: number; max: number }> = {
   price_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
   cost_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
   unit_cost_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
+  rate_minor: { min: 0, max: Number.MAX_SAFE_INTEGER },
   lead_time_days: { min: 0, max: 3650 },
   is_active: { min: 0, max: 1 },
   is_preferred: { min: 0, max: 1 },
   is_internal: { min: 0, max: 1 },
 };
-const ENTITY_CURRENCY_COLUMNS = ['price_currency', 'cost_currency'];
+const ENTITY_CURRENCY_COLUMNS = ['price_currency', 'cost_currency', 'currency'];
 const CURRENCY_CODE = /^[A-Z]{3}$/;
 
 function readHeader(path: string): string {
@@ -418,6 +421,32 @@ function validateEntityRow(
         table,
         recordId,
         field,
+      });
+    }
+  }
+
+  if (table === 'catalog_prices') {
+    const kind = row.item_kind;
+    if (kind !== null && kind !== undefined && kind !== 'product' && kind !== 'service') {
+      diagnostics.push({
+        code: 'AMP_INVALID_VALUE',
+        message: '"item_kind" must be "product" or "service".',
+        table,
+        recordId,
+        field: 'item_kind',
+      });
+    }
+    const identifies = ['product_package_record_id', 'service_package_record_id', 'item_ref', 'sku', 'name'].some(
+      (column) => typeof row[column] === 'string' && (row[column] as string).trim().length > 0
+    );
+    if (!identifies) {
+      diagnostics.push({
+        code: 'AMP_INVALID_VALUE',
+        message:
+          'catalog_prices records require one of "product_package_record_id", "service_package_record_id", "item_ref", "sku" or "name".',
+        table,
+        recordId,
+        field: 'item_ref',
       });
     }
   }

@@ -12,6 +12,8 @@ import {
 import { AmpPackageBuilder, validateAmpPackage } from '@alga-psa/migration-sdk';
 import { buildEntityRows, type CsvConversionDiagnostic, type EntityRowsInput } from './engine';
 import { parseSpreadsheet } from './parse';
+import { inferPriceBookMappingFromHeaders, isPriceBookTarget } from './mapping';
+import { expandPriceBookSheet } from './priceBook';
 import { toRfc3339Seconds } from './values';
 
 /** One source file in a conversion config. */
@@ -252,4 +254,78 @@ function toDiagnosticRows(diagnostics: CsvConversionDiagnostic[]): AmpPackageDia
     });
   }
   return rows;
+}
+
+export interface PriceBookConvertConfig {
+  outputPath: string;
+  namespace: string;
+  sourceSystem: string;
+  producerVersion?: string;
+  /** Job currency, or the tenant default; read for a blank currency cell. Never defaulted here. */
+  defaultCurrency?: string;
+  path: string;
+  /** Source header -> price book target (see PRICE_BOOK_TARGETS and `price:<CCY>`). */
+  mapping: Record<string, string>;
+}
+
+/** Convert one price book spreadsheet into an AMP package of items plus catalog prices. */
+export async function convertPriceBookSpreadsheet(
+  config: PriceBookConvertConfig,
+  baseDir: string
+): Promise<CsvConversionResult> {
+  requireNonEmpty(config.outputPath, 'outputPath');
+  requireNonEmpty(config.namespace, 'namespace');
+  requireNonEmpty(config.sourceSystem, 'sourceSystem');
+  requireNonEmpty(config.path, 'path');
+  const entries = Object.entries(config.mapping ?? {});
+  if (entries.length === 0) {
+    throw new Error('Price book mapping must be a non-empty object of source header -> price book column.');
+  }
+  for (const [header, target] of entries) {
+    if (!isPriceBookTarget(target)) {
+      throw new Error(`Mapping for source column "${header}" targets "${target}", which is not a price book column.`);
+    }
+  }
+  const sheet = await parseSpreadsheet(resolve(baseDir, config.path));
+  const conversionDiagnostics: CsvConversionDiagnostic[] = [];
+  const inputs = expandPriceBookSheet(sheet, config.mapping, {
+    label: config.path,
+    defaultCurrency: config.defaultCurrency,
+    diagnostics: conversionDiagnostics,
+  });
+  const result = await runConversion({
+    outputPath: resolve(baseDir, config.outputPath),
+    namespace: config.namespace,
+    sourceSystem: config.sourceSystem,
+    producerName: PRODUCER_NAME,
+    producerVersion: config.producerVersion ?? DEFAULT_PRODUCER_VERSION,
+    inputs,
+  });
+  // Expansion warnings carry original row numbers; list them first.
+  result.diagnostics.unshift(...conversionDiagnostics);
+  return result;
+}
+
+export interface SpreadsheetInspection {
+  headers: string[];
+  sampleRows: Array<Record<string, string>>;
+  /** The proposed price book mapping (header -> target). */
+  mapping: Record<string, string>;
+}
+
+const MAX_SAMPLE_VALUE = 120;
+
+/** Headers, a few sample rows and the inferred price book mapping, for the column mapping step. */
+export async function inspectSpreadsheet(
+  path: string,
+  options: { sampleRows?: number } = {}
+): Promise<SpreadsheetInspection> {
+  const sheet = await parseSpreadsheet(path);
+  const limit = Math.min(Math.max(options.sampleRows ?? 5, 0), 5);
+  const sampleRows = sheet.rows.slice(0, limit).map((row) =>
+    Object.fromEntries(
+      sheet.headers.map((header) => [header, String(row[header] ?? '').slice(0, MAX_SAMPLE_VALUE)])
+    )
+  );
+  return { headers: sheet.headers, sampleRows, mapping: inferPriceBookMappingFromHeaders(sheet.headers) };
 }

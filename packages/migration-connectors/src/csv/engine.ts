@@ -3,6 +3,8 @@ import {
   AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
   AMP_ENTITY_REFERENCES,
   AMP_LIMITS,
+  AMP_PRICE_ERROR_EXTENSION_KEY,
+  AMP_PRICE_TEXT_EXTENSION_KEY,
   AMP_TABLE_COLUMNS,
   type AmpEntityType,
   type AmpRecord,
@@ -79,12 +81,15 @@ const DERIVED_COLUMNS = ['package_record_id', 'external_identifier_namespace', '
 export const FULL_NAME_COLUMN = 'full_name';
 export const CLIENT_NAME_COLUMN = 'client_name';
 const SPECIAL_MAPPING_TARGETS: ReadonlySet<string> = new Set([FULL_NAME_COLUMN, CLIENT_NAME_COLUMN]);
+/** Price book producers carry an unreadable price's text and reason into `extension_json` (catalog_prices only). */
+const PRICE_EXTENSION_TARGETS: ReadonlySet<string> = new Set([AMP_PRICE_TEXT_EXTENSION_KEY, AMP_PRICE_ERROR_EXTENSION_KEY]);
 
 /** Money column -> the currency column that supplies its minor-unit exponent. */
 export const MONEY_COLUMN_CURRENCY: Readonly<Record<string, string>> = {
   price_minor: 'price_currency',
   cost_minor: 'cost_currency',
   unit_cost_minor: 'cost_currency',
+  rate_minor: 'currency',
 };
 /**
  * A sheet with one generic `Currency` column maps it to `price_currency`; cost
@@ -92,7 +97,7 @@ export const MONEY_COLUMN_CURRENCY: Readonly<Record<string, string>> = {
  * never read or stored under the tenant currency when the sheet declared one.
  */
 const CURRENCY_FALLBACK: Readonly<Record<string, string>> = { cost_currency: 'price_currency' };
-const CURRENCY_COLUMNS: ReadonlySet<string> = new Set(['price_currency', 'cost_currency']);
+const CURRENCY_COLUMNS: ReadonlySet<string> = new Set(['price_currency', 'cost_currency', 'currency']);
 const FLAG_COLUMNS: ReadonlySet<string> = new Set(['is_internal', 'is_active', 'is_preferred']);
 const MAX_LEAD_TIME_DAYS = 3650;
 
@@ -121,6 +126,8 @@ const REQUIRED_TEXT_COLUMNS: Record<AmpEntityType, readonly string[]> = {
   ticket_comments: ['body'],
   assets: ['name'],
   products: ['name'],
+  services: ['name'],
+  catalog_prices: [],
   vendor_products: ['vendor_name'],
 };
 
@@ -130,6 +137,8 @@ const REQUIRED_ANY_OF_COLUMNS: Partial<Record<AmpEntityType, readonly string[]>>
   // A price-list row must say which product it prices: either a product
   // record from the same package or a SKU matched against the tenant catalog.
   vendor_products: ['product_package_record_id', 'product_sku'],
+  // A price must say which item it prices.
+  catalog_prices: ['item_ref', 'sku', 'name', 'product_package_record_id', 'service_package_record_id'],
 };
 
 interface BuiltRecord {
@@ -281,6 +290,10 @@ export function buildEntityRows(
           carriedClientName = value;
           continue;
         }
+        if (PRICE_EXTENSION_TARGETS.has(target)) {
+          leftover.set(target, value);
+          continue;
+        }
         const transformed = input.transformValue
           ? input.transformValue(target, value, warn)
           : value;
@@ -419,7 +432,7 @@ export function buildEntityRows(
       record.external_identifier_namespace = namespace;
 
       for (const [header, value] of leftover) {
-        if (header === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY) continue;
+        if (header === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY || PRICE_EXTENSION_TARGETS.has(header)) continue;
         const valueJson = JSON.stringify(value);
         if (Buffer.byteLength(valueJson, 'utf8') > AMP_LIMITS.extensionJsonBytes) {
           warn('CSV_CUSTOM_FIELD_TOO_LARGE', `unmapped column "${header}" exceeds the ${AMP_LIMITS.extensionJsonBytes}-byte custom field value limit and was dropped.`);
@@ -433,7 +446,7 @@ export function buildEntityRows(
           value_json: valueJson,
         });
       }
-      const extensionValues = new Map([...leftover].filter(([key]) => key === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY));
+      const extensionValues = new Map([...leftover].filter(([key]) => key === AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY || PRICE_EXTENSION_TARGETS.has(key)));
       if (assumedCurrency !== undefined) {
         extensionValues.set(AMP_ASSUMED_CURRENCY_EXTENSION_KEY, assumedCurrency);
       }
@@ -489,6 +502,12 @@ function validateMapping(input: EntityRowsInput): void {
       throw new Error(
         `${label}: mapping target "${target}" is derived by the converter and cannot be mapped from source column "${header}".`
       );
+    }
+    if (PRICE_EXTENSION_TARGETS.has(target)) {
+      if (entityType !== 'catalog_prices') {
+        throw new Error(`${label}: mapping target "${target}" is only valid for catalog_prices.`);
+      }
+      continue;
     }
     if (SPECIAL_MAPPING_TARGETS.has(target)) {
       if (entityType !== 'contacts') {

@@ -423,3 +423,44 @@ describe('AMP products and vendor_products entities', () => {
     expect(dangling.diagnostics.some((d) => d.code === 'AMP_INVALID_REFERENCE')).toBe(true);
   });
 });
+
+describe('AMP services and catalog_prices entities', () => {
+  const ids = { source_record_id: 's', external_identifier_namespace: 'ns' };
+  function build(rows: Record<string, unknown[]>): ReturnType<typeof validateAmpPackage> {
+    const path = nextPath();
+    new AmpPackageBuilder(path).write(sampleManifest(), rows as never);
+    return validateAmpPackage(path);
+  }
+
+  it('lists both tables and validates the sample rows', () => {
+    expect(AMP_ENTITY_TABLES).toContain('services');
+    expect(AMP_ENTITY_TABLES).toContain('catalog_prices');
+    const path = nextPath();
+    buildSamplePackage(path);
+    const result = validateAmpPackage(path);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.rowCounts.services).toBe(1);
+    expect(result.rowCounts.catalog_prices).toBe(1);
+  });
+
+  it('rejects a catalog price that identifies no item, a bad item_kind and a negative rate', () => {
+    const result = build({
+      catalog_prices: [
+        { package_record_id: 'a', ...ids, currency: 'USD', rate_minor: 1 },
+        { package_record_id: 'b', ...ids, sku: 'x', item_kind: 'bundle' },
+        { package_record_id: 'c', ...ids, sku: 'x', rate_minor: -5 },
+        { package_record_id: 'd', ...ids, sku: 'x', currency: 'usd' },
+      ] as never,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.diagnostics.filter((d) => d.table === 'catalog_prices').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('requires a service name and resolves catalog price references into the package', () => {
+    expect(() => build({ services: [{ package_record_id: 'a', ...ids }] as never })).toThrow(/NOT NULL/);
+    const dangling = build({
+      catalog_prices: [{ package_record_id: 'a', ...ids, service_package_record_id: 'missing', rate_minor: 1, currency: 'USD' }] as never,
+    });
+    expect(dangling.valid).toBe(false);
+  });
+});
