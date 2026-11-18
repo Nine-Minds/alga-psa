@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { ClientPortalSignIn, ClientPortalSsoFailureNotice, PortalSwitchPrompt } from '@alga-psa/auth/client';
+import { requestClientPortalLoginLinksAction } from '../../../actions/tenantDiscoveryActions';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
 import {
@@ -10,6 +11,7 @@ import {
   getTenantSlugByDomain,
 } from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
+import { getClientPortalSignInSsoProviders } from '@alga-psa/auth/lib/sso/clientPortalSsoResolution';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
@@ -110,7 +112,7 @@ export default async function ClientSignInPage({
       <I18nWrapper portal="client" initialLocale={discoveryLocale}>
         {/* An SSO mapping failure can land here with no tenant to brand against;
             discovery renders no error of its own, so say why sign-in failed. */}
-        <ClientPortalTenantDiscovery callbackUrl={callbackUrl} notice={<ClientPortalSsoFailureNotice />} />
+        <ClientPortalTenantDiscovery requestLoginLinks={requestClientPortalLoginLinksAction} callbackUrl={callbackUrl} notice={<ClientPortalSsoFailureNotice />} />
       </I18nWrapper>
     );
   }
@@ -129,6 +131,13 @@ export default async function ClientSignInPage({
         getTenantLocaleBySlug(tenantSlug),
       ]);
 
+  // Only the providers this tenant offers reach the browser, so the buttons are
+  // right on first paint. A lookup failure yields none; the password form still works.
+  const offeredProviders = await getClientPortalSignInSsoProviders({
+    tenantSlug,
+    portalDomain,
+  });
+
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>
       <PortalBrandingStyles branding={branding} />
@@ -136,6 +145,7 @@ export default async function ClientSignInPage({
         branding={branding}
         portalDomain={portalDomain || undefined}
         tenantSlug={tenantSlug}
+        offeredProviders={offeredProviders}
       />
     </I18nWrapper>
   );

@@ -1,0 +1,17 @@
+[
+  {
+    "role_name": "Admin",
+    "resource": "ticket",
+    "action": "update"
+  },
+  {
+    "role_name": "Admin",
+    "resource": "ticket",
+    "action": "read"
+  },
+  {
+    "role_name": "Admin",
+    "resource": "ticket",
+    "action": "create"
+  }
+]

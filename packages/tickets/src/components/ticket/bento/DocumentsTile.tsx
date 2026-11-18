@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useTicketScreenReadOnly } from '../TicketDataSourceContext';
 import { FileText, Plus, Eye } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
@@ -118,7 +119,9 @@ export function DocumentsTile({
   const { renderDocuments } = useDocumentsCrossFeature();
   const [viewingDocument, setViewingDocument] = useState<IDocument | null>(null);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const visible = documents.slice(0, MAX_ROWS);
+  // A read-only screen lists every document for viewing; the manager (new/upload/link/delete) is not offered.
+  const readOnly = useTicketScreenReadOnly();
+  const visible = readOnly ? documents : documents.slice(0, MAX_ROWS);
   const overflow = documents.length - visible.length;
 
   return (
@@ -127,7 +130,7 @@ export function DocumentsTile({
         id={id}
         title={t('bento.tiles.documents', 'Documents')}
         icon={<FileText className="h-4 w-4" />}
-        action={
+        action={readOnly ? undefined : (
           <Button
             id={`${id}-manage-btn`}
             variant="ghost"
@@ -138,19 +141,19 @@ export function DocumentsTile({
           >
             <Plus className="h-4 w-4" />
           </Button>
-        }
+        )}
       >
         {documents.length === 0 ? (
           <div>
             <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noDocuments', 'No documents yet')}</BentoTileEmpty>
-            <button
+            {!readOnly && <button
               id={`${id}-add-link`}
               type="button"
               onClick={() => setIsManagerOpen(true)}
               className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
             >
               <Plus className="h-3 w-3" /> {t('bento.tiles.addDocument', 'Add a document')}
-            </button>
+            </button>}
           </div>
         ) : (
           <div>
@@ -194,7 +197,7 @@ export function DocumentsTile({
 
       <Dialog
         id={`${id}-manager-dialog`}
-        isOpen={isManagerOpen}
+        isOpen={isManagerOpen && !readOnly}
         onClose={() => setIsManagerOpen(false)}
         className="max-w-3xl"
       >

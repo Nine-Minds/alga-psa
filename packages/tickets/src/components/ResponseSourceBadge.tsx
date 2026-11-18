@@ -17,7 +17,8 @@ export interface ResponseSourceLabels {
 interface ResponseSourceBadgeProps {
   source: CommentResponseSource;
   labels?: Partial<ResponseSourceLabels>;
-  size?: 'sm' | 'md';
+  /** 'icon': just the channel glyph, label in the tooltip (dense timelines). */
+  size?: 'sm' | 'md' | 'icon';
   className?: string;
 }
 
@@ -44,6 +45,20 @@ export default function ResponseSourceBadge({
     source === COMMENT_RESPONSE_SOURCES.INBOUND_EMAIL
       ? resolvedLabels.inboundEmail
       : resolvedLabels.clientPortal;
+
+  if (size === 'icon') {
+    return (
+      <span
+        className={cn('inline-flex items-center text-[rgb(var(--color-text-400))]', className)}
+        title={label}
+        aria-label={label}
+        data-testid="ticket-response-source-indicator"
+        data-response-source={source}
+      >
+        <ResponseSourceIcon source={source} />
+      </span>
+    );
+  }
 
   return (
     <div

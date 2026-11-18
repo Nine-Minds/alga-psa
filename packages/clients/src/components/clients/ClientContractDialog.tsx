@@ -11,6 +11,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel'; // Im
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getCurrentDateInUserTimeZone } from '@alga-psa/core';
 
 export interface ClientContractDialogSubmission {
   startDate: string;
@@ -59,11 +60,11 @@ export function ClientContractDialog({
   };
 
   const [open, setOpen] = useState(isOpen);
-  // Safely initialize startDate: check if initialStartDate is a non-empty string
-  const [startDate, setStartDate] = useState<string>(() => {
-    const dateStr = typeof initialStartDate === 'string' && initialStartDate ? initialStartDate.split('T')[0] : null;
-    return dateStr || new Date().toISOString().split('T')[0];
-  });
+  // initialStartDate is a YYYY-MM-DD calendar day (the server read boundary emits strings).
+  // With none, default to the viewer's local "today", the day the DatePicker shows.
+  const [startDate, setStartDate] = useState<string>(() =>
+    initialStartDate ? initialStartDate.split('T')[0] : getCurrentDateInUserTimeZone()
+  );
   const [endDate, setEndDate] = useState<string | null>(initialEndDate || null);
   // Safely initialize isOngoing: check if initialEndDate is a non-empty string
   const [isOngoing, setIsOngoing] = useState<boolean>(!(typeof initialEndDate === 'string' && initialEndDate));
@@ -90,10 +91,9 @@ export function ClientContractDialog({
   }, [isOpen]);
 
   useEffect(() => {
-    const nextStartDate =
-      typeof initialStartDate === 'string' && initialStartDate
-        ? initialStartDate.split('T')[0]
-        : new Date().toISOString().split('T')[0];
+    const nextStartDate = initialStartDate
+      ? initialStartDate.split('T')[0]
+      : getCurrentDateInUserTimeZone();
     setStartDate(nextStartDate);
     setEndDate(initialEndDate || null);
     setIsOngoing(!(typeof initialEndDate === 'string' && initialEndDate));

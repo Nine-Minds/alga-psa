@@ -24,12 +24,21 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => {
       tenantScopeSpy(t, tenant);
-      return conn(t);
+      // Folder documents here carry no entity associations; authorization's
+      // association lookups must not receive the documents' own rows.
+      return t === 'document_associations' ? createQueryBuilder() : conn(t);
     },
     unscoped: (t: string) => conn(t),
     tenantJoin: (q: any, t: string, _l?: any, _r?: any, o: any = {}) =>
       o?.type === 'left' ? (q.leftJoin?.(t) ?? q) : (q.join?.(t) ?? q),
   }),
+}));
+
+// These tests mock the query builder, not the authorization tables. Nothing narrows the subject here
+// (the S2 fast path), so the read scope resolves to "no clause".
+vi.mock('@alga-psa/authorization/readScope', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/readScope')>()),
+  resolveNarrowedReadScope: vi.fn(async () => null),
 }));
 
 vi.mock('@alga-psa/auth', () => {

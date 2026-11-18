@@ -1,7 +1,6 @@
 import { beforeAll, afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
 import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 
@@ -148,8 +147,12 @@ describe('Appointment Notification System Integration Tests', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {
-    db = await createTestDbConnection();
-    await runMigrationsAndSeeds(db);
+    // createTestDbConnection already hands this file a freshly migrated
+    // database. Re-dropping the public schema here needed one lock per object
+    // (12k+ for the full schema) in a single transaction and overflowed the
+    // shared lock table on CI ("out of shared memory"). The suite builds its
+    // own fixtures, so skip the dev seeds instead.
+    db = await createTestDbConnection({ runSeeds: false });
     ({ createAppointmentRequest } = await import('@alga-psa/client-portal/actions'));
     ({ approveAppointmentRequest, declineAppointmentRequest } = await import('@alga-psa/scheduling/actions'));
     ({ runWithTenant } = await import('server/src/lib/db'));
@@ -1368,17 +1371,6 @@ describe('Appointment Notification System Integration Tests', () => {
 });
 
 // Helper functions
-
-async function runMigrationsAndSeeds(connection: Knex): Promise<void> {
-  await connection.raw('DROP SCHEMA IF EXISTS public CASCADE');
-  await connection.raw('CREATE SCHEMA public');
-  await connection.raw('GRANT ALL ON SCHEMA public TO public');
-
-  const migrationDir = path.resolve(__dirname, '../../../migrations');
-  await connection.migrate.latest({
-    directory: migrationDir
-  });
-}
 
 async function createContact(
   db: Knex,

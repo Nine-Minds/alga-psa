@@ -2,9 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StripeService } from '../../lib/stripe/StripeService';
 
 const getConnectionMock = vi.hoisted(() => vi.fn());
+const countLicensedInternalUsersMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db/db', () => ({
   getConnection: getConnectionMock,
+}));
+
+// The licensed internal user count (active internal users less seat technicians) is SQL owned by
+// @alga-psa/licensing and covered by its database tests; here it is a persistence result.
+vi.mock('@alga-psa/licensing', async (importOriginal) => ({
+  ...((await importOriginal()) as typeof import('@alga-psa/licensing')),
+  countLicensedInternalUsers: countLicensedInternalUsersMock,
 }));
 
 // These pricing-unit fixtures supply persistence results. SQL and tenant
@@ -28,8 +36,19 @@ function queryFixture(handlers: {
       return query;
     },
     whereRaw: (sql: string) => {
-      if (sql !== "COALESCE(metadata->>'addon_key', '') = ''") throw new Error(`Unexpected fixture predicate: ${sql}`);
-      predicates.push(row => !row.metadata?.addon_key);
+      // One entry per raw predicate `licenseSubscriptions` applies, so adding a
+      // predicate to the query is a one-line addition here rather than a throw
+      // in the middle of an otherwise unrelated assertion.
+      const RAW_PREDICATES: Record<string, (row: any) => boolean> = {
+        "COALESCE(metadata->>'addon_key', '') = ''": row => !row.metadata?.addon_key,
+        // A co-managed seat subscription is billed on its own SKU and must never
+        // be counted as, or mutated by, the tenant's own license subscription.
+        "COALESCE(metadata->>'subscription_kind', '') <> 'co_managed'":
+          row => (row.metadata?.subscription_kind ?? '') !== 'co_managed',
+      };
+      const predicate = RAW_PREDICATES[sql];
+      if (!predicate) throw new Error(`Unexpected fixture predicate: ${sql}`);
+      predicates.push(predicate);
       return query;
     },
     orderByRaw: () => query,
@@ -124,7 +143,7 @@ function createUpgradeKnex(state: {
   tenantUpdates: Array<{ criteria: Record<string, any>; values: Record<string, any> }>;
   activeUserCount?: number;
 }) {
-  return connectionFixture(table => {
+  const knex = connectionFixture(table => {
     if (table === 'stripe_subscriptions') return queryFixture({
       first: criteria => Object.entries(criteria).every(([key, value]) => state.existingSubscription[key] === value) ? state.existingSubscription : null,
       update: (criteria, values) => { state.subscriptionUpdates.push({ criteria, values }); return 1; },
@@ -133,9 +152,10 @@ function createUpgradeKnex(state: {
     if (table === 'tenants') return queryFixture({ first: () => ({ billing_source: 'stripe' }),
       update: (criteria, values) => { state.tenantUpdates.push({ criteria, values }); return 1; },
     });
-    if (table === 'users') return queryFixture({ first: () => ({ count: String(state.activeUserCount ?? 1) }) });
     throw new Error(`Unexpected table ${table}`);
   });
+  countLicensedInternalUsersMock.mockResolvedValue(state.activeUserCount ?? 1);
+  return knex;
 }
 
 function createAddOnKnex(addOnRecord?: Record<string, any>) {
@@ -201,6 +221,7 @@ function createService(planByTenant: Record<string, string>) {
 describe('StripeService tier pricing', () => {
   beforeEach(() => {
     getConnectionMock.mockReset();
+    countLicensedInternalUsersMock.mockReset();
   });
 
   it('returns a base-only price shape for Solo', () => {
@@ -504,6 +525,8 @@ describe('StripeService tier pricing', () => {
       success: false,
       error: 'Solo downgrade requires exactly 1 active internal user',
     });
+    // The gate reads the licensed count, so seat technicians never block a Solo downgrade.
+    expect(countLicensedInternalUsersMock).toHaveBeenCalledWith(expect.anything(), 'tenant-pro');
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
   });
 

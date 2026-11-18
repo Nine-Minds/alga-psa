@@ -21,6 +21,7 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
   getStoredXeroConnections: async () => xeroConnectionsState.value,
 }));
 
+// LEVERAGE: pattern server-migration-loader — packages load server migrations from tests; inventory has packages/inventory/src/test-utils/serverMigrations.ts to avoid nx edges
 // Load the migration under test via a computed path so Nx's static graph does
 // not record a billing -> server project edge for a test-only fixture (mirrors
 // standardTemplateI18n.test.ts). The `up`/`down` shape is asserted at load.

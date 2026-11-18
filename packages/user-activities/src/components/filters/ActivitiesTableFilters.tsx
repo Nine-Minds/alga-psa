@@ -5,7 +5,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
   ActivityType,
-  IClient,
   IPriority,
   IStatus,
   ITag,
@@ -18,6 +17,7 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { SearchInput } from "@alga-psa/ui/components/SearchInput";
 import { StringDateRangePicker, parseLocalYMD, formatLocalYMD } from "@alga-psa/ui/components/DateRangePicker";
 import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
+import { useClientPickerSearch } from "@alga-psa/ui/context";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import TreeSelect, { TreeSelectOption, TreeSelectMode } from "@alga-psa/ui/components/TreeSelect";
 import { TagFilter } from "@alga-psa/ui/components";
@@ -33,7 +33,6 @@ interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
   priorities?: IPriority[];
-  clients?: IClient[];
   projects?: ProjectWithPhases[];
   boards?: Array<{ board_id?: string; board_name?: string }>;
   ticketStatuses?: IStatus[];
@@ -72,7 +71,6 @@ export function ActivitiesTableFilters({
   filters,
   onChange,
   priorities = [],
-  clients = [],
   projects = [],
   boards = [],
   ticketStatuses = [],
@@ -102,7 +100,10 @@ export function ActivitiesTableFilters({
   const isPriorityFilterAvailable =
     selectedTypes.length === 1 && PRIORITY_FILTERABLE_TYPES.has(selectedTypes[0]);
   const hasPriorityFilter = isPriorityFilterAvailable && priorities.length > 0;
-  const hasClientFilter = clients.length > 0;
+  // The client filter searches on the server through the searcher the MSP shell supplies; without one
+  // (no provider mounted) the filter is hidden rather than loading a client list.
+  const { searchClients } = useClientPickerSearch();
+  const hasClientFilter = Boolean(searchClients);
 
   // -------- Handlers -------------------------------------------------------
 
@@ -685,7 +686,6 @@ export function ActivitiesTableFilters({
             </Label>
             <ClientPicker
               id="activities-client-picker"
-              clients={clients}
               selectedClientId={filters.clientId || null}
               onSelect={handleClientChange}
               filterState={clientFilterState}

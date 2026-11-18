@@ -11,6 +11,7 @@ import {
   type CurrencyAmount,
 } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { mapHourBlockUsageRow, type HourBlockUsageQueryRow } from '../lib/hourBlockUsageRows';
 import type { Knex } from 'knex';
 import { isActionPermissionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -600,14 +601,24 @@ export interface HourBlockUsage {
   /** Cents per hour the block is valued at (minor units). */
   hourly_rate: number;
   currency_code: string;
+  /**
+   * Value of the unused hours, minor units of `currency_code`: remaining hours x hourly_rate,
+   * rounded once on the server (computeRemainingBlockValueMinor). Zero unless the block is
+   * active, since an expired or voided block's remaining hours are forfeited.
+   */
+  remaining_value: number;
   purchased_at: string | null;
+  /** First day the block can be drawn (cadence blocks); null = no lower bound. */
+  valid_from: string | null;
   expiration_date: string | null;
 }
 
 /**
  * Get prepaid hour-block usage report data
  * One row per issued block (ad-hoc and contract-issued) with burn progress.
- * Blocks with no liability (pending, or voided before issuance) are excluded.
+ * Blocks with no liability (pending, or voided before issuance) are excluded,
+ * as are blocks that fell out of the trailing 12-month window (see below) so
+ * the report does not accumulate every block the tenant ever bought.
  */
 export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promise<HourBlockUsage[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
@@ -627,6 +638,7 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
         'hb.hourly_rate',
         'hb.currency_code',
         'hb.purchased_at',
+        'hb.valid_from',
         'hb.expiration_date',
         'cl.contract_line_name as line_name',
         'c.contract_name',
@@ -638,32 +650,24 @@ export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promis
     db.tenantJoin(blockQuery, 'contracts as c', 'cl.contract_id', 'c.contract_id', { type: 'left' });
     db.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
     blockQuery.whereNotNull('hb.purchased_at').andWhere('hb.status', '!=', 'pending');
+    // Default window so the table does not grow without bound as blocks age
+    // out: live blocks always, plus blocks that expired, were voided or were
+    // purchased within the last 12 months. Callers narrow further in the UI.
+    const today = new Date();
+    const windowStartDateOnly = new Date(Date.UTC(
+      today.getUTCFullYear() - 1, today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0
+    )).toISOString().slice(0, 10);
+    blockQuery.where((builder) => {
+      builder
+        .where('hb.status', 'active')
+        .orWhere('hb.expiration_date', '>=', windowStartDateOnly)
+        .orWhere('hb.voided_at', '>=', windowStartDateOnly)
+        .orWhere('hb.purchased_at', '>=', windowStartDateOnly);
+    });
     blockQuery.orderBy('clients.client_name', 'asc').orderBy('hb.purchased_at', 'asc');
     const rows = await blockQuery;
 
-    const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
-
-    const usages: HourBlockUsage[] = rows.map((row: any) => {
-      const totalMinutes = Number(row.total_minutes ?? 0);
-      const remainingMinutes = Math.max(0, Number(row.remaining_minutes ?? 0));
-      const usedMinutes = Math.max(0, totalMinutes - remainingMinutes);
-      return {
-        block_id: row.block_id,
-        client_id: row.client_id,
-        client_name: row.client_name || 'Unknown Client',
-        service_name: row.service_name || row.line_name || '—',
-        contract_name: row.contract_name ?? null,
-        status: row.status,
-        total_hours: minutesToHours(totalMinutes),
-        used_hours: minutesToHours(usedMinutes),
-        remaining_hours: minutesToHours(remainingMinutes),
-        utilization_percentage: totalMinutes > 0 ? Math.round((usedMinutes / totalMinutes) * 100) : 0,
-        hourly_rate: Number(row.hourly_rate ?? 0),
-        currency_code: row.currency_code || 'USD',
-        purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString().slice(0, 10) : null,
-        expiration_date: row.expiration_date ? new Date(row.expiration_date).toISOString().slice(0, 10) : null,
-      };
-    });
+    const usages: HourBlockUsage[] = rows.map((row: HourBlockUsageQueryRow) => mapHourBlockUsageRow(row));
 
     const clientIds = Array.from(new Set(usages.map((row) => row.client_id).filter((id): id is string => Boolean(id))));
     if (clientIds.length > 0) {

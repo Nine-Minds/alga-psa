@@ -44,22 +44,26 @@ function rememberHtml(src: string, value: string | null): void {
 const SANDBOX = 'allow-same-origin allow-popups allow-popups-to-escape-sandbox';
 
 /**
- * The frame stays a light sheet in both app themes, and says so with
- * `color-scheme: light` rather than a hardcoded palette.
+ * The sheet is always *rendered* against the light palette senders author mail
+ * for, and says so with `color-scheme: light` rather than a hardcoded palette:
+ * `Canvas`/`CanvasText`/`GrayText` are the system colours that scheme selects,
+ * which is what keeps black-on-white signatures, table rules and inline-styled
+ * headings legible instead of guessing at a sender's intent.
  *
- * Senders author mail against a white background with their own ink: a dark
- * canvas turns black-on-white signatures, table rules and inline-styled
- * headings invisible, and fidelity to what the sender sent is the entire point
- * of this view — so re-tinting it would break the feature, not theme it. The
- * app's tokens cannot reach in here anyway (custom properties do not cross a
- * document boundary), so pinning the scheme is also what makes the colours
- * below resolvable: `Canvas`/`CanvasText`/`GrayText` are the system palette
- * that scheme selects, and it keeps the sheet's own scrollbars and form
- * controls light instead of letting an OS dark theme paint them onto white.
+ * On a dark app theme that sheet read as a white block dropped onto a dark
+ * card, so dark mode keeps the light rendering and flips the result: the body
+ * is inverted (hue-rotated back, with media inverted a second time so photos
+ * and logos stay true). Every surface the sender painted darkens while the
+ * contrast they authored survives — unlike a plain dark canvas, where the
+ * pure-black ink Outlook and Gmail emit would simply go invisible. The body's
+ * own ground is dropped so what shows behind the message is the app's card.
+ *
+ * The trade is the inverse case: a message the sender authored dark lands
+ * light, and CSS background art is not in the media list so it reads as a
+ * negative. Both are the cost of flipping a document whose intent we cannot
+ * inspect, paid on the rare mail to keep the common mail readable.
  */
-const FRAME_STYLES = [
-  ':root{color-scheme:light;}',
-  'html,body{margin:0;padding:0;background:Canvas;color:CanvasText;}',
+const FRAME_BODY_STYLES = [
   'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;',
   'font-size:14px;line-height:1.5;overflow-wrap:anywhere;}',
   'img{max-width:100%;height:auto;}',
@@ -67,11 +71,91 @@ const FRAME_STYLES = [
   'blockquote{margin:0 0 0 0.75rem;padding-left:0.75rem;border-left:2px solid GrayText;color:GrayText;}',
 ].join('');
 
-function toFrameDocument(html: string): string {
+const LIGHT_SHEET_STYLES = 'html,body{margin:0;padding:0;background:Canvas;color:CanvasText;}';
+
+/**
+ * Resolved theme values the frame document cannot look up for itself: custom
+ * properties do not cross a document boundary, so the triples are read out
+ * here and written in, the way the extension iframe bridge ships theme tokens
+ * to its frame. `null` is the light theme, which needs nothing injected.
+ */
+interface FrameTheme {
+  /** The card the frame sits on, so the sheet's ground matches it exactly. */
+  canvas: string;
+  /** The frame's own scrollbar, which sits outside the inverted body. */
+  thumb: string | null;
+}
+
+function readTokenColor(styles: CSSStyleDeclaration, token: string): string | null {
+  const triple = styles.getPropertyValue(token).trim();
+  return triple ? `rgb(${triple})` : null;
+}
+
+function readFrameTheme(): FrameTheme | null {
+  if (typeof document === 'undefined') return null;
+  const root = document.documentElement;
+  if (!root.classList.contains('dark')) return null;
+  const styles = window.getComputedStyle(root);
+  const canvas = readTokenColor(styles, '--color-card');
+  // A canvas that cannot be read cannot be matched; the light sheet is the
+  // honest fallback rather than a guessed shade of dark.
+  if (!canvas) return null;
+  return { canvas, thumb: readTokenColor(styles, '--color-border-400') };
+}
+
+function sameFrameTheme(a: FrameTheme | null, b: FrameTheme | null): boolean {
+  if (!a || !b) return a === b;
+  return a.canvas === b.canvas && a.thumb === b.thumb;
+}
+
+/**
+ * The frame repaints when the reader switches theme or theme pair. Watching
+ * `<html>` rather than taking the theme from a provider keeps `@alga-psa/ui`'s
+ * viewer free of next-themes and picks up a branding pair change too, since
+ * both land as attributes on the same element.
+ */
+function useFrameTheme(): FrameTheme | null {
+  const [theme, setTheme] = useState<FrameTheme | null>(readFrameTheme);
+
+  useEffect(() => {
+    const sync = () => setTheme((current) => {
+      const next = readFrameTheme();
+      return sameFrameTheme(current, next) ? current : next;
+    });
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-theme', 'data-theme-pair'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return theme;
+}
+
+/**
+ * `!important` guards only the sheet's own ground: sender markup keeps its
+ * `<style>` blocks through sanitizing, and a stray `html`/`body` background in
+ * one of them would otherwise paint the white block straight back.
+ */
+function darkSheetStyles(theme: FrameTheme): string {
+  const scrollbar = theme.thumb ? `scrollbar-color:${theme.thumb} ${theme.canvas};` : '';
+  return [
+    `html{margin:0;padding:0;background:${theme.canvas}!important;${scrollbar}}`,
+    'body{margin:0;padding:0;color:CanvasText;background:transparent!important;',
+    'filter:invert(1) hue-rotate(180deg)!important;}',
+    'img,picture,video,svg{filter:invert(1) hue-rotate(180deg);}',
+  ].join('');
+}
+
+function toFrameDocument(html: string, theme: FrameTheme | null): string {
+  const sheet = theme ? darkSheetStyles(theme) : LIGHT_SHEET_STYLES;
   return `<!doctype html><html><head><meta charset="utf-8">`
     + `<meta name="color-scheme" content="light">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1">`
-    + `<style>${FRAME_STYLES}</style></head><body>${html}</body></html>`;
+    + `<style>:root{color-scheme:light;}${sheet}${FRAME_BODY_STYLES}`
+    + `</style></head><body>${html}</body></html>`;
 }
 
 export interface EmailHtmlViewerProps {
@@ -105,6 +189,7 @@ export function EmailHtmlViewer({
     cached === undefined ? 'loading' : cached ? 'ready' : 'error'
   );
   const [height, setHeight] = useState(240);
+  const frameTheme = useFrameTheme();
   const frameRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -197,11 +282,13 @@ export function EmailHtmlViewer({
       ref={frameRef}
       title={title}
       sandbox={SANDBOX}
-      srcDoc={toFrameDocument(html)}
+      srcDoc={toFrameDocument(html, frameTheme)}
       onLoad={handleLoad}
       style={{ height }}
+      // The sheet itself is painted by the frame document; the host background
+      // shows only at the rounded corners, so it tracks the card it sits on.
       className={cn(
-        'w-full min-w-0 rounded-md border border-[rgb(var(--color-border-200))] bg-white',
+        'w-full min-w-0 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]',
         className
       )}
     />

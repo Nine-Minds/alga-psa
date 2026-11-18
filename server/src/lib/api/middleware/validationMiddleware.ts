@@ -58,7 +58,7 @@ export function withValidation<T extends z.ZodSchema>(
         const result = schema.safeParse(data);
 
         if (!result.success) {
-          const errors = result.error.errors.map(err => ({
+          const errors = result.error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message,
             code: err.code
@@ -116,7 +116,7 @@ export function withParamsValidation<T extends z.ZodSchema>(schema: T) {
  * Common validation schemas
  */
 export const commonValidations = {
-  uuid: z.string().uuid('Invalid UUID format'),
+  uuid: z.string().guid('Invalid UUID format'),
   paginationQuery: z.object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(100).default(25),

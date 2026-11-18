@@ -191,6 +191,39 @@ export function buildInventorySoFulfilledPayload(params: {
   });
 }
 
+/** INVENTORY_RMA_UPDATED (published after commit; client-asset warranty claims, C5). */
+export function buildInventoryRmaUpdatedPayload(params: {
+  tenant: string;
+  rmaId: string;
+  rmaNumber: string;
+  status: string;
+  previousStatus: string | null;
+  rmaType: 'standard' | 'advance_replacement';
+  assetId: string | null;
+  ticketId: string | null;
+  clientId: string | null;
+  warrantyOutcome: 'covered' | 'not_covered' | 'unknown' | null;
+  changedFields: string[];
+  userId?: string;
+  timestamp: string;
+}) {
+  return builtWorkflowPayload('INVENTORY_RMA_UPDATED', {
+    tenant: params.tenant,
+    rma_id: params.rmaId,
+    rma_number: params.rmaNumber,
+    status: params.status,
+    previous_status: params.previousStatus,
+    rma_type: params.rmaType,
+    asset_id: params.assetId,
+    ticket_id: params.ticketId,
+    client_id: params.clientId,
+    warranty_outcome: params.warrantyOutcome,
+    changed_fields: params.changedFields,
+    ...(params.userId ? { user_id: params.userId } : {}),
+    timestamp: params.timestamp,
+  });
+}
+
 /** INVENTORY_RMA_CREATED (published after commit). */
 export function buildInventoryRmaCreatedPayload(params: {
   tenant: string;

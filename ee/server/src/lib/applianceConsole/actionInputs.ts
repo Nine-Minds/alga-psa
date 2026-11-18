@@ -60,14 +60,12 @@ export interface ExtendProArgs extends BaseArgs {
 }
 
 export type EntitlementChangeMode = 'comp' | 'billed';
-export type ProrationBehavior = 'create_prorations' | 'none';
 
 export interface ChangeEntitlementArgs extends BaseArgs {
   tenantId: string;
   mode: EntitlementChangeMode;
   /** null = unlimited (comp mode only). */
   seats: number | null;
-  proration: ProrationBehavior;
 }
 
 export interface SetStatusArgs extends BaseArgs {
@@ -253,14 +251,14 @@ export function parseChangeEntitlement(body: Body, tenantId: string, base: Omit<
   if (!seatsProvided) throw new ActionValidationError('seats is required');
   const seats = body.seats === null ? null : positiveInt(body, 'seats')!;
   if (mode === 'billed' && seats === null) throw new ActionValidationError('Unlimited seats cannot be billed; use comp mode');
-  const proration = oneOf(body, 'proration', ['create_prorations', 'none'] as const, false) ?? 'create_prorations';
+  // Billing (proration / immediate charge) is decided by direction and subscription
+  // status in the worker — same rule as the customer portal — so no caller option.
   return {
     ...base,
     reason: reason(body, true),
     tenantId,
     mode,
     seats,
-    proration,
   };
 }
 

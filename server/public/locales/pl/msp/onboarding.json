@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
       "addTeamMembers": "Nie udało się dodać członków zespołu",
+      "unsentInvites": "Przed kontynuowaniem wyślij zaproszenie do każdego dodanego członka zespołu lub go usuń.",
+      "teamMembersNotCreated": "Ci członkowie zespołu nie zostali utworzeni. Przed kontynuowaniem popraw lub usuń każdego z nich:",
+      "teamProgressNotSaved": "Ci członkowie zespołu zostali utworzeni, ale konfiguracja nie mogła zapisać postępu: {{users}}. Jeśli opuścisz konfigurację i wrócisz, mogą nie być widoczni jako dodani; ich konta już istnieją, więc nie dodawaj ich ponownie. Wybierz Dalej, aby kontynuować.",
       "saveClient": "Nie udało się zapisać klienta",
       "addContact": "Nie udało się dodać kontaktu",
       "setupBilling": "Nie udało się skonfigurować fakturowania",
@@ -416,6 +419,7 @@
       "invalidEmail": "Wprowadź prawidłowy adres e-mail",
       "passwordLength": "Hasło musi mieć co najmniej 8 znaków",
       "saveFailed": "Nie udało się zapisać członka zespołu",
+      "progressNotSaved": "Utworzono {{email}}, ale konfiguracja nie mogła zapisać postępu. Jeśli opuścisz konfigurację i wrócisz, ten członek może nie być widoczny jako dodany; konto już istnieje, więc nie dodawaj go ponownie.",
       "inviteFailed": "Nie udało się wysłać zaproszenia",
       "roleRequired": "Wybierz rolę",
       "generic": "Wystąpił błąd"

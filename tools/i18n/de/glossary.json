@@ -2169,13 +2169,13 @@
     {
       "term": "bucket",
       "preferred": "Stundenkontingent",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Untranslated English leak for prepaid hour pools."
     },
     {
       "term": "buckets",
       "preferred": "Stundenkontingente",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plural of the untranslated bucket leak."
     },
     {
@@ -2227,7 +2227,7 @@
       "term": "eimer",
       "preferred": "Stundenkontingent",
       "reason": "Literal translation of billing bucket; Eimer means a physical pail. Use Stundenkontingent or Verbrauchskontingent.",
-      "enWhen": "\\bbuckets?\\b"
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b"
     },
     {
       "term": "eintrittskarte",
@@ -2347,6 +2347,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
       " (Standard)",
@@ -2377,6 +2378,7 @@
       "Array",
       "Asset",
       "Assets",
+      "Audits",
       "August",
       "Authorization: Bearer abc123\nX-Source: alga-psa",
       "Barcode (UPC/EAN)",
@@ -2426,6 +2428,7 @@
       "Fax",
       "Filter",
       "Firewall",
+      "Firmware",
       "Format",
       "Format: {{value}}",
       "{{size}} GB",
@@ -2474,6 +2477,7 @@
       "MAC (optional)",
       "macOS",
       "Manager",
+      "Markdown",
       "Marketing",
       "Meta",
       "Microsoft",
@@ -2503,6 +2507,7 @@
       "Onboarding",
       "Online",
       "online",
+      "Operator",
       "Option {{index}}",
       "Optional",
       "Optional:",
@@ -2520,6 +2525,7 @@
       "Pipeline",
       "Plan",
       "Port",
+      "Ports",
       "Portal",
       "portal.example.com",
       "primary",
@@ -2531,6 +2537,7 @@
       "QuickBooks CSV",
       "QuickBooks Online",
       "Radius",
+      "RAM",
       "RAM (GB)",
       "Realm",
       "Realm ID: {{id}}",
@@ -2542,6 +2549,7 @@
       "RMAs",
       "Router",
       "Sandbox",
+      "Scan",
       "Schema",
       "September",
       "Server",
@@ -2562,6 +2570,7 @@
       "Start (optional)",
       "Start *",
       "Status",
+      "Status:",
       "Story",
       "Stripe",
       "Support",
@@ -2585,6 +2594,7 @@
       "Test",
       "Text",
       "Ticket",
+      "Ticket {{number}}",
       "Tickets",
       "token",
       "Try/Catch",
@@ -2634,7 +2644,11 @@
       "Bcc",
       "Cc/Bcc",
       "Code 128",
-      "Barcode"
+      "Barcode",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}",
+      "{{actor}} • {{eventType}}"
     ],
     "caseInsensitive": [
       "api",

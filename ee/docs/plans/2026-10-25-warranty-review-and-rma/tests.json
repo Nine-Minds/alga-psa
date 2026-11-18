@@ -1,0 +1,615 @@
+[
+  {
+    "id": "T001",
+    "level": "unit",
+    "proves": "The warranty-claim transition table accepts exactly the fourteen documented transitions, refuses every other (status, action) pair including closeRma from warranty_review, and never routes an asset-only case to a stock-unit action",
+    "testFile": "packages/inventory/src/lib/rma/stateMachine.unit.test.ts",
+    "featureIds": [
+      "F005"
+    ],
+    "covers": [
+      "F005.1",
+      "F005.2",
+      "F005.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T002",
+    "level": "unit",
+    "proves": "Zod schemas for the claim inputs: denial requires a reason, shipment requires vendor/carrier/tracking, approval accepts only the two tracks, replacement requires a serial, and unknown keys are rejected",
+    "testFile": "packages/inventory/src/lib/rma/warrantySchemas.unit.test.ts",
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F010",
+      "F011"
+    ],
+    "covers": [
+      "F010.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T003",
+    "level": "unit",
+    "proves": "The INVENTORY_RMA_UPDATED payload builder emits the documented fields and validates against the event schema; the event is registered in eventBusSchema and workflowEventCatalog",
+    "testFile": "packages/inventory/src/lib/rma/rmaEventPayload.unit.test.ts",
+    "featureIds": [
+      "F024"
+    ],
+    "covers": [
+      "F024.1"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T004",
+    "level": "unit",
+    "proves": "buildRmaLabelViewModel maps a case row to identifier=rma_number, title=device, detail=vendor, secondaryIdentifier=asset tag, serialSuffix (last 4 only) and url=recordUrl('rma', id)",
+    "testFile": "packages/inventory/src/lib/rma/rmaLabelViewModel.unit.test.ts",
+    "featureIds": [
+      "F022"
+    ],
+    "covers": [
+      "F022.2"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/inventory/src/lib/rmaPrintData.unit.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T005",
+    "level": "unit",
+    "proves": "The standard RMA work-tag template is registered under the work-tag document type, maps to the rma-work-tag class, and addresses only label.* bindings",
+    "testFile": "packages/billing/src/lib/label-template-ast/standardTemplates.rma.test.ts",
+    "featureIds": [
+      "F022"
+    ],
+    "covers": [
+      "F022.1"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T006",
+    "level": "unit",
+    "proves": "The document-template registry exposes rma-return-slip with its own bindings, sample data, standard template and printGeometry 'document', and the designer kind resolver recognises its binding catalog",
+    "testFile": "packages/billing/src/lib/document-templates/registry.rmaReturnSlip.test.ts",
+    "featureIds": [
+      "F023"
+    ],
+    "covers": [
+      "F023.1"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/billing/tests/rmaTemplates.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T007",
+    "level": "unit",
+    "proves": "shouldSkipApiKeyAuth returns true for the RMA document route and false for other RMA paths, so the browser session cookie reaches the handler and API-key auth still applies elsewhere",
+    "testFile": "server/src/test/unit/middleware.apiKeyAuth.test.ts",
+    "featureIds": [
+      "F023"
+    ],
+    "covers": [
+      "F023.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T008",
+    "level": "unit",
+    "proves": "The RMA manager's status labels, badge variants and ?status= filter accept exactly the statuses the DB CHECK allows (including warranty_review and repaired, excluding dead_unit_returned), and the RMA # column renders rma_number",
+    "testFile": "packages/inventory/src/components/RmaManager.warranty.test.tsx",
+    "featureIds": [
+      "F003",
+      "F004"
+    ],
+    "covers": [
+      "F003.2",
+      "F004.1",
+      "F004.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/components/RmaManager.warranty.test.tsx",
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T009",
+    "level": "unit",
+    "proves": "The asset Warranty card renders warranty end, vendor, ownership and claim history, Start warranty claim only navigates with ?assetId=, and the RMA badge shows open claims and renders nothing on refusal",
+    "testFile": "packages/assets/src/components/warranty/WarrantyCard.test.tsx",
+    "featureIds": [
+      "F020"
+    ],
+    "covers": [
+      "F020.1",
+      "F020.2",
+      "F020.3"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/assets/src/components/warranty/warrantyDisplay.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T010",
+    "level": "unit",
+    "proves": "All new copy resolves through rma.* and warranty.* keys present in every locale directory; no new component contains a hardcoded user-facing English string",
+    "testFile": "server/src/test/unit/warrantyRma.i18n.test.ts",
+    "featureIds": [
+      "F028"
+    ],
+    "covers": [
+      "F028.1",
+      "F028.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T011",
+    "level": "integration",
+    "proves": "Against a migrated database: every new rma_cases column exists with its CHECK, rma_number is NOT NULL and unique, closed rows backfill closed_reason resolved, the ticket/custody/user FKs are composite and tenant-inclusive, rma_events exists and is registered for tenant scoping, and the migration re-runs cleanly and rolls back",
+    "testFile": "server/src/test/integration/warrantyRmaSchema.integration.test.ts",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004"
+    ],
+    "covers": [
+      "F001.1",
+      "F001.2",
+      "F001.3",
+      "F002.1",
+      "F004.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/warrantyRmaSchema.db.test.ts + packages/inventory/src/actions/warrantyRmaMigration.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB); migration up/down/up on c5_migration_test (dropped afterwards)"
+  },
+  {
+    "id": "T012",
+    "level": "integration",
+    "proves": "An UPDATE or DELETE on rma_events raises the append-only error on plain Postgres, and only recordRmaEvent inserts (insert-only path)",
+    "testFile": "server/src/test/integration/warrantyRmaEvents.integration.test.ts",
+    "featureIds": [
+      "F002"
+    ],
+    "covers": [
+      "F002.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/warrantyRmaSchema.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T013",
+    "level": "integration",
+    "proves": "RMA numbering: a fresh tenant gets RMA-00001 then RMA-00002; a tenant with backfilled rows continues above the maximum; the list and detail reads return rma_number",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F003"
+    ],
+    "covers": [
+      "F003.1",
+      "F003.2"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T014",
+    "level": "integration",
+    "proves": "Opening a claim: derives client/ticket/custody from the asset and its open episode, allocates a number, writes one opened event and publishes INVENTORY_RMA_CREATED after commit; refuses a stock-unit-backed asset, an unreadable asset, a missing asset, an asset with no client, and a ticket whose client differs",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F006"
+    ],
+    "covers": [
+      "F006.1",
+      "F006.2",
+      "F006.3"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T015",
+    "level": "integration",
+    "proves": "Approval (both tracks), denial and cancellation set the documented status, outcome, decision fields, closed_reason and events, and are refused from the wrong source status or without a denial reason",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F007",
+      "F008"
+    ],
+    "covers": [
+      "F007.1",
+      "F007.2",
+      "F007.3",
+      "F008.1",
+      "F008.2"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T016",
+    "level": "integration",
+    "proves": "Mark received requires an in-office custody episode and writes no stock rows; shipping persists vendor, carrier, tracking, return_by and outbound_shipped_at and moves custody to with_vendor; missing fields are refused before any write",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F009",
+      "F010"
+    ],
+    "covers": [
+      "F009.1",
+      "F009.2",
+      "F010.1",
+      "F010.2",
+      "F010.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T017",
+    "level": "integration",
+    "proves": "Replacement and repair: the same asset row is updated (no new assets or stock rows), previous values land in asset_history warranty_replacement, inbound fields and events are written, custody returns to in_office, and ASSET_UPDATED publishes after commit",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F011",
+      "F012",
+      "F025"
+    ],
+    "covers": [
+      "F011.1",
+      "F011.2",
+      "F011.3",
+      "F012.1",
+      "F012.2",
+      "F025.1",
+      "F025.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T018",
+    "level": "integration",
+    "proves": "Vendor credit closes custody as disposed with a custody_disposed history row and no invoice/charge/stock rows; return-to-client closes the case as resolved and closes custody as returned_to_client with the held_by_msp\u2192active rule, and is refused from every other status",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F013",
+      "F014"
+    ],
+    "covers": [
+      "F013.1",
+      "F013.2",
+      "F014.1",
+      "F014.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T019",
+    "level": "integration",
+    "proves": "closeRma stores the reason and writes a closed event, refuses warranty_review, and is a no-op on an already closed case; existing stock-unit closures still work",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F015"
+    ],
+    "covers": [
+      "F015.1",
+      "F015.2",
+      "F015.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T020",
+    "level": "integration",
+    "proves": "The warranty permission resource is created and granted for existing tenants and by the catalog for new ones; a technician with warranty:update can transition claims, without it the action refuses before writing, and a role with only inventory:read still lists RMAs",
+    "testFile": "server/src/test/integration/warrantyRmaPermissions.integration.test.ts",
+    "featureIds": [
+      "F016"
+    ],
+    "covers": [
+      "F016.1",
+      "F016.2",
+      "F016.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyPermissions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T021",
+    "level": "integration",
+    "proves": "List and getRmaCase hide a case whose linked asset the caller cannot read, identically to a missing case, while rows without asset_id keep today's visibility",
+    "testFile": "server/src/test/integration/warrantyRmaPermissions.integration.test.ts",
+    "featureIds": [
+      "F017"
+    ],
+    "covers": [
+      "F017.1",
+      "F017.2",
+      "F017.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyPermissions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T022",
+    "level": "integration",
+    "proves": "Row counts in stock_units, stock_movements, stock_levels, product_inventory_settings, invoice_charges and time_entries are identical before and after the complete open\u2192approve\u2192receive\u2192ship\u2192replacement\u2192return and open\u2192credit flows",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F029"
+    ],
+    "covers": [
+      "F029.1"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaWarrantyActions.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T023",
+    "level": "integration",
+    "proves": "getAssetInventoryProvenance returns RMA history for an asset with no service_id and no stock_unit_id, and reports rma_number separately from the vendor reference",
+    "testFile": "server/src/test/integration/assetWarrantyProvenance.integration.test.ts",
+    "featureIds": [
+      "F021"
+    ],
+    "covers": [
+      "F021.1",
+      "F021.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/assets/src/actions/assetWarrantyProvenance.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T024",
+    "level": "integration",
+    "proves": "The RMA label provider returns the expected view model, returns null for a missing case, a caller without warranty:read and an asset the caller cannot read, and preserves input order in a batch",
+    "testFile": "server/src/test/integration/rmaLabelProvider.integration.test.ts",
+    "featureIds": [
+      "F022"
+    ],
+    "covers": [
+      "F022.2",
+      "F022.3"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/lib/rmaLabelProvider.db.test.ts",
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T025",
+    "level": "integration",
+    "proves": "The return-slip route rejects unauthenticated callers and callers without warranty:read or asset access with no record data, and the rendered slip contains rma_number, vendor/ship-to, vendor case, device identity, custody accessories, fault, return_by and the RMA QR",
+    "testFile": "server/src/test/unit/api/rmaDocumentRoute.test.ts",
+    "featureIds": [
+      "F023"
+    ],
+    "covers": [
+      "F023.2",
+      "F023.3"
+    ],
+    "implemented": true,
+    "actualTestFile": "server/src/test/unit/inventoryRmaDocumentRoute.test.ts",
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T026",
+    "level": "unit",
+    "proves": "Static checks: no file in packages/inventory/src/lib/rma/ or rmaWarrantyActions.ts calls recordStockMovement or imports a stock ledger writer; no component imports labelPrintClient; labelPrintClient.ts is gone and its LEVERAGE marker with it",
+    "testFile": "server/src/test/unit/warrantyRma.static.test.ts",
+    "featureIds": [
+      "F005",
+      "F027"
+    ],
+    "covers": [
+      "F005.3",
+      "F027.1",
+      "F027.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T027",
+    "level": "integration",
+    "proves": "The vendor-case mirror adds exactly one external_entity_links row through addExternalLink with the custom system and case reference, is idempotent for the same case, and is not written when only the RMA is saved",
+    "testFile": "server/src/test/integration/warrantyRma.integration.test.ts",
+    "featureIds": [
+      "F026"
+    ],
+    "covers": [
+      "F026.1",
+      "F026.2"
+    ],
+    "implemented": true,
+    "actualTestFile": "packages/inventory/src/actions/rmaActions.stockUnit.db.test.ts",
+    "verified": true,
+    "ranAgainst": "scratch Postgres c5_warranty_test (copy of dev DB)"
+  },
+  {
+    "id": "T028",
+    "level": "e2e",
+    "proves": "The RMA page renders the warranty view with the new statuses and RMA numbers, the New warranty claim dialog lists held equipment and creates a claim, and /msp/inventory/rma?assetId=<id> opens that dialog prefilled",
+    "testFile": "server/src/test/e2e/warranty-rma.playwright.test.ts",
+    "featureIds": [
+      "F018",
+      "F019"
+    ],
+    "covers": [
+      "F018.1",
+      "F018.2",
+      "F018.3",
+      "F019.5"
+    ],
+    "coversOnlyAtE2E": [
+      "F018.3",
+      "F019.5"
+    ],
+    "implemented": true,
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
+  },
+  {
+    "id": "T029",
+    "level": "unit",
+    "proves": "The RMA detail warranty panel renders the decision, vendor case, shipping and return-by; offers exactly the actions the state machine allows for the current status; links to readable asset and ticket records; and exposes the print actions only where they apply",
+    "testFile": "packages/inventory/src/components/rma/RmaWarrantyPanel.test.tsx",
+    "featureIds": [
+      "F019"
+    ],
+    "covers": [
+      "F019.1",
+      "F019.2",
+      "F019.3",
+      "F019.4"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/components/rma/RmaWarrantyPanel.test.tsx",
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T030",
+    "level": "unit",
+    "proves": "A publish failure for INVENTORY_RMA_UPDATED is logged and the committed transition stands; each transition publishes exactly once after commit",
+    "testFile": "packages/inventory/src/lib/rma/publishRmaUpdated.unit.test.ts",
+    "featureIds": [
+      "F024"
+    ],
+    "covers": [
+      "F024.2"
+    ],
+    "implemented": true,
+    "verified": true,
+    "actualTestFile": "packages/inventory/src/lib/rma/publishRmaUpdated.unit.test.ts",
+    "ranAgainst": "vitest, no DB"
+  },
+  {
+    "id": "T031",
+    "level": "e2e",
+    "proves": "The ticket's associated-asset row shows the RMA chip for an asset with an open claim, and the chip is absent after the claim closes",
+    "testFile": "server/src/test/e2e/warranty-rma.playwright.test.ts",
+    "featureIds": [
+      "F020"
+    ],
+    "covers": [
+      "F020.4"
+    ],
+    "coversOnlyAtE2E": [
+      "F020.4"
+    ],
+    "implemented": true,
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
+  },
+  {
+    "id": "T032",
+    "level": "e2e",
+    "proves": "Print return slip from the RMA detail dialog downloads a PDF whose text contains the case number, vendor case and return-by date",
+    "testFile": "server/src/test/e2e/warranty-rma.playwright.test.ts",
+    "featureIds": [
+      "F023"
+    ],
+    "covers": [
+      "F023.4"
+    ],
+    "coversOnlyAtE2E": [
+      "F023.4"
+    ],
+    "implemented": true,
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
+  },
+  {
+    "id": "T033",
+    "level": "e2e",
+    "proves": "The standard RMA work tag renders on a 4x2 in cell, its QR decodes to the canonical /msp/inventory/rma?rmaId= URL, and all text stays inside the cell",
+    "testFile": "packages/billing/src/lib/label-batch/labelBatch.e2e.test.ts",
+    "featureIds": [
+      "F022"
+    ],
+    "covers": [
+      "F022.4"
+    ],
+    "coversOnlyAtE2E": [
+      "F022.4"
+    ],
+    "implemented": true,
+    "verified": true,
+    "ranAgainst": "vitest, no DB",
+    "note": "RMA describe block added to labelBatch.e2e.test.ts (jsqr decode); PDF render also in packages/billing/tests/rmaDocumentActions.pdf.e2e.test.ts"
+  },
+  {
+    "id": "T034",
+    "level": "e2e",
+    "proves": "The full Dell scenario: receive into custody, open a claim, approve, print the tag, ship with tracking, receive a replacement, return to client, close; custody and the equipment queue reflect each step and no stock or billing screen changes",
+    "testFile": "server/src/test/e2e/warranty-rma.playwright.test.ts",
+    "featureIds": [
+      "F029"
+    ],
+    "covers": [
+      "F029.2"
+    ],
+    "coversOnlyAtE2E": [
+      "F029.2"
+    ],
+    "implemented": true,
+    "verified": false,
+    "note": "UNVERIFIED: Playwright spec written, not run (no app server). Selectors and auth setup unchecked."
+  }
+]

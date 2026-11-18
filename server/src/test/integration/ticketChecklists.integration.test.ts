@@ -12,7 +12,7 @@ const userRef = vi.hoisted(() => ({
   user: null as any,
 }));
 
-const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const hasPermissionMock = vi.hoisted(() => vi.fn(async (_user: unknown, _resource: string, _action: string) => true));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -79,12 +79,20 @@ import {
   createChecklistTemplate,
   updateChecklistTemplate,
   getChecklistTemplates,
+  getChecklistTemplatesForTicket,
+  getChecklistTemplateOptionsForEditor,
+  getChecklistRuleClientNames,
+  getChecklistRuleServiceRequestDefinitions,
+  reorderChecklistTemplateItems,
+  getChecklistTemplateApplyRules,
+  deleteChecklistTemplateApplyRule,
+  deleteChecklistTemplate,
   duplicateChecklistTemplateToClient,
   addChecklistTemplateItem,
   updateChecklistTemplateItem,
   deleteChecklistTemplateItem,
-  createChecklistTemplateApplyRule,
-  updateChecklistTemplateApplyRule,
+  createChecklistTemplateApplyRule as createPredicateRule,
+  updateChecklistTemplateApplyRule as updatePredicateRule,
 } from '../../../../packages/tickets/src/actions/checklists/checklistTemplateActions';
 import { applyChecklistTemplate } from '../../../../packages/tickets/src/actions/checklists/applyChecklistTemplate';
 import {
@@ -109,6 +117,15 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+import { legacyChecklistRuleToPredicate } from '../../../migrations/utils/checklistRulePredicate.cjs';
+import type { PredicateGroup } from '@alga-psa/predicates';
+const legacyInput = (input: Record<string, unknown>) => ({
+  where: legacyChecklistRuleToPredicate(input) as PredicateGroup,
+  ...(typeof input.is_enabled === 'boolean' ? { is_enabled: input.is_enabled } : {}),
+});
+const createChecklistTemplateApplyRule = (id: string, input: Record<string, unknown>) => createPredicateRule(id, legacyInput(input));
+const updateChecklistTemplateApplyRule = (id: string, input: Record<string, unknown>) => updatePredicateRule(id, legacyInput(input));
+
 const HOOK_TIMEOUT = 240_000;
 
 let db: Knex;
@@ -132,7 +149,7 @@ function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissio
 async function createTemplateWithItems(
   names: Array<{ name: string; required?: boolean }>
 ): Promise<string> {
-  const template = expectActionSuccess(await createChecklistTemplate({ name: `Template ${uuidv4().slice(0, 8)}` }));
+  const template = expectActionSuccess(await createChecklistTemplate({ client_id: null, name: `Template ${uuidv4().slice(0, 8)}` }));
   for (const item of names) {
     expectActionSuccess(
       await addChecklistTemplateItem(template.template_id, {
@@ -172,6 +189,21 @@ async function createTicketViaModel(
   input: { title: string; description?: string },
   options?: { serviceRequest?: { definitionId: string } }
 ): Promise<string> {
+  let submissionId: string | undefined;
+  if (options?.serviceRequest) {
+    const definitionId = options.serviceRequest.definitionId;
+    const version = await scopedDbFor(fixture.tenantId).table('service_request_definition_versions').where({ definition_id: definitionId }).first();
+    if (!version) {
+      const created = await insertServiceRequestDefinition(fixture.tenantId);
+      options.serviceRequest.definitionId = created.definitionId;
+    }
+    const linkedVersion = await scopedDbFor(fixture.tenantId).table('service_request_definition_versions').where({ definition_id: options.serviceRequest.definitionId }).first();
+    submissionId = uuidv4();
+    await scopedDbFor(fixture.tenantId).table('service_request_submissions').insert({
+      tenant: fixture.tenantId, submission_id: submissionId, definition_id: options.serviceRequest.definitionId,
+      definition_version_id: linkedVersion.version_id, client_id: localFixture.clientId, request_name: 'Checklist fixture', submitted_payload: '{}',
+    });
+  }
   const result = await db.transaction((trx) =>
     TicketModel.createTicket(
       {
@@ -189,7 +221,7 @@ async function createTicketViaModel(
       silentTicketCreation('checklist auto-apply fixture does not assert on ticket events'),
       undefined,
       fixture.userId,
-      options
+      submissionId ? { serviceRequestSubmissionId: submissionId } : undefined
     )
   );
   return result.ticket_id;
@@ -215,6 +247,7 @@ describe('ticket checklists', () => {
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
       user_id: seededUser.user_id,
+      tenant: seededUser.tenant,
       user_type: 'internal',
       first_name: seededUser.first_name ?? 'Test',
       last_name: seededUser.last_name ?? 'User',
@@ -231,6 +264,153 @@ describe('ticket checklists', () => {
   beforeEach(() => {
     hasPermissionMock.mockReset();
     hasPermissionMock.mockResolvedValue(true);
+    userRef.user = { ...userRef.user, user_type: 'internal' };
+  });
+
+  it('requires an MSP principal and ticket_settings:update for every template and rule mutation', async () => {
+    const templateId = uuidv4();
+    await scopedDbFor(fixture.tenantId).table('checklist_templates').insert({
+      tenant: fixture.tenantId,
+      template_id: templateId,
+      name: 'Protected tenant-wide template',
+      is_active: true,
+      client_id: null,
+    });
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      resource === 'ticket' && action === 'update'
+    );
+
+    const before = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
+    expect(await createChecklistTemplate({ client_id: null, name: 'Technician tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await addChecklistTemplateItem(templateId, { item_name: 'Tenant-wide required step' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await createChecklistTemplateApplyRule(templateId, { where: { join: 'and', clauses: [] } })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    const after = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
+    expect(Number(after?.count)).toBe(Number(before?.count));
+    expect(await scopedDbFor(fixture.tenantId).table('checklist_template_items').where({ template_id: templateId })).toHaveLength(0);
+    expect(await scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules').where({ template_id: templateId })).toHaveLength(0);
+    expect(hasPermissionMock).toHaveBeenCalledWith(userRef.user, 'ticket_settings', 'update');
+  });
+
+  it('refuses client principals even if their role permission resolver reports ticket settings access', async () => {
+    userRef.user = { ...userRef.user, user_type: 'client', clientId: fixture.clientId, contact_id: fixture.contactId };
+    const before = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
+    expect(await createChecklistTemplate({ client_id: null, name: 'Client tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    const after = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
+    expect(Number(after?.count)).toBe(Number(before?.count));
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it('allows an MSP administrator to create tenant-wide templates and requires ticket_settings:read for administration lists', async () => {
+    expect(hasPermissionMock).toHaveBeenCalledTimes(0);
+    const template = expectActionSuccess(await createChecklistTemplate({ client_id: null, name: 'Admin tenant-wide template' }));
+    expect(template.client_id).toBeNull();
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      resource === 'ticket_settings' && action === 'update'
+    );
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    hasPermissionMock.mockResolvedValue(true);
+    expect((await getChecklistTemplates({ includeInactive: true })).map((row) => row.template_id)).toContain(template.template_id);
+  });
+
+  it('rejects an always-true empty AND predicate on create and update', async () => {
+    const templateId = await createTemplateWithItems([{ name: 'Guarded rule step' }]);
+    expect(await createPredicateRule(templateId, { where: { join: 'and', clauses: [] } })).toMatchObject({
+      messageKey: 'features/tickets:errors.checklist.predicateInvalid',
+    });
+    const rule = expectActionSuccess(await createPredicateRule(templateId, {
+      where: { join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: fixture.boardId }] },
+      is_enabled: false,
+    }));
+    expect(await updatePredicateRule(rule.apply_rule_id, { where: { join: 'and', clauses: [] } })).toMatchObject({
+      messageKey: 'features/tickets:errors.checklist.predicateInvalid',
+    });
+    expect((await getChecklistTemplateApplyRules(templateId)).map((row) => row.apply_rule_id)).toEqual([rule.apply_rule_id]);
+  });
+
+  it.each(['internal', 'client'])('denies every settings mutation to an unauthorized %s principal without changing stored data', async (userType) => {
+    const templateId = await createTemplateWithItems([{ name: 'Protected item' }]);
+    const item = await scopedDbFor(fixture.tenantId).table('checklist_template_items').where({ template_id: templateId }).first();
+    const rule = expectActionSuccess(await createPredicateRule(templateId, {
+      where: { join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: fixture.boardId }] },
+    }));
+    const snapshot = async () => Promise.all([
+      scopedDbFor(fixture.tenantId).table('checklist_templates').orderBy('template_id'),
+      scopedDbFor(fixture.tenantId).table('checklist_template_items').where({ template_id: templateId }).orderBy('template_item_id'),
+      scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules').where({ template_id: templateId }).orderBy('apply_rule_id'),
+    ]);
+    const before = await snapshot();
+    userRef.user = { ...userRef.user, user_type: userType };
+    // A client with a misconfigured role is still not an MSP administrator.
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      userType === 'client' || (resource === 'ticket' && action === 'update')
+    );
+    const mutations = [
+      () => createChecklistTemplate({ name: 'Unauthorized', client_id: null }),
+      () => updateChecklistTemplate(templateId, { name: 'Unauthorized' }),
+      () => duplicateChecklistTemplateToClient(templateId, fixture.clientId),
+      () => deleteChecklistTemplate(templateId),
+      () => addChecklistTemplateItem(templateId, { item_name: 'Unauthorized' }),
+      () => updateChecklistTemplateItem(item.template_item_id, { item_name: 'Unauthorized' }),
+      () => deleteChecklistTemplateItem(item.template_item_id),
+      () => reorderChecklistTemplateItems(templateId, [item.template_item_id]),
+      () => createPredicateRule(templateId, { where: rule.where }),
+      () => updatePredicateRule(rule.apply_rule_id, { where: rule.where, is_enabled: false }),
+      () => deleteChecklistTemplateApplyRule(rule.apply_rule_id),
+    ];
+    for (const mutate of mutations) {
+      expect(await mutate()).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    }
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it.each(['internal', 'client'])('denies administrative reads to a %s without MSP settings update authority', async (userType) => {
+    userRef.user = { ...userRef.user, user_type: userType };
+    hasPermissionMock.mockImplementation(async (_user, _resource, action) => userType === 'client' || action === 'read');
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    await expect(getChecklistTemplateApplyRules()).rejects.toThrow(/Permission denied/);
+    expect(await getChecklistRuleClientNames([fixture.clientId])).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await getChecklistRuleServiceRequestDefinitions()).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+  });
+
+  it.each(['internal', 'client'])('denies manual application to a %s without MSP settings authority', async (userType) => {
+    const templateId = await createTemplateWithItems([{ name: 'Protected apply' }]);
+    const ticketId = await insertTicket(db, fixture);
+    userRef.user = { ...userRef.user, user_type: userType, clientId: fixture.clientId, contact_id: fixture.contactId };
+    hasPermissionMock.mockImplementation(async (_user, resource) => userType === 'client' || resource === 'ticket');
+    expect(await applyChecklistTemplate(ticketId, templateId)).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await appliedTemplateIds(ticketId)).toEqual([]);
+  });
+
+  it('requires explicit creation scope, allowing null only as an intentional tenant-wide choice', async () => {
+    // @ts-expect-error Server actions must reject malformed runtime callers too.
+    expect(await createChecklistTemplate({ name: 'Missing scope' })).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientInvalid' });
+    expect(await createChecklistTemplate({ name: 'Empty scope', client_id: '' })).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientInvalid' });
+    expect(expectActionSuccess(await createChecklistTemplate({ name: 'Explicit scope', client_id: null })).client_id).toBeNull();
+  });
+
+  it.each(['recurring_ticket', 'ticket_template'] as const)('provides scoped options under %s permissions without settings access', async (resource) => {
+    const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const wide = expectActionSuccess(await createChecklistTemplate({ name: 'Wide choice', client_id: null }));
+    const mine = expectActionSuccess(await createChecklistTemplate({ name: 'Client choice', client_id: fixture.clientId }));
+    const theirs = expectActionSuccess(await createChecklistTemplate({ name: 'Other choice', client_id: other.clientId }));
+    const inactive = expectActionSuccess(await createChecklistTemplate({ name: 'Inactive choice', client_id: fixture.clientId, is_active: false }));
+    hasPermissionMock.mockImplementation(async (_user, requestedResource) => requestedResource === resource);
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    const options = await getChecklistTemplateOptionsForEditor({ resource, clientId: fixture.clientId });
+    expect(options.map((option) => option.template_id)).toEqual(expect.arrayContaining([wide.template_id, mine.template_id]));
+    expect(options.map((option) => option.template_id)).not.toContain(theirs.template_id);
+    expect(options.map((option) => option.template_id)).not.toContain(inactive.template_id);
+    expect(options.find((option) => option.template_id === mine.template_id)).toEqual({
+      template_id: mine.template_id, name: mine.name, client_id: fixture.clientId, client_name: expect.any(String),
+    });
+    expect((await getChecklistTemplateOptionsForEditor({ resource, clientId: null })).every((option) => option.client_id === null)).toBe(true);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: uuidv4() })).rejects.toThrow();
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: null })).rejects.toThrow(/Permission denied/);
+    userRef.user = { ...userRef.user, user_type: 'client' };
+    hasPermissionMock.mockResolvedValue(true);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: fixture.clientId })).rejects.toThrow(/Permission denied/);
   });
 
   it('T022: checklist item lifecycle with persistent ordering and tenant scoping', async () => {
@@ -260,6 +440,20 @@ describe('ticket checklists', () => {
     });
   });
 
+  it('requires ticket read permission when the caller can otherwise access the ticket record', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    await addChecklistItem(ticketId, { item_name: 'Visible checklist step' });
+
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
+
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
+    expect(hasPermissionMock).toHaveBeenLastCalledWith(userRef.user, 'ticket', 'read');
+
+    hasPermissionMock.mockResolvedValue(true);
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
+  });
+
   it('T023: completion stamps accountability and audit rows preserve prior signoff', async () => {
     const ticketId = await insertTicket(db, fixture);
     const item = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Verify backups' }));
@@ -286,6 +480,58 @@ describe('ticket checklists', () => {
     expect(uncheckAudit.details.previous_completed_by).toBe(fixture.userId);
     expect(uncheckAudit.details.previous_completed_at).toBeTruthy();
     expect(uncheckAudit.actor_user_id).toBe(fixture.userId);
+  });
+
+  it('denies a client principal checklist access across ticket visibility boundaries', async () => {
+    const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const ticketId = await insertTicket(db, fixture);
+    const itemId = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Private checklist step' }))
+      .checklist_item_id;
+    const templateId = await createTemplateWithItems([{ name: 'Unauthorized template step' }]);
+    const originalUser = userRef.user;
+    userRef.user = {
+      user_id: uuidv4(),
+      user_type: 'client',
+      tenant: fixture.tenantId,
+      clientId: other.clientId,
+      contact_id: other.contactId,
+      roles: [],
+    };
+
+    try {
+      // Reads conceal inaccessible tickets; mutations return permission errors.
+      await expect(getTicketChecklistItems(ticketId)).resolves.toEqual([]);
+      expect(await addChecklistItem(ticketId, { item_name: 'Unauthorized add' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await updateChecklistItem(itemId, { item_name: 'Unauthorized update' })).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await setChecklistItemCompleted(itemId, true)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await deleteChecklistItem(itemId)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await reorderChecklistItems(ticketId, [itemId])).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+      expect(await applyChecklistTemplate(ticketId, templateId)).toMatchObject({ permissionError: expect.stringMatching(/permission denied/i) });
+
+      const stored = await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+        .where({ checklist_item_id: itemId }).first();
+      expect(stored).toMatchObject({ item_name: 'Private checklist step', completed: false });
+      expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items').where({ ticket_id: ticketId })).toHaveLength(1);
+    } finally {
+      userRef.user = originalUser;
+    }
+  });
+
+  it('rejects reorder lists containing items owned by another ticket', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    const otherTicketId = await insertTicket(db, fixture);
+    const ownedItem = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Owned item' }))
+      .checklist_item_id;
+    const foreignItem = expectActionSuccess(await addChecklistItem(otherTicketId, { item_name: 'Other ticket item' }))
+      .checklist_item_id;
+
+    expect(await reorderChecklistItems(ticketId, [ownedItem, foreignItem])).toMatchObject({
+      actionError: expect.stringMatching(/not found/i),
+    });
+    expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ checklist_item_id: ownedItem }).first()).toMatchObject({ order_number: 0 });
+    expect(await scopedDbFor(fixture.tenantId).table('ticket_checklist_items')
+      .where({ checklist_item_id: foreignItem }).first()).toMatchObject({ order_number: 0 });
   });
 
   it('T024: applying a template copies items idempotently and templates stack', async () => {
@@ -452,7 +698,7 @@ describe('ticket checklists', () => {
     expect(await setChecklistItemCompleted(item.checklist_item_id, true)).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
-    expect(await createChecklistTemplate({ name: 'x' })).toMatchObject({
+    expect(await createChecklistTemplate({ client_id: null, name: 'x' })).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
     expect(await createChecklistTemplateApplyRule(uuidv4(), {})).toMatchObject({
@@ -475,84 +721,58 @@ describe('ticket checklists', () => {
     const applied = await db.transaction((trx) =>
       applyMatchingChecklistTemplates(trx, localFixture.tenantId, {
         ticket_id: matchingTicket,
-        board_id: localFixture.boardId,
-        priority_id: localFixture.priorityId,
-        category_id: null,
-        subcategory_id: null,
+
       })
     );
     expect(applied).toBe(1);
 
     const wrongPriorityTicket = await insertTicket(db, localFixture);
+    await scopedDbFor(localFixture.tenantId).table('tickets').where({ ticket_id: wrongPriorityTicket }).update({ priority_id: fixture.priorityId });
     const notApplied = await db.transaction((trx) =>
       applyMatchingChecklistTemplates(trx, localFixture.tenantId, {
         ticket_id: wrongPriorityTicket,
-        board_id: localFixture.boardId,
-        priority_id: uuidv4(),
-        category_id: null,
-        subcategory_id: null,
+
       })
     );
     expect(notApplied).toBe(0);
   });
 
-  it('apply rules reject categories that are not on the rule board', async () => {
-    const sourceFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
-    const targetFixture = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
-    const insertCategory = async (boardId: string, name: string, parent?: string) => {
-      const categoryId = uuidv4();
-      await scopedDbFor(fixture.tenantId).table('categories').insert({
-        tenant: fixture.tenantId,
-        category_id: categoryId,
-        category_name: name,
-        board_id: boardId,
-        parent_category: parent ?? null,
-        created_by: fixture.userId,
-      });
-      return categoryId;
-    };
-    // Same names on both boards, as after a category copy.
-    const sourceHardware = await insertCategory(sourceFixture.boardId, 'Hardware');
-    const sourceLaptop = await insertCategory(sourceFixture.boardId, 'Laptop', sourceHardware);
-    const targetHardware = await insertCategory(targetFixture.boardId, 'Hardware');
-    const targetLaptop = await insertCategory(targetFixture.boardId, 'Laptop', targetHardware);
+  it('round-trips nested predicates through CRUD and maintains tag references transactionally', async () => {
+    const templateId = await createTemplateWithItems([{ name: 'Nested' }]);
+    const clientTag = uuidv4(), contactTag = uuidv4();
+    await scopedDbFor(fixture.tenantId).table('tag_definitions').insert([
+      { tenant: fixture.tenantId, tag_id: clientTag, tag_text: 'Reference client', tagged_type: 'client' },
+      { tenant: fixture.tenantId, tag_id: contactTag, tag_text: 'Reference contact', tagged_type: 'contact' },
+    ]);
+    const where: PredicateGroup = { join: 'and', clauses: [{ join: 'or', clauses: [
+      { path: 'client.tags', operator: 'in', value: [clientTag] },
+      { path: 'contact.tags', operator: 'not_in', value: [contactTag] },
+    ] }] };
+    const rule = expectActionSuccess(await createPredicateRule(templateId, { where, is_enabled: false }));
+    expect((await getChecklistTemplateApplyRules(templateId))[0].where).toEqual(where);
+    const refs = () => scopedDbFor(fixture.tenantId).table('tag_references').where({ referrer_type: 'checklist_template_apply_rule', referrer_id: rule.apply_rule_id });
+    expect((await refs()).map((row: any) => row.tag_id).sort()).toEqual([clientTag, contactTag].sort());
+    expect(await updatePredicateRule(rule.apply_rule_id, { where: { join: 'and', clauses: [] }, is_enabled: false })).toMatchObject({
+      messageKey: 'features/tickets:errors.checklist.predicateInvalid',
+    });
+    expect(await refs()).toHaveLength(2);
+    expectActionSuccess(await updatePredicateRule(rule.apply_rule_id, { where, is_enabled: false }));
+    await deleteChecklistTemplateApplyRule(rule.apply_rule_id);
+    expect(await refs()).toHaveLength(0);
+    const second = expectActionSuccess(await createPredicateRule(templateId, { where, is_enabled: false }));
+    await deleteChecklistTemplate(templateId);
+    expect(await scopedDbFor(fixture.tenantId).table('tag_references').where({ referrer_id: second.apply_rule_id })).toHaveLength(0);
+  });
 
-    const templateId = await createTemplateWithItems([{ name: 'Scoped step' }]);
-
-    expect(
-      await createChecklistTemplateApplyRule(templateId, { board_id: targetFixture.boardId, category_id: sourceHardware })
-    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryBoardMismatch' });
-    expect(
-      await createChecklistTemplateApplyRule(templateId, {
-        board_id: targetFixture.boardId,
-        category_id: targetHardware,
-        subcategory_id: sourceLaptop,
-      })
-    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleSubcategoryInvalid' });
-    expect(
-      await createChecklistTemplateApplyRule(templateId, { board_id: targetFixture.boardId, category_id: targetLaptop })
-    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryInvalid' });
-    expect(
-      await createChecklistTemplateApplyRule(templateId, { subcategory_id: targetLaptop })
-    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleSubcategoryRequiresCategory' });
-
-    const rule = expectActionSuccess(
-      await createChecklistTemplateApplyRule(templateId, {
-        board_id: targetFixture.boardId,
-        category_id: targetHardware,
-        subcategory_id: targetLaptop,
-      })
-    );
-    // With no board, any board's category is allowed.
-    expectActionSuccess(await createChecklistTemplateApplyRule(templateId, { category_id: sourceHardware }));
-
-    expect(
-      await updateChecklistTemplateApplyRule(rule.apply_rule_id, {
-        board_id: sourceFixture.boardId,
-        category_id: targetHardware,
-        subcategory_id: targetLaptop,
-      })
-    ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleCategoryBoardMismatch' });
+  it('rejects invalid predicate paths, values and versions on save', async () => {
+    const templateId = await createTemplateWithItems([{ name: 'Validation' }]);
+    for (const input of [
+      { where: { join: 'and', clauses: [{ path: 'unknown.path', operator: 'equals', value: 'x' }] } },
+      { where: { join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: 'not-a-uuid' }] } },
+      { where_version: 2, where: { join: 'and', clauses: [] } },
+    ]) {
+      expect(await createPredicateRule(templateId, input as any)).toMatchObject({ messageKey: 'features/tickets:errors.checklist.predicateInvalid' });
+    }
   });
   describe('client / service request / keyword matchers', () => {
     // Each case gets its own fixture (own board + client) so rules registered
@@ -583,16 +803,11 @@ describe('ticket checklists', () => {
           keywords: ['  Onboarding ', 'onboarding', ''],
         })
       );
-      expect(rule.client_ids).toEqual([localFixture.clientId]);
-      expect(rule.ticket_origins).toEqual(['api']);
-      expect(rule.from_service_request).toBe(true);
-      expect(rule.keywords).toEqual(['Onboarding']);
-      expect(rule.keyword_mode).toBe('any');
-      expect(rule.keyword_target).toBe('title_and_description');
-
-      expect(
-        await createChecklistTemplateApplyRule(templateId, { keywords: Array.from({ length: 21 }, (_, i) => `k${i}`) })
-      ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleTooManyKeywords' });
+      expect(rule.where).toEqual(legacyChecklistRuleToPredicate({
+        client_ids: [localFixture.clientId, localFixture.clientId], ticket_origins: ['api'],
+        service_request_definition_id: definitionId, keywords: ['  Onboarding ', 'onboarding', ''],
+      }));
+      expect(rule.where_version).toBe(1);
     });
 
     it('card example: create-path service request context applies the checklist', async () => {
@@ -600,8 +815,7 @@ describe('ticket checklists', () => {
       const { definitionId } = await insertServiceRequestDefinition(fixture.tenantId);
       const templateId = await cardRule(localFixture, definitionId);
 
-      // The submission row does not link to the ticket yet at create time, so
-      // only the explicit context can make this match.
+      // The model links the submission before evaluating the compiled rule.
       const ticketId = await createTicketViaModel(
         localFixture,
         { title: 'New onboarding for Bob' },
@@ -746,9 +960,7 @@ describe('ticket checklists', () => {
       const rule = expectActionSuccess(
         await createChecklistTemplateApplyRule(templateId, { board_id: localFixture.boardId })
       );
-      expect(rule.client_ids).toBeNull();
-      expect(rule.from_service_request).toBe(false);
-      expect(rule.keywords).toBeNull();
+      expect(rule.where).toEqual(legacyChecklistRuleToPredicate({ board_id: localFixture.boardId }));
 
       const ticketId = await createTicketViaModel(localFixture, { title: 'Anything at all' });
       expect(await appliedTemplateIds(ticketId)).toContain(templateId);
@@ -800,12 +1012,12 @@ describe('ticket checklists', () => {
         const templateId = await createScopedTemplate(fixture.clientId);
         expect(
           await createChecklistTemplateApplyRule(templateId, { client_ids: [fixture.clientId, other.clientId] })
-        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope' });
+        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.predicateClientOutsideScope' });
 
-        const rule = expectActionSuccess(await createChecklistTemplateApplyRule(templateId, {}));
+        const rule = expectActionSuccess(await createChecklistTemplateApplyRule(templateId, { client_ids: [fixture.clientId] }));
         expect(
           await updateChecklistTemplateApplyRule(rule.apply_rule_id, { client_ids: [other.clientId] })
-        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope' });
+        ).toMatchObject({ messageKey: 'features/tickets:errors.checklist.predicateClientOutsideScope' });
       });
 
       it('stores a rule naming only the owner as "any client", and it fires only on the owner\'s tickets', async () => {
@@ -815,7 +1027,7 @@ describe('ticket checklists', () => {
         const rule = expectActionSuccess(
           await createChecklistTemplateApplyRule(templateId, { client_ids: [owner.clientId], keywords: ['owner-only-kw'] })
         );
-        expect(rule.client_ids).toBeNull();
+        expect(rule.where).toEqual(legacyChecklistRuleToPredicate({ keywords: ['owner-only-kw'] }));
 
         const ownerTicket = await createTicketViaModel(owner, { title: 'owner-only-kw request' });
         const otherTicket = await createTicketViaModel(other, { title: 'owner-only-kw request' });
@@ -830,7 +1042,7 @@ describe('ticket checklists', () => {
         await scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules').insert({
           tenant: fixture.tenantId,
           template_id: templateId,
-          client_ids: db.raw('ARRAY[?]::uuid[]', [other.clientId]),
+          where: JSON.stringify({ join: 'and', clauses: [{ path: 'client.id', operator: 'in', value: [other.clientId] }] }),
           is_enabled: true,
         });
         const otherTicket = await createTicketViaModel(other, { title: 'Anything' });
@@ -846,12 +1058,12 @@ describe('ticket checklists', () => {
         expectActionSuccess(await updateChecklistTemplate(ok, { client_id: owner.clientId }));
         const okRuleAfter = await scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules')
           .where({ apply_rule_id: okRule.apply_rule_id }).first();
-        expect(okRuleAfter.client_ids).toBeNull();
+        expect(okRuleAfter.where).toEqual({ join: 'and', clauses: [] });
 
         const blocked = await createScopedTemplate(null);
         expectActionSuccess(await createChecklistTemplateApplyRule(blocked, { client_ids: [owner.clientId, other.clientId] }));
         expect(await updateChecklistTemplate(blocked, { client_id: owner.clientId })).toMatchObject({
-          messageKey: 'features/tickets:errors.checklist.templateRulesTargetOtherClients',
+          messageKey: 'features/tickets:errors.checklist.predicateClientOutsideScope',
         });
         const unchanged = await scopedDbFor(fixture.tenantId).table('checklist_templates').where({ template_id: blocked }).first();
         expect(unchanged.client_id).toBeNull();
@@ -870,10 +1082,7 @@ describe('ticket checklists', () => {
       const applied = await db.transaction((trx) =>
         applyMatchingChecklistTemplates(trx, ruleFixture.tenantId, {
           ticket_id: ticketId,
-          board_id: ruleFixture.boardId,
-          priority_id: ruleFixture.priorityId,
-          category_id: null,
-          subcategory_id: null,
+
         })
       );
       // Only the tenant-wide template applied; the scoped one was skipped without error.
@@ -901,7 +1110,7 @@ describe('ticket checklists', () => {
       const wide = await createScopedTemplate(null);
       const ticketId = await insertTicket(db, fixture);
 
-      const picker = (await getChecklistTemplates({ forTicketId: ticketId })).map((t) => t.template_id);
+      const picker = (await getChecklistTemplatesForTicket(ticketId)).map((t) => t.template_id);
       expect(picker).toContain(mine);
       expect(picker).toContain(wide);
       expect(picker).not.toContain(theirs);
@@ -911,6 +1120,25 @@ describe('ticket checklists', () => {
       const withName = (await getChecklistTemplates({ clientId: other.clientId }))[0];
       expect(withName).toMatchObject({ template_id: theirs, client_id: other.clientId });
       expect(withName.client_name).toBeTruthy();
+    });
+
+    it('ticket-picker reads require ticket read permission and per-ticket record access', async () => {
+      const ticketId = await insertTicket(db, fixture);
+      hasPermissionMock.mockResolvedValue(false);
+      await expect(getChecklistTemplatesForTicket(ticketId)).rejects.toThrow(/Permission denied/);
+
+      const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+      userRef.user = {
+        ...userRef.user,
+        user_type: 'client',
+        clientId: other.clientId,
+        contact_id: other.contactId,
+      };
+      hasPermissionMock.mockResolvedValue(true);
+      await expect(getChecklistTemplatesForTicket(ticketId)).rejects.toThrow(/Permission denied/);
+      expect(await applyChecklistTemplate(ticketId, uuidv4())).toMatchObject({
+        permissionError: expect.stringMatching(/Permission denied/),
+      });
     });
 
     it('rejects a client that does not belong to the tenant', async () => {

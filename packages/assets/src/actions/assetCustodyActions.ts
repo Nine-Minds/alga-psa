@@ -48,7 +48,7 @@ import { toCustodyResult, type CustodyActionResult } from '../lib/custody/action
 
 type Denied = ActionPermissionError;
 
-const idSchema = z.string().uuid();
+const idSchema = z.string().guid();
 
 async function denyUnless(user: Parameters<typeof hasPermission>[0], action: 'read' | 'update'): Promise<Denied | null> {
   return (await hasPermission(user, 'asset', action))

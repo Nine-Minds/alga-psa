@@ -1,6 +1,8 @@
 import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { DisplayTagBadges, type DisplayTag } from "../ui/components/DisplayTagBadges";
+import { mergePartyDisplayTags } from "./ticketRowTags";
 import { buildMapsUrl } from "../urls/mapsUrl";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
@@ -28,6 +30,7 @@ import { useCommentDraft } from "../features/ticketDetail/hooks/useCommentDraft"
 import { useDescriptionEditor } from "../features/ticketDetail/hooks/useDescriptionEditor";
 import { useTicketStatus } from "../features/ticketDetail/hooks/useTicketStatus";
 import { useTicketPriority } from "../features/ticketDetail/hooks/useTicketPriority";
+import { useTicketCategory } from "../features/ticketDetail/hooks/useTicketCategory";
 import { useTicketDueDate } from "../features/ticketDetail/hooks/useTicketDueDate";
 import { useTicketWatch } from "../features/ticketDetail/hooks/useTicketWatch";
 import { useTimeEntry } from "../features/ticketDetail/hooks/useTimeEntry";
@@ -53,6 +56,7 @@ import { resyncScheduleReminders } from "../notifications/reminderSync";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
+import { CategoryPickerModal } from "../features/ticketDetail/components/CategoryPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
@@ -60,9 +64,9 @@ import { ContactFormModal } from "../features/contacts/components/ContactFormMod
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "../features/ticketDetail/components/TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "../features/ticketDetail/components/useTicketNotificationSuppression";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
 import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
@@ -72,6 +76,7 @@ import { useTimer } from "../features/timer/TimerContext";
 
 // Utils
 import { getDueDateIso, getWatcherUserIds, isoToDateInput, stringOrDash } from "../features/ticketDetail/utils";
+import { selectedTicketCategoryId, ticketCategoryLabel } from "../features/ticketDetail/ticketCategory";
 
 // Re-exports for backward compatibility
 export { CommentComposer } from "../features/ticketDetail/components/CommentComposer";
@@ -244,6 +249,7 @@ export function TicketDetailBody({
     },
   });
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
+  const categoryHook = useTicketCategory({ ...deps, fetchTicket, boardId });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
   const [timeEntriesRefreshKey, setTimeEntriesRefreshKey] = useState(0);
@@ -292,10 +298,19 @@ export function TicketDetailBody({
 
   const [composerCollapsed, setComposerCollapsed] = useState(true);
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
-  const [titleSuppression, setTitleSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const {
+    suppression: titleSuppression,
+    setSuppression: setTitleSuppression,
+    reset: resetTitleSuppression,
+  } = useTicketNotificationSuppression();
 
-  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+  const renderEntityValue = useCallback((
+    name: string | null | undefined,
+    imageUri: string | null | undefined,
+    accessibilityLabel: string,
+    displayTags?: readonly DisplayTag[] | null,
+  ) => (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm }}>
       <Avatar
         name={name ?? undefined}
         imageUri={imageUri ?? undefined}
@@ -306,6 +321,7 @@ export function TicketDetailBody({
       <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
         {stringOrDash(name)}
       </Text>
+      <DisplayTagBadges tags={displayTags} />
     </View>
   ), [colors.text, session?.accessToken, spacing.sm, typography.body]);
 
@@ -418,11 +434,14 @@ export function TicketDetailBody({
             void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
           }}
         />
-        <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-          {ticket.ticket_number}
-          {ticket.client_name ? ` • ${ticket.client_name}` : ""}
-          {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
-        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {ticket.ticket_number}
+            {ticket.client_name ? ` • ${ticket.client_name}` : ""}
+            {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
+          </Text>
+          <DisplayTagBadges tags={mergePartyDisplayTags(ticket.contact_tags, ticket.client_tags)} />
+        </View>
         {titleHook.titleEditing ? (
           <View style={{ marginTop: 2 }}>
             <View>
@@ -451,15 +470,16 @@ export function TicketDetailBody({
               </Text>
             ) : null}
             <TicketUpdateFooter
+              idPrefix="ticket-title-update"
               suppression={titleSuppression}
               onSuppressionChange={setTitleSuppression}
               onCancel={() => {
                 titleHook.cancelTitleEditing();
-                setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                resetTitleSuppression();
               }}
               onApply={() => {
                 void titleHook.saveTitle(activeTicketNotificationSuppression(titleSuppression)).then((saved) => {
-                  if (saved) setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                  if (saved) resetTitleSuppression();
                 });
               }}
               applyLabel={t("detail.saveTitle", "Save title")}
@@ -470,7 +490,7 @@ export function TicketDetailBody({
         ) : (
           <Pressable
             onPress={() => {
-              setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+              resetTitleSuppression();
               titleHook.startTitleEditing();
             }}
             accessibilityRole="button"
@@ -646,6 +666,7 @@ export function TicketDetailBody({
               ticket.contact_name,
               typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
               t("detail.contact"),
+              ticket.contact_tags,
             )}
           >
             {contactPhone ? (
@@ -700,6 +721,7 @@ export function TicketDetailBody({
               ticket.client_name,
               typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
               t("detail.client"),
+              ticket.client_tags,
             )}
           >
             {clientPhone ? (
@@ -754,6 +776,24 @@ export function TicketDetailBody({
                 clientId={ticketClientId}
                 titleKey="notes.ticketTitle"
               />
+            ) : null}
+          </KeyValue>
+          <View style={{ height: spacing.sm }} />
+          <KeyValue
+            label={t("detail.category")}
+            value={stringOrDash(ticketCategoryLabel(ticket))}
+          >
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+              <ActionChip
+                label={t("detail.changeCategory")}
+                disabled={categoryHook.categoryUpdating}
+                onPress={() => void categoryHook.openCategoryPicker()}
+              />
+            </View>
+            {categoryHook.categoryUpdateError && !categoryHook.categoryPickerOpen ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {categoryHook.categoryUpdateError}
+              </Text>
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
@@ -878,6 +918,18 @@ export function TicketDetailBody({
         updateError={priorityHook.priorityUpdateError}
         onApply={(id, notificationSuppression) => void priorityHook.submitPriority(id, notificationSuppression)}
         onClose={() => priorityHook.setPriorityPickerOpen(false)}
+      />
+
+      <CategoryPickerModal
+        visible={categoryHook.categoryPickerOpen}
+        loading={categoryHook.categoryOptionsLoading}
+        error={categoryHook.categoryOptionsError}
+        categories={categoryHook.categoryOptions}
+        currentCategoryId={selectedTicketCategoryId(ticket)}
+        updating={categoryHook.categoryUpdating}
+        updateError={categoryHook.categoryUpdateError}
+        onApply={(categoryId, notificationSuppression) => void categoryHook.submitCategory(categoryId, notificationSuppression)}
+        onClose={() => categoryHook.setCategoryPickerOpen(false)}
       />
 
       <StatusPickerModal

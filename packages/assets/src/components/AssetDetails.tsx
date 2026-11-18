@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetStatusLabel } from '../lib/assetStatus';
 import React from 'react';
 import { Card, Flex, Text, Heading } from '@radix-ui/themes';
 import type { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '@alga-psa/types';
@@ -72,8 +73,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (match) => match.toUpperCase());
 
-  const getAssetStatusLabel = (status: Asset['status']) =>
-    t(`assetDetails.statuses.${status}`, { defaultValue: toTitleCase(status) });
+  const getAssetStatusLabel = useAssetStatusLabel();
 
   const getDeviceTypeLabel = (deviceType: NetworkDeviceAsset['device_type']) =>
     t(`assetDetails.deviceTypes.${deviceType}`, { defaultValue: toTitleCase(deviceType) });

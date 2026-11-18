@@ -19,18 +19,18 @@ const visibilityGroupSchema = z.object({
   ticketScope: z.enum(['client', 'contact']).default('client'),
   assetScope: z.enum(['client', 'contact']).default('client'),
   projectScope: z.enum(['client', 'contact']).default('client'),
-  boardIds: z.array(z.string().uuid()).default([]),
-  clientId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional()
+  boardIds: z.array(z.string().guid()).default([]),
+  clientId: z.string().guid().optional(),
+  contactId: z.string().guid().optional()
 });
 
 const visibilityAssignmentSchema = z.object({
-  contactId: z.string().uuid(),
-  groupId: z.string().uuid().nullable()
+  contactId: z.string().guid(),
+  groupId: z.string().guid().nullable()
 });
 
 const visibilityGroupIdSchema = z.object({
-  groupId: z.string().uuid()
+  groupId: z.string().guid()
 });
 
 type GroupManagementScope = {

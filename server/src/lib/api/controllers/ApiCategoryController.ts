@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { CategoryService } from '../services/CategoryService';
@@ -36,9 +37,6 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
 import {
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -88,7 +86,7 @@ export class ApiCategoryController extends ApiBaseController {
     }
 
     const knex = await getConnection(req.context.tenant);
-    const hasAccess = await hasPermission(req.context.user, resource, action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, resource, action, knex);
     if (!hasAccess) {
       const resourceLabel = resource.replace('_', ' ');
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${resourceLabel}`);
@@ -125,7 +123,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedQuery = serviceCategoryListQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -200,7 +198,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = createServiceCategorySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -238,7 +236,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = updateServiceCategorySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -308,7 +306,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedQuery = ticketCategoryListQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -383,7 +381,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = createTicketCategorySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -421,7 +419,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = updateTicketCategorySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -513,7 +511,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = moveCategorySchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }
@@ -559,7 +557,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedQuery = categorySearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -611,7 +609,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedQuery = categoryAnalyticsFilterSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -658,7 +656,7 @@ export class ApiCategoryController extends ApiBaseController {
             validatedData = bulkDeleteCategoriesSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Request validation failed', error.errors);
+              throw new ValidationError('Request validation failed', error.issues);
             }
             throw error;
           }

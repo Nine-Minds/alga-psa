@@ -3,6 +3,10 @@ import {
   allocateCentsByWeights,
   fixedMemberContributionCents,
   fixedRateBasisOf,
+  FixedMemberRatePairError,
+  fixedMemberRateProvenance,
+  resolveFixedMemberRatePair,
+  resolveFixedMemberRatePatch,
 } from '../fixedMemberRate';
 
 describe('fixedRateBasisOf', () => {
@@ -79,5 +83,73 @@ describe('allocateCentsByWeights', () => {
       { key: 'b', weight: 3 },
     ]);
     expect(proportions).toEqual([0.25, 0.75]);
+  });
+});
+
+describe('resolveFixedMemberRatePair', () => {
+  it('drops any stated basis for a NULL rate (catalog-priced)', () => {
+    expect(resolveFixedMemberRatePair({ base_rate: null, base_rate_basis: 'per_unit', pricing_basis: 'unit' }))
+      .toEqual({ base_rate: null, base_rate_basis: null });
+    expect(resolveFixedMemberRatePair({ base_rate_basis: 'share' })).toEqual({ base_rate: null, base_rate_basis: null });
+  });
+
+  it('keeps a stated basis with a rate, else the stored one; seats are per_unit', () => {
+    expect(resolveFixedMemberRatePair({ base_rate: 1500, base_rate_basis: 'share', pricing_basis: 'bundle' }))
+      .toEqual({ base_rate: 1500, base_rate_basis: 'share' });
+    expect(resolveFixedMemberRatePair({ base_rate: 1500, pricing_basis: 'bundle', storedBasis: 'share' }))
+      .toEqual({ base_rate: 1500, base_rate_basis: 'share' });
+    expect(resolveFixedMemberRatePair({ base_rate: 0, pricing_basis: 'unit' }))
+      .toEqual({ base_rate: 0, base_rate_basis: 'per_unit' });
+  });
+
+  it('refuses a rate with no meaning and a seat priced as a share, by name', () => {
+    expect(() => resolveFixedMemberRatePair({ base_rate: 100, pricing_basis: 'bundle' })).toThrow(FixedMemberRatePairError);
+    const error = (() => {
+      try { resolveFixedMemberRatePair({ base_rate: 100, base_rate_basis: 'share', pricing_basis: 'unit' }); }
+      catch (e) { return e as FixedMemberRatePairError; }
+    })();
+    expect(error).toBeInstanceOf(FixedMemberRatePairError);
+    expect(error?.statusCode).toBe(400);
+  });
+});
+
+describe('resolveFixedMemberRatePatch', () => {
+  const inherited = { base_rate: null, base_rate_basis: null, pricing_basis: 'unit' } as const;
+  const custom = { base_rate: '1500.00', base_rate_basis: 'per_unit', pricing_basis: 'bundle' } as const;
+
+  it('ignores a patch that touches neither column', () => {
+    expect(resolveFixedMemberRatePatch({}, custom)).toBeUndefined();
+  });
+
+  it('refuses a basis alone on a NULL-rate member (the incident shape)', () => {
+    expect(() => resolveFixedMemberRatePatch({ base_rate_basis: 'per_unit' }, inherited))
+      .toThrow('A fixed member base_rate_basis requires base_rate');
+  });
+
+  it('a NULL rate with an invented basis resolves to NULL/NULL', () => {
+    expect(resolveFixedMemberRatePatch({ base_rate: null, base_rate_basis: 'per_unit' }, inherited))
+      .toEqual({ base_rate: null, base_rate_basis: null });
+  });
+
+  it('re-states a basis for the stored rate', () => {
+    expect(resolveFixedMemberRatePatch({ base_rate_basis: 'share' }, custom)).toEqual({ base_rate: 1500, base_rate_basis: 'share' });
+  });
+
+  it('clearing the basis alone never drops a stored rate', () => {
+    expect(resolveFixedMemberRatePatch({ base_rate_basis: null }, custom)).toEqual({ base_rate: 1500, base_rate_basis: 'per_unit' });
+    expect(resolveFixedMemberRatePatch({ base_rate_basis: null }, inherited)).toEqual({ base_rate: null, base_rate_basis: null });
+  });
+
+  it('a new rate keeps the stored basis unless one is stated', () => {
+    expect(resolveFixedMemberRatePatch({ base_rate: 900 }, { ...custom, base_rate_basis: 'share' }))
+      .toEqual({ base_rate: 900, base_rate_basis: 'share' });
+    expect(resolveFixedMemberRatePatch({ base_rate: 900 }, inherited)).toEqual({ base_rate: 900, base_rate_basis: 'per_unit' });
+  });
+});
+
+describe('fixedMemberRateProvenance', () => {
+  it('a stored number is custom, NULL is inherited', () => {
+    expect(fixedMemberRateProvenance({ base_rate: 1, base_rate_basis: 'per_unit' })).toBe('custom');
+    expect(fixedMemberRateProvenance({ base_rate: null, base_rate_basis: null })).toBe('inherited');
   });
 });

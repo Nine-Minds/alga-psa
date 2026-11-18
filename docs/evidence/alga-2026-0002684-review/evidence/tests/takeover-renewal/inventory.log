@@ -1,0 +1,15 @@
+Command: npx --no-install vitest run src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts
+Working directory: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/server
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/server
+      Running tests with seed "1793153785194"
+
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+ ✓ |node| src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts (66 tests) 619ms 21 MB heap used
+   ✓ service-period-first billing plan artifacts > T002: inventory captures every live billing_cycle_alignment reference in runtime, schemas, UI, and tests  505ms
+
+ Test Files  1 passed (1)
+      Tests  66 passed (66)
+   Start at  02:16:25
+   Duration  5.06s (transform 93ms, setup 68ms, collect 53ms, tests 619ms, environment 0ms, prepare 37ms)

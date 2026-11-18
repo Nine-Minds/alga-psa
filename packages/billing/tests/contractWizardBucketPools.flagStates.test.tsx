@@ -23,6 +23,8 @@ vi.mock('@alga-psa/core', () => ({
   currencyFractionDigits: (currency = 'USD', locale = 'en-US') =>
     new Intl.NumberFormat(locale, { style: 'currency', currency }).resolvedOptions()
       .maximumFractionDigits ?? 2,
+  // ...and the glyph for its adornment.
+  displayCurrencySymbol: (...args: unknown[]) => mocks.getCurrencySymbol(...args),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

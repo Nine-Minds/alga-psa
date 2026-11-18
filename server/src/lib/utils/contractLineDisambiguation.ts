@@ -5,6 +5,8 @@ import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '../db';
 import { IClientContractLine } from '../../interfaces/billing.interfaces';
 import { formatISO } from 'date-fns';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 
 type EligibleContractLine = IClientContractLine & {
   contract_line_type: string;
@@ -265,6 +267,7 @@ export async function shouldAllocateUnassignedEntry(
  * @param serviceId The service ID
  * @returns Array of eligible contract lines with simplified structure
  */
+// LEVERAGE: pattern eligible-contract-lines-for-ui — three near-identical copies of this lookup (packages/billing/src/lib, packages/scheduling/src/lib, server/src/lib/utils); the guard is shared (@alga-psa/auth/lib/commercialAccess), the body is not. A package-direction-safe shared implementation would remove two.
 export async function getEligibleContractLinesForUI(
   clientId: string,
   serviceId: string
@@ -278,6 +281,11 @@ export async function getEligibleContractLinesForUI(
   has_bucket_overlay: boolean;
   bucket_overlay?: EligibleContractLine['bucket_overlay'];
 }>> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  await assertCommercialReadPermission(currentUser);
   const { knex, tenant } = await createTenantKnex();
 
   if (!tenant) {

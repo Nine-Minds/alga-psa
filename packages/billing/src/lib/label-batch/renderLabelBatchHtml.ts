@@ -109,6 +109,12 @@ export function buildLabelModel(
       assetLine: secondaryIdentifier ? `Asset ${secondaryIdentifier}` : null,
       serialLine: serialSuffix && !custodyPrints ? `S/N \u2026${serialSuffix}` : null,
       sequenceLine: viewModel.sequence ? `Box ${viewModel.sequence.n} of ${viewModel.sequence.total}` : null,
+      ...(viewModel.rma
+        ? {
+            rmaReturnByLine: viewModel.rma.returnBy ? `Return by ${viewModel.rma.returnBy}` : null,
+            rmaTicketLine: viewModel.rma.ticketNumber ? `Ticket ${viewModel.rma.ticketNumber}` : null,
+          }
+        : {}),
     },
   };
 }

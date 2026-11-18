@@ -35,15 +35,15 @@ export function registerRmmAlertWorkflowActionsV2(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      alert_id: z.string().uuid(),
-      board_id: z.string().uuid().optional(),
-      priority_id: z.string().uuid().optional(),
-      assign_to_user_id: z.string().uuid().optional(),
+      alert_id: z.string().guid(),
+      board_id: z.string().guid().optional(),
+      priority_id: z.string().guid().optional(),
+      assign_to_user_id: z.string().guid().optional(),
       title_template: z.string().optional(),
       description_template: z.string().optional()
     }),
     outputSchema: z.object({
-      ticket_id: z.string().uuid(),
+      ticket_id: z.string().guid(),
       ticket_number: z.string()
     }),
     ui: {

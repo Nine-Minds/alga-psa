@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import { getSession } from '@alga-psa/auth';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export type AppMenuItem = {
@@ -16,7 +17,7 @@ export type AppMenuItem = {
 export async function listAppMenuItemsForTenant(): Promise<AppMenuItem[]> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
-  await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
+  await assertPsaOnlyTenantAccess({ tenantId: tenant, userId: (await getSession())?.user?.id }, 'extension_actions');
 
   // Query: enabled installs where extension_version.ui contains hooks.appMenu.label (non-empty)
   const rows = await tenantDb(knex, tenant).table('tenant_extension_install as ti')

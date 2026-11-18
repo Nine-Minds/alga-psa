@@ -36,7 +36,7 @@ export const canonicalCallRecordSchema = z.object({
   endedAt: z.string().datetime({ offset: true }).nullable().optional(),
   durationSeconds: z.number().int().nonnegative().nullable().optional(),
   modality: z.enum(CALL_MODALITIES).nullable().optional(),
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CanonicalCallRecord = z.infer<typeof canonicalCallRecordSchema>;
@@ -74,7 +74,7 @@ export const canonicalChatRecordSchema = z.object({
   messages: z.string(),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
-  raw: z.record(z.unknown()).optional(),
+  raw: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CanonicalChatRecord = z.infer<typeof canonicalChatRecordSchema>;

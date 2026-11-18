@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/scheduling/lib/timeEntryAuthorizationSql', () => ({ resolveTimeEntryReadScope: async () => ({ narrowed: false, apply: () => undefined, applyWith: () => undefined, subject: null }) }));
 import Ajv2020 from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
 
@@ -33,6 +36,7 @@ const pgRow = vi.hoisted(() => ({
   contract_line_unresolved_reason: null,
   catalog_pricing_acknowledged_at: null,
   catalog_pricing_acknowledged_by: null,
+  billing_mode: 'commercial',
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -88,6 +92,7 @@ describe.each(SPECS)('published time sheet schemas validate real rows (%s)', (sp
       submitted_at: null,
       approved_at: null,
       approved_by: null,
+      notes: null,
       user_name: 'Erin Entries',
       time_entries: rows,
     };

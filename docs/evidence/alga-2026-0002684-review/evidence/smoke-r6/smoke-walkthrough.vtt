@@ -1,0 +1,13 @@
+WEBVTT
+
+1
+00:00:00.054 --> 00:00:20.703
+Defect 3: replay past invoices after monthly->quarterly change (R5 client)
+
+2
+00:00:20.703 --> 00:00:32.397
+Regression: R5 forward simulation after the change uses the new quarterly cadence
+
+3
+00:00:32.397 --> 00:00:58.442
+Regression: acceptance contract R2 (monthly, no change) replays Sep 3,000 / Oct 3,600 at zero deltas

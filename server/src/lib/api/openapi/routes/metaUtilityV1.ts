@@ -12,7 +12,7 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
           userRole: zOpenApi.string().optional(),
           companySize: zOpenApi.enum(['small', 'medium', 'large', 'enterprise']).optional(),
           subscriptionPlan: zOpenApi.string().optional(),
-          customProperties: zOpenApi.record(zOpenApi.unknown()).optional(),
+          customProperties: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
         })
         .optional(),
     }),
@@ -21,7 +21,7 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
   const FeatureAccessBody = registry.registerSchema(
     'FeatureAccessBodyV1',
     zOpenApi.object({
-      user_id: zOpenApi.string().uuid().optional(),
+      user_id: zOpenApi.string().guid().optional(),
       feature_name: zOpenApi.string(),
     }),
   );
@@ -29,7 +29,7 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
   const ApiError = registry.registerSchema(
     'MetaUtilityApiErrorV1',
     zOpenApi.object({
-      error: zOpenApi.unknown(),
+      error: zOpenApi.unknown().optional(),
       message: zOpenApi.string().optional(),
       details: zOpenApi.unknown().optional(),
       success: zOpenApi.boolean().optional(),
@@ -41,16 +41,16 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       data: zOpenApi
         .union([
-          zOpenApi.record(zOpenApi.unknown()),
-          zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+          zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+          zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
           zOpenApi.string(),
           zOpenApi.number(),
           zOpenApi.boolean(),
         ])
         .nullable()
         .optional(),
-      flags: zOpenApi.record(zOpenApi.unknown()).optional(),
-      context: zOpenApi.record(zOpenApi.unknown()).optional(),
+      flags: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      context: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       enabled: zOpenApi.boolean().optional(),
       reason: zOpenApi.string().optional(),
       usageStatsEnabled: zOpenApi.boolean().optional(),

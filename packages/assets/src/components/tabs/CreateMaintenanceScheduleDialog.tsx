@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createMaintenanceSchedule, updateMaintenanceSchedule } from '../../actions/assetActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
 import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
+import { customRecurrenceSchema, MAINTENANCE_RECURRENCE_UNITS, type CustomRecurrence, type MaintenanceRecurrenceUnit } from '../../lib/maintenanceRecurrence';
+import { describeMaintenanceCadence, WEEKDAY_KEYS } from '../../lib/maintenanceCadence';
 import type {
   MaintenanceType,
   MaintenanceFrequency,
@@ -19,6 +21,9 @@ import type {
   UpdateMaintenanceScheduleRequest
 } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const DAYS_OF_MONTH = Array.from({ length: 31 }, (_, index) => index + 1);
+const WEEKDAY_ENGLISH = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface CreateMaintenanceScheduleDialogProps {
   isOpen: boolean;
@@ -42,10 +47,28 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
   const [maintenanceType, setMaintenanceType] = useState<MaintenanceType | ''>('');
   const [frequency, setFrequency] = useState<MaintenanceFrequency | ''>('');
   const [frequencyInterval, setFrequencyInterval] = useState<string>('1');
+  // Custom recurrence rule (frequency === 'custom'); the interval above is its multiplier.
+  const [recurrenceUnit, setRecurrenceUnit] = useState<MaintenanceRecurrenceUnit>('days');
+  const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [daysOfMonth, setDaysOfMonth] = useState<number[]>([]);
   const [nextMaintenance, setNextMaintenance] = useState<Date | undefined>(undefined);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setScheduleName('');
+    setDescription('');
+    setMaintenanceType('');
+    setFrequency('');
+    setFrequencyInterval('1');
+    setRecurrenceUnit('days');
+    setWeekdays([]);
+    setDaysOfMonth([]);
+    setNextMaintenance(undefined);
+    setIsActive(true);
+    setError(null);
+  };
 
   // Populate form when editing
   React.useEffect(() => {
@@ -55,19 +78,31 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
       setMaintenanceType(schedule.maintenance_type);
       setFrequency(schedule.frequency);
       setFrequencyInterval(schedule.frequency_interval.toString());
+      const rule = customRecurrenceSchema.safeParse(schedule.schedule_config?.recurrence);
+      setRecurrenceUnit(rule.success ? rule.data.unit : 'days');
+      setWeekdays(rule.success ? rule.data.weekdays ?? [] : []);
+      setDaysOfMonth(rule.success ? rule.data.days_of_month ?? [] : []);
       setNextMaintenance(toCalendarDisplayDate(schedule.next_maintenance) ?? undefined);
       setIsActive(schedule.is_active);
     } else {
-      // Reset form for new schedule
-      setScheduleName('');
-      setDescription('');
-      setMaintenanceType('');
-      setFrequency('');
-      setFrequencyInterval('1');
-      setNextMaintenance(undefined);
-      setIsActive(true);
+      resetForm();
     }
   }, [schedule, isOpen]);
+
+  const customRecurrence = (): CustomRecurrence => ({
+    unit: recurrenceUnit,
+    ...(recurrenceUnit === 'weeks' && weekdays.length ? { weekdays: [...weekdays].sort((a, b) => a - b) } : {}),
+    ...(recurrenceUnit === 'months' && daysOfMonth.length ? { days_of_month: [...daysOfMonth].sort((a, b) => a - b) } : {}),
+  });
+
+  // Keep other config keys (e.g. checklist) when editing; only `recurrence` is owned here.
+  const buildScheduleConfig = (): Record<string, unknown> => {
+    const { recurrence: _previous, ...preserved } = schedule?.schedule_config ?? {};
+    return frequency === 'custom' ? { ...preserved, recurrence: customRecurrence() } : preserved;
+  };
+
+  const toggle = (values: number[], value: number) =>
+    values.includes(value) ? values.filter((candidate) => candidate !== value) : [...values, value];
 
   const maintenanceTypeOptions = [
     { value: 'preventive', label: t('maintenanceSchedulesTab.types.preventive', { defaultValue: 'Preventive' }) },
@@ -82,9 +117,33 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
     { value: 'weekly', label: t('createMaintenanceScheduleDialog.frequencyOptions.weekly', { defaultValue: 'Weekly' }) },
     { value: 'monthly', label: t('createMaintenanceScheduleDialog.frequencyOptions.monthly', { defaultValue: 'Monthly' }) },
     { value: 'quarterly', label: t('createMaintenanceScheduleDialog.frequencyOptions.quarterly', { defaultValue: 'Quarterly' }) },
-    { value: 'yearly', label: t('createMaintenanceScheduleDialog.frequencyOptions.yearly', { defaultValue: 'Yearly' }) }
+    { value: 'yearly', label: t('createMaintenanceScheduleDialog.frequencyOptions.yearly', { defaultValue: 'Yearly' }) },
+    { value: 'custom', label: t('createMaintenanceScheduleDialog.frequencyOptions.custom', { defaultValue: 'Custom' }) }
   ];
 
+  const recurrenceUnitOptions = MAINTENANCE_RECURRENCE_UNITS.map((unit) => ({
+    value: unit,
+    label: t(`createMaintenanceScheduleDialog.recurrenceUnits.${unit}`, {
+      defaultValue: unit.charAt(0).toUpperCase() + unit.slice(1)
+    })
+  }));
+
+  const dayOfMonthOptions = [
+    { value: '', label: t('createMaintenanceScheduleDialog.dayOfMonthOptions.any', { defaultValue: 'Any day' }) },
+    // A rule written through the API may name several days; keep it selectable so
+    // editing an unrelated field does not quietly drop the extra ones.
+    ...(daysOfMonth.length > 1 ? [{ value: daysOfMonth.join(','), label: [...daysOfMonth].sort((a, b) => a - b).join(', ') }] : []),
+    ...DAYS_OF_MONTH.map((day) => ({ value: String(day), label: String(day) }))
+  ];
+
+  const cadencePreview = frequency
+    ? describeMaintenanceCadence(
+        t,
+        frequency,
+        parseInt(frequencyInterval, 10) || 0,
+        frequency === 'custom' ? { recurrence: customRecurrence() } : undefined
+      )
+    : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +194,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
         maintenance_type: maintenanceType as MaintenanceType,
         frequency: frequency as MaintenanceFrequency,
         frequency_interval: interval,
-        schedule_config: {},
+        schedule_config: buildScheduleConfig(),
         next_maintenance: toCalendarDateString(nextMaintenance)!
       };
 
@@ -154,16 +213,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
         unwrapAssetActionResult(await createMaintenanceSchedule(scheduleData));
       }
 
-      // Reset form
-      setScheduleName('');
-      setDescription('');
-      setMaintenanceType('');
-      setFrequency('');
-      setFrequencyInterval('1');
-      setNextMaintenance(undefined);
-      setIsActive(true);
-      setError(null);
-
+      resetForm();
       onSuccess();
       onClose();
     } catch (err) {
@@ -179,14 +229,7 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
 
   const handleClose = () => {
     if (!isSubmitting) {
-      setScheduleName('');
-      setDescription('');
-      setMaintenanceType('');
-      setFrequency('');
-      setFrequencyInterval('1');
-      setNextMaintenance(undefined);
-      setIsActive(true);
-      setError(null);
+      resetForm();
       onClose();
     }
   };
@@ -320,17 +363,80 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
                 className="mt-1"
                 required
               />
-              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                {frequency && t('maintenanceSchedulesTab.frequency.every', {
-                  count: parseInt(frequencyInterval, 10) || 0,
-                  frequency: t(`maintenanceSchedulesTab.frequency.units.${frequency}`, {
-                    count: parseInt(frequencyInterval, 10) || 0,
-                    defaultValue: frequency
-                  })
-                })}
-              </p>
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">{cadencePreview}</p>
             </div>
           </div>
+
+          {frequency === 'custom' && (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="recurrence-unit">
+                  {t('createMaintenanceScheduleDialog.fields.recurrenceUnit', { defaultValue: 'Unit *' })}
+                </Label>
+                <CustomSelect
+                  id="recurrence-unit"
+                  options={recurrenceUnitOptions}
+                  value={recurrenceUnit}
+                  onValueChange={(value) => setRecurrenceUnit(value as MaintenanceRecurrenceUnit)}
+                  className="mt-1"
+                />
+              </div>
+
+              {recurrenceUnit === 'weeks' && (
+                <div>
+                  <Label>
+                    {t('createMaintenanceScheduleDialog.fields.onWeekdays', { defaultValue: 'On weekdays (optional)' })}
+                  </Label>
+                  <div id="recurrence-weekdays" role="group" className="mt-1 flex flex-wrap gap-2">
+                    {WEEKDAY_KEYS.map((key, day) => {
+                      const selected = weekdays.includes(day);
+                      return (
+                        <Button
+                          key={key}
+                          id={`recurrence-weekday-${key}`}
+                          type="button"
+                          size="xs"
+                          variant={selected ? 'default' : 'outline'}
+                          aria-pressed={selected}
+                          onClick={() => setWeekdays(toggle(weekdays, day))}
+                        >
+                          {t(`maintenanceSchedulesTab.frequency.weekdays.${key}`, { defaultValue: WEEKDAY_ENGLISH[day] })}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                    {t('createMaintenanceScheduleDialog.hints.selectors', {
+                      defaultValue: 'Leave unselected to repeat from the completion date.'
+                    })}
+                  </p>
+                </div>
+              )}
+
+              {recurrenceUnit === 'months' && (
+                <div>
+                  <Label htmlFor="recurrence-day-of-month">
+                    {t('createMaintenanceScheduleDialog.fields.onDayOfMonth', { defaultValue: 'On day of the month (optional)' })}
+                  </Label>
+                  <CustomSelect
+                    id="recurrence-day-of-month"
+                    options={dayOfMonthOptions}
+                    value={daysOfMonth.join(',')}
+                    onValueChange={(value) => setDaysOfMonth(value ? value.split(',').map((day) => parseInt(day, 10)) : [])}
+                    className="mt-1"
+                    // "Any day" already stands for an empty rule; a disabled
+                    // "Select..." row above it would just read as a second one.
+                    showPlaceholderInDropdown={false}
+                  />
+                  <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                    {t('createMaintenanceScheduleDialog.hints.selectors', {
+                      defaultValue: 'Leave unselected to repeat from the completion date.'
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <Label htmlFor="next-maintenance">

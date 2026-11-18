@@ -69,6 +69,8 @@ it('creates a tenant and admin through the real workflow and persists their reco
           'workflow_definition_versions', 'workflow_definitions', 'asset_type_registry', 'asset_statuses',
           'document_default_folders', 'project_template_checklist_items', 'project_template_tasks',
           'project_template_phases', 'project_template_status_mappings', 'project_templates', 'statuses',
+          // VIP seed (12_vip_tags): references and rules point at definitions, so they go first.
+          'tag_references', 'tag_display_rules', 'tag_definitions',
         ]) await scoped.table(table).delete();
         await rollbackTenantInDB(tenantId, { log: { info() {}, error: console.error } });
         expect(await tenantDb(db, tenantId).table('tenants').first()).toBeUndefined();

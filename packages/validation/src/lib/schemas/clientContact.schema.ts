@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import { partialWithoutDefaults } from '../partialWithoutDefaults';
 import { normalizePhone, PHONE_EXTENSION_MAX_LENGTH } from '../phone';
 
 export const CLIENT_CONTACT_FIELD_LIMITS = {
@@ -214,7 +215,7 @@ export function parseSubmittedFields<T extends z.ZodRawShape>(
     submitted[key] = payload[key];
   }
 
-  const result = (partial ? schema.partial() : schema).safeParse(submitted);
+  const result = (partial ? partialWithoutDefaults(schema) : schema).safeParse(submitted);
   if (result.success) {
     // A field explicitly submitted as null/'' means "clear it"; preserve that intent
     // rather than letting the optional() preprocess drop it from the update.

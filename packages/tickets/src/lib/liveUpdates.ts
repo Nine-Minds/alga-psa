@@ -1,7 +1,5 @@
-export interface TicketLiveUpdateActor {
-  userId: string;
-  displayName: string;
-}
+import { parseTicketLiveUpdateActor, type TicketLiveUpdateActor } from './ticketLiveUpdateActor';
+export type { TicketLiveUpdateActor } from './ticketLiveUpdateActor';
 
 export interface PublishTicketUpdateParams {
   tenantId: string;
@@ -11,7 +9,18 @@ export interface PublishTicketUpdateParams {
   updatedAt: string;
 }
 
+export interface PublishTicketListActivityParams {
+  tenantId: string;
+  ticketId: string;
+  changeKind: 'created' | 'updated';
+  boardId: string | null;
+  changedFields: string[];
+  actorUserId: string | null;
+  updatedAt: string;
+}
+
 const TICKET_UPDATE_CHANNEL_PREFIX = 'ticket-updates:';
+const TICKET_LIST_CHANGE_CHANNEL_PREFIX = 'ticket-list-changes:';
 
 interface RedisPublisherClient {
   publish(channel: string, message: string): Promise<unknown>;
@@ -121,18 +130,51 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
     return;
   }
 
+  // Only a qualified (co-managed) actor is validated; a local actor passes through unchanged.
+  let updatedBy: TicketLiveUpdateActor = params.updatedBy;
+  if (params.updatedBy && (params.updatedBy as { actorReference?: unknown }).actorReference !== undefined) {
+    const parsed = parseTicketLiveUpdateActor(params.updatedBy, params.tenantId);
+    if (!parsed) throw new Error('Invalid ticket live update actor');
+    updatedBy = parsed;
+  }
+
   try {
     const client = await getTicketUpdatePublisherClient();
     await client.publish(
       getTicketUpdateChannel(params.tenantId, params.ticketId),
       JSON.stringify({
         updatedFields: params.updatedFields,
-        updatedBy: params.updatedBy,
+        updatedBy,
         updatedAt: params.updatedAt,
       })
     );
+    // Ticket-list publication is intentionally not done here: this publisher
+    // has no recipient-specific ticket-read authorization decision. Sending a
+    // ticket id to the tenant room would disclose tickets hidden by board,
+    // relationship, or assignment policy. A list publisher must be wired at a
+    // layer that can authorize each recipient before relay.
   } catch (error) {
     console.warn('[publishTicketUpdate] Failed to publish live ticket update:', error);
+    await resetTicketUpdatePublisherClient();
+  }
+}
+
+/** Publish only to trusted Redis. The live relay authorizes each recipient and
+ * enriches the message before delivery to the shared tenant room. */
+export async function publishTicketListActivity(params: PublishTicketListActivityParams): Promise<void> {
+  if (process.env.LIVE_TICKET_UPDATES_DISABLED === '1') return;
+  try {
+    const client = await getTicketUpdatePublisherClient();
+    await client.publish(`${getRedisPrefix()}${TICKET_LIST_CHANGE_CHANNEL_PREFIX}${params.tenantId}`, JSON.stringify({
+      ticketId: params.ticketId,
+      changeKind: params.changeKind,
+      boardId: params.boardId,
+      changedFields: params.changedFields,
+      actorUserId: params.actorUserId,
+      updatedAt: params.updatedAt,
+    }));
+  } catch (error) {
+    console.warn('[publishTicketListActivity] Failed to publish ticket activity:', error);
     await resetTicketUpdatePublisherClient();
   }
 }

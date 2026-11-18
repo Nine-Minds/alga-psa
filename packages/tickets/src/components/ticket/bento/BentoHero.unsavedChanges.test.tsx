@@ -139,7 +139,8 @@ vi.mock('@alga-psa/ui/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children, id }: { children: React.ReactNode; id: string }) => <section id={id}>{children}</section>,
   BentoTileEmpty: ({ children, id }: { children: React.ReactNode; id: string }) => <p id={id}>{children}</p>,
 }));
@@ -397,6 +398,36 @@ describe('BentoHero unsaved change model', () => {
         priority_id: null,
       });
     });
+  });
+
+  it('cross-family board switch lists the destination family priorities and not the old family', async () => {
+    renderHero({
+      priorityOptions: [
+        { value: 'priority-high', label: 'High', is_from_itil_standard: false },
+        { value: 'priority-low', label: 'Low', is_from_itil_standard: false },
+        { value: 'priority-p1', label: 'P1 - Critical', is_from_itil_standard: true },
+        { value: 'priority-p2', label: 'P2 - High', is_from_itil_standard: true },
+      ] as any,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Support category' })).toBeInTheDocument();
+    });
+    const optionLabels = () =>
+      Array.from(screen.getByTestId('bento-hero-priority-select').querySelectorAll('option'))
+        .map((option) => (option as HTMLOptionElement).value)
+        .filter(Boolean);
+
+    // Unchanged (custom) board: only the custom family.
+    expect(optionLabels()).toEqual(['priority-high', 'priority-low']);
+
+    // board-b is ITIL: the stale custom priority is staged to null, so the picker
+    // offers the ITIL family only.
+    fireEvent.change(screen.getByTestId('bento-hero-board-select'), { target: { value: 'board-b' } });
+    await waitFor(() => {
+      expect(optionLabels()).toEqual(['priority-p1', 'priority-p2']);
+    });
+    expect(screen.getByTestId('bento-hero-priority-select')).toHaveValue('');
   });
 
   it('re-selecting the original board clears the staged board-scoped nulls (no unsaveable diff)', async () => {
@@ -718,21 +749,12 @@ describe('BentoHero unsaved change model', () => {
   });
 });
 
-it('opens the additional agents popover and selects each agent independently', async () => {
-  const onAgentClick = vi.fn();
+it('leaves additional agents to the Team tile (no "+N" control in the hero)', () => {
   renderHero({
-    onAgentClick,
     additionalAgents: [{ additional_user_id: 'agent-a' }, { additional_user_id: 'agent-b' }] as any,
     availableAgents: [{ user_id: 'agent-a', first_name: 'Alex', last_name: 'Agent' }, { user_id: 'agent-b', first_name: 'Blair', last_name: 'Agent' }] as any,
   });
-  const trigger = screen.getByRole('button', { name: 'bento.hero.additionalAgentsTooltip' });
-  expect(trigger).toHaveTextContent('+2');
-  fireEvent.click(trigger);
-  expect(onAgentClick).not.toHaveBeenCalled();
-  fireEvent.click(await screen.findByRole('button', { name: 'Blair Agent' }));
-  expect(onAgentClick).toHaveBeenLastCalledWith('agent-b');
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Alex Agent' })).not.toBeInTheDocument());
-  fireEvent.click(trigger);
-  fireEvent.click(await screen.findByRole('button', { name: 'Alex Agent' }));
-  expect(onAgentClick).toHaveBeenLastCalledWith('agent-a');
+  expect(screen.queryByRole('button', { name: 'bento.hero.additionalAgentsTooltip' })).not.toBeInTheDocument();
+  expect(screen.queryByText('+2')).not.toBeInTheDocument();
 });
+

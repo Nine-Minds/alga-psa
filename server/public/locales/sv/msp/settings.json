@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tangentbordsgenvägar",
     "opportunities": "Affärsmöjligheter",
     "mcpServer": "MCP-server",
-    "settingsFallback": "Inställningar"
+    "settingsFallback": "Inställningar",
+    "tags": "Taggar"
   },
   "unsavedChanges": {
     "title": "Osparade ändringar",
@@ -307,6 +308,36 @@
       "expiresPrefix": "Går ut:",
       "revoke": "Återkalla",
       "revoking": "Återkallar…"
+    },
+    "seatTechnicians": {
+      "title": "Platstekniker",
+      "description": "Personer som arbetar i ditt PSA via en kunds samförvaltade plats. De räknas inte som dina licensierade användare.",
+      "clientUnavailable": "Kunden är inte tillgänglig",
+      "effectiveAccess": "Effektiv åtkomst",
+      "columns": {
+        "name": "Namn",
+        "email": "E-post",
+        "client": "Kund",
+        "status": "Status",
+        "actions": "Åtgärder"
+      },
+      "state": {
+        "active": "Aktiv",
+        "invited": "Inbjudan väntar"
+      },
+      "dialog": {
+        "title": "Effektiv åtkomst för {{name}}",
+        "help": "Välj ett ärende för att se om den här platsteknikern kan läsa det, och varför.",
+        "ticket": "Ärende",
+        "ticketPlaceholder": "Välj ett ärende...",
+        "checking": "Kontrollerar åtkomst...",
+        "allowed": "{{name}} kan läsa det här ärendet.",
+        "denied": "{{name}} kan inte läsa det här ärendet.",
+        "noReasons": "Inga fler detaljer rapporterades.",
+        "error": "Det gick inte att kontrollera åtkomsten. Försök igen.",
+        "close": "Stäng",
+        "unavailable": "Effektiv åtkomst kan inte kontrolleras för det här ärendet i den här utgåvan eller konfigurationen."
+      }
     }
   },
   "userDetails": {
@@ -413,17 +444,21 @@
       "cancel": "Avbryt",
       "delete": "Radera",
       "placeholder": "Ange nytt teamnamn",
+      "descriptionPlaceholder": "Ange en valfri teambeskrivning",
       "selectManager": "Välj en chef"
     },
     "details": {
       "loading": "Läser in teamuppgifter…",
       "notFound": "Inget team hittades",
+      "noDescription": "Ingen beskrivning",
       "fields": {
         "teamLead": "Teamledare",
+        "description": "Beskrivning",
         "addMember": "Lägg till medlem"
       },
       "placeholders": {
         "teamName": "Ange teamnamn",
+        "description": "Ange teambeskrivning",
         "selectTeamLead": "Välj en teamledare",
         "selectUserToAdd": "Välj en användare att lägga till",
         "noTeamLead": "Inte tilldelad"
@@ -435,8 +470,10 @@
         "discard": "Kasta",
         "saveChanges": "Spara ändringar",
         "saveName": "Spara namn",
+        "saveDescription": "Spara beskrivning",
         "cancel": "Avbryt",
         "editName": "Redigera namn",
+        "editDescription": "Redigera beskrivning",
         "remove": "Ta bort"
       },
       "table": {
@@ -461,6 +498,7 @@
         "createFailed": "Det gick inte att skapa teamet: {{error}}",
         "deleteFailed": "Det gick inte att radera teamet",
         "updateName": "Det gick inte att uppdatera teamnamnet",
+        "updateDescription": "Det gick inte att uppdatera teambeskrivningen",
         "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
       }
     }
@@ -710,7 +748,8 @@
         "skipItem": "Hoppa över denna post",
         "importNewName": "Importera med ett annat namn:",
         "importWithOrder": "Importera med ordning {{order}}",
-        "importWithResolutions": "Importera med lösta konflikter"
+        "importWithResolutions": "Importera med lösta konflikter",
+        "removesIntro": "Om du raderar den här tavlan tas även följande bort:"
       },
       "importTable": {
         "active": "Aktiv"
@@ -779,7 +818,9 @@
           "deleteFailed": "Det gick inte att radera tavlan",
           "importFailed": "Det gick inte att importera tavlor",
           "updateStatusFailed": "Det gick inte att uppdatera tavlans status",
-          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan"
+          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan",
+          "hasEmailSenderRoute": "Det går inte att radera tavlan: den har en egen routning för utgående avsändare. Ta först bort ärendeavsändaren i tavelredigeraren.",
+          "referencedByAutomations": "Det går inte att radera tavlan: andra inställningar pekar fortfarande på den. Rikta om dem till en annan tavla eller ta bort dem först."
         }
       },
       "closeRules": {
@@ -840,11 +881,15 @@
           "notificationsRecipients": "Avisera",
           "notificationsRecipientsPlaceholder": "Välj användare och team...",
           "notificationsRecipientsHelp": "Teammedlemmar slås upp varje gång en avisering skickas.",
+          "notificationsEmails": "E-postadresser",
+          "notificationsEmailsPlaceholder": "Lägg till en distributionslista eller delad brevlåda...",
+          "notificationsEmailsHelp": "Dessa adresser får alla ärendeuppgifter för varje matchande ärende på den här tavlan, trots att de inte är Alga-användare och ingen behörighetskontroll sker. Använd för distributionslistor som du kontrollerar. Om du vill avisera en person med Alga-konto, välj personen ovan i stället.",
+          "notificationsEmailInvalid": "Åtgärda eller ta bort de ogiltiga e-postadresserna i aviseringsreglerna.",
           "notificationsDefaultWatchers": "Standardbevakare",
           "notificationsDefaultWatchersPlaceholder": "Välj användare...",
           "notificationsDefaultWatchersHelp": "Läggs till i bevakarlistan för varje nytt ärende på den här tavlan och aviseras om alla senare uppdateringar.",
           "notificationsTriggerRequired": "Varje aviseringsregel behöver minst en utlösare: att ett ärende skapas eller en status.",
-          "notificationsRecipientRequired": "Varje aviseringsregel behöver minst en användare eller ett team att avisera.",
+          "notificationsRecipientRequired": "Varje aviseringsregel måste ha minst en användare, ett team eller en e-postadress att avisera.",
           "notificationsFetchFailed": "Det gick inte att läsa in aviseringsinställningarna",
           "notificationsStatusRemapFailed": "Tavlan skapades, men statusen för en aviseringsregel kunde inte matchas mot den nya tavlan. Lägg till aviseringsreglerna igen.",
           "inbound": "E-post och inkommande svar",
@@ -893,6 +938,48 @@
         "useDefault": "Använd standard för ärenden",
         "duplicateRoute": "Den avsändarroutningen finns redan.",
         "saveFailed": "Det gick inte att spara avsändarroutningen. Försök igen."
+      },
+      "deleteDependencies": {
+        "categories_one": "kategori",
+        "categories_other": "kategorier",
+        "categories_few": "kategorier",
+        "categories_many": "kategorier",
+        "statuses_one": "ärendestatus",
+        "statuses_other": "ärendestatusar",
+        "statuses_few": "ärendestatusar",
+        "statuses_many": "ärendestatusar",
+        "autoCloseRules_one": "regel för automatisk stängning",
+        "autoCloseRules_other": "regler för automatisk stängning",
+        "autoCloseRules_few": "regler för automatisk stängning",
+        "autoCloseRules_many": "regler för automatisk stängning",
+        "notificationRules_one": "aviseringsregel",
+        "notificationRules_other": "aviseringsregler",
+        "notificationRules_few": "aviseringsregler",
+        "notificationRules_many": "aviseringsregler",
+        "portalVisibility_one": "synlighetstilldelning i kundportalen",
+        "portalVisibility_other": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_few": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_many": "synlighetstilldelningar i kundportalen",
+        "emailSenderRoutes_one": "utgående avsändarroutning",
+        "emailSenderRoutes_other": "utgående avsändarroutningar",
+        "emailSenderRoutes_few": "utgående avsändarroutningar",
+        "emailSenderRoutes_many": "utgående avsändarroutningar",
+        "ticketTemplates_one": "ärendemall",
+        "ticketTemplates_other": "ärendemallar",
+        "ticketTemplates_few": "ärendemallar",
+        "ticketTemplates_many": "ärendemallar",
+        "recurringTickets_one": "schema för återkommande ärenden",
+        "recurringTickets_other": "scheman för återkommande ärenden",
+        "recurringTickets_few": "scheman för återkommande ärenden",
+        "recurringTickets_many": "scheman för återkommande ärenden",
+        "checklistRules_one": "regel för checklistetilldelning",
+        "checklistRules_other": "regler för checklistetilldelning",
+        "checklistRules_few": "regler för checklistetilldelning",
+        "checklistRules_many": "regler för checklistetilldelning",
+        "cannedResponses_one": "färdigt svar för tavlan",
+        "cannedResponses_other": "färdiga svar för tavlan",
+        "cannedResponses_few": "färdiga svar för tavlan",
+        "cannedResponses_many": "färdiga svar för tavlan"
       }
     },
     "priorities": {
@@ -1108,6 +1195,55 @@
         "client": "Kund",
         "allClients": "Alla kunder",
         "clear": "Rensa filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tavla",
+          "category_id": "Kategori",
+          "subcategory_id": "Underkategori",
+          "priority_id": "Prioritet",
+          "client_id": "Kund",
+          "client_tags": "Kundtaggar",
+          "contact_tags": "Kontakttaggar",
+          "location_id": "Plats",
+          "contact_locations": "Beställarens plats",
+          "ticket_origin": "Ärendekälla",
+          "title_folded": "Rubrik",
+          "description_folded": "Beskrivning",
+          "from_service_request": "Från tjänstebegäran",
+          "service_request_definition_id": "Tjänstebegäran"
+        },
+        "operators": {
+          "equals": "Är lika med",
+          "not_equals": "Är inte lika med",
+          "in": "Innehåller något av",
+          "not_in": "Innehåller inget av",
+          "contains": "Innehåller",
+          "starts_with": "Börjar med",
+          "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
+          "is_empty": "Är tomt",
+          "is_not_empty": "Är inte tomt"
+        },
+        "conditions": "Villkor",
+        "match": "Matchning",
+        "and": "Alla villkor",
+        "or": "Något villkor",
+        "field": "Fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "yes": "Ja",
+        "no": "Nej",
+        "advanced": "Den här regeln innehåller grupperade eller avancerade villkor och är skrivskyddad i den här redigeraren.",
+        "add": "Lägg till villkor",
+        "save": "Spara villkor",
+        "enabled": "Aktiverad",
+        "matchesAll": "Matchar alla ärenden inom mallens omfattning.",
+        "matchesNone": "Matchar inga ärenden.",
+        "tagsFailed": "Det gick inte att läsa in taggalternativen. Sparade val bevaras.",
+        "retry": "Försök igen"
       }
     },
     "externalSystems": {
@@ -1752,10 +1888,15 @@
         "label": "Aktivera aviseringar",
         "description": "Slå på eller av alla aviseringar för organisationen"
       },
+      "defaultDontNotifyCustomer": {
+        "label": "Börja ärenden med \"Meddela inte kunden\" ikryssad",
+        "description": "Ärendekommentarer, status- och kontaktändringar samt avslutningar börjar utan kundaviseringar. Handläggare kan ta bort krysset för att meddela kunden vid en enskild åtgärd."
+      },
       "loading": "Läser in aviseringsinställningar…",
       "loadError": "Det gick inte att läsa in inställningarna",
       "save": "Spara ändringar",
-      "saving": "Sparar…"
+      "saving": "Sparar…",
+      "saveError": "Det gick inte att spara aviseringsinställningarna"
     },
     "emailTemplatesUi": {
       "preview": {
@@ -1771,7 +1912,8 @@
         "loading": "Läser in e-postmallar…",
         "templateCount": "({{templateCount}} mallar)",
         "usingCustom": "Använder anpassad mall",
-        "usingStandard": "Använder standardmall"
+        "usingStandard": "Använder standardmall",
+        "notCurrentlySent": "Skickas inte för närvarande"
       },
       "columns": {
         "name": "Namn",
@@ -1795,7 +1937,8 @@
         "close": "Stäng",
         "cancel": "Avbryt",
         "saving": "Sparar…",
-        "save": "Spara"
+        "save": "Spara",
+        "variableReference": "Variabelreferens"
       },
       "description": "Varje händelsetyp har en standardmall som kan anpassas. Du kan använda standardmallen eller skapa en egen version.",
       "filter": {
@@ -1818,7 +1961,8 @@
         "notAvailable": "Ej tillämpligt"
       },
       "edit": {
-        "title": "Redigera anpassad mall: {{name}}"
+        "title": "Redigera anpassad mall: {{name}}",
+        "variableSuggestions": "Förslag på mallvariabler"
       },
       "languages": {
         "en": "Engelska",
@@ -1828,7 +1972,8 @@
         "nl": "Nederländska",
         "it": "Italienska",
         "pl": "Polska",
-        "pt": "Portugisiska"
+        "pt": "Portugisiska",
+        "sv": "Svenska"
       }
     },
     "emailBranding": {
@@ -2062,6 +2207,8 @@
       },
       "title": "Referens för variabler i e-postmallar",
       "panelTitle": "Mallvariabler",
+      "mspOnly": "Endast MSP",
+      "clientSafeHelp": "Skickas till kunder. Variabler som endast gäller MSP är inte tillgängliga.",
       "inferredContract": "Skickas inte för närvarande. Detta kontrakt härleds från mallen.",
       "empty": "Inga matchande variabler.",
       "example": "Exempel:",
@@ -2397,7 +2544,9 @@
       },
       "actions": {
         "back": "Tillbaka till migreringar",
-        "upload": "Ladda upp paket"
+        "upload": "Ladda upp paket",
+        "close": "Stäng",
+        "cancel": "Avbryt"
       },
       "errors": {
         "noImportableRecords": "Paketet innehöll inga poster som kunde importeras.",
@@ -2410,10 +2559,48 @@
         "storageRejected": "Servern avvisade uppladdningen. Be administratören kontrollera konfigurationen för lagringens filtyper.",
         "spreadsheetFailed": "Det gick inte att importera kalkylbladet. Försök igen.",
         "uploadFailed": "Det gick inte att ladda upp paketet. Försök igen.",
-        "unknown": "Uppladdningen misslyckades. Försök igen."
+        "unknown": "Uppladdningen misslyckades. Försök igen.",
+        "loadJobs": "Det gick inte att läsa in migreringsjobben.",
+        "loadJob": "Det gick inte att läsa in migreringsjobbet.",
+        "jobNotFound": "Migreringsjobbet hittades inte."
       },
       "preflight": {
-        "title": "Förkontroll"
+        "title": "Förkontroll",
+        "description": "En provkörning som validerar varje mellanlagrad post mot den här organisationen och din konfiguration. Förkontrollen skapar ingenting.",
+        "errors": {
+          "loadReport": "Det gick inte att läsa in förkontrollrapporten.",
+          "runFailed": "Det gick inte att köra förkontrollen.",
+          "startMigration": "Det gick inte att starta migreringen.",
+          "downloadCsv": "Det gick inte att ladda ner förkontrollens CSV-fil.",
+          "downloadJson": "Det gick inte att ladda ner förkontrollens JSON-fil."
+        },
+        "running": "Förkontroll pågår…",
+        "runAgain": "Kör förkontrollen igen",
+        "run": "Kör förkontroll",
+        "empty": "Ingen förkontroll har körts för den här konfigurationen ännu. Kör förkontrollen för att se planen för varje objekttyp och eventuella problem.",
+        "plan": "Plan",
+        "preflightedAt": "Förkontroll utförd {{timestamp}}",
+        "downloadCsv": "Ladda ner CSV",
+        "downloadJson": "Ladda ner JSON",
+        "columns": {
+          "entity": "Objekt",
+          "staged": "Mellanlagrade",
+          "toCreate": "Att skapa",
+          "toSkip": "Att hoppa över (redan migrerade)",
+          "blocked": "Blockerade"
+        },
+        "noStagedRecords": "Inga poster mellanlagrades från paketet.",
+        "blockingIssues": "Blockerande problem ({{count}})",
+        "warnings": "Varningar ({{count}})",
+        "blockedWithIssues_one": "Migreringen kan inte köras: {{count}} blockerande problem måste lösas först.",
+        "blockedWithIssues_other": "Migreringen kan inte köras: {{count}} blockerande problem måste lösas först.",
+        "blockedNoPreflight": "Migreringen kan inte köras förrän en förkontroll har godkänts utan blockerande problem.",
+        "needsConfiguration": "Migreringen kan köras när en förkontroll av den sparade konfigurationen har godkänts.",
+        "starting": "Startar…",
+        "runMigration": "Kör migrering",
+        "recordsAffected_one": "{{count}} post berörs",
+        "recordsAffected_other": "{{count}} poster berörs",
+        "sampleRecords": "Exempel på poster:"
       },
       "run": {
         "queued": "Migreringen har köats",
@@ -2431,14 +2618,58 @@
         "claimedBySamePackage": "Redan migrerad av detta paket",
         "claimedByOtherPackage": "Redan migrerad av {{file}}",
         "claimedByExistingEntity": "Matchad mot ett befintligt objekt",
-        "matchedBySku": "Matchad mot en befintlig produkt via SKU"
+        "matchedBySku": "Matchad mot en befintlig produkt via SKU",
+        "title": "Resultat",
+        "errors": {
+          "loadSummary": "Det gick inte att läsa in resultatsammanfattningen.",
+          "loadRecords": "Det gick inte att läsa in resultatposterna.",
+          "downloadCsv": "Det gick inte att ladda ner resultatets CSV-fil."
+        },
+        "actions": {
+          "created": "Skapad",
+          "skipped": "Överhoppad",
+          "failed": "Misslyckades"
+        },
+        "counts": {
+          "created": "skapades",
+          "skipped": "hoppades över",
+          "failed": "misslyckades"
+        },
+        "finishedAt": "Slutfört {{timestamp}}.",
+        "noLongerRunning": "Bakgrundsjobbet körs inte längre.",
+        "preparing": "Förbereder…",
+        "downloadCsv": "Ladda ner resultat som CSV",
+        "failedLabel": "Migreringen misslyckades:",
+        "cancelled": "Migreringen avbröts vid en kontrollpunkt. Poster som behandlades före avbrottet finns kvar och listas nedan.",
+        "noRecordsWritten": "Inga resultatposter skrevs för det här bakgrundsjobbet.",
+        "noRecordsMatch": "Inga resultatposter matchar dessa filter.",
+        "columns": {
+          "entity": "Objekt",
+          "sourceRecord": "Källpost",
+          "action": "Åtgärd",
+          "result": "Resultat",
+          "at": "Tidpunkt"
+        },
+        "filters": {
+          "allEntities": "Alla objekt",
+          "allActions": "Alla åtgärder"
+        },
+        "unknownError": "Okänt fel",
+        "recordLimitNotice": "De första {{count}} matchande posterna visas. Ladda ner resultatet som CSV för att få hela listan."
       },
       "spreadsheet": {
         "entities": {
           "products": "Produkter (katalog / prislista)",
-          "vendorProducts": "Leverantörsprislista (distributörens kostnader)"
+          "vendorProducts": "Leverantörsprislista (distributörens kostnader)",
+          "assets": "Tillgångar (äldre tillgångsimport)",
+          "organizations": "Organisationer",
+          "locations": "Platser",
+          "contacts": "Kontakter",
+          "tickets": "Ärenden",
+          "ticketComments": "Ärendekommentarer"
         },
-        "productsHint": "Priser och kostnader läses som decimalbelopp (till exempel 1,299.50) med valutakolumnen om den finns, annars hyresgästens valuta. Negativa, icke-numeriska eller alltför exakta belopp tas bort och rapporteras; raden importeras ändå. Produkter matchas mot befintliga produkter via SKU; rader i leverantörsprislistan refererar till en produkt via SKU och skapar eller matchar leverantören via namn."
+        "productsHint": "Priser och kostnader läses som decimalbelopp (till exempel 1,299.50) med valutakolumnen om den finns, annars hyresgästens valuta. Negativa, icke-numeriska eller alltför exakta belopp tas bort och rapporteras; raden importeras ändå. Produkter matchas mot befintliga produkter via SKU; rader i leverantörsprislistan refererar till en produkt via SKU och skapar eller matchar leverantören via namn.",
+        "headersHint": "Standardrubriker känns igen automatiskt. Andra kolumner kan mappas till anpassade fält för tillgångstyper i steget Konfigurera. Kontakter stöder vanliga kolumnnamn som Name, First Name, Last Name, Email, Phone, Title och Client. Äldre kolumnnamn för tillgångar som Asset Name, Asset Type och Serial Number bevaras genom AMP-flödet."
       },
       "configure": {
         "products": {
@@ -2446,7 +2677,93 @@
           "serviceType": "Tjänstetyp för nya produkter",
           "serviceTypePlaceholder": "Välj en tjänstetyp",
           "serviceTypeHelp": "Produkter vars SKU redan finns matchas och lämnas oförändrade; endast nya produkter placeras under denna tjänstetyp."
+        },
+        "title": "Konfigurera migreringen",
+        "description": "Mappa paketets referensdata till den här organisationen. Förkontrollen verifierar varje mappning innan något kan köras.",
+        "errors": {
+          "loadOptions": "Det gick inte att läsa in konfigurationsalternativen.",
+          "save": "Det gick inte att spara konfigurationen.",
+          "optionsUnavailable": "Konfigurationsalternativen är inte tillgängliga."
+        },
+        "clientPlaceholder": "Välj kund",
+        "mappingPlaceholder": "Välj mappning",
+        "tickets": {
+          "title": "Ärenden",
+          "board": "Tavla",
+          "boardPlaceholder": "Välj tavla",
+          "defaultRequester": "Standardkund för ärenden",
+          "defaultRequesterHelp": "Används när ett ärendes organisation inte kan identifieras.",
+          "defaultAssignee": "Förvald ansvarig",
+          "defaultAssigneePlaceholder": "Lämna ärenden utan tilldelning"
+        },
+        "statusMapping": {
+          "title": "Statusmappning",
+          "description": "Varje statusnamn i paketet måste mappas till en ärendestatus i den här organisationen.",
+          "empty": "Paketets ärenden saknar statusnamn."
+        },
+        "priorityMapping": {
+          "title": "Prioritetsmappning",
+          "description": "Varje prioritetsnamn i paketet måste mappas till en prioritet i den här organisationen.",
+          "empty": "Paketets ärenden saknar prioritetsnamn."
+        },
+        "assets": {
+          "title": "Tillgångar"
+        },
+        "assetTypeMapping": {
+          "title": "Mappning av tillgångstyper",
+          "description": "Varje tillgångstypnamn i paketet måste mappas till en tillgångstyp i den här organisationen.",
+          "empty": "Paketets tillgångar saknar tillgångstypnamn."
+        },
+        "general": {
+          "title": "Allmänt",
+          "defaultClient": "Standardkund för poster utan organisation",
+          "defaultClientHelp": "Kontakter och tillgångar vars organisation inte kan identifieras kopplas till den här kunden.",
+          "clearDefaultClient": "Rensa"
+        },
+        "saved": "Konfigurationen har sparats. Kör förkontrollen för att validera den mot de mellanlagrade posterna.",
+        "saving": "Sparar…",
+        "save": "Spara konfiguration"
+      },
+      "home": {
+        "title": "Migreringar",
+        "description": "För över data från ett annat PSA-system till Alga genom att ladda upp ett AMP-paket eller ett CSV/XLSX-kalkylblad. Varje uppladdning granskas, konfigureras och förkontrolleras innan något skapas.",
+        "columns": {
+          "package": "Paket",
+          "sourceSystem": "Källsystem",
+          "state": "Tillstånd",
+          "progress": "Förlopp",
+          "created": "Skapad"
+        },
+        "empty": {
+          "title": "Inga migreringar ännu",
+          "descriptionPrefix": "Ett Alga Migration Package (",
+          "descriptionSuffix": ") är ett portabelt, validerat arkiv med organisationer, platser, kontakter, ärenden, kommentarer och tillgångar som exporterats från ett annat system. Ladda upp ett paket för att granska innehållet, mappa referensdata till den här organisationen och köra en förkontrollerad import som kan upprepas utan att skapa dubbletter.",
+          "docsLink": "Läs referensdokumentationen för AMP-paket"
         }
+      },
+      "upload": {
+        "title": "Ladda upp migreringspaket",
+        "tooLarge": "Migreringspaket får vara högst {{megabytes}} MB.",
+        "fileLabel": "Paket eller kalkylblad",
+        "fileHint": "AMP (.amp) eller CSV/XLSX, upp till {{megabytes}} MB. Kalkylblad omvandlas till ett AMP-paket före mellanlagringen. Inget importeras förrän du kör migreringen.",
+        "entityLabel": "Posterna i kalkylbladet representerar",
+        "rejected": "Paketet avvisades och inget mellanlagrades. Åtgärda följande problem i källpaketet och ladda upp det igen:",
+        "stagedWithDiagnostics": "Paketet har mellanlagrats, men vissa källdata kräver din uppmärksamhet innan du kör importen:",
+        "continueToConfigure": "Fortsätt till konfiguration",
+        "uploading": "Laddar upp…",
+        "submit": "Ladda upp"
+      },
+      "detail": {
+        "source": "Källa: {{system}}",
+        "sourceNotDeclared": "Källsystem har inte angetts",
+        "producer": "Producent: {{producer}}",
+        "uploaded": "Uppladdat {{timestamp}}",
+        "lifecycleAria": "Migreringens livscykel",
+        "inspecting": "Paketet granskas och mellanlagras",
+        "packageSuffix": "(paket {{packageId}})",
+        "inspectingRefresh": ". Den här vyn uppdateras automatiskt.",
+        "rejectedBody": "Paketet avvisades under granskningen. Inget mellanlagrades och inget kommer att importeras från det. Åtgärda paketet i källsystemet och ladda upp ett nytt.",
+        "rejectionDetails": "Information om avvisningen"
       }
     },
     "jobDetails": {
@@ -2749,7 +3066,8 @@
         "preparingPreview": "Förbereder förhandsgranskning…",
         "linking": "Kopplar konton…",
         "unlinking": "Tar bort kontokopplingar…",
-        "bulkLabel": "Massåtgärder för SSO {{location}}"
+        "bulkLabel": "Massåtgärder för SSO {{location}}",
+        "disabledSelectUsers": "Välj minst en användare först."
       },
       "table": {
         "email": "E-post",
@@ -2907,7 +3225,8 @@
     "rmmEnterpriseNote": "RMM-integrationer är tillgängliga i Pro.",
     "categoryHeading": "Integrationer för {{label}}",
     "loading": {
-      "payments": "Läser in betalningsinställningar…"
+      "payments": "Läser in betalningsinställningar…",
+      "hudu": "Läser in integrationsinställningar för Hudu…"
     },
     "categories": {
       "accounting": {
@@ -2999,6 +3318,11 @@
         "name": "Telefoni",
         "description": "Logga samtal som interaktioner, identifiera uppringare och omvandla ett samtal till ett ärende"
       }
+    },
+    "addOnRequired": {
+      "heading": "{{featureName}} kräver tillägget {{addOnName}}",
+      "manageAddOns": "Hantera tillägg",
+      "entraDescription": "Köp Enterprise-tillägget för att aktivera Microsoft Entra Sync med identifiering av klientorganisationer, kundmappning, kontaktsynkronisering och arbetsflöden för avstämning."
     }
   },
   "orgChart": {
@@ -3016,6 +3340,54 @@
     "messages": {
       "adminLocked": "Administratörsrollens behörigheter kan inte ändras",
       "permissionsUpdated": "Behörigheterna har uppdaterats"
+    },
+    "title": "Hantera behörigheter",
+    "description": "Konfigurera åtkomstbehörigheter för olika roller och resurser",
+    "selectPrompt": "Välj en roll eller resurs för att hantera behörigheter",
+    "unsavedChanges": "Du har osparade ändringar",
+    "adminLockedTooltip": "Administratörsrollens behörigheter definieras av systemet och kan inte ändras",
+    "none": "Inga",
+    "actionCount_one": "{{count}} åtgärd",
+    "actionCount_other": "{{count}} åtgärder",
+    "views": {
+      "clientPortal": "Kundportal"
+    },
+    "filters": {
+      "allResources": "Alla resurser",
+      "allRoles": "Alla roller",
+      "selectRole": "Välj roll",
+      "filterByResource": "Filtrera efter resurs"
+    },
+    "columns": {
+      "resource": "Resurs",
+      "role": "Roll",
+      "create": "Skapa",
+      "read": "Läsa",
+      "update": "Uppdatera",
+      "delete": "Radera",
+      "specialActions": "Särskilda åtgärder"
+    },
+    "actions": {
+      "cancel": "Avbryt",
+      "saveChanges": "Spara ändringar",
+      "saving": "Sparar…"
+    },
+    "confirm": {
+      "title": "Bekräfta behörighetsändringar",
+      "message": "Är du säker på att du vill spara dessa behörighetsändringar?",
+      "confirmLabel": "Spara ändringar"
+    },
+    "stats": {
+      "empty": "Välj en roll eller resurs för att visa behörigheter",
+      "rolesForResource_one": "{{count}} roll för {{resource}}",
+      "rolesForResource_other": "{{count}} roller för {{resource}}",
+      "resourcesAndPermissions": "Antal resurser: {{count}} • Behörigheter: {{assigned}}/{{total}}"
+    },
+    "errors": {
+      "fetchPermissions": "Det gick inte att hämta behörigheterna",
+      "fetchRoles": "Det gick inte att hämta rollerna",
+      "fetchRolePermissions": "Det gick inte att hämta rollbehörigheterna",
+      "savePermissions": "Det gick inte att spara behörigheterna"
     }
   },
   "sla": {
@@ -3304,6 +3676,91 @@
         "timerPaused": "SLA-tidtagning: pausad"
       },
       "unknown": "Okänd"
+    },
+    "businessHours": {
+      "title": "Scheman för öppettider",
+      "description": "Ange när supportteamet är tillgängligt för SLA-beräkningar",
+      "loading": "Läser in scheman för öppettider…",
+      "default": "Standard",
+      "recurring": "Återkommande",
+      "openMenu": "Öppna meny",
+      "workingHours": "Öppettider",
+      "dailyHours": "Dagliga öppettider",
+      "closed": "Stängt",
+      "alwaysOpen": "Det här schemat gäller dygnet runt – tillgängligt hela dagen, varje dag.",
+      "holidays": "Helgdagar",
+      "noHolidays": "Inga helgdagar har angetts för det här schemat.",
+      "timezoneLabel": "Tidszon: {{timezone}}",
+      "days": {
+        "0": "Söndag",
+        "1": "Måndag",
+        "2": "Tisdag",
+        "3": "Onsdag",
+        "4": "Torsdag",
+        "5": "Fredag",
+        "6": "Lördag"
+      },
+      "columns": {
+        "name": "Namn",
+        "timezone": "Tidszon",
+        "actions": "Åtgärder",
+        "holidayName": "Helgdagens namn",
+        "date": "Datum",
+        "day": "Dag",
+        "enabled": "Aktiverad",
+        "startTime": "Starttid",
+        "endTime": "Sluttid"
+      },
+      "empty": {
+        "title": "Inga scheman för öppettider",
+        "description": "Skapa ditt första schema för öppettider för att börja beräkna SLA-tider."
+      },
+      "actions": {
+        "edit": "Redigera",
+        "viewDetails": "Visa detaljer",
+        "delete": "Radera",
+        "cancel": "Avbryt",
+        "close": "Stäng",
+        "create": "Skapa",
+        "update": "Uppdatera",
+        "saving": "Sparar…",
+        "adding": "Lägger till…",
+        "createDefault": "Skapa standardschema",
+        "createCustom": "Skapa anpassat schema",
+        "addSchedule": "Lägg till schema",
+        "addHoliday": "Lägg till helgdag"
+      },
+      "fields": {
+        "scheduleName": "Schemanamn *",
+        "scheduleNamePlaceholder": "T.ex. ordinarie öppettider",
+        "timezone": "Tidszon *",
+        "is24x7": "Schema för dygnet runt (alltid tillgängligt)",
+        "isDefault": "Ange som standardschema",
+        "holidayName": "Helgdagens namn *",
+        "holidayNamePlaceholder": "T.ex. juldagen",
+        "holidayDate": "Datum *",
+        "holidayDatePlaceholder": "Välj datum",
+        "isRecurring": "Upprepas årligen"
+      },
+      "dialog": {
+        "editTitle": "Redigera schema",
+        "createTitle": "Skapa schema",
+        "deleteScheduleTitle": "Radera schema",
+        "deleteScheduleMessage": "Är du säker på att du vill radera ”{{name}}”? Alla tillhörande helgdagar raderas också. Åtgärden kan inte ångras.",
+        "deleteHolidayTitle": "Radera helgdag",
+        "deleteHolidayMessage": "Är du säker på att du vill radera ”{{name}}”? Åtgärden kan inte ångras."
+      },
+      "errors": {
+        "loadSchedules": "Det gick inte att läsa in scheman för öppettider",
+        "loadScheduleDetails": "Det gick inte att läsa in schemats detaljer",
+        "nameRequired": "Schemanamn krävs",
+        "invalidTimeRange": "{{day}}: ogiltigt tidsintervall – sluttiden måste vara efter starttiden",
+        "saveSchedule": "Det gick inte att spara schemat",
+        "deleteSchedule": "Det gick inte att radera schemat",
+        "createDefaultSchedule": "Det gick inte att skapa standardschemat",
+        "addHoliday": "Det gick inte att lägga till helgdagen",
+        "deleteHoliday": "Det gick inte att radera helgdagen"
+      }
     }
   },
   "clientPortalLanguage": {
@@ -3326,7 +3783,6 @@
   },
   "settings": {
     "assetTypes": {
-      "additionalFields": "Ytterligare fält",
       "tab": "Tillgångar",
       "title": "Tillgångstyper",
       "description": "Anpassade typer använder ett fältschema för sina formulär. Inbyggda typer kan dessutom ha ytterligare fält.",
@@ -3415,7 +3871,8 @@
           "invalidOptions": "Alternativen måste ha värden som inte är tomma.",
           "invalidField": "Detta fält är ogiltigt."
         }
-      }
+      },
+      "additionalFields": "Ytterligare fält"
     }
   },
   "mcpServer": {
@@ -3437,7 +3894,7 @@
       "platformManaged": "Hanteras av AlgaPSA – ingen konfiguration behövs. Anslut en agent till en i steg 2.",
       "addAnother": "Lägg till en annan identitetsleverantör",
       "advancedOptions": "Avancerade alternativ",
-      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "googleSetup": "Agenterna loggar in med en ID-token för ett Google-tjänstkonto. Endast målgruppen nedan behöver matcha hur de begär den.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3451,9 +3908,14 @@
       "fields": {
         "provider": "Identitetsleverantör",
         "entraTenantId": "Entra-klientorganisations-ID",
-        "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": {
+          "microsoft": "Program-ID (klient-ID) för Entra-appregistreringen som dina agenter begär token för. Agenterna begär omfånget api://<det ID:t>/.default.",
+          "google": "Agenterna måste begära sin Google-ID-token med exakt den här målgruppen. Vi har fyllt i den här serverns MCP-URL, som är det vanliga valet.",
+          "custom": "API- eller resursidentifieraren som har konfigurerats hos din leverantör (till exempel en Auth0-API-identifierare). Den måste exakt matcha aud-anspråket i agenternas token. Den här serverns MCP-URL är ett bra val."
+        },
+        "audienceWhy": "Token som din leverantör har utfärdat till andra appar godkänns inte här.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"
@@ -3567,6 +4029,36 @@
         "confirm": "Koppla från",
         "cancel": "Avbryt"
       }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
+      }
     }
   },
   "errors": {
@@ -3665,7 +4157,9 @@
       "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}.",
       "nameRequired": "Rollnamn krävs.",
       "builtInRename": "Inbyggda roller kan inte byta namn.",
-      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen."
+      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen.",
+      "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
     },
     "secrets": {
       "tenantContextMissing": "Organisationskontext saknas. Ladda om sidan och försök igen.",
@@ -3746,7 +4240,63 @@
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
+  },
+  "loginPolicy": {
+    "title": "Inloggningspolicy",
+    "description": "Styr hur personal och användare i kundportalen får logga in, med lösenord eller enkel inloggning (SSO). Reglerna tillämpas på servern.",
+    "requireSso": {
+      "title": "Kräv enkel inloggning (SSO) för MSP-personal",
+      "body": "Interna användare måste logga in med Google, Microsoft eller din Keycloak-leverantör. Lösenordsinloggning och lösenordsåterställning blockeras, förutom för nödadministratörerna nedan.",
+      "signOutWarning": "När du aktiverar ”Kräv enkel inloggning” loggas alla interna användare som loggat in med lösenord ut, utom nödadministratörer. Ett krav på tvåfaktorsautentisering loggar inte ut någon; det gäller vid nästa inloggning."
+    },
+    "require2faInternal": {
+      "title": "Kräv tvåfaktorsautentisering vid lösenordsinloggning för MSP-personal",
+      "body": "Personal utan autentiseringsapp ombeds konfigurera en vid nästa inloggning."
+    },
+    "require2faClient": {
+      "title": "Kräv tvåfaktorsautentisering vid lösenordsinloggning i kundportalen",
+      "body": "Kundportalanvändare utan autentiseringsapp ombeds konfigurera en vid nästa inloggning. Kravet på enkel inloggning gäller aldrig kundportalanvändare."
+    },
+    "knownDeviceSkip": {
+      "title": "Låt kända enheter hoppa över koden",
+      "body": "Användare som litar på en enhet tillfrågas inte om kod på den enheten. Nödadministratörer behöver alltid en kod."
+    },
+    "breakGlass": {
+      "title": "Nödadministratörer",
+      "body": "Dessa administratörer kan fortfarande logga in med lösenord när enkel inloggning krävs. De måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad och behöver alltid en kod.",
+      "noEligible": "Inga behöriga administratörer. En administratör måste vara aktiv och ha tvåfaktorsautentisering aktiverad.",
+      "noLongerEligible": "Är inte längre behörig.",
+      "remove": "Ta bort",
+      "reasons": {
+        "no_two_factor": "Tvåfaktorsautentiseringen har återställts eller saknas.",
+        "inactive": "Användaren är inaktiverad.",
+        "not_admin": "Användaren är inte längre administratör.",
+        "not_internal": "Användaren är inte en intern användare.",
+        "not_found": "Användaren finns inte längre."
+      }
+    },
+    "clientPortalSso": {
+      "title": "Inloggningsalternativ i kundportalen",
+      "body": "Välj vilka leverantörer av enkel inloggning som visas på kundportalens inloggningssida. Bara leverantörer som din organisation kan logga in med visas. Inloggning med lösenord påverkas inte.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Inga leverantörer av enkel inloggning är konfigurerade för din organisation. Konfigurera en i inställningarna för enkel inloggning för att erbjuda den i kundportalen."
+    },
+    "guard": {
+      "sso_provider_required": "Konfigurera minst en leverantör av enkel inloggning innan du kräver enkel inloggning.",
+      "break_glass_required": "Välj minst en nödadministratör innan du kräver enkel inloggning.",
+      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad.",
+      "client_portal_sso_provider_invalid": "Välj bara leverantörer av enkel inloggning som stöds."
+    },
+    "errors": {
+      "load": "Det gick inte att läsa in inloggningspolicyn.",
+      "save": "Det gick inte att spara inloggningspolicyn."
+    }
   },
   "featureFlags": {
     "categories": {
@@ -3926,6 +4476,170 @@
       "default": "Standard",
       "empty": "Inga standardstatusar tillgängliga för import",
       "importSelected": "Importera markerade ({{count}})"
+    }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Tjänst"
+    },
+    "keyReveal": {
+      "copySuccess": "API-nyckeln kopierades till urklipp!",
+      "copyFailed": "Det gick inte att kopiera API-nyckeln till urklipp",
+      "downloadFailed": "Det gick inte att ladda ned API-nyckeln",
+      "title": "API-nyckel genererad",
+      "warning": "Kopiera din API-nyckel nu. Av säkerhetsskäl visas den inte igen.",
+      "rotationNote": "Den tidigare nyckeln fungerar i 5 minuter till så att du hinner byta.",
+      "copy": "Kopiera till urklipp",
+      "download": "Ladda ned som .txt",
+      "done": "Klar"
+    },
+    "dialog": {
+      "nameRequired": "Ett namn krävs",
+      "rateLimitInvalid": "Ange båda värdena för hastighetsgränsen, inom de visade maxvärdena, eller lämna båda tomma.",
+      "saveFailed": "Det gick inte att spara tjänstehuvudmannen",
+      "editTitle": "Redigera tjänstehuvudman",
+      "createTitle": "Ny tjänstehuvudman",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "name": "Namn",
+      "description": "Beskrivning",
+      "roles": "Roller",
+      "allowActAs": "Tillåt att agera på uppdrag av en användare",
+      "rateLimit": "Åsidosättning av hastighetsgräns (valfritt)",
+      "rateLimitBurst": "Burst-storlek (max {{max}})",
+      "rateLimitRefill": "Förfrågningar per minut (max {{max}})",
+      "allowActAsHelp": "När detta är aktiverat kan förfrågningar agera som en aktiv intern användare. Varje åtgärd måste tillåtas för både tjänsteidentiteten och användaren."
+    },
+    "keys": {
+      "loadFailed": "Det gick inte att läsa in nycklar",
+      "issueFailed": "Det gick inte att skapa API-nyckeln",
+      "revokeFailed": "Det gick inte att återkalla API-nyckeln",
+      "columns": {
+        "description": "Beskrivning",
+        "status": "Status",
+        "lastUsed": "Senast använd",
+        "expires": "Upphör"
+      },
+      "noDescription": "Ingen beskrivning",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "never": "Aldrig",
+      "noExpiry": "Ingen utgång",
+      "rotate": "Rotera",
+      "revoke": "Återkalla",
+      "title": "API-nycklar för {{name}}",
+      "descriptionLabel": "Nyckelbeskrivning",
+      "create": "Skapa nyckel",
+      "revokeTitle": "Återkalla API-nyckeln?",
+      "revokeMessage": "Allt som använder den här nyckeln slutar fungera omedelbart."
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "name": "Namn",
+      "status": "Status",
+      "active": "Aktiv",
+      "roles": "Roller",
+      "keys": "Aktiva nycklar",
+      "lastUsed": "Senast använd",
+      "createdBy": "Skapad av",
+      "kind": "Typ",
+      "allowActAs": "Agera som"
+    },
+    "loadFailed": "Det gick inte att läsa in tjänstehuvudmän",
+    "toggleFailed": "Det gick inte att uppdatera tjänstehuvudmannen",
+    "delete": {
+      "archived": "Tjänstehuvudmannen arkiverades. Dess historik sparas så att tidigare aktivitet fortfarande visar dess namn.",
+      "deleted": "Tjänstehuvudmannen togs bort.",
+      "failed": "Det gick inte att ta bort tjänstehuvudmannen",
+      "title": "Ta bort tjänstehuvudmannen?",
+      "message": "Dess API-nycklar slutar fungera. Om den har historik arkiveras den i stället för att tas bort."
+    },
+    "status": {
+      "inactive": "Inaktiv",
+      "active": "Aktiv"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "keys": "Nycklar",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "new": "Ny tjänstehuvudman"
+    },
+    "featureName": "Tjänstehuvudmän",
+    "title": "Tjänstehuvudmän",
+    "description": "Icke-mänskliga identiteter med egna roller och API-nycklar för integrationer och agenter.",
+    "usage": {
+      "header": "{{used}} av {{limit}} tjänstehuvudmän",
+      "availableOnPro": "Tillgängligt i Pro",
+      "row": "{{used}} av {{limit}}",
+      "label": "Tjänstehuvudmän",
+      "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
+      "settingsLink": "Inställningar för tjänsteidentiteter",
+      "blockedAccess": "API- och MCP-åtkomst blockeras under Pro.",
+      "blockedCount": "{{used}} aktiva tjänstehuvudmän blockerade av planen"
+    },
+    "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en ny.",
+    "mcp": {
+      "sharedLimit": "MCP-agenter räknas mot din gräns för tjänstehuvudmän: {{used}} av {{limit}} används.",
+      "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en agent.",
+      "blockedAccess": "API- och MCP-åtkomst för tjänstehuvudmän blockeras omedelbart under Pro. Befintliga poster finns kvar för rensning.",
+      "sharedLimitBlocked": "MCP-agenter räknas mot den gemensamma gränsen för tjänstehuvudmän: {{used}} av {{limit}}; aktiva poster blockeras av planen."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP-agent"
+    },
+    "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
+    "blockedAccess": "API- och MCP-åtkomst för tjänstehuvudmän blockeras omedelbart under Pro. Befintliga poster finns kvar för rensning."
+  },
+  "tagDisplay": {
+    "title": "Visa på chips",
+    "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
+    "loading": "Laddar…",
+    "description": "Välj vilka taggar som visas som märken bredvid kontakter och kunder, och i vilken ordning. En lista utan taggar visar inga märken för den målgruppen.",
+    "contacts": "Kontakter",
+    "clients": "Kunder",
+    "audienceInternal": "Interna användare",
+    "audienceClient": "Kundportal",
+    "clientNote": "Börjar tom. Taggar i den här listan syns för kundens egna användare i kundportalen.",
+    "noneSelected": "Inga taggar visas.",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "remove": "Ta bort",
+    "addTag": "Lägg till en tagg…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Tillbaka till e-postinställningar",
+      "title": "E-post- och identitetsleverantörer",
+      "description": "Registrera din egen Google- eller Microsoft-applikation för inkommande e-post och inloggning för personal. Dessa autentiseringsuppgifter tillhör din arbetsyta."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Tillgångsnumrering",
+      "description": "En gemensam nummerserie för klientorganisationen formateras med varje kunds prefix. Förhandsgranskning och utskrift tilldelar inga nummer. Utfärdade nummer som överges lämnar luckor och återanvänds aldrig.",
+      "clientPrefixes": "Kundprefix",
+      "noPrefix": "Inget prefix",
+      "prefixSaved": "Kundprefix sparat",
+      "uniquenessEnabled": "Unika inventarienummer är aktiverade",
+      "legacyAudit": "Granskning av befintliga inventarienummer",
+      "legacyAuditHelp": "Befintliga inventarienummer bevaras. Åtgärda dubbletter genom att redigera berörda tillgångars inventarienummer. Granska tomma inventarienummer utan att ändra dem om de avsiktligt är tomma.",
+      "reconciliationNote": "Anteckning om manuell avstämning",
+      "markReviewed": "Markera som granskad",
+      "noLegacyIssues": "Inga tomma eller dubbla inventarienummer hittades vid migreringen.",
+      "activate": "Aktivera unika inventarienummer",
+      "saveFailed": "Det gick inte att spara prefixet",
+      "activationFailed": "Åtgärda dubbla inventarienummer före aktivering",
+      "continuationReview": "Granskningen av befintliga data omfattade {{scanned}} sparade inventarienummer; {{numeric}} har numeriska suffix. Det högsta suffixet är {{maximum}}; granska startvärdet {{next}}. Detta är endast ett förslag. Ange och spara det godkända fortsättningsvärdet ovan. Granskningen förbrukar inget värde i nummerserien.",
+      "continuationExamples": "Exempel: {{examples}}",
+      "blankTag": "(tomt inventarienummer)",
+      "normalizedTag": "Normaliserat: {{tag}}"
     }
   }
 }

@@ -20,6 +20,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -30,18 +31,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  ApiRequest,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
 export class ApiTeamController extends ApiBaseController {
@@ -98,14 +88,13 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -124,7 +113,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = advancedTeamSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -198,14 +187,13 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -262,14 +250,13 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -334,17 +321,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -401,17 +387,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -428,7 +413,7 @@ export class ApiTeamController extends ApiBaseController {
           memberData = addTeamMemberSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid member data', error.errors);
+            throw new ValidationError('Invalid member data', error.issues);
           }
           throw error;
         }
@@ -480,9 +465,8 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract IDs from path
         const url = new URL(req.url);
@@ -494,8 +478,8 @@ export class ApiTeamController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -552,17 +536,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -579,7 +562,7 @@ export class ApiTeamController extends ApiBaseController {
           membersData = bulkAddTeamMembersSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid members data', error.errors);
+            throw new ValidationError('Invalid members data', error.issues);
           }
           throw error;
         }
@@ -631,17 +614,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -658,7 +640,7 @@ export class ApiTeamController extends ApiBaseController {
           managerData = assignManagerSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid manager data', error.errors);
+            throw new ValidationError('Invalid manager data', error.issues);
           }
           throw error;
         }
@@ -710,17 +692,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -739,7 +720,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = teamAnalyticsQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid analytics parameters', error.errors);
+            throw new ValidationError('Invalid analytics parameters', error.issues);
           }
           throw error;
         }
@@ -791,17 +772,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -858,17 +838,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -934,17 +913,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'read',
           db
@@ -1001,9 +979,8 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract permission ID from path
         const url = new URL(req.url);
@@ -1018,8 +995,8 @@ export class ApiTeamController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -1076,17 +1053,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -1150,17 +1126,16 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -1217,14 +1192,13 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'update',
           db
@@ -1292,14 +1266,13 @@ export class ApiTeamController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertInternalApiUser(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
-          user,
+        const hasDeletePermission = await hasApiContextPermission(
+          apiAuthContext,
           'team',
           'delete',
           db

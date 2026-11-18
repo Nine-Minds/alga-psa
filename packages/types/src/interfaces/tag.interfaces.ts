@@ -94,3 +94,32 @@ export interface CreateTagOutput {
   tenant?: string;
   created_at: string;
 }
+
+/**
+ * Who a tag display rule is for. 'internal' = MSP users, 'client' = client-portal users. An audience
+ * with no rules sees no chip tags.
+ */
+export type TagDisplayAudience = 'internal' | 'client';
+
+/** Entity types whose tags can be shown as chips (display rules exist for these only). */
+export type TagDisplayEntityType = 'contact' | 'client';
+
+/** A tag rendered as a chip badge. `tag_id` is the tag DEFINITION id. */
+export interface IDisplayTag {
+  tag_id: string;
+  tag_text: string;
+  background_color?: string | null;
+  text_color?: string | null;
+}
+
+/** One ordered display rule: this definition shows for this audience on this entity type. */
+export interface ITagDisplayRule {
+  tenant?: string;
+  rule_id: string;
+  tagged_type: TagDisplayEntityType;
+  audience: TagDisplayAudience;
+  tag_id: string;
+  position: number;
+  created_at?: string | Date;
+  created_by?: string | null;
+}

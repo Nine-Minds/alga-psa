@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Impossible d'enregistrer les informations client",
       "addTeamMembers": "Impossible d'ajouter les membres de l'équipe",
+      "unsentInvites": "Envoyez l’invitation à chaque membre de l’équipe ajouté, ou supprimez-le, avant de continuer.",
+      "teamMembersNotCreated": "Ces membres de l’équipe n’ont pas été créés. Corrigez ou supprimez chacun d’eux avant de continuer :",
+      "teamProgressNotSaved": "Ces membres de l’équipe ont été créés, mais la configuration n’a pas pu enregistrer sa progression : {{users}}. Si vous quittez la configuration puis revenez, ils risquent de ne pas apparaître comme ajoutés ; leurs comptes existent déjà, ne les ajoutez donc pas à nouveau. Sélectionnez Suivant pour continuer.",
       "saveClient": "Impossible d'enregistrer le client",
       "addContact": "Impossible d'ajouter le contact",
       "setupBilling": "Impossible de configurer la facturation",
@@ -414,6 +417,7 @@
       "invalidEmail": "Veuillez saisir une adresse e-mail valide",
       "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
       "saveFailed": "Impossible d'enregistrer le membre de l'équipe",
+      "progressNotSaved": "{{email}} a été créé, mais la configuration n’a pas pu enregistrer sa progression. Si vous quittez la configuration puis revenez, ce membre risque de ne pas apparaître comme ajouté ; le compte existe déjà, ne l’ajoutez donc pas à nouveau.",
       "inviteFailed": "Impossible d'envoyer l'invitation",
       "roleRequired": "Veuillez sélectionner un rôle",
       "generic": "Une erreur s'est produite"

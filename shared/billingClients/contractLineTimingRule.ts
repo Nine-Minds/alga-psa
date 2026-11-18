@@ -74,6 +74,78 @@ export function isContractLineTimingNotAllowedError(
 }
 
 /**
+ * A line's recurring charge streams. Timing is resolved per (line, stream): the
+ * `line` stream is the line's own charge (fixed fee, hourly time, usage, ...)
+ * and is due by the line's effective billing timing. Further streams (the
+ * prepaid-block fee of a cadence-mode block) are independent schedules of the
+ * same line.
+ */
+export type RecurringChargeStream = 'line' | 'prepaid_block';
+
+/**
+ * The stream a persisted period's charge family belongs to. Only the
+ * prepaid-block fee has its own stream; every other family is the line's own.
+ */
+export function streamForChargeFamily(chargeFamily: string | null | undefined): RecurringChargeStream {
+  return chargeFamily === 'prepaid_block' ? 'prepaid_block' : 'line';
+}
+
+export interface LineRecurringStream {
+  stream: RecurringChargeStream;
+  family: RecurringChargeFamily;
+  duePosition: RecurringBillingTiming;
+}
+
+/** The slice of a line that decides its streams. */
+export interface LineStreamInput {
+  contract_line_type: string | null | undefined;
+  billing_timing?: string | null;
+}
+
+/** The slice of a Prepaid Block config that decides extra streams. */
+export interface BlockConfigStreamInput {
+  issue_mode?: string | null;
+}
+
+/**
+ * The single source of a contract line's recurring streams: every materializer,
+ * regeneration and retire path, and the simulator, ask this and loop over the
+ * result, so none of them re-derives family or due position.
+ */
+export function contractLineRecurringStreams(
+  line: LineStreamInput,
+  blockConfig?: BlockConfigStreamInput | null,
+): LineRecurringStream[] {
+  const streams: LineRecurringStream[] = [
+    {
+      stream: 'line',
+      family: resolveRecurringChargeFamily(line.contract_line_type),
+      duePosition: resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing),
+    },
+  ];
+  // A cadence-mode block fee is billed in advance each period, whatever the
+  // line's own (arrears) timing is.
+  if (blockConfig?.issue_mode === 'cadence') {
+    streams.push({ stream: 'prepaid_block', family: 'prepaid_block', duePosition: 'advance' });
+  }
+  return streams;
+}
+
+/**
+ * The line's own stream (family and due position of the charge the line type
+ * produces). Callers that handle one stream at a time use this; callers that
+ * materialize or retire schedules loop over `contractLineRecurringStreams`.
+ */
+export function contractLineOwnStream(line: LineStreamInput): LineRecurringStream {
+  const own = contractLineRecurringStreams(line).find((entry) => entry.stream === 'line');
+  /* c8 ignore next 3 -- contractLineRecurringStreams always yields the line stream */
+  if (!own) {
+    throw new Error('contractLineRecurringStreams must yield the line stream');
+  }
+  return own;
+}
+
+/**
  * Maps a stored contract line type to the recurring charge family used by the
  * schedule materializers, the coverage audit and the engine.
  */

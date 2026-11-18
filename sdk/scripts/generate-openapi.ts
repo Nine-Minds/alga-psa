@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import YAML from 'yaml';
+import { writeDocument, type OpenApiFormat } from './lib/write-openapi-document.mjs';
 import { buildBaseRegistry, buildDocument, DocumentBuildOptions } from '../../server/src/lib/api/openapi';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +14,7 @@ interface CliOptions {
   version: string;
   title?: string;
   description?: string;
-  formats: Array<'json' | 'yaml'>;
+  formats: OpenApiFormat[];
 }
 
 function readRootPackageVersion(rootDir: string): string {
@@ -95,30 +95,19 @@ function parseCliOptions(rootDir: string): CliOptions {
   return options;
 }
 
-function writeDocument(outputDir: string, baseName: string, formats: CliOptions['formats'], document: unknown) {
-  fs.mkdirSync(outputDir, { recursive: true });
-  const writtenFiles: string[] = [];
-
-  if (formats.includes('json')) {
-    const jsonPath = path.join(outputDir, `${baseName}.json`);
-    fs.writeFileSync(jsonPath, `${JSON.stringify(document, null, 2)}\n`, 'utf-8');
-    writtenFiles.push(jsonPath);
-  }
-
-  if (formats.includes('yaml')) {
-    const yamlPath = path.join(outputDir, `${baseName}.yaml`);
-    fs.writeFileSync(yamlPath, `${YAML.stringify(document)}\n`, 'utf-8');
-    writtenFiles.push(yamlPath);
-  }
-
-  return writtenFiles;
-}
-
 async function main() {
   const repoRoot = path.resolve(__dirname, '..', '..');
   const options = parseCliOptions(repoRoot);
 
-  const registry = buildBaseRegistry({ edition: options.edition });
+  // Per-product edition extensions to the document: each product exposes the same
+  // `decorateOpenApiRoute` from its oss/ and ee/ trees; the edition selects one.
+  const productDecorators = await Promise.all(
+    ['product-service-principals'].map(async (pkg) => {
+      const mod = await import(`../../packages/${pkg}/${options.edition === 'ee' ? 'ee' : 'oss'}/openapi.ts`);
+      return mod.decorateOpenApiRoute as (route: any) => any;
+    }),
+  );
+  const registry = buildBaseRegistry({ edition: options.edition, routeDecorators: productDecorators });
 
   const metadata: DocumentBuildOptions = {
     title: options.title ?? 'AlgaPSA API',

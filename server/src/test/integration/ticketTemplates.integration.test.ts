@@ -280,7 +280,7 @@ describe('Ticket templates (integration)', () => {
 
   async function addBoardApplyRule() {
     await tt('checklist_template_apply_rules').insert({
-      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, board_id: boardId, is_enabled: true,
+      tenant: tenantId, apply_rule_id: uuidv4(), template_id: checklistTemplateX, where: JSON.stringify({ join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: boardId }] }), is_enabled: true,
     });
   }
 
@@ -451,6 +451,27 @@ describe('Ticket templates (integration)', () => {
       const after: any = await ticketActions.getTicketById(ticket.ticket_id);
       expect(after.created_from_template_id).toBe(templateId);
       expect(after.created_from_template_name ?? null).toBeNull();
+    });
+
+    it('copies the template documentation links onto every ticket addTicket creates from it', async () => {
+      const templateId = await insertTemplate({ name: 'Linked template' });
+      const url = 'https://docs.example.hudu.com/kba/apns-renewal';
+      await tt('ticket_template_links').insert({
+        tenant: tenantId, template_id: templateId, system: 'hudu', external_id: 'apns-renewal', url, title: 'APNs renewal', order_number: 0,
+      });
+
+      // Two tickets from one template: the shared reference must not collide across tickets.
+      const first = await createdTicket(await ticketActions.addTicket(ticketForm(templateId)));
+      const second = await createdTicket(await ticketActions.addTicket(ticketForm(templateId)));
+      for (const ticket of [first, second]) {
+        const links = await tt('external_entity_links').where({ entity_type: 'ticket', entity_id: ticket.ticket_id });
+        expect(links).toHaveLength(1);
+        expect(links[0]).toMatchObject({ system: 'hudu', external_id: 'apns-renewal', url, title: 'APNs renewal', relationship: 'reference', portal_visible: false });
+        const activity = await tt('ticket_audit_logs')
+          .where({ ticket_id: ticket.ticket_id, event_type: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE })
+          .first();
+        expect(json(activity.details)).toMatchObject({ links_copied: 1 });
+      }
     });
   });
 
@@ -688,6 +709,13 @@ describe('Ticket templates (integration)', () => {
       // Recurring definitions reference ticket_templates (migration A, ON DELETE RESTRICT), so roll that link back first.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const linkMigration = require('../../../migrations/20261017120000_add_recurring_ticket_template_link.cjs');
+      // ticket_template_links references ticket_templates too (ON DELETE CASCADE FK), so it goes first as well.
+      // Only the table is dropped: that migration's full down rebuilds external_entity_links indexes
+      // CONCURRENTLY, which cannot run inside this test's transaction. Its up then recreates just the
+      // table, because the index steps are already done.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const docLinksMigration = require('../../../migrations/20261109120000_ticket_template_links.cjs');
+      await context.db.schema.dropTableIfExists('ticket_template_links');
       await linkMigration.down(context.db);
       try {
         await migration.down(context.db);
@@ -698,13 +726,14 @@ describe('Ticket templates (integration)', () => {
       } finally {
         await migration.up(context.db);
         await linkMigration.up(context.db);
+        await docLinksMigration.up(context.db);
       }
       expect(await tableExists('ticket_templates')).toBe(true);
       expect(await columnRows()).toHaveLength(1);
       await expect(migration.up(context.db)).resolves.not.toThrow();
     });
 
-    it('the permission catalog matches D11 for PSA and AlgaDesk', async () => {
+    it('the permission catalog matches D11 for PSA, AlgaDesk and co-managed', async () => {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { ACTIVE_PERMISSIONS: PERMISSIONS } = require('../../../migrations/utils/permissions/catalog.cjs');
       const rows = PERMISSIONS.filter((p: any) => p.resource === 'ticket_template');
@@ -712,15 +741,19 @@ describe('Ticket templates (integration)', () => {
       for (const row of rows) {
         expect(row.msp).toBe(true);
         expect(row.client).toBe(false);
-        expect([...row.products].sort()).toEqual(['algadesk', 'psa']);
+        expect([...row.products].sort()).toEqual(['algadesk', 'co_managed', 'psa']);
         if (row.action === 'read') {
           expect(row.defaultGrants.psa).toEqual(
             expect.arrayContaining(['msp:Admin', 'msp:Technician', 'msp:Dispatcher', 'msp:Manager', 'msp:Project Manager'])
           );
           expect(row.defaultGrants.algadesk).toEqual(expect.arrayContaining(['msp:Admin', 'msp:Agent']));
+          expect(row.defaultGrants.co_managed).toEqual(
+            expect.arrayContaining(['msp:Admin', 'msp:Technician', 'msp:Dispatcher', 'msp:Project Manager'])
+          );
         } else {
           expect(row.defaultGrants.psa).toEqual(['msp:Admin']);
           expect(row.defaultGrants.algadesk).toEqual(['msp:Admin']);
+          expect(row.defaultGrants.co_managed).toEqual(['msp:Admin']);
         }
       }
     });

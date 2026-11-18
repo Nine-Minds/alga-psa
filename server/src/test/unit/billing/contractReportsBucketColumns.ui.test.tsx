@@ -6,6 +6,10 @@
  * content-driven defaults (Overage only with bucket pools, block columns only
  * with prepaid blocks) apply only to columns the user has not set, and the
  * user's stored choice always wins.
+ *
+ * Also covers the block-status filter next to the Columns menu: pools count as
+ * active, blocks filter on their own status, and both the on-screen table and
+ * the printable table read the filtered rows.
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -53,6 +57,18 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div data-testid="columns-menu">{children}</div>,
 }));
 
+// Radix Select has the same pointer-capture problem; a plain select keeps the
+// value/onValueChange contract the component relies on.
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ id, value, options, onValueChange }: any) => (
+    <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>
+      {options.map((option: any) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
+}));
+
 const reports = vi.hoisted(() => ({
   pools: [] as unknown[],
   blocks: [] as unknown[],
@@ -81,7 +97,7 @@ import ContractReports from '@alga-psa/billing/components/billing-dashboard/repo
 const PREF_KEY = 'billing.reports.bucketUsage.columnVisibility';
 const TOGGLEABLE_COLUMNS = [
   'service_name', 'total_hours', 'used_hours', 'remaining_hours',
-  'utilization_percentage', 'overage_hours', 'hourly_rate', 'expiration_date', 'status',
+  'utilization_percentage', 'overage_hours', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status',
 ];
 // Client and Contract anchor every row: always shown, never offered in the menu.
 const ALWAYS_ON_COLUMNS = ['client_name', 'contract_name'];
@@ -98,10 +114,14 @@ const blockRow = {
   remaining_hours: 36,
   utilization_percentage: 10,
   hourly_rate: 11000,
+  remaining_value: 396000,
+  valid_from: '2026-10-15',
   currency_code: 'USD',
   purchased_at: '2026-10-15',
   expiration_date: '2027-10-15',
 };
+const expiredBlockRow = { ...blockRow, block_id: 'block-2', status: 'expired', service_name: 'Lapsed Block' };
+const voidedBlockRow = { ...blockRow, block_id: 'block-3', status: 'voided', service_name: 'Cancelled Block' };
 const poolRow = {
   contract_name: 'Managed Services',
   client_id: 'client-1',
@@ -123,6 +143,23 @@ function printHeaders(): string[] {
   const root = document.getElementById('bucket-usage-print');
   if (!root) throw new Error('no print root');
   return within(root).queryAllByRole('columnheader').map((cell) => cell.textContent?.trim() ?? '');
+}
+
+function printBodyText(): string {
+  const root = document.getElementById('bucket-usage-print');
+  if (!root) throw new Error('no print root');
+  return within(root).queryAllByRole('cell').map((cell) => cell.textContent?.trim() ?? '').join(' | ');
+}
+
+function screenTableText(): string {
+  const table = document.querySelector('[data-automation-id="bucket-usage-table"]');
+  return table?.textContent ?? '';
+}
+
+function statusFilter(): HTMLSelectElement {
+  const element = document.getElementById('bucket-usage-status-filter');
+  if (!element) throw new Error('no status filter');
+  return element as HTMLSelectElement;
 }
 
 async function renderBucketTab() {
@@ -148,13 +185,15 @@ describe('Bucket Hours Utilization columns', () => {
 
     for (const id of TOGGLEABLE_COLUMNS) expect(toggle(id)).not.toBeDisabled();
     for (const id of ALWAYS_ON_COLUMNS) expect(() => toggle(id)).toThrow(`no toggle for ${id}`);
-    for (const id of ['total_hours', 'used_hours', 'remaining_hours', 'utilization_percentage', 'service_name', 'hourly_rate', 'expiration_date', 'status']) {
+    for (const id of ['total_hours', 'used_hours', 'remaining_hours', 'utilization_percentage', 'service_name', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status']) {
       expect(toggle(id)).toBeChecked();
     }
     expect(toggle('overage_hours')).not.toBeChecked();
     expect(printHeaders()).toEqual([
-      'Client', 'Contract', 'Service', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Rate / hr', 'Expires', 'Status',
+      'Client', 'Contract', 'Service', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Rate / hr', 'Remaining value', 'Valid from', 'Expires', 'Status',
     ]);
+    // 36 h x 110.00/h, formatted from minor units in the block's own currency.
+    expect(within(document.getElementById('bucket-usage-print') as HTMLElement).getByText('$3,960.00')).toBeInTheDocument();
   });
 
   it('defaults to Overage and no block columns when only bucket pools exist', async () => {
@@ -162,7 +201,7 @@ describe('Bucket Hours Utilization columns', () => {
     await renderBucketTab();
 
     expect(toggle('overage_hours')).toBeChecked();
-    for (const id of ['service_name', 'hourly_rate', 'expiration_date', 'status']) expect(toggle(id)).not.toBeChecked();
+    for (const id of ['service_name', 'hourly_rate', 'remaining_value', 'valid_from', 'expiration_date', 'status']) expect(toggle(id)).not.toBeChecked();
     expect(printHeaders()).toEqual(['Client', 'Contract', 'Total Hours', 'Used Hours', 'Remaining', 'Utilization', 'Overage']);
   });
 
@@ -206,5 +245,59 @@ describe('Bucket Hours Utilization columns', () => {
     expect(toggle('overage_hours')).not.toBeChecked();
     expect(prefs.store[PREF_KEY]).toEqual({});
     expect(screen.queryByRole('button', { name: 'Reset to default columns' })).toBeNull();
+  });
+});
+
+describe('Bucket Hours Utilization block-status filter', () => {
+  beforeEach(() => {
+    prefs.store = {};
+    prefs.writes = [];
+    reports.pools = [poolRow];
+    reports.blocks = [blockRow, expiredBlockRow, voidedBlockRow];
+  });
+  afterEach(() => cleanup());
+
+  it('shows pools and every returned block status by default', async () => {
+    await renderBucketTab();
+
+    expect(statusFilter().value).toBe('all');
+    for (const label of ['Managed Services', 'Time Block - 40 Hours', 'Lapsed Block', 'Cancelled Block']) {
+      expect(screenTableText()).toContain(label);
+      expect(printBodyText()).toContain(label);
+    }
+  });
+
+  it('narrows to expired blocks, dropping pool and active rows', async () => {
+    await renderBucketTab();
+
+    fireEvent.change(statusFilter(), { target: { value: 'expired' } });
+    await waitFor(() => expect(screenTableText()).not.toContain('Managed Services'));
+
+    expect(screenTableText()).toContain('Lapsed Block');
+    expect(screenTableText()).not.toContain('Time Block - 40 Hours');
+    expect(screenTableText()).not.toContain('Cancelled Block');
+    expect(printBodyText()).toContain('Lapsed Block');
+    expect(printBodyText()).not.toContain('Cancelled Block');
+  });
+
+  it('counts bucket pools as active alongside active blocks', async () => {
+    await renderBucketTab();
+
+    fireEvent.change(statusFilter(), { target: { value: 'active' } });
+    await waitFor(() => expect(screenTableText()).not.toContain('Lapsed Block'));
+
+    expect(screenTableText()).toContain('Managed Services');
+    expect(screenTableText()).toContain('Time Block - 40 Hours');
+    expect(screenTableText()).not.toContain('Cancelled Block');
+  });
+
+  it('falls back to the empty message when a status matches nothing', async () => {
+    reports.blocks = [blockRow];
+    await renderBucketTab();
+
+    fireEvent.change(statusFilter(), { target: { value: 'voided' } });
+    await waitFor(() => expect(screen.getAllByText('No bucket-based contracts found').length).toBeGreaterThan(0));
+
+    expect(document.querySelector('[data-automation-id="bucket-usage-table"]')).toBeNull();
   });
 });

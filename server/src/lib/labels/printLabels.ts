@@ -16,12 +16,18 @@ import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@a
  * Composition root for label printing: the one place that knows the record owners (through their
  * `LabelViewModelProvider`s) AND the label renderer (billing). Neither side imports the other.
  *
+ * A print job is a list of label subjects `{ recordId, linkedAssetId? }`: one label each, in request order. The
+ * same ticket may appear in several subjects with different picks (one tag per held item).
+ *
  * Invariants, in order of execution:
  *  1. Authorization comes first. Providers enforce RBAC and record-level permission and return `null`
  *     for "missing" and "not permitted" alike. A caller who is not an MSP user, a single record that is
  *     null, and a batch where EVERY record is null all yield the same uniform not-found result.
  *     In a mixed batch, null records are skipped and only their COUNT is returned (`skipped`) - never
  *     which ids or why - so an unauthorized request reveals nothing about a record.
+ *     Skips are counted PER SUBJECT (a ticket named three times that is unreadable counts three), because each
+ *     subject is one label that was not printed. If no UNIQUE record is readable the answer is the same 404 for
+ *     every caller and every request shape.
  *  2. Rendering and printing are read-only: nothing is written, no event is published, nothing recorded.
  *  3. QR content is only the canonical recordUrl (the renderer re-checks it).
  *  4. A render failure stays all-or-nothing (422) and lists every failing record.
@@ -37,24 +43,34 @@ const DEFAULT_LAYOUT: LabelBatchLayout = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface PrintLabelsRequest {
-  /** Single-class request: one label class for every id. */
+  /** Default class for subjects that do not name their own. */
   labelClass?: unknown;
-  ids?: unknown;
   /**
-   * Mixed request (C6 bulk print): labels of several classes in ONE PDF, in this order. Each class prints
-   * with its tenant default (or standard) template; templateId, overrides and linkedAssetId are not
-   * accepted with `items`. The cap, ordering and skip/404 rules are the same as a single-class request.
+   * Label subjects: one label each, in request order, possibly of several classes. A subject's own
+   * `labelClass` wins over the request default. `linkedAssetId` applies to `ticket-work-tag` only and is
+   * dropped silently on any other class.
    */
+  labels: unknown;
+  /** Legacy shapes: always rejected (400). Declared only so the rejection is explicit. */
+  ids?: unknown;
   items?: unknown;
   /** A tenant custom `work-tag` template id, or a standard code. Supersedes `templateCode`. */
   templateId?: unknown;
   /** Alias of `templateId` for standard codes (C1 request shape). */
   templateCode?: unknown;
   layout?: unknown;
-  /** Single ticket only: print-time edits of the item and reason lines. Never persisted. */
+  /** One distinct record only: print-time edits of the item and reason lines. Never persisted. */
   overrides?: unknown;
-  /** Single ticket only: which linked asset to print when several are linked. Ignored when invalid. */
-  linkedAssetId?: unknown;
+}
+
+export interface LabelSubject {
+  recordId: string;
+  linkedAssetId?: string;
+}
+
+/** A subject with its class resolved. */
+export interface ResolvedLabelSubject extends LabelSubject {
+  labelClass: LabelClass;
 }
 
 export const MAX_OVERRIDE_LENGTH = 120;
@@ -93,73 +109,60 @@ export interface PrintLabelsDeps {
    */
   getLinkedAssetParts: (
     context: LabelRequestContext,
-    ticketIds: readonly string[],
-    chosen: Record<string, string>
+    subjects: ReadonlyArray<LabelSubject>
   ) => Promise<
-    Record<
-      string,
-      {
-        assetId: string;
-        assetTag: string | null;
-        serialSuffix: string | null;
-        custodyLocation?: string | null;
-        nextAction?: string | null;
-      } | null
-    >
+    Array<{
+      assetId: string;
+      assetTag: string | null;
+      serialSuffix: string | null;
+      custodyLocation?: string | null;
+      nextAction?: string | null;
+    } | null>
   >;
   describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
 }
 
 const NOT_FOUND: PrintLabelsResult = { ok: false, status: 404, message: 'Not found.' };
 
-interface NormalizedEntry {
-  labelClass: LabelClass;
-  id: string;
-}
-
-function normalizeEntries(request: PrintLabelsRequest): { entries: NormalizedEntry[]; mixed: boolean } | PrintLabelsResult {
-  if (request.items !== undefined) {
-    if (request.labelClass !== undefined || request.ids !== undefined) {
-      return { ok: false, status: 400, message: 'Send either labelClass and ids, or items, not both.' };
-    }
-    const items = request.items;
-    if (!Array.isArray(items) || items.length === 0 || items.length > MAX_LABELS_PER_REQUEST) {
-      return { ok: false, status: 400, message: `items must be 1 to ${MAX_LABELS_PER_REQUEST} labels.` };
-    }
-    const entries: NormalizedEntry[] = [];
-    for (const item of items) {
-      const raw = item as { labelClass?: unknown; id?: unknown } | null;
-      if (!raw || typeof raw !== 'object' || !isLabelClass(raw.labelClass) || typeof raw.id !== 'string' || !UUID.test(raw.id)) {
-        return {
-          ok: false,
-          status: 400,
-          message: `Each item must be { labelClass: ${LABEL_CLASSES.join(' | ')}, id: record id }.`,
-        };
-      }
-      entries.push({ labelClass: raw.labelClass, id: raw.id });
-    }
-    for (const name of ['templateId', 'templateCode', 'overrides', 'linkedAssetId'] as const) {
-      if (request[name] !== undefined && request[name] !== null) {
-        return { ok: false, status: 400, message: `${name} is not accepted with items.` };
-      }
-    }
-    return { entries, mixed: true };
+function normalizeSubjects(request: PrintLabelsRequest): { subjects: ResolvedLabelSubject[] } | PrintLabelsResult {
+  if (request.ids !== undefined || request.items !== undefined) {
+    return { ok: false, status: 400, message: 'ids and items are not accepted; send labels: [{ labelClass?, recordId, linkedAssetId? }].' };
   }
-
-  if (!isLabelClass(request.labelClass)) {
+  if (request.labelClass !== undefined && request.labelClass !== null && !isLabelClass(request.labelClass)) {
     return { ok: false, status: 400, message: `labelClass must be one of: ${LABEL_CLASSES.join(', ')}.` };
   }
-  const labelClass = request.labelClass;
-  const ids = request.ids;
-  if (
-    !Array.isArray(ids) ||
-    ids.length === 0 ||
-    ids.length > MAX_LABELS_PER_REQUEST ||
-    !ids.every((id): id is string => typeof id === 'string' && UUID.test(id))
-  ) {
-    return { ok: false, status: 400, message: `ids must be 1 to ${MAX_LABELS_PER_REQUEST} record ids.` };
+  const defaultClass: LabelClass | null = isLabelClass(request.labelClass) ? request.labelClass : null;
+  const rawLabels = request.labels;
+  const badLabels = {
+    ok: false as const,
+    status: 400 as const,
+    message: `labels must be 1 to ${MAX_LABELS_PER_REQUEST} label subjects { labelClass?, recordId, linkedAssetId? }.`,
+  };
+  if (!Array.isArray(rawLabels) || rawLabels.length === 0 || rawLabels.length > MAX_LABELS_PER_REQUEST) {
+    return badLabels;
   }
-  return { entries: ids.map((id) => ({ labelClass, id })), mixed: false };
+  const subjects: ResolvedLabelSubject[] = [];
+  for (const raw of rawLabels as unknown[]) {
+    const item = raw as { labelClass?: unknown; recordId?: unknown; linkedAssetId?: unknown } | null;
+    if (!item || typeof item !== 'object' || typeof item.recordId !== 'string' || !UUID.test(item.recordId)) {
+      return badLabels;
+    }
+    if (item.labelClass !== undefined && item.labelClass !== null && !isLabelClass(item.labelClass)) {
+      return { ok: false, status: 400, message: `labelClass must be one of: ${LABEL_CLASSES.join(', ')}.` };
+    }
+    const labelClass: LabelClass | null = isLabelClass(item.labelClass) ? item.labelClass : defaultClass;
+    if (!labelClass) {
+      return { ok: false, status: 400, message: `Every label needs a labelClass (one of: ${LABEL_CLASSES.join(', ')}), on the label or on the request.` };
+    }
+    // linkedAssetId only means something on a ticket work tag; on any other class it is dropped, not rejected.
+    if (labelClass === 'ticket-work-tag' && item.linkedAssetId !== undefined && item.linkedAssetId !== null) {
+      if (typeof item.linkedAssetId !== 'string' || !UUID.test(item.linkedAssetId)) return badLabels;
+      subjects.push({ labelClass, recordId: item.recordId, linkedAssetId: item.linkedAssetId });
+    } else {
+      subjects.push({ labelClass, recordId: item.recordId });
+    }
+  }
+  return { subjects };
 }
 
 export async function printLabels(
@@ -167,33 +170,38 @@ export async function printLabels(
   caller: { user: IUserWithRoles; tenant: string; baseUrl: string },
   request: PrintLabelsRequest
 ): Promise<PrintLabelsResult> {
-  const normalized = normalizeEntries(request);
+  const normalized = normalizeSubjects(request);
   if ('ok' in normalized) return normalized;
-  const { entries, mixed } = normalized;
-  const classes = [...new Set(entries.map((e) => e.labelClass))];
-  // Single-class request: the class and ids every existing check below is phrased in.
-  const labelClass = classes[0];
-  const ids = entries.map((e) => e.id);
+  const { subjects } = normalized;
+  const classes = [...new Set(subjects.map((s) => s.labelClass))];
+  const mixed = classes.length > 1;
+  const uniqueIds = Array.from(new Set(subjects.map((subject) => subject.recordId)));
 
   for (const [name, value] of [['templateId', request.templateId], ['templateCode', request.templateCode]] as const) {
     if (value !== undefined && typeof value !== 'string') {
       return { ok: false, status: 400, message: `${name} must be a string.` };
     }
   }
-  const requestedTemplate = mixed
-    ? null
-    : (typeof request.templateId === 'string' && request.templateId) ||
-      (typeof request.templateCode === 'string' && request.templateCode) ||
-      null;
+  const requestedTemplate =
+    (typeof request.templateId === 'string' && request.templateId) ||
+    (typeof request.templateCode === 'string' && request.templateCode) ||
+    null;
+  if (mixed) {
+    for (const name of ['templateId', 'templateCode', 'overrides'] as const) {
+      if (request[name] !== undefined && request[name] !== null) {
+        return { ok: false, status: 400, message: `${name} is not accepted when labels of several classes are printed.` };
+      }
+    }
+  }
 
-  // Overrides edit one ticket's own tag: single ticket only, plain text, bounded.
+  // Overrides edit one ticket's own tag: one distinct ticket only, plain text, bounded.
   let overrides: { title?: string | null; detail?: string | null } | null = null;
   if (request.overrides !== undefined && request.overrides !== null) {
     const raw = request.overrides as Record<string, unknown>;
     if (typeof raw !== 'object' || Array.isArray(raw)) {
       return { ok: false, status: 400, message: 'overrides must be an object.' };
     }
-    if (labelClass !== 'ticket-work-tag' || ids.length !== 1) {
+    if (classes[0] !== 'ticket-work-tag' || uniqueIds.length !== 1) {
       return { ok: false, status: 400, message: 'overrides are only accepted when printing a single ticket.' };
     }
     overrides = {};
@@ -205,13 +213,6 @@ export async function printLabels(
       overrides[key] = sanitizeLabelOverride(raw[key] as string);
     }
   }
-  // Absent unless it is a well-formed id on a single-ticket print. Whether it is linked to the ticket and
-  // readable is decided in the assets package; a bad value is ignored silently, never an error.
-  const linkedAssetId =
-    !mixed && labelClass === 'ticket-work-tag' && ids.length === 1 && typeof request.linkedAssetId === 'string' && UUID.test(request.linkedAssetId)
-      ? request.linkedAssetId
-      : null;
-
   // MSP users only. A client-portal user gets the same answer as a missing record.
   if (caller.user.user_type !== 'internal') {
     return NOT_FOUND;
@@ -238,36 +239,39 @@ export async function printLabels(
   }
 
   const context: LabelRequestContext = { tenant: caller.tenant, user: caller.user, baseUrl: caller.baseUrl };
-  // One provider call per class, then the results are put back in request order.
-  const results: Array<LabelViewModel | null> = new Array(entries.length).fill(null);
+  // One provider call per class (unique ids), then the results are put back in request order per subject.
+  const byRecord = new Map<string, LabelViewModel>();
   for (const cls of classes) {
-    const positions = entries.flatMap((e, index) => (e.labelClass === cls ? [index] : []));
-    const providerResults = await providers.get(cls)!.getLabelViewModels(context, positions.map((i) => entries[i].id));
-    if (providerResults.length !== positions.length) {
+    const ids = Array.from(new Set(subjects.filter((s) => s.labelClass === cls).map((s) => s.recordId)));
+    const providerResults = await providers.get(cls)!.getLabelViewModels(context, ids);
+    if (providerResults.length !== ids.length) {
       return NOT_FOUND;
     }
-    positions.forEach((position, k) => {
-      results[position] = providerResults[k];
+    ids.forEach((id, index) => {
+      const vm = providerResults[index];
+      if (vm) byRecord.set(`${cls}:${id}`, vm);
     });
   }
-  const readable = results.filter((vm): vm is LabelViewModel => vm !== null);
-  // Skip unreadable records and count them; if nothing is readable the answer is the uniform 404.
-  if (readable.length === 0) {
+  // Skip unreadable records and count them per subject; if nothing is readable the answer is the uniform 404.
+  const readableSubjects = subjects.filter((subject) => byRecord.has(`${subject.labelClass}:${subject.recordId}`));
+  if (readableSubjects.length === 0) {
     return NOT_FOUND;
   }
-  const skipped = entries.length - readable.length;
+  const skipped = subjects.length - readableSubjects.length;
 
-  let viewModels = readable;
-  const ticketIds = readable.filter((vm) => vm.labelClass === 'ticket-work-tag').map((vm) => vm.recordId);
-  if (ticketIds.length > 0) {
+  // One view model per subject, in request order.
+  let viewModels: LabelViewModel[] = readableSubjects.map((s) => byRecord.get(`${s.labelClass}:${s.recordId}`)!);
+  const ticketPositions = readableSubjects.flatMap((s, index) => (s.labelClass === 'ticket-work-tag' ? [index] : []));
+  if (ticketPositions.length > 0) {
     const parts = await deps.getLinkedAssetParts(
       context,
-      ticketIds,
-      linkedAssetId ? { [readable[0].recordId]: linkedAssetId } : {}
+      ticketPositions.map((i) => ({ recordId: readableSubjects[i].recordId, linkedAssetId: readableSubjects[i].linkedAssetId }))
     );
-    viewModels = viewModels.map((vm) => {
-      if (vm.labelClass !== 'ticket-work-tag') return vm;
-      const linked = parts[vm.recordId];
+    const partsByPosition = new Map<number, (typeof parts)[number]>();
+    ticketPositions.forEach((position, k) => partsByPosition.set(position, parts[k]));
+    viewModels = viewModels.map((vm, index) => {
+      if (!partsByPosition.has(index)) return vm;
+      const linked = partsByPosition.get(index);
       return linked
         ? {
             ...vm,
@@ -288,8 +292,8 @@ export async function printLabels(
     }));
   }
 
-  const items: LabelPrintItem[] = viewModels.map((viewModel) => {
-    const template = templates.get(viewModel.labelClass)!;
+  const items: LabelPrintItem[] = viewModels.map((viewModel, index) => {
+    const template = templates.get(readableSubjects[index].labelClass)!;
     return {
       viewModel,
       templateCode: template.templateCode,

@@ -190,6 +190,7 @@ exports.up = async function up(knex) {
 
     let linesUpdated = 0;
     for (const ids of chunk(lineIdsToFix)) {
+      // migration-lint: allow 5 - retroactive: backfill is already chunked or bounded by tenant/id lists in the surrounding loop; the lint cannot see the bound through the builder
       linesUpdated += await db.table('contract_lines')
         .whereIn('contract_line_id', ids)
         .where('custom_rate', 0)
@@ -208,6 +209,7 @@ exports.up = async function up(knex) {
     let configsUpdated = 0;
     let basisOnlyUpdated = 0;
     for (const ids of chunk(zeroConfigIds)) {
+      // migration-lint: allow 5 - retroactive: backfill is already chunked or bounded by tenant/id lists in the surrounding loop; the lint cannot see the bound through the builder
       configsUpdated += await db.table('contract_line_service_fixed_config')
         .whereIn('config_id', ids)
         .where('base_rate', 0)
@@ -215,6 +217,7 @@ exports.up = async function up(knex) {
         .update({ base_rate: null, ...clearBasis, rate_provenance: 'inherited', pricing_basis: 'unit', updated_at: nowIso });
     }
     for (const ids of chunk(nullConfigIds)) {
+      // migration-lint: allow 5 - retroactive: backfill is already chunked or bounded by tenant/id lists in the surrounding loop; the lint cannot see the bound through the builder
       basisOnlyUpdated += await db.table('contract_line_service_fixed_config')
         .whereIn('config_id', ids)
         .whereNull('base_rate')

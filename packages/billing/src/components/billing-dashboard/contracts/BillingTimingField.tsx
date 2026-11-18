@@ -16,6 +16,14 @@ interface BillingTimingFieldProps {
   className?: string;
   /** Hide the explanatory help line (used where the caller renders its own). */
   hideHelp?: boolean;
+  /**
+   * Offer a "Use contract default" option. It is selected while `value` is unset
+   * and calls `onInherit` to clear the value.
+   */
+  allowInherit?: boolean;
+  onInherit?: () => void;
+  /** The timing the inherited option resolves to; labels the inherit option. */
+  inheritedValue?: BillingTimingValue | null;
 }
 
 /**
@@ -30,6 +38,9 @@ export function BillingTimingField({
   id = 'billing-timing',
   className,
   hideHelp = false,
+  allowInherit = false,
+  onInherit,
+  inheritedValue,
 }: BillingTimingFieldProps) {
   const { t } = useTranslation('msp/contracts');
 
@@ -50,13 +61,42 @@ export function BillingTimingField({
     );
   }
 
+  const INHERIT = 'inherit';
+  const inheritedLabel =
+    inheritedValue === 'advance'
+      ? t('billingTimingField.inheritedAdvance', { defaultValue: 'In advance' })
+      : t('billingTimingField.inheritedArrears', { defaultValue: 'In arrears' });
+  const selectValue =
+    allowInherit && (value === undefined || value === null)
+      ? INHERIT
+      : value === 'advance'
+        ? 'advance'
+        : 'arrears';
+
   return (
     <div className={className}>
       <CustomSelect
         id={id}
-        value={value === 'advance' ? 'advance' : 'arrears'}
-        onValueChange={(next) => onChange(next === 'advance' ? 'advance' : 'arrears')}
+        value={selectValue}
+        onValueChange={(next) => {
+          if (next === INHERIT) {
+            onInherit?.();
+            return;
+          }
+          onChange(next === 'advance' ? 'advance' : 'arrears');
+        }}
         options={[
+          ...(allowInherit
+            ? [
+                {
+                  value: INHERIT,
+                  label: t('billingTimingField.inheritWithValue', {
+                    defaultValue: 'Use contract default — {{timing}}',
+                    timing: inheritedLabel.toLowerCase(),
+                  }),
+                },
+              ]
+            : []),
           {
             value: 'arrears',
             label: t('billingTimingField.options.arrears', {

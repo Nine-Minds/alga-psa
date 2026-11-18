@@ -178,6 +178,7 @@ describe('ticket close rules', () => {
     dbRef.tenant = seededUser.tenant;
     userRef.user = {
       user_id: seededUser.user_id,
+      tenant: seededUser.tenant,
       user_type: 'internal',
       first_name: seededUser.first_name ?? 'Test',
       last_name: seededUser.last_name ?? 'User',

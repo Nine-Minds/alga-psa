@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
+import { ticketViewSettingsSchema as boardViewSettingsSchema } from '../../actions/board-actions/boardViewSettingsSchema';
 import { ticketListViewFiltersSchema, buildListViewSettingsSchema } from '@alga-psa/list-views';
 import {
   captureTicketListView,
@@ -13,7 +14,7 @@ import { TICKET_STATUS_FILTER_OPEN } from '../ticketStatusFilter';
 const BOARD_SERVICE_DESK = 'b0000000-0000-4000-8000-000000000001';
 const BOARD_PROJECTS = 'b0000000-0000-4000-8000-000000000002';
 const STATUS_NEW = 's0000000-0000-4000-8000-000000000001';
-const USER_ANA = 'u0000000-0000-4000-8000-000000000001';
+const USER_ANA = 'a0000000-0000-4000-8000-000000000001';
 
 const neutral = (): Partial<ITicketListFilters> => ({
   statusId: TICKET_STATUS_FILTER_OPEN,
@@ -148,6 +149,30 @@ describe('ticket list view adapter', () => {
     expect(adapter.apply(settings, liveState()).filters.statusId).toBe(TICKET_STATUS_FILTER_OPEN);
   });
 
+  it('round-trips the "Me" sentinel unresolved through capture, schemas, sanitize and apply', () => {
+    const live = liveState({
+      filters: { ...neutral(), boardIds: [BOARD_SERVICE_DESK], assignedToIds: [TICKET_ASSIGNEE_ME], includeUnassigned: true },
+    });
+    const captured = captureTicketListView(live);
+    expect(captured.filters?.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(ticketListViewFiltersSchema.parse(captured.filters).assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(envelopeSchema.safeParse(captured).success).toBe(true);
+    // Board default views derive from the same filter shape (board scope keys are excluded there).
+    const boardParsed = boardViewSettingsSchema.safeParse({
+      filters: { assignedToIds: captured.filters?.assignedToIds, includeUnassigned: true },
+    });
+    expect(boardParsed.success).toBe(true);
+
+    // known.userIds does not contain 'me'; it must still be kept and not reported as dropped.
+    const { settings, dropped } = adapter.sanitize(captured);
+    expect(settings.filters?.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(dropped).toEqual([]);
+
+    const applied = adapter.apply(settings, liveState());
+    expect(applied.filters.assignedToIds).toEqual([TICKET_ASSIGNEE_ME]);
+    expect(applied.filters.includeUnassigned).toBe(true);
+  });
+
   it('keeps values whose universe is unknown rather than dropping them', () => {
     const captured = adapter.capture(liveState({
       filters: { ...neutral(), assignedTeamIds: ['t-any'], clientId: 'c-any' },
@@ -163,5 +188,38 @@ describe('ticket list view adapter', () => {
     expect(baseline.filters.statusId).toBe(TICKET_STATUS_FILTER_OPEN);
     expect(baseline.filters.boardIds).toEqual([BOARD_SERVICE_DESK]);
     expect(baseline.columnSizing).toBeUndefined();
+  });
+
+  describe('client.id where row (T005)', () => {
+    const C1 = 'c0000000-0000-4000-8000-000000000001';
+    const C2 = 'c0000000-0000-4000-8000-000000000002';
+    const row = (operator: 'in' | 'not_in', ...ids: string[]) =>
+      ({ join: 'and' as const, clauses: [{ path: 'client.id', operator, value: ids }] });
+
+    it('captures a not_in row, applies it to a fresh state, and reports clean', () => {
+      const live = liveState({ filters: { ...neutral(), where: row('not_in', C1, C2) } });
+      const captured = adapter.capture(live);
+      expect(envelopeSchema.safeParse(captured).success).toBe(true);
+      const applied = adapter.apply(captured, liveState({ filters: neutral() }));
+      expect(applied.filters.where).toEqual(row('not_in', C1, C2));
+      expect(adapter.differs(applied, captured)).toBe(false);
+    });
+
+    it('applies a stored v2 view holding clientId as an Any-of row that is not dirty against the folded URL state', async () => {
+      const { migrateListViewSettings, getListViewDefinition } = await import('@alga-psa/list-views');
+      const { foldLegacyClientId } = await import('../ticketFilterUtils');
+      const def = getListViewDefinition('tickets')!;
+      const urlState = foldLegacyClientId({ ...neutral(), clientId: C1 });
+      const live = liveState({ filters: urlState });
+      const base = adapter.capture(live);
+      // The same view as an old document stored it: clientId instead of the row, at version 2.
+      const { where: _where, ...filters } = base.filters as Record<string, unknown>;
+      const stored = { ...base, filters: { ...filters, clientId: C1 } };
+      const migrated = migrateListViewSettings(def, stored as never, 2) as never;
+      const applied = adapter.apply(migrated, liveState({ filters: neutral() }));
+      expect(applied.filters.where).toEqual(row('in', C1));
+      expect(applied.filters.clientId).toBeUndefined();
+      expect(adapter.differs(live, migrated)).toBe(false);
+    });
   });
 });

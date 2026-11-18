@@ -12,7 +12,7 @@ test('real Vitest omitted TODO/skip registrations remain failures without claimi
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   writeFileSync(path.join(directory, 'vitest.config.mjs'), 'export default { test: { globals: true, include: ["*.test.js"], maxWorkers: 1, fileParallelism: false } };');
   writeFileSync(path.join(directory, 'cases.test.js'), 'test("executed",()=>{}); test.todo("policy undecided"); test.skip("intentionally skipped",()=>{});');
-  const cli = fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url));
+  const cli = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url));
   const launch = args => spawnSync(process.execPath, [cli, ...args], { cwd: directory, encoding: 'utf8', timeout: 30_000 });
   const collection = launch(['list', '--json=collected.json']);
   assert.equal(collection.status, 0, collection.stderr);
@@ -59,7 +59,7 @@ test('a no-op conditional registrar keeps an opt-in test out of the strict evide
   // Same shape as the real suite: a no-op registrar when the opt-in flag is off.
   writeFileSync(path.join(directory, 'cases.test.js'),
     'const optIn = process.env.RUN_OPT === "1" ? test : (() => {}); test("executed",()=>{}); optIn("opt-in docker packaging",()=>{ throw new Error("must not run"); });');
-  const cli = fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url));
+  const cli = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url));
   const launch = (args, env) => spawnSync(process.execPath, [cli, ...args], { cwd: directory, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...env } });
 
   const collection = launch(['list', '--json=collected.json']);

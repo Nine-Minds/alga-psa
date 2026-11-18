@@ -1,5 +1,6 @@
 'use client';
 
+import { ActionTrigger } from '@alga-psa/ui/components/ActionSurface';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -207,16 +208,12 @@ export default function CreateTaskFromTicketDialog({
 
   return (
     <>
-      <Button
+      <ActionTrigger
         id="create-task-from-ticket-button"
-        type="button"
-        variant="soft"
         onClick={() => setOpen(true)}
-        className="flex items-center"
-      >
-        <ListTodo className="h-4 w-4 mr-1" />
-        {t('dialogs.createTaskFromTicket.button', 'Create Task')}
-      </Button>
+        icon={<ListTodo />}
+        label={t('dialogs.createTaskFromTicket.button', 'Create Task')}
+      />
 
       <Dialog
         isOpen={open}

@@ -79,6 +79,7 @@ const getTicket = (ticketId: string) => scoped().table('tickets').where({ ticket
 function asUser(user: any) {
   userRef.user = {
     user_id: user.user_id,
+    tenant: user.tenant,
     user_type: user.user_type ?? 'internal',
     first_name: user.first_name,
     last_name: user.last_name,
@@ -99,7 +100,7 @@ async function createExtraUser(firstName: string, lastName: string) {
     user_type: 'internal',
     ...(info.email ? { email: `lub-${userId.slice(0, 8)}@example.com` } : {}),
   });
-  return { user_id: userId, user_type: 'internal', first_name: firstName, last_name: lastName, username: `lub-${userId.slice(0, 8)}` };
+  return { user_id: userId, tenant: fixture.tenantId, user_type: 'internal', first_name: firstName, last_name: lastName, username: `lub-${userId.slice(0, 8)}` };
 }
 
 describe('ticket last-updated-by', () => {
@@ -116,6 +117,7 @@ describe('ticket last-updated-by', () => {
     fixture = await createCloseRulesFixture(db, seededUser.tenant, seededUser.user_id);
     userA = {
       user_id: seededUser.user_id,
+      tenant: seededUser.tenant,
       user_type: 'internal',
       first_name: seededUser.first_name ?? 'Test',
       last_name: seededUser.last_name ?? 'User',

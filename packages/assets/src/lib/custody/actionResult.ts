@@ -26,7 +26,7 @@ export async function toCustodyResult<T>(run: () => Promise<T>): Promise<Custody
         error: {
           code: 'validation',
           message: error.issues[0]?.message ?? 'Invalid input',
-          issues: error.issues.map((i) => ({ path: i.path, message: i.message })),
+          issues: error.issues.map((i) => ({ path: i.path.map(String), message: i.message })),
         },
       };
     }

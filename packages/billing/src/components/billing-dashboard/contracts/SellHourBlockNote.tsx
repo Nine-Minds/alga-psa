@@ -12,7 +12,8 @@ interface SellHourBlockNoteProps {
 /**
  * A contract hour bucket only bills the overage, never the included hours.
  * Charging for a block of hours up front is a Prepaid Block contract line,
- * so the hint points at adding one to the contract.
+ * so the hint points at adding one to the contract (issued every billing period for a
+ * recurring, billed-in-advance block).
  */
 export function SellHourBlockNote({ id, className }: SellHourBlockNoteProps) {
   const { t } = useTranslation('msp/contracts');
@@ -26,7 +27,7 @@ export function SellHourBlockNote({ id, className }: SellHourBlockNoteProps) {
       <span>
         {t('sellHourBlockNote.text', {
           defaultValue:
-            "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab.",
+            "A contract hour bucket bills only the overage. To charge for a block of hours up front, add a Prepaid Block line to the contract and issue it every billing period.",
         })}
       </span>
     </p>

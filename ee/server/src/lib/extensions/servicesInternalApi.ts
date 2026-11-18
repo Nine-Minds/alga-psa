@@ -34,7 +34,7 @@ const listInputSchema = z.object({
 })
 
 const getInputSchema = z.object({
-  serviceId: z.string().uuid(),
+  serviceId: z.string().guid(),
 })
 
 const userSchema = z.object({

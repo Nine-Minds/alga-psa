@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Copy } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -38,17 +38,47 @@ export const WorkflowStepSaveOutputSection: React.FC<{
   const { t } = useTranslation('msp/workflows');
   const currentSaveAs = saveAs ?? '';
   const displayPath = getWorkflowSaveAsDisplayPath(currentSaveAs);
-  const isSaveEnabled = currentSaveAs.length > 0;
+  // The section stays mounted while the name is being edited: only the Switch (or an
+  // external change such as a step switch or draft restore) turns it off, so clearing
+  // the input never unmounts it mid-edit.
+  const [isSaveEnabled, setIsSaveEnabled] = useState<boolean>(() => currentSaveAs.length > 0);
+  const emittedSaveAsRef = useRef<string | undefined>(saveAs);
+
+  useEffect(() => {
+    if (saveAs === emittedSaveAsRef.current) return;
+    emittedSaveAsRef.current = saveAs;
+    setIsSaveEnabled((saveAs ?? '').length > 0);
+  }, [saveAs]);
+
+  useEffect(() => {
+    emittedSaveAsRef.current = saveAs;
+    setIsSaveEnabled((saveAs ?? '').length > 0);
+    // Re-seed on step switch only; `saveAs` changes are handled above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepId]);
+
+  const emitSaveAs = (value?: string) => {
+    emittedSaveAsRef.current = value;
+    onSaveAsChange(value);
+  };
 
   const handleToggleSave = (enabled: boolean) => {
     if (enabled) {
       // 'result' is a variable-name fallback; stays untranslated since it surfaces as `vars.result` in authored workflows.
       const autoName = actionId ? generateSaveAsName(actionId) : 'result';
-      onSaveAsChange(autoName);
+      setIsSaveEnabled(true);
+      emitSaveAs(autoName);
       return;
     }
 
-    onSaveAsChange(undefined);
+    setIsSaveEnabled(false);
+    emitSaveAs(undefined);
+  };
+
+  const handleCommitSaveAs = () => {
+    const trimmed = currentSaveAs.trim();
+    if (trimmed === currentSaveAs && trimmed.length > 0) return;
+    emitSaveAs(trimmed || undefined);
   };
 
   return (
@@ -73,7 +103,8 @@ export const WorkflowStepSaveOutputSection: React.FC<{
               placeholder={t('stepSaveOutput.placeholder', { defaultValue: 'e.g., ticketDefaults' })}
               value={currentSaveAs}
               disabled={disabled}
-              onChange={(event) => onSaveAsChange(event.target.value.trim() || undefined)}
+              onChange={(event) => emitSaveAs(event.target.value)}
+              onBlur={handleCommitSaveAs}
               className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-destructive' : saveAsValidation?.type === 'warning' ? 'border-warning' : ''}`}
             />
             <Button

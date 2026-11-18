@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const findUserByEmailAndTypeMock = vi.fn();
+const findUsersByEmailAndTypeMock = vi.fn();
 const findUserByEmailTenantAndTypeMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -18,7 +18,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
-    findUserByEmailAndType: (...args: unknown[]) => findUserByEmailAndTypeMock(...args),
+    findUsersByEmailAndType: (...args: unknown[]) => findUsersByEmailAndTypeMock(...args),
     findUserByEmailTenantAndType: (...args: unknown[]) =>
       findUserByEmailTenantAndTypeMock(...args),
   },
@@ -56,11 +56,11 @@ describe('OAuth profile mapping reports expected failures instead of throwing', 
       userType: 'internal',
     });
     expect(mapped.id).toBe('');
-    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
   });
 
   it('returns no_matching_user with the provider email when no AlgaPSA user matches', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce(undefined);
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([]);
     const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await mapper();
 
     const mapped = await mapOAuthProfileToExtendedUser({
@@ -79,14 +79,14 @@ describe('OAuth profile mapping reports expected failures instead of throwing', 
   });
 
   it('returns inactive_user for a deactivated AlgaPSA user', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([{
       user_id: 'user-inactive',
       email: 'inactive@example.com',
       username: 'inactive',
       user_type: 'internal',
       tenant: tenantId,
       is_inactive: true,
-    });
+    }]);
     const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await mapper();
 
     const mapped = await mapOAuthProfileToExtendedUser({
@@ -101,14 +101,14 @@ describe('OAuth profile mapping reports expected failures instead of throwing', 
   });
 
   it('returns user_type_mismatch when the stored user type is not the requested one', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([{
       user_id: 'user-client',
       email: 'client@example.com',
       username: 'client',
       user_type: 'client',
       tenant: tenantId,
       is_inactive: false,
-    });
+    }]);
     const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await mapper();
 
     const mapped = await mapOAuthProfileToExtendedUser({
@@ -150,7 +150,7 @@ describe('OAuth profile mapping reports expected failures instead of throwing', 
   });
 
   it('leaves the success path untouched', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([{
       user_id: 'user-ok',
       email: 'ok@example.com',
       username: 'ok',
@@ -159,7 +159,7 @@ describe('OAuth profile mapping reports expected failures instead of throwing', 
       user_type: 'internal',
       tenant: tenantId,
       is_inactive: false,
-    });
+    }]);
     const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await mapper();
 
     const mapped = await mapOAuthProfileToExtendedUser({

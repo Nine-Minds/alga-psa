@@ -56,7 +56,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       tenant: zOpenApi.string().describe('Tenant identifier from the authenticated user session.'),
       userId: zOpenApi.string().optional().describe('User UUID from the authenticated session.'),
-      providerId: zOpenApi.string().uuid().optional().describe('Email provider configuration UUID from the initiate request.'),
+      providerId: zOpenApi.string().guid().optional().describe('Email provider configuration UUID from the initiate request.'),
       redirectUri: zOpenApi.string().describe('OAuth redirect URI included in the authorization request.'),
       timestamp: zOpenApi.number().describe('Epoch milliseconds when state was generated.'),
       nonce: zOpenApi.string().describe('Random hex nonce for CSRF correlation.'),
@@ -79,7 +79,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       success: zOpenApi.literal(true).describe('Refresh completed successfully.'),
       message: zOpenApi.string().describe('Human-readable success message.'),
-      providerId: zOpenApi.string().uuid().describe('Email provider ID that was refreshed.'),
+      providerId: zOpenApi.string().guid().describe('Email provider ID that was refreshed.'),
       mailbox: zOpenApi.string().email().describe('Mailbox address for the Gmail provider.'),
     }),
   );
@@ -121,10 +121,10 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
       handoff: zOpenApi
         .literal('unified_pointer_queue')
         .describe('Queue handoff mechanism used for the Gmail notification pointer.'),
-      providerId: zOpenApi.string().uuid().describe('Resolved email_providers.id for the Gmail mailbox.'),
+      providerId: zOpenApi.string().guid().describe('Resolved email_providers.id for the Gmail mailbox.'),
       tenant: zOpenApi.string().describe('Tenant identifier owning the provider.'),
       historyId: zOpenApi.string().describe('Gmail history ID from the decoded notification.'),
-      jobId: zOpenApi.string().uuid().describe('UUID assigned to the Redis queue job.'),
+      jobId: zOpenApi.string().guid().describe('UUID assigned to the Redis queue job.'),
       queueDepth: zOpenApi.number().int().describe('Redis queue depth after enqueue.'),
     }),
   );

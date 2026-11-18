@@ -137,6 +137,10 @@ describe('Canned responses (integration)', () => {
     const readOnlyId = await mk('cr-readonly', 'Rae');
     const noAccessId = await mk('cr-none', 'Nils');
     const portalId = await mk('cr-portal', 'Pia', 'client');
+    // A portal user is a contact of a client; record-level ticket authz derives its visibility from that contact.
+    const portalContactId = uuidv4();
+    await tt('contacts').insert({ tenant: tenantId, contact_name_id: portalContactId, full_name: 'Pia Tester', email: 'cr-portal-contact@example.com', client_id: clientId });
+    await tt('users').where({ user_id: portalId }).update({ contact_id: portalContactId });
 
     boardId = uuidv4();
     otherBoardId = uuidv4();

@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-11-03T19:57:39Z",
+  "productRevisionServed": "a29e82f8c9633e6956b746a58ea76f9cd35accb9+da39a3ee5e6b",
+  "historicalStatus": "time-bound; not evidence of the current viewer route",
+  "correction": {
+    "checkedAt": "2026-11-03T23:08:47Z",
+    "projectId": "408b0ddd-de45-4ef6-bf35-b88251c8515c",
+    "supportedCliSocket": "/tmp/ghostty-pane-ide/agent-cli.sock",
+    "targetPaneId": "f9b1c96a-95c0-46ea-b8af-e0deaa1b6039",
+    "targetPaneCurrentState": "not present in current project-scoped browser inventory; responses varied between Unsupported method, different host, and pane not found",
+    "currentInventoryPaneId": "363aee64-8363-4f73-a507-21e87b473299",
+    "currentInventoryCommands": "browser-get-url, list-pane-tabs, and harmless example.com navigation succeeded",
+    "interpretation": "space-new-tab success proves tab creation only. ALGA_PROJECT_ID scopes requests but does not make a stale or foreign pane ID current. Use the pane ID returned by the current project-scoped browser inventory."
+  },
+  "featureUiAssertions": "not_run; card application unavailable",
+  "smokeWalkthrough": null
+}

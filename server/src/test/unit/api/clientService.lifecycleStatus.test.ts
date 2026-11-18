@@ -4,6 +4,9 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+
 const CLIENT_ID = '11111111-1111-4111-8111-111111111111';
 const UPDATED_AT = '2026-10-13T12:00:00.000Z';
 
@@ -22,6 +25,10 @@ const updates: Array<Record<string, unknown>> = [];
 function fakeTable(name: string) {
   if (name === 'tenants') {
     return { first: () => Promise.resolve({ product_code: 'psa' }) };
+  }
+  // Read by the shared creation seam to adopt the tenant's default currency.
+  if (name === 'default_billing_settings') {
+    return { select: () => ({ first: () => Promise.resolve({ default_currency_code: 'USD' }) }) };
   }
   const query: any = {
     where: () => query,
@@ -50,6 +57,14 @@ vi.mock('@alga-psa/db', async () => {
     tenantDb: () => ({ table: (name: string) => fakeTable(name) }),
   };
 });
+
+// The shared client-creation seam (shared/models/clientCreation.ts) imports
+// tenantDb from this subpath, not the barrel above, so it falls through to
+// the real tenantDb against the bare fake trx ({}) without this mock,
+// throwing "conn is not a function".
+vi.mock('@alga-psa/db/tenantDb', () => ({
+  tenantDb: () => ({ table: (name: string) => fakeTable(name) }),
+}));
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),

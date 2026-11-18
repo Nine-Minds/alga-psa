@@ -2,6 +2,7 @@
 
 'use server'
 
+import { interactionSeam, resolveInteractionBrowserActor, publishInteractionEvent, isInteractionCommandError, isInteractionForbidden } from '../lib/coManagedInteractionReader';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
@@ -10,6 +11,7 @@ import InteractionModel from '../models/interactions';
 import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
+import { isRecordCreateDeniedError } from '@alga-psa/authorization/recordCreateAuthorization';
 import {
   createInteractionScheduleEntry,
   createInteractionWithSideEffects,
@@ -18,6 +20,8 @@ import {
   resolveScheduleAssignees,
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
+import { getInteractionById as fetchInteractionById } from './queryActions';
+import { resolveInteractionReadScope } from '../lib/interactionAuthorizationSql';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
@@ -56,6 +60,10 @@ const durationRejectionError = (reason: InteractionDurationRejectionReason): Act
   actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
+
+export async function getInteractionById(interactionId: string) {
+  return fetchInteractionById(interactionId);
+}
 
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
@@ -129,6 +137,13 @@ export const addInteraction = withAuth(async (
 
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await interactionSeam.delegate(tenant, p => p.createInteraction(db, tenant, interactionData, () => resolveInteractionBrowserActor(user, tenant), publishInteractionEvent));
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions');
+      revalidatePath('/msp/contacts/[id]', 'page');
+      revalidatePath('/msp/clients/[id]', 'page');
+      return admitted.interaction;
+    }
 
     console.log('Received interaction data:', interactionData);
 
@@ -193,6 +208,8 @@ export const addInteraction = withAuth(async (
     await publishScheduleEntryCreated?.();
     return newInteraction;
   } catch (error) {
+    if (isInteractionCommandError(error)) return actionError(error.message);
+    if (isInteractionForbidden(error) || isRecordCreateDeniedError(error)) return permissionError('Permission denied: Cannot create this interaction.');
     console.error('Error adding interaction:', error)
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
@@ -226,8 +243,15 @@ export const getInteractionsForEntity = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    // Shared-work admission covers client, contact and ticket interactions; opportunities are not shared work.
+    if (entityType !== 'opportunity') {
+      const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } }));
+      if (admitted.handled) return admitted.interactions;
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getForEntity(entityId, entityType, tenant);
+      // The read scope is part of the native read: resolved in its transaction, never ahead of it.
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getForEntity(entityId, entityType, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -252,8 +276,11 @@ export const getRecentInteractions = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters }));
+    if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getRecentInteractions(filters, tenant);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user);
+      return await InteractionModel.getRecentInteractions(filters, tenant, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -272,8 +299,11 @@ export const getInteractionsPage = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+      const readScope = await resolveInteractionReadScope(trx, tenant, user, 'i');
+      return InteractionModel.getInteractionsPage(filters, tenant, trx, readScope);
     });
   } catch (error) {
     const expected = interactionActionErrorFrom(error);
@@ -299,6 +329,11 @@ export const updateInteraction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const admitted = await interactionSeam.delegate(tenant, p => p.updateInteraction(knex, tenant, interactionId, updateData, () => resolveInteractionBrowserActor(user, tenant), publishInteractionEvent));
+    if (admitted.handled) {
+      revalidatePath('/msp/interactions/[id]', 'page');
+      return admitted.interaction;
+    }
     const touchesScheduleEntry = (['start_time', 'end_time', 'duration', 'title'] as const)
       .some((field) => updateData[field] !== undefined);
     const touchesDurationWindow = (['start_time', 'end_time', 'duration'] as const)
@@ -342,6 +377,8 @@ export const updateInteraction = withAuth(async (
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
   } catch (error) {
+    if (isInteractionCommandError(error)) return actionError(error.message);
+    if (isInteractionForbidden(error)) return permissionError('Permission denied: Cannot update this interaction.');
     console.error('Error updating interaction:', error);
     if (error instanceof InteractionDurationRejection) {
       return durationRejectionError(error.reason);
@@ -425,6 +462,12 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
   try {
     const { knex } = await createTenantKnex();
 
+    const admitted = await interactionSeam.delegate(tenant, p => p.deleteInteraction(knex, tenant, interactionId, () => resolveInteractionBrowserActor(user, tenant), publishInteractionEvent));
+    if (admitted.handled) {
+      revalidatePath('/');
+      return;
+    }
+
     const { existing, recordingFileIds } = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
@@ -475,6 +518,8 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
 
     revalidatePath('/'); // Revalidate to update any cached data
   } catch (error) {
+    if (isInteractionCommandError(error)) return actionError(error.message);
+    if (isInteractionForbidden(error)) return permissionError('Permission denied: Cannot delete this interaction.');
     console.error('Error deleting interaction:', error);
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;

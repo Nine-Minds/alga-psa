@@ -444,7 +444,7 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
   try {
     const { knex, integration } = await getLevelIoIntegration(tenant);
     if (!integration?.integration_id) {
-      return { success: true, mappings: [], clients: [] };
+      return { success: true, mappings: [] };
     }
 
     const db = tenantDb(knex, tenant);
@@ -469,11 +469,8 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
       ])
       .orderBy('rom.external_organization_name', 'asc');
 
-    const clients = await db.table('clients')
-      .select(['client_id', 'client_name'])
-      .orderBy('client_name', 'asc');
 
-    return { success: true, mappings: rows, clients };
+    return { success: true, mappings: rows };
   } catch (error) {
     return { success: false, error: sanitizeError(error, 'Unable to load Level organization mappings.') };
   }

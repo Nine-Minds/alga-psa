@@ -248,6 +248,19 @@ describe('client currency and billing-profile lifecycle integration', () => {
       },
     }) as any, context);
 
+    // Creation goes through the shared client-creation seam, which keeps the
+    // two website copies synchronized from the start.
+    let persisted = await tenantTable(tenantId, 'clients')
+      .where({ client_id: created.client_id })
+      .first();
+    expect(persisted.url).toBe(website);
+
+    // Rows created before that synchronization existed carry the website in
+    // properties only; reproduce that shape to cover them too.
+    await tenantTable(tenantId, 'clients')
+      .where({ client_id: created.client_id })
+      .update({ url: '' });
+
     // The UI sends unrelated property values while omitting an unchanged
     // website (and the legacy url column).
     await service.update(created.client_id, updateClientSchema.parse({
@@ -259,7 +272,7 @@ describe('client currency and billing-profile lifecycle integration', () => {
       },
     }) as any, context);
 
-    const persisted = await tenantTable(tenantId, 'clients')
+    persisted = await tenantTable(tenantId, 'clients')
       .where({ client_id: created.client_id })
       .first();
     expect(persisted.url).toBe('');

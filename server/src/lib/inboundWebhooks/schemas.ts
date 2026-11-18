@@ -60,12 +60,12 @@ export const inboundWebhookIdempotencySourceSchema = z.discriminatedUnion('type'
 const directActionHandlerConfigSchema = z.object({
   type: z.literal('direct_action'),
   action: z.string().trim().min(1),
-  field_mapping: z.record(z.string().trim().min(1)).default({}),
+  field_mapping: z.record(z.string(), z.string().trim().min(1)).default({}),
 });
 
 const workflowHandlerConfigSchema = z.object({
   type: z.literal('workflow'),
-  workflow_id: z.string().uuid(),
+  workflow_id: z.string().guid(),
 });
 
 export const inboundWebhookHandlerConfigSchema = z.discriminatedUnion('type', [
@@ -74,7 +74,7 @@ export const inboundWebhookHandlerConfigSchema = z.discriminatedUnion('type', [
 ]);
 
 const inboundWebhookUpsertInputBaseSchema = z.object({
-  inbound_webhook_id: z.string().uuid().optional(),
+  inbound_webhook_id: z.string().guid().optional(),
   name: z.string().trim().min(1).max(255),
   slug: slugSchema,
   description: z.string().trim().max(2000).nullable().optional(),
@@ -114,7 +114,7 @@ export const inboundWebhookUpsertInputSchema = inboundWebhookUpsertInputBaseSche
 
 export const inboundWebhookUpdateInputSchema = inboundWebhookUpsertInputBaseSchema
   .extend({
-    inbound_webhook_id: z.string().uuid(),
+    inbound_webhook_id: z.string().guid(),
   })
   .partial()
   .required({ inbound_webhook_id: true })

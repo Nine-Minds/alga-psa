@@ -16,15 +16,15 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const contactTag = 'Contacts';
   const contractTag = 'Client Contract Lines';
 
-  const ClientIdParam = registry.registerSchema('ClientIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() }));
+  const ClientIdParam = registry.registerSchema('ClientIdParam', zOpenApi.object({ id: zOpenApi.string().guid() }));
   const ClientLocationIdParams = registry.registerSchema(
     'ClientLocationIdParams',
-    zOpenApi.object({ id: zOpenApi.string().uuid(), locationId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ id: zOpenApi.string().guid(), locationId: zOpenApi.string().guid() }),
   );
-  const ContactIdParam = registry.registerSchema('ContactIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() }));
+  const ContactIdParam = registry.registerSchema('ContactIdParam', zOpenApi.object({ id: zOpenApi.string().guid() }));
   const ClientContractLineIdParam = registry.registerSchema(
     'ClientContractLineIdParam',
-    zOpenApi.object({ id: zOpenApi.string().uuid() }),
+    zOpenApi.object({ id: zOpenApi.string().guid() }),
   );
 
   const ClientListQuery = registry.registerSchema(
@@ -47,7 +47,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         'Filters to inactive clients when true and active clients when false; omit to include all clients.',
       ),
       is_tax_exempt: zOpenApi.enum(['true', 'false']).optional(),
-      account_manager_id: zOpenApi.string().uuid().optional(),
+      account_manager_id: zOpenApi.string().guid().optional(),
       region_code: zOpenApi.string().optional(),
       credit_balance_min: zOpenApi.string().optional(),
       credit_balance_max: zOpenApi.string().optional(),
@@ -85,12 +85,14 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       is_tax_exempt: zOpenApi.boolean().optional(),
       tax_exemption_certificate: zOpenApi.string().optional(),
       timezone: zOpenApi.string().optional(),
-      invoice_template_id: zOpenApi.string().uuid().optional(),
-      billing_contact_id: zOpenApi.string().uuid().optional(),
+      invoice_template_id: zOpenApi.string().guid().optional(),
+      billing_contact_id: zOpenApi.string().guid().optional(),
       billing_email: zOpenApi.string().email().optional(),
-      account_manager_id: zOpenApi.string().uuid().optional(),
+      account_manager_id: zOpenApi.string().guid().optional(),
       is_inactive: zOpenApi.boolean().optional(),
-      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional(),
+      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional().describe(
+        'Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status.',
+      ),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
@@ -140,11 +142,14 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       full_name: zOpenApi.string().optional(),
       email: zOpenApi.string().optional(),
       phone_number: zOpenApi.string().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       role: zOpenApi.string().optional(),
       is_inactive: zOpenApi.enum(['true', 'false']).optional(),
       has_client: zOpenApi.enum(['true', 'false']).optional(),
       client_name: zOpenApi.string().optional(),
+      location_id: zOpenApi.string().uuid().optional()
+        .describe('Contacts linked to this client location in any role, primary or not.'),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).optional(),
     }),
   );
 
@@ -157,7 +162,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       query: zOpenApi.string().min(1),
       fields: zOpenApi.string().optional().describe('Comma-separated field list; parsed by contactSearchSchema transform.'),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       include_inactive: zOpenApi.enum(['true', 'false']).optional(),
       limit: zOpenApi.string().optional(),
     }),
@@ -168,7 +173,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       format: zOpenApi.enum(['csv', 'json']).optional(),
       include_inactive: zOpenApi.enum(['true', 'false']).optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       fields: zOpenApi.string().optional().describe('Array schema expects parsed list, but URL values arrive as string.'),
     }),
   );
@@ -185,8 +190,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       created_to: zOpenApi.string().datetime().optional(),
       updated_from: zOpenApi.string().datetime().optional(),
       updated_to: zOpenApi.string().datetime().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
-      contract_line_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
+      contract_line_id: zOpenApi.string().guid().optional(),
       service_category: zOpenApi.string().optional(),
       is_active: zOpenApi.enum(['true', 'false']).optional(),
       has_custom_rate: zOpenApi.enum(['true', 'false']).optional(),
@@ -201,14 +206,14 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientContractLineBody = registry.registerSchema(
     'ClientContractLineBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
-      contract_line_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
+      contract_line_id: zOpenApi.string().guid(),
       service_category: zOpenApi.string().optional(),
       start_date: zOpenApi.string().datetime(),
       end_date: zOpenApi.string().datetime().optional(),
       is_active: zOpenApi.boolean().optional(),
       custom_rate: zOpenApi.number().min(0).optional(),
-      client_contract_id: zOpenApi.string().uuid().optional(),
+      client_contract_id: zOpenApi.string().guid().optional(),
     }),
   );
 
@@ -223,26 +228,46 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // The client locations a person works at, primary first. Address fields are read through from the
+  // client location, so a caller never has to fetch it separately.
+  const ContactLocationLink = registry.registerSchema(
+    'ContactLocationLink',
+    zOpenApi.object({
+      location_id: zOpenApi.string().uuid(),
+      location_name: zOpenApi.string().nullable(),
+      is_primary: zOpenApi.boolean(),
+      is_active: zOpenApi.boolean(),
+      address_line1: zOpenApi.string().nullable().optional(),
+      address_line2: zOpenApi.string().nullable().optional(),
+      address_line3: zOpenApi.string().nullable().optional(),
+      city: zOpenApi.string().nullable().optional(),
+      state_province: zOpenApi.string().nullable().optional(),
+      postal_code: zOpenApi.string().nullable().optional(),
+      country_code: zOpenApi.string().nullable().optional(),
+      country_name: zOpenApi.string().nullable().optional(),
+    }),
+  );
+
   const ContactResource = registry.registerSchema(
     'ContactResource',
     zOpenApi.object({
-      contact_name_id: zOpenApi.string().uuid(),
+      contact_name_id: zOpenApi.string().guid(),
       full_name: zOpenApi.string(),
-      client_id: zOpenApi.string().uuid().nullable(),
+      client_id: zOpenApi.string().guid().nullable(),
       email: zOpenApi.string().email(),
       role: zOpenApi.string().nullable(),
       created_at: zOpenApi.string().datetime(),
       updated_at: zOpenApi.string().datetime(),
       is_inactive: zOpenApi.boolean(),
-      tenant: zOpenApi.string().uuid(),
+      tenant: zOpenApi.string().guid(),
       phone_numbers: zOpenApi
         .array(
           zOpenApi.object({
-            contact_phone_number_id: zOpenApi.string().uuid(),
+            contact_phone_number_id: zOpenApi.string().guid(),
             phone_number: zOpenApi.string(),
             normalized_phone_number: zOpenApi.string(),
             canonical_type: zOpenApi.string().nullable().optional(),
-            custom_phone_type_id: zOpenApi.string().uuid().nullable().optional(),
+            custom_phone_type_id: zOpenApi.string().guid().nullable().optional(),
             custom_type: zOpenApi.string().nullable(),
             is_default: zOpenApi.boolean(),
             display_order: zOpenApi.number().int().nonnegative(),
@@ -252,11 +277,11 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       additional_email_addresses: zOpenApi
         .array(
           zOpenApi.object({
-            contact_additional_email_address_id: zOpenApi.string().uuid(),
+            contact_additional_email_address_id: zOpenApi.string().guid(),
             email_address: zOpenApi.string().email(),
             normalized_email_address: zOpenApi.string().email(),
             canonical_type: zOpenApi.string().nullable().optional(),
-            custom_email_type_id: zOpenApi.string().uuid().nullable().optional(),
+            custom_email_type_id: zOpenApi.string().guid().nullable().optional(),
             custom_type: zOpenApi.string().nullable(),
             display_order: zOpenApi.number().int().nonnegative(),
           }),
@@ -265,9 +290,11 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       default_phone_number: zOpenApi.string().nullable().optional(),
       default_phone_type: zOpenApi.string().nullable().optional(),
       primary_email_canonical_type: zOpenApi.string().nullable().optional(),
-      primary_email_custom_type_id: zOpenApi.string().uuid().nullable().optional(),
+      primary_email_custom_type_id: zOpenApi.string().guid().nullable().optional(),
       primary_email_type: zOpenApi.string().nullable().optional(),
       notes: zOpenApi.string().nullable().optional(),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).nullable().optional(),
+      locations: zOpenApi.array(ContactLocationLink).optional(),
       avatarUrl: zOpenApi.string().nullable().optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       client_name: zOpenApi.string().nullable().optional(),
@@ -282,7 +309,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       inactive_contacts: zOpenApi.number(),
       contacts_with_client: zOpenApi.number(),
       contacts_without_client: zOpenApi.number(),
-      contacts_by_role: zOpenApi.record(zOpenApi.number()),
+      contacts_by_role: zOpenApi.record(zOpenApi.string(), zOpenApi.number()),
       recent_contacts: zOpenApi.number(),
     }),
   );
@@ -290,23 +317,23 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientContractLineResource = registry.registerSchema(
     'ClientContractLineResource',
     zOpenApi.object({
-      client_contract_line_id: zOpenApi.string().uuid(),
-      client_id: zOpenApi.string().uuid(),
-      contract_line_id: zOpenApi.string().uuid(),
+      client_contract_line_id: zOpenApi.string().guid(),
+      client_id: zOpenApi.string().guid(),
+      contract_line_id: zOpenApi.string().guid(),
       service_category: zOpenApi.string().nullable().optional(),
       start_date: zOpenApi.string().datetime(),
       end_date: zOpenApi.string().datetime().nullable().optional(),
       is_active: zOpenApi.boolean(),
       custom_rate: zOpenApi.number().nullable().optional(),
-      client_contract_id: zOpenApi.string().uuid().nullable().optional(),
-      tenant: zOpenApi.string().uuid().optional(),
+      client_contract_id: zOpenApi.string().guid().nullable().optional(),
+      tenant: zOpenApi.string().guid().optional(),
     }),
   );
 
   const ContactExportRow = registry.registerSchema(
     'ContactExportRow',
     zOpenApi.object({
-      contact_name_id: zOpenApi.string().uuid(),
+      contact_name_id: zOpenApi.string().guid(),
       full_name: zOpenApi.string(),
       email: zOpenApi.string().email().nullable(),
       role: zOpenApi.string().nullable(),
@@ -315,6 +342,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_name: zOpenApi.string().nullable(),
       default_phone_number: zOpenApi.string().nullable(),
       default_phone_type: zOpenApi.string().nullable(),
+      work_arrangement: zOpenApi.string().nullable().optional(),
+      // `format=json` returns the links; `format=csv` flattens them into the Locations and
+      // Primary Location columns ("Warehouse; Head office").
+      locations: zOpenApi.array(ContactLocationLink).optional(),
     }),
   );
 
@@ -466,10 +497,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/clients/{id}/contacts',
     summary: 'List contacts for client',
-    description: 'Returns paginated contacts filtered by client_id after client existence check.',
+    description: 'Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam },
+    request: { params: ClientIdParam, query: ContactListQuery },
     responses: {
       200: { description: 'Client contacts returned.', schema: PaginatedContactEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },
@@ -486,7 +517,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/clients/{id}/locations',
     summary: 'List client locations',
-    description: 'Returns locations associated with client_id after client existence check.',
+    description: 'Returns locations associated with client_id after client existence check. Each row carries contact_count: how many contacts work at that location, which is also why deleting it would be refused.',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ClientIdParam },
@@ -506,29 +537,29 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
 
   const ClientMergeIdParams = registry.registerSchema(
     'ClientMergeIdParams',
-    zOpenApi.object({ id: zOpenApi.string().uuid() }),
+    zOpenApi.object({ id: zOpenApi.string().guid() }),
   );
   const BillingProfileContactsParams = registry.registerSchema(
     'BillingProfileContactsParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid(),
-      profileId: zOpenApi.string().uuid(),
+      id: zOpenApi.string().guid(),
+      profileId: zOpenApi.string().guid(),
     }),
   );
 
   const ClientMergePreviewBody = registry.registerSchema(
     'ClientMergePreviewBody',
     zOpenApi.object({
-      source_client_id: zOpenApi.string().uuid().describe('The client that would be absorbed.'),
+      source_client_id: zOpenApi.string().guid().describe('The client that would be absorbed.'),
     }),
   );
 
   const ClientMergePreviewResource = registry.registerSchema(
     'ClientMergePreviewResource',
     zOpenApi.object({
-      sourceClientId: zOpenApi.string().uuid(),
+      sourceClientId: zOpenApi.string().guid(),
       sourceClientName: zOpenApi.string(),
-      targetClientId: zOpenApi.string().uuid(),
+      targetClientId: zOpenApi.string().guid(),
       targetClientName: zOpenApi.string(),
       blockers: zOpenApi.array(zOpenApi.object({
         code: zOpenApi.string(),
@@ -536,26 +567,26 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         i18nKey: zOpenApi.string(),
       })).describe('Non-empty means the merge would be refused.'),
       profiles: zOpenApi.array(zOpenApi.object({
-        billingProfileId: zOpenApi.string().uuid(),
+        billingProfileId: zOpenApi.string().guid(),
         currentName: zOpenApi.string(),
         mergedName: zOpenApi.string().describe('The name the profile takes on the destination client.'),
         isDefault: zOpenApi.boolean(),
         isActive: zOpenApi.boolean(),
       })),
-      movedDefaultProfileId: zOpenApi.string().uuid().nullable(),
-      counts: zOpenApi.record(zOpenApi.number()).describe('Rows that would move, by entity label.'),
+      movedDefaultProfileId: zOpenApi.string().guid().nullable(),
+      counts: zOpenApi.record(zOpenApi.string(), zOpenApi.number()).describe('Rows that would move, by entity label.'),
       contacts: zOpenApi.array(zOpenApi.object({
-        contactNameId: zOpenApi.string().uuid(),
+        contactNameId: zOpenApi.string().guid(),
         fullName: zOpenApi.string(),
         email: zOpenApi.string().nullable(),
-        suggestedBillingProfileId: zOpenApi.string().uuid().nullable(),
+        suggestedBillingProfileId: zOpenApi.string().guid().nullable(),
       })),
       contracts: zOpenApi.array(zOpenApi.object({
-        clientContractId: zOpenApi.string().uuid(),
+        clientContractId: zOpenApi.string().guid(),
         contractName: zOpenApi.string().nullable(),
         startDate: zOpenApi.string(),
         endDate: zOpenApi.string().nullable(),
-        billingProfileId: zOpenApi.string().uuid().nullable(),
+        billingProfileId: zOpenApi.string().guid().nullable(),
         isActive: zOpenApi.boolean(),
         suggestedChoice: zOpenApi.enum(['original', 'cutover']),
         suggestedCutoverDate: zOpenApi.string(),
@@ -564,7 +595,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         total: zOpenApi.number().describe('Assets that would move to the destination client.'),
         byRmmOrganization: zOpenApi.array(zOpenApi.object({
           provider: zOpenApi.string(),
-          integrationId: zOpenApi.string().uuid(),
+          integrationId: zOpenApi.string().guid(),
           externalOrganizationId: zOpenApi.string(),
           externalOrganizationName: zOpenApi.string().nullable(),
           deviceCount: zOpenApi.number(),
@@ -578,11 +609,11 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         unstampedRmmMappings: zOpenApi.number(),
       }).describe('Rows with no billing profile — what `billing_strategy` decides the fate of.'),
       visibilityGroupRenames: zOpenApi.array(zOpenApi.object({
-        groupId: zOpenApi.string().uuid(),
+        groupId: zOpenApi.string().guid(),
         from: zOpenApi.string(),
         to: zOpenApi.string(),
       })),
-      unrestrictedPortalUserIds: zOpenApi.array(zOpenApi.string().uuid())
+      unrestrictedPortalUserIds: zOpenApi.array(zOpenApi.string().guid())
         .describe('Portal users of the source that currently see every billing profile.'),
       externalMappings: zOpenApi.array(zOpenApi.object({
         mappingId: zOpenApi.string(),
@@ -598,15 +629,15 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientMergeBody = registry.registerSchema(
     'ClientMergeBody',
     zOpenApi.object({
-      source_client_id: zOpenApi.string().uuid(),
+      source_client_id: zOpenApi.string().guid(),
       contact_assignments: zOpenApi.array(zOpenApi.object({
-        contact_name_id: zOpenApi.string().uuid(),
-        billing_profile_id: zOpenApi.string().uuid(),
+        contact_name_id: zOpenApi.string().guid(),
+        billing_profile_id: zOpenApi.string().guid(),
         is_manager: zOpenApi.boolean().optional(),
         can_view_profile_tickets: zOpenApi.boolean().optional(),
       })).optional(),
       contract_decisions: zOpenApi.array(zOpenApi.object({
-        client_contract_id: zOpenApi.string().uuid(),
+        client_contract_id: zOpenApi.string().guid(),
         choice: zOpenApi.enum(['original', 'cutover']),
         cutover_date: zOpenApi.string().nullable().optional(),
       })).optional(),
@@ -624,12 +655,12 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientMergeResource = registry.registerSchema(
     'ClientMergeResource',
     zOpenApi.object({
-      merge_id: zOpenApi.string().uuid(),
-      source_client_id: zOpenApi.string().uuid(),
-      target_client_id: zOpenApi.string().uuid(),
-      moved_profile_ids: zOpenApi.array(zOpenApi.string().uuid()),
-      moved_default_profile_id: zOpenApi.string().uuid().nullable(),
-      counts: zOpenApi.record(zOpenApi.number()),
+      merge_id: zOpenApi.string().guid(),
+      source_client_id: zOpenApi.string().guid(),
+      target_client_id: zOpenApi.string().guid(),
+      moved_profile_ids: zOpenApi.array(zOpenApi.string().guid()),
+      moved_default_profile_id: zOpenApi.string().guid().nullable(),
+      counts: zOpenApi.record(zOpenApi.string(), zOpenApi.number()),
       remapped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
       skipped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
       billing_strategy: zOpenApi.enum(['source_profile', 'target_default'])
@@ -640,7 +671,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const BillingProfileContactResource = registry.registerSchema(
     'BillingProfileContactResource',
     zOpenApi.object({
-      contact_name_id: zOpenApi.string().uuid(),
+      contact_name_id: zOpenApi.string().guid(),
       full_name: zOpenApi.string(),
       email: zOpenApi.string().nullable(),
       is_manager: zOpenApi.boolean(),
@@ -653,7 +684,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     'BillingProfileContactsBody',
     zOpenApi.object({
       contacts: zOpenApi.array(zOpenApi.object({
-        contact_name_id: zOpenApi.string().uuid(),
+        contact_name_id: zOpenApi.string().guid(),
         is_manager: zOpenApi.boolean().optional(),
         can_view_profile_tickets: zOpenApi.boolean().optional(),
       })).describe('Replaces the profile\'s contact list; omitting a contact removes it.'),
@@ -765,8 +796,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     'ClientNotesResponse',
     zOpenApi.object({
       data: zOpenApi.object({
-        document: zOpenApi.unknown().nullable().describe('The linked notes document row, or null when the client has no notes.'),
-        blockData: zOpenApi.unknown().nullable().describe('BlockNote block array for the notes body, or null.'),
+        document: zOpenApi.unknown().optional().nullable().describe('The linked notes document row, or null when the client has no notes.'),
+        blockData: zOpenApi.unknown().optional().nullable().describe('BlockNote block array for the notes body, or null.'),
         lastUpdated: zOpenApi.string().nullable().describe('ISO timestamp of the last notes update, or null.'),
       }),
     }),
@@ -774,7 +805,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientNotesUpdateBody = registry.registerSchema(
     'ClientNotesUpdateBody',
     zOpenApi.object({
-      blockData: zOpenApi.unknown().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
+      blockData: zOpenApi.unknown().optional().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
     }),
   );
   const clientNotesErrs = {
@@ -799,7 +830,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     summary: 'Update client notes',
     description: 'Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.',
     tags: [clientTag], security: [{ ApiKeyAuth: [] }], request: { params: ClientIdParam, body: { schema: ClientNotesUpdateBody } },
-    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ data: zOpenApi.object({ document_id: zOpenApi.string().uuid() }) }) }, ...clientNotesErrs },
+    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ data: zOpenApi.object({ document_id: zOpenApi.string().guid() }) }) }, ...clientNotesErrs },
     extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
     edition: 'both',
   });
@@ -880,7 +911,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts',
     summary: 'List contacts',
-    description: 'Inherited ApiBaseController list route for contacts.',
+    description: 'Inherited ApiBaseController list route for contacts. Each row carries work_arrangement (on_site | hybrid | remote) and locations[] — the client locations the person works at, primary first, with the address fields read through from the client. Filterable by location_id (contacts linked to that location in any role) and work_arrangement.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactListQuery },
@@ -899,7 +930,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/contacts',
     summary: 'Create contact',
-    description: 'Inherited ApiBaseController create route for contacts.',
+    description: 'Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact\'s client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: ContactBody } },
@@ -918,7 +949,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/{id}',
     summary: 'Get contact',
-    description: 'Inherited ApiBaseController get route for one contact_name_id.',
+    description: 'Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam },
@@ -938,7 +969,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/contacts/{id}',
     summary: 'Update contact',
-    description: 'Inherited ApiBaseController update route for one contact_name_id.',
+    description: 'Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
@@ -1026,7 +1057,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/search',
     summary: 'Search contacts',
-    description: 'Runs advanced contact search with explicit API-key auth and contact:read permission check.',
+    description: 'Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactSearchQuery },
@@ -1045,7 +1076,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/contacts/export',
     summary: 'Export contacts',
-    description: 'Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.',
+    description: 'Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations ("Warehouse; Head office") and Primary Location columns; JSON rows carry work_arrangement and locations[].',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { query: ContactExportQuery },

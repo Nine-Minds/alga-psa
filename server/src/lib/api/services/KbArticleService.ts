@@ -4,14 +4,23 @@
  */
 
 import { randomUUID } from 'crypto';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import {
+  buildKbArticleContentFromTicket,
+  syncKbArticleClientVisibility,
+} from '@alga-psa/shared/models/kbArticleModel';
 import {
   KbImportParseTimeoutError,
   markdownToBlocks,
   type BlockNoteBlock,
 } from '@alga-psa/jobs/handler-utils/kbImportBlocks';
 import { ListOptions } from '../controllers/types';
-import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import {
+  canMutateKnowledgeBaseArticles,
+  resolveKnowledgeBaseReadScope,
+} from '@alga-psa/authorization/knowledgeBaseReadAuthorization';
 import type { CreateKbArticleData, UpdateKbArticleData, UpdateKbArticleContentData } from '../schemas/kbArticle';
 
 const KB_ARTICLE_SELECT_COLUMNS = [
@@ -125,7 +134,40 @@ function convertApiMarkdown(content: string): BlockNoteBlock[] {
   }
 }
 
+// LEVERAGE: pattern kb-action-vs-rest-service — this service re-implements every KB write (create, update, publish,
+// archive) that kbArticleModel/kbArticleActions already implement; the model should be the single writer and both
+// surfaces thin adapters.
+/** The identity the kernel decides a request by: the user the transport loaded, else the id it authenticated. */
+const subjectOf = (context: ServiceContext) => context.user ?? { user_id: context.userId, user_type: 'internal' };
+
 export class KbArticleService extends BaseService<any> {
+  /** Narrow a query over `kb_articles` (as `alias`) to the articles the caller may read. No clause for an unnarrowed caller. */
+  private async applyReadScope(knex: Knex, context: ServiceContext, query: Knex.QueryBuilder, alias: string): Promise<void> {
+    (await resolveKnowledgeBaseReadScope(knex, context.tenant, subjectOf(context)))?.apply(query, alias);
+  }
+
+  /** Refuses a write by a subject whose rules do not let them change articles (a co-managed seat technician). */
+  private async assertMayWrite(knex: Knex, context: ServiceContext, action: 'create' | 'update' | 'delete'): Promise<void> {
+    if (!(await canMutateKnowledgeBaseArticles(knex, context.tenant, subjectOf(context), action))) {
+      throw new ForbiddenError('Permission denied: Cannot change knowledge base articles');
+    }
+  }
+
+  /**
+   * Runs a KB write in one transaction. Callers lock the kb_articles row with
+   * forUpdate() before changing status/audience, then re-derive visibility.
+   */
+  private async withArticleWrite<T>(
+    context: ServiceContext,
+    work: (trx: Knex.Transaction, txContext: ServiceContext) => Promise<T>,
+  ): Promise<T> {
+    const db = await this.getDbForContext(context);
+    return withTransaction(db, async (trx) => {
+      await this.assertMayWrite(trx, context, 'update');
+      return work(trx, { ...context, db: trx });
+    });
+  }
+
   constructor() {
     super({
       tableName: 'kb_articles',
@@ -154,8 +196,11 @@ export class KbArticleService extends BaseService<any> {
         'd.document_name',
       ]);
     db.tenantJoin(dataQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
+    await this.applyReadScope(knex, context, dataQuery, 'ka');
 
     let countQuery = this.buildTenantScopedQuery(knex, context);
+    // The count query is over the bare table, so its audience column is `kb_articles.audience`.
+    await this.applyReadScope(knex, context, countQuery, 'kb_articles');
 
     // Apply filters
     if (filters.status) {
@@ -222,6 +267,8 @@ export class KbArticleService extends BaseService<any> {
     db.tenantJoin(articleQuery, 'documents as d', 'd.document_id', 'ka.document_id', { type: 'left' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
 
+    await this.applyReadScope(knex, context, articleQuery, 'ka');
+
     const article = await articleQuery
       .andWhere('ka.article_id', id)
       .first();
@@ -230,7 +277,17 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async create(data: CreateKbArticleData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    const articleId = await this.withArticleWrite(context, (trx, txContext) =>
+      this.createInTransaction(data, trx, txContext),
+    );
+    return this.getById(articleId, context);
+  }
+
+  private async createInTransaction(
+    data: CreateKbArticleData,
+    knex: Knex.Transaction,
+    context: ServiceContext,
+  ): Promise<string> {
     const db = tenantDb(knex, context.tenant);
 
     if (!data.title?.trim()) {
@@ -271,6 +328,7 @@ export class KbArticleService extends BaseService<any> {
       created_by: context.userId,
       order_number: 0,
       folder_path: '/Knowledge Base',
+      is_client_visible: false,
       entered_at: now,
       updated_at: now,
     });
@@ -302,87 +360,87 @@ export class KbArticleService extends BaseService<any> {
       ? new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000)
       : null;
 
-    try {
-      await db.table('kb_articles').insert({
-        tenant: context.tenant,
-        article_id: articleId,
-        document_id: documentId,
-        slug,
-        article_type: articleType,
-        audience,
-        status: 'draft',
-        review_cycle_days: data.review_cycle_days || null,
-        next_review_due: nextReviewDue,
-        category_id: data.category_id || null,
-        created_by: context.userId,
-        updated_by: context.userId,
-      });
-    } catch (err) {
-      await db.table('documents')
-        .where('document_id', documentId)
-        .del()
-        .catch(() => {});
-      throw err;
-    }
+    await db.table('kb_articles').insert({
+      tenant: context.tenant,
+      article_id: articleId,
+      document_id: documentId,
+      slug,
+      article_type: articleType,
+      audience,
+      status: 'draft',
+      review_cycle_days: data.review_cycle_days || null,
+      next_review_due: nextReviewDue,
+      category_id: data.category_id || null,
+      created_by: context.userId,
+      updated_by: context.userId,
+    });
 
-    return this.getById(articleId, context);
+    return articleId;
   }
 
   async update(id: string, data: UpdateKbArticleData, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
-
-    const existing = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
-
-    if (!existing) {
-      throw new NotFoundError('Article not found');
-    }
-
-    const updates: Record<string, any> = {
-      updated_at: knex.fn.now(),
-      updated_by: context.userId,
-    };
-
-    if (data.title !== undefined) {
-      await tenantDb(knex, context.tenant).table('documents')
-        .where('document_id', existing.document_id)
-        .update({ document_name: data.title.trim(), updated_at: knex.fn.now() });
-    }
-
-    if (data.slug !== undefined) {
-      const newSlug = data.slug.trim();
-      const collision = await this.buildTenantScopedQuery(knex, context)
-        .where('slug', newSlug)
-        .whereNot('article_id', id)
+    await this.withArticleWrite(context, async (trx, txContext) => {
+      const existing = await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .forUpdate()
         .first();
-      if (collision) {
-        throw new ConflictError('An article with this slug already exists');
+
+      if (!existing) {
+        throw new NotFoundError('Article not found');
       }
-      updates.slug = newSlug;
-    }
 
-    if (data.article_type !== undefined) updates.article_type = data.article_type;
-    if (data.audience !== undefined) updates.audience = data.audience;
-    if (data.category_id !== undefined) updates.category_id = data.category_id;
-    if (data.status !== undefined) updates.status = data.status;
+      const updates: Record<string, any> = {
+        updated_at: trx.fn.now(),
+        updated_by: context.userId,
+      };
 
-    if (data.review_cycle_days !== undefined) {
-      updates.review_cycle_days = data.review_cycle_days;
-      if (data.review_cycle_days) {
-        updates.next_review_due = new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000);
+      if (data.title !== undefined) {
+        await tenantDb(trx, context.tenant).table('documents')
+          .where('document_id', existing.document_id)
+          .update({ document_name: data.title.trim(), updated_at: trx.fn.now() });
       }
-    }
 
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update(updates);
+      if (data.slug !== undefined) {
+        const newSlug = data.slug.trim();
+        const collision = await this.buildTenantScopedQuery(trx, txContext)
+          .where('slug', newSlug)
+          .whereNot('article_id', id)
+          .first();
+        if (collision) {
+          throw new ConflictError('An article with this slug already exists');
+        }
+        updates.slug = newSlug;
+      }
+
+      if (data.article_type !== undefined) updates.article_type = data.article_type;
+      if (data.audience !== undefined) updates.audience = data.audience;
+      if (data.category_id !== undefined) updates.category_id = data.category_id;
+      if (data.status !== undefined) updates.status = data.status;
+
+      if (data.review_cycle_days !== undefined) {
+        updates.review_cycle_days = data.review_cycle_days;
+        if (data.review_cycle_days) {
+          updates.next_review_due = new Date(Date.now() + data.review_cycle_days * 24 * 60 * 60 * 1000);
+        }
+      }
+
+      await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .update(updates);
+
+      await syncKbArticleClientVisibility(trx, context.tenant, {
+        document_id: existing.document_id,
+        status: updates.status ?? existing.status,
+        audience: updates.audience ?? existing.audience,
+      });
+    });
 
     return this.getById(id, context);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    await this.assertMayWrite(knex, context, 'delete');
 
     const article = await this.buildTenantScopedQuery(knex, context)
       .where('article_id', id)
@@ -409,61 +467,63 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async publish(id: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    await this.withArticleWrite(context, async (trx, txContext) => {
+      const article = await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .forUpdate()
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      const now = trx.fn.now();
+      await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .update({
+          status: 'published',
+          published_at: now,
+          published_by: context.userId,
+          updated_at: now,
+          updated_by: context.userId,
+        });
 
-    const now = knex.fn.now();
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update({
+      // Visibility follows the article (an internal audience clears a stale true).
+      await syncKbArticleClientVisibility(trx, context.tenant, {
+        document_id: article.document_id,
         status: 'published',
-        published_at: now,
-        published_by: context.userId,
-        updated_at: now,
-        updated_by: context.userId,
+        audience: article.audience,
       });
-
-    // Auto-set client visibility for client/public audience
-    if (article.audience === 'client' || article.audience === 'public') {
-      await tenantDb(knex, context.tenant).table('documents')
-        .where('document_id', article.document_id)
-        .update({ is_client_visible: true, updated_at: now });
-    }
+    });
 
     return this.getById(id, context);
   }
 
   async archive(id: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    await this.withArticleWrite(context, async (trx, txContext) => {
+      const article = await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .forUpdate()
+        .first();
 
-    const article = await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .first();
+      if (!article) {
+        throw new NotFoundError('Article not found');
+      }
 
-    if (!article) {
-      throw new NotFoundError('Article not found');
-    }
+      await this.buildTenantScopedQuery(trx, txContext)
+        .where('article_id', id)
+        .update({
+          status: 'archived',
+          updated_at: trx.fn.now(),
+          updated_by: context.userId,
+        });
 
-    const now = knex.fn.now();
-    await this.buildTenantScopedQuery(knex, context)
-      .where('article_id', id)
-      .update({
+      await syncKbArticleClientVisibility(trx, context.tenant, {
+        document_id: article.document_id,
         status: 'archived',
-        updated_at: now,
-        updated_by: context.userId,
+        audience: article.audience,
       });
-
-    // Clear client visibility
-    await tenantDb(knex, context.tenant).table('documents')
-      .where('document_id', article.document_id)
-      .update({ is_client_visible: false, updated_at: now });
+    });
 
     return this.getById(id, context);
   }
@@ -475,6 +535,7 @@ export class KbArticleService extends BaseService<any> {
     const articleQuery = db.table('kb_articles as ka')
       .select({ block_data: 'dbc.block_data' });
     db.tenantJoin(articleQuery, 'document_block_content as dbc', 'dbc.document_id', 'ka.document_id', { type: 'left' });
+    await this.applyReadScope(knex, context, articleQuery, 'ka');
 
     const article = await articleQuery
       .andWhere('ka.article_id', id)
@@ -500,6 +561,7 @@ export class KbArticleService extends BaseService<any> {
 
   async updateContent(id: string, data: UpdateKbArticleContentData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+    await this.assertMayWrite(knex, context, 'update');
 
     const article = await this.buildTenantScopedQuery(knex, context)
       .where('article_id', id)
@@ -566,55 +628,26 @@ export class KbArticleService extends BaseService<any> {
   }
 
   async createFromTicket(ticketId: string, context: ServiceContext): Promise<any> {
-    const { knex } = await this.getKnex();
+    const articleId = await this.withArticleWrite(context, async (trx, txContext) => {
+      const ticket = await tenantDb(trx, context.tenant).table('tickets')
+        .where('ticket_id', ticketId)
+        .first();
 
-    const ticket = await tenantDb(knex, context.tenant).table('tickets')
-      .where('ticket_id', ticketId)
-      .first();
+      if (!ticket) {
+        throw new NotFoundError('Ticket not found');
+      }
 
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
+      const blocks = buildKbArticleContentFromTicket(ticket);
 
-    const title = ticket.title || 'Untitled Article';
-    const description = ticket.description || '';
-    const resolution = ticket.resolution || '';
-
-    // Build BlockNote content from ticket data
-    const blocks: BlockNoteBlock[] = [];
-
-    blocks.push({
-      type: 'heading',
-      props: { level: 2 },
-      content: [{ type: 'text', text: 'Problem', styles: {} }],
+      return this.createInTransaction({
+        title: ticket.title || 'Untitled Article',
+        article_type: 'troubleshooting',
+        audience: 'internal',
+        content: JSON.stringify(blocks),
+        content_format: 'blocknote',
+      }, trx, txContext);
     });
 
-    if (description) {
-      blocks.push({
-        type: 'paragraph',
-        content: [{ type: 'text', text: description, styles: {} }],
-      });
-    }
-
-    blocks.push({
-      type: 'heading',
-      props: { level: 2 },
-      content: [{ type: 'text', text: 'Resolution', styles: {} }],
-    });
-
-    if (resolution) {
-      blocks.push({
-        type: 'paragraph',
-        content: [{ type: 'text', text: resolution, styles: {} }],
-      });
-    }
-
-    return this.create({
-      title,
-      article_type: 'troubleshooting',
-      audience: 'internal',
-      content: JSON.stringify(blocks),
-      content_format: 'blocknote',
-    }, context);
+    return this.getById(articleId, context);
   }
 }

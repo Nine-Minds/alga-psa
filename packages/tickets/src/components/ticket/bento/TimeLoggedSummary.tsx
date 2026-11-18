@@ -5,6 +5,7 @@ import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { formatMinutesAsHoursAndMinutes, workedMinutes } from '@alga-psa/core';
 import type { TicketTimeEntriesSummary } from '@alga-psa/types';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 
 interface TimeLoggedSummaryProps {
   id: string;
@@ -53,7 +54,8 @@ function dayLabel(key: string, locale: string): string {
 export function TimeLoggedSummary({ id, ticketId, refreshKey = 0, initialSummary }: TimeLoggedSummaryProps) {
   const { t } = useTranslation('features/tickets');
   const { locale } = useFormatters();
-  const { fetchTimeEntriesForTicket } = useSchedulingCallbacks();
+  const { fetchTimeEntriesForTicket: fetchNativeTimeEntries } = useSchedulingCallbacks();
+  const fetchTimeEntriesForTicket = useTicketDataSource().time.fetchTimeEntries ?? fetchNativeTimeEntries;
   const initialData = initialSummary ? use(initialSummary) : null;
   const [summary, setSummary] = useState<TicketTimeEntriesSummary | null>(initialData);
   const skipFirstFetch = useRef(Boolean(initialSummary));

@@ -6,13 +6,17 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
+import { PREPAID_BLOCK_MAX_ROLLOVER_PERIODS } from '@alga-psa/types';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  blockRatePerHourMinor,
   defaultBlockPriceMinor,
   effectiveBlockPriceMinor,
   majorToMinor,
   minorToMajor,
   type PrepaidBlockConfigDraft,
+  withIssueMode,
 } from './prepaidBlockConfigDraft';
 
 export interface PrepaidBlockCoveredService {
@@ -43,7 +47,8 @@ interface PrepaidBlockConfigFieldsProps {
 
 /**
  * Editor for a Prepaid Block line's config: block size, price, sold-as service,
- * expiry, and the follow-on triggers. Used by the Create Custom dialog and the
+ * how blocks are issued (every billing period with rollover, or on consumption
+ * triggers) and expiry. Used by the Create Custom dialog and the
  * line card's inline editor.
  */
 export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> = ({
@@ -57,6 +62,7 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
   neutralPrice = false,
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const { locale } = useFormatters();
 
   const soldAsId = value.soldAsServiceId ?? coveredServices[0]?.service_id ?? null;
   const soldAsService = coveredServices.find((s) => s.service_id === soldAsId);
@@ -64,6 +70,17 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
   const priceMinor = effectiveBlockPriceMinor(value, rateForDefault);
   const suggestedMinor = defaultBlockPriceMinor(value.hours, rateForDefault);
   const hasExpiry = value.expiryMonths.trim() !== '';
+  const isCadence = value.issueMode === 'cadence';
+  const rateMinor = blockRatePerHourMinor(value.hours, priceMinor);
+  // Templates are currency-neutral, so the per-hour rate is a plain amount there (no currency symbol).
+  const rateText = rateMinor === undefined
+    ? undefined
+    : neutralPrice
+      ? new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 20,
+      }).format(fromMinorUnits(rateMinor, locale, currencyCode))
+      : formatCurrencyFromMinorUnits(rateMinor, locale, currencyCode);
 
   const set = (patch: Partial<PrepaidBlockConfigDraft>) => onChange({ ...value, ...patch });
 
@@ -123,6 +140,14 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
               {t('prepaidBlock.fields.useRateTimesHours', { defaultValue: 'Use hours x rate' })}
             </button>
           )}
+          {rateText !== undefined && (
+            <p id={`${idPrefix}-rate-per-hour`} className="text-xs text-muted-foreground">
+              {t('prepaidBlock.fields.ratePerHour', {
+                defaultValue: 'Works out to {{rate}} per hour of the block.',
+                rate: rateText,
+              })}
+            </p>
+          )}
         </div>
       </div>
 
@@ -146,114 +171,159 @@ export const PrepaidBlockConfigFields: React.FC<PrepaidBlockConfigFieldsProps> =
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-expiry-months`}>
-            {t('prepaidBlock.fields.expiryMonths', { defaultValue: 'Expires after (months)' })}
-          </Label>
-          <Input
-            id={`${idPrefix}-expiry-months`}
-            type="number"
-            min={1}
-            max={120}
-            value={value.expiryMonths}
-            disabled={disabled}
-            placeholder={t('prepaidBlock.fields.neverExpires', { defaultValue: 'Never expires' })}
-            onChange={(e) => {
-              const next = e.target.value;
-              set({
-                expiryMonths: next,
-                triggerOnExpiry: next.trim() === '' ? false : value.triggerOnExpiry,
-              });
-            }}
-            onWheel={(e) => (e.target as HTMLInputElement).blur()}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t('prepaidBlock.fields.expiryMonthsHelp', {
-              defaultValue: 'Leave empty for hours that never expire. Unused hours are forfeited at expiry.',
-            })}
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-threshold`}>
-            {t('prepaidBlock.fields.thresholdPercent', { defaultValue: 'Issue next block at usage (%)' })}
-          </Label>
-          <Input
-            id={`${idPrefix}-threshold`}
-            type="number"
-            min={1}
-            max={99}
-            value={value.thresholdPercent}
-            disabled={disabled}
-            placeholder={t('prepaidBlock.fields.noThreshold', { defaultValue: 'No threshold' })}
-            onChange={(e) => set({ thresholdPercent: e.target.value })}
-            onWheel={(e) => (e.target as HTMLInputElement).blur()}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
-        <p className="text-sm font-medium">
-          {t('prepaidBlock.fields.triggersHeading', { defaultValue: 'Invoice the next block when' })}
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor={`${idPrefix}-trigger-exhaustion`}>
-            {t('prepaidBlock.fields.triggerExhaustion', { defaultValue: 'The block runs out' })}
-          </Label>
-          <Switch
-            id={`${idPrefix}-trigger-exhaustion`}
-            checked={value.triggerOnExhaustion}
-            disabled={disabled}
-            onCheckedChange={(checked) => set({ triggerOnExhaustion: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor={`${idPrefix}-trigger-expiry`}>
-            {t('prepaidBlock.fields.triggerExpiry', { defaultValue: 'The block expires' })}
-          </Label>
-          <Switch
-            id={`${idPrefix}-trigger-expiry`}
-            checked={hasExpiry && value.triggerOnExpiry}
-            disabled={disabled || !hasExpiry}
-            onCheckedChange={(checked) => set({ triggerOnExpiry: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label htmlFor={`${idPrefix}-trigger-renewal`}>
-              {t('prepaidBlock.fields.triggerRenewal', { defaultValue: 'The contract renews' })}
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              {t('prepaidBlock.fields.triggerRenewalHint', {
-                defaultValue: 'Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.',
-              })}
-            </p>
-          </div>
-          <Switch
-            id={`${idPrefix}-trigger-renewal`}
-            checked={value.triggerOnRenewal}
-            disabled={disabled}
-            onCheckedChange={(checked) => set({ triggerOnRenewal: checked })}
-          />
-        </div>
-      </div>
-
       <div className="space-y-1">
-        <Label htmlFor={`${idPrefix}-tier`}>
-          {t('prepaidBlock.fields.tier', { defaultValue: 'Follow-on invoice' })}
+        <Label htmlFor={`${idPrefix}-issue-mode`}>
+          {t('prepaidBlock.fields.issueMode', { defaultValue: 'Issue blocks' })}
         </Label>
         <CustomSelect
-          id={`${idPrefix}-tier`}
-          value={value.replenishmentTier}
+          id={`${idPrefix}-issue-mode`}
+          value={value.issueMode}
           disabled={disabled}
-          onValueChange={(next) => set({ replenishmentTier: next === 'auto_issue' ? 'auto_issue' : 'draft' })}
+          onValueChange={(next) => onChange(withIssueMode(value, next === 'cadence' ? 'cadence' : 'consumption'))}
           options={[
-            { value: 'draft', label: t('prepaidBlock.fields.tierDraft', { defaultValue: 'Create a draft for review' }) },
-            { value: 'auto_issue', label: t('prepaidBlock.fields.tierAutoIssue', { defaultValue: 'Finalize and send automatically' }) },
+            { value: 'cadence', label: t('prepaidBlock.fields.issueModeCadence', { defaultValue: 'Every billing period' }) },
+            { value: 'consumption', label: t('prepaidBlock.fields.issueModeConsumption', { defaultValue: 'When the current block runs out or expires' }) },
           ]}
         />
       </div>
+
+      {isCadence ? (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-rollover-periods`}>
+              {t('prepaidBlock.fields.rolloverPeriods', { defaultValue: 'Unused hours' })}
+            </Label>
+            <CustomSelect
+              id={`${idPrefix}-rollover-periods`}
+              value={value.rolloverPeriods}
+              disabled={disabled}
+              onValueChange={(next) => set({ rolloverPeriods: next })}
+              options={Array.from({ length: PREPAID_BLOCK_MAX_ROLLOVER_PERIODS + 1 }, (_, periods) => ({
+                value: String(periods),
+                label: periods === 0
+                  ? t('prepaidBlock.fields.rolloverNone', { defaultValue: 'Expire at the end of the period' })
+                  : t('prepaidBlock.fields.rolloverCarry', { defaultValue: 'Carry over {{count}} periods', count: periods }),
+              }))}
+            />
+          </div>
+          <p id={`${idPrefix}-cadence-note`} className="text-xs text-muted-foreground">
+            {t('prepaidBlock.fields.cadenceNote', {
+              defaultValue: "Billed in advance each period. Hours over the block bill at the line's hourly rate on the next invoice.",
+            })}
+          </p>
+        </div>
+      ) : (
+        <>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-expiry-months`}>
+              {t('prepaidBlock.fields.expiryMonths', { defaultValue: 'Expires after (months)' })}
+            </Label>
+            <Input
+              id={`${idPrefix}-expiry-months`}
+              type="number"
+              min={1}
+              max={120}
+              value={value.expiryMonths}
+              disabled={disabled}
+              placeholder={t('prepaidBlock.fields.neverExpires', { defaultValue: 'Never expires' })}
+              onChange={(e) => {
+                const next = e.target.value;
+                set({
+                  expiryMonths: next,
+                  triggerOnExpiry: next.trim() === '' ? false : value.triggerOnExpiry,
+                });
+              }}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('prepaidBlock.fields.expiryMonthsHelp', {
+                defaultValue: 'Leave empty for hours that never expire. Unused hours are forfeited at expiry.',
+              })}
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-threshold`}>
+              {t('prepaidBlock.fields.thresholdPercent', { defaultValue: 'Issue next block at usage (%)' })}
+            </Label>
+            <Input
+              id={`${idPrefix}-threshold`}
+              type="number"
+              min={1}
+              max={99}
+              value={value.thresholdPercent}
+              disabled={disabled}
+              placeholder={t('prepaidBlock.fields.noThreshold', { defaultValue: 'No threshold' })}
+              onChange={(e) => set({ thresholdPercent: e.target.value })}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+          <p className="text-sm font-medium">
+            {t('prepaidBlock.fields.triggersHeading', { defaultValue: 'Invoice the next block when' })}
+          </p>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor={`${idPrefix}-trigger-exhaustion`}>
+              {t('prepaidBlock.fields.triggerExhaustion', { defaultValue: 'The block runs out' })}
+            </Label>
+            <Switch
+              id={`${idPrefix}-trigger-exhaustion`}
+              checked={value.triggerOnExhaustion}
+              disabled={disabled}
+              onCheckedChange={(checked) => set({ triggerOnExhaustion: checked })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor={`${idPrefix}-trigger-expiry`}>
+              {t('prepaidBlock.fields.triggerExpiry', { defaultValue: 'The block expires' })}
+            </Label>
+            <Switch
+              id={`${idPrefix}-trigger-expiry`}
+              checked={hasExpiry && value.triggerOnExpiry}
+              disabled={disabled || !hasExpiry}
+              onCheckedChange={(checked) => set({ triggerOnExpiry: checked })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label htmlFor={`${idPrefix}-trigger-renewal`}>
+                {t('prepaidBlock.fields.triggerRenewal', { defaultValue: 'The contract renews' })}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('prepaidBlock.fields.triggerRenewalHint', {
+                  defaultValue: 'Invoices a new block on each renewal (evergreen anniversary or activated renewal contract). Existing blocks keep their own expiry.',
+                })}
+              </p>
+            </div>
+            <Switch
+              id={`${idPrefix}-trigger-renewal`}
+              checked={value.triggerOnRenewal}
+              disabled={disabled}
+              onCheckedChange={(checked) => set({ triggerOnRenewal: checked })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-tier`}>
+            {t('prepaidBlock.fields.tier', { defaultValue: 'Follow-on invoice' })}
+          </Label>
+          <CustomSelect
+            id={`${idPrefix}-tier`}
+            value={value.replenishmentTier}
+            disabled={disabled}
+            onValueChange={(next) => set({ replenishmentTier: next === 'auto_issue' ? 'auto_issue' : 'draft' })}
+            options={[
+              { value: 'draft', label: t('prepaidBlock.fields.tierDraft', { defaultValue: 'Create a draft for review' }) },
+              { value: 'auto_issue', label: t('prepaidBlock.fields.tierAutoIssue', { defaultValue: 'Finalize and send automatically' }) },
+            ]}
+          />
+        </div>
+        </>
+      )}
 
       {errors.length > 0 && (
         <ul id={`${idPrefix}-errors`} className="list-disc pl-5 text-sm text-destructive">

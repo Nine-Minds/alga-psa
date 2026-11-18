@@ -290,6 +290,22 @@ describe('hasBoardFilterParam', () => {
   });
 });
 
+describe('hasTicketViewFilterParams', () => {
+  const CONTACT_A = '44444444-5555-4666-8777-888888888888';
+
+  it('counts a shared contact link as a filter opinion', () => {
+    // A link to "this client's tickets from this person" must outrank the
+    // board's default view, exactly as ?clientId= already does — otherwise the
+    // board's own filters would overwrite the link on arrival.
+    expect(hasTicketViewFilterParams(`?contactId=${CONTACT_A}`)).toBe(true);
+    expect(hasTicketViewFilterParams(`?clientId=x&contactId=${CONTACT_A}`)).toBe(true);
+  });
+
+  it('ignores an empty contact param', () => {
+    expect(hasTicketViewFilterParams('?contactId=')).toBe(false);
+  });
+});
+
 describe('URL probes on a server-built search string', () => {
   /**
    * The remembered board tab is resolved on the server now (see

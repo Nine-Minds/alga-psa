@@ -349,6 +349,10 @@
       "title": "Actifs",
       "custody": {
         "title": "Matériel sous garde"
+      },
+      "audits": {
+        "title": "Audits de site",
+        "detailTitle": "Audit de site"
       }
     },
     "chat": {
@@ -519,6 +523,44 @@
     },
     "layout": {
       "defaultTitle": "Tableau de bord | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Informatique cogérée",
+      "archive": {
+        "title": "Archive de la gestion informatique partagée"
+      }
+    },
+    "coManagement": {
+      "title": "Accès cogéré",
+      "administration": {
+        "title": "Administration cogérée"
+      },
+      "customerTickets": {
+        "title": "Tickets clients"
+      },
+      "sharedTicket": {
+        "title": "Ticket partagé"
+      },
+      "providers": {
+        "title": "Fournisseurs d'e-mail et d'identité"
+      },
+      "sharedTasks": {
+        "title": "Tâches partagées",
+        "taskTitle": "Tâche partagée",
+        "projectTitle": "Projet partagé"
+      },
+      "departure": {
+        "title": "Mettre fin à la gestion informatique partagée"
+      },
+      "sla": {
+        "title": "Priorités SLA cogérées"
+      },
+      "export": {
+        "title": "Exporter l'espace de travail"
+      },
+      "upgrade": {
+        "title": "Passer à AlgaPSA"
+      }
     }
   },
   "auth": {

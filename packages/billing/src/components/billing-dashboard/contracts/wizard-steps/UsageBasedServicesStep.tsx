@@ -1,6 +1,7 @@
 'use client';
 
 
+import { BillingTimingField } from '../BillingTimingField';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -147,6 +148,13 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
             defaultValue: 'Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.',
           })}
         </p>
+      </div>
+
+      <div className="mb-6 space-y-1">
+        <Label className="text-sm font-medium">
+          {t('wizardUsage.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+        </Label>
+        <BillingTimingField id="usage-billing-timing" lineType="Usage" value="arrears" onChange={() => undefined} />
       </div>
 
       <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">

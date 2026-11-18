@@ -11,7 +11,7 @@ export function registerServiceRoutes(
   const ServiceIdParams = registry.registerSchema(
     'ServiceIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Service UUID.'),
+      id: zOpenApi.string().guid().describe('Service UUID.'),
     }),
   );
 
@@ -30,16 +30,16 @@ export function registerServiceRoutes(
   const ServiceResource = registry.registerSchema(
     'ServiceCatalogEntry',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       service_name: zOpenApi.string(),
-      custom_service_type_id: zOpenApi.string().uuid(),
+      custom_service_type_id: zOpenApi.string().guid(),
       billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
       unit_code: zOpenApi.string().nullable().optional(),
-      category_id: zOpenApi.string().uuid().nullable().optional(),
-      tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional(),
+      tax_rate_id: zOpenApi.string().guid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),
       item_kind: zOpenApi.enum(['service', 'product']).optional(),
       is_active: zOpenApi.boolean().optional(),
@@ -64,7 +64,7 @@ export function registerServiceRoutes(
     'ServiceEnvelope',
     zOpenApi.object({
       data: ServiceResource,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -80,7 +80,7 @@ export function registerServiceRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

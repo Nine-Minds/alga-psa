@@ -1510,7 +1510,9 @@
     "addFailed": "Falha ao adicionar comentário",
     "submitting": "Enviando...",
     "loading": "Carregando...",
-    "empty": "Nenhum comentário ainda. Seja o primeiro a comentar!"
+    "empty": "Nenhum comentário ainda. Seja o primeiro a comentar!",
+    "loadError": "Não foi possível carregar os comentários.",
+    "retry": "Tentar novamente"
   },
   "taskStatusSelect": {
     "ariaLabel": "Status da tarefa",
@@ -2272,5 +2274,6 @@
         "inventoryStock": "Você precisa de acesso ao estoque para ver os níveis de estoque."
       }
     }
-  }
+  },
+  "backToSharedTasks": "← Voltar às tarefas partilhadas"
 }

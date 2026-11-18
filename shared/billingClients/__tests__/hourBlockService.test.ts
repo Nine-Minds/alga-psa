@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { classifyContractLineCoverage, computeFifoAllocation } from '../hourBlockService';
+import { classifyContractLineCoverage, computeFifoAllocation, computeRemainingBlockValueMinor } from '../hourBlockService';
 import type { ContractLineCoverageRow } from '../hourBlockService';
 
 type Block = { block_id: string; remaining_minutes: number };
@@ -122,14 +122,27 @@ describe('classifyContractLineCoverage', () => {
     expect(result[0].assignment).toBe('automatic');
   });
 
-  it('drops the excluded line so it is never named as a covering line', () => {
+  it('omits a service whose only line is the excluded one', () => {
     const result = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, 'line-a');
     expect(result).toHaveLength(0);
   });
 
-  it('reclassifies to automatic once the block\'s own overlapping line is excluded', () => {
+  it('stays when_assigned when the excluded issuing line overlaps another line, listing only the other', () => {
+    // Un-assigned time on the service splits between line-a and the issuing
+    // line-b, and time on line-b DOES draw the block: 'automatic' here would
+    // claim all the service's time bills through line-a.
     const result = classifyContractLineCoverage(
       [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+      'line-b',
+    );
+    expect(result[0].assignment).toBe('when_assigned');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
+  });
+
+  it('stays automatic when the excluded issuing line only follows the other line in time', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', '2026-12-31'), row('b', '2027-01-01', null)],
       window,
       'line-b',
     );
@@ -137,8 +150,31 @@ describe('classifyContractLineCoverage', () => {
     expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a']);
   });
 
+  it('leaves the classification untouched when nothing is excluded', () => {
+    const result = classifyContractLineCoverage(
+      [row('a', '2026-01-01', null), row('b', '2026-06-01', '2027-06-01')],
+      window,
+    );
+    expect(result[0].assignment).toBe('when_assigned');
+    expect(result[0].lines.map((l) => l.contract_line_id)).toEqual(['line-a', 'line-b']);
+  });
+
   it('treats a null exclusion as no exclusion', () => {
     const withNull = classifyContractLineCoverage([row('a', '2026-01-01', null)], window, null);
     expect(withNull).toHaveLength(1);
+  });
+});
+
+describe('computeRemainingBlockValueMinor', () => {
+  it('values remaining minutes at the hourly rate in minor units, rounded once', () => {
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: 600, hourly_rate: 15000 })).toBe(150000);
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: 20, hourly_rate: 10000 })).toBe(3333);
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: '90', hourly_rate: '12001' })).toBe(18002);
+  });
+
+  it('is zero for exhausted blocks and unpriced grants', () => {
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: 0, hourly_rate: 15000 })).toBe(0);
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: 60, hourly_rate: 0 })).toBe(0);
+    expect(computeRemainingBlockValueMinor({ remaining_minutes: null, hourly_rate: null })).toBe(0);
   });
 });

@@ -21,7 +21,7 @@ import type {
   IHoliday,
   CreateScheduleEntryOptions,
 } from '@alga-psa/types';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, validate as isUuid } from 'uuid';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 
@@ -207,7 +207,8 @@ const ScheduleEntry = {
     await assertHumanWorkAssignee(
       knexOrTrx,
       tenant,
-      userIds.filter((id) => !existingAssigneeIds.has(id))
+      userIds.filter((id) => !existingAssigneeIds.has(id)),
+      { kind: 'unscoped', surface: 'schedule_entry' }
     );
 
     // Delete existing assignments
@@ -513,7 +514,8 @@ const ScheduleEntry = {
     }
 
     validateAllDayInterval(entry);
-    const entry_id = uuidv4();
+    if (options.entryId !== undefined && !isUuid(options.entryId)) throw new Error('Invalid reserved schedule entry ID');
+    const entry_id = options.entryId ?? uuidv4();
 
     // Prepare entry data
     const entryData = {

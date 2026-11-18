@@ -1,11 +1,17 @@
 import { deactivateClientScopedChecklistTemplates } from '../../../../lib/ticketChecklists/clientDeletion';
+import { deactivateClientScopedTicketTemplates } from '../../../../lib/ticketTemplates/clientDeletion';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertClientPatchKeepsSeatArrangement, ClientSeatArrangementError } from '@alga-psa/core/config/deletion';
 import { tenantDb } from '@alga-psa/db';
-import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
+import { releaseSeatTicketOnMove } from '@alga-psa/db';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '../../../../models/clientCreation';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { ClientModel } from '../../../../models/clientModel';
@@ -88,7 +94,7 @@ const clientSummarySchema = z.object({
   url: z.string().nullable().describe('Website'),
   billing_email: z.string().nullable().optional().describe('Billing email address'),
   is_inactive: z.boolean().describe('Is inactive'),
-  properties: z.record(z.unknown()).nullable().describe('Custom properties'),
+  properties: z.record(z.string(), z.unknown()).nullable().describe('Custom properties'),
   updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
@@ -134,7 +140,7 @@ const clientCreateInputSchema = z.object({
   default_currency_code: z.string().optional(),
   notes: z.string().optional(),
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
   parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
   contract_line_id: nullableUuidSchema.optional(),
   is_default: z.boolean().optional(),
@@ -158,7 +164,7 @@ const clientUpdatePatchSchema = z
     default_currency_code: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
-    properties: z.record(z.unknown()).nullable().optional(),
+    properties: z.record(z.string(), z.unknown()).nullable().optional(),
     parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
     contract_line_id: nullableUuidSchema.optional(),
     is_default: z.boolean().nullable().optional(),
@@ -268,6 +274,23 @@ async function ensureClientExists(ctx: any, tx: TenantTxContext, clientId: strin
     });
   }
   return client as ClientRow;
+}
+
+/** Refuses a client patch that would make a client with a live seat arrangement inactive. */
+async function refuseStrandingSeatArrangement(
+  ctx: any, tx: TenantTxContext, clientId: string, patch: { is_inactive?: unknown },
+): Promise<void> {
+  try {
+    await assertClientPatchKeepsSeatArrangement(tx.trx, tx.tenantId, clientId, patch);
+  } catch (error) {
+    if (!(error instanceof ClientSeatArrangementError)) throw error;
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: 'VALIDATION_ERROR',
+      message: error.message,
+      details: { client_id: clientId, reason: error.code },
+    });
+  }
 }
 
 async function ensureTicketExists(ctx: any, tx: TenantTxContext, ticketId: string): Promise<Record<string, any>> {
@@ -718,11 +741,18 @@ async function cleanupClientDeleteArtifacts(
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
   await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+  await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_rates', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_locations', { client_id: clientId });
+  // RMM organisations stay mapped to nothing; the client's maintenance windows
+  // go with it. Neither foreign key acts on its own on Citus.
+  await tenantScopedTableForTenant(trx, tenant, 'rmm_organization_mappings')
+    .where('client_id', clientId)
+    .update({ client_id: null, billing_profile_id: null, updated_at: new Date().toISOString() });
+  await deleteFromTenantTableIfExists(trx, tenant, 'rmm_maintenance_windows', { client_id: clientId });
   // After every table that references a profile, before the client itself.
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_profiles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_payment_customers', { client_id: clientId });
@@ -855,17 +885,6 @@ async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Pro
   }
 
   return status.status_id;
-}
-
-// Resolve the tenant's configured default billing currency (last-resort fallback 'USD').
-// Mirrors the tenant-default read in resolveClientBillingCurrency so new clients adopt the
-// configured org default at creation instead of a literal 'USD'.
-async function getTenantDefaultBillingCurrency(tx: TenantTxContext): Promise<string> {
-  const billingSettings = await tenantScopedTable(tx, 'default_billing_settings')
-    .select('default_currency_code')
-    .first();
-
-  return billingSettings?.default_currency_code || 'USD';
 }
 
 async function appendClientNoteBlock(
@@ -1323,14 +1342,8 @@ export function registerClientActions(): void {
 
         const clientColumns = await getTableColumns(tx, 'clients');
         const createdId = uuidv4();
-        const nowIso = new Date().toISOString();
-        // When the caller does not specify a currency, adopt the tenant's configured default
-        // (default_billing_settings.default_currency_code) rather than the literal 'USD'.
-        const defaultCurrencyCode =
-          input.default_currency_code ?? (await getTenantDefaultBillingCurrency(tx));
         const createRow = pickExistingFields(
           {
-            tenant: tx.tenantId,
             client_id: createdId,
             client_name: input.client_name,
             client_type: input.client_type ?? 'company',
@@ -1338,31 +1351,28 @@ export function registerClientActions(): void {
             billing_email: input.email ?? null,
             notes: input.notes ?? null,
             client_since: input.client_since ?? null,
-            properties: input.properties ? JSON.stringify(input.properties) : null,
-            default_currency_code: defaultCurrencyCode,
+            properties: input.properties ?? null,
+            // Left null so the creation seam resolves the tenant's configured
+            // default (default_billing_settings) instead of the column's 'USD'.
+            default_currency_code: input.default_currency_code ?? null,
             parent_client_id: input.parent_client_id ?? null,
             contract_line_id: input.contract_line_id ?? null,
             is_default: input.is_default ?? false,
             is_inactive: false,
-            created_at: nowIso,
-            updated_at: nowIso,
           },
           clientColumns,
-          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'tenant', 'client_id', 'created_at', 'updated_at'])
+          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id'])
         );
         try {
-          await tenantScopedTable(tx, 'clients').insert(createRow);
+          // The shared seam owns the row plus its prerequisites: default billing
+          // profile, gated default contract, default tax, tenant currency.
+          await createClientWithDefaults(
+            tx.trx,
+            tx.tenantId,
+            createRow as CreateClientWithDefaultsData
+          );
         } catch (error) {
           rethrowAsStandardError(ctx, error);
-        }
-
-        try {
-          await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
-            tenant: tx.tenantId,
-            clientId: createdId,
-          });
-        } catch {
-          // Best-effort parity with product behavior.
         }
 
         const directPatch = pickExistingFields(
@@ -1497,6 +1507,8 @@ export function registerClientActions(): void {
         }
 
         if (Object.keys(clientPatch).length > 0) {
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, clientPatch);
           try {
             await tenantScopedTable(tx, 'clients')
               .where('client_id', input.client_id)
@@ -1597,6 +1609,8 @@ export function registerClientActions(): void {
         let archivedAt: string | null = null;
         if (!previousInactive) {
           archivedAt = new Date().toISOString();
+          // LEVERAGE: pattern client-inactive-write — every clients.is_inactive write asks the seat arrangement guard in its transaction
+          await refuseStrandingSeatArrangement(ctx, tx, input.client_id, { is_inactive: true });
           await tenantScopedTable(tx, 'clients')
             .where('client_id', input.client_id)
             .update({ is_inactive: true, updated_at: archivedAt });
@@ -1782,7 +1796,6 @@ export function registerClientActions(): void {
         const duplicateRow = pickExistingFields(
           {
             client_id: duplicateId,
-            tenant: tx.tenantId,
             client_name: input.client_name,
             client_type: source.client_type ?? null,
             url: source.url ?? null,
@@ -1804,16 +1817,20 @@ export function registerClientActions(): void {
             billing_cycle: source.billing_cycle ?? null,
             timezone: source.timezone ?? null,
             account_manager_id: source.account_manager_id ?? null,
-            created_at: nowIso,
-            updated_at: nowIso,
             notes_document_id: null,
           },
           clientColumns,
-          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id', 'tenant', 'created_at', 'updated_at', 'notes_document_id'])
+          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id', 'notes_document_id'])
         );
 
         try {
-          await tenantScopedTable(tx, 'clients').insert(duplicateRow);
+          // A duplicate is a new client, so it earns the same prerequisites as
+          // one created from scratch rather than only the source's columns.
+          await createClientWithDefaults(
+            tx.trx,
+            tx.tenantId,
+            duplicateRow as CreateClientWithDefaultsData
+          );
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }
@@ -1832,15 +1849,6 @@ export function registerClientActions(): void {
           actorUserId: tx.actorUserId,
           idempotencyKey: `client_created:${duplicateId}`,
         });
-
-        try {
-          await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
-            tenant: tx.tenantId,
-            clientId: duplicateId,
-          });
-        } catch {
-          // Non-fatal: duplicate creation remains valid.
-        }
 
         let copiedTags = 0;
         if (input.copy_tags) {
@@ -2076,6 +2084,8 @@ export function registerClientActions(): void {
         }
 
         await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).update(patch);
+        // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+        await releaseSeatTicketOnMove(tx.trx, tx.tenantId, input.ticket_id, ticket, { ...ticket, client_id: input.client_id });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

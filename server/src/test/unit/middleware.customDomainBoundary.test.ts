@@ -31,7 +31,7 @@ const CANONICAL = 'https://algapsa.com';
 const ENV_KEYS = ['NEXTAUTH_URL', 'NEXTAUTH_SECRET'] as const;
 const savedEnv: Record<string, string | undefined> = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
 
-type Session = { user: { user_type: 'internal' | 'client'; tenant: string; id: string } } | null;
+type Session = { user: { user_type: 'internal' | 'client'; tenant: string; id: string; product_code?: string } } | null;
 const tech: Session = { user: { user_type: 'internal', tenant: 'tenant-pbnj', id: 'u-tech' } };
 const contact: Session = { user: { user_type: 'client', tenant: 'tenant-pbnj', id: 'u-contact' } };
 
@@ -134,6 +134,13 @@ describe('same host, surface=both (path routing on one domain)', () => {
 
   it('a contact who navigates to /msp goes to the portal on the SAME host', async () => {
     const result = await visit('both.pbnj.ca', '/msp/dashboard', contact);
+    expect(result.status).toBe(307);
+    expect(result.location).toBe('https://both.pbnj.ca/client-portal/dashboard');
+  });
+
+  it('keeps a co-managed client principal out of MSP billing', async () => {
+    const client: Session = { user: { user_type: 'client', tenant: 'customer', id: 'client', product_code: 'co_managed' } };
+    const result = await visit('both.pbnj.ca', '/msp/billing', client);
     expect(result.status).toBe(307);
     expect(result.location).toBe('https://both.pbnj.ca/client-portal/dashboard');
   });

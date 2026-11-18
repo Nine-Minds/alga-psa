@@ -104,4 +104,60 @@ describe('workflow shared helper actor resolution', () => {
     const resolvedActor = await resolveRunContext(db as any, tenantA, scopedRunId);
     expect(resolvedActor).toEqual({ actorUserId: actorA, workflowId: scopedWorkflowId, lineage: [] });
   });
+
+  it('N5: resolves the actor from the workflow version the run executed, not any published version', async () => {
+    const tenant = await createTenant(db, 'Tenant Versions');
+    const creator = await createUser(db, tenant, { email: 'creator@example.com' });
+    const publisherV1 = await createUser(db, tenant, { email: 'publisher-v1@example.com' });
+    const publisherV2 = await createUser(db, tenant, { email: 'publisher-v2@example.com' });
+
+    const workflowId = uuidv4();
+    const now = new Date().toISOString();
+    await tenantTable(db, tenant, 'workflow_definitions').insert({
+      workflow_id: workflowId,
+      tenant,
+      name: 'Versioned Definition',
+      description: null,
+      payload_schema_ref: 'schema://test',
+      trigger: {},
+      draft_definition: { id: workflowId },
+      draft_version: 2,
+      status: 'published',
+      created_by: creator,
+      updated_by: creator,
+      created_at: now,
+      updated_at: now,
+    });
+    for (const [version, publisher] of [[1, publisherV1], [2, publisherV2]] as const) {
+      await tenantTable(db, tenant, 'workflow_definition_versions').insert({
+        version_id: uuidv4(),
+        workflow_id: workflowId,
+        tenant,
+        version,
+        definition_json: { id: workflowId },
+        payload_schema_json: {},
+        published_by: publisher,
+        published_at: now,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
+    const runOn = async (version: number) => {
+      const runId = uuidv4();
+      await tenantTable(db, tenant, 'workflow_runs').insert({
+        run_id: runId,
+        workflow_id: workflowId,
+        workflow_version: version,
+        tenant,
+        status: 'running',
+        started_at: now,
+        updated_at: now,
+      });
+      return resolveRunContext(db as any, tenant, runId);
+    };
+
+    expect((await runOn(1))?.actorUserId).toBe(publisherV1);
+    expect((await runOn(2))?.actorUserId).toBe(publisherV2);
+  });
 });

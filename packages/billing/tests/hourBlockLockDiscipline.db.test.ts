@@ -442,13 +442,12 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
     await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: base.serviceId });
     await db('contract_line_prepaid_blocks').insert({ tenant, contract_line_id: lineId, block_minutes: 600, block_price: 100000 });
     await db('time_entries').where({ tenant, entry_id: base.entry.entry_id }).update({ contract_line_id: lineId });
-    const mk = async (status: string) => {
-      const blockId = uuidv4();
+    const mk = async (status: string, blockId: string) => {
       await db('hour_blocks').insert({
         block_id: blockId, tenant, client_id: base.clientId, service_id: base.serviceId,
         total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
         currency_code: 'USD', status, purchased_at: status === 'pending' ? null : new Date().toISOString(),
-        source_type: 'contract', contract_line_id: lineId,
+        source_type: 'contract', contract_line_id: lineId, service_period_record_id: uuidv4(),
       });
       return blockId;
     };
@@ -456,8 +455,8 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
       clientId: base.clientId,
       serviceId: base.serviceId,
       lineId,
-      activeBlockId: await mk('active'),
-      voidedBlockId: await mk('voided'),
+      activeBlockId: await mk('active', 'ffffffff-ffff-4fff-bfff-ffffffffffff'),
+      voidedBlockId: await mk('voided', '00000000-0000-4000-8000-000000000001'),
       entry: { ...base.entry, contract_line_id: lineId as unknown as null },
     };
   }
@@ -496,6 +495,55 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
       const active = await db('hour_blocks').where({ tenant, block_id: s.activeBlockId }).first();
       expect(Number(active.remaining_minutes)).toBe(480);
     } finally {
+      await holderDb.destroy();
+      await cleanupBlockLine();
+    }
+  });
+
+  it('reversal waits for the first block of its line before locking a later allocated block', async () => {
+    const s = await seedBlockLine();
+    const holderDb = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 1 } });
+    let holder: Knex.Transaction | undefined;
+    let reversing: Knex.Transaction | undefined;
+    let reversal: Promise<void> | undefined;
+    try {
+      await db.transaction((trx) => allocateTimeEntry(trx, tenant, s.clientId, s.entry));
+      holder = await holderDb.transaction();
+      await holder('hour_blocks').where({ tenant, block_id: s.voidedBlockId }).forUpdate();
+      const holderPid = (await holder.raw('select pg_backend_pid() as pid')).rows[0].pid;
+      reversing = await db.transaction();
+      const reversingPid = (await reversing.raw('select pg_backend_pid() as pid')).rows[0].pid;
+      let settled = false;
+      reversal = reverseTimeEntryAllocations(reversing, tenant, s.entry.entry_id).finally(() => { settled = true; });
+      // Observe PostgreSQL's wait graph, not elapsed time: the unallocated,
+      // earlier block must serialize the entire reverse-and-redraw operation.
+      let blockers: number[] = [];
+      const deadline = Date.now() + 5000;
+      do {
+        blockers = (await db.raw('select pg_blocking_pids(?) as blockers', [reversingPid])).rows[0].blockers;
+        if (blockers.includes(holderPid) || settled) break;
+        await sleep(10);
+      } while (Date.now() < deadline);
+      expect(blockers).toContain(holderPid);
+      // A line writer can still take the later block. Locking it in the
+      // reversal before waiting on the first block would form a cycle.
+      await db.transaction((trx) => trx('hour_blocks').where({ tenant, block_id: s.activeBlockId }).forUpdate().noWait());
+      // The writer changes the draw while reversal is waiting. Reversal must
+      // restore the committed 60 minutes, not its earlier 120-minute snapshot.
+      await holder('hour_blocks').where({ tenant, block_id: s.activeBlockId }).update({ remaining_minutes: 540 });
+      await holder('hour_block_time_allocations').where({ tenant, time_entry_id: s.entry.entry_id }).update({ minutes: 60 });
+      await holder.commit();
+      await reversal;
+      await allocateTimeEntry(reversing, tenant, s.clientId, s.entry);
+      await reversing.commit();
+      const active = await db('hour_blocks').where({ tenant, block_id: s.activeBlockId }).first();
+      expect(Number(active.remaining_minutes)).toBe(480);
+      const allocations = await db('hour_block_time_allocations').where({ tenant, time_entry_id: s.entry.entry_id });
+      expect(allocations.map((row) => Number(row.minutes))).toEqual([120]);
+    } finally {
+      if (holder && !holder.isCompleted()) await holder.rollback();
+      await reversal?.catch(() => undefined);
+      if (reversing && !reversing.isCompleted()) await reversing.rollback();
       await holderDb.destroy();
       await cleanupBlockLine();
     }

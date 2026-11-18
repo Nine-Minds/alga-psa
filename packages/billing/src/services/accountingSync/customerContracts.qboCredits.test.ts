@@ -174,7 +174,7 @@ describe('Contract 1 — credits that already live in QBO are not imported', () 
     };
 
     await applyExternalDocumentChange(
-      { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats },
+      { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats, applyLocalVoid: vi.fn(async () => ({ status: 'applied' as const })) },
       legacyCredit
     );
 

@@ -36,6 +36,23 @@ const usePrebuilt = truthyEnv(process.env.USE_PREBUILT);
 const prebuiltDir = (pkg) => usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`;
 const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/${pkg}/dist` : `../packages/${pkg}/src`);
 
+// Export names need not mirror the source tree (rendering/* lives in src/lib/).
+// Let the package manifest define both bundlers' targets so new exports work
+// without maintaining a second list here.
+const coreExports = Object.entries(JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../packages/core/package.json'), 'utf8')
+).exports);
+const coreSourceAliases = Object.fromEntries(coreExports.map(([subpath, entry]) => [
+  `@alga-psa/core${subpath === '.' ? '' : subpath.slice(1)}`,
+  `../packages/core/${entry.types.replace(/^\.\//, '')}`,
+]));
+const coreWebpackAliases = Object.fromEntries(coreExports.map(([subpath, entry]) => [
+  // Webpack aliases are first-match: exact keys keep the root and shorter
+  // exports from swallowing longer subpaths such as capability/server.
+  `@alga-psa/core${subpath === '.' ? '' : subpath.slice(1)}$`,
+  path.resolve(__dirname, '../packages/core', usePrebuilt ? entry.import : entry.types),
+]));
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = '../packages/ee/src/shims/empty.ts';
 
@@ -104,6 +121,7 @@ class EditionBuildDiagnosticsPlugin {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
         '@product/mcp/entry',
+        '@product/service-principals/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -167,7 +185,20 @@ class EditionBuildDiagnosticsPlugin {
   }
 }
 
-const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+// Next's server-action body cap (one global value, not per action). Default 26mb, from two measurements:
+//  - Non-file actions (measured 2026-11, JSON-serialised worst cases): the largest legitimate body is a
+//    BlockNote document at the 1,000,000-char co-managed description cap = 3.65 MB (7.1 MB if every
+//    character were a quote, double-encoded); a 500-id bulk action is 19.5 KB; workflow definitions
+//    are under 60 KB. 8mb would cover all of them.
+//  - Actions that still carry file bytes and buffer by transport (no streaming path): co-managed
+//    attachments at their 25 MiB cap (+64 KiB envelope) set the floor. 26mb is that, rounded up; the
+//    KB import batch (10 MiB raw, 20 MiB worst case escaped) fits under it too. The pinning test
+//    server/src/test/unit/serverActionsBodyLimit.test.ts fails if any of these outgrow the default.
+//  This is not a file-size limit (that is the storage provider's maxFileSize); anything bigger goes
+//  through the chunked upload session API. A body past the cap gets Next's own 413
+//  ("Body exceeded 26mb limit", action-handler.js), never a truncated read. helm/values.yaml
+//  (server.serverActionsBodyLimit) and helm/templates/deployment.yaml carry the same default.
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '26mb';
 // Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
 // pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
 // 32-core box), each loading the full app bundle (~290 MB) — the dominant build
@@ -223,10 +254,13 @@ const nextConfig = {
       '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
       '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
       '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
-      // SSO provider buttons - swap between CE stub and EE implementation
-      '@alga-psa/auth/sso/entry': isEE
-        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+      '@product/service-principals/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
+        return isEE ? eePath : ossPath;
+      })(),
+      // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+      '@alga-psa/auth/sso/entry': '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -282,21 +316,19 @@ const nextConfig = {
       '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
+      '@alga-psa/co-managed': '../packages/co-managed/src',
+      '@alga-psa/co-managed/': '../packages/co-managed/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
       // Leaf horizontal packages (resolve to source during local dev)
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
-      '@alga-psa/core': '../packages/core/src',
-      // core exports whose name does not mirror src/ (they live in src/lib/) need
-      // an explicit entry: the '@alga-psa/core/' prefix would send them to
-      // src/<name>, and the dist/ fallback is absent wherever packages/ is
-      // mounted from source (e.g. the Teams development browser lane).
-      '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
-      '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
+      ...coreSourceAliases,
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
+      '@alga-psa/predicates': '../packages/predicates/src',
+      '@alga-psa/predicates/': '../packages/predicates/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
       '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
@@ -428,6 +460,9 @@ const nextConfig = {
       '@product/mcp/entry': isEE
         ? '@product/mcp/ee/entry'
         : '@product/mcp/oss/entry',
+      '@product/service-principals/entry': isEE
+        ? '@product/service-principals/ee/entry'
+        : '@product/service-principals/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -507,6 +542,7 @@ const nextConfig = {
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
+    '@alga-psa/co-managed',
     '@alga-psa/integrations',
     '@alga-psa/client-portal',
     '@alga-psa/portal-shared',
@@ -560,28 +596,31 @@ const nextConfig = {
       // when billing compiled. Compact IDs retain all actions and source maps.
       config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
     }
-    // Filesystem cache: persists across builds (even after `rm -rf .next`)
-    // so the second cold build reuses module compilation work. Stored under
-    // node_modules/.cache/webpack so it survives `.next` clears.
-    // Keep Next's cache version and dev memory policy. Replacing this object
-    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
-    // and the version metadata that invalidates incompatible cached builds.
-    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
-    config.cache = {
-      ...nextCache,
-      type: 'filesystem',
-      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
-      buildDependencies: {
-        ...nextCache.buildDependencies,
-        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
-      },
-      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
-      // every file (huge in this monorepo).
-      managedPaths: [
-        path.resolve(__dirname, 'node_modules'),
-        path.resolve(__dirname, '../node_modules'),
-      ],
-    };
+    // Production cache packs reached 16 GB even with a one-day maxAge. Loading
+    // and rewriting them alongside the live module graph exhausted a 16 GB CI
+    // runner plus 11 GB of swap. A one-shot production compiler must release
+    // modules instead of retaining a second copy for the next build. Nx still
+    // caches the upstream package builds; development keeps its filesystem cache.
+    if (!dev) {
+      config.cache = false;
+    } else {
+      // Preserve Next's cache version and maxMemoryGenerations: 0, since Next
+      // manages development's in-memory cache itself.
+      const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
+      config.cache = {
+        ...nextCache,
+        type: 'filesystem',
+        cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+        buildDependencies: {
+          ...nextCache.buildDependencies,
+          config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
+        },
+        managedPaths: [
+          path.resolve(__dirname, 'node_modules'),
+          path.resolve(__dirname, '../node_modules'),
+        ],
+      };
+    }
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -625,16 +664,12 @@ const nextConfig = {
       '@alga-psa/clients/': `${prebuiltDirAbs('clients')}/`,
       '@alga-psa/types': prebuiltDirAbs('types'),
       '@alga-psa/types/': `${prebuiltDirAbs('types')}/`,
-      '@alga-psa/core': prebuiltDirAbs('core'),
-      '@alga-psa/core/rateLimit': usePrebuilt
-        ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
-        : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
-      '@alga-psa/core/fileNames': usePrebuilt
-        ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
-        : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
+      ...coreWebpackAliases,
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
+      '@alga-psa/predicates': prebuiltDirAbs('predicates'),
+      '@alga-psa/predicates/': `${prebuiltDirAbs('predicates')}/`,
       '@alga-psa/formatting': prebuiltDirAbs('formatting'),
       '@alga-psa/formatting/': `${prebuiltDirAbs('formatting')}/`,
       '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
@@ -725,10 +760,8 @@ const nextConfig = {
         console.log(`[WEBPACK ALIAS DEBUG] @product/mcp/entry -> ${selectedPath} (isEE: ${isEE})`);
         return selectedPath;
       })(),
-      // SSO provider buttons - swap between CE stub and EE implementation
-      '@alga-psa/auth/sso/entry': isEE
-        ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+      // SSO provider buttons - one shared component for both editions (edition is decided at render time)
+      '@alga-psa/auth/sso/entry': path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -817,6 +850,10 @@ const nextConfig = {
       const pkgMcpEntry = path.join(__dirname, '../packages/product-mcp/entry.ts');
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
+
+      const pkgServicePrincipalsEntry = path.join(__dirname, '../packages/product-service-principals/entry.ts');
+      const pkgServicePrincipalsEeEntry = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+      config.resolve.alias[pkgServicePrincipalsEntry] = pkgServicePrincipalsEeEntry;
 
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
@@ -1075,6 +1112,13 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
           )
         );
+        // Same CE force for the service-principal seam (no EE source in CE).
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -1091,10 +1135,6 @@ const nextConfig = {
         const userActivitiesWorkflowTasksServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.server.ts');
         const userActivitiesWorkflowTaskActionsServerEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTaskActions.server.ts');
         const userActivitiesWorkflowTasksClientEe = path.join(__dirname, '../ee/server/src/user-activities/workflowTasks.client.tsx');
-        const authSsoButtonsEeEntry = path.join(
-          __dirname,
-          '../ee/server/src/components/auth/SsoProviderButtons.tsx',
-        );
         config.plugins = config.plugins || [];
         // Force the MCP seam to the EE implementation before resolution, so the
         // tsconfig `paths` CE default (@product/mcp/entry -> oss) can't win via
@@ -1103,6 +1143,12 @@ const nextConfig = {
           new webpack.NormalModuleReplacementPlugin(
             /^@product[\\\/]mcp[\\\/]entry$/,
             path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/ee/entry.ts')
           )
         );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
@@ -1134,12 +1180,6 @@ const nextConfig = {
             }
             if (req === '@alga-psa/user-activities/client/workflow-tasks') {
               resource.request = userActivitiesWorkflowTasksClientEe;
-              return;
-            }
-            // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
-            // at the CE stub. Force the EE implementation for enterprise builds.
-            if (req === '@alga-psa/auth/sso/entry') {
-              resource.request = authSsoButtonsEeEntry;
               return;
             }
             // IMPORTANT:
@@ -1271,7 +1311,20 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
     },
-    // Increase middleware body size limit for extension installs
+    // Largest request body that can pass the middleware (src/middleware.ts; its matcher covers every
+    // page and API route, so this bounds every request with a body). Next buffers the body for the
+    // middleware's clone, and past this size it only logs a warning and ENDS the stream (see
+    // next/dist/server/body-streams.js getCloneableBody): the handler then reads a silently
+    // truncated body. middleware.ts therefore answers 413 on a Content-Length over this value
+    // (src/middleware/bodySizeGuard.ts), before any body is read.
+    // It is not a file-size limit: the one upload limit is the storage provider's maxFileSize
+    // (packages/storage/src/config/storage.ts), reached through the chunked session API, whose
+    // chunks are far smaller than this. What still needs this much room is bodies that cannot
+    // stream: the legacy multipart upload route (src/lib/api/services/documents/multipartCap.ts),
+    // import previews, and extension bundle installs (EE extUploadProxy / ext-bundles/upload-proxy,
+    // the original reason for raising it). Excluding those routes from the matcher instead would
+    // also skip the API-key gate and CORS handling, so the cap stays and is not to be raised.
+    // Keep equal to NEXT_PROXY_MAX_BODY_BYTES (packages/storage/src/ingest/bufferedCap.ts; pinned by test).
     proxyClientMaxBodySize: '100mb',
     // Next build "Collecting page data" uses a worker pool sized from this value.
     // Default-capped (see buildCpus above) to bound peak memory; override with
@@ -1279,6 +1332,16 @@ const nextConfig = {
     // OOMs in CI.
     cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Compile server, edge and client in separate worker processes, one after
+    // another, so each compiler's module graph and in-memory webpack cache
+    // (production keeps every entry: maxMemoryGenerations Infinity) is freed
+    // before the next starts. Next enables this by default only when the
+    // config has no custom `webpack` function, which ours has; without it all
+    // three compilers stack in one process and a warm cache that a branch
+    // partly invalidates pushed the EE build past CI's runner memory.
+    webpackBuildWorker: true,
+    // Intern shared source strings and avoid keeping both strings and buffers.
+    webpackMemoryOptimizations: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,

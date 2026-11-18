@@ -297,7 +297,7 @@
         "description": "Configurar opções avançadas de processamento de e-mail",
         "folderFiltersLabel": "Filtros de pasta",
         "folderFiltersPlaceholder": "Caixa de entrada, suporte, pasta personalizada",
-        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada)",
+        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada). Use o nome exato da pasta como aparece no Outlook e escreva as pastas aninhadas como Caixa de entrada/Subpasta.",
         "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID do cliente OAuth",
         "clientSecret": "Segredo do cliente OAuth",
         "scopes": "Escopos OAuth",
-        "scopesPlaceholder": "escopos delimitados por espaço"
+        "scopesPlaceholder": "escopos delimitados por espaço",
+        "clientSecretHelp": "O segredo do cliente é armazenado com segurança e não será exibido. Deixe em branco para manter o segredo existente."
       },
       "processing": {
         "title": "Configurações de processamento",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtros de pasta",
         "folderFiltersPlaceholder": "Caixa de entrada, suporte, tickets",
         "active": "Ativo"
+      },
+      "messages": {
+        "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
       "senderDisplayName": "Nome de exibição do remetente",
       "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
+      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket.",
+      "oauthClientSecretHelp": "O segredo do cliente é armazenado com segurança e não será exibido. Deixe em branco para manter o segredo existente."
     },
     "authOptions": {
       "password": "Senha",
@@ -580,6 +585,9 @@
       "saving": "Salvando...",
       "updateProvider": "Provedor de atualização",
       "createProvider": "Criar provedor"
+    },
+    "messages": {
+      "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
     }
   },
   "microsoftForm": {
@@ -1076,6 +1084,7 @@
       "noClient": "Nenhum cliente correspondente",
       "outcome": {
         "assignClient": "Ticket atribuído ao cliente \"{{client}}\"",
+        "matchedClient": "o cliente correspondente",
         "fallback": "Nenhum cliente correspondido — ticket roteado para o destino substituto",
         "none": "A regra não foi resolvida — o processamento normal continua",
         "setDestination": "Passagem encaminhada para o destino selecionado",
@@ -1159,5 +1168,55 @@
         "users": "Falha ao carregar os usuários. Tente novamente."
       }
     }
+  },
+  "quarantine": {
+    "title": "E-mails recebidos em quarentena",
+    "description": "Mensagens recebidas que foram recusadas em vez de adicionadas a um ticket. Revise-as e dispense as que já tratou.",
+    "backToSettings": "Voltar às configurações de e-mail",
+    "openQueue": "E-mails em quarentena",
+    "empty": "Nenhum e-mail em quarentena com estes filtros.",
+    "loadError": "Falha ao carregar e-mails em quarentena",
+    "dismissError": "Falha ao dispensar a entrada",
+    "dismissed": "Entrada dispensada",
+    "noSubject": "(sem assunto)",
+    "dismiss": "Dispensar",
+    "filters": {
+      "mailbox": "Caixa de correio",
+      "reason": "Motivo",
+      "status": "Status",
+      "allMailboxes": "Todas as caixas",
+      "allReasons": "Todos os motivos",
+      "allStatuses": "Todos os status",
+      "ticket": "Filtrado por um ticket",
+      "clearTicket": "Mostrar todos os tickets"
+    },
+    "status": {
+      "open": "Aberto",
+      "dismissed": "Dispensado"
+    },
+    "columns": {
+      "mailbox": "Caixa de correio",
+      "sender": "Remetente",
+      "subject": "Assunto",
+      "reason": "Motivo",
+      "ticket": "Ticket",
+      "received": "Recebido",
+      "status": "Status",
+      "actions": "Ações"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "O remetente não está no ticket",
+      "reply_outside_sender_audience": "Resposta fora do público da notificação",
+      "co_managed_token_refused": "Link de resposta de cogestão recusado",
+      "co_managed_token_unserved": "Conversa de cogestão não aceita aqui",
+      "co_managed_sender_unauthenticated": "Remetente de cogestão não verificado"
+    },
+    "banner_one": "{{count}} e-mail recebido para este ticket foi colocado em quarentena",
+    "banner_many": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
+    "banner_other": "{{count}} e-mails recebidos para este ticket foram colocados em quarentena",
+    "bannerLink": "Revisar e-mails em quarentena",
+    "bannerAskAdmin_one": "Peça a um administrador de e-mail que o revise.",
+    "bannerAskAdmin_many": "Peça a um administrador de e-mail que os revise.",
+    "bannerAskAdmin_other": "Peça a um administrador de e-mail que os revise."
   }
 }

@@ -277,7 +277,7 @@ describe('Scenario: bookkeeper applies a legacy QBO credit to a synced invoice',
     }
     for (const change of changeSet.changes.filter((c) => c.entityType === 'Invoice' || c.entityType === 'CreditMemo')) {
       await applyExternalDocumentChange(
-        { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats },
+        { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats, applyLocalVoid: vi.fn(async () => ({ status: 'applied' as const })) },
         change as any
       );
     }
@@ -324,7 +324,7 @@ describe('Scenario: auto-provisioning against an established company file', () =
 });
 
 describe('Scenario: QBO-side void arrives through CDC', () => {
-  it('the void shape from the simulator trips the drift detector into externalVoided + exception', async () => {
+  it('the void shape from the simulator is mirrored: Alga invoice voided, mapping voided, no exception', async () => {
     const sim = new QboSimulator();
     simRef.current = sim;
 
@@ -344,17 +344,64 @@ describe('Scenario: QBO-side void arrives through CDC', () => {
     const changeSet = await sim.client.fetchChanges(cursor);
     const stats = emptyCycleStats();
     const exceptions = makeExceptions();
+    const applyLocalVoid = vi.fn(async (_invoiceId: string) => ({ status: 'applied' as const }));
 
     for (const change of changeSet.changes.filter((c) => c.entityType === 'Invoice')) {
       await applyExternalDocumentChange(
-        { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats },
+        { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats, applyLocalVoid },
+        change as any
+      );
+    }
+
+    expect(applyLocalVoid).toHaveBeenCalledWith('alga-inv-9');
+    expect(stats.externalVoidsApplied).toBe(1);
+    expect(stats.driftFound).toBe(0);
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+    const mapping = ledger.rows.find((r: any) => r.external_entity_id === qboInvoice.Id);
+    expect(mapping.sync_status).toBe(MAPPING_SYNC_STATUS.voided);
+  });
+
+  it('a void Alga cannot apply (payments recorded) is filed as an exception with the reason', async () => {
+    const sim = new QboSimulator();
+    simRef.current = sim;
+
+    const customer = sim.seedCustomer({ name: 'Acme Corp' });
+    const qboInvoice = sim.seedInvoice({ customerId: customer.Id, amountCents: 15000, docNumber: 'INV-10' });
+
+    const ledger = makeStatefulLedger();
+    seedMapping(ledger, 'invoice', 'alga-inv-10', qboInvoice.Id, {
+      exported_total: 150,
+      doc_number: 'INV-10',
+      sync_token: qboInvoice.SyncToken
+    });
+
+    const cursor = sim.now();
+    await sim.client.voidInvoice(qboInvoice.Id, qboInvoice.SyncToken);
+
+    const changeSet = await sim.client.fetchChanges(cursor);
+    const stats = emptyCycleStats();
+    const exceptions = makeExceptions();
+    const applyLocalVoid = vi.fn(async (_invoiceId: string) => ({
+      status: 'blocked' as const,
+      reason: 'Unwind payments before voiding.'
+    }));
+
+    for (const change of changeSet.changes.filter((c) => c.entityType === 'Invoice')) {
+      await applyExternalDocumentChange(
+        { tenantId: TENANT, targetRealm: REALM, ledger: ledger as any, exceptions, stats, applyLocalVoid },
         change as any
       );
     }
 
     expect(stats.driftFound).toBe(1);
     expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'accounting_sync_drift' })
+      expect.objectContaining({
+        type: 'accounting_sync_drift',
+        context: expect.objectContaining({
+          drift_kind: 'external_voided',
+          local_void_blocked_reason: 'Unwind payments before voiding.'
+        })
+      })
     );
     const mapping = ledger.rows.find((r: any) => r.external_entity_id === qboInvoice.Id);
     expect(mapping.sync_status).toBe(MAPPING_SYNC_STATUS.externalVoided);

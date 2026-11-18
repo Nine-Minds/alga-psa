@@ -12,20 +12,20 @@ export function registerInteractionsV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Interactions v1';
   const InteractionIdParam = registry.registerSchema(
     'InteractionIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid() }),
+    zOpenApi.object({ id: zOpenApi.string().guid() }),
   );
   // The runtime query schema transforms pagination strings, so document its wire representation.
   const ListQuery = registry.registerSchema(
     'InteractionListQueryV1',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid().optional(),
-      contact_id: zOpenApi.string().uuid().optional(),
-      opportunity_id: zOpenApi.string().uuid().optional(),
-      ticket_id: zOpenApi.string().uuid().optional(),
-      project_id: zOpenApi.string().uuid().optional(),
-      user_id: zOpenApi.string().uuid().optional(),
-      type_id: zOpenApi.string().uuid().optional(),
-      status_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
+      contact_id: zOpenApi.string().guid().optional(),
+      opportunity_id: zOpenApi.string().guid().optional(),
+      ticket_id: zOpenApi.string().guid().optional(),
+      project_id: zOpenApi.string().guid().optional(),
+      user_id: zOpenApi.string().guid().optional(),
+      type_id: zOpenApi.string().guid().optional(),
+      status_id: zOpenApi.string().guid().optional(),
       is_closed: zOpenApi.enum(['true', 'false']).optional().describe("Filter by status closure; 'false' also matches interactions with no status."),
       date_from: zOpenApi.string().datetime().optional(),
       date_to: zOpenApi.string().datetime().optional(),

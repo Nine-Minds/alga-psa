@@ -141,14 +141,13 @@ describe('service request client ownership and attachment authorization', () => 
       definition_id: definitionId,
       name: 'Client-Scoped Request',
       form_schema: formSchemaSnapshot,
+      audience: JSON.stringify({ join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [allowedClientId] }] }),
       execution_provider: 'workflow-only',
       execution_config: { workflowId: 'wf-client-scope' },
       form_behavior_provider: 'basic',
       form_behavior_config: {},
-      visibility_provider: 'advanced-visibility',
-      visibility_config: {
-        allowedClientIds: [allowedClientId],
-      },
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
       lifecycle_state: 'published',
     });
 
@@ -163,10 +162,8 @@ describe('service request client ownership and attachment authorization', () => 
       execution_config: { workflowId: 'wf-client-scope' },
       form_behavior_provider: 'basic',
       form_behavior_config: {},
-      visibility_provider: 'advanced-visibility',
-      visibility_config: {
-        allowedClientIds: [allowedClientId],
-      },
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
     });
 
     await tenantTable(tenant, 'external_files').insert({

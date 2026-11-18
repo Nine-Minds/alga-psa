@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { CANNED_RESPONSE_SCOPES } from '@alga-psa/types';
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 export const CANNED_RESPONSE_NAME_MAX = 200;
 export const CANNED_RESPONSE_CATEGORY_MAX = 100;

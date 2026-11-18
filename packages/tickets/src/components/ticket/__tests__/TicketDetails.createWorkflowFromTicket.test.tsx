@@ -27,6 +27,7 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenuItem: ({ children, onSelect, id }: { children: React.ReactNode; onSelect?: () => void; id?: string }) => (
     <button type="button" id={id} onClick={() => onSelect?.()}>{children}</button>
   ),
+  DropdownMenuSeparator: () => <hr />,
 }));
 
 vi.mock('next/server', () => ({
@@ -314,7 +315,7 @@ describe('TicketDetails create workflow from ticket', () => {
     templatePermsRef.current = { read: false, create: false, update: false, delete: false, loaded: true };
   });
 
-  it('hides the More menu without workflow manage rights', () => {
+  it('leaves Create workflow out of the More menu without workflow manage rights', () => {
     render(
       <TicketDetails
         bootstrap={bootstrapWith(false) as any}
@@ -326,12 +327,12 @@ describe('TicketDetails create workflow from ticket', () => {
     expect(renderSlot).not.toHaveBeenCalled();
   });
 
-  it('hides the More menu when the slot is absent (CE)', () => {
+  it('leaves Create workflow out of the More menu when the slot is absent (CE)', () => {
     render(<TicketDetails bootstrap={bootstrapWith(true) as any} initialTicket={baseTicket as any} />);
     expect(document.getElementById('create-workflow-from-ticket-menu-item')).toBeNull();
   });
 
-  it('hides the More menu in Alga Desk mode', () => {
+  it('leaves Create workflow out of the More menu in Alga Desk mode', () => {
     render(
       <TicketDetails
         bootstrap={bootstrapWith(true) as any}

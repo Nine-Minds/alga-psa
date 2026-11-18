@@ -18,7 +18,7 @@ const {
   createCredentialMock,
   updateCredentialMock,
   deleteCredentialMock,
-  getAllClientsMock,
+  searchClientsMock,
   getHuduClientContextMock,
   useFeatureFlagMock,
   hasTierFeatureMock,
@@ -33,7 +33,7 @@ const {
   createCredentialMock: vi.fn(),
   updateCredentialMock: vi.fn(),
   deleteCredentialMock: vi.fn(),
-  getAllClientsMock: vi.fn(),
+  searchClientsMock: vi.fn(),
   getHuduClientContextMock: vi.fn(),
   useFeatureFlagMock: vi.fn(),
   hasTierFeatureMock: vi.fn(),
@@ -78,8 +78,8 @@ vi.mock('@enterprise/components/credentials/EntityCredentialsSection', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: getAllClientsMock,
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: searchClientsMock,
 }));
 
 vi.mock('@alga-psa/assets/actions', () => ({
@@ -242,12 +242,23 @@ vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
 // Keep the test surface focused on credential behavior while preserving the
 // picker contract (the production implementation is the searchable picker).
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, clients, selectedClientId, onSelect }: { id: string; clients: Array<{ client_id: string; client_name: string }>; selectedClientId: string | null; onSelect: (id: string | null) => void }) => (
-    <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
-      <option value="" />
-      {clients.map((client) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
-    </select>
-  ),
+  ClientPicker: ({ id, searchClients, selectedClientId, onSelect }: {
+    id?: string;
+    searchClients?: (params: Record<string, unknown>) => Promise<{ clients: Array<{ client_id: string; client_name: string }> }>;
+    selectedClientId: string | null;
+    onSelect: (id: string | null) => void;
+  }) => {
+    const [clients, setClients] = React.useState<Array<{ client_id: string; client_name: string }>>([]);
+    React.useEffect(() => {
+      void searchClients?.({}).then((result) => setClients(result.clients)).catch(() => undefined);
+    }, [searchClients]);
+    return (
+      <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
+        <option value="" />
+        {clients.map((client) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
+      </select>
+    );
+  },
 }));
 
 
@@ -291,6 +302,7 @@ async function renderScreen(props: {
   entityType?: 'asset' | 'ticket' | 'contact' | 'document' | 'project_task';
   entityId?: string;
   defaultClientId?: string | null;
+  readOnly?: boolean;
 } = {}) {
   render(<CredentialsScreen {...props} />);
   await waitFor(() => {
@@ -313,7 +325,7 @@ beforeEach(() => {
   revealCredentialMock.mockResolvedValue({ state: 'ok', password: SECRET_VALUE, otpCode: null });
   createCredentialMock.mockResolvedValue({ ok: true, credential: credential() });
   updateCredentialMock.mockResolvedValue({ ok: true, credential: credential() });
-  getAllClientsMock.mockResolvedValue([{ client_id: CLIENT_ID, client_name: 'Acme Corp' }]);
+  searchClientsMock.mockResolvedValue({ clients: [{ client_id: CLIENT_ID, client_name: 'Acme Corp' }], total: 1 });
   getHuduClientContextMock.mockResolvedValue({ connected: true, mapped: true });
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: clipboardWriteMock.mockResolvedValue(undefined) } });
   for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
@@ -811,6 +823,34 @@ describe('CredentialsScreen — entity-scoped (association-driven) lists', () =>
     expect(document.getElementById(`credentials-row-edit-${id}`)).toBeNull();
     expect(document.getElementById(`credentials-row-delete-${id}`)).toBeNull();
     expect(document.getElementById(`credentials-row-restrict-${id}`)).toBeNull();
+  });
+});
+
+describe('read-only entity embeds (ended workspace ticket)', () => {
+  const id = '22222222-2222-2222-2222-222222222222';
+
+  it('CredentialsScreen readOnly keeps reveal but drops create, link, and detach', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    await renderScreen({ entityType: 'ticket', entityId: 'ticket-1', defaultClientId: CLIENT_ID, readOnly: true });
+
+    expect(document.getElementById(`credentials-row-reveal-${id}`)).toBeTruthy();
+    expect(document.getElementById('credentials-screen-new')).toBeNull();
+    expect(document.getElementById('credentials-screen-link')).toBeNull();
+    expect(document.getElementById(`credentials-row-detach-${id}`)).toBeNull();
+  });
+
+  it('EntityCredentialsSection forwards readOnly to the entity screen', async () => {
+    listCredentialsMock.mockResolvedValue([credential()]);
+
+    render(
+      <EeEntityCredentialsSection entityType="ticket" entityId="ticket-1" defaultClientId={CLIENT_ID} readOnly />
+    );
+
+    await waitFor(() => expect(document.getElementById(`credentials-row-reveal-${id}`)).toBeTruthy());
+    expect(document.getElementById('credentials-screen-new')).toBeNull();
+    expect(document.getElementById('credentials-screen-link')).toBeNull();
+    expect(document.getElementById(`credentials-row-detach-${id}`)).toBeNull();
   });
 });
 

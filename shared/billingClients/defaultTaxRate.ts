@@ -1,5 +1,9 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+// Subpath import, not the package barrel: the barrel re-exports the Knex
+// turbopack shim (`import.meta.url`-based CJS patch), which blows up with
+// "exports is not defined in ES module scope" under loaders that don't
+// transpile that file as CommonJS (e.g. Playwright's TS loader).
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import type { IClientTaxSettings, ITaxRate } from '@alga-psa/types';
 import { ensureClientDefaultBillingProfile } from './billingProfiles';
 

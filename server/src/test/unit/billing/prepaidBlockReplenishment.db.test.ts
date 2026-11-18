@@ -122,7 +122,7 @@ async function setup(opts: {
     total_minutes: opts.total ?? 2400, remaining_minutes: opts.remaining ?? 0, hourly_rate: 11000, purchase_amount: 440000,
     currency_code: 'EUR', status: 'active', purchased_at: new Date().toISOString(), source_type: 'contract',
     expiration_date: new Date(Date.now() + 200 * 86400000).toISOString().slice(0, 10),
-    contract_line_id: lineId, client_contract_id: clientContractId,
+    contract_line_id: lineId, client_contract_id: clientContractId, service_period_record_id: uuidv4(),
   });
   return { clientId, serviceId, lineId, clientContractId, blockId };
 }

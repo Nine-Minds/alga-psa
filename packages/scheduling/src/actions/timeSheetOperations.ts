@@ -1,5 +1,7 @@
 'use server'
 
+import { assertTimesheetSubmissionAvailable } from '../lib/seatTimeAccess';
+import { delegateToTimeSource } from '../lib/timeSource';
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
@@ -93,6 +95,9 @@ function toDateOnlyString(value: string | Date | null | undefined): string | und
 }
 
 export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.list(ctx));
+  if (delegated.handled) return delegated.value;
   const currentUserId = user.user_id;
 
   console.log('Fetching time sheets for user:', currentUserId);
@@ -127,6 +132,9 @@ export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeS
 });
 
 export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheet | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.submit(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
@@ -136,6 +144,8 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
     if (!await hasPermission(user, 'time_sheet', 'submit', db)) {
       throw new Error('Permission denied: Cannot submit timesheets');
     }
+    // Operational (seat technician) time is never submitted: refused by principal, not just hidden in the UI.
+    await assertTimesheetSubmissionAvailable(db, tenant, user.user_id);
 
     return await db.transaction(async (trx) => {
       // Get timesheet info for analytics
@@ -210,6 +220,9 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
 });
 
 export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<ITimeSheet[]> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant }, (source, ctx) => source.sheets.listAll(ctx));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
   const facade = tenantDb(db, tenant);
 
@@ -238,6 +251,9 @@ export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<IT
 });
 
 export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readForUser(ctx, userId));
+  if (delegated.handled) return delegated.value;
   try {
     // Validate input
     const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
@@ -355,6 +371,9 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
 });
 
 export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.open(ctx, userId, periodId));
+  if (delegated.handled) return delegated.value;
   try {
     // Validate input
     const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
@@ -423,6 +442,9 @@ export const deleteTimeSheets = withAuth(async (
   { tenant },
   timeSheetIds: string[]
 ): Promise<DeleteTimeSheetsResult> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.remove(ctx, timeSheetIds));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
 
   const uniqueIds = Array.from(

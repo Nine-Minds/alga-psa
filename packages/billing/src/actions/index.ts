@@ -61,6 +61,7 @@ export * from './salesOrderInvoicingActions';
 export * from './rmaChargeActions';
 export * from './restockingFeeActions';
 export * from './salesOrderDocumentActions';
+export * from './rmaDocumentActions';
 export * from '../lib/salesOrderDocumentError';
 export * from './documentTemplateActions';
 export * from './materialActions';

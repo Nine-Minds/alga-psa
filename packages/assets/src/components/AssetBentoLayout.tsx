@@ -1,5 +1,6 @@
 'use client';
 
+import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -37,6 +38,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
 import { CustodyCard } from './custody/CustodyCard';
+import { WarrantyCard } from './warranty/WarrantyCard';
 import { getAssetSoftwareSummary } from '../actions/softwareActions';
 import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
@@ -54,7 +56,8 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
@@ -157,6 +160,8 @@ export function AssetBentoLayout({
   const groupPeople = asset.group?.kind === 'bundle'
     ? (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'owner')
     : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
+  // What the server's seat authority closes for this user: closed views and their entry points are left out.
+  const { canUpdate, readOnly } = useAssetSurfaceControls();
   // Owned here because the drawer footer holds the edit form's Save button.
   const [editSaving, setEditSaving] = useState(false);
   const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
@@ -170,7 +175,7 @@ export function AssetBentoLayout({
     </Button>
   );
 
-  const views: FocusView[] = useMemo(() => [
+  const allViews: FocusView[] = useMemo(() => [
     // Edit leads: it is the action people reach for most, and hosting it here
     // means one drawer with one rail instead of two competing overlays.
     {
@@ -223,6 +228,12 @@ export function AssetBentoLayout({
       : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
   ], [asset, t, onFocusChange, editSaving]);
+
+  // Editing, maintenance schedules and related-asset links are writes; the documents and credentials view is the
+  // documents slice's (S31) and stays closed to a read-only surface until it lands.
+  const views = useMemo(() => allViews.filter((view) =>
+    !((!canUpdate && ['edit', 'maintenance', 'related-assets'].includes(view.id)) || (readOnly && view.id === 'documents-passwords'))
+  ), [allViews, canUpdate, readOnly]);
 
   const activeView = focusView ? views.find((view) => view.id === focusView) ?? null : null;
 
@@ -292,7 +303,7 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={resolveAssetStatusLabel(t, asset.status, assetStatuses)} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={assetStatusLabel(t, asset.status, assetStatuses)} />
                 {/* FR-C6: the assignee is always shown, even when empty. */}
                 <AssetAssigneeRow
                   assetId={asset.asset_id}
@@ -338,6 +349,27 @@ export function AssetBentoLayout({
                     edit form's picker. */}
                 <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString()} />
                 <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString()} />
+                {/* Site audits: an instant, not a calendar day, so it is read
+                    as one. Shown only once the device has been audited. */}
+                {asset.last_audited_at ? (
+                  <BentoLabelValue
+                    id="asset-bento-last-audited"
+                    label={t('assetBento.lastAudited', { defaultValue: 'Last audited' })}
+                    value={(
+                      <span className={asset.last_audit_result === 'missing' ? BENTO_TONE_TEXT.bad : undefined}>
+                        {new Date(asset.last_audited_at).toLocaleDateString()}
+                        {asset.last_audit_result ? (
+                          <span className="text-[rgb(var(--color-text-500))]">
+                            {' · '}
+                            {t(`enums.assetAuditResult.${asset.last_audit_result}`, {
+                              defaultValue: asset.last_audit_result,
+                            })}
+                          </span>
+                        ) : null}
+                      </span>
+                    )}
+                  />
+                ) : null}
               </div>
             </BentoTile>
 
@@ -536,15 +568,17 @@ export function AssetBentoLayout({
 
             <CustodyCard id="asset-bento-custody" assetId={asset.asset_id} />
 
+            <WarrantyCard id="asset-bento-warranty" assetId={asset.asset_id} />
+
             <BentoTile
               id="asset-bento-related"
               title={t('assetDetailTabs.tabs.relatedAssets', { defaultValue: 'Related assets' })}
               icon={<Network className="h-4 w-4" />}
-              action={
+              action={canUpdate ? (
                 <button id="asset-bento-related-manage" type="button" onClick={() => onFocusChange('related-assets')} className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline">
                   {t('assetBento.manage', { defaultValue: 'Manage' })}
                 </button>
-              }
+              ) : undefined}
             >
               {asset.relationships?.length ? (
                 <BentoRowList>
@@ -565,8 +599,8 @@ export function AssetBentoLayout({
                   {t('assetBento.noRelated', { defaultValue: 'Not linked to any other asset.' })}
                 </BentoTileEmpty>
               )}
-              {/* F071: an ungrouped asset gets the way into a group from here. */}
-              {!asset.group ? (
+              {/* F071: an ungrouped asset gets the way into a group from here; grouping is a write. */}
+              {!asset.group && canUpdate ? (
                 <Link
                   id="asset-bento-add-to-group"
                   href={`/msp/clients/${asset.client_id}?tab=assets&view=groups`}
@@ -632,11 +666,11 @@ export function AssetBentoLayout({
               id="asset-bento-maintenance"
               title={t('assetDetailTabs.tabs.maintenance', { defaultValue: 'Maintenance' })}
               icon={<CalendarDays className="h-4 w-4" />}
-              action={
+              action={canUpdate ? (
                 <button id="asset-bento-maintenance-open" type="button" onClick={() => onFocusChange('maintenance')} className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline">
                   {t('assetBento.manage', { defaultValue: 'Manage' })}
                 </button>
-              }
+              ) : undefined}
             >
               {maintenanceReport && maintenanceReport.total_schedules > 0 ? (
                 <div className="space-y-1.5 text-sm">
@@ -658,6 +692,7 @@ export function AssetBentoLayout({
               )}
             </BentoTile>
 
+            {!readOnly && (
             <BentoTile
               id="asset-bento-docs"
               title={t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' })}
@@ -672,6 +707,7 @@ export function AssetBentoLayout({
                 {t('assetBento.docsHint', { defaultValue: 'Attachments and credentials for this asset.' })}
               </BentoTileEmpty>
             </BentoTile>
+            )}
           </div>
         </div>
 

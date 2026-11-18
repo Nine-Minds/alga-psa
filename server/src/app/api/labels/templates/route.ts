@@ -1,5 +1,5 @@
 /**
- * GET /api/labels/templates?labelClass=ticket-work-tag|asset-identity|stock-unit-identity|staging-container
+ * GET /api/labels/templates?labelClass=ticket-work-tag|asset-identity|stock-unit-identity|staging-container|rma-work-tag
  *
  * Read-only lookup for the print dialog: the templates a tenant can print a label class with and the
  * one that is the default. Session-authenticated in-handler (withAuth), internal users only, and the
@@ -17,15 +17,19 @@ const RBAC_RESOURCE_BY_CLASS: Record<LabelClass, string> = {
   'asset-identity': 'asset',
   'stock-unit-identity': 'inventory',
   'staging-container': 'project',
+  // RMA read access is `warranty:read` OR `inventory:read`: this is the primary grant, the alternate is below.
+  'rma-work-tag': 'inventory',
 };
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
 const listTemplates = withAuth(async (user, { tenant }, labelClass: LabelClass) => {
-  if (user.user_type !== 'internal' || !(await hasPermission(user, RBAC_RESOURCE_BY_CLASS[labelClass], 'read'))) {
-    return null;
-  }
+  if (user.user_type !== 'internal') return null;
+  const allowed =
+    (await hasPermission(user, RBAC_RESOURCE_BY_CLASS[labelClass], 'read')) ||
+    (labelClass === 'rma-work-tag' && (await hasPermission(user, 'warranty', 'read')));
+  if (!allowed) return null;
   return listLabelTemplatesForTenant(tenant, labelClass);
 });
 

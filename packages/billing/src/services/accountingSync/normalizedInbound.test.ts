@@ -8,6 +8,7 @@ function makeStats() {
     paymentsReversed: 0,
     paymentsSkipped: 0,
     driftFound: 0,
+    externalVoidsApplied: 0,
     customersUpdated: 0,
     opsProcessed: 0,
     opsFailed: 0,
@@ -38,6 +39,9 @@ function makeDeps(mappingOverrides: Record<string, unknown> = {}) {
   return { ledger, exceptions };
 }
 
+// Non-void paths never reach the local void; a shared stub keeps deps complete.
+const applyLocalVoid = vi.fn(async () => ({ status: 'applied' as const }));
+
 describe('provider-neutral inbound change contracts', () => {
   it('guards normalized payloads by shape', () => {
     expect(isNormalizedPaymentPayload({ allocations: [], isCreditApplication: false })).toBe(true);
@@ -54,7 +58,7 @@ describe('provider-neutral inbound change contracts', () => {
   it('detects total drift from a normalized document payload (no QBO shape)', async () => {
     const deps = makeDeps();
     await applyExternalDocumentChange(
-      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
+      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats(), applyLocalVoid },
       {
         entityType: 'Invoice',
         externalId: 'ext-1',
@@ -76,10 +80,11 @@ describe('provider-neutral inbound change contracts', () => {
     );
   });
 
-  it('treats a normalized isVoided document as an external void', async () => {
+  it('treats a normalized isVoided document as an external void and mirrors it to Alga', async () => {
     const deps = makeDeps();
+    const applyLocalVoid = vi.fn(async () => ({ status: 'applied' as const }));
     await applyExternalDocumentChange(
-      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
+      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats(), applyLocalVoid },
       {
         entityType: 'Invoice',
         externalId: 'ext-1',
@@ -89,16 +94,18 @@ describe('provider-neutral inbound change contracts', () => {
       } as any
     );
 
+    expect(applyLocalVoid).toHaveBeenCalledWith('inv-alga-1');
     expect(deps.ledger.update).toHaveBeenCalledWith(
       'map-1',
-      expect.objectContaining({ syncStatus: 'external_voided' })
+      expect.objectContaining({ syncStatus: 'voided' })
     );
+    expect(deps.exceptions.createOrUpdate).not.toHaveBeenCalled();
   });
 
   it('adopts the first observed document as the baseline for legacy mappings instead of ignoring it', async () => {
     const deps = makeDeps({ metadata: { invoiceNumber: 'XERO-INV-OLD' } });
     await applyExternalDocumentChange(
-      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
+      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats(), applyLocalVoid },
       {
         entityType: 'Invoice',
         externalId: 'ext-1',
@@ -123,7 +130,7 @@ describe('provider-neutral inbound change contracts', () => {
 
   it('refreshes the token without drift when only the sync token moved', async () => {    const deps = makeDeps();
     await applyExternalDocumentChange(
-      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats() },
+      { tenantId: 't', targetRealm: 'r', adapterType: 'xero', ledger: deps.ledger as any, exceptions: deps.exceptions as any, stats: makeStats(), applyLocalVoid },
       {
         entityType: 'Invoice',
         externalId: 'ext-1',

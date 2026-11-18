@@ -297,7 +297,7 @@
         "description": "Configurer les options avancées de traitement des e-mails",
         "folderFiltersLabel": "Filtres de dossiers",
         "folderFiltersPlaceholder": "Boîte de réception, support, dossier personnalisé",
-        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception)",
+        "folderFiltersHelp": "Liste des dossiers à surveiller séparés par des virgules (par défaut : Boîte de réception). Utilisez le nom exact du dossier tel qu’il apparaît dans Outlook et écrivez les dossiers imbriqués sous la forme Boîte de réception/Sous-dossier.",
         "maxEmailsPerSync": "Nombre maximum d'e-mails par synchronisation"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID client OAuth",
         "clientSecret": "Secret client OAuth",
         "scopes": "Portées OAuth",
-        "scopesPlaceholder": "portées délimitées par des espaces"
+        "scopesPlaceholder": "portées délimitées par des espaces",
+        "clientSecretHelp": "Le secret client est stocké de manière sécurisée et ne sera pas affiché. Laissez vide pour conserver le secret existant."
       },
       "processing": {
         "title": "Paramètres de traitement",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtres de dossiers",
         "folderFiltersPlaceholder": "Boîte de réception, assistance, tickets",
         "active": "Actif"
+      },
+      "messages": {
+        "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
       "senderDisplayName": "Nom de l'expéditeur",
       "senderDisplayNamePlaceholder": "ex. : Acme Support",
-      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
+      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket.",
+      "oauthClientSecretHelp": "Le secret client est stocké de manière sécurisée et ne sera pas affiché. Laissez vide pour conserver le secret existant."
     },
     "authOptions": {
       "password": "Mot de passe",
@@ -580,6 +585,9 @@
       "saving": "Enregistrement...",
       "updateProvider": "Mettre à jour le fournisseur",
       "createProvider": "Créer un fournisseur"
+    },
+    "messages": {
+      "reconnectRequired": "Les paramètres OAuth ont changé. Reconnectez la boîte mail pour l'autoriser avec les nouveaux paramètres."
     }
   },
   "microsoftForm": {
@@ -1076,6 +1084,7 @@
       "noClient": "Aucun client correspondant",
       "outcome": {
         "assignClient": "Ticket attribué au client \"{{client}}\"",
+        "matchedClient": "le client correspondant",
         "fallback": "Aucun client correspondant — ticket acheminé vers la destination de repli",
         "none": "La règle n'a pas abouti — le traitement normal se poursuit",
         "setDestination": "Ticket acheminé vers la destination sélectionnée",
@@ -1159,5 +1168,55 @@
         "users": "Échec du chargement des utilisateurs. Veuillez réessayer."
       }
     }
+  },
+  "quarantine": {
+    "title": "E-mails entrants en quarantaine",
+    "description": "Messages entrants refusés au lieu d'être ajoutés à un ticket. Examinez-les et écartez ceux que vous avez traités.",
+    "backToSettings": "Retour aux paramètres e-mail",
+    "openQueue": "E-mails en quarantaine",
+    "empty": "Aucun e-mail en quarantaine pour ces filtres.",
+    "loadError": "Impossible de charger les e-mails en quarantaine",
+    "dismissError": "Impossible d'écarter l'entrée",
+    "dismissed": "Entrée écartée",
+    "noSubject": "(sans objet)",
+    "dismiss": "Écarter",
+    "filters": {
+      "mailbox": "Boîte aux lettres",
+      "reason": "Motif",
+      "status": "Statut",
+      "allMailboxes": "Toutes les boîtes",
+      "allReasons": "Tous les motifs",
+      "allStatuses": "Tous les statuts",
+      "ticket": "Filtré sur un ticket",
+      "clearTicket": "Afficher tous les tickets"
+    },
+    "status": {
+      "open": "Ouvert",
+      "dismissed": "Écarté"
+    },
+    "columns": {
+      "mailbox": "Boîte aux lettres",
+      "sender": "Expéditeur",
+      "subject": "Objet",
+      "reason": "Motif",
+      "ticket": "Ticket",
+      "received": "Reçu",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "reasons": {
+      "unauthorized_thread_header_sender": "L'expéditeur ne figure pas sur le ticket",
+      "reply_outside_sender_audience": "Réponse hors de l'audience de la notification",
+      "co_managed_token_refused": "Lien de réponse de cogestion refusé",
+      "co_managed_token_unserved": "Fil de cogestion non accepté ici",
+      "co_managed_sender_unauthenticated": "Expéditeur de cogestion non vérifié"
+    },
+    "banner_one": "{{count}} e-mail entrant pour ce ticket a été mis en quarantaine",
+    "banner_many": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
+    "banner_other": "{{count}} e-mails entrants pour ce ticket ont été mis en quarantaine",
+    "bannerLink": "Examiner les e-mails en quarantaine",
+    "bannerAskAdmin_one": "Demandez à un administrateur de messagerie de l'examiner.",
+    "bannerAskAdmin_many": "Demandez à un administrateur de messagerie de les examiner.",
+    "bannerAskAdmin_other": "Demandez à un administrateur de messagerie de les examiner."
   }
 }

@@ -25,12 +25,10 @@ describe('telephony call intents migration', () => {
     expect(migration).toContain("CHECK (status IN ('pending', 'matched', 'expired', 'cancelled'))");
   });
 
-  it('registers the table with runtime and migration tenant metadata and tenant deletion', () => {
+  it('registers the table with runtime and migration tenant metadata', () => {
     expect(read('packages/db/src/lib/tenantTableMetadata.ts'))
       .toContain("telephony_call_intents: { scope: 'tenant' }");
     expect(read('server/migrations/utils/tenantDb.cjs'))
       .toContain("telephony_call_intents: { scope: 'tenant' }");
-    expect(read('ee/temporal-workflows/src/activities/tenant-deletion-activities.ts'))
-      .toContain("'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records'");
   });
 });

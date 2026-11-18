@@ -61,7 +61,7 @@ describe('webhook event registry contract', () => {
     }
   });
 
-  it('advertises exactly the 12 new entity events plus the unchanged ticket.* and project.* events', () => {
+  it('advertises entity lifecycle events alongside ticket and project events', () => {
     const newOnes = registryNames.filter((n) => /^(client|contact|client_location)\./.test(n));
     expect(newOnes).toEqual(
       sorted(
@@ -72,7 +72,11 @@ describe('webhook event registry contract', () => {
     );
     expect(registryNames.filter((n) => n.startsWith('ticket.'))).toHaveLength(7);
     expect(registryNames.filter((n) => n.startsWith('project.'))).toHaveLength(11);
-    expect(registryNames).toHaveLength(30);
+    expect(registryNames.filter((n) => n.startsWith('quote.'))).toEqual(sorted([
+      'quote.sent', 'quote.viewed', 'quote.approved', 'quote.accepted', 'quote.rejected',
+      'quote.expired', 'quote.converted', 'quote.conversion_reverted', 'quote.superseded', 'quote.cancelled',
+    ]));
+    expect(registryNames).toHaveLength(40);
   });
 
   it('no *.archived alias exists', () => {

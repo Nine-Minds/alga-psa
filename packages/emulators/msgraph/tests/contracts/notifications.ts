@@ -6,9 +6,9 @@ import { z } from 'zod';
 // Resource-specific resourceData and lifecycle notifications require separate checks.
 export const changeNotifications = z.object({
   value: z.array(z.object({
-    subscriptionId: z.string().uuid(),
+    subscriptionId: z.string().guid(),
     subscriptionExpirationDateTime: z.string().datetime({ offset: true }),
-    tenantId: z.string().uuid(),
+    tenantId: z.string().guid(),
     changeType: z.enum(['created', 'updated', 'deleted']),
     resource: z.string().min(1),
     clientState: z.string().max(255).optional(),

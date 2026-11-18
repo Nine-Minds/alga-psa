@@ -1,8 +1,9 @@
-import type {
-  ITicketListFilters,
-  ListViewAdapter,
-  ListViewSanitizeResult,
-  ListViewSettings,
+import {
+  TICKET_ASSIGNEE_ME,
+  type ITicketListFilters,
+  type ListViewAdapter,
+  type ListViewSanitizeResult,
+  type ListViewSettings,
 } from '@alga-psa/types';
 import {
   DroppedReferenceCollector,
@@ -18,6 +19,7 @@ import {
   TICKET_VIEW_DENSITY_STEP,
   type ResolvedTicketViewSettings,
 } from './ticketViewSettings';
+import { TICKET_TAG_PATHS, sanitizeTicketWhere } from './ticketWhere';
 import { resolveTicketColumnOrder, resolveTicketColumnVisibility } from './ticketColumnCatalog';
 
 /**
@@ -57,6 +59,8 @@ export interface TicketListViewContext {
     userIds?: ReadonlySet<string>;
     teamIds?: ReadonlySet<string>;
     tags?: ReadonlySet<string>;
+    /** Tag definition ids by `where` tag path (tags, contact.tags, client.tags). */
+    whereTagIds?: Partial<Record<(typeof TICKET_TAG_PATHS)[number], ReadonlySet<string>>>;
   };
 }
 
@@ -183,10 +187,18 @@ export function sanitizeTicketListView(
     categoryIds: collector.keepList('categoryIds', filters.categoryIds, known.categoryIds, CATEGORY_SENTINELS),
     excludeCategoryIds: collector.keepList('excludeCategoryIds', filters.excludeCategoryIds, known.categoryIds, CATEGORY_SENTINELS),
     clientId: collector.keepScalar('clientId', filters.clientId, known.clientIds),
-    assignedToIds: collector.keepList('assignedToIds', filters.assignedToIds, known.userIds),
+    assignedToIds: collector.keepList('assignedToIds', filters.assignedToIds, known.userIds, [TICKET_ASSIGNEE_ME]),
     assignedTeamIds: collector.keepList('assignedTeamIds', filters.assignedTeamIds, known.teamIds),
     tags: collector.keepList('tags', filters.tags, known.tags),
+    where: undefined,
   });
+
+  // Predicate clauses: malformed ones go, and ids of deleted tags are dropped from the rest.
+  if (filters.where) {
+    const sanitized = sanitizeTicketWhere(filters.where, known.whereTagIds);
+    if (sanitized.where) next.where = sanitized.where;
+    for (const entry of sanitized.dropped) collector.recordDropped(entry.field, entry.count);
+  }
 
   return {
     settings: { ...settings, filters: next as TicketListViewFilters },

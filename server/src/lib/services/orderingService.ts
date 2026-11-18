@@ -1,6 +1,4 @@
 import { generateKeyBetween } from 'fractional-indexing';
-import { tenantDb } from '@alga-psa/db';
-import { createTenantKnex } from 'server/src/lib/db';
 
 export class OrderingService {
     static generateInitialKeys(count: number): string[] {
@@ -50,43 +48,5 @@ export class OrderingService {
             console.error('Error generating key between:', { beforeKey: normalizedBeforeKey, afterKey: normalizedAfterKey, error });
             throw error;
         }
-    }
-    
-    static async reorderProjectTask(
-        taskId: string,
-        targetStatusId: string,
-        beforeKey: string | null,
-        afterKey: string | null
-    ): Promise<string> {
-        const newKey = this.generateKeyForPosition(beforeKey, afterKey);
-        
-        const {knex: db, tenant} = await createTenantKnex();
-        await tenantDb(db, tenant).table('project_tasks')
-            .where({ task_id: taskId })
-            .update({
-                project_status_mapping_id: targetStatusId,
-                order_key: newKey,
-                updated_at: db.fn.now()
-            });
-            
-        return newKey;
-    }
-    
-    static async reorderProjectPhase(
-        phaseId: string,
-        beforeKey: string | null,
-        afterKey: string | null
-    ): Promise<string> {
-        const newKey = this.generateKeyForPosition(beforeKey, afterKey);
-        
-        const {knex: db, tenant} = await createTenantKnex();
-        await tenantDb(db, tenant).table('project_phases')
-            .where({ phase_id: phaseId })
-            .update({
-                order_key: newKey,
-                updated_at: db.fn.now()
-            });
-            
-        return newKey;
     }
 }

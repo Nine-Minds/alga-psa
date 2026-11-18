@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-const scheduleId = z.string().uuid();
-const workflowId = z.string().uuid();
+const scheduleId = z.string().guid();
+const workflowId = z.string().guid();
 
 const optionalTrimmedString = z.preprocess(
   (value) => {
@@ -25,10 +25,10 @@ const optionalUuid = z.preprocess(
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : undefined;
   },
-  z.string().uuid()
+  z.string().guid()
 ).optional();
 
-const jsonObjectPayload = z.record(z.any()).default({});
+const jsonObjectPayload = z.record(z.string(), z.any()).default({});
 
 const baseScheduleInput = z.object({
   workflowId,

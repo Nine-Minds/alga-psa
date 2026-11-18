@@ -51,11 +51,15 @@ function fakeSource(overrides: Partial<ContractChargeSource> & {
       periods: (overrides.periods ?? [{}]) as any,
       taxRateIds: [],
     }),
+    prepaidBlockIssuances: async () => [],
+    hourBlockDraws: async () => null,
+    prepaidCoverage: async () => [],
+    cadencePrepaidBlock: async () => null,
     fixed: charge("fixed") as any,
     hourly: (async (_t: unknown, exclusion: PooledTimeExclusion | null) => {
       exclusions.push(exclusion);
       calls.push("hourly");
-      return { facts: { kind: "hourly" } as any, taxContext: {} as any };
+      return { facts: { kind: "hourly", activity: [] } as any, taxContext: {} as any };
     }) as any,
     usage: charge("usage") as any,
     recurringQuantity: (async (kind: string) => {
@@ -202,12 +206,97 @@ describe("resolveContractLineCharges", () => {
     expect(untimed.map((r) => r.family)).toEqual(["bucket"]);
   });
 
-  it("every family makes a line-position timing demand", async () => {
+  it("every family but the cadence block makes a line-stream timing demand", async () => {
     const { source } = fakeSource({ pools: [POOL] });
     await resolveContractLineCharges(source);
     const requests = (source.resolveTiming as any).mock.calls.map((c: any[]) => c[0]);
     expect(requests.length).toBeGreaterThan(0);
-    for (const request of requests) expect(request.duePosition).toBe("line");
+    const streams = new Set(requests.map((request: any) => request.stream));
+    expect(streams).toEqual(new Set(["line", "prepaid_block"]));
+    expect(
+      requests.filter((request: any) => request.stream === "prepaid_block"),
+    ).toHaveLength(1);
+  });
+
+  describe("cadence prepaid block stream", () => {
+    const BLOCK_TIMING = {
+      duePosition: "advance",
+      servicePeriodStart: "2026-07-01",
+      servicePeriodEnd: "2026-07-31",
+      coverageRatio: 1,
+    } as any;
+    const supply = {
+      contractLineId: "cl-1",
+      blockMinutes: 600,
+      blockPrice: 150000,
+      rolloverPeriods: 1,
+      scopeServiceIds: ["svc-a"],
+      soldAsServiceId: "svc-sold",
+      serviceName: "Support block",
+      soldAsTaxRateId: null,
+      cadence: { owner: "contract", billingCycle: "monthly", anchorDate: "2026-07-01" },
+    } as any;
+    const blockLine = {
+      clientContractLineId: "ccl-1",
+      contractLineId: "cl-1",
+      tenantId: "t",
+      contractLineType: "Hourly",
+      currencyCode: "EUR",
+      enableProration: true,
+    } as any;
+
+    // Due on the block stream only: the line (hourly) stream has nothing due.
+    const onlyBlockStreamDue = (): TimingResolution | ((r: any) => TimingResolution) =>
+      ((request: any) =>
+        request.stream === "prepaid_block"
+          ? { status: "due", timing: BLOCK_TIMING }
+          : { status: "not-due" }) as any;
+
+    it("a line due only on its block stream bills the block and nothing hourly", async () => {
+      const { source, calls } = fakeSource();
+      source.line = blockLine;
+      source.cadencePrepaidBlock = async () => supply;
+      (source.resolveTiming as any).mockImplementation(async (request: any) =>
+        (onlyBlockStreamDue() as any)(request),
+      );
+      const result = await resolveContractLineCharges(source);
+      expect(result.map((r) => r.family)).toEqual(["cadencePrepaidBlock"]);
+      expect(calls).toEqual([]);
+      const facts: any = (result[0] as any).facts ?? (result[0] as any).obligation;
+      expect(JSON.stringify(facts)).toContain("2026-07-31");
+    });
+
+    it("dates the block through the cadence rollover (rollover 1 spans two periods)", async () => {
+      const { source } = fakeSource();
+      source.line = blockLine;
+      source.cadencePrepaidBlock = async () => supply;
+      (source.resolveTiming as any).mockImplementation(async (request: any) =>
+        (onlyBlockStreamDue() as any)(request),
+      );
+      const [charge] = await resolveContractLineCharges(source);
+      const block = (charge.obligation as any).facts.block;
+      expect(block.validFrom).toBe("2026-07-01");
+      expect(block.expirationDate).toBe("2026-08-31");
+      expect(block.currencyCode).toBe("EUR");
+    });
+
+    it("refuses a block with no sold-as service rather than dropping it", async () => {
+      const { source } = fakeSource();
+      source.line = blockLine;
+      source.cadencePrepaidBlock = async () => ({ ...supply, soldAsServiceId: null });
+      (source.resolveTiming as any).mockImplementation(async (request: any) =>
+        (onlyBlockStreamDue() as any)(request),
+      );
+      await expect(resolveContractLineCharges(source)).rejects.toThrow(/sold-as service/);
+    });
+
+    it("flags hourly overage when the line carries a cadence block", async () => {
+      const { source } = fakeSource();
+      source.line = blockLine;
+      source.cadencePrepaidBlock = async () => supply;
+      const result = await resolveContractLineCharges(source, { families: new Set(["hourly"]) });
+      expect((result[0].obligation as any).facts.overPrepaidBlock).toBe(true);
+    });
   });
 
   it("assigns stable obligation ids keyed by pool", async () => {

@@ -380,7 +380,7 @@ describe('voidInvoice (remote-affecting permission predicate)', () => {
   });
 
   it('lets an actor without remote_mutate void when the tenant is unconnected', async () => {
-    // Default mock state: unconnected tenant + no remote_mutate. invoice:update
+    // Default mock state: unconnected tenant + no remote_mutate. invoice:void
     // alone must suffice — this is the "most tenants" case that must not break.
     const { knex, log } = makeVoidHarness();
     vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
@@ -393,5 +393,72 @@ describe('voidInvoice (remote-affecting permission predicate)', () => {
     );
     expect(result).toEqual({ success: true });
     expect(log.some((e) => e.table === 'invoices' && e.op === 'update' && e.args.status === 'cancelled')).toBe(true);
+  });
+});
+
+describe('voidInvoice (invoice:void authorization)', () => {
+  const grants = (allowed: string[]) =>
+    vi.mocked(hasPermission).mockImplementation(
+      async (_user: any, resource: string, action: string) => allowed.includes(`${resource}:${action}`)
+    );
+
+  beforeEach(() => {
+    vi.mocked(createTenantKnex).mockReset();
+    vi.mocked(hasPermission).mockClear();
+    vi.mocked(notifyInvoiceTerminalStatus).mockClear();
+    vi.mocked(hasConnectedQboRealm).mockResolvedValue(false);
+  });
+
+  it('refuses a role with invoice:update but not invoice:void before any read or write', async () => {
+    grants(['invoice:update']);
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1', user_type: 'internal' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'update-only role'
+    );
+
+    expect(result).toEqual({ success: false, error: expect.stringMatching(/void/) });
+    expect(vi.mocked(hasPermission)).toHaveBeenCalledWith(expect.anything(), 'invoice', 'void');
+    expect(createTenantKnex).not.toHaveBeenCalled();
+    expect(knex).not.toHaveBeenCalled();
+    expect(log.filter((e) => e.op === 'insert' || e.op === 'update')).toHaveLength(0);
+  });
+
+  it('lets a role with invoice:void (and without invoice:update) void on an unconnected tenant', async () => {
+    grants(['invoice:void']);
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1', user_type: 'internal' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'void-capable role'
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(log.some((e) => e.table === 'invoices' && e.op === 'update' && e.args.status === 'cancelled')).toBe(true);
+  });
+
+  it('refuses a client-portal user first, whatever the grants are', async () => {
+    grants(['invoice:update', 'invoice:void', 'accounting_integrations:remote_mutate']);
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1', user_type: 'client' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'client user'
+    );
+
+    expect(result).toEqual({ success: false, error: 'Permission denied: operation not available in client portal' });
+    expect(hasPermission).not.toHaveBeenCalled();
+    expect(createTenantKnex).not.toHaveBeenCalled();
+    expect(log).toHaveLength(0);
   });
 });

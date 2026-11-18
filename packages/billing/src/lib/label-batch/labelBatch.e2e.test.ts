@@ -5,7 +5,7 @@
  * `pdftoppm` and `pdfinfo` (poppler) on PATH. Both are required: this test fails, not skips, when they are absent.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import jsQR from 'jsqr';
@@ -31,6 +31,7 @@ import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtm
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
+  STANDARD_LABEL_RMA_CODE,
   STANDARD_LABEL_STOCK_UNIT_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
 } from '../label-template-ast/standardTemplates';
@@ -171,7 +172,25 @@ async function measureContainment(html: string): Promise<ContainmentReport[]> {
           outside: Array.from(new Set(outside)),
           overBarcode: Array.from(new Set(overBarcode)),
           identifierText: identifiers.map((el) => el.textContent ?? ''),
-          identifierClipped: identifiers.map((el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1),
+          // Clipped means a cap hides part of the identifier — never allowed. The vertical
+          // half of that is measured against the nearest capping ancestor rather than the
+          // element's own scroll height, because a font whose natural line box is taller
+          // than the authored line-height reports layout overflow while hiding nothing
+          // (JetBrains Mono's ascent+descent is 1.32em against the identifier's 1.1).
+          identifierClipped: identifiers.map((el) => {
+            if (el.scrollWidth > el.clientWidth + 1) return true;
+            let cap: DOMRect | null = null;
+            for (let p: HTMLElement | null = el; p; p = p.parentElement) {
+              if (getComputedStyle(p).overflow !== 'visible') {
+                cap = p.getBoundingClientRect();
+                break;
+              }
+            }
+            if (!cap) return false;
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            return Array.from(range.getClientRects()).some((r) => !inside(r, { l: cap!.left, t: cap!.top, r: cap!.right, b: cap!.bottom }));
+          }),
         };
       });
     });
@@ -365,6 +384,26 @@ describe('label PDF end to end', () => {
     });
   }, 120_000);
 
+  it('renders adjacent physical asset pairs and preserves each tag barcode', async () => {
+    const first = assetLabel(31, 'FTS-000431');
+    const second = assetLabel(32, 'NORTH-000432');
+    const items = [first, first, second, second];
+    const { html, geometry, pages, rasters, pdf } = await printLabels(items, LETTER_2X5, 'asset-paired-evidence');
+    expect(pages).toHaveLength(1);
+    expect(geometry.placements.map((p) => [p.column, p.row])).toEqual([[0, 0], [1, 0], [0, 1], [1, 1]]);
+    geometry.placements.forEach((placement, index) => {
+      const cell = crop(rasters[0], mmToPx(placement.leftMm), mmToPx(placement.topMm), mmToPx(placement.widthMm), mmToPx(placement.heightMm));
+      expect(decodeCode128(cell)).toBe(items[index].viewModel.code128Value);
+      expect(decodeQr(cell)).toBe(items[index].viewModel.url);
+    });
+    expect(items.map((item) => item.viewModel.identifier)).toEqual(['FTS-000431', 'FTS-000431', 'NORTH-000432', 'NORTH-000432']);
+    expect(html.match(/FTS-000431/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(html.match(/NORTH-000432/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    const evidenceDir = path.resolve(process.cwd(), '../../docs/evidence/alga-2026-0003120-draft');
+    mkdirSync(evidenceDir, { recursive: true });
+    writeFileSync(path.join(evidenceDir, 'paired-asset-labels.pdf'), pdf);
+  }, 120_000);
+
   it('Code 128 on a single 4x2in label decodes', async () => {
     const item = assetLabel(7);
     const { rasters } = await printLabels([item], ONE_PER_PAGE, 'code128-single');
@@ -462,6 +501,82 @@ describe('label PDF end to end', () => {
           if (item.viewModel.code128Value) expect(decodeCode128(cell)).toBe(item.viewModel.code128Value);
         }, 120_000);
       }
+    }
+  });
+
+  describe('RMA work tag (T033, F022.4)', () => {
+    const rmaItem = (n: number, overrides: Partial<LabelViewModel> = {}, withTemplateCode = false): LabelPrintItem => ({
+      ...(withTemplateCode ? { templateCode: STANDARD_LABEL_RMA_CODE } : {}),
+      viewModel: {
+        labelClass: 'rma-work-tag',
+        entityType: 'rma',
+        recordId: uuid(700 + n),
+        url: recordUrl('rma', uuid(700 + n), BASE),
+        identifier: `RMA-${String(n).padStart(5, '0')}`,
+        code128Value: null,
+        title: 'Dell Latitude 7440 Laptop',
+        clientName: 'Emerald City Dental',
+        detail: 'Dell Technologies / 1234-5678-90',
+        secondaryIdentifier: 'AT-000123',
+        serialSuffix: 'SN…ZX81QW77',
+        rma: { statusLabel: 'Sent to vendor', returnBy: '2026-11-15', shipping: 'UPS 1Z999AA10123456784', ticketNumber: 'TIC-1042' },
+        ...overrides,
+      } as LabelViewModel,
+    });
+
+    it('the QR URL is the canonical /msp/inventory/rma?rmaId= record URL', () => {
+      const item = rmaItem(1);
+      expect(item.viewModel.url).toBe(`${BASE}/msp/inventory/rma?rmaId=${uuid(701)}`);
+    });
+
+    it('renders the standard rma-work-tag on a 4x2in cell and its QR decodes to the RMA record URL', async () => {
+      const item = rmaItem(1);
+      const { html, pages, rasters } = await printLabels([item], ONE_PER_PAGE, 'rma-single');
+      expect(html).toContain('RMA-00001');
+      expect(pages).toHaveLength(1);
+      expect(pages[0].width).toBeCloseTo(4 * PT_PER_IN, 0);
+      expect(pages[0].height).toBeCloseTo(2 * PT_PER_IN, 0);
+      expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+      expect(edgeBandIsWhite(rasters[0])).toBe(true);
+    }, 120_000);
+
+    it('decodes per record when n-up on Letter 2x5', async () => {
+      const items = [rmaItem(1), rmaItem(2, {}, true), rmaItem(3)];
+      const { geometry, rasters } = await printLabels(items, LETTER_2X5, 'rma-nup');
+      geometry.placements.forEach((p, i) => {
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(decodeQr(cell)).toBe(items[i].viewModel.url);
+      });
+    }, 120_000);
+
+    for (const [layoutName, layout] of [
+      ['4x2in', ONE_PER_PAGE],
+      ['Letter 2x5', LETTER_2X5],
+    ] as const) {
+      it(`all text stays inside the cell and clear of the QR, with worst-case long data (${layoutName})`, async () => {
+        const item = worstCase(STANDARD_LABEL_RMA_CODE, {
+          labelClass: 'rma-work-tag',
+          entityType: 'rma',
+          identifier: 'RMA-2026-000000123456789',
+          detail: `${LONG_CLIENT} / VENDOR-REFERENCE-0000000000000000000001`,
+          rma: {
+            statusLabel: 'Replacement received from vendor',
+            returnBy: '2026-11-15',
+            shipping: 'UPS 1Z999AA10123456784-WITH-A-VERY-LONG-TRAILING-REFERENCE',
+            ticketNumber: 'TICKET-2026-0000123456789',
+          },
+        });
+        const { html } = await renderLabelBatchHtml([item, item], layout, { tenantClient: { name: 'Example MSP', logoUrl: null } });
+        for (const report of await measureContainment(html)) {
+          expect(report.outside).toEqual([]);
+          expect(report.overBarcode).toEqual([]);
+        }
+        const { rasters, geometry } = await printLabels([item], layout, `rma-contain-${layoutName}`);
+        const p = geometry.placements[0];
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(edgeBandIsWhite(cell)).toBe(true);
+        expect(decodeQr(cell)).toBe(item.viewModel.url);
+      }, 120_000);
     }
   });
 

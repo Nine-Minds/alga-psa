@@ -25,6 +25,7 @@ const DESKTOP_PREDICATE =
 /** @param {import('knex').Knex} knex */
 exports.up = async function up(knex) {
   await knex.raw('DROP INDEX IF EXISTS idx_unique_external_mapping');
+  // migration-lint: allow 1 - retroactive: replaces a unique index via DROP/CREATE inside the transaction because the key shape changes; merged before the lint existed
   await knex.raw(`
     CREATE UNIQUE INDEX idx_unique_external_mapping
     ON tenant_external_entity_mappings (${INDEX_KEY})

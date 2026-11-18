@@ -19,6 +19,7 @@ import { createTenantKnex, runWithTenant, buildTenantPortalSlug, tenantDb } from
 import { getEmailNotificationService } from '@alga-psa/notifications';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
+import { ticketEmailRecipientVariables } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
 
 const WARNING_SUBTYPE_NAME = 'Ticket Auto-Close Warning';
 const WARNING_TEMPLATE_NAME = 'ticket-auto-close-warning';
@@ -139,6 +140,8 @@ async function handleTicketAutoCloseWarningEvent(event: unknown): Promise<void> 
             scheduledCloseDate: formatCloseDate(new Date(scheduledCloseAt), recipientLocale),
             url: await buildPortalTicketUrl(tenantId, ticketId),
           },
+          // Requester only: always the client rendering.
+          ...ticketEmailRecipientVariables('client'),
         },
       });
 

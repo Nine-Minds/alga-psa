@@ -8,8 +8,11 @@ export const clientLocationWebhookSubscriber = createEntityWebhookSubscriber(
   'ClientLocationWebhookSubscriber',
 );
 
+export const quoteWebhookSubscriber = createEntityWebhookSubscriber('quote', 'QuoteWebhookSubscriber');
+
 export const ENTITY_WEBHOOK_SUBSCRIBERS = [
   clientWebhookSubscriber,
   contactWebhookSubscriber,
   clientLocationWebhookSubscriber,
+  quoteWebhookSubscriber,
 ] as const;

@@ -549,8 +549,8 @@ async function sendEmailNotification(
 
     registerAfterCommit(
       trx,
-      () =>
-        emailService.sendNotification({
+      async () => {
+        await emailService.sendNotification({
           mailClass: 'ticket',
           boardId,
           tenant,
@@ -559,7 +559,8 @@ async function sendEmailNotification(
           emailAddress,
           templateName,
           data: data as Record<string, string | number | boolean>
-        }),
+        });
+      },
       `sla-notification-email ${templateName} user=${recipient.user_id}`
     );
 

@@ -42,3 +42,5 @@ export {
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
 export { buildWorkflowPayload } from '@alga-psa/event-schemas';
 export type { WorkflowActor, WorkflowEventPublishContext } from '@alga-psa/event-schemas';
+
+export * from '@alga-psa/shared/workflow/streams/domainEventBuilders/quoteEventBuilders';

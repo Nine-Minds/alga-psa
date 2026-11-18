@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/ee/temporal-workflows
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  10:04:43
+   Duration  1.46s (transform 14ms, setup 20ms, import 7ms, tests 961ms, environment 0ms)
+

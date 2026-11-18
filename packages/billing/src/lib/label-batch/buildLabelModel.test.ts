@@ -48,11 +48,27 @@ describe('buildLabelModel', () => {
   it('T-sens: the binding catalog exposes only view-model fields and never a full serial or ids', () => {
     const paths = Object.values(LABEL_TEMPLATE_VALUE_BINDINGS).map((b) => (b as { path: string }).path).sort();
     expect(paths).toEqual([
-      'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.sequenceLine', 'display.serialLine',
-      'identifier', 'nextAction', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
+      'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
+      'identifier', 'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
       'tenantClient.logoUrl', 'tenantClient.name', 'title', 'url',
     ]);
     expect(paths.some((p) => /serial$|recordId|email|phone/i.test(p) && p !== 'serialSuffix')).toBe(false);
+  });
+
+  it('C5: an RMA tag derives its return-by and ticket lines; other classes get none', () => {
+    const rma: LabelViewModel = {
+      ...vm,
+      labelClass: 'rma-work-tag',
+      entityType: 'rma',
+      url: 'https://x.test/msp/inventory/rma?rmaId=r1',
+      identifier: 'RMA-00007',
+      rma: { statusLabel: 'Sent to vendor', returnBy: '2026-11-15', shipping: 'UPS 1Z9', ticketNumber: 'TIC-1' },
+    };
+    const display = buildLabelModel(rma, tenant).display;
+    expect(display?.rmaReturnByLine).toBe('Return by 2026-11-15');
+    expect(display?.rmaTicketLine).toBe('Ticket TIC-1');
+    expect(buildLabelModel({ ...rma, rma: { statusLabel: null, returnBy: null, shipping: null, ticketNumber: null } }, tenant).display?.rmaReturnByLine).toBeNull();
+    expect(buildLabelModel(vm, tenant).display).not.toHaveProperty('rmaReturnByLine');
   });
 
   it('C6: a staging box shows its position as "Box n of m"; other classes have no position line', () => {

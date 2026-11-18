@@ -1,11 +1,21 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
+    'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'lib/rma/warrantyStateMachine': 'lib/rma/warrantyStateMachine.ts',
+    'lib/rma/recordRmaEvent': 'lib/rma/recordRmaEvent.ts',
+    'lib/email/sanitizeEmailHtml': 'lib/email/sanitizeEmailHtml.ts',
+    'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
+    'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
+    'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
+    'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
+    'interfaces/contact.interfaces': 'interfaces/contact.interfaces.ts',
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
     'core/deploymentProfile': 'core/deploymentProfile.ts',
@@ -17,11 +27,14 @@ export default defineConfig({
     'events/publisher': 'events/publisher.ts',
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
+    'services/email/inboundEmailIdentity': 'services/email/inboundEmailIdentity.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
     'services/assets/assetTicketAssociation': 'services/assets/assetTicketAssociation.ts',
+    'services/assets/maintenanceRecurrence': 'services/assets/maintenanceRecurrence.ts',
+    'services/assets/maintenanceLifecycle': 'services/assets/maintenanceLifecycle.ts',
     'services/tickets/createTicketWithSideEffects': 'services/tickets/createTicketWithSideEffects.ts',
     'services/tickets/ticketModelEventPublisher': 'services/tickets/ticketModelEventPublisher.ts',
     'services/tickets/ticketResourceCore': 'services/tickets/ticketResourceCore.ts',
@@ -84,6 +97,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
@@ -104,12 +118,14 @@ export default defineConfig({
     'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/quoteDiscountAllocation': 'billingClients/quoteDiscountAllocation.ts',
     'billingClients/quoteConversionDiscounts': 'billingClients/quoteConversionDiscounts.ts',
+    'billingClients/serviceTaxTreatment': 'billingClients/serviceTaxTreatment.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way
     // the Next-built consumers are. Without an entry it is "Cannot find
     // package" at test time.
     'billingClients/hourBlockService': 'billingClients/hourBlockService.ts',
+    'billingClients/billingMutationLock': 'billingClients/billingMutationLock.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
     'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
@@ -130,6 +146,13 @@ export default defineConfig({
     'lib/businessHours/businessDayCalendar': 'lib/businessHours/businessDayCalendar.ts',
     'lib/businessHours/loadBusinessDayCalendar': 'lib/businessHours/loadBusinessDayCalendar.ts',
     'lib/recurrence/index': 'lib/recurrence/index.ts',
+    'lib/sla/organizationSlaClock': 'lib/sla/organizationSlaClock.ts',
+    'lib/sla/organizationSlaStore': 'lib/sla/organizationSlaStore.ts',
+    'lib/sla/organizationSlaNotifications': 'lib/sla/organizationSlaNotifications.ts',
+    'lib/sla/organizationSlaLock': 'lib/sla/organizationSlaLock.ts',
+    'lib/sla/slaPolicyResolver': 'lib/sla/slaPolicyResolver.ts',
+    'lib/sla/holidayRows': 'lib/sla/holidayRows.ts',
+    'lib/sla/slaPauseConditions': 'lib/sla/slaPauseConditions.ts',
   },
   format: ['esm'],
   dts: false,
@@ -160,5 +183,8 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
+    /^@alga-psa\/predicates/,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

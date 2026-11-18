@@ -30,7 +30,8 @@
     "status": "Statut",
     "expiration": "Expiration",
     "source": "Source",
-    "actions": "Actions"
+    "actions": "Actions",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "status": {
     "pending": "En attente",
@@ -53,8 +54,10 @@
     "rateRequired": "Saisissez un taux valide.",
     "scopeLabel": "Périmètre — services couverts par ce bloc (vide = toute la main-d'œuvre)",
     "serviceLabel": "Service",
+    "serviceNoResults": "Aucun service trouvé",
     "servicePlaceholder": "Sélectionnez un service",
     "serviceRequired": "Sélectionnez un service.",
+    "serviceSearchPlaceholder": "Rechercher des services...",
     "submit": "Créer un brouillon de facture",
     "submitted": "Brouillon de facture {{invoiceNumber}} créé. Finalisez-le pour activer le bloc.",
     "title": "Vendre un bloc d'heures",
@@ -127,7 +130,9 @@
     "voidedLabel": "Annulé",
     "purchaseReversed": "Achat annulé (facture définalisée)",
     "unknownUser": "Système",
-    "sourceContract": "Contrat : {{contract}}"
+    "sourceContract": "Contrat : {{contract}}",
+    "remainingValue": "Valeur des heures restantes : {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "expire": {
     "error": "Impossible de faire expirer le bloc d'heures.",

@@ -77,7 +77,8 @@ export function createFakeDb(tables: Record<string, Row[]>) {
       return rows.length;
     }
     insert(row: Row) {
-      const list = (tables[this.table] ??= []);
+      const table = this.table;
+      const list = (tables[table] ??= []);
       let conflictCols: string[] | null = null;
       let mergePatch: Row | null = null;
       const apply = () => {
@@ -106,12 +107,16 @@ export function createFakeDb(tables: Record<string, Row[]>) {
           return Promise.resolve([]).then(resolve, reject);
         },
         // insert(...).returning(cols): stored row gets a generated id column.
+        // returning('*') echoes the whole row, with the table's own id column.
         async returning(cols: string[] | string) {
           const list2 = typeof cols === 'string' ? [cols] : cols;
-          const idCol = list2.find((c) => c.endsWith('_id'));
+          const all = list2.includes('*');
+          const idCol = all
+            ? `${table.replace(/s$/, '')}_id`
+            : list2.find((c) => c.endsWith('_id'));
           if (idCol && row[idCol] == null) row[idCol] = `${idCol.replace(/_id$/, '')}-${list.length + 1}`;
           apply();
-          return [Object.fromEntries(list2.map((c) => [c, row[c]]))];
+          return [all ? { ...row } : Object.fromEntries(list2.map((c) => [c, row[c]]))];
         },
       };
       return builder;

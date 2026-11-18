@@ -6,14 +6,21 @@ import type {
   FixedMemberRateWrite,
   IContractLineServiceFixedConfig,
 } from '@alga-psa/types';
+import {
+  coerceFixedMemberRate,
+  FixedMemberRatePairError,
+  fixedMemberRateProvenance,
+  resolveFixedMemberRatePair,
+  resolveFixedMemberRatePatch,
+} from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 type FixedConfigFields = Omit<IContractLineServiceFixedConfig, 'created_at' | 'updated_at' | 'base_rate' | 'base_rate_basis'>;
 
 /**
  * Validate a rate write: a stored number always states what it means, and a
  * seat (`pricing_basis='unit'`) is per-unit by definition. Returns the pair of
- * columns to persist. Throws rather than letting the DB constraint reject it,
- * so the failure names the writer's mistake.
+ * columns to persist. Throws `FixedMemberRatePairError` rather than letting
+ * the DB constraint reject it, so the failure names the writer's mistake.
  */
 export function resolveFixedMemberRateWrite(input: {
   base_rate?: number | null;
@@ -22,19 +29,10 @@ export function resolveFixedMemberRateWrite(input: {
   /** The row's stored basis, for patches that keep it (update paths). */
   storedBasis?: FixedBaseRateBasis | null;
 }): FixedMemberRateWrite {
-  if (input.base_rate === null || input.base_rate === undefined) {
-    return { base_rate: null };
-  }
-  const isSeat = input.pricing_basis === 'unit';
-  const basis = input.base_rate_basis ?? (isSeat ? 'per_unit' : input.storedBasis ?? null);
-  if (basis === null) {
-    throw new Error('A fixed member base_rate requires base_rate_basis (per_unit or share).');
-  }
-  if (isSeat && basis === 'share') {
-    throw new Error("A seat (pricing_basis 'unit') member cannot carry a 'share' base_rate.");
-  }
-  return { base_rate: input.base_rate, base_rate_basis: basis };
+  return resolveFixedMemberRatePair(input);
 }
+
+export { FixedMemberRatePairError };
 
 export default class ContractLineServiceFixedConfig {
   private knex: Knex;
@@ -79,7 +77,8 @@ export default class ContractLineServiceFixedConfig {
       })
       .first();
     
-    return config || null;
+    // `numeric` arrives as a string; clients get number | null (see coerceFixedMemberRate).
+    return config ? { ...config, base_rate: coerceFixedMemberRate(config.base_rate) } : null;
   }
 
   /**
@@ -90,15 +89,14 @@ export default class ContractLineServiceFixedConfig {
     
     const now = new Date();
     
-    const rate = resolveFixedMemberRateWrite(data);
+    const rate = resolveFixedMemberRatePair(data);
     await this.table('contract_line_service_fixed_config').insert({
       config_id: data.config_id,
       base_rate: rate.base_rate,
-      base_rate_basis: rate.base_rate_basis ?? null,
+      base_rate_basis: rate.base_rate_basis,
       // A stored base_rate is an explicit choice; a NULL base_rate follows the
       // catalog. Callers may override, but the invariant must hold either way.
-      rate_provenance:
-        data.rate_provenance ?? (rate.base_rate === null ? 'inherited' : 'custom'),
+      rate_provenance: data.rate_provenance ?? fixedMemberRateProvenance(rate),
       pricing_basis: data.pricing_basis ?? 'bundle',
       // enable_proration: data.enable_proration, // Removed: Moved to contract_line_fixed_config
       // billing_cycle_alignment: data.billing_cycle_alignment, // Removed: Moved to contract_line_fixed_config
@@ -111,15 +109,14 @@ export default class ContractLineServiceFixedConfig {
   }
 
   /**
-   * Update an existing fixed price configuration
-   */
-  /**
    * Update an existing fixed price configuration.
    *
    * Writing `base_rate` recomputes `base_rate_basis` and `rate_provenance` with
    * it (a stored number is `custom` and states its meaning; clearing it is
    * `inherited` with no meaning), so the row can never violate the provenance
-   * or basis CHECKs. A number with no stated basis keeps the row's stored one.
+   * or basis CHECKs. A number with no stated basis keeps the row's stored one;
+   * a basis with no rate is resolved against the stored rate and refused when
+   * that is NULL.
    */
   async update(
     configId: string,
@@ -134,23 +131,27 @@ export default class ContractLineServiceFixedConfig {
       updated_at: new Date()
     };
 
-    if ('base_rate' in data && data.base_rate !== undefined) {
+    // The rate and its basis are one fact: resolve whatever the patch states
+    // against the stored row and write both columns together (or refuse).
+    if (data.base_rate !== undefined || data.base_rate_basis !== undefined) {
       const stored = await this.table('contract_line_service_fixed_config')
         .where({ config_id: configId })
-        .first('pricing_basis', 'base_rate_basis');
-      const rate = resolveFixedMemberRateWrite({
-        base_rate: data.base_rate,
-        base_rate_basis: data.base_rate_basis,
-        pricing_basis: (data as { pricing_basis?: string | null }).pricing_basis ?? stored?.pricing_basis ?? null,
-        storedBasis: stored?.base_rate_basis ?? null,
-      });
+        .first('base_rate', 'pricing_basis', 'base_rate_basis');
+      const rate = resolveFixedMemberRatePatch(
+        {
+          base_rate: data.base_rate,
+          base_rate_basis: data.base_rate_basis,
+          pricing_basis: (data as { pricing_basis?: string | null }).pricing_basis,
+        },
+        stored,
+      )!;
       updateData.base_rate = rate.base_rate;
-      updateData.base_rate_basis = rate.base_rate_basis ?? null;
-      updateData.rate_provenance = data.rate_provenance ?? (rate.base_rate === null ? 'inherited' : 'custom');
-    } else if (data.base_rate_basis !== undefined) {
-      updateData.base_rate_basis = data.base_rate_basis;
+      updateData.base_rate_basis = rate.base_rate_basis;
+      if (data.base_rate !== undefined) {
+        updateData.rate_provenance = data.rate_provenance ?? fixedMemberRateProvenance(rate);
+      }
     }
-    
+
     // Remove config_id from update data if present
     if ('config_id' in updateData) {
       delete updateData.config_id;

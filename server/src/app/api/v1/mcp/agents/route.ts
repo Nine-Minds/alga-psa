@@ -5,6 +5,7 @@
 import { editionGateResponse } from '@/lib/editionGating/response';
 import { NextRequest, NextResponse } from 'next/server';
 import { isEnterpriseEdition } from '@/lib/features';
+import { withServiceErrorMapping } from '@/lib/api/utils/mapServiceError';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -32,24 +33,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   };
   if (!body.name) return NextResponse.json({ error: '"name" is required' }, { status: 400 });
 
-  try {
-    const agent = await createAgent({
-      tenant: admin.tenant,
-      name: body.name,
-      description: body.description,
-      idpIssuer: body.idpIssuer,
-      idpSubject: body.idpSubject,
-      roleIds: body.roleIds,
-      createdBy: admin.userId ?? undefined,
-    });
-    return NextResponse.json({ data: agent }, { status: 201 });
-  } catch (e) {
-    // Duplicate (issuer, subject) binding -> 409 with the friendly message.
-    if (e instanceof Error && e.name === 'AgentBindingConflictError') {
-      return NextResponse.json({ error: e.message }, { status: 409 });
+  return withServiceErrorMapping(async () => {
+    try {
+      const agent = await createAgent({
+        tenant: admin.tenant,
+        name: body.name!,
+        description: body.description,
+        idpIssuer: body.idpIssuer,
+        idpSubject: body.idpSubject,
+        roleIds: body.roleIds,
+        createdBy: admin.userId ?? undefined,
+      });
+      return NextResponse.json({ data: agent }, { status: 201 });
+    } catch (e) {
+      // Duplicate (issuer, subject) binding -> 409 with the friendly message.
+      if (e instanceof Error && e.name === 'AgentBindingConflictError') {
+        return NextResponse.json({ error: e.message }, { status: 409 });
+      }
+      // Agents are principals on the shared service layer: its limit / tier / validation errors carry a
+      // 4xx statusCode and a machine code, so surface them as-is instead of a generic 500.
+      const status = (e as { statusCode?: unknown } | null)?.statusCode;
+      if (e instanceof Error && typeof status === 'number' && status >= 400 && status < 500) {
+        return NextResponse.json({ error: e.message, code: (e as { code?: string }).code }, { status });
+      }
+      throw e;
     }
-    throw e;
-  }
+  });
 }
 
 // Toggle an agent's active flag (the reversible soft-disable).
@@ -63,8 +72,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (!body.agentId || typeof body.active !== 'boolean') {
     return NextResponse.json({ error: '"agentId" and a boolean "active" are required.' }, { status: 400 });
   }
-  await setAgentActive(admin.tenant, body.agentId, body.active);
-  return NextResponse.json({ ok: true });
+  const { agentId, active } = body;
+  return withServiceErrorMapping(async () => {
+    await setAgentActive(admin.tenant, agentId, active);
+    return NextResponse.json({ ok: true });
+  });
 }
 
 // Permanently remove an agent (irreversible — tears down roles, audit, backing user).
@@ -76,6 +88,8 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
   const agentId = req.nextUrl.searchParams.get('agentId');
   if (!agentId) return NextResponse.json({ error: '"agentId" is required.' }, { status: 400 });
-  await deleteAgent(admin.tenant, agentId);
-  return NextResponse.json({ ok: true });
+  return withServiceErrorMapping(async () => {
+    await deleteAgent(admin.tenant, agentId);
+    return NextResponse.json({ ok: true });
+  });
 }

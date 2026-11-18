@@ -387,7 +387,7 @@ describe.runIf(enabled)('Prepaid Block stale pending block warning', () => {
       await w.db('hour_blocks').insert({
         tenant: w.tenant, block_id: blockId, client_id: w.clientId, service_id: w.serviceId,
         total_minutes: 2400, remaining_minutes: 2400, hourly_rate: 11000, purchase_amount: 440000,
-        currency_code: 'EUR', status: 'pending', source_type: 'contract', contract_line_id: w.lineId,
+        currency_code: 'EUR', status: 'pending', source_type: 'contract', contract_line_id: w.lineId, service_period_record_id: uuidv4(),
         created_at: new Date(Date.now() - 20 * 86400000).toISOString(),
       });
       const none = await detectStalePendingPrepaidBlockWarnings({ knex: w.db, tenant: w.tenant, rows: [row] });

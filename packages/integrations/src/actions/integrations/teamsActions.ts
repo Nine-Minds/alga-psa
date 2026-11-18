@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import { isBotConnectorConfiguredFromEnv } from '../../lib/teamsBotConnector';
 import { DEFAULT_MICROSOFT_GRAPH_BASE_URL, DEFAULT_MICROSOFT_LOGIN_BASE_URL,
   getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
@@ -98,16 +99,6 @@ const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   exposeRecordingsInPortal: false,
   notificationChannels: {},
 };
-
-// Mirrors readBotCredentialsFromEnv() in the EE bot connector; kept env-only so
-// the shared (CE-safe) actions never import the EE package statically.
-function isBotConnectorConfiguredFromEnv(): boolean {
-  return Boolean(
-    process.env.TEAMS_BOT_APP_ID?.trim()
-    && process.env.TEAMS_BOT_APP_TENANT_ID?.trim()
-    && process.env.TEAMS_BOT_APP_PASSWORD?.trim()
-  );
-}
 
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';

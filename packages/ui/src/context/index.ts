@@ -6,6 +6,7 @@ export * from './ClientDrawerContext';
 export * from './ContactDrawerContext';
 export * from './QuickAddClientContext';
 export * from './ClientTagsContext';
+export * from './ClientPickerSearchContext';
 export * from './ActivityCrossFeatureContext';
 
 // Note: TagContext has been moved to @alga-psa/tags/context

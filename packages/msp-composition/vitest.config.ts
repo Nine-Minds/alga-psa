@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    // DB suites run through the workspace DB runner (scripts/run-workspace-db-tests.mjs).
+    exclude: ['**/node_modules/**', '**/*.db.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },
@@ -31,6 +33,7 @@ export default defineConfig({
       { find: /^@alga-psa\/assets\/(.*)$/, replacement: path.resolve(__dirname, '../assets/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../tickets/src/$1') },
+      { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../inventory/src/$1') },
       { find: /^@alga-psa\/opportunities$/, replacement: path.resolve(__dirname, '../opportunities/src/index.ts') },
       { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: path.resolve(__dirname, '../opportunities/src/$1') },
       { find: /^@alga-psa\/surveys$/, replacement: path.resolve(__dirname, '../surveys/src/index.ts') },

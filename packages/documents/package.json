@@ -30,6 +30,18 @@
       "import": "./src/components/*.tsx",
       "types": "./src/components/*.tsx"
     },
+    "./hooks/*": {
+      "import": "./src/hooks/*.ts",
+      "types": "./src/hooks/*.ts"
+    },
+    "./lib/uploadSessionClient": {
+      "import": "./src/lib/uploadSessionClient.ts",
+      "types": "./src/lib/uploadSessionClient.ts"
+    },
+    "./lib/kbImportLimits": {
+      "import": "./src/lib/kbImportLimits.ts",
+      "types": "./src/lib/kbImportLimits.ts"
+    },
     "./handlers": {
       "import": "./src/handlers/index.ts",
       "types": "./src/handlers/index.ts"
@@ -38,13 +50,29 @@
       "import": "./src/handlers/*.ts",
       "types": "./src/handlers/*.ts"
     },
+    "./lib/documentPermissions": {
+      "import": "./src/lib/documentPermissions.ts",
+      "types": "./src/lib/documentPermissions.ts"
+    },
     "./lib/collabPersistence": {
       "import": "./src/lib/collabPersistence.ts",
       "types": "./src/lib/collabPersistence.ts"
     },
+    "./lib/documentPreviewJob": {
+      "import": "./src/lib/documentPreviewJob.ts",
+      "types": "./src/lib/documentPreviewJob.ts"
+    },
     "./lib/documentPreviewGenerator": {
       "import": "./src/lib/documentPreviewGenerator.ts",
       "types": "./src/lib/documentPreviewGenerator.ts"
+    },
+    "./lib/renderHtmlToPng": {
+      "import": "./src/lib/renderHtmlToPng.ts",
+      "types": "./src/lib/renderHtmlToPng.ts"
+    },
+    "./lib/documentPreviewProvenance": {
+      "import": "./src/lib/documentPreviewProvenance.ts",
+      "types": "./src/lib/documentPreviewProvenance.ts"
     },
     "./lib/documentMarkdownExport": {
       "import": "./src/lib/documentMarkdownExport.ts",
@@ -77,6 +105,26 @@
     "./models/*": {
       "import": "./src/models/*.ts",
       "types": "./src/models/*.ts"
+    },
+    "./lib/documentUploadSessions": {
+      "import": "./src/lib/documentUploadSessions.ts",
+      "types": "./src/lib/documentUploadSessions.ts"
+    },
+    "./lib/documentUploadAuthorization": {
+      "import": "./src/lib/documentUploadAuthorization.ts",
+      "types": "./src/lib/documentUploadAuthorization.ts"
+    },
+    "./lib/createDocumentFromCommittedFile": {
+      "import": "./src/lib/createDocumentFromCommittedFile.ts",
+      "types": "./src/lib/createDocumentFromCommittedFile.ts"
+    },
+    "./lib/documentTypeLookup": {
+      "import": "./src/lib/documentTypeLookup.ts",
+      "types": "./src/lib/documentTypeLookup.ts"
+    },
+    "./lib/withPrivateDocumentUploads": {
+      "import": "./src/lib/withPrivateDocumentUploads.ts",
+      "types": "./src/lib/withPrivateDocumentUploads.ts"
     }
   },
   "scripts": {
@@ -99,7 +147,9 @@
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
-    "zod": "^3.22.4"
+    "dompurify": ">=3.4.17",
+    "jsdom": "^25.0.1",
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

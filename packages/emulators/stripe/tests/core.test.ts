@@ -125,6 +125,16 @@ describe('stripe emulator pure core', () => {
     expect(() => core.failSession(sessionId)).toThrow(/open/i);
   });
 
+  it('every price references a retrievable product; reset clears products', () => {
+    const { core } = makeCore();
+    core.createProduct({ id: 'prod_named', name: 'co-managed-seat' });
+    expect(core.getProduct(core.createPrice({ unitAmount: 1149, interval: 'month', product: 'prod_named' }).product).name).toBe('co-managed-seat');
+    const anonymous = core.createPrice({ unitAmount: 500, interval: 'month' });
+    expect(core.getProduct(anonymous.product).object).toBe('product');
+    core.reset();
+    expect(() => core.getProduct('prod_named')).toThrow(/No such product/);
+  });
+
   it('reset returns to the deterministic default credentials', () => {
     const { core } = makeCore();
     core.configure({ secretKey: 'sk_test_custom', webhookSecret: 'whsec_custom', webhookTargets: ['http://x/webhook'] });

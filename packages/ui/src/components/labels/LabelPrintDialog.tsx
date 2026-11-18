@@ -5,6 +5,7 @@ import { MAX_LABELS_PER_REQUEST, type LabelClass, type LabelPrintFailure } from 
 import { Dialog, DialogContent, DialogFooter } from '../Dialog';
 import { Button } from '../Button';
 import { Input } from '../Input';
+import { Checkbox } from '../Checkbox';
 import CustomSelect from '../CustomSelect';
 import { Alert, AlertDescription } from '../Alert';
 import { useTranslation } from '../../lib/i18n/client';
@@ -19,11 +20,18 @@ import {
   useLabelPrint,
   type LabelPrintOutcome,
   type LabelTemplateList,
+  type LabelSubject,
   type LinkedAssetChoice,
 } from './useLabelPrint';
 
 const MAX_OVERRIDE_LENGTH = 120;
 const NO_LINKED_ASSET = '__none__';
+
+/** Expand physical asset labels in stable adjacent groups: A,A,B,B. */
+export function expandAssetLabelCopies<T>(subjects: readonly T[], copiesPerAsset: number): T[] {
+  const copies = Math.max(1, Math.min(10, Math.trunc(copiesPerAsset) || 1));
+  return subjects.flatMap((subject) => Array.from({ length: copies }, () => subject));
+}
 
 export interface LabelPrintDialogProps {
   isOpen: boolean;
@@ -34,6 +42,22 @@ export interface LabelPrintDialogProps {
   defaultTitle?: string;
   defaultDetail?: string;
   idPrefix?: string;
+}
+
+/**
+ * The label subjects for a ticket work tag: batch -> one per held item (custody !== null), in choice order;
+ * otherwise one subject carrying the current pick, if any.
+ */
+export function buildLabelSubjects(
+  ticketId: string,
+  choices: ReadonlyArray<LinkedAssetChoice>,
+  pickedAssetId: string,
+  batch: boolean
+): LabelSubject[] {
+  if (batch) {
+    return choices.filter((c) => c.custody).map((c) => ({ recordId: ticketId, linkedAssetId: c.assetId }));
+  }
+  return [{ recordId: ticketId, ...(pickedAssetId !== NO_LINKED_ASSET ? { linkedAssetId: pickedAssetId } : {}) }];
 }
 
 function readStoredPreset(): LabelLayoutPresetId {
@@ -59,7 +83,6 @@ export function LabelPrintDialog({
   const { print, loadTemplates, loadLinkedAssets, isPrinting } = useLabelPrint();
 
   const isSingleTicket = labelClass === 'ticket-work-tag' && ids.length === 1;
-  const tooMany = ids.length > MAX_LABELS_PER_REQUEST;
 
   const [templates, setTemplates] = useState<LabelTemplateList | null>(null);
   const [templateId, setTemplateId] = useState<string>('');
@@ -68,8 +91,12 @@ export function LabelPrintDialog({
   const [detail, setDetail] = useState(defaultDetail);
   const [linkedAssets, setLinkedAssets] = useState<LinkedAssetChoice[]>([]);
   const [linkedAssetId, setLinkedAssetId] = useState<string>(NO_LINKED_ASSET);
+  const [batch, setBatch] = useState(false);
   const [outcome, setOutcome] = useState<LabelPrintOutcome | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [copiesPerAsset, setCopiesPerAsset] = useState(2);
+  const labelCount = labelClass === 'asset-identity' ? ids.length * copiesPerAsset : ids.length;
+  const tooMany = labelCount > MAX_LABELS_PER_REQUEST;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,6 +105,8 @@ export function LabelPrintDialog({
     setTitle(defaultTitle);
     setDetail(defaultDetail);
     setLinkedAssetId(NO_LINKED_ASSET);
+    setBatch(false);
+    setCopiesPerAsset(2);
     setPreset(readStoredPreset());
     let cancelled = false;
     void loadTemplates(labelClass).then((list) => {
@@ -121,11 +150,16 @@ export function LabelPrintDialog({
 
   const run = useCallback(
     async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
-      const requestIds = ids.filter((id) => !skipRecordIds.has(id));
-      if (requestIds.length === 0) return;
+      const selectedLabels: LabelSubject[] = isSingleTicket
+        ? buildLabelSubjects(ids[0], linkedAssets, linkedAssetId, batch)
+        : ids.filter((id) => !skipRecordIds.has(id)).map((recordId) => ({ recordId }));
+      const labels: LabelSubject[] = labelClass === 'asset-identity'
+        ? expandAssetLabelCopies(selectedLabels, copiesPerAsset).map((subject) => ({ ...subject }))
+        : selectedLabels;
+      if (labels.length === 0) return;
       const result = await print({
         labelClass,
-        ids: requestIds,
+        labels,
         templateId: overrideTemplateCode ?? (templateId || undefined),
         layout: LABEL_LAYOUT_PRESETS[preset].layout,
         ...(isSingleTicket
@@ -134,14 +168,37 @@ export function LabelPrintDialog({
                 ...(title !== defaultTitle ? { title } : {}),
                 ...(detail !== defaultDetail ? { detail } : {}),
               },
-              ...(linkedAssetId !== NO_LINKED_ASSET ? { linkedAssetId } : {}),
             }
           : {}),
       });
       setOutcome(result);
     },
-    [ids, print, labelClass, templateId, preset, isSingleTicket, title, detail, defaultTitle, defaultDetail, linkedAssetId]
+    [ids, print, labelClass, templateId, preset, isSingleTicket, title, detail, defaultTitle, defaultDetail, linkedAssetId, linkedAssets, batch, copiesPerAsset]
   );
+
+  const heldAssets = linkedAssets.filter((a) => a.custody);
+  const pickedAsset = linkedAssetId !== NO_LINKED_ASSET ? linkedAssets.find((a) => a.assetId === linkedAssetId) : undefined;
+  // What the tag will show, in plain language. Null = nothing worth saying (no custody on the tag).
+  let preview: string | null = null;
+  if (isSingleTicket) {
+    if (batch && heldAssets.length > 1) {
+      preview = t('labels.dialog.previewBatch', {
+        defaultValue: 'Print {{count}} tags, one per held item.',
+        count: heldAssets.length,
+      });
+    } else if (pickedAsset) {
+      preview = pickedAsset.custody
+        ? t('labels.dialog.previewPicked', { defaultValue: "The tag will show this item's location and next action." })
+        : t('labels.dialog.previewPickedNotHeld', { defaultValue: 'This item is not held, so the tag shows no location.' });
+    } else if (heldAssets.length > 1) {
+      preview = t('labels.dialog.previewSummary', { defaultValue: '{{count}} items held.', count: heldAssets.length });
+    } else if (heldAssets.length === 1) {
+      const location = heldAssets[0].custody?.custodyLocation;
+      preview = location
+        ? t('labels.dialog.previewSingle', { defaultValue: 'The tag will show {{location}}.', location })
+        : t('labels.dialog.previewSingleNoLocation', { defaultValue: "The tag will show this item's next action." });
+    }
+  }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
 
@@ -168,6 +225,23 @@ export function LabelPrintDialog({
           <p className="text-sm text-[rgb(var(--color-text-600))]">
             {t('labels.dialog.count', { defaultValue: '{{count}} selected', count: ids.length })}
           </p>
+
+          {labelClass === 'asset-identity' && (
+            <div>
+              <label htmlFor={`${idPrefix}-copies-per-asset`} className="mb-1 block text-sm font-medium">
+                {t('labels.dialog.copiesPerAsset', { defaultValue: 'Copies per asset' })}
+              </label>
+              <Input
+                id={`${idPrefix}-copies-per-asset`}
+                type="number"
+                min={1}
+                max={10}
+                value={copiesPerAsset}
+                onChange={(event) => setCopiesPerAsset(Math.max(1, Math.min(10, Number(event.target.value) || 1)))}
+              />
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('labels.dialog.adjacentCopies', { defaultValue: 'Copies print together for each asset.' })}</p>
+            </div>
+          )}
 
           {tooMany && (
             <Alert variant="warning">
@@ -233,13 +307,33 @@ export function LabelPrintDialog({
                       { value: NO_LINKED_ASSET, label: t('labels.dialog.noAsset', { defaultValue: 'No asset' }) },
                       ...linkedAssets.map((a) => ({
                         value: a.assetId,
-                        label: [a.assetTag, a.name].filter(Boolean).join(' - ') || a.assetId,
+                        label:
+                          [[a.assetTag, a.name].filter(Boolean).join(' - ') || t('labels.dialog.unnamedAsset', { defaultValue: 'Unnamed asset' }), a.custody?.custodyLocation]
+                            .filter(Boolean)
+                            .join(' \u2014 '),
                       })),
                     ]}
                     value={linkedAssetId}
                     onValueChange={setLinkedAssetId}
+                    disabled={batch}
                   />
                 </div>
+              )}
+              {heldAssets.length > 1 && (
+                <Checkbox
+                  id={`${idPrefix}-batch-checkbox`}
+                  label={t('labels.dialog.batch', {
+                    defaultValue: 'One tag per held item ({{count}})',
+                    count: heldAssets.length,
+                  })}
+                  checked={batch}
+                  onChange={(e) => setBatch(e.target.checked)}
+                />
+              )}
+              {preview && (
+                <p id={`${idPrefix}-preview`} className="text-sm text-[rgb(var(--color-text-600))]">
+                  {preview}
+                </p>
               )}
             </>
           )}

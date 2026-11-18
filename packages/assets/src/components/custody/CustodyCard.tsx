@@ -20,7 +20,7 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { formatCalendarDate, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { getAssetCustody, listCustodyEvents } from '../../actions/assetCustodyActions';
 import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
-import { matchAssetCacheKeys } from '../../lib/assetCacheKeys';
+import { matchAnyEntityAssetsKeys, matchAssetCacheKeys } from '../../lib/assetCacheKeys';
 import {
   custodyEventToHistoryEntry,
   daysHeldSince,
@@ -62,7 +62,10 @@ export function CustodyCard({ id, assetId }: { id: string; assetId: string }) {
 
   const refresh = () => {
     void mutate(matchAssetCacheKeys([assetId]));
-    void mutate(['custody', 'queue']);
+    // Every custody read (queue, list badges) and any mounted ticket/project Assets panel, which show this
+    // asset's status and custody chip but are keyed by the ticket, not the asset.
+    void mutate((key: unknown) => Array.isArray(key) && key[0] === 'custody');
+    void mutate(matchAnyEntityAssetsKeys);
   };
 
   if (isLoading || !data || data.denied) return null;
@@ -240,6 +243,7 @@ export function CustodyCard({ id, assetId }: { id: string; assetId: string }) {
 
 function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; lang?: string }) {
   const { t } = useTranslation('msp/assets');
+  const { renderCustodyPhotos } = useAssetCrossFeature();
   const { data, isLoading } = useSWR(['asset', assetId, 'custody-events'], async ([, aid]) => {
     const outcome = custodyOutcome<IAssetCustodyEventDetail[]>(await listCustodyEvents(aid as string));
     return outcome.ok ? outcome.data : [];
@@ -254,7 +258,7 @@ function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; 
     }
     return events.map((e) => {
       const entry = custodyEventToHistoryEntry(e, e.event_type === 'received' && firstReceived.get(e.custody_id) !== e.event_id);
-      return { event: e, description: describeCustodyHistory(entry, t) };
+      return { event: e, description: describeCustodyHistory(entry, t), documentIds: entry.documentIds };
     });
   }, [data, t]);
 
@@ -268,13 +272,14 @@ function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; 
   }
   return (
     <ul id={id} className="mt-2 space-y-1.5">
-      {rows.map(({ event, description }) => (
+      {rows.map(({ event, description, documentIds }) => (
         <li key={event.event_id} className="text-xs">
           <div className="font-medium text-[rgb(var(--color-text-800))]">{description?.title ?? event.event_type}</div>
           <div className="text-[rgb(var(--color-text-400))]">
             {[new Date(event.occurred_at).toLocaleString(lang), event.actor_name].filter(Boolean).join(' · ')}
             {event.note ? ` · ${event.note}` : ''}
           </div>
+          {documentIds.length ? renderCustodyPhotos?.(documentIds, event.event_id) : null}
         </li>
       ))}
     </ul>

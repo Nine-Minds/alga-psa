@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Klantinfo opslaan mislukt",
       "addTeamMembers": "Teamleden toevoegen mislukt",
+      "unsentInvites": "Verstuur de uitnodiging voor elk teamlid dat u hebt toegevoegd, of verwijder het, voordat u verdergaat.",
+      "teamMembersNotCreated": "Deze teamleden zijn niet aangemaakt. Corrigeer of verwijder elk teamlid voordat u verdergaat:",
+      "teamProgressNotSaved": "Deze teamleden zijn aangemaakt, maar de installatie kon de voortgang niet opslaan: {{users}}. Als u de installatie verlaat en terugkomt, worden ze mogelijk niet als toegevoegd weergegeven; hun accounts bestaan al, dus voeg ze niet opnieuw toe. Selecteer Volgende om door te gaan.",
       "saveClient": "Klant opslaan mislukt",
       "addContact": "Contact toevoegen mislukt",
       "setupBilling": "Facturatie instellen mislukt",
@@ -414,6 +417,7 @@
       "invalidEmail": "Voer een geldig e-mailadres in",
       "passwordLength": "Wachtwoord moet minstens 8 tekens lang zijn",
       "saveFailed": "Teamlid opslaan mislukt",
+      "progressNotSaved": "{{email}} is aangemaakt, maar de installatie kon de voortgang niet opslaan. Als u de installatie verlaat en terugkomt, wordt dit teamlid mogelijk niet als toegevoegd weergegeven; het account bestaat al, dus voeg het niet opnieuw toe.",
       "inviteFailed": "Versturen van uitnodiging mislukt",
       "roleRequired": "Selecteer een rol",
       "generic": "Er is een fout opgetreden"

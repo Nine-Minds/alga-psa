@@ -5,15 +5,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-import {
-  APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE,
-  APPLY_RULE_KEYWORD_TOO_LONG,
-  APPLY_RULE_MAX_KEYWORDS,
-  APPLY_RULE_MAX_KEYWORD_LENGTH,
-  APPLY_RULE_ORIGIN_INVALID,
-  APPLY_RULE_TOO_MANY_KEYWORDS,
-  TEMPLATE_RULES_TARGET_OTHER_CLIENTS,
-} from './applyRuleMatcherValidation';
+import { ZodError } from 'zod';
+import { ChecklistRuleValidationError, UnsupportedRuleVersionError } from '@alga-psa/shared/lib/ticketChecklists';
 
 export type ChecklistActionError = ActionMessageError | ActionPermissionError;
 
@@ -31,8 +24,6 @@ const APPLY_RULE_SCOPE_ERROR_KEYS: Record<string, string> = {
   [APPLY_RULE_SUBCATEGORY_REQUIRES_CATEGORY]: 'features/tickets:errors.checklist.ruleSubcategoryRequiresCategory',
   [TEMPLATE_CLIENT_MISMATCH]: 'features/tickets:errors.checklist.templateClientMismatch',
   [TEMPLATE_CLIENT_INVALID]: 'features/tickets:errors.checklist.templateClientInvalid',
-  [APPLY_RULE_CLIENT_OUTSIDE_TEMPLATE_SCOPE]: 'features/tickets:errors.checklist.ruleClientOutsideTemplateScope',
-  [TEMPLATE_RULES_TARGET_OTHER_CLIENTS]: 'features/tickets:errors.checklist.templateRulesTargetOtherClients',
 };
 
 const EXPECTED_CHECKLIST_MESSAGES = new Set([
@@ -51,14 +42,11 @@ export function checklistActionErrorFrom(error: unknown): ChecklistActionError |
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
     }
-    if (error.message === APPLY_RULE_TOO_MANY_KEYWORDS) {
-      return actionError(error.message, 'features/tickets:errors.checklist.ruleTooManyKeywords', { max: APPLY_RULE_MAX_KEYWORDS });
+    if (error instanceof ChecklistRuleValidationError && error.clientId) {
+      return actionError(error.message, 'features/tickets:errors.checklist.predicateClientOutsideScope', { client: error.clientId });
     }
-    if (error.message === APPLY_RULE_KEYWORD_TOO_LONG) {
-      return actionError(error.message, 'features/tickets:errors.checklist.ruleKeywordTooLong', { max: APPLY_RULE_MAX_KEYWORD_LENGTH });
-    }
-    if (error.message === APPLY_RULE_ORIGIN_INVALID) {
-      return actionError(error.message, 'features/tickets:errors.checklist.ruleOriginInvalid');
+    if (error instanceof ChecklistRuleValidationError || error instanceof UnsupportedRuleVersionError || error instanceof ZodError) {
+      return actionError(error.message, 'features/tickets:errors.checklist.predicateInvalid', { detail: error.message });
     }
     const scopeErrorKey = APPLY_RULE_SCOPE_ERROR_KEYS[error.message];
     if (scopeErrorKey) {

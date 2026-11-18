@@ -7,6 +7,7 @@ import { z } from 'zod';
 import {
   CONTACT_EMAIL_CANONICAL_TYPES,
   CONTACT_PHONE_CANONICAL_TYPES,
+  CONTACT_WORK_ARRANGEMENTS,
 } from '@alga-psa/shared/interfaces/contact.interfaces';
 import { 
   uuidSchema, 
@@ -92,6 +93,30 @@ const contactEmailAddressResponseSchema = z.object({
   display_order: z.number().int().min(0),
 });
 
+// A link the caller may write: the location must belong to the contact's client, which the model
+// enforces (contact_location_client_mismatch); at most one may be primary.
+const contactLocationInputSchema = z.object({
+  location_id: uuidSchema,
+  is_primary: z.boolean().optional(),
+});
+
+const contactLocationResponseSchema = z.object({
+  location_id: uuidSchema,
+  location_name: z.string().nullable(),
+  is_primary: z.boolean(),
+  is_active: z.boolean(),
+  address_line1: z.string().nullable().optional(),
+  address_line2: z.string().nullable().optional(),
+  address_line3: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state_province: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
+  country_code: z.string().nullable().optional(),
+  country_name: z.string().nullable().optional(),
+});
+
+export const contactWorkArrangementSchema = z.enum(CONTACT_WORK_ARRANGEMENTS);
+
 // Create contact schema
 export const createContactSchema = z.object({
   contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
@@ -108,6 +133,9 @@ export const createContactSchema = z.object({
   role: z.string().max(100).optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
+  work_arrangement: contactWorkArrangementSchema.nullish(),
+  /** The links to make. On update, omitted leaves them untouched and [] removes them all. */
+  locations: z.array(contactLocationInputSchema).optional(),
   tags: z.array(z.string()).optional()
 }).strict();
 
@@ -125,7 +153,10 @@ export const contactFilterSchema = baseFilterSchema.extend({
   role: z.string().optional(),
   is_inactive: booleanTransform.optional(),
   has_client: booleanTransform.optional(),
-  client_name: z.string().optional()
+  client_name: z.string().optional(),
+  /** Contacts linked to this location in any role (primary or not). */
+  location_id: uuidSchema.optional(),
+  work_arrangement: contactWorkArrangementSchema.optional()
 });
 
 // Contact list query schema
@@ -151,6 +182,9 @@ export const contactResponseSchema = z.object({
   updated_at: z.string().datetime(),
   is_inactive: z.boolean(),
   notes: z.string().nullable(),
+  work_arrangement: contactWorkArrangementSchema.nullable().optional(),
+  /** The client locations this person works at, primary first. */
+  locations: z.array(contactLocationResponseSchema).optional().default([]),
   avatarUrl: z.string().nullable().optional(),
   tenant: uuidSchema,
   tags: z.array(z.string()).optional(),
@@ -193,7 +227,7 @@ export const contactImportSchema = z.object({
 
 export const contactExportQuerySchema = z.object({
   format: z.enum(['csv', 'json']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default("false"),
+  include_inactive: booleanTransform.prefault("false"),
   client_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional()
 });
@@ -205,7 +239,7 @@ export const contactStatsResponseSchema = z.object({
   inactive_contacts: z.number(),
   contacts_with_client: z.number(),
   contacts_without_client: z.number(),
-  contacts_by_role: z.record(z.number()),
+  contacts_by_role: z.record(z.string(), z.number()),
   recent_contacts: z.number() // contacts created in last 30 days
 });
 
@@ -217,8 +251,8 @@ export const contactSearchSchema = z.object({
     z.string().transform(val => val.split(',').map(f => f.trim()))
   ]).optional(),
   client_id: uuidSchema.optional(),
-  include_inactive: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_inactive: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Export types for TypeScript

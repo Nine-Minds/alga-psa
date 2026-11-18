@@ -587,8 +587,8 @@ function TreeSelect<T extends string>({
           <div
             className={`
               inline-flex items-center justify-center
-              border border-[rgb(var(--color-border-400))] rounded-lg p-2
-              bg-[rgb(var(--color-card))] min-h-[38px]
+              border border-border rounded-lg p-2
+              bg-[rgb(var(--color-card))] min-h-[36px]
               text-sm w-full
               ${className}
             `}
@@ -618,19 +618,19 @@ function TreeSelect<T extends string>({
           <RadixSelect.Trigger
             className={`
               inline-flex items-center justify-between
-              border border-[rgb(var(--color-border-400))] rounded-lg p-2
-              bg-[rgb(var(--color-card))] min-h-[38px]
+              border border-border rounded-lg p-2
+              bg-[rgb(var(--color-card))] min-h-[36px]
               ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
-              text-sm w-full
+              text-sm w-full min-w-0 gap-2 overflow-hidden
               ${triggerClassName}
               ${className}
             `}
           >
             <RadixSelect.Value 
               placeholder={placeholder}
-              className="flex-1 text-left"
+              className="flex-1 min-w-0 overflow-hidden text-left"
             >
-              <span className={!displayLabel && !selectedDisplayLabel ? 'text-gray-400' : ''}>
+              <span className={`block truncate ${!displayLabel && !selectedDisplayLabel ? 'text-gray-400' : ''}`}>
                 {selectedDisplayLabel ?? (displayLabel || placeholder)}
               </span>
             </RadixSelect.Value>

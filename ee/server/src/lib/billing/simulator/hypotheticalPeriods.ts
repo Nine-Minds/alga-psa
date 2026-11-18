@@ -15,7 +15,6 @@
  * end boundary — arrears bills after the covered period closes).
  */
 
-import { Temporal } from '@js-temporal/polyfill';
 import type {
   IPersistedRecurringObligationRef,
   IRecurringServicePeriodRecord,
@@ -24,17 +23,17 @@ import type {
   ScenarioLine,
   SimulationHorizon,
 } from '@alga-psa/types';
+import { assertSimulationPeriodCountWithinBounds } from '@alga-psa/types';
 import { toISODate, toPlainDate } from '@alga-psa/core';
+import { generateClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/clientCadenceServicePeriods';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
-import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
-import { simulationRefusal } from './simulationRefusal';
 import {
-  getBillingPeriodForDate,
-  getNextBillingBoundaryAfter,
-  normalizeAnchorSettingsForCycle,
-} from '@alga-psa/shared/billingClients/billingCycleAnchors';
+  contractLineRecurringStreams,
+  type RecurringChargeStream,
+} from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { simulationRefusal } from './simulationRefusal';
 
 export type SimulatorBillingCycle =
   | 'monthly'
@@ -118,6 +117,7 @@ export function buildInvoicePeriods(
       `Simulation horizon requires a positive integer period_count; got ${horizon.period_count}. Choose a number of billing periods to simulate.`,
     );
   }
+  assertSimulationPeriodCountWithinBounds(horizon.period_count);
   if (!horizon.start_date) {
     throw simulationRefusal(
       "CONTRACT_SIMULATION_SCENARIO_INVALID",
@@ -125,36 +125,100 @@ export function buildInvoicePeriods(
     );
   }
 
-  const anchor = normalizeAnchorSettingsForCycle(schedule.billing_cycle, {
+  const windows = listInvoiceWindows(
+    schedule,
+    toISODate(toPlainDate(horizon.start_date)),
+    horizon.period_count,
+  );
+  return windows.map((window, index) => ({
+    index,
+    startDate: window.start,
+    endDateExclusive: window.end,
+  }));
+}
+
+const SCHEDULE_OBLIGATION: IPersistedRecurringObligationRef = {
+  tenant: 'contract-simulator',
+  obligationId: 'invoice-schedule',
+  chargeFamily: 'fixed',
+};
+
+/** More days than any one billing cycle spans, so a chunk always reaches its periods. */
+const MAX_CYCLE_DAYS = 366;
+const WINDOWS_PER_CHUNK = 60;
+
+/**
+ * `count` consecutive invoice windows of a client billing schedule, the first
+ * being the window that contains `from`. Windows come from the shared
+ * client-cadence generator, which takes the client's persisted cycle windows
+ * (`schedule.history`) verbatim and anchors the current cycle only outside
+ * them. Generation starts at the earliest history window, because the
+ * window containing `from` after a cycle change depends on where the last
+ * persisted window ended, not on the new anchor alone.
+ */
+export function listInvoiceWindows(
+  schedule: ScenarioBillingSchedule,
+  from: string,
+  count: number,
+): Array<{ start: string; end: string }> {
+  assertSimulationPeriodCountWithinBounds(count);
+  const historicalCycles = scheduleHistoricalCycles(schedule);
+  const earliestHistory = historicalCycles
+    .map((cycle) => toISODate(toPlainDate(cycle.start)))
+    .sort()[0];
+  let cursor = earliestHistory && earliestHistory < from ? earliestHistory : from;
+  const anchorSettings = {
     dayOfMonth: schedule.anchor.day_of_month,
     monthOfYear: schedule.anchor.month_of_year,
     dayOfWeek: schedule.anchor.day_of_week,
     referenceDate: schedule.anchor.reference_date,
-  });
-  const first = getBillingPeriodForDate(
-    toUtcMidnight(horizon.start_date),
-    schedule.billing_cycle,
-    anchor,
-  );
-  const periods: SimulatedInvoicePeriodWindow[] = [];
-  let start = first.periodStartDate;
-  let end = first.periodEndDate;
-
-  for (let index = 0; index < horizon.period_count; index += 1) {
-    periods.push({
-      index,
-      startDate: toISODate(toPlainDate(start)),
-      endDateExclusive: toISODate(toPlainDate(end)),
+  };
+  const windows: Array<{ start: string; end: string }> = [];
+  while (windows.length < count) {
+    const remaining = Math.min(count - windows.length, WINDOWS_PER_CHUNK);
+    const base = cursor > from ? cursor : from;
+    const rangeEnd = toISODate(
+      toPlainDate(base).add({ days: remaining * MAX_CYCLE_DAYS }),
+    );
+    const chunk = generateClientCadenceServicePeriods({
+      billingCycle: schedule.billing_cycle,
+      rangeStart: toUtcMidnight(cursor),
+      rangeEnd: toUtcMidnight(rangeEnd),
+      sourceObligation: SCHEDULE_OBLIGATION,
+      duePosition: 'advance',
+      anchorSettings,
+      historicalCycles,
     });
-    start = end;
-    end = getNextBillingBoundaryAfter(end, schedule.billing_cycle, anchor);
+    if (chunk.length === 0) {
+      throw new Error('Invoice schedule generation produced no windows.');
+    }
+    for (const period of chunk) {
+      const end = toISODate(toPlainDate(period.end));
+      if (end > from && windows.length < count) {
+        windows.push({ start: toISODate(toPlainDate(period.start)), end });
+      }
+    }
+    cursor = toISODate(toPlainDate(chunk[chunk.length - 1].end));
   }
-
-  return periods;
+  return windows;
 }
 
 function toUtcMidnight(value: ISO8601String): ISO8601String {
   return `${toISODate(toPlainDate(value))}T00:00:00Z`;
+}
+
+/**
+ * A scenario schedule's billed cycle history in the UTC-midnight form the
+ * shared client-cadence generator requires. The scenario stores date-only
+ * values; every reader converts here so none passes bare dates through.
+ */
+function scheduleHistoricalCycles(
+  schedule: ScenarioBillingSchedule,
+): Array<{ start: ISO8601String; end: ISO8601String }> {
+  return (schedule.history ?? []).map((cycle) => ({
+    start: toUtcMidnight(cycle.start_date),
+    end: toUtcMidnight(cycle.end_date),
+  }));
 }
 
 export interface GenerateLineServicePeriodsInput {
@@ -166,14 +230,22 @@ export interface GenerateLineServicePeriodsInput {
   scenarioId: string;
 }
 
+/** One stream's hypothetical service periods for a line. */
+export interface LineStreamServicePeriods {
+  stream: RecurringChargeStream;
+  records: IRecurringServicePeriodRecord[];
+}
+
 /**
  * Generates a line's hypothetical service periods in memory via the shared
  * pure cadence layer (the same generalization recurringAuthoringPreview.ts
- * applies with hardcoded dates). No rows are read or written.
+ * applies with hardcoded dates), once per recurring stream of the line (the
+ * streams come from contractLineRecurringStreams, the same function the
+ * production materializers use). No rows are read or written.
  */
 export function generateLineServicePeriods(
   input: GenerateLineServicePeriodsInput,
-): IRecurringServicePeriodRecord[] {
+): LineStreamServicePeriods[] {
   const {
     line,
     horizon,
@@ -184,16 +256,13 @@ export function generateLineServicePeriods(
     input;
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
-  const duePosition = resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing);
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
+  // A client-owned stream follows the CLIENT's cycle (as the production
+  // regeneration does), not the line's frequency.
+  const streamCycle =
+    cadenceOwner === 'client' ? normalizeBillingCycle(invoiceSchedule.billing_cycle) : lineCycle;
   const asOf = toUtcMidnight(horizon.start_date);
   const anchorDate = toUtcMidnight(contractStartDate ?? horizon.start_date);
-
-  const sourceObligation: IPersistedRecurringObligationRef = {
-    tenant: 'contract-simulator',
-    obligationId: line.key,
-    chargeFamily: 'fixed',
-  };
 
   // Cover the whole invoice timeline plus one extra line-cadence period so
   // boundary periods (arrears due at the horizon edge) are always generated.
@@ -204,31 +273,46 @@ export function generateLineServicePeriods(
     { largestUnit: 'days' },
   ).days;
   const targetHorizonDays =
-    invoiceHorizonDays + monthsPerCycle(lineCycle) * 31 + 60;
+    invoiceHorizonDays + monthsPerCycle(streamCycle) * 31 + 60;
 
-  const common = {
-    asOf,
-    materializedAt: asOf,
-    billingCycle: lineCycle,
-    sourceObligation,
-    duePosition,
-    sourceRuleVersion: SIMULATOR_SOURCE_RULE_VERSION,
-    sourceRunKey: `simulation-${scenarioId}`,
-    targetHorizonDays,
-    replenishmentThresholdDays: 30,
-  } as const;
+  return contractLineRecurringStreams(line, line.prepaid_block).map(
+    ({ stream, family, duePosition }) => {
+      const sourceObligation: IPersistedRecurringObligationRef = {
+        tenant: 'contract-simulator',
+        obligationId: line.key,
+        chargeFamily: family,
+      };
+      const common = {
+        asOf,
+        materializedAt: asOf,
+        billingCycle: lineCycle,
+        sourceObligation,
+        duePosition,
+        sourceRuleVersion: SIMULATOR_SOURCE_RULE_VERSION,
+        sourceRunKey: `simulation-${scenarioId}`,
+        targetHorizonDays,
+        replenishmentThresholdDays: 30,
+      } as const;
 
-  return cadenceOwner === 'contract'
-    ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
-    : materializeClientCadenceServicePeriods({
-        ...common,
-        anchorSettings: {
-          dayOfMonth: invoiceSchedule.anchor.day_of_month,
-          monthOfYear: invoiceSchedule.anchor.month_of_year,
-          dayOfWeek: invoiceSchedule.anchor.day_of_week,
-          referenceDate: invoiceSchedule.anchor.reference_date,
-        },
-      }).records;
+      return {
+        stream,
+        records:
+          cadenceOwner === 'contract'
+            ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
+            : materializeClientCadenceServicePeriods({
+                ...common,
+                billingCycle: streamCycle,
+                anchorSettings: {
+                  dayOfMonth: invoiceSchedule.anchor.day_of_month,
+                  monthOfYear: invoiceSchedule.anchor.month_of_year,
+                  dayOfWeek: invoiceSchedule.anchor.day_of_week,
+                  referenceDate: invoiceSchedule.anchor.reference_date,
+                },
+                historicalCycles: scheduleHistoricalCycles(invoiceSchedule),
+              }).records,
+      };
+    },
+  );
 }
 
 export interface ServicePeriodAssignment {
@@ -249,24 +333,40 @@ export function assignServicePeriodsToInvoicePeriods(
 ): ServicePeriodAssignment[] {
   const assignments: ServicePeriodAssignment[] = [];
 
+  // Invoice windows are contiguous and non-overlapping, so index them once by
+  // start date and binary-search each boundary: O((n + m) log n) rather than a
+  // scan of every window per service period.
+  const windows = invoicePeriods
+    .map((candidate) => ({
+      index: candidate.index,
+      start: toISODate(toPlainDate(candidate.startDate)),
+      end: toISODate(toPlainDate(candidate.endDateExclusive)),
+    }))
+    .sort((left, right) => (left.start < right.start ? -1 : left.start > right.start ? 1 : 0));
+
   for (const record of records) {
-    const boundary =
+    const boundary = toISODate(
       record.duePosition === 'advance'
         ? toPlainDate(record.servicePeriod.start)
-        : toPlainDate(record.servicePeriod.end);
-
-    const period = invoicePeriods.find(
-      (candidate) =>
-        Temporal.PlainDate.compare(toPlainDate(candidate.startDate), boundary) <=
-          0 &&
-        Temporal.PlainDate.compare(
-          boundary,
-          toPlainDate(candidate.endDateExclusive),
-        ) < 0,
+        : toPlainDate(record.servicePeriod.end),
     );
 
-    if (period) {
-      assignments.push({ periodIndex: period.index, record });
+    // Last window starting on or before the boundary.
+    let low = 0;
+    let high = windows.length - 1;
+    let found = -1;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      if (windows[mid].start <= boundary) {
+        found = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    if (found >= 0 && boundary < windows[found].end) {
+      assignments.push({ periodIndex: windows[found].index, record });
     }
   }
 

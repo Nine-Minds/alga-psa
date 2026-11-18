@@ -115,6 +115,9 @@ const BUNDLE_UTILS = 'packages/tickets/src/actions/ticketBundleUtils.ts';
 const BUNDLE_ACTIONS = 'packages/tickets/src/actions/ticketBundleActions.ts';
 
 const responseStateFields = ['previousResponseState', 'newResponseState'] as const;
+// Schema-optional, but the notification subscribers can only stay silent when the
+// emitter actually sends them (alga-2026-0002907).
+const suppressionFields = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
 function responseState(
   site: string,
   previousState: 'awaiting_client' | 'awaiting_internal' | null,
@@ -152,6 +155,8 @@ export const ticketContracts = {
             boardId: ticket.board_id,
             priorityId: ticket.priority_id,
             clientId: ticket.client_id,
+            dueDate: new Date('2026-12-31T17:00:00.000Z'),
+            ticketOrigin: 'api',
             externalLinks: [
               {
                 link_id: 'ffffffff-ffff-4fff-8fff-000000000001',
@@ -162,7 +167,10 @@ export const ticketContracts = {
                 relationship: 'tracks',
               },
             ],
+            suppressContactNotifications: true,
+            suppressInternalNotifications: true,
           }),
+        expectFields: [...suppressionFields, 'dueDate', 'ticketOrigin'],
       },
       {
         site: `${TICKET_SERVICE}#createFromAsset`,
@@ -174,11 +182,15 @@ export const ticketContracts = {
             boardId: ticket.board_id,
             priorityId: ticket.priority_id,
             clientId: ticket.client_id,
+            suppressContactNotifications: true,
+            suppressInternalNotifications: false,
           }),
+        expectFields: suppressionFields,
       },
       {
         site: 'shared/rmm/alerts/ticketCreatedEvent.ts#publishRmmTicketCreated',
         build: () => buildRmmTicketCreatedPayload({ ticketId: ticket.ticket_id!, source: 'rmm_alert' }),
+        expectFields: ['ticketOrigin'],
         ctx: { actor: { actorType: 'SYSTEM' } },
       },
       {
@@ -188,6 +200,40 @@ export const ticketContracts = {
             { tenantId: IDS.tenant, ticketId: ticket.ticket_id!, userId: IDS.user, metadata: createdMetadata },
             { suppressContactNotifications: true }
           ),
+      },
+      {
+        // A recurring-generated ticket: the generator hands the schedule ids down as payload extras.
+        site: `${MODEL_PUBLISHER}#publishTicketCreated`,
+        build: () =>
+          buildModelPublisherTicketCreatedPayload(
+            {
+              tenantId: IDS.tenant,
+              ticketId: ticket.ticket_id!,
+              userId: IDS.user,
+              metadata: { ...createdMetadata, dueDate: '2026-12-31T17:00:00.000Z', ticketOrigin: 'recurring' },
+            },
+            {
+              suppressContactNotifications: true,
+              recurrence: { definitionId: 'rrrrrrrr-rrrr-4rrr-8rrr-000000000001', occurrenceId: 'oooooooo-oooo-4ooo-8ooo-000000000001', occurrenceDate: '2026-12-31' },
+            }
+          ),
+        expectFields: ['dueDate', 'ticketOrigin', 'recurrence'],
+      },
+      {
+        // Inbound-email outbox path: metadata from TicketModel carries the due date and origin.
+        site: `${OUTBOX_PUBLISHER}#publishTicketCreated`,
+        publishPath: 'rawPublishEvent',
+        build: () =>
+          withOutboxOccurredAt(
+            buildInboundPublisherTicketCreatedPayload({
+              tenantId: IDS.tenant,
+              ticketId: ticket.ticket_id!,
+              userId: IDS.user,
+              metadata: { ...createdMetadata, dueDate: null, ticketOrigin: 'inbound_email' },
+            }),
+            HARNESS_EVENT_TIMESTAMP
+          ),
+        expectFields: ['dueDate', 'ticketOrigin'],
       },
       {
         site: `${SERVER_PUBLISHER}#publishTicketCreated`,

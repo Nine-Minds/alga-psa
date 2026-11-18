@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 
-export type ExportedInvoiceAction = 'unfinalize' | 'delete' | 'edit';
+export type ExportedInvoiceAction = 'unfinalize' | 'delete' | 'edit' | 'change_tax_source';
 
 export async function findInvoiceExportInProgress(
   knex: Knex,
@@ -20,7 +20,9 @@ const BLOCK_MESSAGES: Record<ExportedInvoiceAction, string> = {
     'This invoice is synced to an accounting system — it cannot be reopened. Void it and reissue, or issue a credit note for the difference.',
   delete: 'This invoice is synced to an accounting system — void it instead of deleting.',
   edit:
-    'This invoice is synced to an accounting system — adjustments are locked. Void it and reissue, or issue a credit note for the difference.'
+    'This invoice is synced to an accounting system — adjustments are locked. Void it and reissue, or issue a credit note for the difference.',
+  change_tax_source:
+    'This invoice is synced to an accounting system — its tax source cannot change. Void it and reissue.'
 };
 
 export async function findInvoiceAccountingMapping(

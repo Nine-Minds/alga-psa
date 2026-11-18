@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -17,7 +16,6 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('clientPortal.requestServices.detail.title', { defaultValue: 'Service Request' }),
   };
 }
-import { parseVisibilityRules } from '../../../../lib/service-requests/formVisibility';
 import { ServiceRequestIcon } from '../ServiceRequestIcon';
 import { RequestServiceForm } from './RequestServiceForm';
 
@@ -26,8 +24,6 @@ interface RequestServiceDetailPageProps {
     definitionId: string;
   }>;
   searchParams?: Promise<{
-    submitted?: string;
-    ticketId?: string;
     error?: string;
   }>;
 }
@@ -44,10 +40,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
     notFound();
   }
 
-  const submittedRequestId =
-    typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;
-  const submittedTicketId =
-    typeof resolvedSearchParams?.ticketId === 'string' ? resolvedSearchParams.ticketId : null;
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
@@ -58,12 +50,9 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
-  // Rules only reach the browser for the advanced provider; in CE the detail is null
-  // for such definitions, so this stays disabled and no rules are sent.
-  const visibilityRules =
-    detail.formBehaviorProvider === 'advanced'
-      ? (parseVisibilityRules(detail.formBehaviorConfig) ?? [])
-      : [];
+  // Rules arrive pre-parsed from the server and are only non-empty for the
+  // advanced provider, so nothing else about form behavior reaches this page.
+  const visibilityRules = detail.visibilityRules;
   const visibilityEnabled = visibilityRules.length > 0;
   const visibilityContext = visibilityEnabled
     ? await getRequestServiceVisibilityContextAction()
@@ -75,34 +64,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         <h1 className="text-2xl font-semibold">{detail.title}</h1>
         <div className="mt-1 flex items-center gap-2 text-sm text-[rgb(var(--color-text-600))]">
           <ServiceRequestIcon iconName={detail.icon} className="h-4 w-4" />
-          <span>{t('detail.version', { version: detail.versionNumber })}</span>
         </div>
       </div>
       {detail.description && (
         <p className="text-sm text-[rgb(var(--color-text-700))]">{detail.description}</p>
-      )}
-
-      {submittedRequestId && (
-        <Alert variant="success">
-          <AlertTitle>{t('detail.submitted')}</AlertTitle>
-          <AlertDescription>
-            <p>
-              {t('detail.requestIdLabel')}
-              <span className="font-mono">{submittedRequestId}</span>
-            </p>
-            {submittedTicketId && (
-              <p>
-                {t('detail.ticketIdLabel')}
-                <Link
-                  href={`/client-portal/tickets/${submittedTicketId}`}
-                  className="font-mono underline"
-                >
-                  {submittedTicketId}
-                </Link>
-              </p>
-            )}
-          </AlertDescription>
-        </Alert>
       )}
 
       {submitError && (
@@ -150,19 +115,6 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
               requiredField: t('detail.requiredField'),
             }}
           />
-        )}
-      </section>
-
-      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
-        <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
-        {Object.keys(detail.initialValues).length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-600))]">
-            {t('detail.noInitialValues')}
-          </p>
-        ) : (
-          <pre className="text-xs bg-white p-2 rounded overflow-auto">
-            {JSON.stringify(detail.initialValues, null, 2)}
-          </pre>
         )}
       </section>
     </div>

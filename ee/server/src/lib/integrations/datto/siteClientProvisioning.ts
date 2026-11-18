@@ -16,9 +16,7 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
 import { resolveProductCode } from '@alga-psa/types';
 import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
@@ -127,27 +125,24 @@ async function provisionOne(
   } else {
     outcome = 'created';
     const now = new Date().toISOString();
-    const [inserted] = await db.table('clients')
-      .insert({
-        tenant,
+    // The shared creation seam does the same provisioning the client actions
+    // do, in the same transaction. The batch already resolved the tenant's
+    // currency and product code, so both are passed through.
+    const inserted = await createClientWithDefaults(
+      trx,
+      tenant,
+      {
         client_name: clientName,
         client_type: 'company',
         is_inactive: false,
-        default_currency_code: args.defaultCurrency,
-        created_at: now,
-        updated_at: now,
-      })
-      .returning(['client_id', 'client_name', 'created_at']);
+      },
+      { defaultCurrencyCode: args.defaultCurrency, skipTaxSettings: args.skipTaxSettings }
+    );
     client = {
       client_id: String(inserted.client_id),
       client_name: String(inserted.client_name),
       created_at: inserted.created_at ? new Date(inserted.created_at).toISOString() : now,
     };
-
-    // The same provisioning the client actions do, in the same transaction.
-    await ensureClientDefaultBillingProfile(trx, tenant, client.client_id, { clientName: client.client_name });
-    await ensureDefaultContractForClientIfBillingConfigured(trx, { tenant, clientId: client.client_id });
-    if (!args.skipTaxSettings) await createDefaultTaxSettings(trx, tenant, client.client_id);
   }
 
   // Only claim a site that is still unmapped: an admin may have mapped it

@@ -100,15 +100,30 @@ export type TicketCreatedExternalLink = {
 };
 
 /** REST API creation (TicketService.create / createFromAsset). */
-export function buildApiTicketCreatedPayload(input: {
-  ticketId: string;
-  userId?: string;
-  createdAt: string;
-  boardId: string;
-  priorityId?: string | null;
-  clientId?: string | null;
-  externalLinks?: readonly TicketCreatedExternalLink[];
-}) {
+/** `dueDate` / `ticketOrigin` for TICKET_CREATED; each key is only present when the caller supplied it. */
+function ticketDueDateAndOriginFields(input: { dueDate?: Date | string | null; ticketOrigin?: string | null }) {
+  return {
+    ...(input.dueDate !== undefined
+      ? { dueDate: input.dueDate ? new Date(input.dueDate).toISOString() : null }
+      : {}),
+    ...(input.ticketOrigin ? { ticketOrigin: input.ticketOrigin } : {}),
+  };
+}
+
+export function buildApiTicketCreatedPayload(
+  input: TicketNotificationSuppression & {
+    ticketId: string;
+    userId?: string;
+    createdAt: string;
+    boardId: string;
+    priorityId?: string | null;
+    clientId?: string | null;
+    /** `tickets.due_date` as stored (Date or ISO string); null/absent when none. */
+    dueDate?: Date | string | null;
+    ticketOrigin?: string | null;
+    externalLinks?: readonly TicketCreatedExternalLink[];
+  }
+) {
   return builtWorkflowPayload('TICKET_CREATED', {
     ticketId: input.ticketId,
     userId: input.userId,
@@ -118,6 +133,7 @@ export function buildApiTicketCreatedPayload(input: {
     board_id: input.boardId,
     priority_id: input.priorityId,
     client_id: input.clientId,
+    ...ticketDueDateAndOriginFields(input),
     ...(input.externalLinks && input.externalLinks.length > 0
       ? {
           externalLinks: input.externalLinks.map((link) => ({
@@ -133,12 +149,25 @@ export function buildApiTicketCreatedPayload(input: {
           })),
         }
       : {}),
+    ...suppressionFields(input),
   });
 }
 
-/** RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). */
-export function buildRmmTicketCreatedPayload(input: { ticketId: string; source: string }) {
-  return builtWorkflowPayload('TICKET_CREATED', { ticketId: input.ticketId, source: input.source });
+/**
+ * RMM alert ticket creation (shared/rmm/alerts/ticketCreatedEvent.ts). RMM inserts set neither column, so
+ * the stored values are the column defaults: origin internal, no due date. Those are the defaults here too.
+ */
+export function buildRmmTicketCreatedPayload(input: {
+  ticketId: string;
+  source: string;
+  dueDate?: Date | string | null;
+  ticketOrigin?: string | null;
+}) {
+  return builtWorkflowPayload('TICKET_CREATED', {
+    ticketId: input.ticketId,
+    source: input.source,
+    ...ticketDueDateAndOriginFields({ dueDate: input.dueDate ?? null, ticketOrigin: input.ticketOrigin ?? 'internal' }),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -502,6 +531,12 @@ export type TicketCommentAddedInput = {
   thread_id?: string | null;
   parent_comment_id?: string | null;
   is_reply?: boolean;
+  /**
+   * Shared-work audience of the comment's thread; omitted for native comments. Every
+   * non-`requester` audience goes with `comment.isInternal: true`, so the existing
+   * requester-email filters suppress it.
+   */
+  collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   suppressContactNotifications?: boolean;
   suppressInternalNotifications?: boolean;
 };
@@ -523,8 +558,16 @@ export function buildTicketCommentAddedPayload(input: TicketCommentAddedInput) {
       thread_id: input.thread_id,
       parent_comment_id: input.parent_comment_id,
       is_reply: input.is_reply,
+      collaboration_audience: input.collaboration_audience,
     }),
-    comment: { id: input.commentId, ...withDefined(input.comment) },
+    comment: {
+      id: input.commentId,
+      ...withDefined(input.comment),
+      // The audience decides visibility: every non-requester audience is internal, whatever the caller passed.
+      ...(input.collaboration_audience
+        ? { audience: input.collaboration_audience, isInternal: input.collaboration_audience !== 'requester' }
+        : {}),
+    },
     ...withDefined({
       suppressContactNotifications: input.suppressContactNotifications,
       suppressInternalNotifications: input.suppressInternalNotifications,

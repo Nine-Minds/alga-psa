@@ -184,6 +184,7 @@ export async function activateHourBlocksForFinalizedInvoice(
       }
 
       const isContractBlock = Boolean(block.contract_line_id);
+      const isCadenceBlock = isContractBlock && block.service_period_record_id != null && block.issuance_id == null;
       let remainingMinutes = totalMinutes;
       let expirationUpdate: { expiration_date: string | null } | Record<string, never> = {};
       let purchaseAmount = Math.round(quantity * unitPrice);
@@ -199,7 +200,9 @@ export async function activateHourBlocksForFinalizedInvoice(
         const config = await tenantScopedTable(trx, tenant, 'contract_line_prepaid_blocks')
           .where({ contract_line_id: block.contract_line_id })
           .first('expiry_months');
-        if (config && invoiceDate) {
+        // A cadence block's validity is a count of cadence periods fixed when it
+        // was minted; it has no invoice-date expiry clock and no expiry follow-on.
+        if (config && invoiceDate && !isCadenceBlock) {
           expirationUpdate = {
             expiration_date: computePrepaidBlockExpirationDate(invoiceDate, config.expiry_months as number | null),
           };
@@ -257,7 +260,7 @@ export async function activateHourBlocksForFinalizedInvoice(
         },
       });
 
-      if (isContractBlock) {
+      if (isContractBlock && !isCadenceBlock) {
         await scheduleExpiryIssuanceForActivatedBlock(
           trx,
           tenant,

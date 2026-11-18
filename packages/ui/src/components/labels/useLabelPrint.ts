@@ -18,21 +18,25 @@ export interface LinkedAssetChoice {
   assetId: string;
   assetTag: string | null;
   name?: string | null;
+  /** What the tag would print for this item; null = not in open custody. */
+  custody?: { custodyLocation: string | null; nextAction: string | null } | null;
 }
 
-export interface LabelPrintRequest {
-  labelClass: LabelClass;
-  ids: string[];
-  templateId?: string;
-  layout?: unknown;
-  overrides?: { title?: string; detail?: string };
+/** One label: a record and, for a ticket work tag, the linked item the label is about. */
+export interface LabelSubject {
+  /** Wins over the request's default `labelClass`; required when the request has none. */
+  labelClass?: LabelClass;
+  recordId: string;
   linkedAssetId?: string;
 }
 
-/** A mixed print: labels of several classes in ONE PDF, in this order (C6 staging bulk print). */
-export interface LabelPrintItemsRequest {
-  items: Array<{ labelClass: LabelClass; id: string }>;
+export interface LabelPrintRequest {
+  /** Default class for subjects that name none. Subjects of several classes print in one PDF, in order. */
+  labelClass?: LabelClass;
+  labels: LabelSubject[];
+  templateId?: string;
   layout?: unknown;
+  overrides?: { title?: string; detail?: string };
 }
 
 export type LabelPrintOutcome =
@@ -72,7 +76,7 @@ export function useLabelPrint() {
     return body.assets ?? [];
   }, []);
 
-  const send = useCallback(async (body: LabelPrintRequest | LabelPrintItemsRequest, requested: number): Promise<LabelPrintOutcome> => {
+  const send = useCallback(async (body: LabelPrintRequest): Promise<LabelPrintOutcome> => {
     setIsPrinting(true);
     try {
       const response = await fetch('/api/labels/pdf', {
@@ -91,7 +95,7 @@ export function useLabelPrint() {
       const opened = window.open(blobUrl, '_blank');
       return {
         status: 'printed',
-        printed: requested - skipped,
+        printed: body.labels.length - skipped,
         skipped,
         blobUrl,
         popupBlocked: !opened,
@@ -108,8 +112,5 @@ export function useLabelPrint() {
     }
   }, []);
 
-  const print = useCallback((request: LabelPrintRequest) => send(request, request.ids.length), [send]);
-  const printItems = useCallback((request: LabelPrintItemsRequest) => send(request, request.items.length), [send]);
-
-  return { print, printItems, loadTemplates, loadLinkedAssets, isPrinting };
+  return { print: send, loadTemplates, loadLinkedAssets, isPrinting };
 }

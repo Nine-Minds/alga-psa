@@ -33,6 +33,21 @@ vi.mock('@alga-psa/db', async () => {
   return { ...actual, createTenantKnex: vi.fn(async () => ({ knex: hoisted.db, tenant: hoisted.tenant })) };
 });
 
+// The wizard publishes CONTRACT_CREATED after commit. Publishing is not what
+// these tests prove, and an unreachable Redis would hang every submission.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+
+import { getContractMonthlyFixedValuesByContract } from '../../../shared/billingClients/contractMonthlyValue';
+import { contractLineRecurringStreams } from '../../../shared/billingClients/contractLineTimingRule';
+
 const wizard = enabled ? await import('../src/actions/contractWizardActions') : (null as any);
 
 const messageOf = (value: any): string => value?.actionError ?? value?.permissionError ?? '';
@@ -44,6 +59,7 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
   let svcA: string;
   let svcB: string;
   let svcProduct: string;
+  let svcFixed: string;
   const contractIds: string[] = [];
   const templateIds: string[] = [];
 
@@ -58,12 +74,12 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
     tenant = uuidv4();
     hoisted.tenant = tenant;
     clientId = uuidv4();
-    svcA = uuidv4(); svcB = uuidv4(); svcProduct = uuidv4();
+    svcA = uuidv4(); svcB = uuidv4(); svcProduct = uuidv4(); svcFixed = uuidv4();
     const typeId = uuidv4();
     await db('tenants').insert({ tenant, client_name: 'PBW Tenant', email: 'pbw@test.local', billing_source: 'test' });
     await db('clients').insert({ tenant, client_id: clientId, client_name: 'PBW Client', default_currency_code: 'EUR' });
     await db('service_types').insert({ id: typeId, tenant, name: 'PBW Type', is_active: true, order_number: 1 });
-    for (const [id, name, method] of [[svcA, 'Remote Support', 'hourly'], [svcB, 'Onsite Support', 'hourly'], [svcProduct, 'Router', 'fixed']] as const) {
+    for (const [id, name, method] of [[svcA, 'Remote Support', 'hourly'], [svcB, 'Onsite Support', 'hourly'], [svcProduct, 'Router', 'fixed'], [svcFixed, 'Managed Services', 'fixed']] as const) {
       await db('service_catalog').insert({
         service_id: id, tenant, service_name: name, custom_service_type_id: typeId, billing_method: method,
         default_rate: 11000, unit_of_measure: method === 'hourly' ? 'hour' : 'month', category_id: null, tax_rate_id: null,
@@ -182,5 +198,74 @@ describe.runIf(enabled)('Prepaid Block lines in the contract and template wizard
     expect(Number(row.block_price)).toBe(440000);
     const svcRows = await db('contract_template_line_services').where({ tenant, template_line_id: templateLine.template_line_id });
     expect(svcRows.map((r) => r.service_id).sort()).toEqual([svcA, svcB].sort());
+  });
+  // Contract-wide timing = advance with a cadence Prepaid Block line: the Hourly block line is
+  // arrears-only (timing is per charge, not per line), and its block fee goes in advance through
+  // the `prepaid_block` stream. Regression: the wizard used to stamp the contract-wide advance on
+  // the block line and the contract failed validation.
+  const cadenceBlock = { ...block, issue_mode: 'cadence' as const, block_minutes: 600, block_price: 150000, expiry_months: null, trigger_on_expiry: false };
+
+  it('client wizard: contract-wide advance + cadence block saves; line is arrears, prepaid_block stream is advance', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      billing_timing: 'advance',
+      billing_frequency: 'monthly',
+      prepaid_block_lines: [{ name: 'Cadence block', services: [{ service_id: svcA, hourly_rate: 15000 }], block: cadenceBlock }],
+    }));
+    expect(messageOf(result)).toBe('');
+    contractIds.push(result.contract_id);
+
+    const line = await db('contract_lines').where({ tenant, contract_id: result.contract_id, contract_line_name: 'Cadence block' }).first();
+    expect(line.billing_timing).toBe('arrears');
+    const config = await db('contract_line_prepaid_blocks').where({ tenant, contract_line_id: line.contract_line_id }).first();
+    expect(config.issue_mode).toBe('cadence');
+    const streams = contractLineRecurringStreams(line, config);
+    expect(streams.map((s) => [s.stream, s.duePosition])).toEqual([['line', 'arrears'], ['prepaid_block', 'advance']]);
+  });
+
+  it('template wizard: contract-wide advance + cadence block saves; line is arrears, prepaid_block stream is advance', async () => {
+    const result = await wizard.createContractTemplateFromWizard({
+      contract_name: `Tpl cadence ${uuidv4().slice(0, 6)}`,
+      billing_frequency: 'monthly',
+      billing_timing: 'advance',
+      currency_code: 'USD',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [],
+      prepaid_block_lines: [{ name: 'Tpl cadence block', services: [{ service_id: svcA }], block: cadenceBlock }],
+    });
+    expect(messageOf(result)).toBe('');
+    templateIds.push(result.contract_id);
+
+    const templateLine = await db('contract_template_lines').where({ tenant, template_id: result.contract_id, template_line_name: 'Tpl cadence block' }).first();
+    expect(templateLine.billing_timing).toBe('arrears');
+    const row = await db('contract_template_line_prepaid_blocks').where({ tenant, template_line_id: templateLine.template_line_id }).first();
+    expect(row.issue_mode).toBe('cadence');
+    const streams = contractLineRecurringStreams({ contract_line_type: templateLine.line_type, billing_timing: templateLine.billing_timing }, row);
+    expect(streams.map((s) => [s.stream, s.duePosition])).toEqual([['line', 'arrears'], ['prepaid_block', 'advance']]);
+  });
+  it('acceptance contract: the monthly estimate counts the fixed fee and the cadence block fee ($3,000)', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      billing_timing: 'advance',
+      billing_frequency: 'monthly',
+      fixed_lines: [{ line_key: 'fixed-1', billing_frequency: 'monthly', base_rate: 150000, services: [{ service_id: svcFixed, pricing_basis: 'bundle' }] }],
+      prepaid_block_lines: [{ name: 'Cadence block', services: [{ service_id: svcA, hourly_rate: 15000 }], block: cadenceBlock }],
+    }));
+    expect(messageOf(result)).toBe('');
+    contractIds.push(result.contract_id);
+
+    const value = (await getContractMonthlyFixedValuesByContract(db, tenant, [result.contract_id])).get(result.contract_id)!;
+    expect(value.monthlyValueCents).toBe(300000);
+    expect(value.hasCadencePrepaidBlock).toBe(true);
+  });
+
+  it('a consumption block adds nothing to the monthly estimate', async () => {
+    const result = await wizard.createClientContractFromWizard(clientSubmission({
+      prepaid_block_lines: [{ services: [{ service_id: svcA, hourly_rate: 12000 }], block }],
+    }));
+    contractIds.push(result.contract_id);
+    const value = (await getContractMonthlyFixedValuesByContract(db, tenant, [result.contract_id])).get(result.contract_id)!;
+    expect(value.monthlyValueCents).toBe(0);
+    expect(value.hasCadencePrepaidBlock).toBe(false);
   });
 });

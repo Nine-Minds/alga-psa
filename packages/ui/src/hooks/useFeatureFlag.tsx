@@ -2,31 +2,19 @@
 // TODO: getFeatureFlags vs getFeatureFlag typo in PostHog API
 'use client';
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePostHog } from 'posthog-js/react';
+import {
+  FeatureFlagBootstrapProvider,
+  useFeatureFlagBootstrap,
+  type FeatureFlagValue,
+} from '../capability/bootstrapContext';
 
-type FeatureFlagValue = boolean | string;
-type FeatureFlagBootstrap = Record<string, FeatureFlagValue>;
-
-const FeatureFlagBootstrapContext = createContext<FeatureFlagBootstrap>({});
-
-export function FeatureFlagBootstrapProvider({
-  children,
-  initialFeatureFlags,
-}: {
-  children: ReactNode;
-  initialFeatureFlags: FeatureFlagBootstrap;
-}) {
-  return (
-    <FeatureFlagBootstrapContext.Provider value={initialFeatureFlags}>
-      {children}
-    </FeatureFlagBootstrapContext.Provider>
-  );
-}
+export { FeatureFlagBootstrapProvider, useFeatureFlagBootstrap };
 
 function useBootstrappedFeatureFlag(flagKey: string): FeatureFlagValue | undefined {
-  const initialFeatureFlags = useContext(FeatureFlagBootstrapContext);
+  const initialFeatureFlags = useFeatureFlagBootstrap();
   return Object.prototype.hasOwnProperty.call(initialFeatureFlags, flagKey)
     ? initialFeatureFlags[flagKey]
     : undefined;
@@ -93,11 +81,25 @@ interface FeatureFlagOptions {
 export function useFeatureFlag(
   flagKey: string,
   options: FeatureFlagOptions = {}
-): { enabled: boolean; loading: boolean; error: Error | null } {
+): {
+  enabled: boolean;
+  loading: boolean;
+  error: Error | null;
+  /**
+   * Whether the flag was actually evaluated (forced, bootstrapped, or answered
+   * by PostHog). False when PostHog is missing, blocked, or has not loaded flags:
+   * `enabled` then only reflects the default, which callers that gate a whole
+   * screen must not mistake for the flag being off.
+   */
+  resolved: boolean;
+} {
   const { data: session } = useSession();
   const posthog = usePostHog();
   const forcedValue = getForcedFlagValue(flagKey);
   const bootstrappedValue = useBootstrappedFeatureFlag(flagKey);
+  const [resolved, setResolved] = useState<boolean>(
+    featureFlagsDisabled || forcedValue !== undefined || bootstrappedValue !== undefined
+  );
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (featureFlagsDisabled) return true;
     if (forcedValue !== undefined) return coerceForcedBoolean(flagKey, forcedValue);
@@ -114,6 +116,7 @@ export function useFeatureFlag(
       setEnabled(true);
       setLoading(false);
       setError(null);
+      setResolved(true);
       return;
     }
 
@@ -121,6 +124,20 @@ export function useFeatureFlag(
       setEnabled(coerceForcedBoolean(flagKey, forcedValue));
       setLoading(false);
       setError(null);
+      setResolved(true);
+      return;
+    }
+
+    // A bootstrapped flag was decided by the server for the tenant
+    // (distinctId `tenant_<id>`, group `tenant`). posthog-js evaluates for the
+    // person (`anonymous_<tenant>_<user>`) with no group, so a group-targeted or
+    // percentage rule can answer differently; re-deciding it here would flip
+    // the first-paint value on hydration. The server value is authoritative.
+    if (bootstrappedValue !== undefined) {
+      setEnabled(Boolean(bootstrappedValue));
+      setLoading(false);
+      setError(null);
+      setResolved(true);
       return;
     }
 
@@ -139,6 +156,8 @@ export function useFeatureFlag(
         void distinctId;
 
         const flagValue = posthog.isFeatureEnabled(flagKey);
+        // undefined: PostHog has not loaded flags (blocked, offline, still loading).
+        if (flagValue !== undefined) setResolved(true);
 
         if (process.env.NODE_ENV === 'development') {
           console.log(`[FeatureFlag] ${flagKey}:`, {
@@ -160,11 +179,9 @@ export function useFeatureFlag(
       }
     };
 
-    const timeoutId = bootstrappedValue === undefined
-      ? setTimeout(() => {
-          void checkFlag();
-        }, 200)
-      : undefined;
+    const timeoutId = setTimeout(() => {
+      void checkFlag();
+    }, 200);
 
     const unsubscribeFromFeatureFlags = posthog.onFeatureFlags(() => {
       void checkFlag();
@@ -173,19 +190,19 @@ export function useFeatureFlag(
     if (options.pollInterval && options.pollInterval > 0) {
       const interval = setInterval(checkFlag, options.pollInterval);
       return () => {
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
         clearInterval(interval);
         unsubscribeFromFeatureFlags();
       };
     }
 
     return () => {
-      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       unsubscribeFromFeatureFlags();
     };
   }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval, forcedValue, bootstrappedValue]);
 
-  return { enabled, loading, error };
+  return { enabled, loading, error, resolved };
 }
 
 export function useFeatureFlagVariant(

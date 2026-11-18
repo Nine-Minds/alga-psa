@@ -168,7 +168,7 @@ describe('live ticket update helpers', () => {
       updatedAt: '2026-05-07T12:00:00.000Z',
     });
 
-    const [, payloadJson] = publishMock.mock.calls.at(-1) ?? [];
+    const [, payloadJson] = publishMock.mock.calls[0] ?? [];
     const payload = JSON.parse(payloadJson);
 
     expect(payload).toEqual({
@@ -184,4 +184,28 @@ describe('live ticket update helpers', () => {
     expect(JSON.stringify(payload)).not.toContain('Original');
     expect(JSON.stringify(payload)).not.toContain('Resolved');
   });
+
+  it('does not publish ticket ids to the tenant room without recipient ticket-read authorization', async () => {
+    await publishTicketUpdate({ tenantId: 'tenant-1', ticketId: 'ticket-9', updatedFields: ['status_id'],
+      updatedBy: { userId: 'user-1', displayName: 'Pat Agent' }, updatedAt: '2026-05-07T12:00:00.000Z' });
+    expect(publishMock.mock.calls.some(([channel]) => channel.endsWith('ticket-list-changes:tenant-1'))).toBe(false);
+  });
+  it('publishes a qualified MSP actor with a null local user and rejects mixed/cross-owner identities', async () => {
+    const tenantId = '00000000-0000-4000-8000-000000000001';
+    const actorReference = { ownerTenantId: tenantId, referenceId: '00000000-0000-4000-8000-000000000002',
+      tenantId: '00000000-0000-4000-8000-000000000003', userId: '00000000-0000-4000-8000-000000000004',
+      displayName: 'Morgan', organizationName: 'Partner' };
+    const params = { tenantId, ticketId: 'ticket-1', updatedFields: ['title'], updatedAt: '2026-09-06T20:00:00.000Z',
+      updatedBy: { userId: null, displayName: 'Ignored unqualified label', actorReference } };
+    await publishTicketUpdate(params);
+    expect(JSON.parse(publishMock.mock.calls[0][1]).updatedBy)
+      .toEqual({ userId: null, displayName: 'Morgan (Partner)', actorReference });
+    publishMock.mockClear();
+    await expect(publishTicketUpdate({ ...params, updatedBy: { ...params.updatedBy, userId: actorReference.userId } } as any))
+      .rejects.toThrow('Invalid ticket live update actor');
+    await expect(publishTicketUpdate({ ...params, tenantId: actorReference.tenantId }))
+      .rejects.toThrow('Invalid ticket live update actor');
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
 });

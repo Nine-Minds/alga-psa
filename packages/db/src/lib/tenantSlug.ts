@@ -71,6 +71,35 @@ export async function getTenantIdBySlug(slug: string): Promise<string | null> {
 }
 
 /**
+ * Resolves a tenant slug to the organization's display name (`tenants.client_name`).
+ * Returns null when the slug is invalid, matches no tenant, or the tenant has no name.
+ */
+export async function getTenantDisplayNameBySlug(slug: string): Promise<string | null> {
+  const tenantId = await getTenantIdBySlug(slug);
+  if (!tenantId) {
+    return null;
+  }
+
+  try {
+    const adminDb = await getAdminConnection();
+    const row = await tenantDb(adminDb, TENANT_SLUG_DISCOVERY_TENANT)
+      .unscoped<{ tenant: string; client_name: string | null }>('tenants', 'tenant display name for a validated public portal slug')
+      .select('client_name')
+      .where('tenant', tenantId)
+      .first();
+
+    const name = row?.client_name?.trim();
+    return name ? name : null;
+  } catch (error) {
+    console.error('[tenantSlug] Failed to resolve tenant display name', {
+      slug,
+      error: error instanceof Error ? error.message : error,
+    });
+    return null;
+  }
+}
+
+/**
  * Gets the tenant slug for a given tenant UUID.
  */
 export async function getTenantSlugForTenant(tenantId: string): Promise<string> {

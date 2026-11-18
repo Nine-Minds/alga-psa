@@ -29,6 +29,7 @@ const inList = (values) => values.map((v) => `'${v}'`).join(', ');
 async function addCheck(knex, table, name, expression) {
   const r = await knex.raw('SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass', [name, table]);
   if (r.rows.length === 0) {
+    // migration-lint: allow 2 - retroactive: CHECK added under a pg_constraint absence probe on stock_units; merged before the lint existed
     await knex.raw(`ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (${expression})`, [table, name]);
   }
 }
@@ -110,6 +111,7 @@ exports.up = async function up(knex) {
   if (!(await knex.schema.hasColumn('stock_units', 'allocated_staging_line_id'))) {
     await knex.schema.alterTable('stock_units', (table) => {
       table.uuid('allocated_staging_line_id').nullable();
+      // migration-lint: allow 1 - retroactive: knex builder index on stock_units inside the transaction, on a column added in the same step; merged before the lint existed
       table.index(['tenant', 'allocated_staging_line_id'], 'idx_stock_units_allocated_staging_line');
     });
   }

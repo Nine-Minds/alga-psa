@@ -6,6 +6,7 @@ const rolloutEnabledMock = vi.hoisted(() => vi.fn());
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
   isSelfHostLicensing: vi.fn(),
+  assertInstallationAiCredentialAllowed: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('openai', () => ({

@@ -48,7 +48,7 @@ function validationFailure(error: z.ZodError): ActionFailure {
 }
 
 const ruleInputSchema = z.object({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional(),
   isActive: z.boolean().default(true),
@@ -59,9 +59,9 @@ const ruleInputSchema = z.object({
 const windowInputSchema = z
   .object({
     name: z.string().min(1).max(255),
-    integrationId: z.string().uuid().nullable().optional(),
-    clientId: z.string().uuid().nullable().optional(),
-    assetId: z.string().uuid().nullable().optional(),
+    integrationId: z.string().guid().nullable().optional(),
+    clientId: z.string().guid().nullable().optional(),
+    assetId: z.string().guid().nullable().optional(),
     isActive: z.boolean().default(true),
     startsAt: z.string().datetime().nullable().optional(),
     endsAt: z.string().datetime().nullable().optional(),
@@ -174,7 +174,7 @@ export const updateRmmAlertRule = withAuth(
     const { knex } = await createTenantKnex();
     const [rule] = await tenantDb(knex, tenant).table('rmm_alert_rules')
       .where({ rule_id: input.ruleId })
-      .update(update)
+      .update({ ...update, updated_at: new Date().toISOString() })
       .returning('*');
     if (!rule) {
       return actionFailure('Rule not found', 'msp/integrations:errors.rmm.ruleNotFound');
@@ -305,6 +305,7 @@ export const updateRmmMaintenanceWindow = withAuth(
         starts_at: parsed.data.startsAt ?? null,
         ends_at: parsed.data.endsAt ?? null,
         recurrence: parsed.data.recurrence ? JSON.stringify(parsed.data.recurrence) : null,
+        updated_at: new Date().toISOString(),
       })
       .returning('*');
     if (!window) {
@@ -418,6 +419,7 @@ export const updateRmmAlertPollingSettings = withAuth(
            )`,
           [input.enabled, intervalMinutes]
         ),
+        updated_at: new Date().toISOString(),
       });
     if (!updated) {
       return actionFailure('Integration not found', 'msp/integrations:errors.rmm.integrationNotFound');

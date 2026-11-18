@@ -25,12 +25,14 @@ exports.up = async function up(knex) {
   await knex.raw(`ALTER TABLE ${TABLE_NAME} ADD COLUMN IF NOT EXISTS scope_key varchar(64)`);
 
   await knex.raw(`ALTER TABLE ${TABLE_NAME} DROP CONSTRAINT IF EXISTS ${SCOPE_TYPE_CHECK}`);
+  // migration-lint: allow 2 - retroactive: CHECK re-created after DROP IF EXISTS on document_template_assignments, a small settings table; merged before the lint existed
   await knex.raw(`
     ALTER TABLE ${TABLE_NAME} ADD CONSTRAINT ${SCOPE_TYPE_CHECK}
     CHECK (scope_type IN ('tenant','client','label_class'))
   `);
 
   await knex.raw(`ALTER TABLE ${TABLE_NAME} DROP CONSTRAINT IF EXISTS ${SCOPE_ID_CHECK}`);
+  // migration-lint: allow 2 - retroactive: CHECK re-created after DROP IF EXISTS on document_template_assignments, a small settings table; merged before the lint existed
   await knex.raw(`
     ALTER TABLE ${TABLE_NAME} ADD CONSTRAINT ${SCOPE_ID_CHECK}
     CHECK (
@@ -42,6 +44,7 @@ exports.up = async function up(knex) {
 
   // One default per (tenant, document_type, scope_type[, scope_key]) among rows without a scope_id.
   await knex.raw(`DROP INDEX IF EXISTS ${TENANT_SCOPE_INDEX}`);
+  // migration-lint: allow 1 - retroactive: unique index re-created inside the transaction on document_template_assignments, a small settings table; merged before the lint existed
   await knex.raw(`
     CREATE UNIQUE INDEX ${TENANT_SCOPE_INDEX}
     ON ${TABLE_NAME} (tenant, document_type, scope_type, (COALESCE(scope_key, '')))

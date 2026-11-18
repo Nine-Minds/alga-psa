@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Dupliquer",
       "archive": "Archiver",
-      "unarchive": "Désarchiver"
+      "unarchive": "Désarchiver",
+      "delete": "Supprimer"
     },
     "lifecycleLabels": {
       "published": "Publié",
@@ -150,7 +151,12 @@
         "priorityCalculated": "Priorité (calculée)",
         "selectImpactAndUrgency": "Sélectionner l'impact et l'urgence",
         "priorityFormula": "{{label}} (Impact {{impact}} x Urgence {{urgency}})",
-        "titleFieldKey": "Clé du champ de titre",
+        "ticketSubject": "Objet du ticket",
+        "ticketSubjectHelp": "Les réponses sont insérées lors de l'envoi de la demande. Laissez vide pour utiliser la première réponse.",
+        "insertField": "Insérer un champ",
+        "noInsertableFields": "Ce formulaire n'a pas encore de champ à insérer.",
+        "unknownFields": "Champ inconnu : {{fields}}",
+        "unknownFieldsBlocked": "Corrigez les champs inconnus dans l'objet du ticket ou le préfixe de description avant d'enregistrer.",
         "descriptionPrefix": "Préfixe de description",
         "save": "Enregistrer le routage des tickets"
       },
@@ -174,7 +180,50 @@
       "visibility": {
         "title": "Configuration de la visibilité",
         "config": "Configuration de la visibilité (objet JSON)",
-        "save": "Enregistrer la configuration de la visibilité"
+        "save": "Enregistrer la configuration de la visibilité",
+        "audience": {
+          "removedReferences": "Les sélections de public indisponibles ont été supprimées. Vérifiez et enregistrez le public.",
+          "reference_client_id": "Client",
+          "reference_client_tags": "Étiquette de client",
+          "reference_contact_id": "Contact",
+          "reference_contact_tags": "Étiquette de contact",
+          "reference_contact_group_id": "Groupe de clients",
+          "chooseTags": "Choisir des étiquettes",
+          "loadError": "Impossible de charger les options de public.",
+          "saveError": "Impossible d’enregistrer le public.",
+          "saved": "Public enregistré",
+          "convertedReadOnly": "Ce public migré est en lecture seule.",
+          "replace": "Remplacer par un nouveau public",
+          "clientTags": "Étiquettes de client",
+          "contactTags": "Étiquettes de contact",
+          "allUsers": "Tous les utilisateurs de ce client",
+          "missingClient": "Client indisponible",
+          "missingContact": "Contact indisponible",
+          "narrowTags": "Contacts portant l’étiquette",
+          "remove": "Supprimer",
+          "allPortalUsers": "Tous les utilisateurs du portail client",
+          "reach": "Visible par {{count}} contacts de {{clients}} clients",
+          "reachUnavailable": "Portée indisponible",
+          "title": "Qui peut voir ce formulaire",
+          "everyone": "Tout le monde",
+          "everyoneHelp": "Tous les utilisateurs clients authentifiés peuvent voir et soumettre ce formulaire.",
+          "scoped": "Clients et contacts sélectionnés",
+          "scopedHelp": "Seuls les utilisateurs des clients sélectionnés, ou les membres des groupes sélectionnés, peuvent voir et soumettre ce formulaire.",
+          "addClient": "Ajouter un client",
+          "clientPlaceholder": "Rechercher des clients...",
+          "noClients": "Aucun client sélectionné pour l'instant.",
+          "selectedClients": "Clients sélectionnés",
+          "removeClient": "Retirer {{name}}",
+          "groupsOf": "Groupes d'utilisateurs de {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Chargement des groupes...",
+          "noGroups": "Ce client n'a aucun groupe d'utilisateurs.",
+          "groupsHelp": "Chaque client correspond soit à tous ses utilisateurs, soit uniquement aux membres des groupes sélectionnés. Un groupe n'accorde l'accès qu'aux membres de son propre client. Un client ne peut pas être réglé sur tous les utilisateurs et avoir aussi des groupes sélectionnés.",
+          "emptyWarning": "Personne ne peut voir ce formulaire avant l’ajout d’un public.",
+          "save": "Enregistrer l'audience",
+          "allUsersOf": "Tous les utilisateurs de {{name}}",
+          "onlyGroups": "Uniquement les membres des groupes sélectionnés"
+        }
       },
       "fields": {
         "executionProvider": "Fournisseur d'exécution",
@@ -375,7 +424,8 @@
         "applyFailed": "Impossible d’appliquer la correspondance",
         "applied": "Correspondance des réponses appliquée"
       }
-    }
+    },
+    "delete": "Supprimer"
   },
   "icons": {
     "file-text": "Demande générale",
@@ -417,7 +467,9 @@
       "ticketRoutingUpdated": "Configuration du routage des tickets mise à jour",
       "workflowConfigurationUpdated": "Configuration du workflow mise à jour",
       "formBehaviorConfigUpdated": "Configuration du comportement du formulaire mise à jour",
-      "visibilityConfigUpdated": "Configuration de la visibilité mise à jour"
+      "visibilityConfigUpdated": "Configuration de la visibilité mise à jour",
+      "audienceUpdated": "Audience mise à jour",
+      "definitionDeleted": "Formulaire de demande de service supprimé"
     },
     "error": {
       "loadFailed": "Échec du chargement des demandes de service",
@@ -440,7 +492,12 @@
       "formBehaviorInvalid": "JSON du comportement du formulaire non valide",
       "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
       "visibilityInvalid": "JSON de visibilité non valide",
-      "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}"
+      "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
+      "audienceSaveFailed": "Échec de la mise à jour de l'audience",
+      "deleteFailed": "Échec de la suppression du formulaire de demande de service"
     }
+  },
+  "deleteDialog": {
+    "confirmation": "« {{name}} » et toutes ses versions seront supprimés définitivement. Cette action est irréversible."
   }
 }

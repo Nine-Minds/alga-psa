@@ -2,13 +2,15 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IRecurringServicePeriodRecord, ISO8601String } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { getClientBillingCycleAnchor } from '@shared/billingClients/billingSchedule';
 import { materializeClientCadenceServicePeriods } from '@shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@shared/billingClients/materializeContractCadenceServicePeriods';
 import { buildScheduleSourceRuleVersion } from '@shared/billingClients/clientCadenceScheduleRegeneration';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import {
   isAdvanceTimingAllowedForLineType,
-  resolveRecurringChargeFamily,
+  contractLineOwnStream,
 } from '@shared/billingClients/contractLineTimingRule';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
@@ -192,6 +194,7 @@ export async function hasUninvoicedActivity(
     .where('invoiced', false)
     .where('approval_status', 'APPROVED')
     .where('billable_duration', '>', 0)
+    .whereRaw(commercialTimeEntrySql('time_entries'))
     .whereIn('service_id', serviceIds)
     .where('start_time', '>=', start)
     .where('end_time', '<', end)
@@ -212,7 +215,7 @@ async function loadArrearsCandidateForServicePeriod(
   const sourceObligation = {
     tenant,
     obligationId: line.contract_line_id,
-    chargeFamily: resolveRecurringChargeFamily(line.contract_line_type),
+    chargeFamily: contractLineOwnStream(line).family,
   };
   const sourceRunKey = `${REPAIR_SOURCE_RUN_PREFIX}:${line.contract_line_id}:${materializedAt}`;
   const recordIdFactory = () => uuidv4();
@@ -326,6 +329,7 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
 
   const lines = await loadAffectedLines(trx, tenant, advanceRows);
   summary.linesScanned = lines.length;
+  if (lines.length > 0) await lockTenantBilling(trx, tenant);
 
   for (const line of lines) {
     // 1. Stored timing.
@@ -434,7 +438,7 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
 
     // 5. Catch-up rows for billed advance periods.
     const coveredSpans = new Set((await arrearsRows()).map(periodSpanKey));
-    const chargeFamily = resolveRecurringChargeFamily(line.contract_line_type);
+    const chargeFamily = contractLineOwnStream(line).family;
     let bucketOrTotal: boolean | null = null;
 
     for (const billed of [...billedRows].sort((a, b) =>

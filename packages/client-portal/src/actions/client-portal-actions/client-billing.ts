@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
@@ -11,7 +12,6 @@ import {
   IBillingResult,
   IBucketUsage,
   IQuote,
-  IQuoteItem,
   IService,
   IQuoteWithClient,
   IUserWithRoles
@@ -28,13 +28,13 @@ import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
-import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
+import { authorizePortalUserForQuote, decideQuote, resolveQuoteItemTaxesIfIncluded, type QuoteDecisionResult } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
-import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
   actionError,
   isActionMessageError,
@@ -135,26 +135,40 @@ async function getAuthorizedClientQuote(
   quoteId: string,
   allowedStatuses?: string[]
 ): Promise<ClientBillingActionResult<IQuote>> {
-  const clientId = await getClientIdFromUser(trx, user, tenant);
-  if (!clientId) {
-    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  if (allowedStatuses?.length) {
+    // Serialize status-sensitive reads so concurrent acceptances cannot both change selections.
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
+  }
+  const access = await authorizePortalUserForQuote(trx, user, tenant, quoteId, allowedStatuses);
+  if (!('reason' in access)) {
+    return access.quote;
   }
 
-  const hasAccess = await hasBillingPermission(trx, user, tenant);
-  if (!hasAccess) {
-    return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
+  switch (access.reason) {
+    case 'no_client':
+      return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+    case 'no_billing_permission':
+      return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
+    case 'invalid_state':
+      return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
+    default:
+      return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
   }
+}
 
-  const quote = await Quote.getById(trx, tenant, quoteId);
-  if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
-    return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
+/** Maps a non-`decided` service result back to the portal's existing error shapes. */
+function quoteDecisionErrorFor(result: Exclude<QuoteDecisionResult, { status: 'decided' }>): ClientBillingActionError {
+  switch (result.status) {
+    case 'forbidden':
+      return result.reason === 'no_billing_permission'
+        ? permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData')
+        : permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+    case 'not_pending':
+    case 'already_decided':
+      return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
+    default:
+      return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
   }
-
-  if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
-    return actionError('Quote is not in a valid state for this action', 'client-portal:errors.billing.quoteInvalidState');
-  }
-
-  return quote;
 }
 
 async function validateClientInvoiceAccess(
@@ -186,37 +200,6 @@ async function validateClientInvoiceAccess(
   }
 
   return null;
-}
-
-async function persistOptionalQuoteSelections(
-  trx: Knex.Transaction,
-  tenant: string,
-  quoteId: string,
-  quoteItems: IQuoteItem[],
-  selectedOptionalQuoteItemIds: string[]
-): Promise<{ selectedIds: string[]; deselectedIds: string[] }> {
-  const optionalItems = quoteItems.filter((item) => item.is_optional);
-  const optionalItemIds = new Set(optionalItems.map((item) => item.quote_item_id));
-  const selectedIds = selectedOptionalQuoteItemIds.filter((itemId) => optionalItemIds.has(itemId));
-  const selectedSet = new Set(selectedIds);
-
-  for (const item of optionalItems) {
-    await tenantDb(trx, tenant).table('quote_items')
-      .where({ quote_item_id: item.quote_item_id })
-      .update({
-        is_selected: selectedSet.has(item.quote_item_id),
-        updated_at: trx.fn.now(),
-      });
-  }
-
-  await recalculateQuoteFinancials(trx, tenant, quoteId);
-
-  return {
-    selectedIds,
-    deselectedIds: optionalItems
-      .map((item) => item.quote_item_id)
-      .filter((itemId) => !selectedSet.has(itemId)),
-  };
 }
 
 export const getClientContractLine = withAuth(async (user, { tenant }): Promise<ClientBillingActionResult<IClientContractLine | null>> => {
@@ -553,7 +536,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
           });
 
         if (markedViewed) {
-          await QuoteActivity.create(trx, tenant, {
+          const activity = await QuoteActivity.create(trx, tenant, {
             quote_id: quoteId,
             activity_type: 'viewed',
             description: 'Quote viewed by client in portal',
@@ -562,12 +545,31 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
               viewed_at: viewedAt,
             },
           });
+          await recordQuoteLifecycleTransition(trx, tenant, quote, { ...quote, viewed_at: viewedAt }, activity, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! } }, 'QUOTE_VIEWED');
         }
       }
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
         return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
+      }
+
+      // Read-only: resolved per-row tax and the exact rate behind it, so the
+      // portal can preview optional-item toggles locally with the same math as
+      // the server (including discounts before tax). Only needed while the
+      // client can still change selections.
+      if (updatedQuote.status === 'sent' && updatedQuote.quote_items?.length) {
+        const taxByItemId = await resolveQuoteItemTaxesIfIncluded(trx, tenant, quoteId);
+        updatedQuote.quote_items = updatedQuote.quote_items.map((item) => {
+          const rowTax = taxByItemId.get(item.quote_item_id);
+          return rowTax
+            ? {
+                ...item,
+                tax_amount_if_included: rowTax.taxAmount,
+                tax_rate_if_included: rowTax.taxPercentage,
+              }
+            : item;
+        });
       }
 
       return updatedQuote;
@@ -582,46 +584,6 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
   }
 });
 
-export const updateClientQuoteSelections = withAuth(async (
-  user,
-  { tenant },
-  quoteId: string,
-  selectedOptionalQuoteItemIds: string[]
-): Promise<ClientBillingActionResult<IQuote>> => {
-  const knex = await getConnection(tenant);
-
-  try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
-      }
-
-      await persistOptionalQuoteSelections(
-        trx,
-        tenant,
-        quoteId,
-        quote.quote_items || [],
-        selectedOptionalQuoteItemIds
-      );
-
-      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!updatedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote and try again.', 'client-portal:errors.billing.quoteStale');
-      }
-
-      return updatedQuote;
-    });
-  } catch (error) {
-    const expected = billingActionErrorFrom(error);
-    if (expected) {
-      return expected;
-    }
-    console.error('Error updating client quote selections:', error);
-    throw error;
-  }
-});
-
 export const acceptClientQuote = withAuth(async (
   user,
   { tenant },
@@ -632,46 +594,18 @@ export const acceptClientQuote = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
-      }
-
-      const { selectedIds, deselectedIds } = await persistOptionalQuoteSelections(
-        trx,
-        tenant,
+      const result = await decideQuote({
+        tenantId: tenant,
         quoteId,
-        quote.quote_items || [],
-        selectedOptionalQuoteItemIds
-      );
-
-      const acceptedAt = new Date().toISOString();
-      await Quote.update(trx, tenant, quoteId, {
-        status: 'accepted',
-        accepted_at: acceptedAt,
-        accepted_by: user.user_id,
-        updated_by: user.user_id,
-      });
-
-      await QuoteActivity.create(trx, tenant, {
-        quote_id: quoteId,
-        activity_type: 'accepted',
-        description: 'Quote accepted by client for MSP review',
-        performed_by: user.user_id,
-        metadata: {
-          selected_optional_quote_item_ids: selectedIds,
-          deselected_optional_quote_item_ids: deselectedIds,
-        },
-      });
-
-      const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!acceptedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before accepting it.', 'client-portal:errors.billing.quoteStaleAccept');
+        action: 'accept',
+        actor: { kind: 'portal_user', userId: user.user_id },
+        selections: { selectedOptionalQuoteItemIds: selectedOptionalQuoteItemIds },
+      }, trx);
+      if (result.status !== 'decided') {
+        return quoteDecisionErrorFor(result);
       }
 
-      await onQuoteAccepted(trx, acceptedQuote);
-
-      return acceptedQuote;
+      return result.quote;
     });
   } catch (error) {
     const expected = billingActionErrorFrom(error);
@@ -698,35 +632,18 @@ export const rejectClientQuote = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
-      if (isClientBillingActionError(quote)) {
-        return quote;
+      const result = await decideQuote({
+        tenantId: tenant,
+        quoteId,
+        action: 'reject',
+        actor: { kind: 'portal_user', userId: user.user_id },
+        comment: trimmedReason,
+      }, trx);
+      if (result.status !== 'decided') {
+        return quoteDecisionErrorFor(result);
       }
 
-      const rejectedAt = new Date().toISOString();
-      await Quote.update(trx, tenant, quoteId, {
-        status: 'rejected',
-        rejected_at: rejectedAt,
-        rejection_reason: trimmedReason,
-        updated_by: user.user_id,
-      });
-
-      await QuoteActivity.create(trx, tenant, {
-        quote_id: quoteId,
-        activity_type: 'rejected',
-        description: 'Quote rejected by client',
-        performed_by: user.user_id,
-        metadata: {
-          rejection_reason: trimmedReason,
-        },
-      });
-
-      const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
-      if (!rejectedQuote) {
-        return actionError('Quote is no longer available. Refresh the quote before rejecting it.', 'client-portal:errors.billing.quoteStaleReject');
-      }
-
-      return rejectedQuote;
+      return result.quote;
     });
   } catch (error) {
     const expected = billingActionErrorFrom(error);
@@ -1448,6 +1365,16 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** The block's hourly rate in minor units of `currency_code`; null when it carries none. */
+  hourly_rate: number | null;
+  /**
+   * Value of the remaining hours in minor units of `currency_code` (remaining hours x the
+   * block's hourly rate), rounded once here so the portal only formats it. 0 when the block
+   * carries no rate.
+   */
+  remaining_value: number;
+  /** First day the block can be drawn (cadence blocks); null when it has no lower bound. */
+  valid_from: string | null;
   /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
   contract_name: string | null;
   expiring_soon_days: number | null;
@@ -1504,6 +1431,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.total_minutes',
           'hb.remaining_minutes',
           'hb.expiration_date',
+          'hb.valid_from',
+          'hb.hourly_rate',
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
@@ -1540,6 +1469,12 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          hourly_rate: row.hourly_rate == null ? null : Number(row.hourly_rate),
+          remaining_value: computeRemainingBlockValueMinor({
+            remaining_minutes: remaining,
+            hourly_rate: row.hourly_rate as number | string | null,
+          }),
+          valid_from: toCalendarDateString(row.valid_from as string | Date | null),
           contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };

@@ -40,12 +40,14 @@ import {
   Pencil,
   Plus,
   Users,
+  X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
-import { getAllClients } from '@alga-psa/clients/actions';
-import type { IClient } from '@alga-psa/types';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import { FEATURE_MINIMUM_TIER, TIER_FEATURES } from '@alga-psa/types';
 import {
   addCredentialToEntity,
@@ -83,6 +85,11 @@ export interface CredentialsScreenProps {
    * the same-client rule (the entity's owning client for client-bound types).
    */
   defaultClientId?: string | null;
+  /**
+   * List, reveal and copy only: no create, link, edit, restrict, delete or
+   * detach (for example a ticket in an ended workspace).
+   */
+  readOnly?: boolean;
 }
 
 /**
@@ -126,12 +133,16 @@ function ListChrome({
   );
 }
 
-export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
+export function CredentialsScreen({
+  clientId,
+  entityType,
+  entityId,
+  defaultClientId,
+  readOnly = false,
+}: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
 
   const entityScoped = Boolean(entityType && entityId);
-
-  const [clients, setClients] = useState<IClient[]>([]);
 
   // Load + reveal state lives in the shared hook (single home for the
   // security-sensitive reveal handling; the bento tile body uses it too).
@@ -188,23 +199,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   useEffect(() => {
     if (context?.huduConnected !== true && sourceFilter === 'hudu') setSourceFilter('all');
   }, [context?.huduConnected, sourceFilter]);
-
-  // Tenant client list backs the global screen's client filter and row
-  // labels. Entity embeds never render either (the scope already fixes the
-  // client), so skip the fetch there; the form dialog self-fetches when it
-  // needs a picker.
-  useEffect(() => {
-    if (entityScoped) return;
-    let cancelled = false;
-    getAllClients(false)
-      .then((list) => {
-        if (!cancelled) setClients(list);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [entityScoped]);
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
     let result: CredentialSaveResult;
@@ -292,8 +286,14 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     [credentials, applyFilters]
   );
 
-  const clientName = (id: string) =>
-    clients.find((client) => client.client_id === id)?.client_name ?? null;
+  // Row labels for credentials that do not carry a client name come from a by-id lookup of just the
+  // clients on screen; the tenant's client list is never loaded.
+  const unnamedClientIds = useMemo(
+    () => Array.from(new Set((credentials ?? []).filter((item) => !item.clientName).map((item) => item.clientId))),
+    [credentials]
+  );
+  const { clients: namedClients } = useClientNames(entityScoped ? [] : unnamedClientIds, searchClientsForPicker);
+  const clientName = (id: string) => namedClients[id]?.client_name ?? null;
 
   if (isLoading && !credentials) {
     return (
@@ -346,6 +346,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
+          {!readOnly && (
           <Button
             id="credentials-screen-new"
             size="sm"
@@ -361,7 +362,8 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             <Plus className="mr-2 h-4 w-4" />
             {t('credentials.screen.newPassword')}
           </Button>
-          {entityScoped && (
+          )}
+          {entityScoped && !readOnly && (
             <Button
               id="credentials-screen-link"
               variant="outline"
@@ -407,19 +409,28 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             onChange={(event) => setSearch(event.target.value)}
           />
           {!clientId && (
-            <select
-              id="credentials-screen-client-filter"
-              className="h-9 rounded-md border border-[rgb(var(--color-border-200))] px-2 text-sm"
-              value={clientFilter}
-              onChange={(event) => setClientFilter(event.target.value)}
-            >
-              <option value="all">{t('credentials.screen.allClients')}</option>
-              {clients.map((client) => (
-                <option key={client.client_id} value={client.client_id}>
-                  {client.client_name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1">
+              <ClientPicker
+                id="credentials-screen-client-filter"
+                searchClients={searchClientsForPicker}
+                selectedClientId={clientFilter === 'all' ? null : clientFilter}
+                onSelect={(id) => setClientFilter(id ?? 'all')}
+                placeholder={t('credentials.screen.allClients')}
+                fitContent
+              />
+              {clientFilter !== 'all' && (
+                <Button
+                  id="credentials-screen-client-filter-clear"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setClientFilter('all')}
+                  aria-label={t('credentials.screen.allClients')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           )}
           <select
             id="credentials-screen-source-filter"
@@ -579,7 +590,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           {t('credentials.table.copy')}
                         </Button>
                       )}
-                      {!entityScoped && (
+                      {!entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-edit-${id}`}
                           variant="ghost"
@@ -604,7 +615,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <History className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!entityScoped && item.source === 'alga' && (
+                      {!entityScoped && !readOnly && item.source === 'alga' && (
                         <Button
                           id={`credentials-row-restrict-${id}`}
                           variant="ghost"
@@ -614,7 +625,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Users className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      {!entityScoped && (
+                      {!entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-delete-${id}`}
                           variant="ghost"
@@ -624,7 +635,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
                         </Button>
                       )}
-                      {entityScoped && (
+                      {entityScoped && !readOnly && (
                         <Button
                           id={`credentials-row-detach-${id}`}
                           variant="ghost"
@@ -645,7 +656,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
 
       {/* Swapped-in views for entity embeds: back affordance + heading, then
           the picker/form content in place of the list. */}
-      {entityScoped && entityView !== 'list' && (
+      {entityScoped && !readOnly && entityView !== 'list' && (
         <div id="credentials-screen-subview" className="space-y-3">
           <div className="flex items-center gap-2">
             <Button
@@ -680,7 +691,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
               onSubmit={handleFormSubmit}
               editing={null}
               defaultClientId={defaultClientId ?? clientId ?? null}
-              clients={clients}
               entityType={entityType ?? null}
               entityId={entityId ?? null}
               context={context}
@@ -691,7 +701,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
       )}
 
       {/* Global/client-tab surfaces keep the conventional overlay dialog. */}
-      {!entityScoped && (
+      {!entityScoped && !readOnly && (
         <CredentialFormDialog
           isOpen={formOpen}
           onClose={() => {
@@ -701,7 +711,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
           onSubmit={handleFormSubmit}
           editing={editing}
           defaultClientId={defaultClientId ?? clientId ?? null}
-          clients={clients}
           entityType={entityType ?? null}
           entityId={entityId ?? null}
           context={context}

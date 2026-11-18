@@ -46,6 +46,10 @@
       "import": "./src/lib/geolocation.ts",
       "types": "./src/lib/geolocation.ts"
     },
+    "./boardPolicy": {
+      "import": "./src/boardPolicy.ts",
+      "types": "./src/boardPolicy.ts"
+    },
     "./twoFactorHelpers": {
       "import": "./src/lib/twoFactorHelpers.ts",
       "types": "./src/lib/twoFactorHelpers.ts"
@@ -78,6 +82,26 @@
       "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
     },
+    "./lib/clientBillingProjection": {
+      "import": "./src/lib/clientBillingProjection.ts",
+      "types": "./src/lib/clientBillingProjection.ts"
+    },
+    "./lib/commercialAccess": {
+      "import": "./src/lib/commercialAccess.ts",
+      "types": "./src/lib/commercialAccess.ts"
+    },
+    "./lib/authPolicy": {
+      "import": "./src/lib/authPolicy.ts",
+      "types": "./src/lib/authPolicy.ts"
+    },
+    "./lib/authPolicyStore": {
+      "import": "./src/lib/authPolicyStore.ts",
+      "types": "./src/lib/authPolicyStore.ts"
+    },
+    "./lib/sso/mspSsoResolution": {
+      "import": "./src/lib/sso/mspSsoResolution.ts",
+      "types": "./src/lib/sso/mspSsoResolution.ts"
+    },
     "./lib/mspRememberedEmail": {
       "import": "./src/lib/mspRememberedEmail.ts",
       "types": "./src/lib/mspRememberedEmail.ts"
@@ -90,6 +114,14 @@
       "import": "./src/lib/sso/linkStateCookie.ts",
       "types": "./src/lib/sso/linkStateCookie.ts"
     },
+    "./lib/signInUserResolution": {
+      "import": "./src/lib/signInUserResolution.ts",
+      "types": "./src/lib/signInUserResolution.ts"
+    },
+    "./lib/tenantDiscovery": {
+      "import": "./src/lib/tenantDiscovery/index.ts",
+      "types": "./src/lib/tenantDiscovery/index.ts"
+    },
     "./lib/security/captcha": {
       "import": "./src/lib/security/captcha.ts",
       "types": "./src/lib/security/captcha.ts"
@@ -97,6 +129,14 @@
     "./nextauth/edge-auth": {
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"
+    },
+    "./lib/permissionCapabilities": {
+      "import": "./src/lib/permissionCapabilities.ts",
+      "types": "./src/lib/permissionCapabilities.ts"
+    },
+    "./lib/knowledgeBasePermissions": {
+      "import": "./src/lib/knowledgeBasePermissions.ts",
+      "types": "./src/lib/knowledgeBasePermissions.ts"
     },
     "./lib/preCheckDeletion": {
       "import": "./src/lib/preCheckDeletion.ts",
@@ -126,7 +166,10 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/authorization": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/ui": "*",
+    "jose": "^6.1.3",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
     "ua-parser-js": "^1.0.37"
