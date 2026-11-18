@@ -96,6 +96,19 @@ describe('asset intake with shipped translations', () => {
     expect(missing).not.toHaveBeenCalled();
   });
 
+  it('resumes from a printed label inside the label-first intake dialog', async () => {
+    h.find.mockResolvedValue({ kind: 'asset', asset: { asset_id: 'a2' } });
+    const { missing } = await renderLocalized(<LabelFirstAssetIntake />);
+    fireEvent.click(screen.getByRole('button', { name: 'Réception par étiquette préalable' }));
+    expect(screen.queryByLabelText('Scanner ou saisir une étiquette')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre depuis une étiquette' }));
+    fireEvent.change(screen.getByLabelText('Scanner ou saisir une étiquette'), { target: { value: 'TAG-7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rechercher un actif' }));
+    await waitFor(() => expect(h.push).toHaveBeenCalledWith('/msp/assets/a2'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(missing).not.toHaveBeenCalled();
+  });
+
   it.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'xx', 'yy'])('resolves intake and numbering settings in %s without missing-key fallbacks', async locale => {
     const { i18n, missing } = await renderLocalized(<><LabelFirstAssetIntake /><AssetNumberingSettings /></>, locale);
     const t = i18n.getFixedT(locale, 'msp/settings');
@@ -112,7 +125,7 @@ describe('asset intake with shipped translations', () => {
     await waitFor(() => expect(h.toast).toHaveBeenCalledWith(t('assets.numbering.uniquenessEnabled')));
     h.create.mockRejectedValueOnce(null);
     fireEvent.click(screen.getByRole('button', { name: ta('labelFirstIntake.start') }));
-    expect(screen.getByRole('dialog', { name: ta('labelFirstIntake.title') })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: ta('labelFirstIntake.start') })).toBeTruthy();
     expect(screen.getByText(ta('labelFirstIntake.help'))).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Acme' }));
     fireEvent.click(screen.getByRole('button', { name: ta('labelFirstIntake.createPrint') }));
