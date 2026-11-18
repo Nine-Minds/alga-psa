@@ -2,6 +2,7 @@ import type { EntraSyncUser } from './types';
 import { DEACTIVATABLE_EXCLUSION_REASONS } from './userFilterPipeline';
 import { EntraSyncResultAggregator } from './syncResultAggregator';
 import { findContactMatchesByEmail } from './contactMatcher';
+import { shouldReactivateInactiveMatch } from './inactiveMatchPolicy';
 import {
   createContactForEntraUser,
   linkExistingMatchedContact,
@@ -177,7 +178,7 @@ export async function executeEntraSync(
         const wouldReactivateExcluded = await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true);
         const wouldRecoverSharedMailbox = userWithEntitlement.mailboxKind === 'shared'
           && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true);
-        const wouldReactivateInactive = candidates[0].isInactive;
+        const wouldReactivateInactive = shouldReactivateInactiveMatch(candidates[0].isInactive, userWithEntitlement);
         const wouldRecover = wouldReactivateExcluded || wouldRecoverSharedMailbox || wouldReactivateInactive;
         if (outcome.fieldsWouldChange || wouldRecover) counters.increment('updated');
         preview?.push(

@@ -9,6 +9,7 @@ import { isEmailOwnershipError, resolveContactEmailOwnership, type ContactEmailO
 import { findContactMatchesByEmail } from './contactMatcher';
 import { upsertEntraContactLinkActive } from './contactLinkRepository';
 import type { EntraSyncUser } from './types';
+import { shouldReactivateInactiveMatch } from './inactiveMatchPolicy';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 import { buildContactFieldSyncPatch, buildEntraContactPhoneNumbers } from './contactFieldSync';
 
@@ -273,7 +274,7 @@ export async function linkExistingMatchedContact(
             : false;
           // Same rule as an ownership match in createContactForEntraUser: an inactive
           // contact at the synced client is that person, so it is linked and reactivated.
-          const recoveredInactive = matchedContact.isInactive
+          const recoveredInactive = shouldReactivateInactiveMatch(matchedContact.isInactive, user)
             ? await reactivateInactiveContactInTransaction(trx, tenantId, matchedContact.contactNameId)
             : false;
           const recovered = recoveredShared || recoveredInactive;
@@ -441,7 +442,7 @@ export async function createContactForEntraUser(
           const reactivatedShared = user.mailboxKind === 'shared'
             ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, ownerContactId)
             : false;
-          const reactivatedInactive = owner.isInactive
+          const reactivatedInactive = shouldReactivateInactiveMatch(owner.isInactive, user)
             ? await reactivateInactiveContactInTransaction(trx, tenantId, ownerContactId)
             : false;
           await upsertContactLink(trx, tenantId, clientId, ownerContactId, user, {});
