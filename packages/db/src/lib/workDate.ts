@@ -106,16 +106,23 @@ export async function resolveEffectiveTimeZone(
   tenant: string,
   userId?: string | null
 ): Promise<string> {
+  const db = tenantDb(knexOrTrx, tenant);
+
   if (userId) {
-    const userRow = await tenantDb(knexOrTrx, tenant).table('users')
-      .where({ user_id: userId })
-      .select('timezone')
-      .first();
-    const userTz = validZoneOrNull(userRow?.timezone);
-    if (userTz) return userTz;
+    // One statement for both levels: time-entry writes resolve the zone on the hot path,
+    // so a user without a profile zone must not cost a second round trip.
+    const query = db.table('users as u')
+      .where('u.user_id', userId)
+      .select('u.timezone as user_timezone', knexOrTrx.raw("ts.settings ->> 'timezone' as tenant_timezone"));
+    db.tenantJoin(query, 'tenant_settings as ts', 'ts.tenant', 'u.tenant', { type: 'left', tenantPredicate: 'literal' });
+    const row = await query.first();
+    if (row) {
+      return validZoneOrNull(row.user_timezone) ?? validZoneOrNull(row.tenant_timezone) ?? 'UTC';
+    }
+    // Unknown user: still honour the tenant default.
   }
 
-  const settingsRow = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
+  const settingsRow = await db.table('tenant_settings')
     .select('settings')
     .first();
   return validZoneOrNull(settingsRow?.settings?.timezone) ?? 'UTC';

@@ -1,7 +1,7 @@
 /**
  * Round trip (mocked-knex unit test; no database is reachable in this environment):
  * persistTimeEntry runs the REAL resolveUserTimeZone/computeWorkDateFields against a stubbed
- * users/tenant_settings, so the stored work_date/work_timezone come from the same resolver the drawer uses.
+ * users LEFT JOIN tenant_settings row, so the stored work_date/work_timezone come from the same resolver the drawer uses.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,9 +13,10 @@ const h = vi.hoisted(() => ({
 
 function builder(table: string) {
   const b: any = {
-    where: () => b, orWhere: () => b, forUpdate: () => b, select: () => b,
+    where: () => b, orWhere: () => b, forUpdate: () => b, select: () => b, leftJoin: () => b,
     first: async () => {
-      if (table === 'users') return { timezone: h.userTz };
+      // The resolver reads both levels in one statement: users LEFT JOIN tenant_settings.
+      if (table === 'users as u') return { user_timezone: h.userTz, tenant_timezone: h.tenantTz ?? null };
       if (table === 'tenant_settings') return { settings: h.tenantTz === undefined ? {} : { timezone: h.tenantTz } };
       if (table === 'tickets') return { assigned_to: null };
       return undefined;
@@ -51,7 +52,7 @@ import { persistTimeEntry } from '../timeEntryWriteCore';
 import { formatZonedTime } from '../timeEntryPeriodSelection';
 
 // Real tenantDb over a callable fake knex, so the real resolver and write core both run.
-const fakeKnex: any = (table: string) => builder(table);
+const fakeKnex: any = Object.assign((table: string) => builder(table), { raw: (sql: string) => ({ sql }) });
 const actor: any = { user_id: 'user-1' };
 const entry = () => ({
   work_item_id: 'ticket-1', work_item_type: 'ticket', notes: 'n', approval_status: 'DRAFT',
