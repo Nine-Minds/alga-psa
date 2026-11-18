@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb } from '@alga-psa/db';
 import { parseEmailAddress, parseEmailAddressList } from '@alga-psa/shared/lib/email/addressUtils';
+import { deriveReplyIdentity } from '@alga-psa/shared/services/email/inboundEmailMimeHelpers';
 
 /**
  * Gmail API adapter for email processing
@@ -603,7 +604,16 @@ This indicates a problem with the OAuth token saving process.`;
       const parsedTo = parseEmailAddressList(toEmails);
       const parsedCc = parseEmailAddressList(ccEmails);
       
+      // Gmail's API threadId is the mailbox's own conversation id and is stable
+      // across a conversation, which is what tickets.email_metadata.threadId
+      // is compared against. Headers come from the same format:'full' response.
+      const replyIdentity = deriveReplyIdentity({
+        headers,
+        conversationId: message.data.threadId,
+      });
+
       return {
+        ...replyIdentity,
         id: message.data.id!,
         provider: 'google' as const,
         providerId: this.config.id,

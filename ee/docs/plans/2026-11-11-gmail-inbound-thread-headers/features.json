@@ -1,0 +1,8 @@
+[
+  {"id":"F001","description":"One shared function derives inReplyTo, references and threadId from a case-insensitive header map plus an optional provider conversation id, extracting Message-IDs with extractMessageIds.","implemented":true,"prdRefs":["One derivation of reply identity"]},
+  {"id":"F002","description":"GmailAdapter.getMessageDetails returns inReplyTo, references and threadId from the shared function, with no extra Gmail API call and with x-resolved-*/x-list-* headers still stripped.","implemented":true,"prdRefs":["Gmail adapter"]},
+  {"id":"F003","description":"MicrosoftGraphAdapter.getMessageDetails and the IMAP parsed-MIME builder derive the three fields through the shared function; existing Microsoft conversationId and IMAP threadId behaviour is preserved for stored tickets.","implemented":true,"prdRefs":["One derivation of reply identity"]},
+  {"id":"F004","description":"The Gmail threadId value is chosen from a trace of resolveReplyTargetFromProviderThreadId, findTicketByEmailThread and tickets.email_metadata, so a second message in the same conversation finds the ticket the first one created.","implemented":true,"prdRefs":["One derivation of reply identity"]},
+  {"id":"F005","description":"A Gmail reply with no reply token whose In-Reply-To names a stored rfc_message_id attaches to that ticket, and threading.originalMessageIdCandidate is the normalized In-Reply-To rather than the Gmail API id.","implemented":true,"prdRefs":["Processor"]},
+  {"id":"F006","description":"The unused GmailAdapter copies under server/src and packages/integrations are deleted if no live path imports them, otherwise moved onto the shared function.","implemented":true,"prdRefs":["Gmail adapter"]}
+]

@@ -26,6 +26,7 @@ import {
   formatMicrosoftOAuthFailureForMailboxFlow,
   toSafeMicrosoftOAuthFailure,
 } from '../microsoftOAuthErrors';
+import { deriveReplyIdentity } from '../inboundEmailMimeHelpers';
 import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
@@ -1034,9 +1035,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           contentId: attachment.contentId,
           isInline: attachment.isInline,
         })),
-        threadId: message.conversationId,
-        references: message.internetMessageHeaders?.find((h: any) => h.name === 'References')?.value?.split(' '),
-        inReplyTo: message.internetMessageHeaders?.find((h: any) => h.name === 'In-Reply-To')?.value,
+        ...deriveReplyIdentity({
+          headers: message.internetMessageHeaders,
+          conversationId: message.conversationId,
+        }),
         tenant: this.config.tenant,
         headers: message.internetMessageHeaders?.reduce((acc: any, header: any) => {
           const headerName = String(header?.name || '');
