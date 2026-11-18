@@ -37,42 +37,64 @@ export interface DerivedReplyIdentity {
   threadId?: string;
 }
 
+/** A header map (Microsoft/IMAP parsed shape) or a name/value list (Gmail payload.headers, Graph internetMessageHeaders). */
+export type InboundHeaderSource =
+  | Record<string, unknown>
+  | ReadonlyArray<{ name?: string | null; value?: unknown } | null | undefined>;
+
+/** Every value of a header, case-insensitively, from either header shape, in source order. */
+export function readHeaderValues(headers: InboundHeaderSource | null | undefined, name: string): unknown[] {
+  if (!headers) return [];
+  const wanted = name.toLowerCase();
+  const entries: Array<[unknown, unknown]> = Array.isArray(headers)
+    ? headers.map((h) => [h?.name, h?.value])
+    : Object.entries(headers);
+  const values: unknown[] = [];
+  for (const [key, value] of entries) {
+    if (typeof key === 'string' && key.toLowerCase() === wanted) {
+      if (Array.isArray(value)) values.push(...value);
+      else values.push(value);
+    }
+  }
+  return values;
+}
+
 /**
  * The one derivation of inReplyTo / references / threadId for every inbound
- * provider. Providers differ only in what they pass in:
- *  - `headers`: a header map (any casing; values may be strings or arrays).
+ * provider (Gmail, Microsoft, IMAP and the staged-MIME path). Providers differ
+ * only in what they pass in:
+ *  - `headers`: either header shape, any casing; values may be strings or arrays.
  *  - `conversationId`: the provider's own conversation id (Gmail API threadId,
- *    Microsoft conversationId). When absent, threadId falls back to
- *    `references[0] || inReplyTo` (the IMAP rule).
+ *    Microsoft conversationId).
+ *
+ * Rules:
+ *  - inReplyTo: the first `<msg-id>` token of In-Reply-To (display noise dropped).
+ *  - references: References tokens in order, deduplicated, with inReplyTo
+ *    appended when the header omits it (RFC 5322 puts the parent last).
+ *  - threadId: conversationId when present, else the root of the references chain.
+ * Absent values are omitted (never "" ), because the event and workflow schemas
+ * declare these fields `.optional()` and reject null.
  *
  * These values are sender-controlled: never use them as message identity or
  * dedupe keys.
  */
 export function deriveReplyIdentity(params: {
-  headers?: Record<string, unknown> | null;
+  headers?: InboundHeaderSource | null;
   conversationId?: string | null;
 }): DerivedReplyIdentity {
-  const lookup = (name: string): unknown => {
-    const headers = params.headers;
-    if (!headers) return undefined;
-    const wanted = name.toLowerCase();
-    for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() === wanted) return headers[key];
-    }
-    return undefined;
-  };
+  const inReplyTo = extractMessageIds(readHeaderValues(params.headers, 'in-reply-to'))[0];
+  const references = extractMessageIds(readHeaderValues(params.headers, 'references'));
+  if (inReplyTo && !references.includes(inReplyTo)) references.push(inReplyTo);
 
-  const references = extractMessageIds(lookup('references'));
-  const inReplyTo = extractMessageIds(lookup('in-reply-to'))[0];
   const conversationId =
     typeof params.conversationId === 'string' && params.conversationId.trim()
-      ? params.conversationId
+      ? params.conversationId.trim()
       : undefined;
-  const threadId = conversationId ?? (references[0] || inReplyTo);
+  const threadId = conversationId ?? references[0];
 
   return {
-    inReplyTo: inReplyTo || undefined,
-    references: references.length ? references : undefined,
-    threadId: threadId || undefined,
+    ...(inReplyTo ? { inReplyTo } : {}),
+    ...(references.length ? { references } : {}),
+    ...(threadId ? { threadId } : {}),
   };
 }

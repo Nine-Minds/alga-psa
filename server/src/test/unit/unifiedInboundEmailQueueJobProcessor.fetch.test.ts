@@ -786,9 +786,10 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         emailData: expect.objectContaining({
           id: '<imap-msg-300@example.com>',
           subject: 'IMAP Subject',
-          // Unchanged by the shared derivation: threadId = references[0] || inReplyTo.
+          // threadId stays the root of the chain; In-Reply-To is appended to
+          // References because the message's References header omits it.
           threadId: '<thread-1@example.com>',
-          references: ['<thread-1@example.com>'],
+          references: ['<thread-1@example.com>', '<reply-1@example.com>'],
           inReplyTo: '<reply-1@example.com>',
           rawMimeBase64: expect.any(String),
         }),

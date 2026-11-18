@@ -14,6 +14,11 @@ NOT dead. `server/src/services/email/providers/GmailAdapter.ts` is imported by s
 ## Other
 - `originalMessageIdCandidate` already follows from `inReplyTo` being set (`normalizeRfc822MessageId(inReplyTo ?? id)`), brackets stripped; no processor change.
 - The processor had a private copy of `extractMessageIds`; removed since it became unused.
-- `inboundEmailSourceStager.ts` (durable path, out of scope) still has its own derivation; marked with a LEVERAGE comment.
+- `inboundEmailSourceStager.ts` (durable staged-MIME path) now also uses `deriveReplyIdentity`, so no copy of the derivation remains.
 - T004/T005 are unit-level (mocked DB), not DB-backed; `findTicketByEmailThread` is mocked in T005 with the threadId equality it performs.
 - `findTicketByEmailThread` in `shared/services/emailService.ts` prefers originalMessageId over threadId (else-if chain); the integrations action used by the processor tries threadId first. Not touched.
+
+## Implement-step revision (XO order)
+- References now has In-Reply-To appended when the header omits it (RFC 5322 puts the parent last). threadId still roots at references[0], so it is unchanged for every input.
+- `deriveReplyIdentity` reads the `{name,value}[]` shape (Gmail payload.headers, Graph internetMessageHeaders) directly via `readHeaderValues`, so repeated headers are no longer collapsed by Object.fromEntries.
+- Absent fields are omitted, not null: `inboundEmailReceived` event and workflow action zod schemas declare them `z.string().optional()`, which rejects null.

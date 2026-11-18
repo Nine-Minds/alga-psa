@@ -1036,9 +1036,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           isInline: attachment.isInline,
         })),
         ...deriveReplyIdentity({
-          headers: Object.fromEntries(
-            (message.internetMessageHeaders ?? []).map((h: any) => [String(h?.name || ''), h?.value])
-          ),
+          headers: message.internetMessageHeaders,
           conversationId: message.conversationId,
         }),
         tenant: this.config.tenant,

@@ -321,7 +321,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
     providerType: params.provider,
     providerMessageId: params.fallbackMessageId,
   })?.normalized;
-  const { references, inReplyTo, threadId } = deriveReplyIdentity({
+  const replyIdentity = deriveReplyIdentity({
     headers: { references: params.parsed?.references, 'in-reply-to': params.parsed?.inReplyTo },
   });
 
@@ -410,9 +410,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
           };
         })
       : [],
-    threadId,
-    references,
-    inReplyTo,
+    ...replyIdentity,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
     headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
   };

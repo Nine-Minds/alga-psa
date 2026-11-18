@@ -608,7 +608,7 @@ This indicates a problem with the OAuth token saving process.`;
       // across a conversation, which is what tickets.email_metadata.threadId
       // is compared against. Headers come from the same format:'full' response.
       const replyIdentity = deriveReplyIdentity({
-        headers: Object.fromEntries(headers.map((h: any) => [String(h?.name || ''), h?.value])),
+        headers,
         conversationId: message.data.threadId,
       });
 

@@ -18,7 +18,7 @@ import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { buildInboundSourceObjectKey, normalizeInboundMessageIdentity } from './inboundEmailIdentity';
-import { extractMessageIds } from './inboundEmailMimeHelpers';
+import { deriveReplyIdentity } from './inboundEmailMimeHelpers';
 import type { InboundProviderType } from '../../interfaces/inbound-email.interfaces';
 
 export interface StagedInboundSource {
@@ -136,10 +136,9 @@ export async function parseStagedMimeIntoEmailDetails(params: {
   const from = parsed?.from?.value?.[0];
   const to = parsed?.to?.value || [];
   const cc = parsed?.cc?.value || [];
-  // LEVERAGE: pattern reply-identity-derivation — same derivation as deriveReplyIdentity; durable path left untouched by plan scope.
-  const references = extractMessageIds(parsed?.references);
-  const inReplyTo = extractMessageIds(parsed?.inReplyTo)[0];
-  const threadId = references[0] || inReplyTo;
+  const replyIdentity = deriveReplyIdentity({
+    headers: { references: parsed?.references, 'in-reply-to': parsed?.inReplyTo },
+  });
 
   const emailData: EmailMessageDetails = {
     id: identity.rfcMessageId ?? identity.providerMessageId ?? params.fallbackProviderMessageId ?? '',
@@ -190,9 +189,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
           };
         })
       : [],
-    threadId: threadId || undefined,
-    references: references.length ? references : undefined,
-    inReplyTo: inReplyTo || undefined,
+    ...replyIdentity,
     rawMimeBase64: params.rawMime.toString('base64'),
   };
 
