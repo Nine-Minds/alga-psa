@@ -86,6 +86,88 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
   return cleanedHtml.length === 0 && cleanedText.length === 0;
 }
 
+// One unrepresentable block must not abort a whole email or worksheet, nor
+// vanish silently: it is replaced by a visible marker and logged.
+export const UNSUPPORTED_RICH_TEXT_PLACEHOLDER = '[Unsupported content]';
+
+export interface RichTextRenderOptions {
+  unsupportedContentPlaceholder?: string;
+  missingImagePlaceholder?: string;
+  onUnsupportedContent?: (blockType: string) => void;
+}
+
+function unsupportedPlaceholder(options?: RichTextRenderOptions): string {
+  const placeholder = options?.unsupportedContentPlaceholder;
+  if (placeholder !== undefined && !placeholder.trim()) {
+    throw new Error('The unsupported rich-text content placeholder must not be empty');
+  }
+  return placeholder ?? UNSUPPORTED_RICH_TEXT_PLACEHOLDER;
+}
+
+function missingImagePlaceholder(options?: RichTextRenderOptions): string {
+  const placeholder = options?.missingImagePlaceholder;
+  if (placeholder !== undefined && !placeholder.trim()) {
+    throw new Error('The missing rich-text image placeholder must not be empty');
+  }
+  return placeholder ?? '[Image not included]';
+}
+
+function validateRenderOptions(options?: RichTextRenderOptions): void {
+  unsupportedPlaceholder(options);
+  missingImagePlaceholder(options);
+}
+
+function unsupportedBlock(type: unknown, options?: RichTextRenderOptions): string {
+  const blockType = String(type);
+  if (options?.onUnsupportedContent) {
+    options.onUnsupportedContent(blockType);
+  } else {
+    console.warn(`[BlockNoteUtils] Replacing unsupported rich-text block with a placeholder: ${blockType}`);
+  }
+  return unsupportedPlaceholder(options);
+}
+
+function tableCellContent(cell: unknown, options?: RichTextRenderOptions): unknown[] {
+  if (Array.isArray(cell)) return cell;
+  if (typeof cell === 'string') return [{ type: 'text', text: cell, styles: {} }];
+  if (cell && typeof cell === 'object' && 'type' in cell && cell.type === 'tableCell') {
+    const content = 'content' in cell ? cell.content : undefined;
+    if (content === undefined) return [];
+    if (Array.isArray(content)) return content;
+    if (typeof content === 'string') return [{ type: 'text', text: content, styles: {} }];
+  }
+  return [{ type: 'text', text: unsupportedBlock('invalid table cell', options), styles: {} }];
+}
+
+const TABLE_STYLE = 'border-collapse:collapse;max-width:100%;';
+const TABLE_CELL_STYLE = 'border:1px solid #9ca3af;padding:6px 10px;vertical-align:top;';
+const LINK_ONLY_BLOCK_TYPES = new Set(['video', 'audio', 'file', 'embed']);
+
+function tableCellAttributes(props?: Record<string, unknown> | null): string {
+  const cellProps = props ?? {};
+  let attributes = '';
+  for (const name of ['colspan', 'rowspan'] as const) {
+    const value = cellProps[name];
+    if (typeof value === 'number' && Number.isInteger(value) && value > 1 && value <= 1000) {
+      attributes += ` ${name}="${value}"`;
+    }
+  }
+  const alignment = sanitizeTextAlignment(cellProps.textAlignment);
+  return `${attributes} style="${TABLE_CELL_STYLE}${alignment ? `text-align:${alignment};` : ''}"`;
+}
+
+function mediaLink(props: Record<string, unknown>, type: string, options?: RichTextRenderOptions): { url: string; label: string } | null {
+  const url = sanitizeHref(props.url ?? props.src);
+  if (!url) {
+    unsupportedBlock(type, options);
+    return null;
+  }
+  const label = [props.caption, props.name, props.alt].find(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+  return { url, label: label ?? url };
+}
+
 // Email clients inherit wildly different `p { margin }` defaults, and an empty
 // BlockNote paragraph (`<p><br></p>`) renders as a full blank line *plus* two
 // paragraph margins — roughly four times the gap the author typed. Normalize
@@ -132,7 +214,11 @@ export function normalizeBlockHtmlForEmail(html: unknown): string {
     .replace(BLANK_PARAGRAPH, EMAIL_BLANK_PARAGRAPH);
 }
 
-export function formatBlockNoteContent(content: unknown): { html: string; text: string } {
+export function formatBlockNoteContent(
+  content: unknown,
+  options?: RichTextRenderOptions,
+): { html: string; text: string } {
+  validateRenderOptions(options);
   if (content === null || content === undefined) {
     return { html: '', text: '' };
   }
@@ -143,8 +229,8 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
       // "\n" inside text/link nodes; both renderers would collapse them and
       // swallow the following text into the link.
       const normalized = Array.isArray(input) ? splitEmbeddedNewlineBlocks(input) : input;
-      const htmlResult = convertBlockNoteToHTML(normalized);
-      const textResult = convertBlockNoteToMarkdown(normalized);
+      const htmlResult = convertBlockContentToHTML(normalized, options);
+      const textResult = convertBlockContentToMarkdown(normalized, options);
 
       if (!isEffectivelyEmpty(htmlResult || '', textResult || '')) {
         return { html: normalizeBlockHtmlForEmail(htmlResult), text: textResult };
@@ -168,15 +254,16 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
     if (trimmed.length === 0) {
       return { html: '', text: '' };
     }
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(content);
-      return convertSafely(parsed);
+      parsed = JSON.parse(content);
     } catch {
       return {
         html: normalizeBlockHtmlForEmail(`<p>${escapeHtml(content)}</p>`),
         text: content,
       };
     }
+    return convertSafely(parsed);
   }
 
   return convertSafely(content);
@@ -191,7 +278,8 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
  * @param blocks - BlockNote content as Block array, PartialBlock array, JSON string, or undefined
  * @returns A string containing the markdown representation, never undefined
  */
-export function convertBlockNoteToMarkdown(blocks: any): string {
+export function convertBlockNoteToMarkdown(blocks: any, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   console.log("[BlockNoteUtils] Converting to markdown:", typeof blocks === 'string' ? 'JSON string' : (blocks ? 'blocks array' : 'undefined'));
 
   // Handle empty input
@@ -226,7 +314,7 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
 
   // 1. Try custom converter first
   try {
-    markdown = customBlocksToMarkdown(blockData);
+    markdown = customBlocksToMarkdown(blockData, options);
     if (markdown && markdown.trim() !== '') {
       return markdown;
     }
@@ -345,7 +433,7 @@ function simpleTextExtraction(blocks: Block[] | PartialBlock[]): string {
  * @param content - The content array to extract styled text from
  * @returns The extracted text with styling as a string
  */
-function extractStyledTextFromContent(content: any[]): string {
+function extractStyledTextFromContent(content: unknown): string {
   if (!Array.isArray(content)) return '';
 
   if (content.length === 0) {
@@ -429,8 +517,12 @@ function extractStyledTextFromContent(content: any[]): string {
  * @param blocks - The blocks to convert to markdown
  * @returns The markdown representation as a string
  */
-function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
-  return blocks.map((block) => {
+function customBlocksToMarkdown(blocks: Block[] | PartialBlock[], options?: RichTextRenderOptions): string {
+  const convertBlock = (block: Block | PartialBlock): string => {
+    if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
+      const link = mediaLink(block.props ?? {}, String(block.type), options);
+      return link ? `[${link.label}](${link.url})` : unsupportedPlaceholder(options);
+    }
     // Check for block-level styling (like paragraph background color)
     let blockWrapper = (content: string): string => content;
 
@@ -475,7 +567,7 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         break;
 
       case 'table':
-        return convertTableToMarkdown(block);
+        return convertTableToMarkdown(block, options);
 
       case 'numberedListItem':
         if (block.content && Array.isArray(block.content)) {
@@ -499,10 +591,19 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         }
         break;
 
+      case 'quote':
+        return extractStyledTextFromContent(block.content).split('\n').map(line => `> ${line}`).join('\n');
+
+      case 'toggleListItem':
+        return `- ${extractStyledTextFromContent(block.content)}`;
+
+      case 'divider':
+        return '---';
+
       case 'codeBlock':
         if (block.content && Array.isArray(block.content)) {
           const language = (block.props as any)?.language || '';
-          content = '```' + language + '\n' + extractStyledTextFromContent(block.content) + '\n```';
+          content = '```' + language + '\n' + inlineContentToPlainText(block.content) + '\n```';
           return blockWrapper(content);
         }
         break;
@@ -510,25 +611,42 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
       case 'image': {
         const props = (block.props as any) || {};
         const url = typeof props.url === 'string' ? props.url.trim() : '';
-        if (!url) {
-          return '';
-        }
+        const safeUrl = sanitizeImageSrc(url);
+        if (!safeUrl) return missingImagePlaceholder(options);
         const alt = typeof props.caption === 'string' && props.caption.trim().length > 0
           ? props.caption.trim()
           : typeof props.name === 'string'
             ? props.name.trim()
             : 'clipboard-image';
-        return `![${alt}](${url})`;
+        return `![${alt}](${safeUrl})`;
       }
 
-      default:
-        // Unknown block type
-        console.log(`[BlockNoteUtils] Unknown block type: ${block.type}`);
-        return '';
+      default: {
+        const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+        console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+        if (typeof unknownBlock.content === 'string') return unknownBlock.content;
+        if (Array.isArray(unknownBlock.content)) return extractStyledTextFromContent(unknownBlock.content);
+        if (unknownBlock.children?.length) return '';
+        return unsupportedBlock(unknownBlock.type, options);
+      }
     }
 
     return '';
-  }).join('\n\n'); // Don't filter empty strings to preserve empty paragraphs
+  };
+  return blocks.map((block) => {
+    const ownContent = convertBlock(block);
+    if (!block.children?.length) return ownContent;
+
+    const children = customBlocksToMarkdown(block.children, options);
+    if (block.type === 'quote') {
+      return `${ownContent}\n${children.split('\n').map(line => line ? `> ${line}` : '>').join('\n')}`;
+    }
+    if (['bulletListItem', 'numberedListItem', 'checkListItem', 'toggleListItem'].includes(String(block.type))) {
+      const indent = block.type === 'numberedListItem' ? '   ' : '  ';
+      return `${ownContent}\n${children.split('\n').map(line => line ? `${indent}${line}` : '').join('\n')}`;
+    }
+    return `${ownContent}\n\n${children}`;
+  }).join('\n\n');
 }
 
 /**
@@ -537,13 +655,13 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
  * @param block - The table block to convert
  * @returns The markdown representation of the table
  */
-function convertTableToMarkdown(block: Block | PartialBlock): string {
+function convertTableToMarkdown(block: Block | PartialBlock, options?: RichTextRenderOptions): string {
   try {
     const content = block.content as any;
 
     // Validate table structure
     if (!content || typeof content !== 'object' || !content.rows) {
-      return '[Invalid table structure]';
+      return unsupportedBlock('invalid table', options);
     }
 
     const rows = content.rows || [];
@@ -567,7 +685,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
       // Add cells for this row
       let rowMarkdown = '|';
       for (let colIndex = 0; colIndex < numCols; colIndex++) {
-        const cell = cells[colIndex] || [];
+        const cell = tableCellContent(cells[colIndex] ?? [], options);
         let cellText = ' ';
 
         // Extract styled text from cell content
@@ -618,7 +736,7 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
  * @param content - The content array to extract styled text from
  * @returns The extracted text with styling as an HTML string
  */
-function extractStyledTextToHTML(content: any[]): string {
+function extractStyledTextToHTML(content: unknown): string {
   if (!Array.isArray(content)) return '';
   if (content.length === 0) return '<br>';
 
@@ -698,7 +816,8 @@ function extractStyledTextToHTML(content: any[]): string {
  * @param blocks - BlockNote content as Block array, PartialBlock array, or JSON string.
  * @returns An HTML string representation of the BlockNote content.
  */
-export function convertBlockNoteToHTML(blocks: any): string {
+export function convertBlockNoteToHTML(blocks: any, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   if (!blocks) return '<p>[No content]</p>';
 
   let blockData: Block[] | PartialBlock[];
@@ -763,6 +882,16 @@ export function convertBlockNoteToHTML(blocks: any): string {
       let content = '';
       let isListItem = false;
 
+      if (LINK_ONLY_BLOCK_TYPES.has(String(block.type))) {
+        flushListBuffer();
+        const link = mediaLink(block.props ?? {}, String(block.type), options);
+        output.push(link
+          ? `<p${styleAttribute}><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+          : `<p${styleAttribute}>${escapeHtml(unsupportedPlaceholder(options))}</p>`);
+        if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
+        return;
+      }
+
       switch (block.type) {
         case 'paragraph':
           flushListBuffer();
@@ -824,7 +953,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
           flushListBuffer();
           const checked = (block.props as any)?.checked;
           content = extractStyledTextToHTML(block.content as any[]);
-          output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
+          output.push(`<div${styleAttribute}><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${checked ? `<s>${content}</s>` : content}</div>`);
           if (block.children && (block.children as any[]).length > 0) {
             processBlocksRecursive(block.children as Block[], currentLevel + 1);
           }
@@ -838,30 +967,43 @@ export function convertBlockNoteToHTML(blocks: any): string {
             ? (rawTable as { rows: Array<{ cells: any[] }> })
             : null;
           if (!tableContent || !Array.isArray(tableContent.rows)) {
-            output.push('<!-- Invalid table structure -->');
+            output.push(`<p${styleAttribute}>${escapeHtml(unsupportedBlock('invalid table', options))}</p>`);
             break;
           }
-          let tableHTML = '<table><tbody>';
-          tableContent.rows.forEach((row) => {
+          let tableHTML = `<table style="${TABLE_STYLE}"><tbody>`;
+          const headerRows = 'headerRows' in tableContent ? Number(tableContent.headerRows) : 0;
+          const headerCols = 'headerCols' in tableContent ? Number(tableContent.headerCols) : 0;
+          tableContent.rows.forEach((row, rowIndex) => {
             tableHTML += '<tr>';
             const cells = Array.isArray(row?.cells) ? row.cells : [];
-            cells.forEach((cellContent) => {
-              const inlineArray = Array.isArray(cellContent) ? cellContent : [];
-              tableHTML += `<td>${extractStyledTextToHTML(inlineArray as any[])}</td>`;
+            cells.forEach((cell, columnIndex) => {
+              const inlineArray = tableCellContent(cell, options);
+              const tag = rowIndex < headerRows || columnIndex < headerCols ? 'th' : 'td';
+              const props = !Array.isArray(cell) && cell?.type === 'tableCell' ? cell.props : undefined;
+              tableHTML += `<${tag}${tableCellAttributes(props)}>${extractStyledTextToHTML(inlineArray)}</${tag}>`;
             });
             tableHTML += '</tr>';
           });
           tableHTML += '</tbody></table>';
           output.push(blockStylesArray.length > 0 ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
           break;
+        case 'quote':
+        case 'toggleListItem': {
+          flushListBuffer();
+          const tag = block.type === 'quote' ? 'blockquote' : 'div';
+          output.push(`<${tag}${styleAttribute}>${extractStyledTextToHTML(block.content)}`);
+          if (block.children?.length) processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          output.push(`</${tag}>`);
+          break;
+        }
+        case 'divider':
+          flushListBuffer();
+          output.push('<hr>');
+          break;
         case 'codeBlock':
           flushListBuffer();
           const language = (block.props as any)?.language || '';
-          const codeText = escapeHtml(
-            (block.content as any[])
-              .map(item => item.text || '')
-              .join('\n')
-          );
+          const codeText = escapeHtml(inlineContentToPlainText(block.content));
           content = `<code class="language-${escapeHtml(String(language))}">${codeText}</code>`;
           output.push(`<pre${styleAttribute}>${content}</pre>`);
           break;
@@ -871,6 +1013,8 @@ export function convertBlockNoteToHTML(blocks: any): string {
           const imageUrl = typeof props.url === 'string' ? props.url.trim() : '';
           const safeImageUrl = sanitizeImageSrc(imageUrl);
           if (!safeImageUrl) {
+            console.warn('[BlockNoteUtils] Replacing an image without a safe source with a placeholder');
+            output.push(`<p${styleAttribute}>${escapeHtml(missingImagePlaceholder(options))}</p>`);
             break;
           }
 
@@ -886,23 +1030,20 @@ export function convertBlockNoteToHTML(blocks: any): string {
           );
           break;
         }
-        default:
+        default: {
           flushListBuffer();
-          const anyBlock = block as any;
-          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${anyBlock?.type}`);
-          if (anyBlock?.content && Array.isArray(anyBlock.content)) {
-             content = extractStyledTextToHTML(anyBlock.content as any[]);
-             output.push(`<div${styleAttribute}>${content}</div>`);
-          } else if (anyBlock?.content && typeof anyBlock.content === 'string') {
-             const escapedContent = escapeHtml(anyBlock.content);
-             output.push(`<div${styleAttribute}>${escapedContent}</div>`);
-          } else {
-             output.push(`<!-- Unsupported block type: ${escapeHtml(String(anyBlock?.type))} -->`);
+          const unknownBlock = block as unknown as { type: string; content?: unknown; children?: unknown[] };
+          console.warn(`[BlockNoteUtils] Exporting text from unknown block type: ${unknownBlock.type}`);
+          if (Array.isArray(unknownBlock.content)) {
+            output.push(`<div${styleAttribute}>${extractStyledTextToHTML(unknownBlock.content)}</div>`);
+          } else if (typeof unknownBlock.content === 'string') {
+            output.push(`<div${styleAttribute}>${escapeHtml(unknownBlock.content)}</div>`);
+          } else if (!unknownBlock.children?.length) {
+            output.push(`<div${styleAttribute}>${escapeHtml(unsupportedBlock(unknownBlock.type, options))}</div>`);
           }
-          if (anyBlock?.children && (anyBlock.children as any[]).length > 0) {
-            processBlocksRecursive(anyBlock.children as Block[], currentLevel + 1);
-          }
+          if (unknownBlock.children?.length) processBlocksRecursive(unknownBlock.children as Block[], currentLevel + 1);
           break;
+        }
       }
       if (!isListItem) {
         flushListBuffer();
@@ -920,7 +1061,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
 
 type PMNode = {
   type: string;
-  attrs?: Record<string, unknown>;
+  attrs?: Record<string, unknown> | null;
   content?: PMNode[];
   text?: string;
   marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
@@ -966,6 +1107,7 @@ function renderPMInlineContent(nodes: PMNode[] | undefined): string {
     if (node.type === 'text' && node.text != null) {
       return renderPMMarks(escapeHtml(node.text), node.marks);
     }
+    if (node.type === 'hard_break' || node.type === 'hardBreak') return '<br>';
     if (node.type === 'mention') {
       const { userId, username, displayName } = (node.attrs ?? {}) as {
         userId?: string; username?: string; displayName?: string;
@@ -981,25 +1123,25 @@ function renderPMInlineContent(nodes: PMNode[] | undefined): string {
   }).join('');
 }
 
-function renderPMNode(node: PMNode): string {
+function renderPMNode(node: PMNode, options?: RichTextRenderOptions, struck = false): string {
   switch (node.type) {
     case 'doc':
-      return (node.content ?? []).map(renderPMNode).join('\n');
+      return (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
 
     case 'paragraph': {
       const inner = renderPMInlineContent(node.content);
-      return `<p>${inner || '<br>'}</p>`;
+      return `<p>${inner ? (struck ? `<s>${inner}</s>` : inner) : '<br>'}</p>`;
     }
 
     case 'heading': {
       const level = Math.min(Math.max(Number(node.attrs?.level) || 1, 1), 6);
       const inner = renderPMInlineContent(node.content);
-      return `<h${level}>${inner}</h${level}>`;
+      return `<h${level}>${struck && inner ? `<s>${inner}</s>` : inner}</h${level}>`;
     }
 
     case 'bullet_list':
     case 'bulletList': {
-      const items = (node.content ?? []).map(renderPMNode).join('\n');
+      const items = (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
       return `<ul>${items}</ul>`;
     }
 
@@ -1007,18 +1149,61 @@ function renderPMNode(node: PMNode): string {
     case 'orderedList': {
       const start = Number(node.attrs?.order ?? node.attrs?.start ?? 1);
       const startAttr = start !== 1 ? ` start="${start}"` : '';
-      const items = (node.content ?? []).map(renderPMNode).join('\n');
+      const items = (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
       return `<ol${startAttr}>${items}</ol>`;
     }
 
     case 'list_item':
     case 'listItem': {
-      const inner = (node.content ?? []).map(renderPMNode).join('\n');
+      const inner = (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
       return `<li>${inner}</li>`;
     }
 
+    case 'task_list':
+    case 'taskList':
+      return (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
+
+    case 'task_item':
+    case 'taskItem': {
+      const checked = node.attrs?.checked === true;
+      // <s> is phrasing content, so a completed item strikes the text inside its own blocks.
+      const inner = (node.content ?? []).map(child => renderPMNode(child, options, checked)).join('\n');
+      return `<div><span style="font-family:Arial,sans-serif;">${checked ? '&#9745;' : '&#9744;'}</span> ${inner}</div>`;
+    }
+
+    case 'table':
+      return `<table style="${TABLE_STYLE}"><tbody>${(node.content ?? []).map(child => renderPMNode(child, options)).join('')}</tbody></table>`;
+
+    case 'table_row':
+    case 'tableRow':
+      return `<tr>${(node.content ?? []).map(child => renderPMNode(child, options)).join('')}</tr>`;
+
+    case 'table_cell':
+    case 'tableCell':
+    case 'table_header':
+    case 'tableHeader': {
+      const tag = node.type === 'table_header' || node.type === 'tableHeader' ? 'th' : 'td';
+      return `<${tag}${tableCellAttributes(node.attrs)}>${(node.content ?? []).map(child => renderPMNode(child, options)).join('\n')}</${tag}>`;
+    }
+
+    case 'image':
+      return convertBlockNoteToHTML([{
+        type: 'image',
+        props: { url: node.attrs?.src ?? node.attrs?.url, name: node.attrs?.alt, caption: node.attrs?.caption },
+      }], options);
+
+    case 'video':
+    case 'audio':
+    case 'file':
+    case 'embed': {
+      const link = mediaLink(node.attrs ?? {}, node.type, options);
+      return link
+        ? `<p><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a></p>`
+        : `<p>${escapeHtml(unsupportedPlaceholder(options))}</p>`;
+    }
+
     case 'blockquote': {
-      const inner = (node.content ?? []).map(renderPMNode).join('\n');
+      const inner = (node.content ?? []).map(child => renderPMNode(child, options)).join('\n');
       return `<blockquote>${inner}</blockquote>`;
     }
 
@@ -1027,7 +1212,7 @@ function renderPMNode(node: PMNode): string {
       const lang = node.attrs?.language ? ` class="language-${escapeHtml(String(node.attrs.language))}"` : '';
       const code = (node.content ?? [])
         .map(n => escapeHtml(n.text ?? ''))
-        .join('\n');
+        .join('');
       return `<pre><code${lang}>${code}</code></pre>`;
     }
 
@@ -1054,9 +1239,9 @@ function renderPMNode(node: PMNode): string {
 
     default: {
       // Unknown block — try to render children
-      if (node.content) return (node.content).map(renderPMNode).join('\n');
+      if (node.content) return (node.content).map(child => renderPMNode(child, options)).join('\n');
       if (node.text != null) return escapeHtml(node.text);
-      return `<!-- unsupported node type: ${escapeHtml(String(node.type))} -->`;
+      return `<p>${escapeHtml(unsupportedBlock(node.type, options))}</p>`;
     }
   }
 }
@@ -1066,7 +1251,8 @@ function renderPMNode(node: PMNode): string {
  * Handles paragraphs, headings, lists, code blocks, blockquotes, marks
  * (bold, italic, underline, strike, code, link), mention nodes, and emoji.
  */
-export function convertProseMirrorToHTML(doc: unknown): string {
+export function convertProseMirrorToHTML(doc: unknown, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   if (!doc) return '<p>[No content]</p>';
 
   let parsed: unknown = doc;
@@ -1087,7 +1273,7 @@ export function convertProseMirrorToHTML(doc: unknown): string {
     return '<p>[Invalid ProseMirror document]</p>';
   }
 
-  return renderPMNode(pmDoc);
+  return renderPMNode(pmDoc, options);
 }
 
 // ── ProseMirror JSON → Markdown conversion ─────────────────────────
@@ -1156,11 +1342,15 @@ function renderPMInlineMarkdown(nodes: PMNode[] | undefined): string {
   }).join('');
 }
 
-function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; index: number }): string {
+function renderPMNodeMarkdown(
+  node: PMNode,
+  options?: RichTextRenderOptions,
+  listContext?: { ordered: boolean; index: number },
+): string {
   switch (node.type) {
     case 'doc':
       return (node.content ?? [])
-        .map(child => renderPMNodeMarkdown(child))
+        .map(child => renderPMNodeMarkdown(child, options))
         .join('\n\n');
 
     case 'paragraph': {
@@ -1177,7 +1367,7 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     case 'bullet_list':
     case 'bulletList': {
       return (node.content ?? [])
-        .map(item => renderPMNodeMarkdown(item, { ordered: false, index: 0 }))
+        .map(item => renderPMNodeMarkdown(item, options, { ordered: false, index: 0 }))
         .join('\n');
     }
 
@@ -1185,14 +1375,14 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     case 'orderedList': {
       const start = Number(node.attrs?.order ?? node.attrs?.start ?? 1);
       return (node.content ?? [])
-        .map((item, i) => renderPMNodeMarkdown(item, { ordered: true, index: start + i }))
+        .map((item, i) => renderPMNodeMarkdown(item, options, { ordered: true, index: start + i }))
         .join('\n');
     }
 
     case 'list_item':
     case 'listItem': {
       const marker = listContext?.ordered ? `${listContext.index}.` : '-';
-      const childBlocks = (node.content ?? []).map(child => renderPMNodeMarkdown(child));
+      const childBlocks = (node.content ?? []).map(child => renderPMNodeMarkdown(child, options));
       const first = (childBlocks[0] ?? '').trim();
       const rest = childBlocks.slice(1)
         .map(block => block.split('\n').map(l => (l ? `  ${l}` : l)).join('\n'))
@@ -1203,19 +1393,19 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     case 'task_list':
     case 'taskList': {
       return (node.content ?? [])
-        .map(item => renderPMNodeMarkdown(item))
+        .map(item => renderPMNodeMarkdown(item, options))
         .join('\n');
     }
 
     case 'task_item':
     case 'taskItem': {
       const checked = Boolean(node.attrs?.checked);
-      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child)).join('\n').trim();
+      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child, options)).join('\n').trim();
       return `- [${checked ? 'x' : ' '}] ${inner}`;
     }
 
     case 'blockquote': {
-      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child)).join('\n\n');
+      const inner = (node.content ?? []).map(child => renderPMNodeMarkdown(child, options)).join('\n\n');
       return inner.split('\n').map(line => `> ${line}`).join('\n');
     }
 
@@ -1235,9 +1425,28 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
       return '  \n';
 
     case 'image': {
-      const src = String(node.attrs?.src ?? '');
+      const src = sanitizeImageSrc(node.attrs?.src ?? node.attrs?.url);
       const alt = String(node.attrs?.alt ?? '');
-      return src ? `![${alt}](${src})` : '';
+      return src ? `![${alt}](${src})` : missingImagePlaceholder(options);
+    }
+
+    case 'video':
+    case 'audio':
+    case 'file':
+    case 'embed': {
+      const link = mediaLink(node.attrs ?? {}, node.type, options);
+      return link ? `[${link.label}](${link.url})` : unsupportedPlaceholder(options);
+    }
+
+    case 'table': {
+      const rows = (node.content ?? []).map(row =>
+        `| ${(row.content ?? []).map(cell =>
+          (cell.content ?? []).map(child => renderPMNodeMarkdown(child, options)).join(' ').replace(/\|/g, '\\|').replace(/\n/g, ' '),
+        ).join(' | ')} |`,
+      );
+      if (!rows.length) return '';
+      rows.splice(1, 0, `| ${(node.content?.[0]?.content ?? []).map(() => '---').join(' | ')} |`);
+      return rows.join('\n');
     }
 
     case 'text':
@@ -1251,9 +1460,9 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
     }
 
     default: {
-      if (node.content) return (node.content).map(child => renderPMNodeMarkdown(child)).join('\n');
+      if (node.content) return (node.content).map(child => renderPMNodeMarkdown(child, options)).join('\n');
       if (node.text != null) return node.text;
-      return '';
+      return unsupportedBlock(node.type, options);
     }
   }
 }
@@ -1263,7 +1472,8 @@ function renderPMNodeMarkdown(node: PMNode, listContext?: { ordered: boolean; in
  * Handles paragraphs, headings, lists, code blocks, blockquotes, marks
  * (bold, italic, underline, strike, code, link), mention nodes, and emoji.
  */
-export function convertProseMirrorToMarkdown(doc: unknown): string {
+export function convertProseMirrorToMarkdown(doc: unknown, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   if (!doc) return '';
 
   let parsed: unknown = doc;
@@ -1280,14 +1490,15 @@ export function convertProseMirrorToMarkdown(doc: unknown): string {
   const pmDoc = parsed as PMNode;
   if (pmDoc.type !== 'doc') return '';
 
-  return renderPMNodeMarkdown(pmDoc);
+  return renderPMNodeMarkdown(pmDoc, options);
 }
 
 /**
  * Auto-detects whether block_data is BlockNote or ProseMirror format
  * and converts it to Markdown using the appropriate converter.
  */
-export function convertBlockContentToMarkdown(blockData: unknown): string {
+export function convertBlockContentToMarkdown(blockData: unknown, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   if (!blockData) return '';
 
   let parsed: unknown = blockData;
@@ -1295,7 +1506,7 @@ export function convertBlockContentToMarkdown(blockData: unknown): string {
     try {
       parsed = JSON.parse(blockData);
     } catch {
-      return convertBlockNoteToMarkdown(blockData);
+      return convertBlockNoteToMarkdown(blockData, options);
     }
   }
 
@@ -1303,12 +1514,12 @@ export function convertBlockContentToMarkdown(blockData: unknown): string {
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     const maybeDoc = parsed as { type?: string };
     if (maybeDoc.type === 'doc') {
-      return convertProseMirrorToMarkdown(parsed);
+      return convertProseMirrorToMarkdown(parsed, options);
     }
   }
 
   // BlockNote format: [{type: '...', props: {...}, content: [...]}]
-  return convertBlockNoteToMarkdown(blockData);
+  return convertBlockNoteToMarkdown(blockData, options);
 }
 
 /** Converts block content only when it contains readable content. */
@@ -1323,7 +1534,8 @@ export function getMeaningfulBlockContentMarkdown(blockData: unknown): string | 
  * Auto-detects whether block_data is BlockNote or ProseMirror format
  * and converts it to HTML using the appropriate converter.
  */
-export function convertBlockContentToHTML(blockData: unknown): string {
+export function convertBlockContentToHTML(blockData: unknown, options?: RichTextRenderOptions): string {
+  validateRenderOptions(options);
   if (!blockData) return '<p>[No content]</p>';
 
   let parsed: unknown = blockData;
@@ -1331,7 +1543,7 @@ export function convertBlockContentToHTML(blockData: unknown): string {
     try {
       parsed = JSON.parse(blockData);
     } catch {
-      return convertBlockNoteToHTML(blockData);
+      return convertBlockNoteToHTML(blockData, options);
     }
   }
 
@@ -1339,12 +1551,12 @@ export function convertBlockContentToHTML(blockData: unknown): string {
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     const maybeDoc = parsed as { type?: string };
     if (maybeDoc.type === 'doc') {
-      return convertProseMirrorToHTML(parsed);
+      return convertProseMirrorToHTML(parsed, options);
     }
   }
 
   // BlockNote format: [{type: '...', props: {...}, content: [...]}]
-  return convertBlockNoteToHTML(blockData);
+  return convertBlockNoteToHTML(blockData, options);
 }
 
 // ── Structured content → plain text projection ─────────────────────
@@ -1375,7 +1587,7 @@ function blockTextContent(block: any): string {
     return rows
       .map((row: any) =>
         (Array.isArray(row?.cells) ? row.cells : [])
-          .map((cell: any) => inlineContentToPlainText(cell))
+          .map((cell: unknown) => inlineContentToPlainText(tableCellContent(cell)))
           .join(' | ')
       )
       .join('\n');
