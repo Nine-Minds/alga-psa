@@ -128,7 +128,8 @@ export default function PriceBooksTab(): React.JSX.Element {
         <Button id="price-book-new-from-csv" onClick={() => setImportOpen(true)}>{t('priceBooks.actions.newFromCsv', { defaultValue: 'New price book from CSV' })}</Button>
       </div>
       <DataTable id="price-books-table" data={books} columns={columns} pagination pageSize={10} />
-      <PriceBookImportDialog isOpen={importOpen} onClose={() => setImportOpen(false)} onApplied={() => void load()} />
+      {/* Reload on close too: the upload creates the draft, so a dialog closed before Apply leaves one to list. */}
+      <PriceBookImportDialog isOpen={importOpen} onClose={() => { setImportOpen(false); void load(); }} onApplied={() => void load()} />
 
       <ConfirmationDialog
         id="price-book-confirm-dialog"
