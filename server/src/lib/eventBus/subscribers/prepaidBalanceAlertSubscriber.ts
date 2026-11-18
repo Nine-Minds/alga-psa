@@ -12,7 +12,7 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { evaluatePrepaidBalanceAlertsForTenant } from './prepaidBalanceAlertEvaluator';
 import { planAndDrainDeliveriesForTenant } from './prepaidBalanceAlertDelivery';
-import { replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
+import { issueReplenishmentAwaitingInvoiceNumber, replenishOpenPrepaidBalanceAlerts } from './prepaidAutoReplenishment';
 
 let isRegistered = false;
 
@@ -23,6 +23,7 @@ export async function registerPrepaidBalanceAlertSubscriber(): Promise<void> {
 
   await getEventBus().subscribe('PREPAID_BALANCE_ALERT_SCAN_REQUESTED', handlePrepaidBalanceAlertScanRequested);
   await getEventBus().subscribe('PREPAID_BLOCK_USAGE_CHANGED', handlePrepaidBlockUsageChanged);
+  await getEventBus().subscribe('INVOICE_NUMBER_ASSIGNED', handleInvoiceNumberAssigned);
 
   isRegistered = true;
   logger.info('[PrepaidBalanceAlertSubscriber] Registered');
@@ -35,9 +36,41 @@ export async function unregisterPrepaidBalanceAlertSubscriber(): Promise<void> {
 
   await getEventBus().unsubscribe('PREPAID_BALANCE_ALERT_SCAN_REQUESTED', handlePrepaidBalanceAlertScanRequested);
   await getEventBus().unsubscribe('PREPAID_BLOCK_USAGE_CHANGED', handlePrepaidBlockUsageChanged);
+  await getEventBus().unsubscribe('INVOICE_NUMBER_ASSIGNED', handleInvoiceNumberAssigned);
 
   isRegistered = false;
   logger.info('[PrepaidBalanceAlertSubscriber] Unregistered');
+}
+
+/**
+ * A replenishment invoice auto-issued while "Let Xero assign invoice numbers"
+ * was on is finalized but not emailed until Xero's number is written back
+ * (alga-2026-0002746). This sends the held-back email; any other invoice is a
+ * no-op.
+ */
+export async function handleInvoiceNumberAssigned(event: unknown): Promise<void> {
+  const validated = EventSchemas.INVOICE_NUMBER_ASSIGNED.parse(event);
+  const { tenantId, invoiceId } = validated.payload;
+
+  try {
+    await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const issued = await issueReplenishmentAwaitingInvoiceNumber(knex, tenantId, invoiceId);
+      if (issued) {
+        logger.info('[PrepaidBalanceAlertSubscriber] Sent replenishment invoice held for its Xero number', {
+          tenantId,
+          invoiceId,
+        });
+      }
+    });
+  } catch (error) {
+    logger.error('[PrepaidBalanceAlertSubscriber] Failed to send replenishment invoice after number assignment', {
+      tenantId,
+      invoiceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 }
 
 /**

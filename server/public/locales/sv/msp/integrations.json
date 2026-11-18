@@ -4391,7 +4391,15 @@
           "targetPending": "väntande",
           "failedPermanentDescription": "Rensningen i Xero stötte på ett permanent fel. Du kan försöka igen eller tvinga slutförande för att ta bort de lagrade autentiseringsuppgifterna och registrera åtgärden i granskningsloggen."
         },
-        "credentialsStoredDescription": "Klient-ID och klienthemlighet lagras säkert."
+        "credentialsStoredDescription": "Klient-ID och klienthemlighet lagras säkert.",
+        "invoiceNumbering": {
+          "label": "Låt Xero tilldela fakturanummer",
+          "hint": "Nya fakturor får nästa nummer från den här Xero-organisationen. Tills en faktura har exporterats visar den ett preliminärt nummer och kan inte skickas till kunden. Fakturor som redan finns i Xero behåller sina nummer.",
+          "prefixHint": "Preliminära nummer kommer från Faktureringsinställningar → Numrering. Använd ett prefix som Xero aldrig använder, så att ett preliminärt nummer inte krockar med ett nummer som Xero tilldelar.",
+          "enabledMessage": "Fakturor som slutförs från och med nu får sitt nummer från Xero.",
+          "disabledMessage": "Fakturor som slutförs från och med nu behåller det nummer som Alga tilldelar.",
+          "error": "Det gick inte att uppdatera numreringsläget för fakturor."
+        }
       }
     },
     "stripe": {

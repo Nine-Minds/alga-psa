@@ -4368,7 +4368,15 @@
           "dangerTitle": "Xero trennen"
         },
         "connectNeedsAttention": "Die Xero-Autorisierung ist abgeschlossen, aber die Verbindung erfordert noch Aufmerksamkeit. Die Synchronisierung bleibt pausiert.",
-        "credentialsStoredDescription": "Client-ID und Client-Geheimnis werden sicher gespeichert."
+        "credentialsStoredDescription": "Client-ID und Client-Geheimnis werden sicher gespeichert.",
+        "invoiceNumbering": {
+          "label": "Xero vergibt die Rechnungsnummern",
+          "hint": "Neue Rechnungen erhalten die nächste Nummer aus dieser Xero-Organisation. Bis eine Rechnung exportiert wurde, zeigt sie eine vorläufige Nummer und kann nicht an den Kunden gesendet werden. Rechnungen, die bereits in Xero sind, behalten ihre Nummern.",
+          "prefixHint": "Vorläufige Nummern stammen aus Abrechnungseinstellungen → Nummerierung. Verwenden Sie ein Präfix, das Xero nie nutzt, damit eine vorläufige Nummer nicht mit einer von Xero vergebenen Nummer kollidiert.",
+          "enabledMessage": "Rechnungen, die ab jetzt abgeschlossen werden, erhalten ihre Nummer von Xero.",
+          "disabledMessage": "Rechnungen, die ab jetzt abgeschlossen werden, behalten die von Alga vergebene Nummer.",
+          "error": "Die Nummerierungsart konnte nicht aktualisiert werden."
+        }
       }
     },
     "stripe": {

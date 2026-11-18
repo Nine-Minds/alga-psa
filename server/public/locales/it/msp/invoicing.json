@@ -1264,7 +1264,8 @@
       "viewInQuickBooks": "Visualizza in QuickBooks",
       "viewInXero": "Visualizza in Xero",
       "xeroNumberPrefix": "N. Xero "
-    }
+    },
+    "numberPending": "Numero in attesa da Xero"
   },
   "templateManager": {
     "title": "Gestore modelli di fattura",
@@ -2897,6 +2898,7 @@
       "emailNotConfigured": "L’email non è configurata. Configurare le impostazioni email in Impostazioni prima di inviare le fatture.",
       "schedulePdfFailed": "Impossibile avviare la generazione dei PDF delle fatture. Riprovare.",
       "scheduleEmailFailed": "Impossibile avviare l’invio delle fatture via email. Riprovare.",
+      "invoiceNumberPending": "Questa fattura è in attesa del numero di fattura da Xero. Esportala su Xero, o attendi la prossima sincronizzazione, prima di inviarla.",
       "recipientFailed": "Impossibile caricare le informazioni sul destinatario di questa fattura.",
       "sendFailed": "Impossibile inviare la fattura via email. Riprovare."
     },

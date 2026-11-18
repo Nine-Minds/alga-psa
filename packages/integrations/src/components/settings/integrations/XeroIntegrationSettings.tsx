@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { CheckCircle2, ExternalLink, KeyRound } from 'lucide-react';
-import { disconnectXero, forceFinalizeXeroDisconnect, getXeroConnectionStatus, saveXeroCredentials } from '../../../actions/integrations/xeroActions';
+import { disconnectXero, forceFinalizeXeroDisconnect, getXeroConnectionStatus, getXeroInvoiceNumberingMode, saveXeroCredentials, setXeroInvoiceNumberingMode } from '../../../actions/integrations/xeroActions';
 import { XeroLiveMappingManager } from '../../xero/XeroLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAccountingCapabilities } from './useAccountingCapabilities';
@@ -117,6 +118,8 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
   const [editingCredentials, setEditingCredentials] = React.useState(false);
   const [disconnectConfirmOpen, setDisconnectConfirmOpen] = React.useState(false);
   const [syncIssue, setSyncIssue] = React.useState<{ reconnectRequired: boolean; error: string | null } | null>(null);
+  const [xeroAssignedNumbering, setXeroAssignedNumbering] = React.useState(false);
+  const [savingXeroAssignedNumbering, setSavingXeroAssignedNumbering] = React.useState(false);
 
   const oauthStatus = searchParams?.get('xero_status');
   const oauthError = React.useMemo(() => describeCallbackError(searchParams?.get('xero_error') ?? null, t), [searchParams, t]);
@@ -127,6 +130,19 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
     try {
       const result = await getXeroConnectionStatus();
       setStatus(result);
+      const realmId = result?.defaultConnection?.xeroTenantId;
+      if (realmId) {
+        // A failed numbering read must not hide the connection panel; show the
+        // safe default (off) instead.
+        try {
+          const numbering = await getXeroInvoiceNumberingMode({ realmId });
+          setXeroAssignedNumbering('enabled' in numbering ? numbering.enabled : false);
+        } catch {
+          setXeroAssignedNumbering(false);
+        }
+      } else {
+        setXeroAssignedNumbering(false);
+      }
       return result;
     } catch (err) {
       setError(
@@ -348,6 +364,39 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
     }
   };
 
+  const handleXeroAssignedNumberingChange = async (enabled: boolean) => {
+    const realmId = status?.defaultConnection?.xeroTenantId;
+    if (!realmId) return;
+
+    setSavingXeroAssignedNumbering(true);
+    setError(null);
+    setSuccessMessage(null);
+    // Optimistic, then reconciled by load().
+    setXeroAssignedNumbering(enabled);
+
+    try {
+      const result = await setXeroInvoiceNumberingMode({ realmId, enabled });
+      if (!result.success) {
+        setXeroAssignedNumbering(!enabled);
+        setError(result.error ?? t('integrations.xero.settings.invoiceNumbering.error', { defaultValue: 'Failed to update invoice numbering mode.' }));
+        return;
+      }
+      setSuccessMessage(
+        enabled
+          ? t('integrations.xero.settings.invoiceNumbering.enabledMessage', { defaultValue: 'Invoices finalized from now on will take their number from Xero.' })
+          : t('integrations.xero.settings.invoiceNumbering.disabledMessage', { defaultValue: 'Invoices finalized from now on will keep the number Alga assigns.' })
+      );
+      await load();
+    } catch {
+      // Which system numbers invoices is too consequential to show an
+      // unconfirmed state.
+      setXeroAssignedNumbering(!enabled);
+      setError(t('integrations.xero.settings.invoiceNumbering.error', { defaultValue: 'Failed to update invoice numbering mode.' }));
+    } finally {
+      setSavingXeroAssignedNumbering(false);
+    }
+  };
+
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
@@ -525,6 +574,34 @@ export default function XeroIntegrationSettings({ syncHealthSlot }: { syncHealth
               </AlertDescription>
             </Alert>
           )}
+
+          {defaultConnection ? (
+            <div className="rounded-lg border p-4" id="xero-invoice-numbering-section">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="xero-assigned-invoice-numbers-toggle" className="text-sm font-medium">
+                    {t('integrations.xero.settings.invoiceNumbering.label', { defaultValue: 'Let Xero assign invoice numbers' })}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('integrations.xero.settings.invoiceNumbering.hint', { defaultValue: "New invoices take the next number from this Xero organisation. Until an invoice has been exported it shows a provisional number and can't be sent to the client. Invoices already in Xero keep their numbers." })}
+                  </p>
+                  {xeroAssignedNumbering ? (
+                    <p className="text-xs text-muted-foreground" id="xero-invoice-numbering-prefix-hint">
+                      {t('integrations.xero.settings.invoiceNumbering.prefixHint', { defaultValue: "Provisional numbers come from Billing Settings → Numbering. Use a prefix that Xero never uses, so a provisional number can't clash with a number Xero assigns." })}
+                    </p>
+                  ) : null}
+                </div>
+                {/* No `label` prop: Switch renders its own label beside the
+                    thumb when given one, which would repeat the Label above. */}
+                <Switch
+                  id="xero-assigned-invoice-numbers-toggle"
+                  checked={xeroAssignedNumbering}
+                  disabled={savingXeroAssignedNumbering || loading || !canManageConnections || disconnectPending}
+                  onCheckedChange={(checked) => void handleXeroAssignedNumberingChange(checked)}
+                />
+              </div>
+            </div>
+          ) : null}
 
           {reconnectRequired ? (
             <Alert variant="destructive" id="xero-reconnect-required-alert">

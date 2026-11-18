@@ -321,19 +321,18 @@ async function processAlert(
         deferPrepaidActivation: alertType !== 'prepaid_block',
         markReplenishmentIssued: false,
       });
-      await enqueueImmediateJob('invoice_email', {
-        invoiceIds: [invoiceId],
-        tenantId: tenant,
-        user_id: 'system',
-        steps: [
-          { stepName: `PDF Generation for replenishment invoice ${invoiceId}`, type: 'pdf_generation', metadata: { invoiceId, tenantId: tenant } },
-          { stepName: `Email Sending for replenishment invoice ${invoiceId}`, type: 'email_sending', metadata: { invoiceId, tenantId: tenant } },
-        ],
-        metadata: { user_id: 'system', invoice_count: 1, tenantId: tenant },
-      });
-      await tenantDb(knex, tenant).table('prepaid_balance_alerts')
-        .where({ alert_id: alertId, replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
-        .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+      // A Xero-numbered invoice must not be emailed with its provisional number.
+      // The alert stays `pending` (finalized, email owed) and
+      // issueReplenishmentAwaitingInvoiceNumber sends it on INVOICE_NUMBER_ASSIGNED.
+      const finalized = await tenantDb(knex, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
+        .first('invoice_number_source');
+      if (finalized?.invoice_number_source !== 'pending_external') {
+        await enqueueReplenishmentInvoiceEmail(tenant, invoiceId);
+        await tenantDb(knex, tenant).table('prepaid_balance_alerts')
+          .where({ alert_id: alertId, replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+          .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+      }
     } catch (error) {
       await tenantDb(knex, tenant).table('prepaid_balance_alerts')
         .where({ alert_id: alertId, replenishment_invoice_id: invoiceId })
@@ -348,6 +347,63 @@ async function processAlert(
   }
 
   return { result, autoIssue };
+}
+
+async function enqueueReplenishmentInvoiceEmail(tenant: string, invoiceId: string): Promise<void> {
+  await enqueueImmediateJob('invoice_email', {
+    invoiceIds: [invoiceId],
+    tenantId: tenant,
+    user_id: 'system',
+    steps: [
+      { stepName: `PDF Generation for replenishment invoice ${invoiceId}`, type: 'pdf_generation', metadata: { invoiceId, tenantId: tenant } },
+      { stepName: `Email Sending for replenishment invoice ${invoiceId}`, type: 'email_sending', metadata: { invoiceId, tenantId: tenant } },
+    ],
+    metadata: { user_id: 'system', invoice_count: 1, tenantId: tenant },
+  });
+}
+
+/**
+ * Sends the auto-issue email that was held back while a replenishment invoice
+ * waited for its Xero number (alga-2026-0002746). Only the system auto-issue
+ * path finalizes with the alert still `pending` (a manager finalize marks it
+ * `issued`), so "alert pending + invoice finalized and numbered" means the
+ * email is owed. The alert is claimed before enqueueing so a redelivered event
+ * cannot send twice.
+ */
+export async function issueReplenishmentAwaitingInvoiceNumber(
+  knex: Knex,
+  tenant: string,
+  invoiceId: string,
+): Promise<boolean> {
+  const db = tenantDb(knex, tenant);
+  const invoice = await db.table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first('finalized_at', 'invoice_number_source');
+  if (!invoice?.finalized_at || invoice.invoice_number_source === 'pending_external') {
+    return false;
+  }
+
+  const claimed = await db.table('prepaid_balance_alerts')
+    .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+    .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+  if (!claimed) {
+    return false;
+  }
+
+  try {
+    await enqueueReplenishmentInvoiceEmail(tenant, invoiceId);
+  } catch (error) {
+    await db.table('prepaid_balance_alerts')
+      .where({ replenishment_invoice_id: invoiceId })
+      .update({
+        replenishment_status: 'failed',
+        replenishment_attempt_count: knex.raw('LEAST(COALESCE(replenishment_attempt_count, 0) + 1, 100)'),
+        replenishment_error: String(error instanceof Error ? error.message : error).slice(0, 1000),
+        updated_at: knex.fn.now(),
+      });
+    throw error;
+  }
+  return true;
 }
 
 export async function replenishOpenPrepaidBalanceAlerts(

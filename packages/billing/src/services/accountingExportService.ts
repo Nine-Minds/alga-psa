@@ -566,6 +566,9 @@ export class AccountingExportService {
       }
 
       const hasDeliveredLines = deliveryResult.deliveredLines.length > 0;
+      // A document that exists remotely but could not be finalised locally (e.g. a
+      // Xero-assigned number that clashed) needs a person, not a blind retry.
+      const hasRemoteRetainedDocument = failedDocuments.some((failure) => failure.metadata?.remoteDocumentCreated === true);
       if (failedDocuments.length === 0) {
         await this.repository.updateBatchStatus(batchId, {
           status: 'delivered',
@@ -574,7 +577,7 @@ export class AccountingExportService {
         });
       } else {
         await this.repository.updateBatchStatus(batchId, {
-          status: hasDeliveredLines ? 'needs_attention' : 'failed',
+          status: hasDeliveredLines || hasRemoteRetainedDocument ? 'needs_attention' : 'failed',
           delivered_at: hasDeliveredLines ? new Date().toISOString() : undefined,
           notes: `${failedDocuments.length} of ${transformResult.documents.length} document(s) failed to deliver. See batch errors for details.`
         });

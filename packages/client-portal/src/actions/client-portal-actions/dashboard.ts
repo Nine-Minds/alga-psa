@@ -391,6 +391,8 @@ export const getRecentActivity = withAuth(async (
       scopedDb.tenantJoin(invoicesQuery, 'invoice_charge_details as iid', 'ic.item_id', 'iid.item_id', { type: 'left' });
       const invoices = await invoicesQuery
         .whereNotNull('inv.finalized_at')
+        // Still waiting for its accounting-system number: not client-facing yet.
+        .where('inv.invoice_number_source', '<>', 'pending_external')
         .where({
           'inv.client_id': clientId
         })

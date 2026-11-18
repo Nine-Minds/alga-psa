@@ -171,6 +171,7 @@ export const getPortalSpendByBillingProfile = withAuth(async (
       .where('i.client_id', clientId)
       .whereIn('i.status', PORTAL_VISIBLE_INVOICE_STATUSES)
       .whereNotNull('i.finalized_at')
+      .where('i.invoice_number_source', '<>', 'pending_external')
       .where('i.invoice_date', '>=', input.periodStart)
       .where('i.invoice_date', '<', input.periodEnd)
       .whereIn('ic.billing_profile_id', [...namesById.keys()]);
@@ -246,6 +247,7 @@ export const getPortalChargesForBillingProfile = withAuth(async (
       .where('ic.billing_profile_id', input.billingProfileId)
       .whereIn('i.status', PORTAL_VISIBLE_INVOICE_STATUSES)
       .whereNotNull('i.finalized_at')
+      .where('i.invoice_number_source', '<>', 'pending_external')
       .where('i.invoice_date', '>=', input.periodStart)
       .where('i.invoice_date', '<', input.periodEnd)
       .orderBy('i.invoice_date', 'desc')
@@ -307,6 +309,7 @@ export const getPortalInvoiceIdsForBillingProfile = withAuth(async (
       .where('i.client_id', clientId)
       .where('ic.billing_profile_id', input.billingProfileId)
       .whereNotNull('i.finalized_at')
+      .where('i.invoice_number_source', '<>', 'pending_external')
       .distinct('ic.invoice_id')
       .select('ic.invoice_id');
     return rows.map((row: any) => row.invoice_id as string);

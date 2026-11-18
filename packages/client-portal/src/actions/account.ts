@@ -531,6 +531,8 @@ export const getInvoices = withAuth(async (user, { tenant }): Promise<Invoice[] 
       .where({
         client_id: clientId
       })
+      // Not client-facing until the accounting system has numbered it.
+      .where('invoice_number_source', '<>', 'pending_external')
       .orderBy('created_at', 'desc')
       .limit(10)
       .select('*') as unknown as InvoiceRow[];

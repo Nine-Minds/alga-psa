@@ -193,6 +193,9 @@ async function validateClientInvoiceAccess(
       client_id: clientId,
     })
     .whereNot('status', 'draft')
+    // Waiting for its number from the accounting system: treated like a draft,
+    // so the by-id, line-item, preview and PDF actions all refuse it too.
+    .whereNot('invoice_number_source', 'pending_external')
     .first();
 
   if (!invoiceCheck) {
@@ -295,7 +298,10 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Clie
     }
     // Filter out draft invoices - only finalized invoices should be visible in client portal
     // An invoice is finalized when finalized_at is set (not null)
-    return invoices.filter(invoice => invoice.finalized_at != null);
+    // An invoice still waiting for its Xero-assigned number is not client-facing yet.
+    return invoices.filter(
+      invoice => invoice.finalized_at != null && (invoice as { invoice_number_source?: string }).invoice_number_source !== 'pending_external'
+    );
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {
@@ -449,7 +455,8 @@ export const getClientCreditHistory = withAuth(async (user, { tenant }): Promise
           't.created_at',
           't.invoice_id',
           't.currency_code',
-          { invoice_number: 'i.invoice_number' }
+          { invoice_number: 'i.invoice_number' },
+          { invoice_number_source: 'i.invoice_number_source' }
         )
         .orderBy('t.created_at', 'desc')
         .limit(20);
@@ -465,7 +472,8 @@ export const getClientCreditHistory = withAuth(async (user, { tenant }): Promise
         balance_after: row.balance_after != null ? Number(row.balance_after) : null,
         created_at: String(row.created_at),
         invoice_id: row.invoice_id ? String(row.invoice_id) : null,
-        invoice_number: row.invoice_number ? String(row.invoice_number) : null,
+        // A provisional number must not surface through credit history either.
+        invoice_number: row.invoice_number && row.invoice_number_source !== 'pending_external' ? String(row.invoice_number) : null,
         currency_code: row.currency_code ? String(row.currency_code) : null,
       }));
     });

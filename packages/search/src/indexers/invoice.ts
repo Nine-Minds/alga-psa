@@ -73,6 +73,7 @@ export const invoiceIndexer: EntityIndexer = {
     'INVOICE_DUE_DATE_CHANGED',
     'INVOICE_OVERDUE',
     'INVOICE_WRITTEN_OFF',
+    'INVOICE_NUMBER_ASSIGNED',
   ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {

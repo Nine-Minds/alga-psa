@@ -23,6 +23,7 @@ export type AccountingAuditOperation =
   | 'accounting_disconnected'
   | 'accounting_default_realm_changed'
   | 'accounting_environment_changed'
+  | 'accounting_numbering_mode_changed'
   | 'accounting_mapping_created'
   | 'accounting_mapping_updated'
   | 'accounting_mapping_deleted'

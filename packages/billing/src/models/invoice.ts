@@ -742,6 +742,7 @@ const Invoice = {
     return {
       invoice_id: invoice.invoice_id,
       invoice_number: invoice.invoice_number,
+      invoice_number_source: invoice.invoice_number_source ?? 'alga',
       client_id: invoice.client_id,
       po_number: invoice.po_number ?? null,
       payment_method: invoice.payment_method ?? null,

@@ -427,6 +427,18 @@ describe('InvoiceEmailHandler', () => {
   });
 
   describe('error paths', () => {
+    it('refuses to email an invoice still waiting for its Xero number (alga-2026-0002746)', async () => {
+      mocks.dbRows.invoice = buildInvoice({ invoice_number_source: 'pending_external' });
+
+      await expect(
+        InvoiceEmailHandler.handle('pg-1', buildJobData()),
+      ).rejects.toThrow('Invoice INV-100 is waiting for its invoice number from Xero');
+
+      expect(mocks.generateAndStore).not.toHaveBeenCalled();
+      expect(mocks.sendInvoiceEmail).not.toHaveBeenCalled();
+      expect(mocks.publishGeneratedDocumentsToClient).not.toHaveBeenCalled();
+    });
+
     it('should mark the job failed and re-throw when no recipient email can be resolved', async () => {
       mocks.resolveInvoiceBillingRecipient.mockResolvedValue({
         clientId: 'client-1',

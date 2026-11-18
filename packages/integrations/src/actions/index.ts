@@ -320,6 +320,8 @@ export {
   getXeroItems,
   getXeroTaxRates,
   getXeroTrackingCategories,
+  getXeroInvoiceNumberingMode,
+  setXeroInvoiceNumberingMode,
   type XeroConnectionStatus,
   type XeroAccountOption,
   type XeroItemOption,

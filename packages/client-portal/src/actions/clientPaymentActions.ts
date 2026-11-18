@@ -137,7 +137,7 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
     }
 
     // Check if invoice is a draft or otherwise not finalized
-    if (!invoice.finalized_at || invoice.status === 'draft') {
+    if (!invoice.finalized_at || invoice.status === 'draft' || invoice.invoice_number_source === 'pending_external') {
       return actionError('invoice_unavailable', 'Invoice not available for payment');
     }
 
@@ -304,6 +304,10 @@ export const verifyClientPortalPayment = withAuth(async (
     // Verify user has access via their client
     if (invoice.client_id !== contact.client_id) {
       return actionError('access_denied', 'Access denied');
+    }
+
+    if (invoice.invoice_number_source === 'pending_external') {
+      return actionError('invoice_not_found', 'Invoice not found');
     }
 
     // Check if invoice is already marked as paid
