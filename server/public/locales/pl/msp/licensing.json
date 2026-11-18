@@ -704,6 +704,8 @@
     "buySeats": "Kup miejsca współzarządzania",
     "awaitingVerification_one": "Zakup {{count}} miejsca oczekuje na weryfikację płatności. Miejsce pojawi się tutaj po potwierdzeniu płatności.",
     "awaitingVerification_other": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_few": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_many": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
     "refreshStatus": "Odśwież status",
     "purchaseOnly": {
       "intro": "Kup tutaj pulę miejsc współzarządzania. Po zakupie przydziel miejsca klientom z karty każdego klienta."
