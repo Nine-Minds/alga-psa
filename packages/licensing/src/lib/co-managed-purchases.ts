@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { readCoManagedPoolCapacity } from './co-managed-capacity';
+import { readCoManagedFirstPurchasePhase } from './co-managed-first-purchase';
 
 export interface CoManagedPurchaseOperation {
   operation_id: string;
@@ -16,11 +18,12 @@ export type CoManagedPurchaseResult =
 
 export class CoManagedPurchaseError extends Error {
   constructor(public readonly code: 'INVALID_PURCHASE' | 'SPONSOR_NOT_ELIGIBLE' | 'PURCHASE_IN_PROGRESS' |
-    'OPERATION_CONFLICT' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
+    'OPERATION_CONFLICT' | 'PURCHASE_AWAITING_VERIFICATION' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
     super({
       INVALID_PURCHASE: 'Enter a valid seat quantity and purchase reference.',
       SPONSOR_NOT_ELIGIBLE: 'Only Pro PSA workspaces can purchase co-managed seats.',
       PURCHASE_IN_PROGRESS: 'Complete or resume the pending purchase before starting another.',
+      PURCHASE_AWAITING_VERIFICATION: 'The first purchase is awaiting payment verification. Refresh shortly.',
       OPERATION_CONFLICT: 'This purchase was started with a different seat quantity.',
       ALLOCATED_CAPACITY_REQUIRED: 'Release allocated customer seats before reducing this pool.',
       OFFLINE_LICENSE_REQUIRED: 'Update the signed license to change self-hosted co-managed capacity.',
@@ -32,10 +35,10 @@ export class CoManagedPurchaseError extends Error {
 const IN_FLIGHT = ['preparing', 'checkout', 'payment_failed'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function allocatedSeats(trx: Knex.Transaction, tenant: string): Promise<number> {
-  const totals = await tenantDb(trx, tenant).table('co_managed_allocations').whereNot('state', 'released')
-    .sum('seats as used').first();
-  return Number(totals?.used ?? 0);
+/** A pool cannot be sized below what its allocations, of either kind, already hold. */
+async function holdsAllocations(trx: Knex.Transaction, sponsor: string, quantity: number): Promise<boolean> {
+  const pool = await readCoManagedPoolCapacity(trx, sponsor, quantity);
+  return pool.allocated <= pool.purchased;
 }
 
 /**
@@ -75,11 +78,17 @@ export async function runCoManagedPurchase(db: Knex, input: {
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {
         throw new CoManagedPurchaseError('PURCHASE_IN_PROGRESS');
       }
+      // A first purchase needs a positive pool and cannot start while another one awaits verification.
+      const first = await readCoManagedFirstPurchasePhase(trx, input.sponsorTenant);
+      if (first.phase !== 'established') {
+        if (input.quantity < 1) throw new CoManagedPurchaseError('INVALID_PURCHASE');
+        if (first.phase === 'awaiting_verification') throw new CoManagedPurchaseError('PURCHASE_AWAITING_VERIFICATION');
+      }
       const entitlement = await scoped.table('co_managed_entitlements').first('source');
       if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');
       // An operator grant is not a billing subscription; a purchase would be unreconcilable.
       if (entitlement && entitlement.source !== 'hosted') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
-      if (input.quantity < await allocatedSeats(trx, input.sponsorTenant)) {
+      if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
         throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
       }
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
@@ -103,7 +112,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
     const operation = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).first();
     if (operation.state === 'completed') return { kind: 'updated' as const, subscriptionId: operation.provider_reference };
     if (operation.state === 'expired') return { kind: 'expired' as const };
-    if (input.quantity < await allocatedSeats(trx, input.sponsorTenant)) {
+    if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
       throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
     }
     const result = await provider(operation);

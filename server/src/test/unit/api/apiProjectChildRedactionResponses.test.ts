@@ -8,6 +8,12 @@ const TASK = '44444444-4444-4444-4444-444444444444';
 
 const state = vi.hoisted(() => ({ redactedFields: [] as string[] }));
 
+// Route fixtures supply loaded subject facts while retaining authorization and response projection checks.
+vi.mock('@alga-psa/authorization/subject', async (original) => ({
+  ...await original<typeof import('@alga-psa/authorization/subject')>(),
+  resolveAuthorizationSubject: (await import('../../../../test-utils/authorizationSubjectFixture')).resolveFixtureAuthorizationSubject,
+}));
+
 vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
   ApiKeyServiceForApi: {
     validateApiKeyForTenant: vi.fn(async () => ({ tenant: TENANT, user_id: 'user-1', api_key_id: 'key-1' })),
@@ -27,8 +33,10 @@ vi.mock('@alga-psa/db', async (original) => ({
     table: () => ({ where: () => ({ first: async () => ({ project_id: PROJECT }) }) }),
   })),
 }));
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => ({ allowed: true, redactedFields: state.redactedFields })),
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: vi.fn(async () => ({ allowed: true, redactedFields: state.redactedFields })),
+  })),
 }));
 vi.mock('@/lib/api/services/ProjectService', () => ({ ProjectService: class {} }));
 
@@ -70,11 +78,11 @@ describe('project child read response projections', () => {
     state.redactedFields = ['projects.project_name'];
     const redacted = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
     expect(redacted.data).toMatchObject({ task_id: TASK, task_name: task.task_name });
-    expect(redacted.data).not.toHaveProperty('project_name');
+    expect(redacted.data.project_name).toBeNull();
 
     state.redactedFields = ['project_phases.phase_name'];
     const hiddenPhaseName = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
-    expect(hiddenPhaseName.data).not.toHaveProperty('phase_name');
+    expect(hiddenPhaseName.data.phase_name).toBeNull();
 
     state.redactedFields = ['project_tasks.estimated_hours'];
     const hiddenTaskHours = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
@@ -83,7 +91,7 @@ describe('project child read response projections', () => {
 
     state.redactedFields = ['project_tasks.project_name'];
     const hiddenProjectName = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
-    expect(hiddenProjectName.data).not.toHaveProperty('project_name');
+    expect(hiddenProjectName.data.project_name).toBeNull();
     expect(hiddenProjectName.data.task_name).toBe(task.task_name);
   });
 
@@ -97,7 +105,7 @@ describe('project child read response projections', () => {
     ]) {
       const result = await body(response);
       expect(result.data).toHaveLength(1);
-      expect(result.data[0]).not.toHaveProperty('project_name');
+      expect(result.data[0].project_name).toBeNull();
     }
     const unrestrictedPhase = await body(await controller.listPhases()(req(`/api/v1/projects/${PROJECT}/phases`)));
     expect(unrestrictedPhase.data[0].start_date).toBe('2026-01-01');
@@ -128,7 +136,11 @@ describe('project child read response projections', () => {
       ]) {
         const result = await body(response);
         expect(result.data).toHaveLength(1);
-        expect(result.data[0]).not.toHaveProperty(restriction.endsWith('estimated_hours') ? 'estimated_hours' : 'project_name');
+        if (restriction.endsWith('estimated_hours')) {
+          expect(result.data[0]).not.toHaveProperty('estimated_hours');
+        } else {
+          expect(result.data[0].project_name).toBeNull();
+        }
         expect(result.data[0].task_name).toBe(task.task_name);
       }
     }

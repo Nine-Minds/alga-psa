@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string, o?: any) => o?.defaultValue ?? k }) }));
-vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: true }) }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: true }), useServedCapabilities: () => new Set(['co-managed']) }));
 vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', () => ({ nativeTicketDataSource: { kind: 'native', conversation: {}, comments: h.native } }));
 vi.mock('@/lib/actions/coManagedLocalTicketActions', () => ({ getCoManagedLocalTicketResourceAction: h.resource }));
 vi.mock('@/lib/actions/coManagedTicketConversationActions', () => ({ getCoManagedTicketConversationScreenAction: h.screen }));

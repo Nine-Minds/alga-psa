@@ -605,7 +605,8 @@
       "unfinalizeSelected": "Annuler la sélection",
       "downloadPdf": "Télécharger le PDF",
       "sendEmail": "Envoyer un e-mail",
-      "unfinalize": "Définaliser"
+      "unfinalize": "Définaliser",
+      "recordPayment": "Enregistrer un paiement"
     },
     "status": {
       "finalized": "Finalisée"
@@ -907,6 +908,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "aucun"
+    },
+    "syncFeedback": {
+      "synced": "Facture synchronisée avec {{provider}}.",
+      "failed": "Échec de la synchronisation avec {{provider}} : {{reason}}",
+      "failedNoReason": "Échec de la synchronisation avec {{provider}}. Consultez la liste des opérations en erreur sur la page de l’intégration comptable.",
+      "skipped": "La facture a été ignorée et n’a pas été envoyée à {{provider}} : {{reason}}",
+      "skippedNoReason": "La facture a été ignorée et n’a pas été envoyée à {{provider}}.",
+      "pending": "La facture est en file d’attente pour la synchronisation avec {{provider}} ; elle n’a pas encore été traitée.",
+      "unknown": "Impossible de déterminer si la facture a été synchronisée avec {{provider}}.",
+      "notRun": "La synchronisation avec {{provider}} n’a pas été exécutée : {{reason}}",
+      "notRunNoReason": "La synchronisation avec {{provider}} n’a pas été exécutée.",
+      "error": "Échec de la synchronisation : {{error}}",
+      "refusedNotFound": "Facture introuvable.",
+      "refusedPaid": "Les factures payées ne sont pas synchronisées avec {{provider}}.",
+      "refusedCancelled": "Les factures annulées ne sont pas synchronisées avec {{provider}}.",
+      "cycleFailed": "Échec de la synchronisation avec {{provider}} : {{reason}} La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation.",
+      "cycleFailedNoReason": "Échec de la synchronisation avec {{provider}}. La facture n’a pas été envoyée ; elle reste en file d’attente et sera retentée lors de la prochaine synchronisation."
     }
   },
   "templateEditor": {
@@ -2894,6 +2912,17 @@
       "missingField": "Un champ obligatoire du modèle de facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}.",
       "evaluationFailed": "Échec de la liaison des données du modèle : {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Accès refusé : l'enregistrement des paiements de factures nécessite l'autorisation de paiement de facture.",
+      "invoiceNotFound": "Facture introuvable. Elle a peut-être été modifiée ou supprimée. Veuillez actualiser la page et réessayer.",
+      "amountPositive": "Saisissez un montant de paiement supérieur à zéro.",
+      "methodRequired": "Choisissez un mode de paiement.",
+      "invalidDate": "Saisissez une date de paiement valide.",
+      "noBalanceDue": "Cette facture n'a plus de solde dû.",
+      "statusNotPayable": "Impossible d’enregistrer un paiement pour une facture au statut : {{status}}.",
+      "overpaymentNotConfirmed": "Ce paiement dépasse le solde dû. Confirmez le trop-perçu pour l'enregistrer.",
+      "recordFailed": "Échec de l'enregistrement du paiement. Veuillez réessayer."
     }
   },
   "periodTotal": {
@@ -2916,6 +2945,43 @@
     "blocked": {
       "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",
       "exporting": "Un export comptable de cette facture est en cours de préparation. Attendez qu’il soit terminé avant de modifier la facture."
+    }
+  },
+  "recordPayment": {
+    "title": "Enregistrer un paiement",
+    "titleForInvoice": "Enregistrer un paiement — {{invoiceNumber}}",
+    "loading": "Chargement du solde de la facture...",
+    "summary": {
+      "balanceDue": "Solde dû",
+      "alreadyPaid": "Déjà payé"
+    },
+    "fields": {
+      "amount": "Montant",
+      "paymentDate": "Date de paiement",
+      "method": "Mode de paiement",
+      "reference": "Référence",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "reference": "Numéro de chèque ou de transaction"
+    },
+    "methods": {
+      "manual": "Manuel",
+      "check": "Chèque",
+      "bank_transfer": "Virement bancaire",
+      "cash": "Espèces",
+      "other": "Autre"
+    },
+    "overpayment": {
+      "warning": "Ce paiement dépasse de {{excess}} le solde dû de {{balanceDue}}.",
+      "confirm": "Enregistrer quand même ce trop-perçu"
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "record": "Enregistrer le paiement"
+    },
+    "toasts": {
+      "recorded": "Paiement enregistré"
     }
   }
 }

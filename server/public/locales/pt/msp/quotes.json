@@ -333,6 +333,16 @@
       "addLocation": "+ Adicionar localização",
       "fromTemplate": "+ Do modelo"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Remover este local?",
+        "message": "Este local ainda tem {{count}} item(ns). Escolha o que acontece com eles.",
+        "moveOption": "Mover estes itens para {{location}}",
+        "ungroupOption": "Manter estes itens e deixar de agrupar por localização",
+        "deleteOption": "Excluir estes itens",
+        "confirm": "Remover local"
+      }
+    },
     "clientFacing": {
       "title": "Texto voltado para o cliente",
       "subtitle": "Aparece no PDF, abaixo dos totais.",
@@ -588,10 +598,13 @@
       "groupHeading": "Localização {{index}}",
       "pickerPlaceholder": "Selecione um local",
       "unassigned": "Itens sem localização são listados aqui até que um seja escolhido.",
+      "quoteWide": "Toda a cotação",
+      "quoteWideHint": "Os descontos aplicam-se a toda a cotação, por isso não estão associados a uma localização.",
       "removeGroup": "Remover local",
       "subtotal": "Subtotal de localização",
       "addLocationButton": "+ Adicionar localização",
       "needMoreLocations": "Este cliente possui apenas um local ativo. Adicione um segundo local nas configurações do cliente para ativar a cotação de vários sites.",
+      "allLocationsInUse": "Todos os locais ativos deste cliente já têm um grupo nesta cotação.",
       "emptyGroup": "Ainda não há itens para este local."
     }
   },

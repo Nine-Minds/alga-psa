@@ -27,14 +27,31 @@ const SERVICE_USER = '33333333-3333-4333-8333-333333333333';
 function fakeTable(name: string, tenant: string) {
   let filter: Record<string, any> = {};
   const inFilters: Array<[string, any[]]> = [];
+  // Left-joined aliases: the fake models a left join that matches nothing, so their columns are null.
+  const leftJoined = new Set<string>();
+  const value = (row: Record<string, any>, column: string) => {
+    const parts = column.split(/\s+as\s+/i)[0].trim().split('.');
+    if (parts.length > 1 && leftJoined.has(parts[0])) return null;
+    return row[parts[parts.length - 1]];
+  };
+  const selectKey = (column: string) => {
+    const alias = column.match(/\s+as\s+(.+)$/i);
+    return alias ? alias[1].trim() : column.split('.').pop()!;
+  };
   const rows = () =>
     (state.tables[name] ?? []).filter(
       (row) =>
         row.tenant === tenant &&
-        Object.entries(filter).every(([k, v]) => row[k] === v) &&
-        inFilters.every(([k, values]) => values.includes(row[k])),
+        Object.entries(filter).every(([k, v]) => value(row, k) === v) &&
+        inFilters.every(([k, values]) => values.includes(value(row, k))),
     );
   const api: any = {
+    leftJoinNothing(tableExpression: string) {
+      const [joinedTable, alias] = tableExpression.split(/\s+as\s+/i).map((part) => part.trim());
+      if ((state.tables[joinedTable] ?? []).length > 0) throw new Error(`fake left join of ${joinedTable} with rows is not modelled`);
+      leftJoined.add(alias ?? joinedTable);
+      return api;
+    },
     where(f: Record<string, any>) {
       filter = { ...filter, ...f };
       return api;
@@ -48,7 +65,7 @@ function fakeTable(name: string, tenant: string) {
     select: async (...columns: Array<string | string[]>) => {
       const picked = columns.flat();
       return rows().map((row) =>
-        picked.length === 0 ? { ...row } : Object.fromEntries(picked.map((column) => [column, row[column]])),
+        picked.length === 0 ? { ...row } : Object.fromEntries(picked.map((column) => [selectKey(column), value(row, column)])),
       );
     },
     update: async (data: any) => {
@@ -71,7 +88,13 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual: any = await importOriginal();
   return {
     ...actual,
-    tenantDb: (_knex: unknown, tenant: string) => ({ table: (name: string) => fakeTable(name, tenant) }),
+    tenantDb: (_knex: unknown, tenant: string) => ({
+      table: (name: string) => fakeTable(name, tenant),
+      tenantJoin: (query: any, tableExpression: string, _left: string, _right: string, options?: { type?: string }) => {
+        if (options?.type !== 'left') throw new Error('fake tenantJoin models left joins only');
+        return query.leftJoinNothing(tableExpression);
+      },
+    }),
     withTransaction: async (_knex: unknown, cb: (trx: unknown) => Promise<unknown>) => cb({}),
   };
 });

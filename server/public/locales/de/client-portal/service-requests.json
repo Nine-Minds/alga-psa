@@ -9,10 +9,7 @@
     "newRequestHeading": "Neue Anfrage einreichen"
   },
   "detail": {
-    "version": "Version {{version}}",
     "submitted": "Anfrage eingereicht",
-    "requestIdLabel": "Anfrage-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Anfrage kann nicht eingereicht werden",
     "formTitle": "Anfrageformular",
     "noFields": "Keine Felder konfiguriert.",
@@ -20,9 +17,7 @@
     "datePlaceholder": "Datum auswählen",
     "optionLabel": "Option {{index}}",
     "submit": "Anfrage einreichen",
-    "requiredField": "Dieses Feld ist erforderlich.",
-    "initialValuesTitle": "Anfangswerte",
-    "noInitialValues": "Keine statischen Standardwerte konfiguriert."
+    "requiredField": "Dieses Feld ist erforderlich."
   },
   "myRequests": {
     "title": "Meine Anfragen",
@@ -46,19 +41,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Zurück zu Meine Anfragen",
-    "requestIdLabel": "Anfrage-ID:",
     "statusSection": "Status",
     "submittedAt": "Eingereicht: {{date}}",
-    "executionStatus": "Ausführungsstatus: {{status}}",
-    "ticketLabel": "Ticket:",
-    "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Eingereichte Antworten",
     "noResponse": "Keine Antwort",
     "attachmentsTitle": "Anhänge",
     "noAttachments": "Keine Anhänge enthalten.",
-    "fileIdLabel": "Datei-ID: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}",
-    "versionLabel": "Version {{version}}",
     "historyTitle": "Verlauf",
     "historyEmpty": "Noch kein Verlauf aufgezeichnet.",
     "historyActor": "von {{actor}}",
@@ -66,7 +55,8 @@
       "service_request_submission_created": "Anfrage eingereicht",
       "service_request_submission_execution_succeeded": "Verarbeitung abgeschlossen",
       "service_request_submission_execution_failed": "Verarbeitung fehlgeschlagen"
-    }
+    },
+    "unnamedAttachment": "Anhang"
   },
   "recent": {
     "title": "Ihre letzten Anfragen",
@@ -77,5 +67,12 @@
   },
   "myRequestsAll": {
     "title": "Ihre Anfragen"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, eingereicht am {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket anzeigen"
   }
 }

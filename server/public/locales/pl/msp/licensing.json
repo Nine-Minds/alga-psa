@@ -398,6 +398,129 @@
     "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   },
   "coManaged": {
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Ten obszar roboczy nie ma puli współzarządzania. Dodaj stanowiska współzarządzania, aby z tego korzystać.",
+        "lapsed": "Pula współzarządzania wygasła. Przywróć ją przed dodaniem stanowisk.",
+        "capacity": "W puli nie ma wolnych stanowisk. Dodaj stanowiska do puli lub zwolnij część od innego klienta.",
+        "clientInactive": "Zaktywuj ponownie tego klienta przed włączeniem współzarządzanego IT.",
+        "clientNotFound": "Ten klient nie jest już dostępny.",
+        "hasArrangement": "Ten klient ma już współzarządzane IT. Odśwież, aby je zobaczyć."
+      },
+      "error": {
+        "operationConflict": "To żądanie zostało już wysłane z innymi danymi. Odśwież i zacznij od nowa.",
+        "invalidSeats": "Wpisz liczbę całkowitą stanowisk, co najmniej 1.",
+        "invalidInvitation": "Wybierz kontakt do zaproszenia.",
+        "contactNotFound": "Ten kontakt nie jest już dostępny. Wybierz inny kontakt.",
+        "contactWrongClient": "Ten kontakt należy do innego klienta. Wybierz kontakt tego klienta.",
+        "contactInactive": "Ten kontakt jest nieaktywny. Najpierw go aktywuj.",
+        "contactNoEmail": "Ten kontakt nie ma adresu e-mail. Najpierw dodaj go do kontaktu.",
+        "contactHasSeat": "Ten kontakt ma już miejsce lub oczekujące zaproszenie.",
+        "emailInUse": "Ten adres e-mail należy już do konta użytkownika. Użyj innego adresu.",
+        "emailInvited": "Dla tego adresu e-mail istnieje już oczekujące zaproszenie.",
+        "seatLimit": "Wszystkie stanowiska są zajęte. Najpierw dodaj stanowiska lub wycofaj zaproszenie.",
+        "poolLimit": "W puli nie ma tylu dostępnych stanowisk.",
+        "allocationConflict": "Stanowiska zmieniły się w trakcie edycji. Odśwież i spróbuj ponownie.",
+        "board": "Wybrana tablica nie jest już dostępna. Odśwież i wybierz ponownie.",
+        "project": "Wybrany projekt nie jest już dostępny. Odśwież i wybierz ponownie.",
+        "handoffUser": "Wybrana osoba nie jest już dostępna. Wybierz kogoś innego.",
+        "notPending": "Ten technik już przyjął zaproszenie, więc nie można go zmienić.",
+        "arrangementGone": "To uzgodnienie stanowisk nie jest już aktywne. Odśwież, aby zobaczyć jego stan.",
+        "generic": "To nie zadziałało. Odśwież i spróbuj ponownie.",
+        "load": "Nie udało się wczytać opcji. Odśwież i spróbuj ponownie.",
+        "submit": "Żądanie mogło się nie zakończyć. Spróbuj ponownie; nie zostanie zastosowane dwa razy."
+      },
+      "purchase": {
+        "checking": "Sprawdzanie puli…",
+        "review": "W puli jest za mało miejsc. Sprawdź zakup, aby przydzielić {{count}} miejsc.",
+        "waiting": "Oczekiwanie na zakończenie zakupu. {{count}} miejsc zostanie przydzielonych, gdy tylko pula je otrzyma.",
+        "stalled": "Nowe miejsca jeszcze się nie pojawiły. Sprawdź ponownie za chwilę; nie zostaniesz obciążony dwukrotnie.",
+        "failed": "Płatność nie powiodła się. Ponów ten sam zakup, aby przydzielić {{count}} miejsc.",
+        "check": "Sprawdź ponownie",
+        "cancel": "Anuluj",
+        "error": "Nie udało się sprawdzić puli. Odśwież i spróbuj ponownie; nic nie jest pobierane dwa razy."
+      },
+      "saved": "Zapisano.",
+      "boards": {
+        "title": "Zakres tablic",
+        "hint": "Technicy obsługują zgłoszenia tego klienta na zaznaczonych tutaj tablicach. Bez zaznaczenia nie widzą żadnych zgłoszeń.",
+        "save": "Zapisz zakres tablic",
+        "none": "Brak tablic do wyboru.",
+        "canCreate": "Może tworzyć zgłoszenia"
+      },
+      "projects": {
+        "title": "Udostępnione projekty",
+        "hint": "Projekty tego klienta, które mogą otwierać jego technicy.",
+        "none": "Ten klient nie ma projektów do udostępnienia.",
+        "save": "Zapisz udostępnione projekty"
+      },
+      "handoff": {
+        "title": "Domyślne ustawienia przekazania",
+        "assignee": "Przypisuj zgłoszenia przekazane Tobie do",
+        "nobody": "Pozostaw nieprzypisane",
+        "save": "Zapisz domyślne ustawienia przekazania"
+      },
+      "client": {
+        "seatArrangement": "Uzgodnienie stanowisk",
+        "summary": "Uzgodnienie stanowisk: wykorzystano {{used}} z {{count}} stanowisk"
+      },
+      "technicians": {
+        "sent": "Wysłano zaproszenie.",
+        "notSent": "Stanowisko jest zarezerwowane, ale e-mail nie został wysłany. Wyślij go ponownie.",
+        "name": "Imię i nazwisko",
+        "email": "E-mail",
+        "status": "Status",
+        "active": "Aktywny",
+        "expired": "Zaproszenie wygasło",
+        "invited": "Zaproszony",
+        "resend": "Wyślij ponownie",
+        "withdraw": "Wycofaj",
+        "title": "Technicy",
+        "none": "Brak techników.",
+        "invite": "Zaproś technika",
+        "withdrawTitle": "Wycofaj zaproszenie",
+        "withdrawMessage": "Wycofać zaproszenie dla {{email}}? Stanowisko wróci do tego uzgodnienia.",
+        "withdrawn": "Zaproszenie wycofane."
+      },
+      "panel": {
+        "title": "Uzgodnienie stanowisk",
+        "usage": "Wykorzystano {{used}} z {{count}} stanowisk",
+        "allocation": "Przydzielone stanowiska",
+        "changeSeats": "Zmień liczbę stanowisk"
+      },
+      "access": {
+        "title": "Dostęp i przekazanie"
+      },
+      "setup": {
+        "seats": "Liczba stanowisk",
+        "boards": "Tablice w zakresie",
+        "boardsHint": "Technicy widzą zgłoszenia swojej firmy tylko na tych tablicach.",
+        "technician": "Pierwszy technik",
+        "technicianHint": "Wybierz kontakt tego klienta. Zaproszenie zostanie wysłane e-mailem.",
+        "submit": "Włącz stanowiska",
+        "title": "Uzgodnienie stanowisk"
+      },
+      "contact": {
+        "label": "Technik",
+        "placeholder": "Wybierz kontakt",
+        "addedNoEmail": "Dodano {{name}}, ale kontakt nie ma adresu e-mail, więc nie można go jeszcze zaprosić.",
+        "addedUnavailable": "Dodano {{name}}, ale nie można go zaprosić.",
+        "unavailable": "Niewyświetlone, bo nieaktywne, bez adresu e-mail lub już z miejscem albo zaproszeniem: {{count}}."
+      },
+      "chooser": {
+        "seat": "Stanowisko",
+        "seatHint": "Technicy klienta pracują w Twoim PSA, w granicach swojej firmy.",
+        "workspace": "Obszar roboczy",
+        "workspaceHint": "Zespół IT klienta ma własny service desk i eskaluje zgłoszenia do Ciebie.",
+        "description": "Wybierz, jak zespół IT tego klienta współpracuje z Tobą.",
+        "shape": "Model współzarządzania",
+        "pool": "Dostępne stanowiska: {{available}} z {{purchased}}. Przydzielone: {{allocated}}."
+      },
+      "states": {
+        "active": "Aktywny",
+        "ended": "Zakończony"
+      }
+    },
     "portableExport": {
       "title": "Eksportuj obszar roboczy",
       "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
@@ -474,6 +597,10 @@
     },
     "loading": "Wczytywanie liczby stanowisk dla klientów…",
     "overview": {
+      "shape": "Model",
+      "state": "Stan",
+      "seatsUsed": "Wykorzystane stanowiska",
+      "seatsAllocated": "Przydzielone stanowiska",
       "actions": "Akcje",
       "client": "Klient",
       "empty": "Żaden współzarządzany klient nie pasuje do tego wyszukiwania.",
@@ -574,6 +701,15 @@
     "checkoutUnavailable": "Wbudowana płatność jest niedostępna. Spróbuj ponownie po naprawie konfiguracji płatności.",
     "pendingCapacity_one": "Zakup {{count}} stanowiska oczekuje na realizację.",
     "pendingCapacity_other": "Zakup {{count}} stanowisk oczekuje na realizację.",
+    "buySeats": "Kup miejsca współzarządzania",
+    "awaitingVerification_one": "Zakup {{count}} miejsca oczekuje na weryfikację płatności. Miejsce pojawi się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_other": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_few": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_many": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "refreshStatus": "Odśwież status",
+    "purchaseOnly": {
+      "intro": "Kup tutaj pulę miejsc współzarządzania. Po zakupie przydziel miejsca klientom z karty każdego klienta."
+    },
     "previewError": "Nie udało się wycenić tej zmiany. Odśwież i spróbuj ponownie.",
     "purchaseNeedsAdmin": "Administrator konta musi dodać pojemność współzarządzania.",
     "purchaseProviderUnconfigured": "Dostawca płatności nie jest skonfigurowany.",

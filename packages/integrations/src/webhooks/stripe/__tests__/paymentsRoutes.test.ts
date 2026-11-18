@@ -68,6 +68,26 @@ describe('Stripe payments webhook routes', () => {
     expect(createdFor).toEqual([A]);
   });
 
+  it('a duplicate settlement (handled, nothing newly recorded) answers processed:true', async () => {
+    // Stripe sends payment_intent.succeeded and checkout.session.completed for the
+    // same payment; the second is a no-op success and must not read as a failure
+    // in the MSP's Stripe dashboard (alga-2026-0003329).
+    processWebhookEvent.mockResolvedValueOnce({ success: true, paymentRecorded: false } as any);
+    const res = await legacyPOST(req(body(), SECRETS[A]));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ received: true, processed: true, paymentRecorded: false });
+  });
+
+  it('a genuinely rejected event still answers processed:false with 200', async () => {
+    processWebhookEvent.mockResolvedValueOnce({
+      success: false,
+      error: 'Cannot accept payment for invoice with status: cancelled',
+    } as any);
+    const res = await legacyPOST(req(body(), SECRETS[A]));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ received: true, processed: false, error: 'Processing failed (logged)' });
+  });
+
   it('payload tagged B signed with A secret: 200 ignored, nothing dispatched (both routes)', async () => {
     const raw = body({ tenant_id: B });
     for (const res of [await legacyPOST(req(raw, SECRETS[A])), await tenantPOST(req(raw, SECRETS[A]), tenantCtx(A))]) {

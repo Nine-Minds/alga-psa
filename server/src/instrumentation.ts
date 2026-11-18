@@ -45,6 +45,15 @@ export async function register() {
       console.error('Failed to register the co-managed SLA lifecycle handlers:', error);
     }
 
+    // SLA pause re-evaluation (`reevaluateSlaPause`): registering it is a side effect of this import.
+    // Packages that contribute a pause condition (the co-managed seat handoff) ask through it rather
+    // than importing the SLA package. Without it their condition changes fail and roll back.
+    try {
+      await import('@alga-psa/sla/services');
+    } catch (error) {
+      console.error('Failed to register SLA pause re-evaluation:', error);
+    }
+
     // Co-managed time source (L6a2): registers into the scheduling time-source registry. Best-effort:
     // without it every time call resolves to native and behaves exactly as before.
     try {

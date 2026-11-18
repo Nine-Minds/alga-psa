@@ -66,7 +66,32 @@ vi.mock('@/lib/api/rateLimit/enforce', () => ({
 vi.mock('@/lib/productAccess', () => ({ getTenantProduct: vi.fn(async () => 'psa') }));
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn(() => 'allowed') }));
 vi.mock('server/src/lib/authorization/kernel', () => ({
-  getAuthorizationKernel: vi.fn(async () => ({ authorizeResource: authorizeResourceMock })),
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: authorizeResourceMock,
+    // LEVERAGE: pattern fake-kernel-mutation — hand-written kernel fakes re-model 'mutation = read, then action'; a shared test kernel built from a decision function would keep them in step with the engine.
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: async (input: any) => {
+      const read = await authorizeResourceMock({ ...input, resource: { ...input.resource, action: 'read' } });
+      return read.allowed ? authorizeResourceMock(input) : read;
+    },
+  })),
+}));
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
 }));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
   resolveAuthorizationSubjectForUser: vi.fn(async (_knex, tenant, user, apiKeyId) => ({
@@ -153,12 +178,14 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
     expect(state.writes).toEqual([IN_SCOPE]);
   });
 
-  it('403s when update is allowed but read is denied (no record disclosure)', async () => {
+  it('404s when update is allowed but read is denied (existence is not confirmed)', async () => {
     state.readDenied = new Set([IN_SCOPE]);
     const res = await put(IN_SCOPE);
-    expect(res.status).toBe(403);
+    // A row-dependent read denial is indistinguishable from a missing ticket (404), unlike plain RBAC (403).
+    expect(res.status).toBe(404);
     expect(state.writes).toEqual([]);
-    expect(actionsRequested()).toContain('ticket:update');
+    // The kernel refuses at the read prerequisite and never reaches the update rules.
+    expect(actionsRequested()).toEqual(['ticket:read']);
   });
 
   it('denies a ticket that moves outside update scope between the pre-check and the row lock', async () => {
@@ -173,7 +200,7 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
       .map(([input]) => input.record.boardId)).toEqual(['board-x', 'board-y']);
   });
 
-  describe('Disclosure arm: read is required only where the response discloses the ticket', () => {
+  describe('Read is required for every ticket mutation, whether or not the response discloses the ticket', () => {
     beforeEach(() => {
       // Caller holds ticket:update scope on this ticket but no ticket:read scope.
       state.readDenied = new Set([IN_SCOPE]);
@@ -181,23 +208,22 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
       addWatcherMock.mockClear();
     });
 
-    it('(a) an update-allowed / read-denied caller may use an acknowledgement-only mutation (DELETE agents/{userId}, 204)', async () => {
+    it('(a) an update-allowed / read-denied caller gets 404 on an acknowledgement-only mutation (DELETE agents/{userId}) and nothing is removed', async () => {
       const res = await deleteAgent(IN_SCOPE);
-      expect(res.status).toBe(204);
-      expect(removeTicketAgentMock).toHaveBeenCalledTimes(1);
-      expect(actionsRequested()).toContain('ticket:update');
-      expect(actionsRequested()).not.toContain('ticket:read');
+      expect(res.status).toBe(404);
+      expect(removeTicketAgentMock).not.toHaveBeenCalled();
+      expect(actionsRequested()).toEqual(['ticket:read']);
     });
 
-    it('(b) the same caller gets 403 on PUT assignment (response discloses the ticket) and nothing is written', async () => {
+    it('(b) the same caller gets 404 on PUT assignment (response discloses the ticket) and nothing is written', async () => {
       const res = await put(IN_SCOPE);
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
       expect(serviceUpdateMock).not.toHaveBeenCalled();
       expect(state.writes).toEqual([]);
-      expect(actionsRequested()).toEqual(expect.arrayContaining(['ticket:update', 'ticket:read']));
+      expect(actionsRequested()).toContain('ticket:read');
     });
 
-    it('(c) the same caller gets 403 on POST watchers (response returns the watcher list) and addWatcher is not called', async () => {
+    it('(c) the same caller gets 404 on POST watchers (response returns the watcher list) and addWatcher is not called', async () => {
       const res = await POST_WATCHER(
         new NextRequest(`http://localhost/api/v1/tickets/${IN_SCOPE}/watchers`, {
           method: 'POST',
@@ -206,9 +232,9 @@ describe('PUT /api/v1/tickets/{id}/assignment authorization', () => {
         }),
         { params: Promise.resolve({ id: IN_SCOPE }) } as any
       );
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
       expect(addWatcherMock).not.toHaveBeenCalled();
-      expect(actionsRequested()).toEqual(expect.arrayContaining(['ticket:update', 'ticket:read']));
+      expect(actionsRequested()).toContain('ticket:read');
     });
   });
 });

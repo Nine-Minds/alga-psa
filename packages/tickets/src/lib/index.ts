@@ -111,6 +111,10 @@ export {
 } from './ticketRichText';
 export { extractTicketRichTextHtml } from './ticketRichTextHtml';
 export {
+  removeTicketRichTextImageUrls,
+  replaceTicketRichTextImageUrls,
+} from './ticketRichTextImages';
+export {
   parseTicketMobileEditorNativeToWebMessage,
   parseTicketMobileEditorWebToNativeMessage,
   serializeTicketMobileEditorMessage,

@@ -32,7 +32,7 @@ vi.mock('../../models/project', () => ({
   default: { getById: async (_t: unknown, _tenant: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectActionDecider: async () => async (p: { project_id: string }) => ({ allowed: state.allowedProjects.has(p.project_id), redactedFields: [], governed: false }),
 }));
 
 import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from './taskCommentAuthorization';

@@ -21,7 +21,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
-import type { ColumnDefinition, IClient, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
+import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
   getUnitDetail,
   listInventoryProducts,
@@ -116,12 +116,10 @@ function statusVariant(v?: string | null) {
 
 export function StockUnitsManager({
   initialUnits,
-  clients = [],
   defaultCurrencyCode = 'USD',
   restockReturnWithFee,
 }: {
   initialUnits: IStockUnit[];
-  clients?: IClient[];
   defaultCurrencyCode?: string;
   restockReturnWithFee?: RestockReturnWithFeeAction;
 }) {
@@ -863,7 +861,6 @@ export function StockUnitsManager({
                 <label className="block text-sm font-medium">{t('stockUnits.restock.feeClient', 'Bill restocking fee to')}</label>
                 <ClientPicker
                   id="restock-client"
-                  clients={clients}
                   selectedClientId={restockClientId}
                   onSelect={(id) => setRestockClientId(id)}
                   filterState={restockClientFilter}

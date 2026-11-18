@@ -9,10 +9,7 @@
     "newRequestHeading": "Wyślij nowe zgłoszenie"
   },
   "detail": {
-    "version": "Wersja {{version}}",
     "submitted": "Zgłoszenie przesłane",
-    "requestIdLabel": "ID zgłoszenia: ",
-    "ticketIdLabel": "ID zgłoszenia: ",
     "unableToSubmit": "Nie można przesłać zgłoszenia",
     "formTitle": "Formularz zgłoszenia",
     "noFields": "Nie skonfigurowano żadnych pól.",
@@ -20,9 +17,7 @@
     "datePlaceholder": "Wybierz datę",
     "optionLabel": "Opcja {{index}}",
     "submit": "Prześlij zgłoszenie",
-    "requiredField": "To pole jest wymagane.",
-    "initialValuesTitle": "Wartości początkowe",
-    "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych."
+    "requiredField": "To pole jest wymagane."
   },
   "myRequests": {
     "title": "Moje zgłoszenia",
@@ -46,19 +41,13 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Powrót do Moich zgłoszeń",
-    "requestIdLabel": "ID zgłoszenia:",
     "statusSection": "Status",
     "submittedAt": "Przesłano: {{date}}",
-    "executionStatus": "Status wykonania: {{status}}",
-    "ticketLabel": "Zgłoszenie:",
-    "workflowLabel": "Workflow (ID: {{id}})",
     "submittedAnswersTitle": "Przesłane odpowiedzi",
     "noResponse": "Brak odpowiedzi",
     "attachmentsTitle": "Załączniki",
     "noAttachments": "Brak załączników.",
-    "fileIdLabel": "ID pliku: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}",
-    "versionLabel": "Wersja {{version}}",
     "historyTitle": "Historia",
     "historyEmpty": "Nie zarejestrowano jeszcze historii.",
     "historyActor": "przez {{actor}}",
@@ -66,7 +55,8 @@
       "service_request_submission_created": "Zgłoszenie wysłane",
       "service_request_submission_execution_succeeded": "Przetwarzanie zakończone",
       "service_request_submission_execution_failed": "Przetwarzanie nie powiodło się"
-    }
+    },
+    "unnamedAttachment": "Załącznik"
   },
   "recent": {
     "title": "Twoje ostatnie zgłoszenia",
@@ -77,5 +67,12 @@
   },
   "myRequestsAll": {
     "title": "Twoje zgłoszenia"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, przesłano {{date}}"
+  },
+  "ticketReference": {
+    "label": "Zgłoszenie",
+    "viewTicket": "Zobacz zgłoszenie"
   }
 }

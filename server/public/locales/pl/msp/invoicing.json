@@ -633,7 +633,8 @@
       "unfinalizeSelected": "Cofnij finalizację wybranych",
       "downloadPdf": "Pobierz PDF",
       "sendEmail": "Wyślij e-mail",
-      "unfinalize": "Cofnij finalizację"
+      "unfinalize": "Cofnij finalizację",
+      "recordPayment": "Zarejestruj płatność"
     },
     "status": {
       "finalized": "Sfinalizowana"
@@ -935,6 +936,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "brak"
+    },
+    "syncFeedback": {
+      "synced": "Faktura została zsynchronizowana z {{provider}}.",
+      "failed": "Synchronizacja z {{provider}} nie powiodła się: {{reason}}",
+      "failedNoReason": "Synchronizacja z {{provider}} nie powiodła się. Sprawdź listę operacji z błędami na stronie integracji księgowej.",
+      "skipped": "Faktura została pominięta i nie została wysłana do {{provider}}: {{reason}}",
+      "skippedNoReason": "Faktura została pominięta i nie została wysłana do {{provider}}.",
+      "pending": "Faktura oczekuje w kolejce na synchronizację z {{provider}}; nie została jeszcze przetworzona.",
+      "unknown": "Nie można ustalić, czy faktura została zsynchronizowana z {{provider}}.",
+      "notRun": "Synchronizacja z {{provider}} nie została uruchomiona: {{reason}}",
+      "notRunNoReason": "Synchronizacja z {{provider}} nie została uruchomiona.",
+      "error": "Synchronizacja nie powiodła się: {{error}}",
+      "refusedNotFound": "Nie znaleziono faktury.",
+      "refusedPaid": "Opłacone faktury nie są synchronizowane z {{provider}}.",
+      "refusedCancelled": "Unieważnione lub anulowane faktury nie są synchronizowane z {{provider}}.",
+      "cycleFailed": "Synchronizacja z {{provider}} nie powiodła się: {{reason}} Faktura nie została wysłana; pozostaje w kolejce i zostanie ponowiona przy następnej synchronizacji.",
+      "cycleFailedNoReason": "Synchronizacja z {{provider}} nie powiodła się. Faktura nie została wysłana; pozostaje w kolejce i zostanie ponowiona przy następnej synchronizacji."
     }
   },
   "templateEditor": {
@@ -2946,6 +2964,17 @@
       "missingField": "Brakuje wymaganego pola szablonu faktury.",
       "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}.",
       "evaluationFailed": "Powiązanie danych szablonu nie powiodło się: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Brak uprawnień: rejestrowanie płatności faktur wymaga uprawnienia do płatności faktur.",
+      "invoiceNotFound": "Nie znaleziono faktury. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "amountPositive": "Wprowadź kwotę płatności większą od zera.",
+      "methodRequired": "Wybierz metodę płatności.",
+      "invalidDate": "Wprowadź prawidłową datę płatności.",
+      "noBalanceDue": "Ta faktura nie ma kwoty do zapłaty.",
+      "statusNotPayable": "Nie można zarejestrować płatności dla faktury o statusie: {{status}}.",
+      "overpaymentNotConfirmed": "Ta płatność jest wyższa niż pozostała kwota do zapłaty. Potwierdź nadpłatę, aby ją zarejestrować.",
+      "recordFailed": "Nie udało się zarejestrować płatności. Spróbuj ponownie."
     }
   },
   "periodTotal": {
@@ -2968,6 +2997,43 @@
     "blocked": {
       "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje.",
       "exporting": "Trwa przygotowywanie eksportu księgowego tej faktury. Poczekaj na jego zakończenie przed zmianą faktury."
+    }
+  },
+  "recordPayment": {
+    "title": "Zarejestruj płatność",
+    "titleForInvoice": "Zarejestruj płatność — {{invoiceNumber}}",
+    "loading": "Wczytywanie salda faktury...",
+    "summary": {
+      "balanceDue": "Pozostało do zapłaty",
+      "alreadyPaid": "Już zapłacono"
+    },
+    "fields": {
+      "amount": "Kwota",
+      "paymentDate": "Data płatności",
+      "method": "Metoda płatności",
+      "reference": "Numer referencyjny",
+      "notes": "Notatki"
+    },
+    "placeholders": {
+      "reference": "Numer czeku lub transakcji"
+    },
+    "methods": {
+      "manual": "Ręcznie",
+      "check": "Czek",
+      "bank_transfer": "Przelew bankowy",
+      "cash": "Gotówka",
+      "other": "Inne"
+    },
+    "overpayment": {
+      "warning": "Ta płatność przekracza o {{excess}} pozostałą kwotę do zapłaty wynoszącą {{balanceDue}}.",
+      "confirm": "Zarejestruj mimo to tę nadpłatę"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "record": "Zarejestruj płatność"
+    },
+    "toasts": {
+      "recorded": "Płatność zarejestrowana"
     }
   }
 }

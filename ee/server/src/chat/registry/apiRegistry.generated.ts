@@ -3831,13 +3831,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4072,13 +4074,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -4183,7 +4187,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -4561,7 +4566,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       }
     },
@@ -5776,13 +5782,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string",
             "format": "uuid"
-          }
+          },
+          "minItems": 1
         }
       },
       "required": [
         "username",
         "email",
-        "password"
+        "password",
+        "role_ids"
       ]
     },
     "responseBodySchema": {
@@ -10164,7 +10172,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/asset-audits",
     "displayName": "List site audits",
     "summary": "List site audits",
-    "description": "Returns the tenant audits newest first, optionally narrowed to one client.",
+    "description": "Returns the tenant audits newest first, optionally narrowed by client, location (or \"no location\"), status and a started_at range.",
     "tags": [
       "Asset audits"
     ],
@@ -10199,6 +10207,62 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "uuid",
           "description": "Only audits of this client."
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Only audits scoped to this client location.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only audits scoped to this client location."
+        }
+      },
+      {
+        "name": "no_location",
+        "in": "query",
+        "required": false,
+        "description": "true returns only audits scoped to the assets that have no location. Wins over location_id.",
+        "schema": {
+          "type": "string",
+          "description": "true returns only audits scoped to the assets that have no location. Wins over location_id."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Only audits in this state.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "in_progress",
+            "completed",
+            "cancelled"
+          ],
+          "description": "Only audits in this state."
+        }
+      },
+      {
+        "name": "started_from",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or after it. Send a day boundary in the viewer time zone."
+        }
+      },
+      {
+        "name": "started_to",
+        "in": "query",
+        "required": false,
+        "description": "ISO timestamp; only audits started at or before it.",
+        "schema": {
+          "type": "string",
+          "description": "ISO timestamp; only audits started at or before it."
         }
       },
       {
@@ -10303,6 +10367,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ]
               },
+              "started_by_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "items": {
                 "type": "array",
                 "items": {
@@ -10364,6 +10434,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ]
                     },
+                    "asset_type": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "client_id": {
                       "type": [
                         "string",
@@ -10379,6 +10455,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "format": "uuid"
                     },
                     "location": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "marked_by_name": {
                       "type": [
                         "string",
                         "null"
@@ -10586,6 +10668,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10647,6 +10735,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10662,6 +10756,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -10823,6 +10923,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -10884,6 +10990,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -10899,6 +11011,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11090,6 +11208,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11151,6 +11275,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11166,6 +11296,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11338,6 +11474,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11399,6 +11541,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11414,6 +11562,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11575,6 +11729,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11636,6 +11796,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11651,6 +11817,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -11812,6 +11984,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "started_by_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "items": {
               "type": "array",
               "items": {
@@ -11873,6 +12051,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "null"
                     ]
                   },
+                  "asset_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "client_id": {
                     "type": [
                       "string",
@@ -11888,6 +12072,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "uuid"
                   },
                   "location": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "marked_by_name": {
                     "type": [
                       "string",
                       "null"
@@ -17491,6 +17681,122 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles",
+    "displayName": "List client billing profiles",
+    "summary": "List client billing profiles",
+    "description": "Lists every billing profile of the client, including inactive ones: default profile first, then by name. billing_profile_id is the value used on invoices, contract lines, tickets and assets. Nullable settings mean \"inherit from the client\".",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ClientBillingProfile"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}",
+    "displayName": "Get a client billing profile",
+    "summary": "Get a client billing profile",
+    "description": "Returns one billing profile of the client. billing_profile_id is the value used on invoices, contract lines, tickets and assets. A profile that belongs to another client returns 404, the same as an unknown one.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Client UUID from clients.client_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client UUID from clients.client_id."
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Billing profile UUID from client_billing_profiles.billing_profile_id. Must belong to the client in the path."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientBillingProfile"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_contractlines",
@@ -45186,7 +45492,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "List webhook templates",
     "summary": "List webhook templates",
-    "description": "Returns webhook templates visible to the tenant (own + system templates).",
+    "description": "Webhook templates are not persisted, so this always returns 200 with an empty list. There is no template storage to read from.",
     "tags": [
       "Webhooks"
     ],
@@ -45229,7 +45535,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates",
     "displayName": "Create webhook template",
     "summary": "Create webhook template",
-    "description": "Creates a reusable webhook template. Requires system_settings RBAC.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -45305,9 +45611,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_webhooks_templates_id",
     "method": "get",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Get webhook template detail (webhook getById wiring)",
-    "summary": "Get webhook template detail (webhook getById wiring)",
-    "description": "Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.",
+    "displayName": "Get webhook template detail",
+    "summary": "Get webhook template detail",
+    "description": "Webhook templates are not persisted, so a template id never resolves: returns 404 NOT_FOUND after the RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -45340,7 +45646,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -45356,9 +45662,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_webhooks_templates_id",
     "method": "put",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Update webhook template (webhook update wiring)",
-    "summary": "Update webhook template (webhook update wiring)",
-    "description": "Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.",
+    "displayName": "Update webhook template",
+    "summary": "Update webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check, id validation and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -45391,269 +45697,32 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "name": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "description": {
           "type": "string"
         },
-        "url": {
-          "type": "string",
-          "format": "uri"
+        "category": {
+          "type": "string"
         },
-        "method": {
-          "type": "string",
-          "enum": [
-            "GET",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE"
-          ]
+        "default_config": {
+          "type": "object",
+          "additionalProperties": {}
         },
-        "event_types": {
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supported_events": {
           "type": "array",
           "items": {
             "$ref": "#/components/schemas/WebhookEventTypeV1"
-          },
-          "minItems": 1
-        },
-        "security": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_format": {
-          "type": "string",
-          "enum": [
-            "json",
-            "xml",
-            "form_data",
-            "custom"
-          ]
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "custom_headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
           }
         },
-        "event_filter": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "payload_fields": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "properties": {
-            "ticket": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "ticket_number",
-                  "title",
-                  "url",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "response_state",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "previous_response_state",
-                  "new_response_state",
-                  "priority_id",
-                  "priority_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "assigned_team_id",
-                  "board_id",
-                  "board_name",
-                  "category_id",
-                  "subcategory_id",
-                  "entered_at",
-                  "updated_at",
-                  "closed_at",
-                  "due_date",
-                  "tags",
-                  "comment",
-                  "changes",
-                  "comments"
-                ]
-              }
-            },
-            "project": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "project_name",
-                  "wbs_code",
-                  "description",
-                  "status_id",
-                  "status_name",
-                  "is_closed",
-                  "previous_status_id",
-                  "previous_status_name",
-                  "client_id",
-                  "client_name",
-                  "contact_name_id",
-                  "contact_name",
-                  "contact_email",
-                  "assigned_to",
-                  "assigned_to_name",
-                  "start_date",
-                  "end_date",
-                  "budgeted_hours",
-                  "url",
-                  "changes",
-                  "phases",
-                  "task_counts",
-                  "task_id",
-                  "phase_id",
-                  "phase_name",
-                  "task_name",
-                  "estimated_hours",
-                  "actual_hours",
-                  "due_date",
-                  "priority_id",
-                  "priority_name",
-                  "tags"
-                ]
-              }
-            },
-            "client": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "changed_fields"
-                ]
-              }
-            },
-            "contact": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "client_location": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "changed_fields"
-                ]
-              }
-            },
-            "quote": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string",
-                "enum": [
-                  "client_id",
-                  "quote_number",
-                  "version",
-                  "contact_id",
-                  "opportunity_id",
-                  "previous_status",
-                  "new_status",
-                  "currency_code",
-                  "total_amount",
-                  "performed_by_type",
-                  "performed_by_id",
-                  "sent_at",
-                  "viewed_at",
-                  "approved_at",
-                  "accepted_at",
-                  "rejected_at",
-                  "expired_at",
-                  "converted_at",
-                  "conversion_reverted_at",
-                  "superseded_at",
-                  "cancelled_at",
-                  "accepted_by_name",
-                  "accepted_on_behalf",
-                  "selected_optional_item_ids",
-                  "rejection_reason",
-                  "conversion_targets",
-                  "contract_id",
-                  "invoice_id",
-                  "sales_order_id",
-                  "released_invoice_id",
-                  "superseded_by_quote_id",
-                  "next_version"
-                ]
-              }
-            }
-          },
-          "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
-        },
-        "payload_transformation": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "retry_config": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "is_active": {
+        "is_system_template": {
           "type": "boolean"
-        },
-        "is_test_mode": {
-          "type": "boolean"
-        },
-        "verify_ssl": {
-          "type": "boolean"
-        },
-        "secret_token": {
-          "type": "string"
-        },
-        "rate_limit": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         }
       }
     },
@@ -45661,7 +45730,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {
         "data": {
-          "$ref": "#/components/schemas/WebhookRecordV1"
+          "$ref": "#/components/schemas/WebhookTemplateRecordV1"
         },
         "meta": {
           "type": "object",
@@ -45677,9 +45746,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "delete-_api_v1_webhooks_templates_id",
     "method": "delete",
     "path": "/api/v1/webhooks/templates/{id}",
-    "displayName": "Delete webhook template (webhook delete wiring)",
-    "summary": "Delete webhook template (webhook delete wiring)",
-    "description": "Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.",
+    "displayName": "Delete webhook template",
+    "summary": "Delete webhook template",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and id validation.",
     "tags": [
       "Webhooks"
     ],
@@ -45715,7 +45784,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/webhooks/templates/{id}/create",
     "displayName": "Create webhook from template",
     "summary": "Create webhook from template",
-    "description": "Instantiates a webhook configuration from a template, merging caller-supplied overrides.",
+    "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the RBAC check and body validation.",
     "tags": [
       "Webhooks"
     ],
@@ -61132,7 +61201,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/priorities",
     "displayName": "List ticket priorities",
     "summary": "List ticket priorities",
-    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name.",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
     "tags": [
       "Work Management v1"
     ],
@@ -61920,7 +61989,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/templates",
     "displayName": "List ticket templates",
     "summary": "List ticket templates",
-    "description": "Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item.",
+    "description": "Returns the tenant ticket templates: the ticket fields, tags, custom fields and checklist each one produces, with how many recurring schedules and tickets use it. Filter with client_id to see what one client can use (its own templates plus the tenant-wide ones). Use a template with POST /api/v1/tickets/templates/{templateId}/instantiate instead of creating a ticket and then adding its checklist item by item. To create tickets on a schedule (for example a yearly renewal), schedule a template with POST /api/v1/tickets/recurring.",
     "tags": [
       "Work Management v1"
     ],
@@ -62212,6 +62281,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           },
           "maxItems": 200,
           "description": "The whole checklist, in order. On update this list replaces the stored items."
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
         }
       },
       "required": [
@@ -62253,7 +62377,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/templates/{templateId}",
     "displayName": "Get a ticket template",
     "summary": "Get a ticket template",
-    "description": "Returns one ticket template with its checklist items in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
+    "description": "Returns one ticket template with its checklist items and documentation links in order, its client scope, usage counts, and referenceProblems: fields pointing at a board, category or priority that no longer exists (they are left blank when the template is applied).",
     "tags": [
       "Work Management v1"
     ],
@@ -62489,6 +62613,61 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "maxItems": 200,
           "description": "The whole checklist, in order. On update this list replaces the stored items."
         },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registry key of the external system: a built-in key ('hudu', 'generic', 'github', ...) or custom:<slug>."
+              },
+              "external_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Identifier of the record in the external system, e.g. the Hudu article id."
+              },
+              "realm": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Repository, server or workspace, for systems whose URL template needs one."
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Absolute http(s) link-out. Required for systems with no URL template (hudu, generic). Stored as given and never re-resolved when tickets are created."
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 500,
+                "description": "Human title shown on the ticket, e.g. the article name."
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {},
+                "description": "Free-form details, e.g. { hudu: { article_id, company_id } }."
+              }
+            },
+            "required": [
+              "system",
+              "external_id"
+            ]
+          },
+          "maxItems": 50,
+          "description": "Documentation links (for example Hudu articles), in order. Every ticket created from the template (recurring schedule, instantiate, or manual) gets them as reference external links, readable at GET /api/v1/tickets/{id}/external-links. Duplicate (system, external_id) pairs are refused. On update this list replaces the stored links."
+        },
         "is_active": {
           "type": "boolean",
           "description": "Activate or deactivate the template. Deactivating only hides it from manual use; recurring schedules keep running."
@@ -62698,6 +62877,3166 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_tickets_recurring",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring",
+    "displayName": "List recurring ticket definitions",
+    "summary": "List recurring ticket definitions",
+    "description": "Lists the schedules that create tickets automatically (for example a yearly certificate renewal): name, status (active, paused or archived), recurrence rule, client_count, next_due_at, time_zone and has_failure. Use it to find a schedule by name (search), to see what is paused (status=paused), or to see which one is failing: has_failure means the latest occurrence for some client failed, and GET /api/v1/tickets/recurring/{definitionId}/occurrences?status=failed gives the reason. status defaults to all, which includes archived definitions. Due and create times are wall-clock in time_zone, the tenant time zone.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter by state. Default 'all', which includes archived definitions.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "active",
+            "paused",
+            "archived",
+            "all"
+          ],
+          "description": "Filter by state. Default 'all', which includes archived definitions."
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Case-insensitive substring of the definition name.",
+        "schema": {
+          "type": "string",
+          "description": "Case-insensitive substring of the definition name."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-100. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-100. Default 25."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring",
+    "displayName": "Create a recurring ticket definition",
+    "summary": "Create a recurring ticket definition",
+    "description": "Creates a schedule that creates a ticket every time it falls due, for example \"every year on 1 March, created 30 days early\". What the ticket looks like (title, description, checklist, tags, board, priority) comes from a ticket template: create one first with POST /api/v1/tickets/templates and pass its template_id as ticket_template_id; ticket content fields such as title are rejected here with 400. recurrence.frequency is daily, weekly, monthly or yearly; a yearly rule is { frequency: \"yearly\", month, day, end } and means every year (it has no interval). A new definition generates nothing until clients are added with POST /api/v1/tickets/recurring/{definitionId}/clients. Use POST /api/v1/tickets/recurring/preview to check the dates first. Requires recurring_ticket:create and ticket_template:read. Returns 201 with definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the schedule, for example \"Apple APNs certificate renewal\". It is not the ticket title; the title comes from the ticket template."
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the schedule generates tickets. A definition only generates tickets for the clients added to it. Default true."
+        },
+        "ticket_template_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template this schedule creates tickets from: it supplies the title, description, checklist, tags and default board, priority and category. Create one with POST /api/v1/tickets/templates first."
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "default": {},
+          "additionalProperties": false,
+          "description": "Overrides of the template for the whole schedule: board, priority, category and assignment groups. Each group present replaces that group of template fields; absent groups inherit. Default {}."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Status for created tickets; must belong to the effective board. Null uses the board default."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "User created tickets are assigned to. Null leaves them unassigned."
+        },
+        "assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Team created tickets are assigned to. Null for none."
+        },
+        "additional_agent_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": [],
+          "description": "Additional agent user UUIDs on created tickets. Default []."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD. For a yearly rule this is the first year it is due."
+        },
+        "create_time": {
+          "type": "string",
+          "default": "08:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) the ticket is created on its create date. Default 08:00."
+        },
+        "due_time": {
+          "type": "string",
+          "default": "17:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) on the due date the ticket is due. Default 17:00."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "How many days before the due date the ticket is created. 30 creates it a month ahead. Default 0."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "default": "keep",
+          "description": "When the due date is not a business day: 'keep' it, move to the 'previous' business day, or the 'next' one. Default keep."
+        },
+        "open_previous_policy": {
+          "type": "string",
+          "enum": [
+            "always_create",
+            "skip"
+          ],
+          "default": "always_create",
+          "description": "'always_create' makes a new ticket even if the previous one is still open; 'skip' skips the occurrence while one is open. Default always_create."
+        },
+        "notify_client_on_create": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send the usual new-ticket notification to the client contact when a ticket is created. Default false."
+        }
+      },
+      "required": [
+        "name",
+        "ticket_template_id",
+        "recurrence",
+        "start_date"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_preview",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/preview",
+    "displayName": "Preview the next due dates of an unsaved recurring schedule",
+    "summary": "Preview the next due dates of an unsaved recurring schedule",
+    "description": "Computes the next 5 occurrences (nominal date, due date, create_at and due_at instants) of a draft schedule without saving anything, in the tenant time zone and with the business-day calendar the non_business_day_policy uses. Pass ticket_template_id to also get sample_title, the template title rendered for the first occurrence. Use it to check a rule before POST /api/v1/tickets/recurring. For a saved definition use GET /api/v1/tickets/recurring/{definitionId}/upcoming.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "ticket_template_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Optional ticket template UUID; when given the response includes its title rendered for the first occurrence."
+        },
+        "sample_client_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200,
+          "description": "Client name used to render {{client}} in the sample title."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD."
+        },
+        "create_time": {
+          "type": "string",
+          "description": "Wall-clock create time, HH:MM, tenant time zone."
+        },
+        "due_time": {
+          "type": "string",
+          "description": "Wall-clock due time, HH:MM, tenant time zone."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "description": "Days before the due date the ticket is created."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "description": "'keep', 'previous' or 'next' business day when the due date is not a business day."
+        }
+      },
+      "required": [
+        "recurrence",
+        "start_date",
+        "create_time",
+        "due_time",
+        "lead_days",
+        "non_business_day_policy"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Get a recurring ticket definition",
+    "summary": "Get a recurring ticket definition",
+    "description": "Returns one definition with definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields. clients lists every client the schedule runs for; effective_fields is what a client without its own overrides gets (template, then dispatch, then schedule overrides). An archived definition stays readable: definition.archived_at is set.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_recurring_definitionid",
+    "method": "put",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Replace a recurring ticket definition",
+    "summary": "Replace a recurring ticket definition",
+    "description": "Replaces the whole definition: every field you omit goes back to its default (create_time 08:00, due_time 17:00, lead_days 0, overrides {}, no assignee), it does not keep its current value. GET the definition first and send it back edited. Clients attached to the definition are not touched. Archived definitions are read-only (409). Requires recurring_ticket:update, and ticket_template:read when the template changes. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Name of the schedule, for example \"Apple APNs certificate renewal\". It is not the ticket title; the title comes from the ticket template."
+        },
+        "is_active": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the schedule generates tickets. A definition only generates tickets for the clients added to it. Default true."
+        },
+        "ticket_template_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Ticket template this schedule creates tickets from: it supplies the title, description, checklist, tags and default board, priority and category. Create one with POST /api/v1/tickets/templates first."
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "default": {},
+          "additionalProperties": false,
+          "description": "Overrides of the template for the whole schedule: board, priority, category and assignment groups. Each group present replaces that group of template fields; absent groups inherit. Default {}."
+        },
+        "status_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Status for created tickets; must belong to the effective board. Null uses the board default."
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "User created tickets are assigned to. Null leaves them unassigned."
+        },
+        "assigned_team_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "default": null,
+          "description": "Team created tickets are assigned to. Null for none."
+        },
+        "additional_agent_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "default": [],
+          "description": "Additional agent user UUIDs on created tickets. Default []."
+        },
+        "recurrence": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "daily"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdaysOnly": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Only weekdays (Mon-Fri); requires interval 1. Default false."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "weekly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "weekdays": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "mon",
+                      "tue",
+                      "wed",
+                      "thu",
+                      "fri",
+                      "sat",
+                      "sun"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "Weekdays it recurs on, unique, at least one."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "weekdays"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "interval": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 999,
+                  "description": "Repeat every N units (days, weeks or months). Not used by yearly rules."
+                },
+                "on": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "dayOfMonth"
+                          ]
+                        },
+                        "day": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 31
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "day"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "nthWeekday"
+                          ]
+                        },
+                        "nth": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "enum": [
+                                1
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                2
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                3
+                              ]
+                            },
+                            {
+                              "type": "number",
+                              "enum": [
+                                4
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "last"
+                              ]
+                            }
+                          ]
+                        },
+                        "weekday": {
+                          "type": "string",
+                          "enum": [
+                            "mon",
+                            "tue",
+                            "wed",
+                            "thu",
+                            "fri",
+                            "sat",
+                            "sun"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "nth",
+                        "weekday"
+                      ]
+                    }
+                  ]
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "interval",
+                "on"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {
+                  "type": "string",
+                  "enum": [
+                    "yearly"
+                  ],
+                  "description": "Every year, on the given month and day. Has no interval."
+                },
+                "month": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "description": "Month of the year, 1-12."
+                },
+                "day": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 31,
+                  "description": "Day of the month; must exist in that month (Feb 29 clamps to Feb 28 in non-leap years)."
+                },
+                "end": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "description": "The schedule never ends."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "onDate"
+                          ]
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                          "description": "Last date, YYYY-MM-DD."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "date"
+                      ],
+                      "description": "Ends on a date."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "afterCount"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 10000,
+                          "description": "Total number of occurrences."
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "count"
+                      ],
+                      "description": "Ends after a number of occurrences."
+                    }
+                  ],
+                  "default": {
+                    "type": "never"
+                  },
+                  "description": "When the recurrence stops."
+                }
+              },
+              "required": [
+                "frequency",
+                "month",
+                "day"
+              ]
+            }
+          ]
+        },
+        "start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First date the schedule can fall on, YYYY-MM-DD. For a yearly rule this is the first year it is due."
+        },
+        "create_time": {
+          "type": "string",
+          "default": "08:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) the ticket is created on its create date. Default 08:00."
+        },
+        "due_time": {
+          "type": "string",
+          "default": "17:00",
+          "description": "Wall-clock time (HH:MM, tenant time zone) on the due date the ticket is due. Default 17:00."
+        },
+        "lead_days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 365,
+          "default": 0,
+          "description": "How many days before the due date the ticket is created. 30 creates it a month ahead. Default 0."
+        },
+        "non_business_day_policy": {
+          "type": "string",
+          "enum": [
+            "keep",
+            "previous",
+            "next"
+          ],
+          "default": "keep",
+          "description": "When the due date is not a business day: 'keep' it, move to the 'previous' business day, or the 'next' one. Default keep."
+        },
+        "open_previous_policy": {
+          "type": "string",
+          "enum": [
+            "always_create",
+            "skip"
+          ],
+          "default": "always_create",
+          "description": "'always_create' makes a new ticket even if the previous one is still open; 'skip' skips the occurrence while one is open. Default always_create."
+        },
+        "notify_client_on_create": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send the usual new-ticket notification to the client contact when a ticket is created. Default false."
+        }
+      },
+      "required": [
+        "name",
+        "ticket_template_id",
+        "recurrence",
+        "start_date"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_recurring_definitionid",
+    "method": "delete",
+    "path": "/api/v1/tickets/recurring/{definitionId}",
+    "displayName": "Archive a recurring ticket definition",
+    "summary": "Archive a recurring ticket definition",
+    "description": "Archives the definition: it stops creating tickets and becomes read-only. Occurrence history and the tickets already created are kept, and the definition stays readable with status archived. There is no unarchive, so to pause temporarily use POST /api/v1/tickets/recurring/{definitionId}/pause instead. Returns 204.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_pause",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/pause",
+    "displayName": "Pause a recurring ticket definition",
+    "summary": "Pause a recurring ticket definition",
+    "description": "Stops the whole definition from creating tickets until it is resumed. Reversible with POST /api/v1/tickets/recurring/{definitionId}/resume. To stop only one client use the client pause endpoint. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, with definition.is_active false.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_resume",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/resume",
+    "displayName": "Resume a recurring ticket definition",
+    "summary": "Resume a recurring ticket definition",
+    "description": "Restarts ticket creation for a paused definition. Occurrences that fell due while it was paused are not backfilled: generation continues from now. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, with definition.is_active true.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid_upcoming",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}/upcoming",
+    "displayName": "Get the next due dates of a recurring ticket definition",
+    "summary": "Get the next due dates of a recurring ticket definition",
+    "description": "Returns the next 5 due dates of the saved definition: each with nominal date, due date, create_at and due_at instants, plus time_zone, the business-day calendar used and sample_title. The dates are computed from the schedule rule only: they ignore whether the definition or a client is paused and ignore occurrences already generated, so read definition_status (active, paused or archived) before telling someone a ticket will be created. For the per-client next_due_at use GET /api/v1/tickets/recurring/{definitionId}.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_recurring_definitionid_occurrences",
+    "method": "get",
+    "path": "/api/v1/tickets/recurring/{definitionId}/occurrences",
+    "displayName": "List the occurrence history of a recurring ticket definition",
+    "summary": "List the occurrence history of a recurring ticket definition",
+    "description": "The history of what the schedule did, newest first: for each client and due date the status (created, skipped, missed or failed), the ticket_id and ticket_number it created, the reason a skip or failure happened, and the number of attempts. History survives removing a client. Filter with status=failed to see why a schedule is failing, or with client_id for one client.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Filter by what happened to the occurrence.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "created",
+            "skipped",
+            "missed",
+            "failed"
+          ],
+          "description": "Filter by what happened to the occurrence."
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "description": "Only occurrences for this client (client_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Only occurrences for this client (client_id)."
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number. Default 1.",
+        "schema": {
+          "type": "string",
+          "description": "1-based page number. Default 1."
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size, 1-200. Default 25.",
+        "schema": {
+          "type": "string",
+          "description": "Page size, 1-200. Default 25."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            },
+            "hasNext": {
+              "type": "boolean"
+            },
+            "hasPrev": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages",
+            "hasNext",
+            "hasPrev"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data",
+        "pagination"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients",
+    "displayName": "Add clients to a recurring ticket definition",
+    "summary": "Add clients to a recurring ticket definition",
+    "description": "Adds clients to the definition; this is what starts ticket generation for them, one ticket per client per occurrence. Resolve client_ids with GET /api/v1/clients first. Clients already on the definition are ignored, so the call is safe to repeat. A new client is not backfilled: tickets start from the next occurrence. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields, plus added (how many were new). A client_id that does not exist is 400.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id).",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID, from GET /api/v1/tickets/recurring or the create response (definition.definition_id)."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1,
+          "maxItems": 100,
+          "description": "client_id values (from GET /api/v1/clients) to add. Clients already on the definition are ignored. Adding a client is what starts ticket generation for it."
+        }
+      },
+      "required": [
+        "client_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_tickets_recurring_definitionid_clients_clientid",
+    "method": "put",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}",
+    "displayName": "Replace a client’s settings on a recurring ticket definition",
+    "summary": "Replace a client’s settings on a recurring ticket definition",
+    "description": "Replaces the per-client settings (overrides, contact_id, location_id, asset_ids): all four are required, send {}, null or [] to clear one. {clientId} is the client_id, and the client must already be on this definition (404 otherwise). Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "object",
+              "properties": {
+                "board_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Board for created tickets."
+                },
+                "status_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Status on that board; null for the board default."
+                }
+              },
+              "required": [
+                "board_id",
+                "status_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override board and status together."
+            },
+            "priority": {
+              "type": "object",
+              "properties": {
+                "priority_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Priority for created tickets."
+                }
+              },
+              "required": [
+                "priority_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override the priority."
+            },
+            "category": {
+              "type": "object",
+              "properties": {
+                "category_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Category; null for none."
+                },
+                "subcategory_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Subcategory; requires a category."
+                }
+              },
+              "required": [
+                "category_id",
+                "subcategory_id"
+              ],
+              "additionalProperties": false,
+              "description": "Override category and subcategory together."
+            },
+            "assignment": {
+              "type": "object",
+              "properties": {
+                "assigned_to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assignee user UUID; null means unassigned."
+                },
+                "assigned_team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Assigned team UUID; null for none."
+                },
+                "additional_agent_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": "Additional agent user UUIDs."
+                }
+              },
+              "required": [
+                "assigned_to",
+                "assigned_team_id",
+                "additional_agent_ids"
+              ],
+              "additionalProperties": false,
+              "description": "Override assignment (assignee, team and additional agents) as a unit."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Overrides for this client only, layered on top of the definition overrides. Send {} to clear."
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Requester contact for this client's tickets; must belong to the client. Null to clear."
+        },
+        "location_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Client location for its tickets; must belong to the client. Null to clear."
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxItems": 500,
+          "description": "Assets linked to each created ticket; each must belong to the client. [] to clear."
+        }
+      },
+      "required": [
+        "overrides",
+        "contact_id",
+        "location_id",
+        "asset_ids"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_tickets_recurring_definitionid_clients_clientid",
+    "method": "delete",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}",
+    "displayName": "Remove a client from a recurring ticket definition",
+    "summary": "Remove a client from a recurring ticket definition",
+    "description": "Removes the client from the schedule so it no longer gets tickets. Its occurrence history and the tickets already created are kept. To stop a client temporarily use the client pause endpoint instead. {clientId} is the client_id and must be on the definition (404 otherwise). Returns 204.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients_clientid_pause",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause",
+    "displayName": "Pause one client on a recurring ticket definition",
+    "summary": "Pause one client on a recurring ticket definition",
+    "description": "Stops ticket creation for this client only; the other clients keep running. {clientId} is the client_id and must already be on the definition (404 otherwise). Reversible with the client resume endpoint. Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_tickets_recurring_definitionid_clients_clientid_resume",
+    "method": "post",
+    "path": "/api/v1/tickets/recurring/{definitionId}/clients/{clientId}/resume",
+    "displayName": "Resume one client on a recurring ticket definition",
+    "summary": "Resume one client on a recurring ticket definition",
+    "description": "Restarts ticket creation for a paused client; occurrences missed while it was paused are not backfilled. {clientId} is the client_id and must already be on the definition (404 otherwise). Returns definition, clients (each with client_id, client_name, is_active and asset_ids), next_due_at, time_zone and effective_fields.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "recurring_ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "definitionId",
+        "in": "path",
+        "required": true,
+        "description": "Recurring ticket definition UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Recurring ticket definition UUID."
+        }
+      },
+      {
+        "name": "clientId",
+        "in": "path",
+        "required": true,
+        "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client’s client_id (from GET /api/v1/clients), NOT a definition_client_id. The client must already be on this definition, otherwise 404."
+        }
+      },
+      {
+        "name": "X-Alga-Act-As",
+        "in": "header",
+        "required": false,
+        "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Service-principal keys only. The user id of an active internal user to act as. The request then runs as that user (the effective user, recorded as author/actor) with the principal recorded as the delegating principal; permissions are the intersection of the principal and that user. Rejected with ACT_AS_NOT_ALLOWED when the principal is not allowed to act as, ACT_AS_INVALID_TARGET for a missing, inactive, client or service target, and ACT_AS_NOT_SUPPORTED when sent with a human-owned key."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_tickets_id_externallinks",
     "method": "get",
     "path": "/api/v1/tickets/{id}/external-links",
@@ -62841,6 +66180,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           ],
           "format": "uri",
           "description": "Optional explicit link-out; must be http(s)."
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
         },
         "relationship": {
           "type": "string",
@@ -63000,6 +66347,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "format": "uri"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Human title shown instead of the raw external id, e.g. a knowledge-base article name."
         },
         "actor": {
           "type": [

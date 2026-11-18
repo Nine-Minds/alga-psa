@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useCapability, useFeatureFlag, useServedCapabilities } from '@alga-psa/ui/hooks';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
 import '@/config/coManagedMenu';
+import { useCoManagedPurchaseNavigation } from '@enterprise/components/co-managed/useCoManagedPurchaseNavigation';
+import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
@@ -26,6 +28,7 @@ import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
+const CO_MANAGED_ROOT_HREF = '/msp/co-managed';
 const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
 /** Menu rows that exist only while the co-managed capability is served. */
 export const CO_MANAGED_GATED_HREFS: ReadonlySet<string> = new Set([CO_MANAGED_ADMINISTRATION_HREF, '/msp/tickets/customer']);
@@ -149,6 +152,27 @@ export function filterNavigationSectionsByPermission(
     .filter((section) => section.items.length > 0);
 }
 
+/**
+ * Merges the commercial first-purchase contribution into the sections. Commercial eligibility is its own
+ * fact: it shows the overview root without `co_management:read`, and only the root (the archive row keeps its
+ * own gate). When the served group already carries the root the two paths collapse to one link; otherwise the
+ * contribution supplies it. Exactly one Co-managed IT link survives either way.
+ */
+export function mergeCoManagedPurchaseSection(
+  sections: readonly NavigationSection[],
+  purchase: NavigationSection | null,
+): NavigationSection[] {
+  if (!purchase) return [...sections];
+  const hasRoot = sections.some((section) => section.items.some((item) => item.href === CO_MANAGED_ROOT_HREF));
+  if (!hasRoot) return [...sections, purchase];
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => item.href === CO_MANAGED_ROOT_HREF && item.requiredPermission
+      ? { ...item, requiredPermission: undefined }
+      : item),
+  }));
+}
+
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -158,6 +182,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
   const { enabled: coManagedServed } = useCapability('co-managed');
+  const servedCapabilities = useServedCapabilities();
+  // Server-authoritative commercial eligibility (EE only; the community stub is always null). No Stripe call.
+  const purchaseNavigation = useCoManagedPurchaseNavigation();
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -166,7 +193,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const { hasFeature } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
-  const { productCode, edition } = useProduct();
+  const { productCode, surfaceKind, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
   useEffect(() => {
@@ -206,8 +233,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     };
 
     loadPermissions();
+    // A verified purchase can change the permissions the server derives; re-read them, never infer them.
+    window.addEventListener(CO_MANAGED_ACCESS_CHANGED, loadPermissions);
     return () => {
       isMounted = false;
+      window.removeEventListener(CO_MANAGED_ACCESS_CHANGED, loadPermissions);
     };
   }, []);
 
@@ -217,13 +247,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const menuSections = useMemo<NavigationSection[]>(() => {
     // Capability-gated contributions join before the edition → tier →
     // permission → product chain, which then filters them like any menu item.
-    const contributedSections = resolveUiSlots<NavigationSection>(
-      'msp.navigation.group',
-      new Set(coManagedServed ? ['co-managed' as const] : []),
-    ).flatMap((slot) => (slot.props ? [slot.props] : []));
-    const baseSections = useNavigationSections
+    const contributedSections = resolveUiSlots<NavigationSection>('msp.navigation.group', servedCapabilities).flatMap((slot) => (slot.props ? [slot.props] : []));
+    // The contribution joins the same chain; the served group's root is relieved of its permission only
+    // when the server's commercial decision is open, and the archive row never is.
+    const baseSections = mergeCoManagedPurchaseSection(useNavigationSections
       ? [...originalSections, ...contributedSections]
-      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections], purchaseNavigation);
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
@@ -250,23 +279,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
 
     return filterMenuSectionsByProduct(
-      productCode,
+      { productCode, surfaceKind },
       filterNavigationSectionsByPermission(
         filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities, purchaseNavigation]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
-    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
+    const productSections = filterMenuSectionsByProduct({ productCode, surfaceKind }, editionSections);
 
     return filterNavigationSectionsBySelfHost(
       productSections,
       selfHostMode,
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, surfaceKind, selfHostMode]);
+
+  // The footer links answer to the same principal as the sections above: a seat technician's surface
+  // reaches neither settings nor the external support link.
+  const footerItems = useMemo(
+    () => filterMenuSectionsByProduct({ productCode, surfaceKind }, [{ items: bottomMenuItems }]).flatMap((section) => section.items),
+    [productCode, surfaceKind],
+  );
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(
@@ -288,7 +324,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     <Sidebar
       {...props}
       menuSections={menuSections}
-      bottomMenuItems={bottomMenuItems}
+      bottomMenuItems={footerItems}
       appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
       appLogoAlt={t('sidebar.appLogoAlt', {
         appName: isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA',

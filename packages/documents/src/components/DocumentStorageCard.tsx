@@ -32,6 +32,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import VisibilityToggle from './VisibilityToggle';
+import { isAwaitingPreview } from '../lib/documentPreviewPending';
 
 // Browsers (notably Chrome) report `video/quicktime` as unplayable via
 // HTMLMediaElement.canPlayType() even when the .mov actually contains an H.264/AAC
@@ -352,6 +353,14 @@ function DocumentStorageCardComponent({
         });
 
 
+    // The background job has not produced the stored preview yet: show the placeholder and do not
+    // fall back to the legacy in-request handlers (they load whole files into memory / run ffmpeg).
+    const awaitingPreview = isAwaitingPreview(document);
+    const previewFileId = document.preview_file_id;
+    const previousPreviewFileId = useRef(previewFileId);
+    const latestPreviewFileId = useRef(previewFileId);
+    latestPreviewFileId.current = previewFileId;
+
     const loadPreview = async () => {
         // NEW: Try cached preview first (for images, videos, PDFs)
         // Use preview (800x600, preserves aspect ratio) instead of thumbnail (200x200, cropped)
@@ -360,6 +369,11 @@ function DocumentStorageCardComponent({
             const previewUrl = `/api/documents/${document.document_id}/preview?t=${Date.now()}`;
             setPreviewContent({ previewImage: previewUrl });
             setHasLoadedPreview(true);
+            setIsLoading(false);
+            return;
+        }
+
+        if (awaitingPreview) {
             setIsLoading(false);
             return;
         }
@@ -393,6 +407,12 @@ function DocumentStorageCardComponent({
                 ]);
                 if (isActionPermissionError(preview)) {
                     throw new Error(preview.permissionError);
+                }
+                // The stored preview arrived while the legacy request was in flight: prefer it.
+                if (latestPreviewFileId.current) {
+                    setPreviewContent({ previewImage: `/api/documents/${document.document_id}/preview?t=${Date.now()}` });
+                    setHasLoadedPreview(true);
+                    return;
                 }
                 setPreviewContent(preview);
                 setHasLoadedPreview(true);
@@ -435,14 +455,26 @@ function DocumentStorageCardComponent({
         };
     }, []);
 
+    // The stored preview arrives after the card has rendered (background job + list polling).
+    // Drop whatever the card showed (placeholder or legacy data:image) and load again.
+    // Declared before the load effect so its queued state resets are applied before the load's own
+    // setPreviewContent (updates apply in order); the reverse order wipes the freshly loaded image.
+    useEffect(() => {
+        if (previewFileId && previewFileId !== previousPreviewFileId.current) {
+            setPreviewContent({});
+            setHasLoadedPreview(false);
+        }
+        previousPreviewFileId.current = previewFileId;
+    }, [previewFileId]);
+
     // Load preview only when in view and hasn't been loaded yet
     useEffect(() => {
         if (isInView && !hasLoadedPreview && !isLoading) {
             loadPreview();
         }
-        // Only depend on isInView and hasLoadedPreview to prevent unnecessary reloads
+        // Only depend on isInView, hasLoadedPreview and the stored preview id to prevent unnecessary reloads
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isInView, hasLoadedPreview]);
+    }, [isInView, hasLoadedPreview, document.preview_file_id]);
 
     // Force refresh preview when forceRefresh prop changes for THIS document
     useEffect(() => {
@@ -685,6 +717,13 @@ function DocumentStorageCardComponent({
                     ) : isLoading ? (
                         <div className="mt-4 flex justify-center">
                             <Spinner size="sm" />
+                        </div>
+                    ) : awaitingPreview && !previewContent.previewImage ? (
+                        <div
+                            className="mt-4 flex justify-center h-48 items-center bg-gray-50 dark:bg-[rgb(var(--color-border-50))] rounded"
+                            data-testid="document-preview-placeholder"
+                        >
+                            <Image className="w-8 h-8 text-gray-400 dark:text-[rgb(var(--color-text-400))]" />
                         </div>
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
@@ -1008,7 +1047,11 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.onToggleVisibility === nextProps.onToggleVisibility &&
         prevProps.isVisibilityUpdating === nextProps.isVisibilityUpdating &&
         prevProps.document.comment_attachment_is_public === nextProps.document.comment_attachment_is_public &&
-        prevProps.document.is_client_visible === nextProps.document.is_client_visible
+        prevProps.document.is_client_visible === nextProps.document.is_client_visible &&
+        // Background preview generation fills these in after the card first rendered.
+        prevProps.document.preview_file_id === nextProps.document.preview_file_id &&
+        prevProps.document.thumbnail_file_id === nextProps.document.thumbnail_file_id &&
+        prevProps.document.preview_generated_at === nextProps.document.preview_generated_at
     );
 });
 

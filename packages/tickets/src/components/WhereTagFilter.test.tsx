@@ -8,7 +8,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (_k: string, d: any) => (typeof d === 'string' ? d : d?.defaultValue ?? _k) }),
+  useTranslation: () => ({
+    t: (_k: string, d: any) =>
+      typeof d === 'string'
+        ? d
+        : String(d?.defaultValue ?? _k).replace(/\{\{(\w+)\}\}/g, (_m: string, name: string) => String(d?.[name] ?? '')),
+  }),
 }));
 
 import { WhereTagFilter } from './WhereTagFilter';
@@ -32,7 +37,15 @@ describe('WhereTagFilter', () => {
     expect(where).toEqual({ join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: ['def-vip'] }] });
   });
 
-  it('toggles to none-of and keeps the selected ids', () => {
+  it('keeps the toolbar to one button: the match switch is inside the popover', () => {
+    render(
+      <WhereTagFilter id="f" label="Requester tags" definitions={defs} selection={{ mode: 'in', ids: ['def-vip'] }} onChange={() => {}} />,
+    );
+    expect(screen.queryByText('None of')).toBeNull();
+    expect(screen.getByText('Requester tags: 1')).toBeTruthy();
+  });
+
+  it('switches to none-of inside the popover and keeps the selected ids', () => {
     const onChange = vi.fn();
     render(
       <WhereTagFilter
@@ -43,15 +56,16 @@ describe('WhereTagFilter', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByText('Any of'));
+    fireEvent.click(screen.getByText('Requester tags: 1'));
+    fireEvent.click(screen.getByText('None of'));
     expect(onChange).toHaveBeenCalledWith({ mode: 'not_in', ids: ['def-vip'] });
   });
 
-  it('shows the none-of mode label for a not_in selection', () => {
+  it('marks a not_in selection on the trigger', () => {
     render(
       <WhereTagFilter id="f" label="Client tags" definitions={defs} selection={{ mode: 'not_in', ids: ['def-poc'] }} onChange={() => {}} />,
     );
-    expect(screen.getByText('None of')).toBeTruthy();
+    expect(screen.getByText('Excluding Client tags: 1')).toBeTruthy();
   });
 });
 
@@ -86,7 +100,8 @@ describe('WhereLocationFilter', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByText('Any of'));
+    fireEvent.click(screen.getByText('Requester location: 1'));
+    fireEvent.click(screen.getByText('None of'));
     expect(onChange).toHaveBeenCalledWith({ mode: 'not_in', ids: [WAREHOUSE] });
   });
 
@@ -115,19 +130,28 @@ describe('TicketingDashboard wiring (descriptor table)', () => {
   it('renders the toolbar filters, chips and reset from the descriptor table', () => {
     // The table is WHERE_FILTERS now that it holds location rows as well as tag rows; the control
     // each row renders is chosen from its options source, so a new row is still never new wiring.
-    expect(source).toContain('WHERE_FILTERS.map((descriptor) =>');
+    expect(source).toContain("whereFiltersFor('primary').map(renderWhereFilter)");
+    expect(source).toContain("whereFiltersFor('secondary').map(renderWhereFilter)");
     expect(source).toContain('whereFilterChips(');
     expect(source).toMatch(/where: undefined,\s*\n\s*assignedToIds: undefined/);
-    expect(source).toContain('onFilterChange({ where: chip.clear() })');
+    expect(source).toContain('handleWhereChange(chip.clear())');
   });
 
   // T063: one option list behind both Location filters, narrowed to the filtered client and
   // reloaded when that filter changes.
   it('loads the location options for the filtered client and shares them between both rows', () => {
-    expect(source).toContain('listTicketFilterLocations(selectedClient ?? null)');
-    expect(source).toMatch(/return \(\) => \{ cancelled = true; \};\s*\n\s*\}, \[selectedClient\]\);/);
+    expect(source).toContain('listTicketFilterLocations(scopedClientId)');
+    expect(source).toMatch(/return \(\) => \{ cancelled = true; \};\s*\n\s*\}, \[scopedClientId\]\);/);
     expect((source.match(/options=\{whereLocationOptions\}/g) ?? []).length).toBe(1);
     expect(source).toContain('<WhereLocationFilter');
+  });
+
+  it('has no dashboard-only client branch: the client row is read from the table', () => {
+    expect(source).not.toContain('selectedClient');
+    expect(source).not.toContain('<ClientPicker');
+    expect(source).not.toContain('fetch-selected-client-by-id');
+    expect(source).toContain('<WhereClientFilter');
+    expect(source).toContain("getSingleClientScope(selectedWhere)");
   });
 
   it('derives the active-filter count and the toolbar controls from the same table', () => {

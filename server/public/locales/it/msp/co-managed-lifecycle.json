@@ -60,5 +60,35 @@
     },
     "retentionFailuresHeading": "Allegati non conservati",
     "retentionFailed": "Allegato non conservato: {{reason}}"
+  },
+  "seatEnd": {
+    "title": "Terminare l'accordo di postazioni per {{name}}?",
+    "intro": "La fine ha effetto alla successiva richiesta di ogni tecnico e non può essere annullata da qui.",
+    "effectTechnicians": "Tecnici disattivati: {{count}}",
+    "effectInvitations": "Inviti in sospeso ritirati: {{count}}",
+    "effectTickets": "Ticket restituiti al tuo team: {{count}}",
+    "effectSeats": "Postazioni rilasciate nel pool: {{count}}",
+    "effectNotes": "Le note condivise restano leggibili dal tuo personale.",
+    "confirm": "Termina accordo",
+    "cancel": "Annulla",
+    "start": "Termina accordo di postazioni",
+    "done": "L'accordo di postazioni è terminato.",
+    "errorDenied": "Non hai l'autorizzazione per terminare questo accordo.",
+    "errorNotFound": "Impossibile trovare questo accordo.",
+    "errorGeneric": "Impossibile elaborare la richiesta.",
+    "loading": "Caricamento…"
+  },
+  "seatProjects": {
+    "errorDenied": "Non hai l'autorizzazione per condividere progetti.",
+    "errorProject": "È possibile condividere solo un progetto di questo cliente.",
+    "errorNotFound": "Impossibile trovare questo accordo.",
+    "errorGeneric": "Impossibile elaborare la richiesta.",
+    "columnProject": "Progetto",
+    "columnShared": "Condiviso con i tecnici",
+    "inactive": "Inattivo",
+    "shareLabel": "Condividi {{name}} con i tecnici",
+    "intro": "I tecnici vedono solo i progetti che condividi. L'annullamento della condivisione ha effetto dalla loro richiesta successiva.",
+    "loading": "Caricamento dei progetti…",
+    "empty": "Questo cliente non ha progetti da condividere."
   }
 }

@@ -20,7 +20,9 @@ import { getCoManagedEntitlementState } from '../../../../packages/licensing/src
 import { runCoManagedPurchase } from '../../../../packages/licensing/src/lib/co-managed-purchases';
 import { reconcileHostedCoManagedEntitlement } from '../../../../packages/licensing/src/lib/co-managed-hosted-reconcile';
 import { isCoManagedPurchaseSurfaceOpen } from '../../../../packages/licensing/src/lib/co-managed-purchase-surface';
-import { hasCoManagedEntitlement } from '../../../../packages/co-managed/src/capability';
+import { hasCoManagedEntitlement, coManagedParticipants } from '../../../../packages/co-managed/src/capability';
+import { isCoManagedSeatEligible } from '../../../../packages/co-managed/src/seatCapability';
+import { readCoManagedFirstPurchasePhase } from '../../../../packages/licensing/src/lib/co-managed-first-purchase';
 import { admits } from '../../../../packages/core/src/lib/capability';
 import { registerFeatureFlagChecker } from '../../../../packages/core/src/lib/features';
 import { StripeService } from '@ee/lib/stripe/StripeService';
@@ -47,6 +49,7 @@ const require = createRequire(import.meta.url);
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const foundationMigration = require('../../../migrations/20261028130000_create_co_management_foundation.cjs');
 const purchaseMigration = require('../../../migrations/20261029120000_create_co_managed_purchase_operations.cjs');
+const allocationKindMigration = require('../../../migrations/20261111100000_add_co_managed_allocation_kind.cjs');
 const subscriptionItemMigration = require('../../../migrations/20261027090100_add_stripe_subscription_item_id.cjs');
 const stripeMigrations = [
   '20251014120000_create_stripe_integration_tables.cjs',
@@ -140,6 +143,8 @@ beforeAll(async () => {
   }
   await foundationMigration.up(db);
   await purchaseMigration.up(db);
+  // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
+  await allocationKindMigration.up(db);
 
   host = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
   const started = await host.start();
@@ -169,11 +174,11 @@ afterAll(async () => {
   await admin?.destroy();
 }, HOOK_TIMEOUT);
 
-async function sponsorFixture() {
+async function sponsorFixture(customerId: string = CUSTOMER_ID) {
   const tenant = randomUUID();
   const sponsor = tenantDb(db, tenant);
   await sponsor.table('tenants').insert({ tenant, product_code: 'psa', plan: 'pro', email: 'sponsor@example.test', billing_source: 'stripe' });
-  await sponsor.table('stripe_customers').insert({ tenant, stripe_customer_external_id: CUSTOMER_ID, email: 'sponsor@example.test' });
+  await sponsor.table('stripe_customers').insert({ tenant, stripe_customer_external_id: customerId, email: 'sponsor@example.test' });
   return { tenant, sponsor };
 }
 
@@ -408,6 +413,133 @@ describe('co-managed purchase against the Stripe emulator', () => {
         holder.flag = previous.flag;
         if (previous.price) process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = previous.price; else delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
       }
+    }, HOOK_TIMEOUT);
+  });
+
+  describe('first purchase: discovery, awaiting verification and operational authority', () => {
+    const paid = (capacity: number) => async () => ({ capacity, active: true, validUntil: new Date(Date.now() + 86_400_000) });
+    const unpaid = async () => ({ capacity: 3, active: false, validUntil: new Date(Date.now() + 86_400_000) });
+    const never = async () => { throw new Error('provider must not be called'); };
+    const operational = async (tenant: string) => ({
+      admits: (await admits('co-managed', tenant)).admitted,
+      eligible: await hasCoManagedEntitlement(tenant, db),
+      participates: (await coManagedParticipants([tenant], db)).has(tenant),
+      seatEligible: await isCoManagedSeatEligible(tenant, db),
+    });
+
+    it('T003: in-flight, unpaid zero row, completed-but-unverified, then verified once; no second first charge in between', async () => {
+      holder.flag = true;
+      delete process.env.FORCE_CAPABILITIES;
+      // Its own Stripe customer: the emulator's subscriptions outlive a single test.
+      const customer = `cus_first_${randomUUID().slice(0, 8)}`;
+      await control('seed/customer', { id: customer, email: 'first@example.test', name: 'First Purchase MSP' });
+      const { tenant, sponsor } = await sponsorFixture(customer);
+      await control('seed/subscription', { customer, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
+      const service = new StripeService();
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'none' });
+
+      // A first purchase needs a positive pool: a zero target is refused before anything is persisted.
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 0 }, never))
+        .rejects.toMatchObject({ code: 'INVALID_PURCHASE' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(0);
+
+      // In flight; a refresh or an ambiguous response resumes the SAME operation and charges once.
+      const operationId = randomUUID();
+      const started = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+      expect(started.kind).toBe('checkout');
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'in_flight', operationId, quantity: 3 });
+      const resumed = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+      expect(resumed).toMatchObject({ kind: 'checkout' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 3 }, never))
+        .rejects.toMatchObject({ code: 'PURCHASE_IN_PROGRESS' });
+
+      // An unpaid observation creates a zero-capacity hosted row. It is no purchase and no authority.
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', unpaid);
+      expect(await entitlementRow(tenant)).toMatchObject({ source: 'hosted', source_reference: 'sub_first' });
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0, available: 0 });
+      expect(await operational(tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toMatchObject({ phase: 'in_flight', operationId });
+
+      // The request completes at the provider (inline update) but no paid reconciliation has arrived.
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: operationId }).delete();
+      const completed = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: completed, quantity: 3 },
+        async () => ({ kind: 'updated' as const, subscriptionId: 'sub_first' }));
+      expect(await operationRow(tenant, completed)).toMatchObject({ state: 'completed', quantity: 3, provider_reference: 'sub_first' });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'awaiting_verification', operationId: completed, quantity: 3 });
+      // The operation status alone raised nothing, and a second first charge cannot start.
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0 });
+      expect(await operational(tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 5 }, never))
+        .rejects.toMatchObject({ code: 'PURCHASE_AWAITING_VERIFICATION' });
+      expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+      // Replaying the completed operation is still answered from it.
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: completed, quantity: 3 }, never))
+        .resolves.toMatchObject({ kind: 'updated', subscriptionId: 'sub_first' });
+
+      // The matching paid event, delivered (and replayed) with no browser involved, verifies it once.
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', paid(3));
+      await reconcileHostedCoManagedEntitlement(db, tenant, 'sub_first', paid(3));
+      expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, allocated: 0, available: 3 });
+      expect(await sponsor.table('co_managed_entitlements')).toHaveLength(1);
+      expect(await operational(tenant)).toEqual({ admits: true, eligible: true, participates: true, seatEligible: true });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'established' });
+      // Buying seats created no client arrangement and assigned no seat.
+      expect(await sponsor.table('co_managed_allocations')).toHaveLength(0);
+      expect(await sponsor.table('co_management_relationships')).toHaveLength(0);
+    }, HOOK_TIMEOUT);
+
+    it('an awaiting record older than the verification window is history: a legitimate retry is not stranded', async () => {
+      const { tenant, sponsor } = await sponsorFixture();
+      const stale = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: stale, quantity: 2 },
+        async () => ({ kind: 'updated' as const, subscriptionId: 'sub_stale' }));
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toMatchObject({ phase: 'awaiting_verification' });
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: stale })
+        .update({ updated_at: new Date(Date.now() - 73 * 3_600_000) });
+      expect(await readCoManagedFirstPurchasePhase(db, tenant)).toEqual({ phase: 'none' });
+      const retry = randomUUID();
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: retry, quantity: 2 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_retry', clientSecret: 'secret' }))).resolves.toMatchObject({ kind: 'checkout' });
+      // An expired operation is likewise no obstacle.
+      await sponsor.table('co_managed_purchase_operations').where({ operation_id: retry }).update({ state: 'expired' });
+      await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 2 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_again', clientSecret: 'secret' }))).resolves.toMatchObject({ kind: 'checkout' });
+    }, HOOK_TIMEOUT);
+
+    it('T004: every read and refusal is the current sponsor tenant\'s own (operation ids and pending state do not cross)', async () => {
+      const a = await sponsorFixture();
+      const b = await sponsorFixture();
+      const bOperation = randomUUID();
+      await runCoManagedPurchase(db, { sponsorTenant: b.tenant, operationId: bOperation, quantity: 9 },
+        async () => ({ kind: 'checkout' as const, sessionId: 'cs_b', clientSecret: 'secret_b' }));
+      expect(await readCoManagedFirstPurchasePhase(db, b.tenant)).toEqual({ phase: 'in_flight', operationId: bOperation, quantity: 9 });
+      // Sponsor A sees none of it, and may start its own purchase even when it presents B's operation id.
+      expect(await readCoManagedFirstPurchasePhase(db, a.tenant)).toEqual({ phase: 'none' });
+      const calls: string[] = [];
+      await runCoManagedPurchase(db, { sponsorTenant: a.tenant, operationId: bOperation, quantity: 2 },
+        async (operation) => { calls.push(operation.operation_id); return { kind: 'checkout' as const, sessionId: 'cs_a', clientSecret: 'secret_a' }; });
+      expect(await operationRow(a.tenant, bOperation)).toMatchObject({ quantity: 2, provider_reference: 'cs_a' });
+      expect(await operationRow(b.tenant, bOperation)).toMatchObject({ quantity: 9, provider_reference: 'cs_b', state: 'checkout' });
+      expect(await a.sponsor.table('co_managed_entitlements')).toHaveLength(0);
+      expect(await b.sponsor.table('co_managed_entitlements')).toHaveLength(0);
+      // The unverified pending purchase of one sponsor makes neither sponsor operational.
+      expect(await operational(a.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+      expect(await operational(b.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
+    }, HOOK_TIMEOUT);
+
+    it('a lapsed sponsor with history stays operational; a never-paid zero row does not', async () => {
+      const lapsed = await sponsorFixture();
+      await reconcileHostedCoManagedEntitlement(db, lapsed.tenant, 'sub_lapse', paid(4));
+      await reconcileHostedCoManagedEntitlement(db, lapsed.tenant, 'sub_lapse',
+        async () => ({ capacity: 4, active: false, validUntil: new Date(Date.now() + 86_400_000), lapseSince: new Date() }));
+      expect(await getCoManagedEntitlementState(db, lapsed.tenant)).toMatchObject({ capacity: 0 });
+      expect(await operational(lapsed.tenant)).toMatchObject({ admits: true, eligible: true, participates: true });
+      expect(await readCoManagedFirstPurchasePhase(db, lapsed.tenant)).toEqual({ phase: 'established' });
+      const pending = await sponsorFixture();
+      await reconcileHostedCoManagedEntitlement(db, pending.tenant, 'sub_pending', unpaid);
+      expect(await operational(pending.tenant)).toEqual({ admits: false, eligible: false, participates: false, seatEligible: false });
     }, HOOK_TIMEOUT);
   });
 });

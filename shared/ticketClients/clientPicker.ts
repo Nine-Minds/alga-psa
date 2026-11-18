@@ -15,6 +15,13 @@ export interface PickerClient {
   client_type: 'company' | 'individual' | null;
   is_inactive: boolean;
   logoUrl: string | null;
+  /**
+   * Plain (non-billing) attributes a screen reads for the one client it picked, through an `ids`
+   * lookup: the sales-order dialog takes its currency from the client, the new-opportunity dialog
+   * its default type from the lifecycle. They saved a per-package by-id action each.
+   */
+  lifecycle_status: string | null;
+  default_currency_code: string | null;
 }
 
 export interface SearchClientsForPickerParams {
@@ -62,7 +69,14 @@ export async function searchClientsForPicker(
   db: Knex,
   tenant: string,
   user: { user_id: string; user_type?: string; clientId?: string | null },
-  params: SearchClientsForPickerParams = {}
+  params: SearchClientsForPickerParams = {},
+  options: {
+    /**
+     * ANDs the caller's row restriction (e.g. a bundle client scope) onto the picker's `clients as c` query,
+     * before the count and the page are taken, so `total` and paging come from the narrowed query.
+     */
+    narrowQuery?: (query: Knex.QueryBuilder) => void;
+  } = {}
 ): Promise<SearchClientsForPickerResult> {
   const {
     search,
@@ -82,6 +96,7 @@ export async function searchClientsForPicker(
   const { rows, total } = await withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
     let query = scopedDb.table('clients as c');
+    options.narrowQuery?.(query);
 
     if (isLookup) {
       query = query.whereIn('c.client_id', ids.slice(0, CLIENT_PICKER_MAX_LOOKUP_IDS));
@@ -115,7 +130,7 @@ export async function searchClientsForPicker(
 
     let rowsQuery = query
       .clone()
-      .select('c.client_id', 'c.client_name', 'c.client_type', 'c.is_inactive')
+      .select('c.client_id', 'c.client_name', 'c.client_type', 'c.is_inactive', 'c.lifecycle_status', 'c.default_currency_code')
       .orderByRaw('LOWER(c.client_name) asc')
       .orderBy('c.client_id', 'asc');
     if (!isLookup) {
@@ -136,6 +151,8 @@ export async function searchClientsForPicker(
     client_type: r.client_type ?? null,
     is_inactive: Boolean(r.is_inactive),
     logoUrl: logoMap.get(r.client_id) ?? null,
+    lifecycle_status: r.lifecycle_status ?? null,
+    default_currency_code: r.default_currency_code ?? null,
   }));
 
   return { clients, total };

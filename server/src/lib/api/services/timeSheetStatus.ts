@@ -6,6 +6,7 @@
  * side effects that give the new state its meaning. Callers may request a transition; none may write the column.
  */
 
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, withViaPrincipal, type ServiceContext } from '@alga-psa/db';
@@ -143,7 +144,8 @@ export async function applyTransition(
         await insertHistory(trx, sheet.id, 'approval', payload.approval_notes, null, context);
         await insertComment(trx, sheet.id, payload.approval_notes, true, context);
       }
-      await db.table('time_entries').where({ time_sheet_id: sheet.id }).update({ approval_status: 'APPROVED', updated_at: new Date() });
+      // Operational (seat technician) entries are never approved.
+      await db.table('time_entries').where({ time_sheet_id: sheet.id }).whereRaw(commercialTimeEntrySql('time_entries')).update({ approval_status: 'APPROVED', updated_at: new Date() });
       return;
     }
     case 'CHANGES_REQUESTED': {

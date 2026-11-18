@@ -1,0 +1,32 @@
+[
+  {
+    "id": "F001",
+    "description": "Single Google mailbox OAuth client resolver used by initiate, callback and GmailAdapter.refreshAccessToken (all live copies). It takes the client ID and secret as a pair from the row's client_id+client_secret when both are present, else the tenant's google_client_id+google_client_secret, and never reads process.env.GOOGLE_CLIENT_ID/SECRET.",
+    "implemented": true,
+    "prdRefs": ["§3.1"]
+  },
+  {
+    "id": "F002",
+    "description": "Google OAuth callback persists the issuing client_id to google_email_provider_config.client_id with the tokens (no new secret columns). If the recorded client_id differs from the tenant's current google_client_id, refresh is not attempted and fails with a specific reconnect-required error.",
+    "implemented": true,
+    "prdRefs": ["§3.1", "§3.2"]
+  },
+  {
+    "id": "F003",
+    "description": "EmailProviderAutoWiring and any other Gmail mailbox path no longer prefer process.env.GOOGLE_CLIENT_ID. They route through the resolver, or the dead file is deleted.",
+    "implemented": true,
+    "prdRefs": ["§3.3"]
+  },
+  {
+    "id": "F004",
+    "description": "Google refresh errors become actionable provider error messages. unauthorized_client means a client mismatch: reconnect, not counted toward auth-failure auto-pause. invalid_grant means the authorization expired or was revoked: reconnect, plus the External/Testing 7-day hint, with existing auto-pause behaviour.",
+    "implemented": true,
+    "prdRefs": ["§3.4"]
+  },
+  {
+    "id": "F005",
+    "description": "When configureGmailProvider succeeds for a provider that was status='error' before the call, the missed interval is reconciled through the shared Gmail reconciler (generalised from reconcileGooglePausedInterval). It starts from the pre-watch savedHistoryId, falls back to a time query bounded by last_sync_at, and uses the existing idempotent ingress pointers.",
+    "implemented": true,
+    "prdRefs": ["§3.5"]
+  }
+]

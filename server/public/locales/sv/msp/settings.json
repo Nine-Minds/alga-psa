@@ -308,6 +308,36 @@
       "expiresPrefix": "Går ut:",
       "revoke": "Återkalla",
       "revoking": "Återkallar…"
+    },
+    "seatTechnicians": {
+      "title": "Platstekniker",
+      "description": "Personer som arbetar i ditt PSA via en kunds samförvaltade plats. De räknas inte som dina licensierade användare.",
+      "clientUnavailable": "Kunden är inte tillgänglig",
+      "effectiveAccess": "Effektiv åtkomst",
+      "columns": {
+        "name": "Namn",
+        "email": "E-post",
+        "client": "Kund",
+        "status": "Status",
+        "actions": "Åtgärder"
+      },
+      "state": {
+        "active": "Aktiv",
+        "invited": "Inbjudan väntar"
+      },
+      "dialog": {
+        "title": "Effektiv åtkomst för {{name}}",
+        "help": "Välj ett ärende för att se om den här platsteknikern kan läsa det, och varför.",
+        "ticket": "Ärende",
+        "ticketPlaceholder": "Välj ett ärende...",
+        "checking": "Kontrollerar åtkomst...",
+        "allowed": "{{name}} kan läsa det här ärendet.",
+        "denied": "{{name}} kan inte läsa det här ärendet.",
+        "noReasons": "Inga fler detaljer rapporterades.",
+        "error": "Det gick inte att kontrollera åtkomsten. Försök igen.",
+        "close": "Stäng",
+        "unavailable": "Effektiv åtkomst kan inte kontrolleras för det här ärendet i den här utgåvan eller konfigurationen."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Referens för variabler i e-postmallar",
       "panelTitle": "Mallvariabler",
+      "mspOnly": "Endast MSP",
+      "clientSafeHelp": "Skickas till kunder. Variabler som endast gäller MSP är inte tillgängliga.",
       "inferredContract": "Skickas inte för närvarande. Detta kontrakt härleds från mallen.",
       "empty": "Inga matchande variabler.",
       "example": "Exempel:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "Allmänt",
           "defaultClient": "Standardkund för poster utan organisation",
-          "defaultClientHelp": "Kontakter och tillgångar vars organisation inte kan identifieras kopplas till den här kunden."
+          "defaultClientHelp": "Kontakter och tillgångar vars organisation inte kan identifieras kopplas till den här kunden.",
+          "clearDefaultClient": "Rensa"
         },
         "saved": "Konfigurationen har sparats. Kör förkontrollen för att validera den mot de mellanlagrade posterna.",
         "saving": "Sparar…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Förbereder förhandsgranskning…",
         "linking": "Kopplar konton…",
         "unlinking": "Tar bort kontokopplingar…",
-        "bulkLabel": "Massåtgärder för SSO {{location}}"
+        "bulkLabel": "Massåtgärder för SSO {{location}}",
+        "disabledSelectUsers": "Välj minst en användare först."
       },
       "table": {
         "email": "E-post",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}.",
       "nameRequired": "Rollnamn krävs.",
       "builtInRename": "Inbyggda roller kan inte byta namn.",
-      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen."
+      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen.",
+      "lastMspAdmin": "En organisation måste behålla minst en aktiv användare med rollen MSP Admin.",
+      "lastRole": "En användare måste behålla minst en roll. Tilldela en annan roll först och ta sedan bort den här."
     },
     "secrets": {
       "tenantContextMissing": "Organisationskontext saknas. Ladda om sidan och försök igen.",
@@ -4209,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Inloggningspolicy",
-    "description": "Styr hur personal och användare i kundportalen får logga in med lösenord. Reglerna tillämpas på servern.",
+    "description": "Styr hur personal och användare i kundportalen får logga in, med lösenord eller enkel inloggning (SSO). Reglerna tillämpas på servern.",
     "requireSso": {
       "title": "Kräv enkel inloggning (SSO) för MSP-personal",
       "body": "Interna användare måste logga in med Google, Microsoft eller din Keycloak-leverantör. Lösenordsinloggning och lösenordsåterställning blockeras, förutom för nödadministratörerna nedan.",
@@ -4241,10 +4277,21 @@
         "not_found": "Användaren finns inte längre."
       }
     },
+    "clientPortalSso": {
+      "title": "Inloggningsalternativ i kundportalen",
+      "body": "Välj vilka leverantörer av enkel inloggning som visas på kundportalens inloggningssida. Bara leverantörer som din organisation kan logga in med visas. Inloggning med lösenord påverkas inte.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Inga leverantörer av enkel inloggning är konfigurerade för din organisation. Konfigurera en i inställningarna för enkel inloggning för att erbjuda den i kundportalen."
+    },
     "guard": {
       "sso_provider_required": "Konfigurera minst en leverantör av enkel inloggning innan du kräver enkel inloggning.",
       "break_glass_required": "Välj minst en nödadministratör innan du kräver enkel inloggning.",
-      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad."
+      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad.",
+      "client_portal_sso_provider_invalid": "Välj bara leverantörer av enkel inloggning som stöds."
     },
     "errors": {
       "load": "Det gick inte att läsa in inloggningspolicyn.",
@@ -4550,7 +4597,7 @@
     "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
     "blockedAccess": "API- och MCP-åtkomst för tjänstehuvudmän blockeras omedelbart under Pro. Befintliga poster finns kvar för rensning."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Visa på chips",
     "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
     "loading": "Laddar…",

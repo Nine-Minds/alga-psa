@@ -15,7 +15,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
-import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, isAssetOperationClosedForUser, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 type MappingActionUser = {
   user_id: string;
@@ -122,6 +122,9 @@ export const suggestAssigneeFromRmmUser = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  if (await isAssetOperationClosedForUser(knex, tenant, user as MappingActionUser, 'rmm_mapping')) {
+    return permissionError('Permission denied: Cannot read RMM integrations', 'msp/integrations:errors.rmm.permissions.read');
+  }
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const authorize = createRmmMappingAuthorizer(trx, tenant, user as MappingActionUser, 'read');
@@ -156,6 +159,9 @@ export const mapRmmUserToContact = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+  if (await isAssetOperationClosedForUser(knex, tenant, user as MappingActionUser, 'rmm_mapping')) {
+    return permissionError('Permission denied: Cannot update RMM integrations', 'msp/integrations:errors.rmm.permissions.update');
+  }
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const authorize = createRmmMappingAuthorizer(trx, tenant, user as MappingActionUser, 'update');

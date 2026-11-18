@@ -308,6 +308,36 @@
       "expiresPrefix": "Verloopt:",
       "revoke": "Intrekken",
       "revoking": "Bezig met intrekken..."
+    },
+    "seatTechnicians": {
+      "title": "Seat-technici",
+      "description": "Mensen die via de co-managed seat van een klant in uw PSA werken. Zij tellen niet mee voor uw gelicentieerde gebruikers.",
+      "clientUnavailable": "Klant niet beschikbaar",
+      "effectiveAccess": "Effectieve toegang",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "client": "Klant",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "state": {
+        "active": "Actief",
+        "invited": "Uitnodiging in behandeling"
+      },
+      "dialog": {
+        "title": "Effectieve toegang voor {{name}}",
+        "help": "Kies een ticket om te zien of deze seat-technicus het kan lezen, en waarom.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Selecteer een ticket...",
+        "checking": "Toegang controleren...",
+        "allowed": "{{name}} kan dit ticket lezen.",
+        "denied": "{{name}} kan dit ticket niet lezen.",
+        "noReasons": "Er zijn geen verdere details gemeld.",
+        "error": "Kon de toegang niet controleren. Probeer het opnieuw.",
+        "close": "Sluiten",
+        "unavailable": "Effectieve toegang kan voor dit ticket in deze editie of configuratie niet worden gecontroleerd."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Variabelenreferentie voor e-mailsjablonen",
       "panelTitle": "Sjabloonvariabelen",
+      "mspOnly": "Alleen MSP",
+      "clientSafeHelp": "Wordt naar klanten verzonden. Variabelen die alleen voor de MSP zijn, zijn niet beschikbaar.",
       "inferredContract": "Wordt momenteel niet verzonden. Dit contract is afgeleid van het sjabloon.",
       "empty": "Geen overeenkomende variabelen.",
       "example": "Voorbeeld:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "Algemeen",
           "defaultClient": "Standaardklant voor records zonder organisatie",
-          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld."
+          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld.",
+          "clearDefaultClient": "Wissen"
         },
         "saved": "Configuratie opgeslagen. Voer de voorcontrole uit om deze te controleren aan de hand van de klaargezette records.",
         "saving": "Opslaan…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Voorbeeld voorbereiden…",
         "linking": "Accounts koppelen…",
         "unlinking": "Accounts ontkoppelen…",
-        "bulkLabel": "SSO-bulkacties {{location}}"
+        "bulkLabel": "SSO-bulkacties {{location}}",
+        "disabledSelectUsers": "Selecteer eerst minimaal één gebruiker."
       },
       "table": {
         "email": "E-mail",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
       "nameRequired": "Rolnaam is verplicht.",
       "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
-      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal.",
+      "lastMspAdmin": "Een tenant moet ten minste één actieve MSP-Admin-gebruiker houden.",
+      "lastRole": "Een gebruiker moet ten minste één rol houden. Wijs eerst een andere rol toe en verwijder daarna deze."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
@@ -4209,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Aanmeldbeleid",
-    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich met een wachtwoord mogen aanmelden. Deze regels worden op de server afgedwongen.",
+    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich mogen aanmelden, met een wachtwoord of single sign-on. Deze regels worden op de server afgedwongen.",
     "requireSso": {
       "title": "Single sign-on verplichten voor MSP-medewerkers",
       "body": "Interne gebruikers moeten zich aanmelden met Google, Microsoft of uw Keycloak-provider. Aanmelden met een wachtwoord en het opnieuw instellen van wachtwoorden zijn geblokkeerd, behalve voor de noodbeheerders hieronder.",
@@ -4241,10 +4277,21 @@
         "not_found": "De gebruiker bestaat niet meer."
       }
     },
+    "clientPortalSso": {
+      "title": "Aanmeldopties voor het klantportaal",
+      "body": "Kies welke single sign-on-providers op de aanmeldpagina van het klantportaal verschijnen. Alleen providers waarmee uw organisatie zich kan aanmelden worden getoond. Aanmelden met een wachtwoord blijft ongewijzigd.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Er zijn geen single sign-on-providers geconfigureerd voor uw organisatie. Stel er een in via de single sign-on-instellingen om die in het klantportaal aan te bieden."
+    },
     "guard": {
       "sso_provider_required": "Stel minstens één single sign-on-provider in voordat u single sign-on verplicht stelt.",
       "break_glass_required": "Selecteer minstens één noodbeheerder voordat u single sign-on verplicht stelt.",
-      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld."
+      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld.",
+      "client_portal_sso_provider_invalid": "Kies alleen ondersteunde single sign-on-providers."
     },
     "errors": {
       "load": "Het aanmeldbeleid kan niet worden geladen.",
@@ -4550,7 +4597,7 @@
     "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
     "blockedAccess": "API- en MCP-toegang voor serviceprincipals wordt direct geblokkeerd onder Pro. Bestaande records blijven beschikbaar om op te schonen."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Weergeven op chips",
     "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
     "loading": "Laden…",

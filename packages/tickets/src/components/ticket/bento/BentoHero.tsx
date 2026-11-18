@@ -80,6 +80,8 @@ interface BentoHeroProps {
   agentOptions: HeroSelectOption[];
   /** Full user objects backing the assignee picker (individual agents). */
   availableAgents: IUserWithRoles[];
+  /** Seat technicians of the ticket's own client, listed apart in the assignee picker. Absent: no group. */
+  clientItUserIds?: readonly string[];
   /** Teams selectable as the assignee (renders the assigned-team badge too). */
   teams?: ITeam[];
   /** Extra assigned agents; surfaced as a compact "+N" indicator. */
@@ -186,6 +188,7 @@ export function BentoHero({
   boardOptions,
   agentOptions,
   availableAgents,
+  clientItUserIds,
   teams,
   additionalAgents,
   onAssignTeam,
@@ -1090,6 +1093,10 @@ export function BentoHero({
                   await onAssignTeam?.(teamId);
                 }}
                 users={availableAgents}
+                // LEVERAGE: pattern client-it-picker-group — TicketInfo and BentoHero each build the same Client IT userGroups from clientItUserIds
+                userGroups={clientItUserIds?.length
+                  ? [{ label: t('info.clientItGroup', 'Client IT'), userIds: clientItUserIds }]
+                  : undefined}
                 teams={teams ?? []}
                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
                 getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}

@@ -98,7 +98,7 @@ export function useDescriptionEditor(
         setDescriptionSaving(false);
       }
     },
-    [client, descriptionSaving, session, showToast, ticket, ticketId],
+    [client, descriptionSaving, session, showToast, t, ticket, ticketId],
   );
 
   const startDescriptionEditing = () => {

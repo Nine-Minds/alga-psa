@@ -308,6 +308,36 @@
       "expiresPrefix": "Scade:",
       "revoke": "Revoca",
       "revoking": "Revoca in corso..."
+    },
+    "seatTechnicians": {
+      "title": "Tecnici di postazione",
+      "description": "Persone che lavorano nel tuo PSA tramite la postazione cogestita di un cliente. Non vengono conteggiate tra i tuoi utenti con licenza.",
+      "clientUnavailable": "Cliente non disponibile",
+      "effectiveAccess": "Accesso effettivo",
+      "columns": {
+        "name": "Nome",
+        "email": "Email",
+        "client": "Cliente",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "state": {
+        "active": "Attivo",
+        "invited": "Invito in sospeso"
+      },
+      "dialog": {
+        "title": "Accesso effettivo di {{name}}",
+        "help": "Scegli un ticket per vedere se questo tecnico di postazione può leggerlo e perché.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Seleziona un ticket...",
+        "checking": "Verifica dell'accesso in corso...",
+        "allowed": "{{name}} può leggere questo ticket.",
+        "denied": "{{name}} non può leggere questo ticket.",
+        "noReasons": "Non sono stati segnalati ulteriori dettagli.",
+        "error": "Impossibile verificare l'accesso. Riprova.",
+        "close": "Chiudi",
+        "unavailable": "L'accesso effettivo non può essere verificato per questo ticket in questa edizione o configurazione."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Riferimento delle variabili dei modelli email",
       "panelTitle": "Variabili del modello",
+      "mspOnly": "Solo MSP",
+      "clientSafeHelp": "Inviato ai clienti. Le variabili riservate all'MSP non sono disponibili.",
       "inferredContract": "Attualmente non inviato. Questo contratto è dedotto dal modello.",
       "empty": "Nessuna variabile corrispondente.",
       "example": "Esempio:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "Generale",
           "defaultClient": "Cliente predefinito per i record orfani",
-          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente."
+          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente.",
+          "clearDefaultClient": "Cancella"
         },
         "saved": "Configurazione salvata. Esegui la verifica preliminare per convalidarla rispetto ai record preparati.",
         "saving": "Salvataggio…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Preparazione anteprima…",
         "linking": "Collegamento account…",
         "unlinking": "Scollegamento account…",
-        "bulkLabel": "Azioni SSO in blocco {{location}}"
+        "bulkLabel": "Azioni SSO in blocco {{location}}",
+        "disabledSelectUsers": "Selezioni prima almeno un utente."
       },
       "table": {
         "email": "Email",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
       "nameRequired": "Il nome del ruolo è obbligatorio.",
       "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
-      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale.",
+      "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
@@ -4209,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Criteri di accesso",
-    "description": "Controlla come il personale e gli utenti del portale clienti possono accedere con una password. Queste regole vengono applicate sul server.",
+    "description": "Controlla come il personale e gli utenti del portale clienti possono accedere, con una password o con il single sign-on. Queste regole vengono applicate sul server.",
     "requireSso": {
       "title": "Richiedi il Single Sign-On per il personale MSP",
       "body": "Gli utenti interni devono accedere con Google, Microsoft o il tuo provider Keycloak. L’accesso con password e il ripristino della password sono bloccati, tranne per gli amministratori di emergenza indicati sotto.",
@@ -4241,10 +4277,21 @@
         "not_found": "L'utente non esiste più."
       }
     },
+    "clientPortalSso": {
+      "title": "Opzioni di accesso del portale clienti",
+      "body": "Scegli quali provider di single sign-on compaiono nella pagina di accesso del portale clienti. Sono elencati solo i provider con cui la tua organizzazione può accedere. L’accesso con password non cambia.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Nessun provider di single sign-on è configurato per la tua organizzazione. Configurane uno nelle impostazioni del single sign-on per offrirlo nel portale clienti."
+    },
     "guard": {
       "sso_provider_required": "Configura almeno un provider Single Sign-On prima di richiederlo.",
       "break_glass_required": "Seleziona almeno un amministratore di emergenza prima di richiedere il Single Sign-On.",
-      "break_glass_invalid_user": "Gli utenti di emergenza devono essere amministratori attivi con l’autenticazione a due fattori abilitata."
+      "break_glass_invalid_user": "Gli utenti di emergenza devono essere amministratori attivi con l’autenticazione a due fattori abilitata.",
+      "client_portal_sso_provider_invalid": "Scegli solo provider di single sign-on supportati."
     },
     "errors": {
       "load": "Impossibile caricare i criteri di accesso.",
@@ -4550,7 +4597,7 @@
     "seatNote": "I service principal non consumano licenze utente.",
     "blockedAccess": "L’accesso API e MCP ai service principal viene bloccato immediatamente sotto Pro. I record esistenti restano disponibili per la pulizia."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Mostra sui chip",
     "subtitle": "Tag mostrati accanto a contatti e clienti negli elenchi dei ticket, nelle intestazioni dei ticket e nei selettori.",
     "loading": "Caricamento…",

@@ -30,7 +30,6 @@ describe('InteractionsWorkspace', () => {
       <InteractionsWorkspace
         users={[]}
         contacts={[]}
-        clients={[]}
         callsPanel={<div>Phone call workspace</div>}
       />,
     );
@@ -43,7 +42,7 @@ describe('InteractionsWorkspace', () => {
   });
 
   it('does not advertise calls when telephony is unavailable', () => {
-    render(<InteractionsWorkspace users={[]} contacts={[]} clients={[]} />);
+    render(<InteractionsWorkspace users={[]} contacts={[]} />);
 
     expect(screen.queryByRole('tab', { name: 'Localized calls' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Localized interaction feed' })).toBeTruthy();

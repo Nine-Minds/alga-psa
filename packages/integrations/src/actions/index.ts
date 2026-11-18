@@ -255,6 +255,7 @@ export {
   type EntraSyncHistoryResponse,
   type EntraSyncRunDetail,
   type EntraSyncRunTenantResult,
+  type EntraSyncRunUserIssue,
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
