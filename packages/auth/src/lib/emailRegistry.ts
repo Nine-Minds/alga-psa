@@ -23,6 +23,12 @@ export interface AuthEmailProvider {
     clientName: string;
   }): Promise<boolean>;
 
+  /**
+   * True when the environment-backed system email provider is configured and
+   * not disabled (resolved by @alga-psa/email's resolveSystemEmailState).
+   */
+  isSystemEmailConfigured(): boolean;
+
   getSystemEmailService(): Promise<{
     isConfigured(): Promise<boolean>;
     sendEmailVerification(params: {
@@ -41,6 +47,10 @@ export interface AuthEmailProvider {
 const defaultRegistry: AuthEmailProvider = {
   sendPasswordResetEmail: async () => {
     throw new Error('Email provider not configured: sendPasswordResetEmail not registered');
+  },
+
+  isSystemEmailConfigured: () => {
+    throw new Error('Email provider not configured: isSystemEmailConfigured not registered');
   },
 
   getSystemEmailService: async () => {

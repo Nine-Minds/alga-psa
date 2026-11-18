@@ -55,7 +55,7 @@ x-environment: &shared-environment
   HOCUSPOCUS_URL: ${HOCUSPOCUS_URL}
 
   # ---- EMAIL ----
-  EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+  EMAIL_ENABLE: ${EMAIL_ENABLE:-}
   EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
   EMAIL_HOST: ${EMAIL_HOST}
   EMAIL_PORT: ${EMAIL_PORT:-587}
