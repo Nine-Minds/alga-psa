@@ -2384,6 +2384,13 @@ export const getClientPortalVisibilityGroupAssignmentForContact = withAuth(async
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
+      // Same in-scope check getContactByContactNameId runs before a single-contact read:
+      // an out-of-scope contact reads as not found, never leaking which rows exist.
+      const scope = await createClientScopeContext(trx, tenant, user);
+      if (!(await scope.permits('contact', contactId))) {
+        throw await contactError('errors.contact.notFound');
+      }
+
       const contact = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ contact_name_id: contactId })
         .first('portal_visibility_group_id') as { portal_visibility_group_id: string | null } | undefined;
