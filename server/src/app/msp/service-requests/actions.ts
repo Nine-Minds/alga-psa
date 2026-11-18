@@ -16,6 +16,8 @@ import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,
   createBlankServiceRequestDefinition,
+  deleteServiceRequestDefinitionFromManagement,
+  type ServiceRequestDefinitionDeleteResult,
   createServiceRequestDefinitionFromTemplate,
   duplicateServiceRequestDefinition,
   type BasicFormFieldType,
@@ -635,6 +637,20 @@ export const archiveServiceRequestDefinitionAction = withAuth(async (
   } catch (error) {
     return mapServiceRequestDefinitionError(error);
   }
+});
+
+export const deleteServiceRequestDefinitionAction = withAuth(async (
+  user,
+  { tenant },
+  definitionId: string
+): Promise<ServiceRequestDefinitionDeleteResult> => {
+  const { knex } = await createTenantKnex();
+  await requireServiceRequestPermission(user, 'delete', knex);
+  const result = await deleteServiceRequestDefinitionFromManagement(knex, tenant, definitionId, getActorId(user));
+  if (result.deleted) {
+    revalidatePath('/msp/service-requests');
+  }
+  return result;
 });
 
 export const unarchiveServiceRequestDefinitionAction = withAuth(async (

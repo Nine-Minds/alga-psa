@@ -314,7 +314,6 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   redirect(
     buildRequestServiceCatalogRedirectUrl({
       submitted: outcome.submissionId,
-      ticketId: outcome.createdTicketId,
     })
   );
 });

@@ -142,7 +142,6 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getContactByContactNameId: lazy(clientLookupActionsModule, 'getContactByContactNameId'),
     getContactsByClient: lazy(clientLookupActionsModule, 'getContactsByClient'),
     getClientById: lazy(clientLookupActionsModule, 'getClientById'),
-    getAllClients: lazy(clientLookupActionsModule, 'getAllClients'),
     getClientLocations: lazy(clientLookupActionsModule, 'getClientLocations'),
     getClientBillingProfiles: lazy(clientLookupActionsModule, 'getClientBillingProfiles'),
     getContactEffectiveLocation: lazy(clientLookupActionsModule, 'getContactEffectiveLocation'),

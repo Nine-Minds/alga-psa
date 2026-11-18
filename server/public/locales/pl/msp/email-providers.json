@@ -1084,6 +1084,7 @@
       "noClient": "Nie dopasowano klienta",
       "outcome": {
         "assignClient": "Zgłoszenie przypisane do klienta „{{client}}”",
+        "matchedClient": "dopasowany klient",
         "fallback": "Nie dopasowano klienta — zgłoszenie przekierowano do awaryjnego miejsca docelowego",
         "none": "Reguła nie rozstrzygnęła — kontynuowane jest normalne przetwarzanie",
         "setDestination": "Zgłoszenie przekierowano do wybranego miejsca docelowego",

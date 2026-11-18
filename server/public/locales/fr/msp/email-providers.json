@@ -1084,6 +1084,7 @@
       "noClient": "Aucun client correspondant",
       "outcome": {
         "assignClient": "Ticket attribué au client \"{{client}}\"",
+        "matchedClient": "le client correspondant",
         "fallback": "Aucun client correspondant — ticket acheminé vers la destination de repli",
         "none": "La règle n'a pas abouti — le traitement normal se poursuit",
         "setDestination": "Ticket acheminé vers la destination sélectionnée",

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityType,
-  IClient,
   IPriority,
   IStatus,
   ITag,
@@ -18,7 +17,6 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface ActivityFilterOptions {
   priorities: IPriority[];
-  clients: IClient[];
   projects: ProjectWithPhases[];
   boards: Array<{ board_id?: string; board_name?: string }>;
   ticketStatuses: IStatus[];
@@ -27,7 +25,7 @@ export interface ActivityFilterOptions {
 }
 
 // The dashboard hosts this hook above any provider-dependent child, so a missing composition
-// provider must degrade to "no client/project options" instead of crashing the whole screen.
+// provider must degrade to "no project options" instead of crashing the whole screen.
 function useCrossFeatureOrNull(): ReturnType<typeof useActivityCrossFeature> | null {
   try {
     return useActivityCrossFeature();
@@ -40,7 +38,6 @@ function useCrossFeatureOrNull(): ReturnType<typeof useActivityCrossFeature> | n
 export function useActivityFilterOptions(types: ActivityType[] | undefined): ActivityFilterOptions {
   const ctx = useCrossFeatureOrNull();
   const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
   const [boards, setBoards] = useState<Array<{ board_id?: string; board_name?: string }>>([]);
   const [ticketStatuses, setTicketStatuses] = useState<IStatus[]>([]);
@@ -61,18 +58,6 @@ export function useActivityFilterOptions(types: ActivityType[] | undefined): Act
     }
     setPriorities([]);
   }, [types]);
-
-  // Load clients for the shared client filter on mount
-  useEffect(() => {
-    if (!ctx) return;
-    ctx.getAllClients(false)
-      .then((data: unknown) => {
-        if (!isActionPermissionError(data)) {
-          setClients(data as IClient[]);
-        }
-      })
-      .catch((err: unknown) => console.error('Error loading clients:', err));
-  }, [ctx]);
 
   // Load projects with phases + statuses for the filter tree on mount
   useEffect(() => {
@@ -122,5 +107,5 @@ export function useActivityFilterOptions(types: ActivityType[] | undefined): Act
       .catch((err) => console.error('Error loading tags:', err));
   }, []);
 
-  return { priorities, clients, projects, boards, ticketStatuses, ticketTags, projectTaskTags };
+  return { priorities, projects, boards, ticketStatuses, ticketTags, projectTaskTags };
 }

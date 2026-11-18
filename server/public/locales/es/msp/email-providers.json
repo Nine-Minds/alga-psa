@@ -1084,6 +1084,7 @@
       "noClient": "Ningún cliente coincidió",
       "outcome": {
         "assignClient": "Ticket asignado al cliente \"{{client}}\"",
+        "matchedClient": "el cliente coincidente",
         "fallback": "Ningún cliente coincidió: el ticket se enrutó al destino alternativo",
         "none": "La regla no se resolvió: continúa el procesamiento normal",
         "setDestination": "Ticket enrutado al destino seleccionado",
