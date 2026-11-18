@@ -4,13 +4,7 @@ import { tenantDb } from './tenantDb';
 
 // LEVERAGE: pattern iana-zone-catalog — lenient read-path zone check; storable-zone validation lives in @alga-psa/core/timeZones (validateStorableTimeZone)
 export function normalizeIanaTimeZone(timeZone: string | null | undefined): string {
-  if (!timeZone) return 'UTC';
-  try {
-    Temporal.TimeZone.from(timeZone);
-    return timeZone;
-  } catch {
-    return 'UTC';
-  }
+  return validZoneOrNull(timeZone) ?? 'UTC';
 }
 
 export function toTemporalInstant(value: string | Date): Temporal.Instant {

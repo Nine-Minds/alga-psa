@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
 import {
   localDateForInstant,
+  normalizeIanaTimeZone,
   resolveEffectiveTimeZone,
   resolveTenantToday,
   resolveUserTimeZone,
@@ -101,5 +102,19 @@ describe('resolveUserTimeZone / resolveEffectiveTimeZone', () => {
     const viaEffective = await resolveEffectiveTimeZone(knex, 'tenant-1', 'user-1');
     expect(viaUser).toBe(expected);
     expect(viaEffective).toBe(expected);
+  });
+});
+
+describe('normalizeIanaTimeZone', () => {
+  it.each([
+    ['Australia/Brisbane', 'Australia/Brisbane'],
+    ['  Australia/Brisbane  ', 'Australia/Brisbane'],
+    [null, 'UTC'],
+    [undefined, 'UTC'],
+    ['', 'UTC'],
+    ['   ', 'UTC'],
+    ['Not/AZone', 'UTC'],
+  ])('%j -> %s', (input, expected) => {
+    expect(normalizeIanaTimeZone(input as any)).toBe(expected);
   });
 });
