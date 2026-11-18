@@ -6,7 +6,7 @@
  *
  * Query parameters:
  * - type: a remote connection type id (default: 'splashtop'). Known ids and aliases are defined by the registry in
- *   packages/integrations/src/lib/rmm/connectionTypes.ts; the provider adapter decides which types a device offers.
+ *   packages/types/src/lib/connectionTypes.ts; the provider adapter decides which types a device offers.
  *   Values that are not a plausible type id are rejected with 400.
  */
 

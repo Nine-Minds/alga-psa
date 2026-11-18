@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { describeRmmConnectionType, rmmConnectionTypesForProvider } from '@alga-psa/integrations/lib/rmm/connectionTypes';
+import { describeRmmConnectionType, rmmConnectionTypesForProvider } from '@alga-psa/types';
 import { useAssetCrossFeature, type AssetRemoteConnectionType } from '../context/AssetCrossFeatureContext';
 import { getRemoteAccessLinksForAsset, type RenderedRemoteAccessLink } from '../actions/remoteAccessLinkActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
