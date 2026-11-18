@@ -2368,6 +2368,42 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
   }
 });
 
+/**
+ * The contact's currently stored visibility-group assignment. The portal tab reloads this
+ * instead of trusting the server-component `contact` prop, which keeps its original value
+ * for the lifetime of the page and would otherwise redisplay a stale group after a change.
+ */
+export const getClientPortalVisibilityGroupAssignmentForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<{ group_id: string | null } | VisibilityGroupActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      const contact = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
+        .first('portal_visibility_group_id') as { portal_visibility_group_id: string | null } | undefined;
+
+      if (!contact) {
+        throw await contactError('errors.contact.notFound');
+      }
+
+      return { group_id: contact.portal_visibility_group_id ?? null };
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('[contactActions.getClientPortalVisibilityGroupAssignmentForContact]', error);
+    throw error;
+  }
+});
+
 async function ensureBoardsAreActiveInTenant(
   trx: Knex.Transaction,
   tenant: string,
