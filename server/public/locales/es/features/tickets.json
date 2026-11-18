@@ -2518,6 +2518,7 @@
       "addHelp": "Seleccione un cliente para agregarlo. El cuadro de diálogo permanece abierto para que pueda agregar más.",
       "alreadyAdded": "Ya agregado",
       "pickerPlaceholder": "Seleccione un cliente para agregar",
+      "unnamedClient": "Cliente",
       "addedHeading": "Agregados en este cuadro de diálogo",
       "columns": {
         "client": "Cliente",

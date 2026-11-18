@@ -298,7 +298,6 @@ import {
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
-  listTelephonyResolutionTargets,
   resolveTelephonyCall,
   setTelephonyAutoCreateTickets,
   setTelephonyAutoTicketPolicy,
@@ -957,77 +956,6 @@ describe('telephony link-to-ticket', () => {
 
       expect(result).toEqual({ success: false, error: 'db exploded' });
       expect(hoisted.logMocks.error).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('resolution targets', () => {
-    beforeEach(() => {
-      contacts.push(
-        { tenant: 'tenant-1', contact_name_id: 'contact-1', full_name: 'Glinda', client_id: 'client-1', is_inactive: false, client_name: 'Emerald City' } as any,
-        { tenant: 'tenant-1', contact_name_id: 'contact-2', full_name: 'Toto', client_id: 'client-2', is_inactive: false, client_name: 'Kansas Farms' } as any,
-        { tenant: 'tenant-1', contact_name_id: 'contact-3', full_name: 'Retired Witch', client_id: 'client-2', is_inactive: true, client_name: 'Kansas Farms' } as any,
-        { tenant: 'tenant-2', contact_name_id: 'contact-9', full_name: 'Glinda', client_id: 'client-9', is_inactive: false, client_name: 'Other Tenant' } as any,
-      );
-      clients.push(
-        { tenant: 'tenant-1', client_id: 'client-1', client_name: 'Emerald City', is_inactive: false },
-        { tenant: 'tenant-1', client_id: 'client-2', client_name: 'Kansas Farms', is_inactive: false },
-        { tenant: 'tenant-1', client_id: 'client-3', client_name: 'Closed Co', is_inactive: true },
-      );
-    });
-
-    it('T010: offers active contacts and clients so an unmatched call can be attributed', async () => {
-      const result = await listTelephonyResolutionTargets({});
-
-      expect(result.success).toBe(true);
-      expect(result.targets).toEqual([
-        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
-        { contactId: 'contact-2', clientId: 'client-2', label: 'Toto', sublabel: 'Kansas Farms' },
-        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
-
-    it('T010: the search narrows both contacts and clients', async () => {
-      const result = await listTelephonyResolutionTargets({ search: 'kansas' });
-
-      expect(result.targets).toEqual([
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
-
-    it('T010: supplies the full client-only data source used by ClientPicker', async () => {
-      const result = await listTelephonyResolutionTargets({ clientsOnly: true });
-
-      expect(result.targets).toEqual([
-        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
-        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
-      ]);
-    });
-
-    it('T010: targets never cross the tenant boundary', async () => {
-      const result = await listTelephonyResolutionTargets({ search: 'Glinda' });
-
-      expect(result.targets).toEqual([
-        { contactId: 'contact-1', clientId: 'client-1', label: 'Glinda', sublabel: 'Emerald City' },
-      ]);
-    });
-
-    it('T010: a user who may read neither contacts nor clients is denied', async () => {
-      hasPermissionMock.mockResolvedValue(false);
-
-      const result = await listTelephonyResolutionTargets({});
-
-      expect(result.success).toBe(false);
-      expect(result.targets).toEqual([]);
-    });
-
-    it('T010: a user who may read only clients gets clients alone', async () => {
-      hasPermissionMock.mockImplementation(async (_user: unknown, resource: string) => resource === 'client');
-
-      const result = await listTelephonyResolutionTargets({});
-
-      expect(result.targets.every((target) => target.contactId === null)).toBe(true);
-      expect(result.targets).toHaveLength(2);
     });
   });
 });

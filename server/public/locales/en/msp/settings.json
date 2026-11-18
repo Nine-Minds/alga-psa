@@ -2717,7 +2717,8 @@
         "general": {
           "title": "General",
           "defaultClient": "Default client for orphaned records",
-          "defaultClientHelp": "Contacts and assets whose organization cannot be resolved are attached to this client."
+          "defaultClientHelp": "Contacts and assets whose organization cannot be resolved are attached to this client.",
+          "clearDefaultClient": "Clear"
         },
         "saved": "Configuration saved. Run preflight to validate it against the staged records.",
         "saving": "Saving…",

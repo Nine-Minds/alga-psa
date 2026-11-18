@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Allgemein",
           "defaultClient": "Standardkunde für verwaiste Datensätze",
-          "defaultClientHelp": "Kontakte und Assets, deren Organisation nicht ermittelt werden kann, werden diesem Kunden zugeordnet."
+          "defaultClientHelp": "Kontakte und Assets, deren Organisation nicht ermittelt werden kann, werden diesem Kunden zugeordnet.",
+          "clearDefaultClient": "Leeren"
         },
         "saved": "Konfiguration gespeichert. Führen Sie die Vorprüfung aus, um sie anhand der bereitgestellten Datensätze zu validieren.",
         "saving": "Wird gespeichert…",

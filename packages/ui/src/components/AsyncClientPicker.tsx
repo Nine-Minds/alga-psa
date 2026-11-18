@@ -31,6 +31,9 @@ export interface PickerClientOption {
   client_type?: string | null;
   is_inactive?: boolean;
   logoUrl?: string | null;
+  /** Read by id for the picked client (see `PickerClient` in the shared model). */
+  lifecycle_status?: string | null;
+  default_currency_code?: string | null;
   /** Chip tags for the viewer, already filtered by the display rules. */
   displayTags?: IDisplayTag[];
 }
@@ -86,6 +89,11 @@ interface AsyncClientPickerBaseProps {
   footerContent?: React.ReactNode;
   /** Rewrites the trigger text once something is selected, e.g. to mark an exclusion. */
   formatSelectedLabel?: (label: string) => string;
+  /**
+   * Rows the caller has already resolved by id (`lookupClientsByIds`). A screen with one picker per
+   * row passes them so the pickers do not each look their selection up.
+   */
+  knownClients?: readonly PickerClientOption[];
 }
 
 /** One client; picking a row commits it and closes the list. */
@@ -252,6 +260,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   debounceMs,
   footerContent: extraFooter,
   formatSelectedLabel,
+  knownClients,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
@@ -273,7 +282,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   );
   const searchRef = useRef(searchClients);
   searchRef.current = searchClients;
-  const { clients: known, remember } = useClientNames(selectedIds, searchClients);
+  const { clients: known, remember } = useClientNames(selectedIds, searchClients, knownClients);
 
   // Disabled state is presentation only: read through refs and keyed by content, so a new-but-equal
   // Set (or a tooltip change) from a parent re-render never re-issues the server query.

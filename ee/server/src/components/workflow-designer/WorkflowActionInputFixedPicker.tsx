@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import SearchableSelect, { type SelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { AsyncClientPicker } from '@alga-psa/ui/components/AsyncClientPicker';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
@@ -26,7 +28,6 @@ import type { TFunction } from 'i18next';
 import { groupSharedStatusIds, toAnyBoardStatusValue } from './workflowStatusGroups';
 import type {
   IBoard,
-  IClient,
   IContact,
   IUser,
   ITeam,
@@ -168,7 +169,6 @@ const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
   statuses: [],
   priorities: [],
   categories: [],
-  clients: [],
   users: [],
   locations: [],
 };
@@ -393,13 +393,6 @@ const toBoards = (ticketOptions: TicketFieldOptions | null): IBoard[] =>
     is_inactive: false,
   } as IBoard));
 
-const toClients = (ticketOptions: TicketFieldOptions | null): IClient[] =>
-  (ticketOptions?.clients ?? []).map((client) => ({
-    client_id: client.id,
-    client_name: client.name,
-    is_inactive: false,
-  } as IClient));
-
 const mapTicketFieldOptions = (
   kind: string,
   ticketOptions: TicketFieldOptions | null,
@@ -415,11 +408,6 @@ const mapTicketFieldOptions = (
       return ticketOptions.boards.map((board) => ({
         value: board.id,
         label: board.name,
-      }));
-    case 'client':
-      return ticketOptions.clients.map((client) => ({
-        value: client.id,
-        label: client.name,
       }));
     case 'ticket-status': {
       // Statuses belong to a board, so the same name can appear once per board. Unscoped lists
@@ -852,6 +840,9 @@ const loadWorkflowPickerData = async (
         contacts,
       };
     }
+    case 'client':
+      // Clients are searched on the server by the picker itself; there is nothing to preload.
+      return EMPTY_PICKER_DATA;
     case 'user':
       return {
         ...EMPTY_PICKER_DATA,
@@ -998,11 +989,10 @@ const renderDedicatedPicker = ({
       );
     }
     case 'client': {
-      const clients = toClients(data.ticketOptions);
       return (
         <ClientPicker
           id={`${idPrefix}-literal-picker`}
-          clients={clients}
+          searchClients={searchClientsForPicker}
           selectedClientId={value}
           onSelect={(nextValue) => onChange(nextValue)}
           filterState="active"
@@ -1172,6 +1162,22 @@ export const WorkflowActionInputFixedMultiPicker: React.FC<{
 
   if (!pickerKind || !supportsKind) {
     return null;
+  }
+
+  if (pickerKind === 'client') {
+    return (
+      <div className="space-y-2" id={`${idPrefix}-literal-multi-picker`}>
+        {/* Searches and pages on the server; selected clients are named from their ids. */}
+        <AsyncClientPicker
+          id={`${idPrefix}-literal-picker`}
+          searchClients={searchClientsForPicker}
+          selectedClientIds={values}
+          onSelectedClientIdsChange={onChange}
+          placeholder={field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim() ?? t('actionInputFixedPicker.addValue', { defaultValue: 'Add a value' })}
+          disabled={disabled}
+        />
+      </div>
+    );
   }
 
   if (pickerKind !== 'user') {

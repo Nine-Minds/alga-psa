@@ -2717,7 +2717,8 @@
         "general": {
           "title": "General",
           "defaultClient": "Cliente predeterminado para registros huérfanos",
-          "defaultClientHelp": "Los contactos y activos cuya organización no se pueda identificar se vinculan a este cliente."
+          "defaultClientHelp": "Los contactos y activos cuya organización no se pueda identificar se vinculan a este cliente.",
+          "clearDefaultClient": "Borrar"
         },
         "saved": "Configuración guardada. Ejecute la verificación previa para validarla con los registros preparados.",
         "saving": "Guardando…",

@@ -2518,6 +2518,7 @@
       "addHelp": "Kies een klant om deze toe te voegen. Het dialoogvenster blijft open, zodat u er meer kunt toevoegen.",
       "alreadyAdded": "Al toegevoegd",
       "pickerPlaceholder": "Selecteer een klant om toe te voegen",
+      "unnamedClient": "Klant",
       "addedHeading": "Toegevoegd in dit dialoogvenster",
       "columns": {
         "client": "Klant",

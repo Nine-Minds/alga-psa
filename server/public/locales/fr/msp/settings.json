@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Général",
           "defaultClient": "Client par défaut pour les enregistrements orphelins",
-          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client."
+          "defaultClientHelp": "Les contacts et actifs dont l’organisation ne peut pas être identifiée sont rattachés à ce client.",
+          "clearDefaultClient": "Effacer"
         },
         "saved": "Configuration enregistrée. Exécutez la vérification préalable pour la valider par rapport aux enregistrements préparés.",
         "saving": "Enregistrement…",
