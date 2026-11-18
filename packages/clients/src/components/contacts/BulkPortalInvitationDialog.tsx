@@ -89,22 +89,23 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       : eligibleContacts.map((contact) => contact.contact_name_id);
 
     const invitable: IContact[] = [];
-    const skipped: Array<{ contact: IContact | undefined; contactId: string; reason: SkipReason }> = [];
+    const skipped: Array<{ contactId: string; reason: SkipReason }> = [];
 
     for (const contactId of chosen) {
       const eligible = eligibleById.get(contactId);
-      const known = eligible ?? contacts.find((row) => row.contact_name_id === contactId);
+      // Not in the eligible set means the contact already has a portal user:
+      // the query is "contacts without one".
       if (!eligible) {
-        skipped.push({ contact: known, contactId, reason: 'alreadyHasPortalAccess' });
+        skipped.push({ contactId, reason: 'alreadyHasPortalAccess' });
         continue;
       }
       if (eligible.contact_kind === 'shared_mailbox') {
-        skipped.push({ contact: known, contactId, reason: 'sharedMailbox' });
+        skipped.push({ contactId, reason: 'sharedMailbox' });
         continue;
       }
       const email = (eligible.email ?? '').trim();
       if (!email || !EMAIL_PATTERN.test(email)) {
-        skipped.push({ contact: known, contactId, reason: 'missingEmail' });
+        skipped.push({ contactId, reason: 'missingEmail' });
         continue;
       }
       invitable.push(eligible);
@@ -122,7 +123,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       groupScoped: invitable.filter((contact) => Boolean(contact.portal_visibility_group_id)).length,
       fullAccess: invitable.filter((contact) => !contact.portal_visibility_group_id).length,
     };
-  }, [eligibleContacts, target, contacts]);
+  }, [eligibleContacts, target]);
 
   const nameOf = useCallback(
     (contactId: string) =>
