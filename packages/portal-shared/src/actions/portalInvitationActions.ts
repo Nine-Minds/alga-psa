@@ -433,14 +433,14 @@ export const createClientPortalUser = withAuth(async (
       const lastName = nameParts.slice(1).join(' ') || undefined;
 
       const emailOwner = await findPortalEmailOwner(trx, tenant, contact.email);
-      const ownerStatus = emailOwner
-        ? classifyPortalEmailOwner(emailOwner, contact.contact_name_id)
-        : null;
-      if (emailOwner && ownerStatus !== 'orphaned') {
-        throw new PortalInvitationError(
-          portalEmailOwnerConflictMessage(ownerStatus!),
-          'PORTAL_USER_ALREADY_EXISTS'
-        );
+      if (emailOwner) {
+        const ownerStatus = classifyPortalEmailOwner(emailOwner, contact.contact_name_id);
+        if (ownerStatus !== 'orphaned') {
+          throw new PortalInvitationError(
+            portalEmailOwnerConflictMessage(ownerStatus),
+            'PORTAL_USER_ALREADY_EXISTS'
+          );
+        }
       }
 
       const { hashPassword } = await import('@alga-psa/core/encryption');
