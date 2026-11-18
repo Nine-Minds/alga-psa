@@ -12,7 +12,9 @@ import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
-import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
+import { ContactModel, deleteContactCascade } from '@alga-psa/shared/models/contactModel';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
 import {
   CONTACT_LOCATION_CLIENT_MISMATCH,
@@ -548,15 +550,37 @@ export class ContactService extends BaseService<IContact> {
       if (!before) {
         throw new NotFoundError('Contact not found');
       }
-
-      await clearContactLinksBeforeDelete(trx, context.tenant, id);
-
-      await tenantDb(trx, context.tenant).table('contacts')
-        .where('contact_name_id', id)
-        .delete();
-
       return before;
     });
+
+    // Same dependency gate the MSP action runs: a contact with a portal user (or
+    // tickets, interactions, …) must not be deleted out from under it, or the
+    // account is stranded — unable to sign in and unable to be invited again.
+    const result = await deleteEntityWithValidation(
+      'contact',
+      id,
+      knex,
+      context.tenant,
+      async (trx, tenant) => {
+        const deleted = await deleteContactCascade(trx, tenant, id, {
+          deleteTags: (tagTrx, contactId) => deleteEntityTags(tagTrx, contactId, 'contact'),
+        });
+        if (!deleted) {
+          throw new NotFoundError('Contact not found');
+        }
+      }
+    );
+
+    if (!result.deleted) {
+      throw new ConflictError(
+        result.message || 'Contact cannot be deleted while dependent records exist',
+        {
+          code: result.code,
+          dependencies: result.dependencies,
+          alternatives: result.alternatives,
+        }
+      );
+    }
 
     const occurredAt = new Date().toISOString();
     const actor = maybeUserActorFromContext(context);
