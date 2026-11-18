@@ -19,6 +19,7 @@ import {
   recordImapOauthAuthRetry,
   recordMessageOutcome,
 } from './inboundEmailMetrics';
+import { deriveReplyIdentity } from './inboundEmailMimeHelpers';
 import { GmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
@@ -80,30 +81,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   return Promise.race([promise, timeoutPromise]).finally(() => {
     if (timer) clearTimeout(timer);
   });
-}
-
-function extractMessageIds(value: unknown): string[] {
-  const entries: string[] = Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string')
-    : typeof value === 'string'
-      ? [value]
-      : [];
-
-  const normalized = new Set<string>();
-  for (const entry of entries) {
-    const trimmed = entry.trim();
-    if (!trimmed) continue;
-    const matches = trimmed.match(/<[^<>]+>/g);
-    if (matches?.length) {
-      for (const match of matches) {
-        const cleaned = match.trim();
-        if (cleaned.length > 2) normalized.add(cleaned);
-      }
-      continue;
-    }
-    if (trimmed.length > 2) normalized.add(trimmed);
-  }
-  return Array.from(normalized);
 }
 
 function normalizeExternalMessageIdentity(params: {
@@ -344,9 +321,9 @@ function mapParsedMimeToEmailMessageDetails(params: {
     providerType: params.provider,
     providerMessageId: params.fallbackMessageId,
   })?.normalized;
-  const references = extractMessageIds(params.parsed.references);
-  const inReplyTo = extractMessageIds(params.parsed.inReplyTo)[0];
-  const threadId = references[0] || inReplyTo;
+  const { references, inReplyTo, threadId } = deriveReplyIdentity({
+    headers: { references: params.parsed?.references, 'in-reply-to': params.parsed?.inReplyTo },
+  });
 
   // Mailing-list / Google-Group DMARC rewrites replace the visible From with the
   // list address (e.g. "'Jane Doe' via support <support@lists.example.com>").
@@ -433,9 +410,9 @@ function mapParsedMimeToEmailMessageDetails(params: {
           };
         })
       : [],
-    threadId: threadId || undefined,
-    references: references.length ? references : undefined,
-    inReplyTo: inReplyTo || undefined,
+    threadId,
+    references,
+    inReplyTo,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
     headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
   };

@@ -136,6 +136,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
   const from = parsed?.from?.value?.[0];
   const to = parsed?.to?.value || [];
   const cc = parsed?.cc?.value || [];
+  // LEVERAGE: pattern reply-identity-derivation — same derivation as deriveReplyIdentity; durable path left untouched by plan scope.
   const references = extractMessageIds(parsed?.references);
   const inReplyTo = extractMessageIds(parsed?.inReplyTo)[0];
   const threadId = references[0] || inReplyTo;

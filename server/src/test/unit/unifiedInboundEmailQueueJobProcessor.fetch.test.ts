@@ -607,6 +607,9 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       subject: 'Google Subject',
       body: { text: 'Body', html: '<p>Body</p>' },
       attachments: [],
+      inReplyTo: '<parent@example.com>',
+      references: ['<root@example.com>', '<parent@example.com>'],
+      threadId: 'gmail-thread-1',
     } as any);
 
     const { processUnifiedInboundEmailQueueJob } = await import(
@@ -643,6 +646,9 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         emailData: expect.objectContaining({
           id: 'g-msg-1',
           subject: 'Google Subject',
+          inReplyTo: '<parent@example.com>',
+          references: ['<root@example.com>', '<parent@example.com>'],
+          threadId: 'gmail-thread-1',
         }),
       }),
       { collectDiagnostics: true }
@@ -780,6 +786,10 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         emailData: expect.objectContaining({
           id: '<imap-msg-300@example.com>',
           subject: 'IMAP Subject',
+          // Unchanged by the shared derivation: threadId = references[0] || inReplyTo.
+          threadId: '<thread-1@example.com>',
+          references: ['<thread-1@example.com>'],
+          inReplyTo: '<reply-1@example.com>',
           rawMimeBase64: expect.any(String),
         }),
       }),

@@ -1,0 +1,7 @@
+[
+  {"id":"T001","description":"Shared derivation: finds In-Reply-To/References under exact-case and lower-case names; parses a folded References header with tabs, newlines and repeated spaces into separate ids; returns undefined fields when the headers are absent.","implemented":true,"featureIds":["F001"]},
+  {"id":"T002","description":"GmailAdapter.getMessageDetails with a fixture Gmail API payload returns inReplyTo, references and threadId, makes one messages.get call, and still omits x-resolved-* and x-list-* headers.","implemented":true,"featureIds":["F002"]},
+  {"id":"T003","description":"fetchEmailPayloadsForJob for a google job yields details carrying the three fields; the Microsoft and IMAP branches return the same values as before for existing fixtures.","implemented":true,"featureIds":["F002","F003"]},
+  {"id":"T004","description":"Inbound round trip: a Gmail message with no reply token and an In-Reply-To equal to a stored email_sending_logs.rfc_message_id is added to that ticket as a comment, and originalMessageIdCandidate is that Message-ID.","implemented":true,"featureIds":["F005"]},
+  {"id":"T005","description":"Two Gmail messages in one conversation, neither with a reply token and the second arriving before any outbound notification: the second lands on the ticket created by the first.","implemented":true,"featureIds":["F004"]}
+]

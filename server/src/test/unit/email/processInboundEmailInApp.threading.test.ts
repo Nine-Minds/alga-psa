@@ -1186,4 +1186,144 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     });
   });
 
+  describe('Gmail reply headers (no reply token)', () => {
+    const plainBody = {
+      sanitizedText: 'Gmail reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    };
+
+    it('T004: In-Reply-To equal to a stored rfc_message_id attaches to that ticket; candidate is the Message-ID', async () => {
+      parseEmailReplyBodyMock.mockResolvedValue(plainBody);
+
+      withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+        const trx = vi.fn((table: string) => {
+          if (table === 'tickets as t' || table === 'comments as c') return makeQueryBuilder(undefined);
+          if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-gmail-1', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+          if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+          if (table === 'boards') return makeQueryBuilder({});
+          if (table === 'email_sending_logs') {
+            return makeLogsBuilder(() => ({ threadId: 'thread-gmail-1' }));
+          }
+          if (table === 'comment_threads') {
+            return {
+              select: vi.fn().mockReturnThis(),
+              where: vi.fn().mockReturnThis(),
+              first: vi.fn().mockResolvedValue({ ticketId: 'ticket-gmail-1', threadId: 'thread-gmail-1' }),
+            };
+          }
+          if (table === 'comments') {
+            return {
+              select: vi.fn().mockReturnThis(),
+              where: vi.fn().mockReturnThis(),
+              whereRaw: vi.fn().mockReturnThis(),
+              orderBy: vi.fn().mockReturnThis(),
+              first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-gmail-1' }),
+              then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+            };
+          }
+          throw new Error(`Unexpected table in unit test: ${table}`);
+        });
+        return callback(trx);
+      });
+
+      const { processInboundEmailInApp } = await import(
+        '@alga-psa/shared/services/email/processInboundEmailInApp'
+      );
+
+      // Shape produced by GmailAdapter.getMessageDetails: Gmail API id as `id`, header-derived
+      // inReplyTo/references, Gmail API threadId.
+      const result: any = await processInboundEmailInApp(
+        {
+          tenantId: 'tenant-1',
+          providerId: 'provider-1',
+          emailData: buildEmailData({
+            id: '1a127f5b0fabfb0d',
+            provider: 'google',
+            inReplyTo: '<outbound-gmail-1@example.test>',
+            references: ['<outbound-gmail-1@example.test>'],
+            threadId: 'gmail-api-thread-1',
+          }),
+        },
+        { collectDiagnostics: true }
+      );
+
+      expect(result).toMatchObject({
+        outcome: 'replied',
+        matchedBy: 'thread_headers',
+        ticketId: 'ticket-gmail-1',
+        commentId: 'comment-1',
+      });
+      expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+      expect(result.diagnostics.threading.originalMessageIdCandidate).toBe('outbound-gmail-1@example.test');
+    });
+
+    it('T005: a second message in the same Gmail conversation lands on the ticket the first created', async () => {
+      parseEmailReplyBodyMock.mockResolvedValue(plainBody);
+      createTicketFromEmailMock.mockResolvedValue({ ticket_id: 'ticket-first', ticket_number: 'T-1' });
+
+      const noRows = () => {
+        const builder: any = {
+          select: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          whereIn: vi.fn().mockReturnThis(),
+          whereRaw: vi.fn().mockReturnThis(),
+          whereNotNull: vi.fn().mockReturnThis(),
+          andWhereRaw: vi.fn().mockReturnThis(),
+          andWhere: vi.fn().mockReturnThis(),
+          orderBy: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue(undefined),
+          then: (resolve: any, reject: any) => Promise.resolve([]).then(resolve, reject),
+        };
+        return builder;
+      };
+      withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+        const trx = vi.fn((table: string) => {
+          if (table === 'tickets') return makeQueryBuilder({ ticket_id: 'ticket-first', board_id: 'board-1', client_id: 'client-1', attributes: {} });
+          if (table === 'statuses') return makeQueryBuilder({ is_closed: false });
+          if (table === 'boards') return makeQueryBuilder({});
+          return noRows();
+        });
+        return callback(trx);
+      });
+
+      const { processInboundEmailInApp } = await import(
+        '@alga-psa/shared/services/email/processInboundEmailInApp'
+      );
+
+      // First message: no headers; Gmail supplies only its API threadId.
+      const first: any = await processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: buildEmailData({ id: 'gmail-msg-1', threadId: 'gmail-api-thread-7' }),
+      });
+      expect(first.outcome).toBe('created');
+      const storedMetadata = createTicketFromEmailMock.mock.calls[0][0].email_metadata;
+      expect(storedMetadata.threadId).toBe('gmail-api-thread-7');
+
+      // findTicketByEmailThread compares tickets.email_metadata.threadId to the inbound
+      // threadId; emulate that comparison against what the first message stored.
+      findTicketByEmailThreadMock.mockImplementation(async (input: any) =>
+        input.threadId && input.threadId === storedMetadata.threadId ? { ticketId: 'ticket-first' } : null
+      );
+
+      const second: any = await processInboundEmailInApp({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: buildEmailData({
+          id: 'gmail-msg-2',
+          threadId: 'gmail-api-thread-7',
+          inReplyTo: '<client-first@example.test>',
+          references: ['<client-first@example.test>'],
+        }),
+      });
+
+      expect(second).toMatchObject({ outcome: 'replied', ticketId: 'ticket-first' });
+      expect(createTicketFromEmailMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });
