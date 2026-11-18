@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { formatDate, getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
+import { getDateFormatPreference } from '@alga-psa/clients/actions/countryActions';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
   listRequestServiceCatalogGroupsAction,
   listMyRecentServiceRequestsAction,
 } from './actions';
+import { ServiceRequestTicketLink } from './ServiceRequestTicketLink';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -21,7 +24,6 @@ import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 interface ServiceRequestsPageProps {
   searchParams?: Promise<{
     submitted?: string;
-    ticketId?: string;
   }>;
 }
 
@@ -37,8 +39,6 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
   const resolvedSearchParams = props.searchParams ? await props.searchParams : undefined;
   const submittedRequestId =
     typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;
-  const submittedTicketId =
-    typeof resolvedSearchParams?.ticketId === 'string' ? resolvedSearchParams.ticketId : null;
 
   // Fetching all submissions here keeps the page a single round-trip; the table
   // paginates client-side, which is fine for the small per-client volume.
@@ -47,6 +47,22 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
     listMyRecentServiceRequestsAction(1000),
     getServerTranslation(undefined, 'client-portal/service-requests'),
   ]);
+
+  // The banner is resolved from the signed-in client's own submissions (newest
+  // first, so a just-submitted request is always present); nothing but the
+  // submission id is read from the URL, and an id that is not one of the
+  // caller's own submissions renders no banner.
+  const submittedSummary = submittedRequestId
+    ? allSubmissions.find((submission) => submission.submission_id === submittedRequestId) ?? null
+    : null;
+
+  // Locale and date pattern (a DB lookup) are only needed to render the banner.
+  const [locale, dateFormat] = submittedSummary
+    ? await Promise.all([
+        getServerLocale(),
+        getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT),
+      ])
+    : [null, null];
 
   const rows: MyRequestsTableRow[] = allSubmissions.map((submission) => ({
     submission_id: submission.submission_id,
@@ -65,23 +81,29 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
       {/* Header is provided by the layout topbar via clientPortalRouteTitles */}
 
       {/* Success banner: rendered after a redirect from the form-submit action. */}
-      {submittedRequestId && (
+      {submittedSummary && locale && dateFormat && (
         <Alert variant="success">
           <AlertTitle>{t('detail.submitted')}</AlertTitle>
           <AlertDescription>
             <p>
-              {t('detail.requestIdLabel')}
-              <span className="font-mono">{submittedRequestId}</span>
+              {t('submittedBanner.summary', {
+                requestName: submittedSummary.request_name,
+                date: formatDate(
+                  new Date(submittedSummary.submitted_at),
+                  locale,
+                  { dateStyle: 'medium', timeStyle: 'short' },
+                  dateFormat
+                ),
+              })}
             </p>
-            {submittedTicketId && (
+            {submittedSummary.created_ticket_id && (
               <p>
-                {t('detail.ticketIdLabel')}
-                <Link
-                  href={`/client-portal/tickets/${submittedTicketId}`}
-                  className="font-mono underline"
-                >
-                  {submittedTicketId}
-                </Link>
+                {t('ticketReference.label')}{' '}
+                <ServiceRequestTicketLink
+                  ticketId={submittedSummary.created_ticket_id}
+                  ticketNumber={submittedSummary.ticket_number}
+                  labels={{ viewTicket: t('ticketReference.viewTicket') }}
+                />
               </p>
             )}
           </AlertDescription>
@@ -153,6 +175,7 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
               noTicket: t('myRequests.noTicket', 'No ticket'),
               details: t('myRequests.columns.details'),
               view: t('myRequests.view'),
+              viewTicket: t('ticketReference.viewTicket'),
               unknownDate: t('myRequests.unknownDate'),
               statuses: {
                 pending: t('myRequests.statuses.pending'),
