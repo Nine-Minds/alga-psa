@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -50,6 +50,7 @@ import {
   createSalesOrder,
   confirmSalesOrder,
   cancelSalesOrder,
+  getInventoryClientCurrency,
 } from '../actions';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import {
@@ -199,8 +200,6 @@ export interface SalesOrdersManagerProps {
   loadErrorMessage?: string;
   /** Active stock locations for the fulfill dialog's source selector. */
   locations?: IStockLocation[];
-  /** Clients for the create-SO client picker. */
-  clients?: IClient[];
   /** Sellable services/products for the line-item picker (fetched by the page from billing). */
   services?: SalesOrderServiceOption[];
   /** Billing-owned actions passed from the page (billing → inventory dependency). */
@@ -219,7 +218,6 @@ export function SalesOrdersManager({
   initialSos,
   loadErrorMessage,
   locations = [],
-  clients = [],
   services = [],
   fulfillAndInvoice,
   generateInvoice,
@@ -288,7 +286,6 @@ export function SalesOrdersManager({
   const [sos, setSos] = useState<ISalesOrder[]>(initialSos || []);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
@@ -329,12 +326,27 @@ export function SalesOrdersManager({
 
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
   // client and render it read-only (falling back to the tenant default when the client has none).
+  // The picker searches on the server and never holds the client list, so the picked client's currency
+  // is read by id; a created client already carries it.
+  const latestPickedClientRef = useRef<string | null>(null);
   const onClientSelect = (clientId: string | null, createdClient?: IClient) => {
-    const picked = createdClient ?? (clientId
-      ? clientOptions.find((client) => client.client_id === clientId)
-      : undefined);
-    const nextCurrency = picked?.default_currency_code || (clientId ? defaultCurrencyCode : '');
-    setForm((f) => ({
+    latestPickedClientRef.current = clientId;
+    if (!clientId || createdClient) {
+      applyClientCurrency(clientId, createdClient?.default_currency_code || (clientId ? defaultCurrencyCode : ''));
+      return;
+    }
+    // Until the lookup answers the order sits on the tenant currency, the same fallback as a client with none.
+    applyClientCurrency(clientId, defaultCurrencyCode);
+    getInventoryClientCurrency(clientId)
+      .then((currency) => {
+        if (latestPickedClientRef.current !== clientId) return;
+        applyClientCurrency(clientId, currency || defaultCurrencyCode);
+      })
+      .catch(() => undefined);
+  };
+
+  const applyClientCurrency = (clientId: string | null, nextCurrency: string) => {
+    setForm((f) => (f.client_id === (clientId ?? '') && f.currency_code === nextCurrency) ? f : ({
       ...f,
       client_id: clientId ?? '',
       currency_code: nextCurrency,
@@ -778,7 +790,6 @@ export function SalesOrdersManager({
               <label className="block text-sm font-medium">{t('salesOrders.columns.client', 'Client')}</label>
               <ClientPicker
                 id="sales-order-client"
-                clients={clientOptions}
                 selectedClientId={form.client_id || null}
                 onSelect={onClientSelect}
                 filterState={clientFilterState}
@@ -1034,15 +1045,6 @@ export function SalesOrdersManager({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClientOptions((currentClients) => {
-            const existingIndex = currentClients.findIndex(
-              (client) => client.client_id === newClient.client_id,
-            );
-            if (existingIndex === -1) return [...currentClients, newClient];
-            const nextClients = [...currentClients];
-            nextClients[existingIndex] = newClient;
-            return nextClients;
-          });
           onClientSelect(newClient.client_id, newClient);
         },
         skipSuccessDialog: true,
