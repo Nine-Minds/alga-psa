@@ -543,6 +543,7 @@
     "errors": {
       "validationPrefix": "Corrija lo siguiente:",
       "emailExists": "El correo electrónico ya existe: ya existe en el sistema un contacto con esta dirección",
+      "emailExistsPrefix": "El correo electrónico ya existe:",
       "invalidReferencePrefix": "Referencia no válida:",
       "systemPrefix": "Error del sistema:",
       "saveFailed": "Se produjo un error al guardar. Inténtelo de nuevo.",
@@ -847,6 +848,15 @@
       "otherClient": "Permiso denegado: no se pueden gestionar contactos de otro cliente",
       "notAssociatedWithClient": "El contacto no está asociado a un cliente",
       "emailExists": "Ya existe en el sistema un contacto con esta dirección de correo electrónico",
+      "emailConflict": {
+        "named": "Esta dirección de correo ya pertenece a {{name}} en {{client}}.",
+        "namedNoClient": "Esta dirección de correo ya pertenece a {{name}}, un contacto sin cliente.",
+        "anotherClient": "Esta dirección de correo ya pertenece a un contacto de otro cliente.",
+        "inactive": "Esta dirección de correo ya pertenece a {{name}}, un contacto inactivo. Reactive ese contacto en su lugar.",
+        "inactiveAtClient": "Esta dirección de correo ya pertenece a {{name}} en {{client}}, un contacto inactivo. Reactive ese contacto en su lugar.",
+        "additional": "Esta dirección de correo ya es una dirección adicional de {{name}}.",
+        "additionalAtClient": "Esta dirección de correo ya es una dirección adicional de {{name}} en {{client}}."
+      },
       "fieldRequired": "{{field}} es obligatorio",
       "clientInvalid": "El cliente seleccionado ya no es válido",
       "duplicate": "Ya existe un contacto con estos datos.",

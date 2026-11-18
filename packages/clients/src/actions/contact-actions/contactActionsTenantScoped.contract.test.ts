@@ -68,7 +68,8 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(phoneTypeSection).not.toContain("trx('contact_phone_type_definitions')");
     expect(phoneTypeSection).not.toContain('.where({ tenant })');
 
-    expect(updateSection).toContain("tenantScopedTable(trx, 'contacts', tenant)");
+    // The duplicate-email pre-check reads through the tenant-scoped ownership resolver rather than its own contacts root.
+    expect(updateSection).toContain('resolveContactEmailOwnership(tenant, contactData.email!, trx)');
     expect(updateSection).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(updateSection).toContain("tenantScopedTable(trx, 'inbound_ticket_defaults', tenant)");
     expect(updateSection).toContain("tenantScopedTable(trx, 'users', tenant)");

@@ -13,6 +13,8 @@ import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/lo
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
+import { describeContactEmailConflict, isEmailOwnershipError } from '@alga-psa/shared/models/contactEmailOwnership';
+import enContactLocale from '../../../../public/locales/en/msp/contacts.json';
 import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
 import {
   CONTACT_LOCATION_CLIENT_MISMATCH,
@@ -118,6 +120,42 @@ function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: st
     rootTenantColumn: 'cpn_default.tenant',
   });
   return query;
+}
+
+/** API messages are English; the keys are the same ones the UI formatter reads. */
+function englishContactText(key: string, params: Record<string, string> = {}): string {
+  const text = key.split('.').reduce<unknown>(
+    (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
+    enContactLocale as unknown
+  );
+  return typeof text === 'string'
+    ? text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => params[name] ?? '')
+    : key;
+}
+
+/**
+ * An email-ownership conflict names its owner only when the API caller can read that contact and its client
+ * (the same read scope the contact endpoints apply); otherwise it says "another client".
+ */
+// LEVERAGE: pattern contact-email-conflict-visibility — same visibility decision as packages/clients/src/lib/contactEmailConflict.ts.
+async function throwContactModelApiErrorForCaller(
+  error: unknown,
+  context: ServiceContext,
+  conn: Knex | Knex.Transaction
+): Promise<never> {
+  if (isEmailOwnershipError(error)) {
+    const { conflict } = error;
+    let visible = false;
+    try {
+      const scope = await createClientScopeContext(conn, context.tenant, subjectFromServiceContext(context));
+      visible = (!conflict.clientId || (await scope.permits('client', conflict.clientId)))
+        && (await scope.permits('contact', conflict.contactNameId));
+    } catch {
+      visible = false;
+    }
+    throw new ConflictError(describeContactEmailConflict(conflict, visible, englishContactText));
+  }
+  return throwContactModelApiError(error);
 }
 
 function throwContactModelApiError(error: unknown): never {
@@ -372,7 +410,7 @@ export class ContactService extends BaseService<IContact> {
       if (!hydrated) return hydrated;
       const [withLocations] = await attachLocations(trx, context.tenant, [hydrated]);
       return withLocations;
-    }).catch(throwContactModelApiError);
+    }).catch((error) => throwContactModelApiErrorForCaller(error, context, knex));
 
     if (!contact) {
       throw new NotFoundError('Contact not found');
@@ -463,7 +501,7 @@ export class ContactService extends BaseService<IContact> {
 
       const updatedFieldKeys = Object.keys(data).filter((key) => (data as Record<string, unknown>)[key] !== undefined);
       return { before, after, updatedFieldKeys };
-    }).catch(throwContactModelApiError);
+    }).catch((error) => throwContactModelApiErrorForCaller(error, context, knex));
 
     const occurredAt = result.after.updated_at ?? new Date().toISOString();
     const actor = maybeUserActorFromContext(context);

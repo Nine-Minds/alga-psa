@@ -543,6 +543,7 @@
     "errors": {
       "validationPrefix": "Please fix the following:",
       "emailExists": "Email already exists: A contact with this email address already exists in the system",
+      "emailExistsPrefix": "Email already exists:",
       "invalidReferencePrefix": "Invalid reference:",
       "systemPrefix": "System error:",
       "saveFailed": "An error occurred while saving. Please try again.",
@@ -847,6 +848,15 @@
       "otherClient": "Permission denied: Cannot manage contacts for another client",
       "notAssociatedWithClient": "Contact is not associated with a client",
       "emailExists": "A contact with this email address already exists in the system",
+      "emailConflict": {
+        "named": "This email address already belongs to {{name}} at {{client}}.",
+        "namedNoClient": "This email address already belongs to {{name}}, a contact with no client.",
+        "anotherClient": "This email address already belongs to a contact at another client.",
+        "inactive": "This email address already belongs to {{name}}, an inactive contact. Reactivate that contact instead.",
+        "inactiveAtClient": "This email address already belongs to {{name}} at {{client}}, an inactive contact. Reactivate that contact instead.",
+        "additional": "This email address is already an additional email address on {{name}}.",
+        "additionalAtClient": "This email address is already an additional email address on {{name}} at {{client}}."
+      },
       "fieldRequired": "The {{field}} is required",
       "clientInvalid": "The selected client is no longer valid",
       "duplicate": "A contact with these details already exists.",

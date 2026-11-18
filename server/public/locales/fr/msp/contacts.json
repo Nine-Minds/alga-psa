@@ -543,6 +543,7 @@
     "errors": {
       "validationPrefix": "Veuillez corriger ce qui suit :",
       "emailExists": "L’e-mail existe déjà : un contact avec cette adresse e-mail existe déjà dans le système",
+      "emailExistsPrefix": "L’e-mail existe déjà :",
       "invalidReferencePrefix": "Référence invalide :",
       "systemPrefix": "Erreur système :",
       "saveFailed": "Une erreur est survenue lors de l’enregistrement. Veuillez réessayer.",
@@ -847,6 +848,15 @@
       "otherClient": "Autorisation refusée : impossible de gérer les contacts d’un autre client",
       "notAssociatedWithClient": "Le contact n’est associé à aucun client",
       "emailExists": "Un contact avec cette adresse e-mail existe déjà dans le système",
+      "emailConflict": {
+        "named": "Cette adresse e-mail appartient déjà à {{name}} chez {{client}}.",
+        "namedNoClient": "Cette adresse e-mail appartient déjà à {{name}}, un contact sans client.",
+        "anotherClient": "Cette adresse e-mail appartient déjà à un contact d’un autre client.",
+        "inactive": "Cette adresse e-mail appartient déjà à {{name}}, un contact inactif. Réactivez plutôt ce contact.",
+        "inactiveAtClient": "Cette adresse e-mail appartient déjà à {{name}} chez {{client}}, un contact inactif. Réactivez plutôt ce contact.",
+        "additional": "Cette adresse e-mail est déjà une adresse supplémentaire de {{name}}.",
+        "additionalAtClient": "Cette adresse e-mail est déjà une adresse supplémentaire de {{name}} chez {{client}}."
+      },
       "fieldRequired": "{{field}} est obligatoire",
       "clientInvalid": "Le client sélectionné n’est plus valide",
       "duplicate": "Un contact avec ces informations existe déjà.",

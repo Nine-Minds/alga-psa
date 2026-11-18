@@ -330,9 +330,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             setError(`${t('contactDetailsEdit.errors.validationPrefix', { defaultValue: 'Please fix the following:' })} ${detail}`);
             break;
           case 'EMAIL_EXISTS':
-            setError(t('contactDetailsEdit.errors.emailExists', {
-              defaultValue: 'Email already exists: A contact with this email address already exists in the system'
-            }));
+            // The detail names the owner (within what this user may see); only an empty detail falls back to the generic text.
+            setError(detail
+              ? `${t('contactDetailsEdit.errors.emailExistsPrefix', { defaultValue: 'Email already exists:' })} ${detail}`
+              : t('contactDetailsEdit.errors.emailExists', {
+                defaultValue: 'Email already exists: A contact with this email address already exists in the system'
+              }));
             break;
           case 'FOREIGN_KEY_ERROR':
             setError(`${t('contactDetailsEdit.errors.invalidReferencePrefix', { defaultValue: 'Invalid reference:' })} ${detail}`);
