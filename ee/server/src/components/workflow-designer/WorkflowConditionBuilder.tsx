@@ -184,6 +184,7 @@ export const describeConditionField = (path: string): string => {
   return `${parent} ${field}`;
 };
 
+const UUID_GLOBAL = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const formatLiteral = (
@@ -248,7 +249,9 @@ export const WorkflowConditionSummary: React.FC<{ expression: string }> = ({ exp
     const group = parseConditionExpression(expression);
     return Boolean(group && group.clauses.length > 0);
   }, [expression]);
-  const entityLabels = useWorkflowEntityLabels(isBuilderShaped);
+  // Id literals in the condition may be clients; their names are looked up by id.
+  const idLiterals = useMemo(() => Array.from(new Set(expression.match(UUID_GLOBAL) ?? [])), [expression]);
+  const entityLabels = useWorkflowEntityLabels(isBuilderShaped, idLiterals);
   const summary = useMemo(() => describeWorkflowCondition(t, expression, entityLabels), [entityLabels, expression, t]);
   const text = summary ?? expression.trim();
 

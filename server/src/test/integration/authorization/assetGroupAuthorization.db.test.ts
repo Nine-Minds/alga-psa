@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../../shared/test-utils/assetFixtures';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
@@ -74,7 +75,7 @@ describe('asset group mutation authorization', () => {
 
   async function createAsset(name: string, assetClientId = clientId): Promise<string> {
     const assetId = randomUUID();
-    await database().table('assets').insert({
+    await insertTestAssets(holder.knex, {
       tenant: holder.tenant,
       asset_id: assetId,
       asset_type: 'unknown',

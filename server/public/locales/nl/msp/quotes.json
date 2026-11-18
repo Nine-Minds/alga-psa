@@ -333,6 +333,16 @@
       "addLocation": "+ Locatie toevoegen",
       "fromTemplate": "+ Uit sjabloon"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Deze locatie verwijderen?",
+        "message": "Deze locatie heeft nog {{count}} regel(s). Kies wat ermee gebeurt.",
+        "moveOption": "Deze items verplaatsen naar {{location}}",
+        "ungroupOption": "Deze regels behouden en niet meer groeperen op locatie",
+        "deleteOption": "Deze items verwijderen",
+        "confirm": "Locatie verwijderen"
+      }
+    },
     "clientFacing": {
       "title": "Klantgerichte tekst",
       "subtitle": "Verschijnt op de pdf, onder de totalen.",
@@ -588,10 +598,13 @@
       "groupHeading": "Locatie {{index}}",
       "pickerPlaceholder": "Een locatie kiezen",
       "unassigned": "Items zonder locatie staan hier tot er een is gekozen.",
+      "quoteWide": "Hele offerte",
+      "quoteWideHint": "Kortingen gelden voor de hele offerte en zijn dus niet aan een locatie gekoppeld.",
       "removeGroup": "Locatie verwijderen",
       "subtotal": "Subtotaal locatie",
       "addLocationButton": "+ Locatie toevoegen",
       "needMoreLocations": "Deze klant heeft maar één actieve locatie. Voeg in klantinstellingen een tweede locatie toe voor offertes met meerdere locaties.",
+      "allLocationsInUse": "Elke actieve locatie van deze klant heeft al een groep op deze offerte.",
       "emptyGroup": "Nog geen items voor deze locatie."
     }
   },

@@ -297,7 +297,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const data = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(ticketId, internalUser as any)
+      getConsolidatedTicketData(ticketId)
     );
 
     expect(data).not.toHaveProperty('clients');
@@ -592,7 +592,7 @@ describe('Ticket bundling integration', () => {
 
     // The child renderer resolves the agent, not Unknown User.
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const resolvedChildAuthor = resolveCommentAuthor(mirrored, {
       userMap: childData.userMap,
@@ -692,7 +692,7 @@ describe('Ticket bundling integration', () => {
     expect(mirrored?.author_type).toBe('internal');
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     // The contact id is carried onto the child; when the user record is not
     // resolvable it is the contact map that renders the author.
@@ -775,7 +775,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const childData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(childId, internalUser as any)
+      getConsolidatedTicketData(childId)
     );
     const childComments = childData.comments as any[];
     const mirrored = childComments.find((comment) => comment.comment_id === mirroredCommentId);
@@ -837,7 +837,7 @@ describe('Ticket bundling integration', () => {
     );
 
     const resolutionData = await runWithTenant(tenantId, async () =>
-      getConsolidatedTicketData(resolutionChildId, internalUser as any)
+      getConsolidatedTicketData(resolutionChildId)
     );
     const resolutionMirror = (resolutionData.comments as any[]).find((comment) => comment.is_system_generated);
     expect(resolutionMirror).toBeTruthy();
@@ -1424,7 +1424,7 @@ describe('Ticket bundling integration', () => {
     const masterRow = (listResult.tickets ?? []).find((t: any) => t.ticket_id === masterId);
     expect(masterRow?.bundle_open_child_count).toBe(2);
 
-    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId, internalUser as any));
+    const consolidated = await runWithTenant(tenantId, () => getConsolidatedTicketData(masterId));
     expect(consolidated.bundle.openChildrenCount).toBe(2);
     const consolidatedChild = (consolidated.bundle.children ?? []).find((c: any) => c.ticket_id === child1Id);
     expect(consolidatedChild?.is_closed).toBe(false);
@@ -1494,7 +1494,7 @@ describe('Ticket bundling integration', () => {
     });
 
     const consolidated = await runWithTenant(tenantId, async () => {
-      return getConsolidatedTicketData(masterId, internalUser as any);
+      return getConsolidatedTicketData(masterId);
     });
 
     expect(Array.isArray(consolidated.aggregatedChildClientComments)).toBe(true);

@@ -308,6 +308,36 @@
       "expiresPrefix": "Expira:",
       "revoke": "Revocar",
       "revoking": "Revocando..."
+    },
+    "seatTechnicians": {
+      "title": "Técnicos de puesto",
+      "description": "Personas que trabajan en su PSA a través del puesto cogestionado de un cliente. No cuentan para sus usuarios con licencia.",
+      "clientUnavailable": "Cliente no disponible",
+      "effectiveAccess": "Acceso efectivo",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "client": "Cliente",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "state": {
+        "active": "Activo",
+        "invited": "Invitación pendiente"
+      },
+      "dialog": {
+        "title": "Acceso efectivo de {{name}}",
+        "help": "Elija un ticket para ver si este técnico de puesto puede leerlo y por qué.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Seleccionar un ticket...",
+        "checking": "Comprobando el acceso...",
+        "allowed": "{{name}} puede leer este ticket.",
+        "denied": "{{name}} no puede leer este ticket.",
+        "noReasons": "No se informó de más detalles.",
+        "error": "No se pudo comprobar el acceso. Inténtelo de nuevo.",
+        "close": "Cerrar",
+        "unavailable": "El acceso efectivo no se puede comprobar para este ticket en esta edición o configuración."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Referencia de variables de plantillas de correo electrónico",
       "panelTitle": "Variables de plantilla",
+      "mspOnly": "Solo MSP",
+      "clientSafeHelp": "Se envía a los clientes. Las variables solo para MSP no están disponibles.",
       "inferredContract": "No se envía actualmente. Este contrato se infiere de la plantilla.",
       "empty": "No hay variables coincidentes.",
       "example": "Ejemplo:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "General",
           "defaultClient": "Cliente predeterminado para registros huérfanos",
-          "defaultClientHelp": "Los contactos y activos cuya organización no se pueda identificar se vinculan a este cliente."
+          "defaultClientHelp": "Los contactos y activos cuya organización no se pueda identificar se vinculan a este cliente.",
+          "clearDefaultClient": "Borrar"
         },
         "saved": "Configuración guardada. Ejecute la verificación previa para validarla con los registros preparados.",
         "saving": "Guardando…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Preparando vista previa…",
         "linking": "Vinculando cuentas…",
         "unlinking": "Desvinculando cuentas…",
-        "bulkLabel": "Acciones masivas SSO {{location}}"
+        "bulkLabel": "Acciones masivas SSO {{location}}",
+        "disabledSelectUsers": "Seleccione primero al menos un usuario."
       },
       "table": {
         "email": "Correo electrónico",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
       "nameRequired": "El nombre del rol es obligatorio.",
       "builtInRename": "Los roles integrados no se pueden renombrar.",
-      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal.",
+      "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
@@ -4206,6 +4242,61 @@
   "common": {
     "saving": "Guardando…",
     "cancel": "Cancelar"
+  },
+  "loginPolicy": {
+    "title": "Política de inicio de sesión",
+    "description": "Controle cómo pueden iniciar sesión el personal y los usuarios del portal de clientes, con contraseña o con inicio de sesión único. Estas reglas se aplican en el servidor.",
+    "requireSso": {
+      "title": "Exigir inicio de sesión único para el personal del MSP",
+      "body": "Los usuarios internos deben iniciar sesión con Google, Microsoft o su proveedor Keycloak. El inicio de sesión con contraseña y el restablecimiento de contraseña están bloqueados, salvo para los administradores de emergencia indicados abajo.",
+      "signOutWarning": "Al activar «Exigir inicio de sesión único» se cierra la sesión de todos los usuarios internos que iniciaron sesión con contraseña, excepto los administradores de emergencia. Activar un requisito de dos factores no cierra la sesión de nadie; se aplica en el siguiente inicio de sesión."
+    },
+    "require2faInternal": {
+      "title": "Exigir autenticación de dos factores en el inicio de sesión con contraseña del personal del MSP",
+      "body": "Al personal sin autenticador se le pedirá que configure uno en su próximo inicio de sesión."
+    },
+    "require2faClient": {
+      "title": "Exigir autenticación de dos factores en el inicio de sesión con contraseña del portal de clientes",
+      "body": "A los usuarios del portal de clientes sin autenticador se les pedirá que configuren uno en su próximo inicio de sesión. El requisito de inicio de sesión único nunca se aplica a los usuarios del portal de clientes."
+    },
+    "knownDeviceSkip": {
+      "title": "Permitir que los dispositivos conocidos omitan el código",
+      "body": "A los usuarios que marcaron un dispositivo como de confianza no se les pide código en ese dispositivo. Los administradores de emergencia siempre necesitan un código."
+    },
+    "breakGlass": {
+      "title": "Administradores de emergencia",
+      "body": "Estos administradores pueden seguir iniciando sesión con contraseña cuando se exige el inicio de sesión único. Deben ser administradores activos con la autenticación de dos factores habilitada y siempre necesitan un código.",
+      "noEligible": "No hay administradores elegibles. Un administrador debe estar activo y tener habilitada la autenticación de dos factores.",
+      "noLongerEligible": "Ya no es apto.",
+      "remove": "Quitar",
+      "reasons": {
+        "no_two_factor": "La autenticación de dos factores se restableció o falta.",
+        "inactive": "El usuario está desactivado.",
+        "not_admin": "El usuario ya no es administrador.",
+        "not_internal": "El usuario no es un usuario interno.",
+        "not_found": "El usuario ya no existe."
+      }
+    },
+    "clientPortalSso": {
+      "title": "Opciones de inicio de sesión del portal de clientes",
+      "body": "Elija qué proveedores de inicio de sesión único aparecen en la página de inicio de sesión del portal de clientes. Solo se muestran los proveedores con los que puede iniciar sesión su organización. El inicio de sesión con contraseña no cambia.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "No hay proveedores de inicio de sesión único configurados para su organización. Configure uno en los ajustes de inicio de sesión único para ofrecerlo en el portal de clientes."
+    },
+    "guard": {
+      "sso_provider_required": "Configure al menos un proveedor de inicio de sesión único antes de exigirlo.",
+      "break_glass_required": "Seleccione al menos un administrador de emergencia antes de exigir el inicio de sesión único.",
+      "break_glass_invalid_user": "Los usuarios de emergencia deben ser administradores activos con la autenticación de dos factores habilitada.",
+      "client_portal_sso_provider_invalid": "Elija solo proveedores de inicio de sesión único compatibles."
+    },
+    "errors": {
+      "load": "No se pudo cargar la política de inicio de sesión.",
+      "save": "No se pudo guardar la política de inicio de sesión."
+    }
   },
   "featureFlags": {
     "categories": {
@@ -4506,7 +4597,7 @@
     "seatNote": "Los principales de servicio no consumen licencias de usuario.",
     "blockedAccess": "El acceso a API y MCP de los principales de servicio se bloquea inmediatamente por debajo de Pro. Los registros existentes siguen disponibles para su limpieza."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Mostrar en chips",
     "subtitle": "Etiquetas que se muestran junto a contactos y clientes en listas de tickets, encabezados de tickets y selectores.",
     "loading": "Cargando…",
@@ -4527,6 +4618,28 @@
       "backToEmail": "Volver a la configuración de correo electrónico",
       "title": "Proveedores de correo electrónico e identidad",
       "description": "Registre su propia aplicación de Google o Microsoft para el correo electrónico entrante y el inicio de sesión del personal. Estas credenciales pertenecen a su espacio de trabajo."
+    }
+  },
+  "assets": {
+    "numbering": {
+      "title": "Numeración de activos",
+      "description": "Una única secuencia para todo el inquilino se formatea con el prefijo de cada cliente. La vista previa y la impresión no asignan números. Los números emitidos que se abandonan dejan huecos y nunca se reutilizan.",
+      "clientPrefixes": "Prefijos de clientes",
+      "noPrefix": "Sin prefijo",
+      "prefixSaved": "Prefijo de cliente guardado",
+      "uniquenessEnabled": "La unicidad de las etiquetas de activos está activa",
+      "legacyAudit": "Auditoría de etiquetas existentes",
+      "legacyAuditHelp": "Se conservan las etiquetas existentes. Resuelva los duplicados editando las etiquetas de los activos afectados; revise las etiquetas vacías sin cambiarlas si están vacías intencionadamente.",
+      "reconciliationNote": "Nota de conciliación manual",
+      "markReviewed": "Marcar como revisado",
+      "noLegacyIssues": "No se encontraron etiquetas vacías ni duplicadas durante la migración.",
+      "activate": "Activar etiquetas de activos únicas",
+      "saveFailed": "No se pudo guardar el prefijo",
+      "activationFailed": "Resuelva las etiquetas duplicadas antes de la activación",
+      "continuationReview": "La revisión de datos existentes examinó {{scanned}} etiquetas guardadas; {{numeric}} tienen sufijos numéricos. El sufijo más alto es {{maximum}}; revise un valor inicial de {{next}}. Esto es solo una recomendación. Introduzca y guarde arriba el valor de continuación aprobado; esta revisión no consume ningún valor de la secuencia.",
+      "continuationExamples": "Ejemplos: {{examples}}",
+      "blankTag": "(etiqueta vacía)",
+      "normalizedTag": "Normalizada: {{tag}}"
     }
   }
 }

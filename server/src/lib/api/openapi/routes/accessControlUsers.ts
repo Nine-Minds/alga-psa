@@ -192,7 +192,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       two_factor_enabled: zOpenApi.boolean().optional(),
       is_google_user: zOpenApi.boolean().optional(),
       is_inactive: zOpenApi.boolean().optional(),
-      role_ids: zOpenApi.array(zOpenApi.string().guid()).optional(),
+      // Required: createUserSchema rejects a user created without a role.
+      role_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
     }),
   );
 

@@ -156,6 +156,47 @@ describe('client portal dashboard visibility enforcement', () => {
   });
 });
 
+it('service request activity never selects or surfaces the raw execution error text', async () => {
+  vi.clearAllMocks();
+  currentUser = { user_id: 'u', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1' };
+  createTenantKnexMock.mockResolvedValue({ knex: {} });
+  hasPermissionMock.mockImplementation(async () => true);
+  applyTicketVisibilityFilterMock.mockImplementation((query) => query);
+  getVisibilityContextMock.mockResolvedValue({
+    contactId: 'contact-1',
+    clientId: 'client-1',
+    visibilityGroupId: null,
+    visibleBoardIds: [],
+  });
+  let serviceRequestQuery: any;
+  withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+    callback(Object.assign((table: string) => {
+      if (table === 'contacts') return chain([{ client_id: 'client-1', contact_name_id: 'contact-1' }]);
+      if (table === 'service_request_submissions') {
+        serviceRequestQuery = chain([
+          {
+            client_id: 'client-1',
+            name: 'Access Request',
+            status: 'failed',
+            execution_error_summary: 'duplicate key value violates unique constraint "pk_tickets"',
+            timestamp: '2026-10-01T00:00:00Z',
+          },
+        ]);
+        return serviceRequestQuery;
+      }
+      return chain([]);
+    }, { raw: vi.fn() }))
+  );
+
+  const { getRecentActivity } = await import('./dashboard');
+  const activity = await getRecentActivity();
+
+  const serviceRequestActivity = (activity as any[]).find((item) => item.type === 'service_request');
+  expect(serviceRequestActivity).toMatchObject({ status: 'failed', description: '' });
+  expect(JSON.stringify(activity)).not.toContain('duplicate key');
+  expect(JSON.stringify(serviceRequestQuery.select.mock.calls)).not.toContain('execution_error_summary');
+});
+
 it.each([false, true])('dashboard count and activity exclude sibling/NULL tickets unless admin=%s', async (admin) => {
   vi.clearAllMocks();
   currentUser = { user_id: 'u', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1' };

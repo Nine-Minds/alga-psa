@@ -1,10 +1,11 @@
 'use client';
 
+import { searchClientsForPicker } from '../../actions/clientLookupActions';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IClient, TicketTemplateListItem } from '@alga-psa/types';
+import type { ColumnDefinition, TicketTemplateListItem } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -26,7 +27,6 @@ import {
   listTicketTemplates,
   setTicketTemplateActive,
 } from '../../actions/ticketTemplateActions';
-import { getAllClients } from '../../actions/clientLookupActions';
 import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import { recurringErrorMessage, unwrapRecurring } from '../recurring/recurringUi';
 import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
@@ -45,7 +45,6 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
   const [includeInactive, setIncludeInactive] = useState(false);
   // The filter means "usable by this client": its own templates plus the tenant-wide ones.
   const [clientFilter, setClientFilter] = useState<string | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(true);
@@ -67,14 +66,6 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
   }, [includeInactive, clientFilter]);
 
   useEffect(() => { void load(); }, [load]);
-
-  useEffect(() => {
-    let cancelled = false;
-    getAllClients(true)
-      .then((all) => { if (!cancelled) setClients(all); })
-      .catch(() => { if (!cancelled) setClients([]); });
-    return () => { cancelled = true; };
-  }, []);
 
   const openNew = useCallback(() => router.push('/msp/tickets/templates/new'), [router]);
 
@@ -235,7 +226,7 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
             <div className="w-64">
               <ClientPicker
                 id="ticket-templates-client-filter"
-                clients={clients}
+                searchClients={searchClientsForPicker}
                 selectedClientId={clientFilter}
                 onSelect={setClientFilter}
                 filterState={clientFilterState}

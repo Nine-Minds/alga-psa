@@ -1,0 +1,7 @@
+{
+  "attemptedAt": "2026-11-02T17:31:44.106Z",
+  "command": "node ~/.alga-xo/bin/cli.mjs pane-activate-tab --paneId=376c175b-b142-46db-b907-5be706188acf",
+  "exitStatus": 1,
+  "stdout": "",
+  "stderr": "Error: Pane is not inside a tab container\n"
+}

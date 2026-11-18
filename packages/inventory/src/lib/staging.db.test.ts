@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 /**
  * C6 project staging engine against the isolated migrated test DB. Every case runs in a transaction that
  * is always rolled back, except the concurrency case, which commits its own fixture and removes it.
@@ -619,10 +620,10 @@ describe('T007 reserve, stage and pack are not consumption', () => {
 describe('T008 client-provided items', () => {
   it('never create stock units, movements or levels, and never become billable; another client’s asset is refused', async () => {
     const { projectId } = await makeProject();
-    const [asset] = await trx()('assets').insert({ tenant: TENANT, asset_tag: `CL-${randomUUID().slice(0, 6)}`, name: 'Client NAS', status: 'active', client_id: CLIENT, asset_type: 'unknown' }).returning('asset_id');
+    const [asset] = await insertTestAssets(trx(), { tenant: TENANT, asset_tag: `CL-${randomUUID().slice(0, 6)}`, name: 'Client NAS', status: 'active', client_id: CLIENT, asset_type: 'unknown' });
     const otherClient = randomUUID();
     await trx()('clients').insert({ tenant: TENANT, client_id: otherClient, client_name: 'Other client', billing_cycle: 'monthly' });
-    const [foreign] = await trx()('assets').insert({ tenant: TENANT, asset_tag: `OT-${randomUUID().slice(0, 6)}`, name: 'Not theirs', status: 'active', client_id: otherClient, asset_type: 'unknown' }).returning('asset_id');
+    const [foreign] = await insertTestAssets(trx(), { tenant: TENANT, asset_tag: `OT-${randomUUID().slice(0, 6)}`, name: 'Not theirs', status: 'active', client_id: otherClient, asset_type: 'unknown' });
 
     const before = { units: await count('stock_units'), moves: await count('stock_movements'), levels: await count('stock_levels'), materials: await count('project_materials') };
     await stagingRefusal(() => addClientLines(db(), TENANT, { project_id: projectId, items: [{ kind: 'client_asset', asset_id: foreign.asset_id }] }, USER), 'wrong_client');

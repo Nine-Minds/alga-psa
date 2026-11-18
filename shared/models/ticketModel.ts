@@ -9,9 +9,10 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { recordSeatTicketCreated, recordTicketAssigneeChange, releaseSeatTicketOnMove } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
 import {
-  assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
+  nativeReplyAudience, nativeThreadAudience, type CommentAudienceReader, type NativeCommentAudience,
 } from '../lib/commentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
@@ -26,6 +27,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { applyBoardDefaultTeam, resolveBoardDefaultRouting } from '../lib/tickets/boardDefaultRouting';
 import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
 import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
@@ -152,7 +154,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().guid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   // Names who may read a shared-work comment; native tenants never need it (see nativeThreadAudience).
-  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
+  collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -188,8 +190,8 @@ export interface CreateTicketInput {
    */
   billing_profile_id?: string | null;
   status_id?: string;
-  assigned_to?: string;
-  assigned_team_id?: string;
+  assigned_to?: string | null;
+  assigned_team_id?: string | null;
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
@@ -338,6 +340,10 @@ export interface CreateCommentInput {
    * `metadata.email_recipients`; rejected on internal comments.
    */
   emailRecipients?: { cc?: string[]; bcc?: string[] };
+  /** Who may read this comment (see `nativeThreadAudience`). */
+  collaboration_audience?: NativeCommentAudience;
+  /** The author's organization when the caller admits seat principals (see `NativeCommentAuthor`). */
+  audience_author?: CommentAudienceReader | null;
 }
 
 export interface CreateCommentOutput {
@@ -1134,6 +1140,10 @@ export class TicketModel {
     // (e.g. inbound To/Cc watchers) win over the defaults.
     const attributes: Record<string, unknown> =
       (await applyBoardDefaultWatchers(trx, tenant, cleanedInput.board_id, baseAttributes)) ?? {};
+    const boardDefaults = await resolveBoardDefaultRouting(trx, tenant, cleanedInput);
+    if (boardDefaults.assignedTo !== undefined) {
+      cleanedInput.assigned_to = boardDefaults.assignedTo;
+    }
 
     // Assemble the insert row through the exhaustive field-handling map so
     // every CreateTicketInput key is either persisted, transformed, or
@@ -1173,10 +1183,26 @@ export class TicketModel {
     };
 
     // Human-work guard: a ticket's primary assignee must be an active internal user.
-    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to], {
+      kind: 'ticket_draft',
+      clientId: dbData.client_id,
+      boardId: dbData.board_id,
+    });
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
+
+    // Apply the team through the same core used by explicit team assignment.
+    // This stays in the creation transaction and precedes TICKET_CREATED so
+    // subscribers observe the final routing. Stale defaults are soft failures.
+    if (boardDefaults.defaultTeamId) {
+      await applyBoardDefaultTeam(
+        trx, tenant, userId ?? null, ticketId, boardDefaults.defaultTeamId, cleanedInput.board_id!,
+      );
+    }
+
+    // A ticket a seat technician raises for their own client starts with client IT. Nothing is written for any other creator.
+    await recordSeatTicketCreated(trx, tenant, { ticket_id: ticketId, client_id: dbData.client_id, board_id: dbData.board_id }, userId);
 
     // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
     // board defaults); the mirror is then rewritten from the table.
@@ -1226,6 +1252,8 @@ export class TicketModel {
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             client_id: cleanedInput.client_id,
+            dueDate: cleanedInput.due_date ? new Date(cleanedInput.due_date).toISOString() : null,
+            ticketOrigin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
             ...(requester.clientName ? { clientName: requester.clientName } : {}),
             ...(requester.contactName ? { contactName: requester.contactName } : {}),
             ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
@@ -1453,9 +1481,14 @@ export class TicketModel {
 
     // Human-work guard: validate assigned_to only when this write changes it, so legacy
     // references (e.g. a former agent user) never block unrelated edits.
-    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
-      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+    const pendingPlacement = { clientId: updateData.client_id, boardId: updateData.board_id };
+    const reassigning = 'assigned_to' in updateData && updateData.assigned_to !== undefined
+      && updateData.assigned_to !== currentTicket.assigned_to;
+    if (reassigning && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to], { kind: 'ticket', ticketId, pending: pendingPlacement });
     }
+    // A move that takes the ticket out of a seat arrangement is not refused: releaseSeatTicketOnMove,
+    // after the write, clears and drops the seat technicians it strands (F094).
 
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')
@@ -1469,6 +1502,16 @@ export class TicketModel {
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    if ('assigned_to' in updateData && (updateData.assigned_to ?? null) !== (currentTicket.assigned_to ?? null)) {
+      // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+      await recordTicketAssigneeChange(trx, tenant, ticketId);
+    }
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if ((await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
     }
 
     // Publish update event if publisher provided
@@ -1599,7 +1642,15 @@ export class TicketModel {
         assigned_to: updateData.assigned_to
       });
     }
-    
+
+    // LEVERAGE: pattern ticket-assignee-write — every tickets.assigned_to change advances the seat work revision in its transaction
+    await recordTicketAssigneeChange(trx, tenant, ticketId);
+
+    // LEVERAGE: pattern ticket-placement-write — every tickets.client_id / tickets.board_id change settles the seat work state in its transaction
+    if (updatedTicket && (await releaseSeatTicketOnMove(trx, tenant, ticketId, currentTicket, updatedTicket)).assigneeCleared) {
+      updatedTicket.assigned_to = null;
+    }
+
     return updatedTicket;
   }
 
@@ -1736,14 +1787,10 @@ export class TicketModel {
         commentIsInternal = Boolean(parent.thread_is_internal);
         // A reply inherits its thread's audience. Only a labelled (co-managed) thread
         // is re-read under lock, so legacy threads cost no extra statement.
-        if (parent.thread_audience != null) {
-          labelledAudience = parent.thread_audience;
-          await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
-          assertReplyAudience(
-            { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
-            { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience },
-          );
-        }
+        labelledAudience = await nativeReplyAudience(trx, tenant,
+          { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+          { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience,
+            author: input.audience_author, ticketId: validatedData.ticket_id }) ?? undefined;
       }
     }
 
@@ -1754,6 +1801,8 @@ export class TicketModel {
       isInternal: commentIsInternal,
       authorType: dbAuthorType,
       audience: validatedData.collaboration_audience,
+      author: input.audience_author,
+      ticketId: validatedData.ticket_id,
     });
     labelledAudience ??= threadAudience.collaboration_audience;
 

@@ -27,6 +27,12 @@ import {
 const MAX_OVERRIDE_LENGTH = 120;
 const NO_LINKED_ASSET = '__none__';
 
+/** Expand physical asset labels in stable adjacent groups: A,A,B,B. */
+export function expandAssetLabelCopies<T>(subjects: readonly T[], copiesPerAsset: number): T[] {
+  const copies = Math.max(1, Math.min(10, Math.trunc(copiesPerAsset) || 1));
+  return subjects.flatMap((subject) => Array.from({ length: copies }, () => subject));
+}
+
 export interface LabelPrintDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -77,7 +83,6 @@ export function LabelPrintDialog({
   const { print, loadTemplates, loadLinkedAssets, isPrinting } = useLabelPrint();
 
   const isSingleTicket = labelClass === 'ticket-work-tag' && ids.length === 1;
-  const tooMany = ids.length > MAX_LABELS_PER_REQUEST;
 
   const [templates, setTemplates] = useState<LabelTemplateList | null>(null);
   const [templateId, setTemplateId] = useState<string>('');
@@ -89,6 +94,9 @@ export function LabelPrintDialog({
   const [batch, setBatch] = useState(false);
   const [outcome, setOutcome] = useState<LabelPrintOutcome | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [copiesPerAsset, setCopiesPerAsset] = useState(2);
+  const labelCount = labelClass === 'asset-identity' ? ids.length * copiesPerAsset : ids.length;
+  const tooMany = labelCount > MAX_LABELS_PER_REQUEST;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -98,6 +106,7 @@ export function LabelPrintDialog({
     setDetail(defaultDetail);
     setLinkedAssetId(NO_LINKED_ASSET);
     setBatch(false);
+    setCopiesPerAsset(2);
     setPreset(readStoredPreset());
     let cancelled = false;
     void loadTemplates(labelClass).then((list) => {
@@ -141,9 +150,12 @@ export function LabelPrintDialog({
 
   const run = useCallback(
     async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
-      const labels: LabelSubject[] = isSingleTicket
+      const selectedLabels: LabelSubject[] = isSingleTicket
         ? buildLabelSubjects(ids[0], linkedAssets, linkedAssetId, batch)
         : ids.filter((id) => !skipRecordIds.has(id)).map((recordId) => ({ recordId }));
+      const labels: LabelSubject[] = labelClass === 'asset-identity'
+        ? expandAssetLabelCopies(selectedLabels, copiesPerAsset).map((subject) => ({ ...subject }))
+        : selectedLabels;
       if (labels.length === 0) return;
       const result = await print({
         labelClass,
@@ -161,7 +173,7 @@ export function LabelPrintDialog({
       });
       setOutcome(result);
     },
-    [ids, print, labelClass, templateId, preset, isSingleTicket, title, detail, defaultTitle, defaultDetail, linkedAssetId, linkedAssets, batch]
+    [ids, print, labelClass, templateId, preset, isSingleTicket, title, detail, defaultTitle, defaultDetail, linkedAssetId, linkedAssets, batch, copiesPerAsset]
   );
 
   const heldAssets = linkedAssets.filter((a) => a.custody);
@@ -213,6 +225,23 @@ export function LabelPrintDialog({
           <p className="text-sm text-[rgb(var(--color-text-600))]">
             {t('labels.dialog.count', { defaultValue: '{{count}} selected', count: ids.length })}
           </p>
+
+          {labelClass === 'asset-identity' && (
+            <div>
+              <label htmlFor={`${idPrefix}-copies-per-asset`} className="mb-1 block text-sm font-medium">
+                {t('labels.dialog.copiesPerAsset', { defaultValue: 'Copies per asset' })}
+              </label>
+              <Input
+                id={`${idPrefix}-copies-per-asset`}
+                type="number"
+                min={1}
+                max={10}
+                value={copiesPerAsset}
+                onChange={(event) => setCopiesPerAsset(Math.max(1, Math.min(10, Number(event.target.value) || 1)))}
+              />
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('labels.dialog.adjacentCopies', { defaultValue: 'Copies print together for each asset.' })}</p>
+            </div>
+          )}
 
           {tooMany && (
             <Alert variant="warning">

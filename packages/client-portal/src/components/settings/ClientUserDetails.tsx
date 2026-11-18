@@ -21,6 +21,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { Eye, EyeOff, ChevronDown, ChevronUp, X } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
@@ -415,20 +416,37 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
               {/* Current Roles */}
               <div className="space-y-2 mb-4">
                 {userRoles.length > 0 ? (
-                  userRoles.map((role) => (
-                    <div key={role.role_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                      <span className="text-sm">{role.role_name}</span>
+                  userRoles.map((role) => {
+                    // The server refuses to leave a user with no role; don't offer it.
+                    const isOnlyRole = userRoles.length === 1;
+                    const removeButton = (
                       <Button
                         id={`remove-role-${role.role_id}`}
-                        onClick={() => handleRemoveRole(role.role_id)}
+                        onClick={(e) => {
+                          if (isOnlyRole) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                          }
+                          handleRemoveRole(role.role_id);
+                        }}
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        aria-disabled={isOnlyRole || undefined}
+                        className={`h-6 w-6 p-0${isOnlyRole ? ' cursor-not-allowed opacity-50' : ''}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
-                  ))
+                    );
+                    return (
+                      <div key={role.role_id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                        <span className="text-sm">{role.role_name}</span>
+                        {isOnlyRole
+                          ? <Tooltip content={tProfile('errors.roles.lastRole')}>{removeButton}</Tooltip>
+                          : removeButton}
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-sm text-gray-500">{tProfile('clientSettings.users.noRolesAssigned', 'No roles assigned')}</p>
                 )}

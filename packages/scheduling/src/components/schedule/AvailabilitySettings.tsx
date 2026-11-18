@@ -62,6 +62,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [contextHydrated, setContextHydrated] = useState(false);
   const [canReadSystemSettings, setCanReadSystemSettings] = useState(false);
   const [canManageSystemSettings, setCanManageSystemSettings] = useState(false);
+  const [canDeleteSystemSettings, setCanDeleteSystemSettings] = useState(false);
   const [canManageUserHours, setCanManageUserHours] = useState(false);
 
   // Team management state
@@ -82,6 +83,13 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const [autoApprovalRequireContract, setAutoApprovalRequireContract] = useState(true);
   const [autoApprovalCheckConflicts, setAutoApprovalCheckConflicts] = useState(true);
   const [autoApprovalRespectBuffers, setAutoApprovalRespectBuffers] = useState(true);
+  // Client-portal booking menu curation (edited on the Service Rules tab,
+  // stored in the general_settings row): the MSP decides what clients see and
+  // which service is preselected, so clients never have to pick one.
+  const [hideContractServices, setHideContractServices] = useState(false);
+  const [defaultPortalServiceId, setDefaultPortalServiceId] = useState('');
+  // Defaults on: existing tenants keep showing rates until the MSP turns it off.
+  const [showServiceRates, setShowServiceRates] = useState(true);
 
   // User hours state
   const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
@@ -189,6 +197,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
       setCanReadSystemSettings(access.canReadSystemSettings);
       setCanManageSystemSettings(access.canManageSystemSettings);
+      setCanDeleteSystemSettings(access.canDeleteSystemSettings);
       setCanManageUserHours(access.canManageUserHours);
       setIsManager(!access.canReadSystemSettings);
       setAllUsers(fetchedUsers);
@@ -238,6 +247,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         if (setting.config_json?.auto_approval_enabled !== undefined) {
           setAutoApprovalEnabled(setting.config_json.auto_approval_enabled);
         }
+        setHideContractServices(setting.config_json?.hide_contract_services === true);
+        setDefaultPortalServiceId(setting.config_json?.default_portal_service_id ?? '');
+        setShowServiceRates(setting.config_json?.show_service_rates !== false);
         if (setting.config_json?.auto_approval_criteria) {
           const criteria = setting.config_json.auto_approval_criteria;
           if (criteria.require_availability !== undefined) setAutoApprovalRequireAvailability(criteria.require_availability);
@@ -340,7 +352,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     }
   }, [activeTab, isLoading, loadUserHours, selectedUserId]);
 
-  const handleSaveGeneralSettings = async () => {
+  // successMessage lets the Service Rules tab's portal-booking block save this
+  // same row without claiming it saved "general settings".
+  const handleSaveGeneralSettings = async (successMessage?: string) => {
     try {
       const result = await createOrUpdateAvailabilitySetting({
         setting_type: 'general_settings',
@@ -350,6 +364,11 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         config_json: {
           approver_user_ids: approverUserIds,
           approver_team_ids: approverTeamIds,
+          // This object is written wholesale: every key this row owns — from
+          // either tab — must be listed or saving erases it.
+          hide_contract_services: hideContractServices,
+          default_portal_service_id: defaultPortalServiceId || null,
+          show_service_rates: showServiceRates,
           auto_approval_enabled: autoApprovalEnabled,
           auto_approval_criteria: {
             require_availability: autoApprovalRequireAvailability,
@@ -361,7 +380,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       });
 
       if (result.success) {
-        toast.success(t('availabilitySettings.general.feedback.saveSuccess', { defaultValue: 'General settings saved' }));
+        toast.success(successMessage ?? t('availabilitySettings.general.feedback.saveSuccess', { defaultValue: 'General settings saved' }));
       } else {
         toast.error(result.error || t('availabilitySettings.general.feedback.saveError', { defaultValue: 'Failed to save settings' }));
       }
@@ -657,19 +676,23 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           >
             {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
           </Button>
-          <Button
-            id={`delete-user-${user.user_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => setUserToDelete(user)}
-            aria-label={t('availabilitySettings.userHours.configuredUsers.actions.delete', { defaultValue: 'Delete booking hours for {{name}}', name: `${user.first_name} ${user.last_name}`.trim() })}
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
-          </Button>
+          {/* Manager-scoped deletes are authorized by canAccessUserHours, so a
+              manager without system delete can still remove these rows. */}
+          {(canDeleteSystemSettings || isManager) && (
+            <Button
+              id={`delete-user-${user.user_id}`}
+              variant="ghost"
+              size="sm"
+              onClick={() => setUserToDelete(user)}
+              aria-label={t('availabilitySettings.userHours.configuredUsers.actions.delete', { defaultValue: 'Delete booking hours for {{name}}', name: `${user.first_name} ${user.last_name}`.trim() })}
+            >
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </Button>
+          )}
         </div>
       )
     }
-  ], [t]);
+  ], [canDeleteSystemSettings, isManager, t]);
 
   // Column definitions for configured services table
   const configuredServicesColumns: ColumnDefinition<IService>[] = useMemo(() => [
@@ -711,19 +734,23 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           >
             {t('availabilitySettings.common.actions.edit', { defaultValue: 'Edit' })}
           </Button>
-          <Button
-            id={`delete-service-${service.service_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => setServiceToDelete(service)}
-            aria-label={t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
-          >
-            <Trash2 className="h-4 w-4 text-red-600" />
-          </Button>
+          {/* Removal needs system_settings delete — the permission
+              deleteAvailabilitySetting actually enforces — or the click fails. */}
+          {canDeleteSystemSettings && (
+            <Button
+              id={`delete-service-${service.service_id}`}
+              variant="ghost"
+              size="sm"
+              onClick={() => setServiceToDelete(service)}
+              aria-label={t('availabilitySettings.common.actions.delete', { defaultValue: 'Delete' })}
+            >
+              <Trash2 className="h-4 w-4 text-red-600" />
+            </Button>
+          )}
         </div>
       ) : null
     }
-  ], [canManageSystemSettings, serviceSettings, t]);
+  ], [canDeleteSystemSettings, canManageSystemSettings, serviceSettings, t]);
 
   // Filtered data for configured users
   const configuredUsersData = useMemo(() =>
@@ -736,6 +763,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
     services.filter(service => serviceSettings[service.service_id]),
     [services, serviceSettings]
   );
+
+  // Only services the MSP configured under Service Rules can be the portal
+  // default; the empty row clears it.
+  const portalDefaultServiceOptions: SelectOption[] = useMemo(() => [
+    { value: '', label: t('availabilitySettings.serviceRules.portalDefaultService.none', { defaultValue: 'No default — client chooses' }) },
+    ...configuredServicesData.map(service => ({
+      value: service.service_id,
+      label: service.service_name
+    })),
+  ], [configuredServicesData, t]);
 
   return (
     // Fixed height so loading/tab/content swaps scroll internally instead of
@@ -862,7 +899,8 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 />
               </div>
             </div>
-            {canManageSystemSettings && <Button id="save-general-settings" onClick={handleSaveGeneralSettings}>
+
+            {canManageSystemSettings && <Button id="save-general-settings" onClick={() => handleSaveGeneralSettings()}>
               <Save className="h-4 w-4 mr-2" />
               {t('availabilitySettings.general.actions.save', { defaultValue: 'Save General Settings' })}
             </Button>}
@@ -1228,6 +1266,70 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                   }}
                 />
               )}
+            </div>
+
+            {/* Lives beside the services it curates: both the default and the
+                "configured only" filter draw on the table above. */}
+            <div className="space-y-4 border-t pt-4 mt-6">
+              <h3 className="text-lg font-semibold">{t('availabilitySettings.serviceRules.portalBooking.title', { defaultValue: 'Client Portal Booking' })}</h3>
+              <p className="text-sm text-gray-600 -mt-2">{t('availabilitySettings.serviceRules.portalBooking.description', { defaultValue: 'What clients see when they request an appointment from the portal.' })}</p>
+
+              <div className="flex items-start space-x-3">
+                <Switch
+                  id="portal-hide-contract-services"
+                  checked={hideContractServices}
+                  onCheckedChange={setHideContractServices}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="portal-hide-contract-services" className="font-medium">
+                    {t('availabilitySettings.serviceRules.portalHideContractServices.label', { defaultValue: 'Only show configured bookable services in the client portal' })}
+                  </Label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {t('availabilitySettings.serviceRules.portalHideContractServices.help', { defaultValue: 'Hides the services clients inherit from their contracts, so the portal lists only the services configured above with "Allow Booking Without Contract".' })}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <SearchableSelect
+                  id="portal-default-service"
+                  label={t('availabilitySettings.serviceRules.portalDefaultService.label', { defaultValue: 'Default booking service' })}
+                  options={portalDefaultServiceOptions}
+                  value={defaultPortalServiceId}
+                  onChange={setDefaultPortalServiceId}
+                  placeholder={t('availabilitySettings.serviceRules.portalDefaultService.none', { defaultValue: 'No default — client chooses' })}
+                  dropdownMode="overlay"
+                />
+                <p className="text-xs text-gray-600 -mt-2">
+                  {t('availabilitySettings.serviceRules.portalDefaultService.help', { defaultValue: 'Preselected for clients so they never have to choose a service. Pick one of your configured services — nothing is preselected until you do.' })}
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Switch
+                  id="portal-show-service-rates"
+                  checked={showServiceRates}
+                  onCheckedChange={setShowServiceRates}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="portal-show-service-rates" className="font-medium">
+                    {t('availabilitySettings.serviceRules.portalShowServiceRates.label', { defaultValue: 'Show service rates to clients' })}
+                  </Label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {t('availabilitySettings.serviceRules.portalShowServiceRates.help', { defaultValue: 'When off, clients never see a price for a service while booking.' })}
+                  </p>
+                </div>
+              </div>
+
+              {/* These three live in the general_settings row, so saving here
+                  writes that row — not the per-service rules above. */}
+              {canManageSystemSettings && <Button
+                id="save-portal-booking"
+                onClick={() => handleSaveGeneralSettings(t('availabilitySettings.serviceRules.feedback.portalBookingSaveSuccess', { defaultValue: 'Client portal booking settings saved' }))}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {t('availabilitySettings.serviceRules.actions.savePortalBooking', { defaultValue: 'Save Portal Booking Settings' })}
+              </Button>}
             </div>
           </TabsContent>
 

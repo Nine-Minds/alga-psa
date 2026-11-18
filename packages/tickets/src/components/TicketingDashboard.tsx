@@ -1,12 +1,12 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import BulkBundleDialog from './BulkBundleDialog';
-import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, ITicketListViewSummary, TICKET_ASSIGNEE_ME } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
@@ -16,6 +16,8 @@ import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
+import BulkHandoffDialog from './BulkHandoffDialog';
+import { selectBulkHandoffTickets, type BulkHandoffTicket } from '../lib/bulkHandoff';
 import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
 import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
 import {
@@ -32,6 +34,9 @@ import {
   type SmartSearchRunCache,
 } from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { seatResponsibilityLabel } from '../lib/seatResponsibilityLabel';
+import { getSeatResponsibilityFilter, setSeatResponsibilityFilter } from '../lib/ticketSeatResponsibilityFilter';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -39,18 +44,23 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import { searchClientsForPicker } from '../actions/clientLookupActions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { WhereTagFilter } from './WhereTagFilter';
 import {
   WHERE_FILTERS,
-  WHERE_TAG_FILTERS,
+  getSingleClientScope,
   getWhereTagSelection,
   setWhereTagSelection,
   whereFilterChips,
+  whereFiltersFor,
+  type WhereFilterDescriptor,
+  type WhereSelection,
 } from '../lib/ticketWhereFilters';
+import { WhereClientFilter } from './WhereClientFilter';
 import { WhereLocationFilter, locationFilterLabel, type WhereLocationOption } from './WhereLocationFilter';
 import { listTicketFilterLocations } from '../actions/clientLookupActions';
 import type { TagSize } from '@alga-psa/ui/components/tags';
@@ -90,12 +100,12 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, getTicketChangeCounts, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles, UserCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useCapability, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -122,6 +132,10 @@ import {
 } from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ChangedSinceLoad } from '../lib/changedSinceLoad';
+import { handleTicketListChangeForDashboard } from '../lib/liveTicketChangeWiring';
+import { useTicketListChanges } from '../hooks/useTicketListChanges';
+import type { TicketListChange } from '../lib/listChangeFilters';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -134,7 +148,7 @@ import {
   getContactByContactNameId,
   getContactsByClient,
 } from '../actions/clientLookupActions';
-import { contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
+import { clientRowAllows, contactFilterUpdateForClientChange } from '../lib/ticketFilterUtils';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   buildTicketStatusFilterOptions,
@@ -149,6 +163,7 @@ import {
   buildBoardSelectionFilterUpdate,
   resolveActiveBoardId,
   buildBoardTabs,
+  type BoardTabDescriptor,
 } from '../lib/boardTabs';
 import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 import { useTicketsRouteState } from './TicketsRouteProvider';
@@ -174,6 +189,9 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
+  loadedAt: number;
+  loadedFilters: Partial<ITicketListFilters>;
+  onRefreshListForChanges: () => Promise<boolean>;
   initialBoards: IBoard[];
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
@@ -184,6 +202,12 @@ interface TicketingDashboardProps {
   clientTagDefinitions?: ITag[];
   initialUsers?: IUser[];
   totalCount: number;
+  /** Named views of the list (with their counts) the server offers this caller. Absent for callers with none. */
+  namedViews?: ITicketListViewSummary[];
+  /** The reader is offered the responsibility column and filter. Absent: the list has neither. */
+  seatResponsibilityOffered?: boolean;
+  /** The bulk handoff the reader is offered: MSP staff hand to client IT, a seat technician hands to the MSP. Absent: none. */
+  seatHandoffDirection?: 'client_it' | 'msp';
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -331,6 +355,9 @@ function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets,
+  loadedAt,
+  loadedFilters,
+  onRefreshListForChanges,
   initialBoards,
   initialStatuses,
   initialPriorities,
@@ -338,6 +365,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTags = [],
   initialUsers = [],
   totalCount,
+  namedViews: namedViewsByServer,
+  seatResponsibilityOffered: seatResponsibilityOfferedByServer = false,
+  seatHandoffDirection: seatHandoffDirectionByServer,
   currentPage,
   pageSize,
   onPageChange,
@@ -377,6 +407,71 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  const changeStateRef = useRef(new ChangedSinceLoad());
+  const boardTrackingSinceRef = useRef(loadedAt);
+  const recoveryRunningRef = useRef(false);
+  const recoveryRequestedRef = useRef(false);
+  const recoverChangesRef = useRef<(() => void) | null>(null);
+  const [, setChangeRevision] = useState(0);
+  useLayoutEffect(() => {
+    changeStateRef.current.load(initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []), loadedFilters, user?.user_id ?? '', loadedAt);
+    setChangeRevision(value => value + 1);
+  }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
+  const receiveTicketChange = useCallback((event: TicketListChange) => {
+    handleTicketListChangeForDashboard(event, changeStateRef.current, loadedFilters.searchQuery ?? '',
+      () => setChangeRevision(value => value + 1), () => recoverChangesRef.current?.());
+  }, [loadedFilters.searchQuery]);
+  const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
+    if (recoveryRunningRef.current) {
+      recoveryRequestedRef.current = true;
+      return;
+    }
+    recoveryRunningRef.current = true;
+    const requestedSnapshot = changeStateRef.current.getSnapshot();
+    try {
+      const result = await getTicketChangeCounts(
+        loadedFilters as ITicketListFilters,
+        initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
+        loadedAt,
+        boardTrackingSinceRef.current,
+      );
+      if (isActionMessageError(result) || isActionPermissionError(result)) return;
+      changeStateRef.current.setFallbackSnapshot({
+        since: loadedAt, asOf: result.asOf,
+        newCount: result.newCount, updatedCount: result.updatedCount, boards: result.boards,
+        boardLatestAt: result.boardLatestAt,
+        updatedTicketIds: initialTickets.flatMap((ticket, index) => result.loadedChanged[index] && ticket.ticket_id ? [ticket.ticket_id] : []),
+      }, requestedSnapshot.generation);
+      setChangeRevision(value => value + 1);
+    } catch (error) {
+      console.warn('Ticket change counts recovery failed:', error);
+    } finally {
+      recoveryRunningRef.current = false;
+      if (recoveryRequestedRef.current) {
+        recoveryRequestedRef.current = false;
+        recoverChangesRef.current?.();
+      }
+    }
+  }, [loadedAt, loadedFilters, initialTickets]);
+  recoverChangesRef.current = () => { void recoverTicketChanges(loadedAt); };
+  useTicketListChanges(user?.tenant, receiveTicketChange, {
+    onUnavailable: recoverTicketChanges,
+    onRecovered: recoverTicketChanges,
+  });
+  useEffect(() => {
+    if (changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
+  }, [loadedAt, loadedFilters, recoverTicketChanges]);
+  const changeCounts = changeStateRef.current.getCounts();
+  const changedBoardIds = changeStateRef.current.boards();
+  const refreshChangedTickets = useCallback(async () => {
+    await onRefreshListForChanges();
+  }, [onRefreshListForChanges]);
+  // The server offers the responsibility column, filter and seat views; the capability is the client's own kill
+  // switch over them, so a closed capability shows none of the seat list UI whatever the payload carries.
+  const { enabled: seatServed } = useCapability('co-managed-seat');
+  const seatResponsibilityOffered = seatServed && seatResponsibilityOfferedByServer;
+  const namedViews = seatServed ? namedViewsByServer : undefined;
+  const seatHandoffDirection = seatServed ? seatHandoffDirectionByServer : undefined;
   // These followed the browser locale, so a German UI printed American dates.
   const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
@@ -406,6 +501,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
+  const [isBulkHandoffOpen, setIsBulkHandoffOpen] = useState(false);
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkMoving, setIsBulkMoving] = useState(false);
   const [bulkMoveErrors, setBulkMoveErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
@@ -448,21 +544,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
     ? selectedBoards[0]
     : null;
-  const selectedClient = filterValues.clientId ?? null;
-  // The client filter is a server-searched picker, so the chip label is resolved by id on demand.
-  // LEVERAGE: pattern fetch-selected-client-by-id — single-client lookup for a picker's selected value
-  const [selectedClientLabel, setSelectedClientLabel] = useState<{ id: string; name: string } | null>(null);
-  useEffect(() => {
-    if (!selectedClient) return;
-    let cancelled = false;
-    searchClientsForPicker({ ids: [selectedClient] })
-      .then((result) => {
-        const match = result.clients.find((c) => c.client_id === selectedClient);
-        if (!cancelled && match) setSelectedClientLabel({ id: selectedClient, name: match.client_name });
-      })
-      .catch((error) => console.error('Error resolving selected client filter label:', error));
-    return () => { cancelled = true; };
-  }, [selectedClient]);
+  useLayoutEffect(() => {
+    if (!selectedBoard) return;
+    changeStateRef.current.acknowledgeBoard(selectedBoard, Date.now());
+    setChangeRevision(value => value + 1);
+  }, [selectedBoard]);
   const selectedContact = filterValues.contactId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const selectedPriority = filterValues.priorityId ?? 'all';
@@ -519,6 +605,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
   const selectedTeams = filterValues.assignedTeamIds ?? EMPTY_STRING_ARRAY;
+  // "Me" is stored as the TICKET_ASSIGNEE_ME sentinel and resolved to the viewer only when the filter compiles to SQL.
+  const assigneePinnedOptions = useMemo(
+    () => [{ value: TICKET_ASSIGNEE_ME, label: t('filters.me', 'Me'), icon: <UserCheck className="w-4 h-4" /> }],
+    [t],
+  );
   const includeUnassigned = filterValues.includeUnassigned ?? false;
   const [teams] = useState<ITeam[]>(initialTeams);
 
@@ -559,6 +650,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
   const selectedWhere = filterValues.where;
+  const selectedSeatResponsibility = seatResponsibilityOffered ? getSeatResponsibilityFilter(selectedWhere) : null;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   // `where` tag filters (Requester tags / Client tags) come from the descriptor table.
@@ -568,6 +660,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
   const hasWhereTagFilters = WHERE_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
   const whereTagFilterCount = WHERE_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
+  // The client row: names for its chips come from one batched id lookup, and "Any of" exactly one
+  // client scopes the contact and location options (anything else leaves them tenant-wide).
+  const clientRow = getWhereTagSelection(selectedWhere, 'client.id');
+  const clientRowIds = clientRow?.ids ?? EMPTY_STRING_ARRAY;
+  const clientNames = useClientNames(clientRowIds, searchClientsForPicker);
+  const scopedClientId = getSingleClientScope(selectedWhere);
 
   // The filtered client's locations, or every active tenant location grouped by client when no
   // client narrows the list. Both Location filters share the one list.
@@ -576,7 +674,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     let cancelled = false;
     (async () => {
       try {
-        const rows = await listTicketFilterLocations(selectedClient ?? null);
+        const rows = await listTicketFilterLocations(scopedClientId);
         // The options are informational: anything other than a list leaves the control empty
         // rather than failing the toolbar.
         if (!cancelled) setWhereLocationOptions(Array.isArray(rows) ? rows : []);
@@ -586,7 +684,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedClient]);
+  }, [scopedClientId]);
   const whereLocationLabelById = useMemo(
     () => new Map(whereLocationOptions.map((option) => [option.location_id, locationFilterLabel(option)])),
     [whereLocationOptions],
@@ -596,7 +694,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFiltered = useMemo(() => {
     return selectedBoards.length > 0 ||
       excludedBoards.length > 0 ||
-      selectedClient !== null ||
       selectedContact !== null ||
       selectedStatus !== TICKET_STATUS_FILTER_OPEN ||
       selectedPriority !== 'all' ||
@@ -611,14 +708,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
+  }, [selectedBoards, excludedBoards, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
 
   // Count of active filter groups (excludes the always-visible search box) — drives
   // the "Filters" button badge in the candidate #1 collapsed toolbar.
   const activeFilterCount = useMemo(() => {
     let n = 0;
     if (selectedBoards.length > 0 || excludedBoards.length > 0) n++;
-    if (selectedClient !== null) n++;
     if (selectedContact !== null) n++;
     if (selectedAssignees.length > 0 || selectedTeams.length > 0 || includeUnassigned) n++;
     if (selectedStatus !== TICKET_STATUS_FILTER_OPEN) n++;
@@ -630,7 +726,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedTags.length > 0) n++;
     n += whereTagFilterCount;
     return n;
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
+  }, [selectedBoards, excludedBoards, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
 
   // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
   const [showFilters, setShowFilters] = useState(false);
@@ -651,8 +747,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       try {
         // 'all' rather than 'active': a ticket can name a contact who has since
         // been deactivated, and that ticket still has to be findable.
-        const contacts = selectedClient
-          ? await getContactsByClient(selectedClient, 'all')
+        const contacts = scopedClientId
+          ? await getContactsByClient(scopedClientId, 'all')
           : await getAllActiveContacts();
         if (!cancelled) setContactOptions(contacts);
       } catch {
@@ -661,7 +757,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
     })();
     return () => { cancelled = true; };
-  }, [needsContactOptions, selectedClient]);
+  }, [needsContactOptions, scopedClientId]);
+  // Outside the one-client scope the list is tenant-wide, so the row narrows it here. The applied
+  // contact always stays listed so the control can show (and clear) it.
+  const visibleContactOptions = useMemo(
+    () => scopedClientId
+      ? contactOptions
+      : contactOptions.filter((c) => c.contact_name_id === selectedContact || clientRowAllows(clientRow, c.client_id)),
+    [contactOptions, scopedClientId, clientRow, selectedContact],
+  );
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -914,6 +1018,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
   const activeBoardTabId = boardTabId(selectedBoard);
 
+  // Named views the server offers this caller (a seat technician's Client IT / With MSP / Unassigned / All).
+  // They are a second face on the list's own `listView` filter: one tab is "this key is set", and the
+  // count on it is the number of rows that filter returns, computed by the server in the same pass.
+  const listViewTabs = useMemo(
+    () => (namedViews ?? []).map((view): BoardTabDescriptor => ({
+      id: view.key,
+      boardId: null,
+      label: t(view.labelKey, view.defaultLabel),
+      openTicketCount: view.count,
+      isInactive: false,
+    })),
+    [namedViews, t]
+  );
+  const activeListViewKey = namedViews?.find((view) => view.key === filterValues.listView)?.key
+    ?? namedViews?.find((view) => view.key === 'all')?.key
+    ?? namedViews?.[0]?.key
+    ?? '';
+  const handleListViewSelect = useCallback((key: string) => {
+    if (key === activeListViewKey) return;
+    onFilterChange({ listView: key }, { pushHistory: true });
+  }, [activeListViewKey, onFilterChange]);
+
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -928,7 +1054,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.excludeBoardIds && f.excludeBoardIds.length > 0) {
       params.set('excludeBoardIds', f.excludeBoardIds.join(','));
     }
-    if (f.clientId) params.set('clientId', f.clientId);
     if (f.contactId) params.set('contactId', f.contactId);
     if (f.statusId && f.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', f.statusId);
     if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
@@ -961,6 +1086,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.bundleView && f.bundleView !== 'bundled') {
       params.set('bundleView', f.bundleView);
     }
+    if (f.listView) params.set('listView', f.listView);
     if (f.responseState && f.responseState !== 'all') {
       params.set('responseState', f.responseState);
     }
@@ -1293,7 +1419,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     priorityId: selectedPriority,
     categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
     excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-    clientId: selectedClient ?? undefined,
     contactId: selectedContact ?? undefined,
     searchQuery: debouncedSearchQuery,
     boardFilterState: boardFilterState,
@@ -1313,7 +1438,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     where: selectedWhere,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
     allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
@@ -1529,6 +1654,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   );
 
 
+  // The selected rows as the handoff dialog needs them: named by number or title, with the revision each must name.
+  const selectedHandoffTickets = useMemo(
+    (): BulkHandoffTicket[] => (seatHandoffDirection ? selectBulkHandoffTickets(selectedTicketIdsArray, tickets, smartSearchRows) : []),
+    [seatHandoffDirection, selectedTicketIdsArray, tickets, smartSearchRows],
+  );
+
+  const handleBulkHandoffDone = useCallback((_handedOver: string[], failedTicketIds: string[]) => {
+    // Refresh the list (rows, responsibility column and revisions); what is left selected is what still needs attention.
+    if (failedTicketIds.length === 0) clearSelection();
+    else setSelectedTicketIds(() => new Set(failedTicketIds));
+    onFilterChange({});
+  }, [clearSelection, onFilterChange]);
+
   // Board id for every ticket currently rendered on the page.
   const onPageBoardById = useMemo(() => {
     const map = new Map<string, string | null>();
@@ -1645,6 +1783,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         : displaySettings || undefined,
       columnOrder: viewPresentation?.columnOrder,
       onTicketClick: handleTicketClick,
+      isTicketChanged: (ticketId) => changeStateRef.current.has(ticketId),
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       tagsReadOnly: !canUpdateTickets,
@@ -1768,8 +1907,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       canCreateTemplate: templatePermissions.create,
     });
 
+    // Who is responsible for a ticket of a client in a seat arrangement. Present only when the server offers it
+    // (the seat shape is released for the tenant); blank for every other ticket.
+    const responsibilityColumn: ColumnDefinition<ITicketListItem> = {
+      title: t('dashboard.responsibility.column', 'Responsible'),
+      dataIndex: 'seat_responsibility',
+      sortable: false,
+      render: (value: unknown) => value === 'client_it' || value === 'msp'
+        ? <Badge variant={value === 'client_it' ? 'info' : 'default-muted'}>{seatResponsibilityLabel(t, value)}</Badge>
+        : null,
+    };
+    const listColumns = seatResponsibilityOffered ? [...baseColumns, responsibilityColumn] : baseColumns;
+
     // Duplicate and "Create template" are the only row actions and both write.
-    return workspaceReadOnly ? [selectionColumn, ...baseColumns] : [selectionColumn, ...baseColumns, actionsColumn];
+    return workspaceReadOnly ? [selectionColumn, ...listColumns] : [selectionColumn, ...listColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1801,6 +1952,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
     setBatchDuplicateSourceId,
+    seatResponsibilityOffered,
     templatePermissions.create,
     t,
     locale,
@@ -2188,16 +2340,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange]);
 
-  // Client and contact move together: a contact that does not belong to the
-  // newly selected client is cleared in the *same* update, so one click is one
-  // debounced fetch and no intermediate state applies both at once.
-  const handleClientSelect = useCallback((clientId: string | null) => {
+  // Every `where` control and chip changes the row through here. Client and contact move together:
+  // a contact the client row forbids is cleared in the *same* update, so one click is one debounced
+  // fetch and no intermediate state applies both at once.
+  const handleWhereChange = useCallback((nextWhere: PredicateGroup | undefined) => {
+    const nextClientRow = getWhereTagSelection(nextWhere, 'client.id');
+    const sameRow = JSON.stringify(nextClientRow) === JSON.stringify(clientRow);
+    if (sameRow || !selectedContact) {
+      onFilterChange({ where: nextWhere });
+      return;
+    }
     onFilterChange(contactFilterUpdateForClientChange({
-      nextClientId: clientId,
+      currentWhere: nextWhere,
+      nextSelection: nextClientRow,
       currentContactId: selectedContact,
       contactClientId: contactOptions.find((c) => c.contact_name_id === selectedContact)?.client_id,
     }));
-  }, [onFilterChange, selectedContact, contactOptions]);
+  }, [onFilterChange, clientRow, selectedContact, contactOptions]);
 
   const handleContactSelect = useCallback((contactId: string) => {
     onFilterChange({ contactId: contactId || undefined });
@@ -2222,7 +2381,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardId: undefined,
       boardIds: undefined,
       excludeBoardIds: undefined,
-      clientId: undefined,
       contactId: undefined,
       statusId: TICKET_STATUS_FILTER_OPEN,
       priorityId: 'all',
@@ -2277,11 +2435,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    if (selectedClient) {
-      const name = (selectedClientLabel?.id === selectedClient ? selectedClientLabel.name : null) ?? t('fields.client', 'Client');
-      chips.push({ key: `client:${selectedClient}`, label: `${t('fields.client', 'Client')}: ${name}`, onRemove: () => handleClientSelect(null) });
-    }
-
     if (selectedContact) {
       const contactLabel = t('fields.contact', 'Contact');
       const name = contactOptions.find((c) => c.contact_name_id === selectedContact)?.full_name ?? contactLabel;
@@ -2293,8 +2446,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     selectedAssignees.forEach((userId) => {
-      const u = initialUsers.find((x) => x.user_id === userId);
-      const name = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
+      const u = userId === TICKET_ASSIGNEE_ME ? undefined : initialUsers.find((x) => x.user_id === userId);
+      const name = userId === TICKET_ASSIGNEE_ME ? t('filters.me', 'Me') : u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || t('fields.assignedTo', 'Assignee') : t('fields.assignedTo', 'Assignee');
       chips.push({
         key: `assignee:${userId}`,
         label: name,
@@ -2356,6 +2509,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       chips.push({ key: 'sla', label: `${t('fields.slaStatus', 'SLA Status')}: ${map[selectedSlaStatus] ?? selectedSlaStatus}`, onRemove: () => onFilterChange({ slaStatusFilter: undefined }) });
     }
 
+    if (selectedSeatResponsibility) {
+      chips.push({
+        key: 'responsibility',
+        label: `${t('dashboard.responsibility.filter', 'Responsibility')}: ${seatResponsibilityLabel(t, selectedSeatResponsibility)}`,
+        onRemove: () => onFilterChange({ where: setSeatResponsibilityFilter(selectedWhere, null) }),
+      });
+    }
+
     selectedCategories.forEach((categoryId) => {
       const name = categories.find((c) => c.category_id === categoryId)?.category_name ?? categoryLabel;
       chips.push({
@@ -2383,15 +2544,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     whereFilterChips(
       selectedWhere,
-      (descriptor, valueId) => ('tags' in descriptor.options
-        ? whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text
-        : whereLocationLabelById.get(valueId)),
+      (descriptor, valueId) => {
+        if ('tags' in descriptor.options) {
+          return whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags'].find((d) => d.tag_id === valueId)?.tag_text;
+        }
+        if ('clients' in descriptor.options) {
+          // Still resolving: a neutral ellipsis, never the id. Resolved-but-missing falls through
+          // to the descriptor's "Unknown client" label.
+          return clientNames.clients[valueId]?.client_name ?? (clientNames.unresolved.has(valueId) ? undefined : '…');
+        }
+        return whereLocationLabelById.get(valueId);
+      },
       (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
+      WHERE_FILTERS,
+      (descriptor) => descriptor.unknownValue ? t(descriptor.unknownValue.labelKey, descriptor.unknownValue.defaultLabel) : undefined,
     ).forEach((chip) => {
       chips.push({
         key: chip.key,
         label: chip.label,
-        onRemove: () => onFilterChange({ where: chip.clear() }),
+        onRemove: () => handleWhereChange(chip.clear()),
       });
     });
 
@@ -2399,7 +2570,52 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ...chip,
       removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
     }));
-  }, [selectedBoards, excludedBoards, boards, selectedClient, selectedClientLabel, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+  }, [selectedBoards, excludedBoards, boards, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, whereLocationLabelById, clientNames, handleWhereChange, handleBoardSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+
+  // One control per `where` descriptor row; the row's options source picks the control, and its
+  // placement picks the toolbar row. Every change goes through handleWhereChange.
+  const renderWhereFilter = (descriptor: WhereFilterDescriptor) => {
+    const selection = getWhereTagSelection(selectedWhere, descriptor.path);
+    const onChange = (next: WhereSelection | null) =>
+      handleWhereChange(setWhereTagSelection(selectedWhere, descriptor.path, next));
+    if ('tags' in descriptor.options) {
+      return (
+        <WhereTagFilter
+          key={descriptor.path}
+          id={`${id}-where-${descriptor.options.tags}-tags`}
+          label={t(descriptor.labelKey, descriptor.defaultLabel)}
+          definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
+          selection={selection}
+          onChange={onChange}
+        />
+      );
+    }
+    if ('clients' in descriptor.options) {
+      return (
+        <WhereClientFilter
+          key={descriptor.path}
+          id={`${id}-where-client`}
+          searchClients={searchClientsForPicker}
+          selection={selection}
+          onChange={onChange}
+          filterState={clientFilterState}
+          onFilterStateChange={handleClientFilterStateChange}
+          clientTypeFilter={clientTypeFilter}
+          onClientTypeFilterChange={handleClientTypeFilterChange}
+        />
+      );
+    }
+    return (
+      <WhereLocationFilter
+        key={descriptor.path}
+        id={`${id}-where-${descriptor.options.locations}-location`}
+        label={t(descriptor.labelKey, descriptor.defaultLabel)}
+        options={whereLocationOptions}
+        selection={selection}
+        onChange={onChange}
+      />
+    );
+  };
 
   return (
     <>
@@ -2463,9 +2679,47 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
+        changedBoardIds={changedBoardIds}
       />
+      {listViewTabs.length > 0 && (
+        <>
+          <BoardTabStrip
+            id={`${id}-list-view-tabs`}
+            tabs={listViewTabs}
+            value={activeListViewKey}
+            onChange={handleListViewSelect}
+          />
+          {totalCount === 0 && !isLoadingMore && (
+            <p id={`${id}-list-view-empty`} className="px-1 py-2 text-sm text-[rgb(var(--color-text-500))]">
+              {t('dashboard.seatViews.empty', {
+                view: t(
+                  namedViews?.find((view) => view.key === activeListViewKey)?.labelKey ?? 'dashboard.seatViews.all',
+                  namedViews?.find((view) => view.key === activeListViewKey)?.defaultLabel ?? 'All',
+                ),
+                defaultValue: 'No tickets in {{view}} right now.',
+              })}
+            </p>
+          )}
+        </>
+      )}
       {listCallout}
       <ListCard>
+        {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
+          <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
+            className="chip-primary mb-3 w-full rounded-md px-3 py-2 text-left text-sm font-medium hover:underline disabled:opacity-60"
+            aria-live="polite">
+            {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
+              ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,
+                  changeCounts.newCount === 1
+                    ? changeCounts.updatedCount === 1 ? '1 new ticket and 1 updated ticket' : '1 new ticket and {{updatedCount}} updated tickets'
+                    : changeCounts.updatedCount === 1 ? '{{newCount}} new tickets and 1 updated ticket' : '{{newCount}} new tickets and {{updatedCount}} updated tickets', changeCounts)
+              : changeCounts.newCount > 0
+                ? t(changeCounts.newCount === 1 ? 'live.newOne' : 'live.newMany',
+                    changeCounts.newCount === 1 ? '1 new ticket' : '{{count}} new tickets', { count: changeCounts.newCount })
+                : t(changeCounts.updatedCount === 1 ? 'live.updatedOne' : 'live.updatedMany',
+                    changeCounts.updatedCount === 1 ? '1 ticket updated' : '{{count}} tickets updated', { count: changeCounts.updatedCount })}
+          </button>
+        )}
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by
@@ -2580,27 +2834,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   allowEmpty={true}
                   className="text-sm min-w-[200px]"
                 />
-                <ClientPicker
-                  id='client-picker'
-                  data-automation-id={`${id}-client-picker`}
-                  searchClients={searchClientsForPicker}
-                  onSelect={handleClientSelect}
-                  selectedClientId={selectedClient}
-                  filterState={clientFilterState}
-                  onFilterStateChange={handleClientFilterStateChange}
-                  clientTypeFilter={clientTypeFilter}
-                  onClientTypeFilterChange={handleClientTypeFilterChange}
-                  fitContent={true}
-                />
+                {whereFiltersFor('primary').map(renderWhereFilter)}
                 <ContactPicker
                   id="contact-picker"
                   data-automation-id={`${id}-contact-picker`}
-                  contacts={contactOptions}
+                  contacts={visibleContactOptions}
                   value={selectedContact ?? ''}
                   onValueChange={handleContactSelect}
                   // Belt to the braces of the scoped fetch: even a mid-flight
                   // option list cannot offer another client's contact.
-                  clientId={selectedClient ?? undefined}
+                  clientId={scopedClientId ?? undefined}
                   placeholder={t('dashboard.filters.allContacts', 'All Contacts')}
                   buttonWidth="fit"
                   className="text-sm min-w-[180px]"
@@ -2618,6 +2861,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     filterMode={true}
                     includeUnassigned={includeUnassigned}
                     onUnassignedChange={(value) => onFilterChange({ includeUnassigned: value })}
+                    pinnedOptions={assigneePinnedOptions}
                     placeholder={t('dashboard.filters.allAssignees', 'All Assignees')}
                     showSearch={true}
                     compactDisplay={true}
@@ -2710,6 +2954,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
                   />
                 )}
+                {seatResponsibilityOffered && (
+                  <CustomSelect
+                    data-automation-id={`${id}-responsibility-filter`}
+                    options={[
+                      { value: 'all', label: t('dashboard.responsibility.all', 'All responsibility') },
+                      { value: 'client_it', label: seatResponsibilityLabel(t, 'client_it') },
+                      { value: 'msp', label: seatResponsibilityLabel(t, 'msp') },
+                    ]}
+                    value={selectedSeatResponsibility ?? 'all'}
+                    onValueChange={(value) => onFilterChange({
+                      where: setSeatResponsibilityFilter(selectedWhere, value === 'client_it' || value === 'msp' ? value : null),
+                    })}
+                    placeholder={t('dashboard.responsibility.filter', 'Responsibility')}
+                  />
+                )}
               </ListFilterRow>
 
               {/* Row 2: Category, tags */}
@@ -2764,31 +3023,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
-                {WHERE_FILTERS.map((descriptor) => (
-                  'tags' in descriptor.options ? (
-                    <WhereTagFilter
-                      key={descriptor.path}
-                      id={`${id}-where-${descriptor.options.tags}-tags`}
-                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                      definitions={whereTagDefinitions[descriptor.path as 'contact.tags' | 'client.tags']}
-                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                      onChange={(selection) =>
-                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                      }
-                    />
-                  ) : (
-                    <WhereLocationFilter
-                      key={descriptor.path}
-                      id={`${id}-where-${descriptor.options.locations}-location`}
-                      label={t(descriptor.labelKey, descriptor.defaultLabel)}
-                      options={whereLocationOptions}
-                      selection={getWhereTagSelection(selectedWhere, descriptor.path)}
-                      onChange={(selection) =>
-                        onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
-                      }
-                    />
-                  )
-                ))}
+                {whereFiltersFor('secondary').map(renderWhereFilter)}
                 </div>
               </div>
               </ListFilterPanel>
@@ -3196,6 +3431,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           onCompleted={() => onFilterChange({})}
         />
       )}
+      {seatHandoffDirection && (
+        <BulkHandoffDialog
+          id={id}
+          isOpen={isBulkHandoffOpen && hasSelection}
+          direction={seatHandoffDirection}
+          tickets={selectedHandoffTickets}
+          onClose={() => setIsBulkHandoffOpen(false)}
+          onHandedOver={handleBulkHandoffDone}
+        />
+      )}
       <BulkBundleDialog
         id={id}
         isOpen={isBundleDialogOpen}
@@ -3215,6 +3460,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
         showDelete={!workspaceReadOnly}
+        // The list offers a direction only to a reader the bulk action accepts (it checks ticket:update itself), so
+        // this does not lean on canUpdateTickets: that comes from a role-permission read a seat technician cannot make.
+        handoffDirection={workspaceReadOnly ? undefined : seatHandoffDirection}
+        onHandoff={() => setIsBulkHandoffOpen(true)}
         statusDisabled={!selectedTicketsSharedBoardId}
         statusDisabledTitle={isResolvingSelectedBoards
           ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')

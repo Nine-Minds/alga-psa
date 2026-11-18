@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
@@ -91,7 +92,7 @@ afterAll(async () => {
 
 async function addAsset(clientId: string, name: string): Promise<string> {
   const assetId = randomUUID();
-  await trx('assets').insert({
+  await insertTestAssets(trx, {
     tenant,
     asset_id: assetId,
     asset_type: 'workstation',

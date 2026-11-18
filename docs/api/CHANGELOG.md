@@ -2,6 +2,38 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
+
+**Affected endpoint:** `POST /api/v1/tickets`
+
+Tickets created over REST used to ignore the board's default assignment and arrived unassigned, while the same board routed Quick Add and inbound-email tickets to its default user or team. Board-default routing now runs once in the shared ticket-creation path, so REST, Quick Add, and inbound email resolve assignment the same way.
+
+**Changes:**
+
+- New optional body field `assigned_team_id` (uuid or `null`). `assigned_to` now also accepts `null`.
+- An **omitted** field is filled from the board: omitted `assigned_to` takes the board's default user; the board's default team is applied only when **both** `assigned_to` and `assigned_team_id` are omitted. Applying the default team uses the normal team-assignment semantics: the team lead becomes the primary assignee when none was resolved, and team members are added as additional agents.
+- An **explicit** value always wins. A user id or team id is stored as sent. An explicit `null` keeps that field empty, and an explicit `assigned_to` (including `null`) also suppresses the board's default team, so a team lead never replaces the requested assignee.
+- Sending only `assigned_team_id` still lets the board's default user fill the omitted `assigned_to`.
+- Stale defaults soft-fail: a default user who is no longer a valid assignee, or a default team that no longer exists or has no lead, is skipped and the ticket is still created (`201`).
+- Assignment events published after creation carry the persisted assignee.
+
+**Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
+
+## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin
+
+**Affected endpoints:** `POST /api/v1/users`, `PUT /api/v1/users/{id}` (deactivation), `DELETE /api/v1/users/{id}`, and `POST|PUT|DELETE /api/v1/users/{id}/roles`
+
+A tenant could previously lock itself out by removing roles, deactivating or deleting users until no active MSP Admin was left, or leave a user with zero roles. Two invariants are now enforced on every write path (UI server actions, the shared user and role services, the `User` model and the REST API), checked inside the caller's transaction under a per-tenant advisory lock so concurrent requests cannot race past them:
+
+- **Every interactive user keeps at least one role.** A change that would leave an internal or client user with no roles is refused with `400` (`A user must keep at least one role. …`). This includes a role replacement with an empty `role_ids`.
+- **The tenant keeps at least one active internal user with the built-in MSP Admin role.** Removing that role from, deactivating, or deleting the last such user is refused with `409` (`A tenant must keep at least one active MSP Admin user.`). Bulk deactivation counts the other users in the same request as already gone, so deactivating every admin at once is also refused.
+
+**Changes:**
+
+- `role_ids` is now **required** on `POST /api/v1/users` and must contain at least one role id; omitting it or sending `[]` returns `400`. Integrations that created a user and assigned roles in a second call must send the roles on create.
+- To change a user's only role, assign the new role first and then remove the old one, or replace the set in one `PUT /users/{id}/roles` call with a non-empty `role_ids`.
+- To hand MSP Admin to someone else, grant it to the new admin before removing it from, deactivating, or deleting the old one.
+
 ## 2026-11-09 — Inbound webhook receiver: `429 evaluator_busy` and mapping limits
 
 **Affected endpoint:** `POST /api/inbound/{tenantSlug}/{webhookSlug}`
@@ -41,9 +73,9 @@ The bulk invoice endpoint now runs each invoice through the same service operati
 - `operation` accepts only `finalize` and `cancel`. Any other value returns `400` before an invoice is processed.
   - `finalize` runs the normal finalize operation and requires `invoice:finalize`.
   - `cancel` voids each invoice through the normal void operation. When an accounting integration is connected, the void also requires `accounting_integrations:remote_mutate`.
-- The caller also needs `invoice:update`. Permissions are checked once, before any invoice in the batch is processed.
+- The caller also needs `invoice:update`. `invoice:update` and the operation's permission are checked once, before any invoice in the batch is processed; `accounting_integrations:remote_mutate` is checked per invoice when it is voided.
 - `send` was removed. Requests with `operation: "send"`, including those that pass `email_addresses`, now fail validation. Bulk invoice email will return once it uses the same recipient delivery as single invoices. Until then, send invoices one at a time.
-- `apply_credit` is still unsupported, because the earlier bulk command reported success without applying credit. Apply credit per invoice with `POST /api/v1/financial/invoices/{id}/credit`.
+- `apply_credit` is still unsupported, because the earlier bulk command reported success without applying credit. Apply credit per invoice with `POST /api/v1/invoices/{id}/credit`.
 - `invoice_ids` must contain 1 to 50 IDs. Each invoice is processed independently. Each entry in `results` reports `success` and `error`, plus an `outcome` of `finalized` or `voided` when the operation succeeds.
 
 ## 2026-11-09 — Time-sheet status changes through PUT follow the approval rules

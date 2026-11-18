@@ -100,6 +100,7 @@ export async function assertCoManagedSeatAdmission(trx: Knex.Transaction, tenant
 
 /** Sponsor adapter supplies its authenticated home tenant. Allocation changes
  * never evict a user or cancel a pending invitation to make the numbers fit. */
+// LEVERAGE: pattern co-managed-allocation-resize — resizeCoManagedSeatAllocation applies the same rule to the seat kind; only the lock path and the committed count differ.
 export async function changeCoManagedAllocation(db: Knex, sponsorTenant: string, input: {
   customerTenant: string; relationshipId: string; seats: number; expectedSeats: number;
 }): Promise<void> {

@@ -113,7 +113,8 @@
     "signOut": "Logga ut",
     "coManaged": "Samförvaltad IT",
     "coManagedArchive": "Arkiv för samförvaltning",
-    "coManagedAdministration": "Åtkomst och administration"
+    "coManagedAdministration": "Åtkomst och administration",
+    "assetsAudits": "Platsgranskningar"
   },
   "marketing": {
     "dialogs": {

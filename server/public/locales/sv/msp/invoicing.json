@@ -907,6 +907,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "ingen"
+    },
+    "syncFeedback": {
+      "synced": "Fakturan har synkroniserats med {{provider}}.",
+      "failed": "Synkroniseringen med {{provider}} misslyckades: {{reason}}",
+      "failedNoReason": "Synkroniseringen med {{provider}} misslyckades. Kontrollera listan över åtgärder med fel på sidan för bokföringsintegrationen.",
+      "skipped": "Fakturan hoppades över och skickades inte till {{provider}}: {{reason}}",
+      "skippedNoReason": "Fakturan hoppades över och skickades inte till {{provider}}.",
+      "pending": "Fakturan står i kö för synkronisering med {{provider}}; den har inte bearbetats ännu.",
+      "unknown": "Det gick inte att avgöra om fakturan har synkroniserats med {{provider}}.",
+      "notRun": "Synkroniseringen med {{provider}} kördes inte: {{reason}}",
+      "notRunNoReason": "Synkroniseringen med {{provider}} kördes inte.",
+      "error": "Synkroniseringen misslyckades: {{error}}",
+      "refusedNotFound": "Fakturan hittades inte.",
+      "refusedPaid": "Betalda fakturor synkroniseras inte med {{provider}}.",
+      "refusedCancelled": "Makulerade eller annullerade fakturor synkroniseras inte med {{provider}}.",
+      "cycleFailed": "Synkroniseringen med {{provider}} misslyckades: {{reason}} Fakturan skickades inte; den står kvar i kön och försöks igen vid nästa synkronisering.",
+      "cycleFailedNoReason": "Synkroniseringen med {{provider}} misslyckades. Fakturan skickades inte; den står kvar i kön och försöks igen vid nästa synkronisering."
     }
   },
   "templateEditor": {

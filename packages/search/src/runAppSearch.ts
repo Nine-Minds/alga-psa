@@ -3,16 +3,20 @@ import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 
+import { resolveReadableScope } from '@alga-psa/authorization/subject';
+
 import { registeredObjectTypes } from './index';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
+  SEARCH_TYPE_RESOURCE,
   type ClientAccess,
+  type SearchAclPrincipal,
 } from './acl';
 import {
-  countSearchMatchesByType,
   encodeSearchCursor,
-  runSearchQuery,
+  runSearchPage,
+  type SearchIndexHit,
   type SearchQueryOptions,
 } from './query';
 import {
@@ -100,29 +104,61 @@ export function emptyGroups(): Record<SearchObjectType, number> {
   ) as Record<SearchObjectType, number>;
 }
 
+/** Resources whose `read` rules bound the clients of the search types that belong to them (see SEARCH_TYPE_RESOURCE). */
+export const SEARCH_CLIENT_RESOURCES = [...new Set(Object.values(SEARCH_TYPE_RESOURCE))];
+
 /**
- * Single source of truth for which clients a search principal may see.
+ * Single source of truth for which clients and boards a search principal may see.
  *
- * Internal/MSP users are currently unrestricted, so they get `{ mode: 'all' }`
- * — no `clients` table scan and no giant UUID array bound into every search
- * query. Client-portal users are scoped to their own client.
+ * Client-portal users are scoped to their own client. An internal/MSP user is resolved through the
+ * authorization subject resolver and their bundle rules: when those restrict clients they get
+ * `{ mode: 'by_resource' }` with one client set per resource (each applies to its own search types only), when they restrict ticket boards they also get `boardIds`.
+ * The SQL predicate and the per-row visibility verifier both consume this value, so the
+ * restriction is enforced in both layers without an `isInternal` shortcut to audit.
  *
- * When ABAC per-internal-user client restrictions are introduced, the *only*
- * change is here: return `{ mode: 'scoped', clientIds }` for restricted
- * internal users. The SQL predicate and the per-row visibility verifier both
- * consume this mode, so the restriction is enforced in both layers without
- * an `isInternal` shortcut to audit.
+ * Unrestricted users stay on `{ mode: 'all' }`: in a tenant with no published bundle assignment the
+ * cached tenant probe is the only query (no subject load, no rule load, no `clients` scan, no
+ * UUID array bound into the search query).
  */
-export function resolveClientAccess(user: IUserWithRoles): ClientAccess {
+export async function resolveClientAccess(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<ClientAccess> {
   if (user.user_type === 'client') {
     return { mode: 'scoped', clientIds: user.clientId ? [user.clientId] : [] };
   }
 
-  return { mode: 'all' };
+  const scope = await resolveReadableScope(knex, {
+    tenant,
+    user,
+    clientResources: SEARCH_CLIENT_RESOURCES,
+    boardResource: 'ticket',
+  });
+  const boards = scope.boardIds === null ? {} : { boardIds: scope.boardIds };
+  const restricted = Object.entries(scope.clientIdsByResource)
+    .filter((entry): entry is [string, string[]] => entry[1] !== null);
+  return restricted.length === 0
+    ? { mode: 'all', ...boards }
+    : { mode: 'by_resource', clientIdsByResource: Object.fromEntries(restricted), ...boards };
+}
+
+/**
+ * The search principal for `user`, with its client and board restriction resolved by
+ * `resolveClientAccess`. Every reader of `app_search_index` outside `runAppSearch` (smart search,
+ * the chat search tool) builds its principal here, so none of them can fall back to an
+ * unrestricted principal for a narrowed user.
+ */
+export async function resolveSearchPrincipal(
+  knex: Knex,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<SearchAclPrincipal> {
+  return resolveSearchAclPrincipal(knex, user, await resolveClientAccess(knex, tenant, user));
 }
 
 export function toSearchResultRow(
-  hit: Awaited<ReturnType<typeof runSearchQuery>>[number],
+  hit: SearchIndexHit,
 ): SearchResultRow {
   return {
     type: hit.type,
@@ -156,32 +192,22 @@ export async function runAppSearch(
 ): Promise<SearchAppResult> {
   const limit = normalizeLimit(input.limit);
   const requestedTypes = resolveAllowedTypes(input.types);
-  const clientAccess = resolveClientAccess(user);
+  const clientAccess = await resolveClientAccess(knex, tenant, user);
   const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
   const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-  const [hits, typeCounts] = await Promise.all([
-    runSearchQuery({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      limit: limit + 1,
-      cursor: input.cursor,
-      sort: input.sort,
-      includeSnippets: true,
-      acl,
-      searchIndex,
-    }),
-    countSearchMatchesByType({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      acl,
-      searchIndex,
-    }),
-  ]);
+  const { hits, countsByType: typeCounts } = await runSearchPage({
+    knex,
+    tenant,
+    query: input.query,
+    allowedTypes,
+    limit: limit + 1,
+    cursor: input.cursor,
+    sort: input.sort,
+    includeSnippets: true,
+    acl,
+    searchIndex,
+  });
 
   const visibleHits = await verifyResultVisibility(knex, acl, hits);
   const pageHits = visibleHits.slice(0, limit);

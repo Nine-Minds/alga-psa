@@ -18,7 +18,7 @@ import { useClientTags } from '../context/ClientTagsContext';
 import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
-import { AsyncClientPicker, type ClientPickerSearchFn } from './AsyncClientPicker';
+import { AsyncClientPicker, type ClientPickerSearchFn, type PickerClientOption } from './AsyncClientPicker';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -51,6 +51,8 @@ interface ClientPickerProps {
   searchClients?: ClientPickerSearchFn;
   /** Async mode only: ids removed from results on the server (not the same as disabledClientIds). */
   excludeIds?: string[];
+  /** Async mode only: rows already resolved by id (`lookupClientsByIds`), so a picker per row does not look each up. */
+  knownClients?: readonly PickerClientOption[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientFilterState;
@@ -142,9 +144,16 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (prop
         disabledClientIds={props.disabledClientIds}
         disabledTooltip={props.disabledTooltip}
         excludeIds={props.excludeIds}
+        knownClients={props.knownClients}
         className={props.className}
         placeholder={props.placeholder}
         modal={props.modal}
+        fitContent={props.fitContent}
+        size={props.size}
+        triggerVariant={props.triggerVariant}
+        triggerSize={props.triggerSize}
+        triggerButtonClassName={props.triggerButtonClassName}
+        data-automation-type={props['data-automation-type']}
         onAddNew={props.onAddNew}
         disabled={props.disabled}
       />

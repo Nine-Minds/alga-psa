@@ -24,7 +24,8 @@ export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(2
 export const createAssetSchema = z.object({
   client_id: uuidSchema,
   asset_type: assetTypeSchema,
-  asset_tag: z.string().min(1, 'Asset tag is required').max(255),
+  asset_tag: z.string().max(255).optional(),
+  asset_number_reservation_id: uuidSchema.optional(),
   name: z.string().min(1, 'Asset name is required').max(255),
   status: z.string().min(1, 'Status is required'),
   location_id: uuidSchema.nullable().optional(),

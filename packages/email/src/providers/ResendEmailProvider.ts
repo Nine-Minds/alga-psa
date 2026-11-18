@@ -17,6 +17,7 @@ import {
   DomainVerificationResult,
   DnsRecord,
 } from '@alga-psa/types';
+import { onWireMessageIdFields } from '../onWireMessageId';
 
 interface ResendConfig {
   apiKey: string;
@@ -46,6 +47,8 @@ interface ResendEmailRequest {
 
 interface ResendEmailResponse {
   id: string;
+  /** Resend exposes the on-wire Message-ID as `message_id` (changelog 2026-07-08); whether POST carries it is unverified. */
+  message_id?: string | null;
   from: string;
   to: string[];
   created_at: string;
@@ -65,6 +68,12 @@ interface ResendDomainResponse {
     priority?: string;
     value: string;
   }>;
+}
+
+function getMessageIdHeader(headers: Record<string, string> | undefined): string | undefined {
+  if (!headers) return undefined;
+  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === 'message-id');
+  return key ? headers[key] : undefined;
 }
 
 export class ResendEmailProvider implements IEmailProvider {
@@ -141,15 +150,24 @@ export class ResendEmailProvider implements IEmailProvider {
           created_at: response.data.created_at,
         });
 
+        // Resend relays through Amazon SES, which replaces our Message-ID. Record the on-wire id
+        // under the shared contract (onWireMessageId.ts). Never throws and never retries the POST.
+        const onWire = onWireMessageIdFields(
+          getMessageIdHeader(message.headers),
+          await this.resolveOnWireMessageId(response.data)
+        );
+
         return {
           success: true,
           messageId: response.data.id,
           providerMessageId: response.data.id,
+          ...(onWire.rfcMessageId ? { rfcMessageId: onWire.rfcMessageId } : {}),
           providerId: this.providerId,
           providerType: this.providerType,
           metadata: {
             to: response.data.to,
             createdAt: response.data.created_at,
+            ...onWire.metadata,
           },
           sentAt: response.data.created_at ? new Date(response.data.created_at) : new Date(),
         };
@@ -171,6 +189,38 @@ export class ResendEmailProvider implements IEmailProvider {
     }
 
     throw new EmailProviderError('Failed to send email after retries', this.providerId, this.providerType, true);
+  }
+
+  /**
+   * The on-wire Message-ID for a send that already succeeded: `message_id` from the POST response if
+   * present, otherwise one `GET /emails/:id`. A missing/null id or any error is logged and swallowed;
+   * the `email.sent` webhook (or the backfill) records it later.
+   */
+  private async resolveOnWireMessageId(sent: ResendEmailResponse): Promise<string | null> {
+    try {
+      if (typeof sent.message_id === 'string' && sent.message_id.trim()) {
+        return sent.message_id;
+      }
+      if (!sent.id) return null;
+      const retrieved = await this.client!.get<{ message_id?: string | null }>(
+        `/emails/${encodeURIComponent(sent.id)}`
+      );
+      const id = retrieved.data?.message_id;
+      if (typeof id === 'string' && id.trim()) {
+        return id;
+      }
+      logger.info(`[ResendEmailProvider:${this.providerId}] Resend has no message_id yet; webhook will record it`, {
+        id: sent.id,
+      });
+      return null;
+    } catch (error: any) {
+      logger.warn(`[ResendEmailProvider:${this.providerId}] Could not fetch on-wire Message-ID; send is unaffected`, {
+        id: sent.id,
+        status: error?.response?.status,
+        error: error?.message,
+      });
+      return null;
+    }
   }
 
   async sendBulkEmails(messages: EmailMessage[]): Promise<EmailSendResult[]> {

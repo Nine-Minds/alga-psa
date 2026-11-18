@@ -102,6 +102,19 @@ export const dateTriggerSourceDefinitions = [
     catalogEventType: 'ASSET_MAINTENANCE_DUE',
   },
   {
+    id: 'ticket.due_date',
+    labelKey: 'designer.form.dateSourceTicketDueDate',
+    defaultLabel: 'Ticket due date',
+    payloadSchemaRef: 'payload.TicketDueDate.v1',
+    mode: 'window',
+    // Once per (ticket, due date): the fire key includes occursOn, so a changed due date is a new
+    // occurrence and an unchanged one never fires twice. Window mode: a fire date more than 3 days
+    // in the past is skipped, so a recurring ticket must exist by due date + offset + 3 days.
+    recurrence: 'once',
+    hasParams: false,
+    usesOffset: true,
+  },
+  {
     id: 'ticket.status_age',
     labelKey: 'designer.form.dateSourceTicketStatusAge',
     defaultLabel: 'Ticket in status for N days',

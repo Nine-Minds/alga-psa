@@ -1,11 +1,9 @@
 import { loanersOutReport } from '@alga-psa/inventory/actions';
 import { LoanersManager } from '@alga-psa/inventory/components';
-import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { LoanerOutRow } from '@alga-psa/inventory/actions';
-import type { IClient } from '@alga-psa/types';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -41,15 +39,7 @@ export default async function LoanersPage() {
     console.error('Failed to load loaners:', error);
   }
 
-  // Loan-out needs the client picker; the page loads clients the same way sales orders does.
-  let clients: IClient[] = [];
-  try {
-    clients = await getAllClients();
-  } catch (error) {
-    console.error('Failed to load clients:', error);
-  }
-
-  return <LoanersManager initialLoaners={initialLoaners} clients={clients} />;
+  return <LoanersManager initialLoaners={initialLoaners} />;
 }
 
 export const dynamic = 'force-dynamic';

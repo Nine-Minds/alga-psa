@@ -7,6 +7,7 @@ import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
+import { resolveTagReadScope } from '../lib/tagReadScope';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,6 +26,11 @@ import {
   permissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { isTagActionError, type TagActionError } from './tagActionErrors';
+import {
+  isTagCreationRestricted,
+  TAG_CREATION_RESTRICTED_KEY,
+  TAG_CREATION_RESTRICTED_MESSAGE,
+} from '../lib/tagCreationRestriction';
 
 /** Map tagged entity types to their permission resource equivalents */
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
@@ -367,6 +373,10 @@ export const createTag = withAuth(async (
       // Check if this is a new tag (not in existing tags) - only then require tag:create permission
       if (!existingTag && !await hasPermissionAsync(currentUser, 'tag', 'create', trx)) {
         await throwPermissionErrorAsync('create new tags', 'You can only select from existing tags');
+      }
+      // A caller a restriction governs (a seat technician) applies existing tags and never mints one.
+      if (!existingTag && await isTagCreationRestricted(trx, { tenant, user: currentUser })) {
+        return actionError(TAG_CREATION_RESTRICTED_MESSAGE, TAG_CREATION_RESTRICTED_KEY);
       }
 
       const tagWithTenant: Omit<ITag, 'tag_id' | 'tenant'> & {
@@ -738,9 +748,12 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // null for a subject nothing narrows: no clause, no query beyond the tenant probe.
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       // Join mappings with definitions to create ITag structure
       const tags = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
+        .modify((query) => readScope?.applyToMappings(query, 'tm'))
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
           'td.board_id',
@@ -787,11 +800,14 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
 
+      // A narrowed subject is offered only tags attached to records it may read (see resolveTagReadScope).
+      const readScope = await resolveTagReadScope(trx, tenant, user);
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
         .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
+        .modify((query) => readScope?.applyToDefinitions(query, 'td'))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 
@@ -879,7 +895,8 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
   // Mirror createTag's gate: minting a brand-new tag definition requires
   // tag:create permission. Resolved once per call since pendingTags is small.
-  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx)
+    && !await isTagCreationRestricted(trx, { tenant, user: currentUser });
 
   const createdTags: ITag[] = [];
 
@@ -1060,7 +1077,8 @@ export const bulkApplyTagsToEntities = withAuth(async (
   }
 
   // tag:create gate (mints brand-new definitions) resolved once for the batch.
-  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx)
+    && !await isTagCreationRestricted(trx, { tenant, user: currentUser });
 
   // Definitions are shared across entities — resolve each unique text once,
   // keyed by lowercased text while preserving the first-seen casing.
@@ -1451,9 +1469,13 @@ export const checkTagPermissions = withOptionalAuth(async (currentUser: IUserWit
         hasPermissionAsync(currentUser, 'tag', 'delete', trx)
       ]);
 
+      // Asked only of a caller who would otherwise be offered "create": a restriction (seat technician) takes it away.
+      const mayCreate = entityUpdate && tagCreate
+        && !await isTagCreationRestricted(trx, { tenant: currentUser.tenant, user: currentUser });
+
       return {
         canAddExisting: entityUpdate,
-        canCreateNew: entityUpdate && tagCreate,
+        canCreateNew: mayCreate,
         canEditColors: entityUpdate && tagUpdate,
         canEditText: entityUpdate && tagUpdate,
         canDelete: entityUpdate,

@@ -157,6 +157,12 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <div>{children}</div>,
 }));
+// The location remove-group confirmation is covered in
+// QuoteForm.locations.test.tsx; stub it here so this suite keeps its minimal
+// Dialog mock (the real component also needs DialogFooter and RadioGroup).
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ id, isOpen }: any) => (isOpen ? <div id={id} /> : null),
+}));
 vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
 }));

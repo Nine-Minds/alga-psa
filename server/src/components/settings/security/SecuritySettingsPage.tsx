@@ -90,6 +90,14 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
+const LoginPolicySettings = dynamic(
+  () => import('@enterprise/components/settings/security/LoginPolicySettings'),
+  {
+    loading: SsoLoading,
+    ssr: false,
+  },
+);
+
 const MspSsoAdvancedSection = dynamic(
   () => import('./MspSsoAdvancedSection'),
   { ssr: false },
@@ -226,6 +234,9 @@ const SecuritySettingsPage = (): React.JSX.Element => {
             <KeycloakSsoSettings />
           </div>
           <MspSsoAdvancedSection />
+          <div className="mt-6">
+            <LoginPolicySettings />
+          </div>
         </>
       ),
     },

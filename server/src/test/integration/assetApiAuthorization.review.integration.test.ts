@@ -1,3 +1,4 @@
+import { insertTestAssets } from '../../../../shared/test-utils/assetFixtures';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
@@ -128,7 +129,7 @@ async function invoke(handler: Function, req: NextRequest, params?: Record<strin
 
 async function createAsset(clientId: string, name: string) {
   const assetId = randomUUID();
-  await table('assets').insert({ tenant, asset_id: assetId, asset_tag: `TAG-${assetId}`, serial_number: `SER-${assetId}`, name, status: 'active', asset_type: 'workstation', client_id: clientId, created_at: db.fn.now(), updated_at: db.fn.now() });
+  await insertTestAssets(connection.db!, { tenant, asset_id: assetId, asset_tag: `TAG-${assetId}`, serial_number: `SER-${assetId}`, name, status: 'active', asset_type: 'workstation', client_id: clientId, created_at: db.fn.now(), updated_at: db.fn.now() });
   return assetId;
 }
 
@@ -423,7 +424,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
           tenant: foreignTenant, asset_id: assetId, asset_tag: `FOREIGN-${assetId}`, serial_number: `FOREIGN-${assetId}`,
           name, status: 'active', asset_type: 'workstation', client_id: foreignClient,
         });
-        await tenantDb(db, foreignTenant).table('assets').insert([
+        await insertTestAssets(db, [
           foreignAsset(foreignParent, 'Foreign parent'), foreignAsset(foreignChild, 'Foreign child'),
         ]);
         await tenantDb(db, foreignTenant).table('asset_relationships').insert({
@@ -537,7 +538,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
       });
       await tenantDb(connection.db!, foreignTenant).table('clients').insert({ tenant: foreignTenant, client_id: foreignClient, client_name: 'Foreign client' });
       await tenantDb(connection.db!, foreignTenant).table('users').insert({ tenant: foreignTenant, user_id: foreignUser, username: `foreign-${foreignUser}`, email: `${foreignUser}@example.test`, first_name: 'Foreign', last_name: 'User', hashed_password: 'unused', user_type: 'internal', is_inactive: false });
-      await tenantDb(connection.db!, foreignTenant).table('assets').insert({ tenant: foreignTenant, asset_id: foreignAsset, client_id: foreignClient, asset_type: 'workstation', asset_tag: `foreign-${foreignAsset}`, name: 'Foreign asset', status: 'active' });
+      await insertTestAssets(connection.db!, { tenant: foreignTenant, asset_id: foreignAsset, client_id: foreignClient, asset_type: 'workstation', asset_tag: `foreign-${foreignAsset}`, name: 'Foreign asset', status: 'active' });
       await tenantDb(connection.db!, foreignTenant).table('document_types').insert({ tenant: foreignTenant, type_id: foreignType, type_name: `Foreign ${foreignType}`, icon: 'file' });
       await tenantDb(connection.db!, foreignTenant).table('documents').insert({ tenant: foreignTenant, document_id: foreignDocument, document_name: 'Foreign document', type_id: foreignType, user_id: foreignUser, created_by: foreignUser });
       await tenantDb(connection.db!, foreignTenant).table('asset_document_associations').insert({ tenant: foreignTenant, association_id: foreignAssociation, asset_id: foreignAsset, document_id: foreignDocument, created_by: foreignUser });

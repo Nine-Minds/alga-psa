@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commercialTimeEntryRowFilter } from '../../../../test-utils/commercialTimeEntryMock';
 import { Temporal } from '@js-temporal/polyfill';
 import {
   buildClientCadenceDueSelectionInput,
@@ -21,7 +22,7 @@ type Row = Record<string, any>;
 const adjustmentPreview = vi.hoisted(() => vi.fn());
 vi.mock('../../../../../packages/billing/src/services/invoiceAutomaticAdjustments', () => ({
   previewAutomaticInvoiceDiscounts: adjustmentPreview,
-  reconcileAutomaticInvoiceAdjustments: vi.fn(),
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => ({ automaticDiscountAmount: 0 })),
 }));
 
 // The preview taxes through the tenant's TaxService, which resolves its own
@@ -126,7 +127,10 @@ function buildContractCadenceServicePeriodRow(overrides: Row = {}): Row {
   };
 }
 
-function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
+// Rows written through the stubbed knex, so creation can be compared with preview.
+const insertedRows: Array<{ table: string; row: Record<string, any> }> = [];
+
+function createQueryBuilder(rows: Row[], raw: (sql: string) => string, tableName = '') {
   let resultRows = [...rows];
 
   const builder: any = {
@@ -157,6 +161,7 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       return builder;
     }),
     orWhere: vi.fn(() => builder),
+    andWhere: vi.fn(() => builder),
     whereIn: vi.fn((column: string, values: any[]) => {
       const normalized = normalizeColumn(column);
       resultRows = resultRows.filter((row) => values.includes(row[normalized]));
@@ -174,6 +179,12 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
       resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
       return builder;
     }),
+    whereRaw: vi.fn((sql: string) => {
+      const commercialOnly = commercialTimeEntryRowFilter(sql);
+      if (!commercialOnly) throw new Error(`Unsupported whereRaw expression: ${sql}`);
+      resultRows = resultRows.filter(commercialOnly);
+      return builder;
+    }),
     distinct: vi.fn(() => builder),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
@@ -182,6 +193,13 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
     joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
+    insert: vi.fn((row: Record<string, any>) => {
+      insertedRows.push({ table: tableName, row });
+      return { returning: async () => [{ ...row, invoice_id: 'created-invoice-1' }] };
+    }),
+    update: vi.fn(async () => 1),
+    delete: vi.fn(async () => 1),
+    forUpdate: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
@@ -189,6 +207,9 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
 
   return builder;
 }
+
+// Tenant timezone the stubbed resolveTenantToday reads (null = no saved timezone).
+const tenantTimeZone = vi.hoisted(() => ({ value: null as string | null }));
 
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
@@ -247,7 +268,7 @@ const mocks = vi.hoisted(() => {
       throw new Error(`relation "${normalizedTableName}" does not exist`);
     }
 
-    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw);
+    return createQueryBuilder(rowsByTable[normalizedTableName] ?? [], raw, normalizedTableName);
   }) as any;
   knex.raw = raw;
 
@@ -367,6 +388,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  // Real conversion at the helper boundary; clock from Temporal.Now.instant (fake timers).
+  resolveTenantToday: async () => {
+    const { localDateForInstant } = await import('../../../../../packages/db/src/lib/workDate');
+    const { Temporal: T } = await import('@js-temporal/polyfill');
+    return localDateForInstant(T.Now.instant(), tenantTimeZone.value);
+  },
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
   tenantDb: (conn: any, tenant: string) => ({
@@ -388,6 +415,10 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
 vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
   getNextBillingDate: mocks.getNextBillingDate,
   getDueDate: mocks.getDueDate,
+}));
+
+vi.mock('@alga-psa/shared/services/numberingService', () => ({
+  SharedNumberingService: { getNextNumber: vi.fn(async () => 'INV-1000') },
 }));
 
 vi.mock('@alga-psa/shared/billingClients', () => ({
@@ -428,11 +459,33 @@ vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => (
   },
 }));
 
+// Creation (used by the preview-vs-created date test) runs with no pending contract events.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('../../../../../packages/billing/src/models/clientContractLine', () => ({
+  default: { getClientCredit: vi.fn(async () => 0) },
+}));
+vi.mock('../../../../../packages/billing/src/lib/authHelpers', () => ({
+  getAnalyticsAsync: vi.fn(async () => ({ analytics: { capture: vi.fn() }, AnalyticsEvents: { INVOICE_GENERATED: 'invoice_generated' } })),
+}));
+vi.mock('../../../../../packages/billing/src/services/pdfGenerationService', () => ({
+  createPDFGenerationService: vi.fn(),
+}));
+vi.mock('../../../../../packages/billing/src/actions/taxSourceActions', () => ({
+  getInitialInvoiceTaxSource: vi.fn(async () => 'internal'),
+  shouldUseTaxDelegation: vi.fn(async () => false),
+}));
+
 const {
   previewInvoice,
   previewInvoiceForSelectionInput,
   getPurchaseOrderOverageForSelectionInput,
   generateInvoiceForSelectionInput,
+  createInvoiceFromBillingResult,
 } = await import(
   '../../../../../packages/billing/src/actions/invoiceGeneration'
 );
@@ -440,6 +493,9 @@ const {
 describe('invoice preview recurring timing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    tenantTimeZone.value = null;
+    insertedRows.length = 0;
     adjustmentPreview.mockResolvedValue({ discounts: [] });
     mocks.missingTables.clear();
     mocks.hasPermission.mockReturnValue(true);
@@ -575,6 +631,36 @@ describe('invoice preview recurring timing', () => {
     );
   });
 
+  it('previews the tenant-local invoice date: Sydney at 2026-10-18T22:00Z is due Net 30 from the 19th', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    tenantTimeZone.value = 'Australia/Sydney';
+
+    const result = await previewInvoice('cycle-1');
+
+    expect(result).toMatchObject({ success: true, data: { dueDate: '2026-11-18' } });
+    vi.useRealTimers();
+  });
+
+  it('preview issue date equals the created invoice_date (Sydney, 2026-10-18T22:00Z)', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T22:00:00.000Z'));
+    tenantTimeZone.value = 'Australia/Sydney';
+
+    const preview = await previewInvoice('cycle-1');
+    const billingResult = await mocks.calculateBillingForExecutionWindow();
+    await createInvoiceFromBillingResult(
+      billingResult as any, 'client-1', '2025-02-01', '2025-03-01', 'cycle-1', 'user-1',
+    );
+
+    const created = insertedRows.find((r) => r.table === 'invoices')?.row;
+    expect(created?.invoice_date).toBe('2026-10-19');
+    expect(preview).toMatchObject({ success: true, data: { issueDate: '2026-10-19' } });
+    expect((preview as any).data.issueDate).toBe(created?.invoice_date);
+    expect((preview as any).data.dueDate).toBe(created?.due_date);
+    vi.useRealTimers();
+  });
+
   it('T076: one-cycle invoice preview uses canonical service periods and still matches expected recurring totals', async () => {
     const result = await previewInvoice('cycle-1');
 
@@ -611,7 +697,7 @@ describe('invoice preview recurring timing', () => {
         invoiceNumber: 'PREVIEW',
         // The stubbed profile identity sets no payment terms, so the preview
         // is due on Net 30 from today.
-        dueDate: Temporal.Now.plainDateISO().add({ days: 30 }).toString(),
+        dueDate: Temporal.Now.plainDateISO('UTC').add({ days: 30 }).toString(),
         currencyCode: 'USD',
         subtotal: 4000,
         tax: 200,

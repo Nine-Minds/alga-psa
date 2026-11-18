@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { DocumentAssociationEntityType, IClient, IContact } from '@alga-psa/types';
+import type { DocumentAssociationEntityType, IContact } from '@alga-psa/types';
 import SearchableSelect, { type SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import AsyncSearchableSelect, { type SelectOption as AsyncSelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
-import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
+import { useClientNames } from '@alga-psa/ui/hooks';
 import {
-  getDocumentAssociationClientsForPicker,
   getDocumentAssociationContactsForPicker,
   searchDocumentAssociationEntities,
 } from '../actions/documentActions';
@@ -79,12 +79,8 @@ export default function AssociatedEntityPicker({
   disabled = false,
 }: AssociatedEntityPickerProps): React.JSX.Element {
   const { t } = useTranslation('common');
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(false);
-  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
-  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const allowedSet = useMemo(() => allowedEntityTypes ? new Set<string>(allowedEntityTypes) : null, [allowedEntityTypes]);
   const selectedEntityType = !allowedSet || allowedSet.has(entityType) ? entityType : '';
   const selectedSearchableEntityType = SEARCHABLE_ENTITY_TYPES.has(selectedEntityType)
@@ -121,36 +117,6 @@ export default function AssociatedEntityPicker({
   }, [selectedSearchableEntityType]);
 
   useEffect(() => {
-    if (selectedEntityType !== 'client') {
-      return;
-    }
-
-    let cancelled = false;
-    setClientsLoading(true);
-    getDocumentAssociationClientsForPicker()
-      .then((rows) => {
-        if (!cancelled) {
-          setClients(rows);
-        }
-      })
-      .catch((error) => {
-        console.error('[AssociatedEntityPicker] Failed to load clients:', error);
-        if (!cancelled) {
-          setClients([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setClientsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedEntityType]);
-
-  useEffect(() => {
     if (selectedEntityType !== 'contact') {
       return;
     }
@@ -180,6 +146,16 @@ export default function AssociatedEntityPicker({
     };
   }, [selectedEntityType]);
 
+  // An already-associated client keeps its name when the caller holds only the id (a deep link or a
+  // restored filter). Resolved by id through the shell's searcher; the client list is never loaded.
+  const { searchClients } = useClientPickerSearch();
+  const clientIdToResolve = selectedSearchableEntityType === 'client' && entityId && !selectedEntityLabel
+    ? [entityId]
+    : [];
+  const { clients: resolvedClients } = useClientNames(clientIdToResolve, searchClients);
+  const resolvedEntityLabel = selectedEntityLabel
+    ?? (selectedSearchableEntityType === 'client' && entityId ? resolvedClients[entityId]?.client_name : undefined);
+
   const handleTypeChange = useCallback((value: string) => {
     onEntityChange('', undefined);
     onEntityTypeChange(value === noEntityTypeValue ? '' : value);
@@ -206,37 +182,7 @@ export default function AssociatedEntityPicker({
       />
 
       {selectedSearchableEntityType && (
-        selectedSearchableEntityType === 'client' ? (
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">
-              {entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
-                entityType: selectedEntityTypeLabel,
-                defaultValue: selectedEntityTypeLabel,
-              })}
-            </label>
-            <ClientPicker
-              id={`${id}-entity`}
-              clients={clients}
-              selectedClientId={entityId || null}
-              onSelect={(clientId) => {
-                const selectedClient = clients.find((client) => client.client_id === clientId);
-                onEntityChange(clientId ?? '', selectedClient?.client_name);
-              }}
-              filterState={clientFilterState}
-              onFilterStateChange={setClientFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
-              placeholder={clientsLoading
-                ? t('documents.associatedEntityPicker.loadingClients', 'Loading clients...')
-                : t('documents.associatedEntityPicker.entityPlaceholder', {
-                    entityType: selectedEntityTypeLabel.toLowerCase(),
-                    defaultValue: `Select ${selectedEntityTypeLabel.toLowerCase()}`,
-                  })}
-              disabled={disabled || clientsLoading}
-              className="w-full"
-            />
-          </div>
-        ) : selectedSearchableEntityType === 'contact' ? (
+        selectedSearchableEntityType === 'contact' ? (
           <div>
             <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">
               {entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
@@ -270,7 +216,7 @@ export default function AssociatedEntityPicker({
               defaultValue: selectedEntityTypeLabel,
             })}
             value={entityId || ''}
-            selectedLabel={selectedEntityLabel}
+            selectedLabel={resolvedEntityLabel}
             onChange={handleEntityChange}
             loadOptions={loadOptions}
             placeholder={t('documents.associatedEntityPicker.entityPlaceholder', {
