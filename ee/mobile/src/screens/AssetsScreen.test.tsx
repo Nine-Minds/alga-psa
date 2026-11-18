@@ -57,7 +57,7 @@ vi.mock("../ui/ThemeContext", async () => {
   return { useTheme: () => lightTheme };
 });
 vi.mock("../auth/AuthContext", () => ({ useAuth: () => mocks.authValue }));
-vi.mock("../capabilities/CapabilitiesContext", () => ({
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
   useCapabilities: () => ({ features: mocks.features, loaded: true }),
 }));
 vi.mock("../config/appConfig", () => ({ getAppConfig: () => ({ ok: true, env: "dev", baseUrl: "https://algapsa.com" }) }));
