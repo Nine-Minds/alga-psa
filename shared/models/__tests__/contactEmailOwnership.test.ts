@@ -53,7 +53,7 @@ describe('resolveContactEmailOwnership (query order)', () => {
 
     const owner = await resolveContactEmailOwnership('t1', '  Jane@Acme.TEST ', {} as any);
 
-    expect(owner).toMatchObject({ kind: 'primary', contactNameId: 'c1', clientName: 'Acme' });
+    expect(owner).toMatchObject({ kind: 'primary', email: 'jane@acme.test', contactNameId: 'c1', clientName: 'Acme' });
     expect(queries.map((q) => q.table)).toEqual(['contacts as c']);
     // Normalised: trimmed and lower-cased before it reaches SQL.
     expect(queries[0].whereRaw[0]).toEqual(['lower(c.email) = ?', ['jane@acme.test']]);
@@ -66,6 +66,7 @@ describe('resolveContactEmailOwnership (query order)', () => {
 
     expect(owner).toEqual({
       kind: 'additional',
+      email: 'x@y.test',
       contactNameId: 'c2',
       clientId: null,
       fullName: 'Jane Doe',
@@ -84,7 +85,7 @@ describe('resolveContactEmailOwnership (query order)', () => {
 
 describe('EmailOwnershipError and describeContactEmailConflict', () => {
   const t = (key: string, params: Record<string, string> = {}) => `${key}|${JSON.stringify(params)}`;
-  const owner = { kind: 'primary' as const, contactNameId: 'c1', clientId: 'cl1', fullName: 'Jane Doe', clientName: 'Acme', isInactive: false };
+  const owner = { kind: 'primary' as const, email: 'jane@acme.test', contactNameId: 'c1', clientId: 'cl1', fullName: 'Jane Doe', clientName: 'Acme', isInactive: false };
 
   it('keeps the EMAIL_EXISTS prefix and generic text while carrying the owner', () => {
     const error = new EmailOwnershipError(owner);

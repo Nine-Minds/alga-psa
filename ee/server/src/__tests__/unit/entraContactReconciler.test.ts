@@ -543,9 +543,36 @@ describe('reconcileEntraUserToContact', () => {
     expect(contactsUpdateMock).toHaveBeenCalled();
   });
 
+  it('an inactive contact matched by email at the same client is linked and reactivated', async () => {
+    const harness = setupReconcilerKnexHarness();
+    findContactMatchesByEmailMock.mockResolvedValue([
+      {
+        contactNameId: 'contact-inactive',
+        clientId: 'client-1',
+        email: 'user@example.com',
+        fullName: 'Inactive User',
+        isInactive: true,
+      },
+    ]);
+
+    const { reconcileEntraUserToContact } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+    const result = await reconcileEntraUserToContact({
+      tenantId: 'tenant-1',
+      clientId: 'client-1',
+      managedTenantId: 'managed-1',
+      user: buildUser(),
+    });
+
+    expect(result).toMatchObject({ action: 'linked', contactNameId: 'contact-inactive', recovered: true });
+    expect(harness.contactsUpdateMock).toHaveBeenCalledWith(expect.objectContaining({ is_inactive: false }));
+    expect(createContactMock).not.toHaveBeenCalled();
+    expect(queueEntraEmailConflictMock).not.toHaveBeenCalled();
+  });
+
   describe('email ownership (createContactForEntraUser)', () => {
     const owner = (overrides: Record<string, unknown> = {}) => ({
       kind: 'primary',
+      email: 'ben@muscle.ca',
       contactNameId: 'owner-contact',
       clientId: 'other-client',
       fullName: 'Benjamin Dixon',
@@ -565,7 +592,13 @@ describe('reconcileEntraUserToContact', () => {
       expect(result).toEqual({
         action: 'conflict',
         queueItemId: 'queue-conflict',
-        owner: expect.objectContaining({ contactNameId: 'owner-contact', clientName: 'Muscle Corp' }),
+        owner: expect.objectContaining({
+          contactNameId: 'owner-contact',
+          fullName: 'Benjamin Dixon',
+          clientId: 'other-client',
+          clientName: 'Muscle Corp',
+          email: 'ben@muscle.ca',
+        }),
       });
       expect(queueEntraEmailConflictMock).toHaveBeenCalledWith({
         tenantId: 'tenant-1',

@@ -55,6 +55,7 @@ import { createOrFindContactByEmail } from './queryActions';
 
 const owner = (overrides: Record<string, unknown> = {}) => ({
   kind: 'primary' as const,
+  email: 'owner@example.com',
   contactNameId: 'owner-1',
   clientId: 'client-other',
   fullName: 'Benjamin Dixon',

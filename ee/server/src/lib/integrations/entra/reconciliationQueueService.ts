@@ -27,6 +27,8 @@ export interface EntraQueueOwner {
   clientName: string | null;
   kind: 'primary' | 'additional';
   isInactive: boolean;
+  /** The matched address (normalized). */
+  email: string | null;
 }
 
 export interface QueueEntraEmailConflictInput {
@@ -111,7 +113,7 @@ export async function queueEntraEmailConflict(
       contactNameId: owner.contactNameId,
       clientId: owner.clientId,
       clientName: owner.clientName,
-      email: input.user.email || input.user.userPrincipalName,
+      email: owner.email,
       fullName: owner.fullName,
       isInactive: owner.isInactive,
       kind: owner.kind,
@@ -271,6 +273,7 @@ function queueReasonAndOwner(row: any): { reason: EntraQueueReason; owner: Entra
       clientName: first.clientName ? String(first.clientName) : null,
       kind: first.kind === 'additional' ? 'additional' : 'primary',
       isInactive: Boolean(first.isInactive),
+      email: first.email ? String(first.email) : null,
     },
   };
 }

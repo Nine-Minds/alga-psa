@@ -177,11 +177,13 @@ export async function executeEntraSync(
         const wouldReactivateExcluded = await reactivateExcludedEntraContact(input.tenantId, candidates[0].contactNameId, true);
         const wouldRecoverSharedMailbox = userWithEntitlement.mailboxKind === 'shared'
           && await reactivateDisabledSharedMailboxContact(input.tenantId, candidates[0].contactNameId, true);
-        if (outcome.fieldsWouldChange || wouldReactivateExcluded || wouldRecoverSharedMailbox) counters.increment('updated');
+        const wouldReactivateInactive = candidates[0].isInactive;
+        const wouldRecover = wouldReactivateExcluded || wouldRecoverSharedMailbox || wouldReactivateInactive;
+        if (outcome.fieldsWouldChange || wouldRecover) counters.increment('updated');
         preview?.push(
           describeUser(
             user,
-            outcome.alreadyLinked && !outcome.fieldsWouldChange && !wouldReactivateExcluded && !wouldRecoverSharedMailbox ? 'no_change' : 'link'
+            outcome.alreadyLinked && !outcome.fieldsWouldChange && !wouldRecover ? 'no_change' : 'link'
           )
         );
       } else {

@@ -183,6 +183,7 @@ describe('contact action email conflict handling', () => {
   describe('names the contact that owns the email', () => {
     const owner = (overrides: Record<string, unknown> = {}) => ({
       kind: 'primary' as const,
+      email: 'owner@example.com',
       contactNameId: 'owner-1',
       clientId: 'client-other',
       fullName: 'Benjamin Dixon',

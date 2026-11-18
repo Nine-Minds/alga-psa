@@ -268,9 +268,15 @@ export async function linkExistingMatchedContact(
         [matchedContact.contactNameId],
         entraContactEventKeys(user, fieldSyncConfig),
         async () => {
-          const recovered = user.mailboxKind === 'shared'
+          const recoveredShared = user.mailboxKind === 'shared'
             ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, matchedContact.contactNameId)
             : false;
+          // Same rule as an ownership match in createContactForEntraUser: an inactive
+          // contact at the synced client is that person, so it is linked and reactivated.
+          const recoveredInactive = matchedContact.isInactive
+            ? await reactivateInactiveContactInTransaction(trx, tenantId, matchedContact.contactNameId)
+            : false;
+          const recovered = recoveredShared || recoveredInactive;
           const changed = await upsertContactLink(
             trx,
             tenantId,

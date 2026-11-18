@@ -240,7 +240,7 @@ describe('executeEntraSync dry-run behavior', () => {
       .mockResolvedValueOnce({
         action: 'conflict',
         queueItemId: 'queue-1',
-        owner: { contactNameId: 'owner-1', clientId: 'other', clientName: 'Other Co', fullName: 'Owner', kind: 'primary', isInactive: false },
+        owner: { email: 'conflicting@example.com', contactNameId: 'owner-1', clientId: 'other', clientName: 'Other Co', fullName: 'Owner', kind: 'primary', isInactive: false },
       })
       .mockResolvedValueOnce({ action: 'created', contactNameId: 'contact-normal' });
 
@@ -269,7 +269,7 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockResolvedValue({
       action: 'conflict',
       queueItemId: 'queue-1',
-      owner: { contactNameId: 'owner-1', clientId: null, clientName: null, fullName: 'Owner', kind: 'primary', isInactive: false },
+      owner: { email: 'conflicting@example.com', contactNameId: 'owner-1', clientId: null, clientName: null, fullName: 'Owner', kind: 'primary', isInactive: false },
     });
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');

@@ -18,6 +18,8 @@ export type ContactEmailOwnerKind = 'primary' | 'additional';
 export interface ContactEmailOwner {
   /** Which address of the owning contact matched. */
   kind: ContactEmailOwnerKind;
+  /** The address that matched, normalized (trimmed, lower-cased). */
+  email: string;
   contactNameId: string;
   clientId: string | null;
   fullName: string;
@@ -38,9 +40,10 @@ export function normalizeOwnershipEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-function toOwner(kind: ContactEmailOwnerKind, row: OwnerRow): ContactEmailOwner {
+function toOwner(kind: ContactEmailOwnerKind, email: string, row: OwnerRow): ContactEmailOwner {
   return {
     kind,
+    email,
     contactNameId: String(row.contact_name_id),
     clientId: row.client_id ? String(row.client_id) : null,
     fullName: row.full_name ? String(row.full_name) : '',
@@ -72,7 +75,7 @@ export async function resolveContactEmailOwnership(
     .first<OwnerRow>(['c.contact_name_id', 'c.client_id', 'c.full_name', 'c.is_inactive', 'cl.client_name']);
 
   if (primary) {
-    return toOwner('primary', primary);
+    return toOwner('primary', normalized, primary);
   }
 
   const additional = await db
@@ -86,7 +89,7 @@ export async function resolveContactEmailOwnership(
     .where('cea.normalized_email_address', normalized)
     .first<OwnerRow>(['c.contact_name_id', 'c.client_id', 'c.full_name', 'c.is_inactive', 'cl.client_name']);
 
-  return additional ? toOwner('additional', additional) : null;
+  return additional ? toOwner('additional', normalized, additional) : null;
 }
 
 export const EMAIL_EXISTS_PREFIX = 'EMAIL_EXISTS: ';

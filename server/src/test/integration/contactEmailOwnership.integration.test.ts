@@ -54,6 +54,7 @@ describe('contact email ownership (resolver + ContactModel.createContact)', () =
 
         await expect(resolveContactEmailOwnership(tenant, 'ben@muscle.ca', trx)).resolves.toEqual({
           kind: 'primary',
+          email: 'ben@muscle.ca',
           contactNameId: owner.contact_name_id,
           clientId,
           fullName: 'Benjamin Dixon',

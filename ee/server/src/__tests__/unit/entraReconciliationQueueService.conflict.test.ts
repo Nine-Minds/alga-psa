@@ -73,6 +73,7 @@ function buildUser(): EntraSyncUser {
 
 const owner = {
   kind: 'primary' as const,
+  email: 'ben@muscle.ca',
   contactNameId: 'owner-contact',
   clientId: 'other-client',
   fullName: 'Benjamin Dixon',
@@ -115,6 +116,7 @@ describe('reconciliationQueueService: email_owned_by_other_client', () => {
         clientName: 'Muscle Corp',
         kind: 'primary',
         isInactive: false,
+        email: 'ben@muscle.ca',
       },
     });
   });
