@@ -9,9 +9,9 @@ import { describe, expect, it } from 'vitest';
  * the server through `AsyncClientPicker` / `searchClientsForPicker`; a screen that fetches every client and
  * hands the rows to a picker keeps the slow in-memory path and the full fetch that feeds it.
  *
- * Mechanical form of that rule: no source file may both call a full-list client action and render a
- * `ClientPicker` / `AsyncClientPicker`, unless it is on the allowlist below. The allowlist holds only the
- * screens where a full list is correct: exports and bulk reads, which stay server-side.
+ * Mechanical form of that rule: a full-list client action is called only from the allowlist below, so a
+ * full list cannot reach a picker or dropdown through a parent, a loader or a module either. The
+ * allowlist holds only the screens where a full list is correct: exports and bulk reads.
  */
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
@@ -32,6 +32,8 @@ const ALLOWLIST: Record<string, string> = {
     'The Clients page CSV export loads every client; the list itself is paginated on the server.',
   'server/src/app/api/clients/route.ts':
     'Bulk client list endpoint (JSON); not a picker.',
+  'packages/integrations/src/components/accounting-mappings/clientAlgaSearch.tsx':
+    'Accounting bulk mapping grid: its rows are the unmapped clients, read only when the user opens Bulk map. The mapping dialog searches on the server.',
 };
 
 /**
@@ -94,6 +96,18 @@ function offenders(files: string[], read: (file: string) => string, allow: Recor
   return hits;
 }
 
+function fullListCallers(files: string[], read: (file: string) => string, allow: Record<string, string>): string[] {
+  const hits: string[] = [];
+  for (const file of files) {
+    const rel = path.relative(REPO_ROOT, file).split(path.sep).join('/');
+    if (rel in allow) continue;
+    const source = stripComments(read(file));
+    const call = FULL_LIST_CALLS.find((name) => source.includes(name));
+    if (call) hits.push(`${rel} calls ${call}`);
+  }
+  return hits;
+}
+
 function clientsPropOffenders(files: string[], read: (file: string) => string, allow: Record<string, string>): string[] {
   const hits: string[] = [];
   for (const file of files) {
@@ -117,6 +131,16 @@ describe('client pickers never load the whole tenant client list', () => {
 
   it('has no file that both calls a full-list client action and renders a client picker', () => {
     expect(offenders(files, read, ALLOWLIST)).toEqual([]);
+  });
+
+  it('calls a full-list client action only from an allowlisted export or bulk screen', () => {
+    expect(fullListCallers(files, read, ALLOWLIST)).toEqual([]);
+  });
+
+  it('flags a full-list call with no picker in the same file (the caller rule can fail)', () => {
+    const fake = path.join(REPO_ROOT, 'packages/example/src/loadOptions.ts');
+    expect(fullListCallers([fake], () => 'loadAlgaEntities: async () => getIntegrationClients(true),', {})).toHaveLength(1);
+    expect(fullListCallers([fake], () => 'const rows = await lookupClientsByIds(search, ids);', {})).toEqual([]);
   });
 
   it('allowlists only files that exist and still need it', () => {
