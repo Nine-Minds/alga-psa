@@ -16,7 +16,9 @@ describe('reference-data tenant-scoped query contract', () => {
     const boardSource = readFileSync(resolve(__dirname, 'actions/boardActions.ts'), 'utf8');
     const prioritySource = readFileSync(resolve(__dirname, 'actions/priorityActions.ts'), 'utf8');
 
-    expect(boardSource).toContain("tenantDb(trx, tenant).table('boards')");
+    // The board list body moved to lib/referenceListQueries (shared with the batched loader).
+    const listQuerySource = readFileSync(resolve(__dirname, 'lib/referenceListQueries.ts'), 'utf8');
+    expect(listQuerySource).toContain("tenantDb(trx, tenant).table('boards')");
     expect(prioritySource).toContain('tenantScopedTable(trx,');
     expect(prioritySource).toContain("tenantScopedTable(trx, 'boards', tenant)");
     expect(prioritySource).toContain("tenantScopedTable(trx, 'priorities', tenant)");
