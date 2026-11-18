@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { ITicket, IBoard, IUser, RmmCachedData } from '@alga-psa/types';
+import type { RmmRemoteConnectionType } from '@alga-psa/integrations/lib/rmm/connectionTypes';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface AssetQuickAddTicketRenderProps {
@@ -39,8 +40,9 @@ export interface AssetRmmCommandResult {
   jobId?: string;
 }
 
-// LEVERAGE: provider connection types currently cross the feature boundary as a parallel union.
-export type AssetRemoteConnectionType = 'splashtop' | 'teamviewer' | 'vnc' | 'rdp' | 'shell';
+// LEVERAGE: friction rmm-connection-types-boundary — assets must not import the integrations package, but the
+// connection-type registry lives there; only the pure type module is imported (type-only) until it moves to a shared layer.
+export type AssetRemoteConnectionType = RmmRemoteConnectionType;
 
 /**
  * RMM device actions for the asset page. Implemented by @alga-psa/integrations
