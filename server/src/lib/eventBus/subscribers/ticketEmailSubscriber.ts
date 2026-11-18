@@ -913,9 +913,9 @@ function escapeHtml(value: string): string {
 
 const CHANGE_LIST_STYLE = 'margin:0;padding:0;list-style:none;';
 const CHANGE_ITEM_STYLE = 'margin:0 0 10px 0;padding:0;';
-const CHANGE_FIELD_LABEL_STYLE = 'font-weight:600;color:#1f2933;';
-const CHANGE_OLD_VALUE_STYLE = 'color:#94595d;text-decoration:line-through;word-break:break-word;';
-const CHANGE_NEW_VALUE_STYLE = 'color:#0a7c3c;font-weight:600;word-break:break-word;';
+const CHANGE_FIELD_LABEL_STYLE = 'font-size:13px;font-weight:600;color:#475467;';
+const CHANGE_OLD_VALUE_STYLE = 'color:#667085;text-decoration:line-through;word-break:break-word;';
+const CHANGE_NEW_VALUE_STYLE = 'color:#1f2933;font-weight:600;word-break:break-word;';
 const CHANGE_SINGLE_VALUE_STYLE = 'color:#1f2933;word-break:break-word;';
 const CHANGE_SECTION_STYLE = 'margin:0 0 14px 0;padding:0 0 12px 0;border-bottom:1px solid rgba(146,64,14,0.15);';
 const CHANGE_SECTION_LAST_STYLE = 'margin:0;padding:0;';
@@ -923,42 +923,79 @@ const CHANGE_SECTION_HEADER_STYLE = 'font-size:13px;color:#92400e;font-weight:60
 const CHANGE_SECTION_TIMESTAMP_STYLE = 'color:#9a6c1f;font-weight:500;';
 
 /**
- * Render a single field change (old → new) as an HTML <li>.
+ * One field change, as stock templates lay it out with {{#each ticket.changeItems}}.
+ * Templates own the colors, so a tenant's email branding restyles the list; the
+ * pre-rendered `ticket.changes` HTML is kept for templates customized before this.
  */
-function renderChangeItemHtml(fieldLabel: string, oldValue: string | null, newValue: string): string {
-  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(fieldLabel)}</div>`;
-  if (oldValue === null) {
-    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
-  }
-  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(newValue)}</div></li>`;
+interface EmailChangeItem {
+  label: string;
+  /** '' when the change carries no previous value: shown as a single value. */
+  oldValue: string;
+  newValue: string;
+  /** Bundled updates only: the updater on the first item of each update, '' otherwise. */
+  updatedBy: string;
+  /** Bundled updates only: when that update happened, on the same item as updatedBy. */
+  updatedAt: string;
+}
+
+interface EmailChangeGroup {
+  updatedBy: string;
+  updatedAt: string;
+  items: EmailChangeItem[];
+}
+
+function changeItem(label: string, oldValue: string | null, newValue: string): EmailChangeItem {
+  return { label, oldValue: oldValue ?? '', newValue, updatedBy: '', updatedAt: '' };
 }
 
 /**
- * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ * Render a single field change (old → new) as an HTML <li>.
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
-  const items = await Promise.all(
-    Object.entries(changes).map(async ([field, value]): Promise<string> => {
+function renderChangeItemHtml(item: EmailChangeItem): string {
+  const fieldHtml = `<div style="${CHANGE_FIELD_LABEL_STYLE}">${escapeHtml(item.label)}</div>`;
+  if (!item.oldValue) {
+    return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_SINGLE_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+  }
+  return `<li style="${CHANGE_ITEM_STYLE}">${fieldHtml}<div style="${CHANGE_OLD_VALUE_STYLE}">${escapeHtml(item.oldValue)}</div><div style="${CHANGE_NEW_VALUE_STYLE}">${escapeHtml(item.newValue)}</div></li>`;
+}
+
+/** The legacy `ticket.changes` fragment for one update. */
+function renderChangeItemsHtml(items: EmailChangeItem[]): string {
+  if (items.length === 0) {
+    return '';
+  }
+  return `<ul style="${CHANGE_LIST_STYLE}">${items.map(renderChangeItemHtml).join('')}</ul>`;
+}
+
+/**
+ * Resolve a changes record (ids → names, dates → local time) into change items.
+ */
+async function resolveChangeItems(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<EmailChangeItem[]> {
+  return Promise.all(
+    Object.entries(changes).map(async ([field, value]): Promise<EmailChangeItem> => {
       const fieldLabel = formatFieldName(field);
       if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
           const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
           const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-          return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
+          return changeItem(fieldLabel, resolvedOldValue, resolvedNewValue);
         }
         const presentVal = newVal !== undefined ? newVal : oldVal;
         const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+        return changeItem(fieldLabel, null, resolvedValue);
       }
       const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-      return renderChangeItemHtml(fieldLabel, null, resolvedValue);
+      return changeItem(fieldLabel, null, resolvedValue);
     })
   );
-  if (items.length === 0) {
-    return '';
-  }
-  return `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>`;
+}
+
+/**
+ * Format changes record into an HTML fragment for use in the "Changes Made" email box.
+ */
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC', locale: string = 'en'): Promise<string> {
+  return renderChangeItemsHtml(await resolveChangeItems(db, changes, tenantId, timeZone, locale));
 }
 
 /**
@@ -1931,7 +1968,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const changeItems = await resolveChangeItems(db, payload.changes || {}, tenantId, emailTimeZone, emailLocale);
+    const formattedChanges = renderChangeItemsHtml(changeItems);
 
     // Get updater's name
     const updater = updaterUserId
@@ -1965,6 +2003,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updater ? `${updater.first_name} ${updater.last_name}` : 'System'
     };
 
@@ -2117,31 +2156,30 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 }
 
 /**
- * Format multiple accumulated changes into an HTML fragment.
- * Each updater gets a header (name · timestamp) followed by a list of field changes.
+ * Resolve bundled updates into one group per update: the updater (never a raw id),
+ * the local timestamp, and that update's change items.
  */
-async function formatAccumulatedChanges(
+async function resolveAccumulatedChangeGroups(
   db: any,
   accumulatedChanges: AccumulatedChange[],
   tenantId: string,
   timeZone: string = 'UTC',
   locale: string = 'en'
-): Promise<string> {
-  const formattedSections: string[] = [];
+): Promise<EmailChangeGroup[]> {
+  const groups: EmailChangeGroup[] = [];
 
-  for (let i = 0; i < accumulatedChanges.length; i += 1) {
-    const changeSet = accumulatedChanges[i];
+  for (const changeSet of accumulatedChanges) {
     const updater = changeSet.userId
       ? await tenantDb(db, tenantId).table('users')
           .where({ user_id: changeSet.userId })
           .first()
       : null;
     // Never render a raw id: no user row (or no userId at all) reads as System.
-    const updaterName = updater
+    const updatedBy = updater
       ? `${updater.first_name} ${updater.last_name}`
       : 'System';
 
-    const timestamp = new Date(changeSet.timestamp).toLocaleString(locale, {
+    const updatedAt = new Date(changeSet.timestamp).toLocaleString(locale, {
       month: 'short',
       day: '2-digit',
       year: 'numeric',
@@ -2151,33 +2189,48 @@ async function formatAccumulatedChanges(
       timeZoneName: 'short'
     });
 
-    const items = await Promise.all(
-      Object.entries(changeSet.changes).map(async ([field, value]): Promise<string> => {
-        const fieldLabel = formatFieldName(field);
-        if (typeof value === 'object' && value !== null && ('old' in value || 'new' in value)) {
-          const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
-          if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone, locale);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone, locale);
-            return renderChangeItemHtml(fieldLabel, resolvedOldValue, resolvedNewValue);
-          }
-          const presentVal = newVal !== undefined ? newVal : oldVal;
-          const resolvedValue = await resolveValue(db, field, presentVal, tenantId, timeZone);
-          return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-        }
-        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone, locale);
-        return renderChangeItemHtml(fieldLabel, null, resolvedValue);
-      })
-    );
-
-    const isLast = i === accumulatedChanges.length - 1;
-    const sectionStyle = isLast ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
-    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(updaterName)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(timestamp)}</span></div>`;
-    const list = items.length > 0 ? `<ul style="${CHANGE_LIST_STYLE}">${items.join('')}</ul>` : '';
-    formattedSections.push(`<div style="${sectionStyle}">${header}${list}</div>`);
+    const items = await resolveChangeItems(db, changeSet.changes, tenantId, timeZone, locale);
+    groups.push({ updatedBy, updatedAt, items });
   }
 
-  return formattedSections.join('');
+  return groups;
+}
+
+/**
+ * Flatten bundled updates for {{#each ticket.changeItems}}: the first item of each
+ * update carries its updater and time so a template can print a heading there.
+ */
+function flattenChangeGroups(groups: EmailChangeGroup[]): EmailChangeItem[] {
+  return groups.flatMap((group) =>
+    group.items.map((item, index) =>
+      index === 0 ? { ...item, updatedBy: group.updatedBy, updatedAt: group.updatedAt } : item
+    )
+  );
+}
+
+/**
+ * The legacy `ticket.changes` fragment for bundled updates: each updater gets a
+ * header (name · timestamp) followed by a list of field changes.
+ */
+function renderChangeGroupsHtml(groups: EmailChangeGroup[]): string {
+  return groups.map((group, i) => {
+    const sectionStyle = i === groups.length - 1 ? CHANGE_SECTION_LAST_STYLE : CHANGE_SECTION_STYLE;
+    const header = `<div style="${CHANGE_SECTION_HEADER_STYLE}">${escapeHtml(group.updatedBy)} <span style="${CHANGE_SECTION_TIMESTAMP_STYLE}">· ${escapeHtml(group.updatedAt)}</span></div>`;
+    return `<div style="${sectionStyle}">${header}${renderChangeItemsHtml(group.items)}</div>`;
+  }).join('');
+}
+
+/**
+ * Format multiple accumulated changes into the legacy `ticket.changes` HTML fragment.
+ */
+async function formatAccumulatedChanges(
+  db: any,
+  accumulatedChanges: AccumulatedChange[],
+  tenantId: string,
+  timeZone: string = 'UTC',
+  locale: string = 'en'
+): Promise<string> {
+  return renderChangeGroupsHtml(await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, timeZone, locale));
 }
 
 /** Display string for the "Updated By" row of an accumulated-update email. */
@@ -2365,7 +2418,9 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const emailLocale = await getTenantDefaultLocale(tenantId);
 
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeGroups = await resolveAccumulatedChangeGroups(db, accumulatedChanges, tenantId, emailTimeZone, emailLocale);
+    const changeItems = flattenChangeGroups(changeGroups);
+    const formattedChanges = renderChangeGroupsHtml(changeGroups);
 
     const updatedByDisplay = await resolveUpdatedByDisplay(db, tenantId, accumulatedChanges);
 
@@ -2394,6 +2449,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       categoryDetails,
       locationSummary,
       changes: formattedChanges,
+      changeItems,
       updatedBy: updatedByDisplay,
       updateCount: accumulatedChanges.length,
     };
@@ -4282,6 +4338,9 @@ export const ticketEmailSubscriberTestHarness = {
   handleTicketClosed,
   handleTicketEvent,
   formatAccumulatedChanges,
+  resolveChangeItems,
+  resolveAccumulatedChangeGroups,
+  flattenChangeGroups,
   resolveUpdatedByDisplay,
 };
 

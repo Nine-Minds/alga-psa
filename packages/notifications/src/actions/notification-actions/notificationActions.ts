@@ -562,13 +562,13 @@ export const sendTestEmailAction = withAuth(async (
     const textContent = overrideContent?.text_content ?? template.text_content;
 
     // 5. Get sample data and substitute variables
-    const { getSampleDataForPreview } = await import('../../lib/templateSampleData');
+    const { expandEachBlocksForPreview, getSampleDataForPreview } = await import('../../lib/templateSampleData');
     const sampleData = getSampleDataForPreview(template.name, htmlContent, subject);
 
     const { StaticTemplateProcessor } = await import('@alga-psa/email');
     const renderedSubject = `[TEST] ${replaceVars(subject, sampleData)}`;
-    const renderedHtml = replaceVars(htmlContent, sampleData);
-    const renderedText = replaceVars(textContent, sampleData);
+    const renderedHtml = replaceVars(expandEachBlocksForPreview(htmlContent), sampleData);
+    const renderedText = replaceVars(expandEachBlocksForPreview(textContent ?? ''), sampleData);
 
     const templateProcessor = new StaticTemplateProcessor(renderedSubject, renderedHtml, renderedText);
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { bodySizeGuardResponse } from './middleware/bodySizeGuard';
+import { principalApiSurfaceResponse } from './middleware/principalApiSurface';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
@@ -486,6 +487,9 @@ const _middleware = auth(async (request) => {
     }
     return corsPreflightResponse(origin);
   }
+
+  const principalApiRefusal = principalApiSurfaceResponse(request);
+  if (principalApiRefusal) return applyCorsHeaders(principalApiRefusal, origin);
 
   // Dev-only guard: prevent noisy stack traces from stale Server Action IDs after refactors/restarts.
   // If the browser is running an older bundle, it can keep POSTing an action id that no longer exists.

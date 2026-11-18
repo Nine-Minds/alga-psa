@@ -38,6 +38,16 @@ describe("navigation deep link config", () => {
     expect(drawerScreens.ContactsTab).toBe("contacts");
     expect(drawerScreens.SettingsTab).toBe("settings");
   });
+
+  it("parses query params of a link through React Navigation", async () => {
+    // native re-exports this from core; core imports without react-native.
+    const { getStateFromPath } = await import("@react-navigation/core");
+    const mod = await import("./linking");
+
+    const state = getStateFromPath("auth/callback?ott=abc&state=xyz", mod.linking.config);
+
+    expect(state?.routes[0]).toMatchObject({ name: "AuthCallback", params: { ott: "abc", state: "xyz" } });
+  });
 });
 
 describe("hosted ticket links", () => {
