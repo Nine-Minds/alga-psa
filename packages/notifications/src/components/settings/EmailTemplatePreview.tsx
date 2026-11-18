@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@alga-psa/ui/components/Label";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { resolveBrandLogoForPreview, type BrandLogoPreviewUrls } from "@alga-psa/email/branding";
-import { getSampleDataForPreview } from "../../lib/templateSampleData";
+import { expandEachBlocksForPreview, getSampleDataForPreview } from "../../lib/templateSampleData";
 import {
   annotateHtmlSource,
   parseSourceRange,
@@ -27,17 +27,8 @@ export function replaceTemplateVariables(
   content: string,
   data: Record<string, string>
 ): string {
-  // Expand {{#each path}}...{{/each}} blocks once for preview, qualifying
-  // {{this.*}} references (including {{#if this.*}}) against the block's path
-  // so the registry's per-item examples (e.g. credits.items.creditId) resolve.
-  let result = content.replace(
-    /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match, path, blockContent: string) =>
-      blockContent.replace(
-        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
-        (_inner, open, ifTag, key, close) => `${open}${ifTag ?? ''}${path}.${key}${close}`
-      )
-  );
+  // Expand {{#each path}}...{{/each}} blocks first (one example item per list).
+  let result = expandEachBlocksForPreview(content);
 
   // Then, process {{#if condition}}...{{/if}} blocks.
   // For preview, show the block content (with variables replaced) since sample data is available.
