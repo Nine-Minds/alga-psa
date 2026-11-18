@@ -1923,7 +1923,7 @@
       },
       "kind": {
         "product": "Produkt",
-        "service": "Service"
+        "service": "Dienst"
       },
       "map": {
         "help": "Prüfen Sie, welche Spalte was enthält. Auf „Ignorieren“ gesetzte Spalten werden nicht importiert.",

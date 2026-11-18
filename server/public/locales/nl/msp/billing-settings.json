@@ -1905,7 +1905,7 @@
       "errors": {
         "slow": "De import is nog bezig. Controleer de prijslijsten zo meteen opnieuw.",
         "unreadable": "Dat bestand kon niet worden gelezen. Controleer of het een CSV- of XLSX-bestand met een koprij is.",
-        "applyFailed": "De prijslijst kon niet worden toegepast. Er is niets opgeslagen. Probeer het opnieuw of neem contact op met je beheerder als het blijft mislukken."
+        "applyFailed": "De prijslijst kon niet worden toegepast. Er is niets opgeslagen. Probeer het opnieuw of neem contact op met uw beheerder als het blijft mislukken."
       },
       "impact": {
         "columns": {
@@ -1951,7 +1951,7 @@
           "change": "Wijziging",
           "currency": "Valuta",
           "current": "Huidige prijs",
-          "item": "Item",
+          "item": "Artikel",
           "kind": "Soort",
           "new": "Nieuwe prijs",
           "outcome": "Resultaat",
