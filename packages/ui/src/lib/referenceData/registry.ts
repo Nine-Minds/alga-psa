@@ -73,3 +73,13 @@ export type ReferenceListEntry =
 export function referenceListCacheKey(scope: string, key: ReferenceListKey): readonly ['ref', string, ReferenceListKey] {
   return ['ref', scope, key];
 }
+
+/** The cached tag list that a tag of this entity type belongs to; null for types with no cached list. */
+export function tagReferenceListKey(taggedType: string | undefined): 'ticketTags' | 'projectTaskTags' | null {
+  if (taggedType === 'ticket') return 'ticketTags';
+  if (taggedType === 'project_task') return 'projectTaskTags';
+  return null;
+}
+
+/** Both tag lists, for tag changes that are not tied to one entity type (rename, recolor by id). */
+export const ALL_TAG_LIST_KEYS = ['ticketTags', 'projectTaskTags'] as const satisfies readonly ReferenceListKey[];

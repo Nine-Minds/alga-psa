@@ -41,6 +41,7 @@ export function UserActivitiesDashboard() {
   const {
     value: viewMode,
     setValue: setViewModePreference
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   } = useUserPreference<UserActivitiesViewMode>(
     'activitiesDashboardViewMode',
     {

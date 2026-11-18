@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import type { ITag, TaggedEntityType } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllTags, updateTagColor, updateTagText, deleteAllTagsByText, checkTagPermissions, isTagActionError } from '../actions';
+import { invalidateReferenceList, ALL_TAG_LIST_KEYS, tagReferenceListKey } from '@alga-psa/ui/lib/referenceData';
 
 interface TagPermissions {
   canAddExisting: boolean;
@@ -94,6 +95,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
       if (isTagActionError(result)) {
         throw result;
       }
+      invalidateReferenceList([...ALL_TAG_LIST_KEYS]);
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to update tag color:", error);
@@ -123,6 +125,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
       if (isTagActionError(result)) {
         throw result;
       }
+      invalidateReferenceList([...ALL_TAG_LIST_KEYS]);
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to update tag text:", error);
@@ -144,6 +147,8 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
       if (isTagActionError(result)) {
         throw result;
       }
+      const listKey = tagReferenceListKey(taggedType);
+      if (listKey) invalidateReferenceList(listKey);
       // Skip automatic refetch - let individual components handle their own updates
     } catch (error) {
       console.error("Failed to delete tags:", error);

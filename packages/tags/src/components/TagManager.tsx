@@ -10,6 +10,7 @@ import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isProvisionalTagId, useReconciledTags, type PendingTagOp } from './useReconciledTags';
+import { invalidateReferenceList, tagReferenceListKey } from '@alga-psa/ui/lib/referenceData';
 
 interface TagManagerProps {
   id?: string;
@@ -32,6 +33,12 @@ interface TagManagerProps {
   };
   /** Display the entity's tags with no add, remove, or edit affordance. */
   readOnly?: boolean;
+}
+
+/** A tag was added to or removed from an entity of this type: refresh that type's cached tag list. */
+function invalidateTagList(entityType: string): void {
+  const key = tagReferenceListKey(entityType);
+  if (key) invalidateReferenceList(key);
 }
 
 export const TagManager: React.FC<TagManagerProps> = ({
@@ -217,6 +224,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         return { kind: 'add', tag: newTag };
       });
       if (!updatedTags) return;
+      invalidateTagList(entityType);
 
       onTagsChange?.(updatedTags);
 
@@ -243,6 +251,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       return op;
     });
     if (updatedTags) {
+      invalidateTagList(entityType);
       onTagsChange?.(updatedTags);
     }
   };

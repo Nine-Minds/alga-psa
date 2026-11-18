@@ -26,6 +26,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 /**
  * ProjectStatusSettings - Manages project-level statuses
@@ -106,6 +107,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
         toast.error(statusActionErrorMessage(result));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));
@@ -170,6 +172,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
         return;
       }
 
+      invalidateReferenceList('projectsWithPhases');
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
       toast.success(t('settings.statuses.status_deleted_success', 'Status "{{statusName}}" deleted successfully', {
         statusName: statusToDelete.name,

@@ -49,6 +49,7 @@ import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
 import { isTeamActionError } from '@alga-psa/teams/actions/team-actions/teamActionErrors';
 import { toast } from 'react-hot-toast';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 import {
   getErrorMessage,
   handleError,
@@ -799,6 +800,13 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
   };
 
+  // Board and ticket-status changes (statuses are board-scoped and saved with the board) also feed
+  // the shared reference-list cache behind the User Activities filters.
+  const refreshBoardsAfterChange = async () => {
+    invalidateReferenceList(['boards', 'ticketStatuses']);
+    await fetchBoards();
+  };
+
   const fetchUsers = async () => {
     try {
       // Fetch only active internal users for the default assigned agent picker
@@ -1053,7 +1061,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       if (result.success) {
         toast.success(result.message || t('ticketing.boards.messages.success.deleted'));
         setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
-        await fetchBoards();
+        await refreshBoardsAfterChange();
         return;
       }
 
@@ -1327,7 +1335,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         // refresh the list/stats, then re-baseline the dirty state from what was
         // actually persisted so the unsaved indicators clear without navigating away.
         setEditingBoard((prev) => (prev ? { ...prev, board_name: formData.board_name, description: formData.description } : prev));
-        await fetchBoards();
+        await refreshBoardsAfterChange();
         setFormSnapshot(null);
         await reloadBoardEditorData(editingBoard);
         return;
@@ -1381,7 +1389,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               copy_ticket_statuses_from_board_id: '',
             }));
             setFormSnapshot(null);
-            await fetchBoards();
+            await refreshBoardsAfterChange();
             await reloadBoardEditorData(createdBoard);
             failInSection('notifications', message);
           };
@@ -1435,7 +1443,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setShowAddEditDialog(false);
       setEditingBoard(null);
       setFormData(createEmptyFormData());
-      await fetchBoards();
+      await refreshBoardsAfterChange();
     } catch (error) {
       console.error('Error saving board:', error);
       setDialogError(error instanceof Error ? error.message : t('ticketing.boards.messages.error.saveFailed'));
@@ -1529,7 +1537,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       setImportBoardItilSettings({});
       setImportConflicts([]);
       setConflictResolutions({});
-      await fetchBoards();
+      await refreshBoardsAfterChange();
     } catch (error) {
       handleError(error, t('ticketing.boards.messages.error.importFailed'));
     }
