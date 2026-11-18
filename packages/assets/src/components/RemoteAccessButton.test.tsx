@@ -146,4 +146,34 @@ describe('RemoteAccessButton availability', () => {
     expect(open).toHaveBeenCalledTimes(1);
     open.mockRestore();
   });
+
+  it('renders an unknown provider type with the generic label and opens its URL', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['4242']);
+    mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://remote.example/unknown');
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    const item = await screen.findByText('remoteAccess.connectionTypes.generic');
+    item.closest('button')?.click();
+    await vi.waitFor(() => expect(mockRmm.getAssetRemoteControlUrl).toHaveBeenCalledWith('asset-1', '4242'));
+    expect(open).toHaveBeenCalledWith('https://remote.example/unknown', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('humanizes a readable unknown type instead of showing a raw key', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['fancy_remote']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    expect(await screen.findByText('Fancy remote')).toBeTruthy();
+  });
+
+  it('renders NinjaOne Remote with the monitor icon', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['ninjaone_remote']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'ninjaone', rmm_device_id: '123' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    const label = await screen.findByText('remoteAccess.connectionTypes.ninjaoneRemote');
+    const item = label.closest('button')!;
+    expect(item.querySelector('svg.lucide-monitor')).toBeTruthy();
+    expect(item.querySelector('svg.lucide-terminal')).toBeNull();
+  });
 });

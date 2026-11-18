@@ -1,13 +1,14 @@
 'use client';
 
 import { useAssetSurfaceControls } from '../context/AssetSurfaceAccessContext';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AlertCircle, ExternalLink, Loader2, Monitor, Terminal } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { describeRmmConnectionType, rmmConnectionTypesForProvider } from '@alga-psa/integrations/lib/rmm/connectionTypes';
 import { useAssetCrossFeature, type AssetRemoteConnectionType } from '../context/AssetCrossFeatureContext';
 import { getRemoteAccessLinksForAsset, type RenderedRemoteAccessLink } from '../actions/remoteAccessLinkActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
@@ -22,17 +23,23 @@ export interface RemoteAccessButtonProps {
   surface?: 'asset-header' | 'asset-drawer' | 'ticket-sidebar';
 }
 
-const ninjaOneTypes: AssetRemoteConnectionType[] = ['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell'];
-const providerTypes: Record<string, AssetRemoteConnectionType[]> = {
-  ninjaone: ninjaOneTypes,
-  tacticalrmm: ['splashtop', 'shell'], // Tactical's `control` URL is its desktop session.
-  datto: ['splashtop'], // Datto Web Remote (device webRemoteUrl), shown as Remote Desktop.
-};
+function connectionLabel(type: AssetRemoteConnectionType, t: (key: string, options?: { defaultValue?: string }) => string): string {
+  const { labelKey, fallbackLabel } = describeRmmConnectionType(type);
+  if (labelKey) return t(labelKey, { defaultValue: fallbackLabel || undefined });
+  return fallbackLabel;
+}
 
-function connectionLabel(type: AssetRemoteConnectionType, t: (key: string) => string): string {
-  if (type === 'splashtop') return t('remoteAccess.remoteDesktop');
-  if (type === 'shell') return t('remoteAccess.remoteShell');
-  return t(`remoteAccess.connectionTypes.${type}`);
+/** Providers that publish a closed set keep it (in their order); everything else is shown as the adapter returned it, in registry order. */
+function presentableTypes(provider: string | null | undefined, reported: AssetRemoteConnectionType[]): AssetRemoteConnectionType[] {
+  const allowed = rmmConnectionTypesForProvider(provider);
+  const hint = allowed ?? [];
+  const rank = (type: AssetRemoteConnectionType) => {
+    const index = hint.indexOf(type);
+    return index >= 0 ? index : hint.length;
+  };
+  return [...new Set(reported)]
+    .filter((type) => !allowed || allowed.includes(type))
+    .sort((a, b) => rank(a) - rank(b) || describeRmmConnectionType(a).order - describeRmmConnectionType(b).order);
 }
 
 /** Not rendered at all when the server's seat authority closes remote access to the signed-in user. */
@@ -51,16 +58,15 @@ function RemoteAccessButtonControl({ asset, variant = 'default', size = 'sm', cl
   const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState(false);
   const [assetLinks, setAssetLinks] = useState<RenderedRemoteAccessLink[]>([]);
-  const candidates = useMemo(() => asset.rmm_provider ? providerTypes[asset.rmm_provider] ?? [] : [], [asset.rmm_provider]);
-  const hasRmmCandidates = Boolean(asset.rmm_provider && asset.rmm_device_id && candidates.length > 0);
+  const hasRmmCandidates = Boolean(asset.rmm_provider && asset.rmm_device_id);
 
   const loadOptions = useCallback(async () => {
     if (hasLoadedOptions || isLoadingOptions) return;
     setIsLoadingOptions(true);
     setLoadFailed(false);
-    const typeRequest = asset.rmm_provider && asset.rmm_device_id && candidates.length > 0
+    const typeRequest = hasRmmCandidates
       ? rmm.getAssetRemoteControlTypes(asset.asset_id)
-          .then((types) => setAvailableTypes(types.filter((type) => candidates.includes(type))))
+          .then((types) => setAvailableTypes(presentableTypes(asset.rmm_provider, types)))
           .catch(() => { setAvailableTypes([]); setLoadFailed(true); })
       : Promise.resolve().then(() => setAvailableTypes([]));
     const linkRequest = getRemoteAccessLinksForAsset(asset.asset_id)
@@ -72,9 +78,9 @@ function RemoteAccessButtonControl({ asset, variant = 'default', size = 'sm', cl
     await Promise.all([typeRequest, linkRequest]);
     setHasLoadedOptions(true);
     setIsLoadingOptions(false);
-  }, [asset.asset_id, asset.rmm_device_id, asset.rmm_provider, candidates, hasLoadedOptions, isLoadingOptions, rmm]);
+  }, [asset.asset_id, asset.rmm_provider, hasRmmCandidates, hasLoadedOptions, isLoadingOptions, rmm]);
 
-  const availableRmmTypes = availableTypes?.filter((type) => candidates.includes(type)) ?? [];
+  const availableRmmTypes = availableTypes ?? [];
 
   if (!hasRmmCandidates && !hasTemplateLinks) return null;
 
@@ -118,7 +124,7 @@ function RemoteAccessButtonControl({ asset, variant = 'default', size = 'sm', cl
           )}
           {availableRmmTypes.map((type) => (
             <DropdownMenuItem key={type} id={`remote-access-${asset.asset_id}-${type}`} data-asset-id={asset.asset_id} onClick={() => void connect(type)} disabled={isPending} className="gap-2">
-              {type === 'shell' ? <Terminal className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+              {describeRmmConnectionType(type).icon === 'terminal' ? <Terminal className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
               <span>{connectionLabel(type, t)}</span>
               <ExternalLink className="ml-auto h-3 w-3 text-muted-foreground" />
             </DropdownMenuItem>
