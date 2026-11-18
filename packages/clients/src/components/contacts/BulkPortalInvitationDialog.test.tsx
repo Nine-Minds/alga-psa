@@ -26,10 +26,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   };
   return { useTranslation: () => ({ t }) };
 });
-vi.mock('../../actions/contact-actions/contactActions', () => ({
+vi.mock('@alga-psa/clients/actions', () => ({
   getContactsEligibleForInvitation: hoisted.getContactsEligibleForInvitation,
-}));
-vi.mock('../../actions/contact-actions/portalInvitationBridgeActions', () => ({
   sendBulkPortalInvitations: hoisted.sendBulkPortalInvitations,
 }));
 vi.mock('@alga-psa/ui/components/Button', () => ({

@@ -6,8 +6,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getContactsEligibleForInvitation } from '../../actions/contact-actions/contactActions';
-import { sendBulkPortalInvitations } from '../../actions/contact-actions/portalInvitationBridgeActions';
+import { isValidEmail } from '@alga-psa/validation';
+// Through the package entry, like the list that owns this dialog: the relative
+// path would pull the server-action graph into every component test that
+// renders the Contacts tab.
+import { getContactsEligibleForInvitation, sendBulkPortalInvitations } from '@alga-psa/clients/actions';
 import type { BulkSendInvitationResult } from '@alga-psa/portal-shared/types';
 
 export type BulkPortalInvitationTarget =
@@ -26,8 +29,6 @@ interface BulkPortalInvitationDialogProps {
 
 /** Why a chosen contact will not receive an invitation. */
 type SkipReason = 'alreadyHasPortalAccess' | 'missingEmail' | 'sharedMailbox';
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Confirms a bulk portal invitation before anything is sent, then reports what
@@ -103,8 +104,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         skipped.push({ contactId, reason: 'sharedMailbox' });
         continue;
       }
-      const email = (eligible.email ?? '').trim();
-      if (!email || !EMAIL_PATTERN.test(email)) {
+      // Same check the send path runs, so the preview count cannot disagree
+      // with the number of emails that actually go out.
+      if (!isValidEmail(eligible.email)) {
         skipped.push({ contactId, reason: 'missingEmail' });
         continue;
       }
