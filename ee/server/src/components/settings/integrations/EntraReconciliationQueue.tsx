@@ -39,6 +39,7 @@ export default function EntraReconciliationQueue() {
   const [quickAddItem, setQuickAddItem] = React.useState<EntraReconciliationQueueItem | null>(null);
   const [linkAnywayItem, setLinkAnywayItem] = React.useState<EntraReconciliationQueueItem | null>(null);
 
+  // Clears the success message, so each action reloads first and then says what it did.
   const loadQueue = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -117,8 +118,8 @@ export default function EntraReconciliationQueue() {
       if ('error' in result) {
         setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
-        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedExisting', { queueItemId: item.queueItemId, contactNameId }));
         await loadQueue();
+        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedExisting', { queueItemId: item.queueItemId, contactNameId }));
       }
     } finally {
       setResolvingItemId(null);
@@ -137,10 +138,10 @@ export default function EntraReconciliationQueue() {
       if ('error' in result) {
         setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
+        await loadQueue();
         setSuccessMessage(t('integrations.entra.reconciliation.success.dismissed', {
           identity: item.email || item.userPrincipalName || item.displayName || item.entraObjectId,
         }));
-        await loadQueue();
       }
     } finally {
       setResolvingItemId(null);
@@ -158,11 +159,11 @@ export default function EntraReconciliationQueue() {
       if ('error' in result) {
         setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
+        await loadQueue();
         setSuccessMessage(t('integrations.entra.reconciliation.success.linkedAnyway', {
           identity: item.email || item.userPrincipalName || item.displayName || '',
           name: item.owner?.fullName || '',
         }));
-        await loadQueue();
       }
     } finally {
       setResolvingItemId(null);
@@ -179,8 +180,8 @@ export default function EntraReconciliationQueue() {
       if ('error' in result) {
         setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
       } else {
-        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedNew', { queueItemId: item.queueItemId, contactNameId: result.data?.contactNameId || '' }));
         await loadQueue();
+        setSuccessMessage(t('integrations.entra.reconciliation.success.resolvedNew', { queueItemId: item.queueItemId, contactNameId: result.data?.contactNameId || '' }));
       }
     } finally {
       setResolvingItemId(null);
