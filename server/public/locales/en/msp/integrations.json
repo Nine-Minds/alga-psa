@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "The email already belongs to a contact at another client (or at none), so the sync will not link it. These land in the review queue.",
+            "label": "Email belongs to another client"
+          },
           "create": {
             "description": "No contact in this client matches the email, so one would be created.",
             "label": "New contacts"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Dismiss",
+          "linkAnyway": "Link anyway",
           "refresh": "Refresh",
           "resolveExisting": "Resolve to Existing",
           "resolveNew": "Resolve to New"
@@ -845,12 +850,28 @@
           "loadQueue": "Failed to load reconciliation queue.",
           "resolveFailed": "Failed to resolve queue item."
         },
+        "linkAnyway": {
+          "message": "{{identity}} will be linked to {{name}} at {{client}}, even though that contact belongs to a different client than the one being synced. This is recorded as your decision.",
+          "noClient": "no client",
+          "title": "Link across clients?"
+        },
         "loading": "Loading queue…",
         "noEmailIdentity": "No email identity",
+        "owner": {
+          "additionalNote": "The address is an additional email on that contact.",
+          "at": "Held by {{name}} at {{client}}",
+          "inactiveNote": "That contact is inactive.",
+          "noClient": "Held by {{name}} (no client)"
+        },
         "queuedAt": "{{identity}} · queued {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "Email belongs to another client",
+          "multipleEmailMatches": "Multiple contacts match"
+        },
         "scopedToMappedClient": "Existing contact options are limited to this mapped client.",
         "success": {
           "dismissed": "Dismissed {{identity}}. It will not come back on the next sync.",
+          "linkedAnyway": "Linked {{identity}} to {{name}}.",
           "resolvedExisting": "Resolved queue item {{queueItemId}} to existing contact {{contactNameId}}.",
           "resolvedNew": "Resolved queue item {{queueItemId}} by creating contact {{contactNameId}}."
         },

@@ -319,6 +319,7 @@ export type EntraPreflightBucketId =
   | 'create'
   | 'link'
   | 'needs_decision'
+  | 'conflict'
   | 'no_change'
   | 'mark_inactive';
 
@@ -415,6 +416,16 @@ export type EntraReconciliationQueueItem = {
   displayName: string | null;
   email: string | null;
   candidateContacts: Array<Record<string, unknown>>;
+  reason: 'multiple_email_matches' | 'email_owned_by_other_client';
+  /** For `email_owned_by_other_client`: the contact (and client) that already holds the address. */
+  owner: {
+    contactNameId: string;
+    fullName: string;
+    clientId: string | null;
+    clientName: string | null;
+    kind: 'primary' | 'additional';
+    isInactive: boolean;
+  } | null;
   status: string;
   createdAt: string;
 };
@@ -1087,6 +1098,32 @@ export const dismissEntraQueueItem = withAuth(async (
 
   return callEeRoute<{ queueItemId: string; status: string }>({
     importFn: routes.dismissQueueItemRoute,
+    method: 'POST',
+    body: input,
+  });
+});
+
+/**
+ * "This person really is that contact": link an identity queued because its email belongs to a
+ * contact at another client. The only way a sync identity is ever linked across clients; the
+ * decision is recorded with the operator on the link and on the queue item.
+ */
+export const linkEntraQueueItemAnyway = withAuth(async (
+  user,
+  _ctx,
+  input: { queueItemId: string; note?: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
+  }
+
+  return callEeRoute<EntraQueueResolutionResponse>({
+    importFn: routes.linkAnywayQueueItemRoute,
     method: 'POST',
     body: input,
   });

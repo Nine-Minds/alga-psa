@@ -5,6 +5,7 @@ import { findContactMatchesByEmail } from './contactMatcher';
 import {
   createContactForEntraUser,
   linkExistingMatchedContact,
+  previewEmailOwnerPolicy,
   previewLinkedContactChange,
   queueAmbiguousContactMatch,
   reactivateExcludedEntraContact,
@@ -29,6 +30,8 @@ export type EntraSyncPreviewBucket =
   | 'create'
   | 'link'
   | 'needs_decision'
+  /** The email already belongs to a contact at another client: queued for an operator, not linked. */
+  | 'conflict'
   | 'no_change'
   | 'mark_inactive';
 
@@ -88,6 +91,8 @@ export interface ExecuteEntraSyncResult {
     linked: number;
     updated: number;
     ambiguous: number;
+    /** Skipped because the email is owned by a contact at another client (queued for review). */
+    conflict: number;
     inactivated: number;
     skipped: number;
   };
@@ -249,11 +254,35 @@ export async function executeEntraSync(
       continue;
     }
 
-    counters.increment('created');
     if (dryRun) {
-      preview?.push(describeUser(user, 'create'));
+      // Same ownership rule the real run applies, read-only, so the preview never promises a create the run would refuse.
+      const email = userWithEntitlement.email || userWithEntitlement.userPrincipalName;
+      const ownerPolicy = email
+        ? await previewEmailOwnerPolicy(input.tenantId, input.clientId, email)
+        : { policy: 'free' as const };
+      if (ownerPolicy.policy === 'conflict') {
+        counters.increment('conflict');
+        preview?.push(describeUser(user, 'conflict'));
+      } else if (ownerPolicy.policy === 'link') {
+        counters.increment('linked');
+        preview?.push(describeUser(user, 'link'));
+      } else {
+        counters.increment('created');
+        preview?.push(describeUser(user, 'create'));
+      }
     } else {
-      const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+      const createdContact = await createContactForEntraUser(
+        input.tenantId,
+        input.clientId,
+        userWithEntitlement,
+        input.managedTenantId
+      );
+      if (createdContact.action === 'conflict') {
+        // Queued for an operator. Counted so the run report shows the skip, then on to the next user.
+        counters.increment('conflict');
+        continue;
+      }
+      counters.increment(createdContact.action === 'linked' ? 'linked' : 'created');
       const reactivatedExcluded = createdContact.action === 'linked'
         && await reactivateExcludedEntraContact(input.tenantId, createdContact.contactNameId, false);
       if (createdContact.action === 'linked' && (createdContact.recovered || reactivatedExcluded)) counters.increment('updated');

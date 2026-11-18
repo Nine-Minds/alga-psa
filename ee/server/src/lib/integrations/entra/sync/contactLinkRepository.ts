@@ -7,6 +7,8 @@ export interface UpsertEntraContactLinkInput {
   clientId: string | null;
   contactNameId: string;
   user: EntraSyncUser;
+  /** Audit annotation, e.g. an operator's explicit decision to link. Left untouched when omitted. */
+  metadata?: Record<string, unknown>;
 }
 
 export async function upsertEntraContactLinkActive(
@@ -26,7 +28,7 @@ export async function upsertEntraContactLinkActive(
       is_active: true,
       last_seen_at: now,
       last_synced_at: now,
-      metadata: trx.raw(`'{}'::jsonb`),
+      metadata: input.metadata ? trx.raw('?::jsonb', [JSON.stringify(input.metadata)]) : trx.raw(`'{}'::jsonb`),
       created_at: now,
       updated_at: now,
     })
@@ -38,6 +40,7 @@ export async function upsertEntraContactLinkActive(
       is_active: true,
       last_seen_at: now,
       last_synced_at: now,
+      ...(input.metadata ? { metadata: trx.raw('?::jsonb', [JSON.stringify(input.metadata)]) } : {}),
       updated_at: now,
     });
 }

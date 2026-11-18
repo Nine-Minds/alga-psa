@@ -26,6 +26,7 @@ const BUCKET_ORDER: EntraPreflightBucketId[] = [
   'create',
   'link',
   'needs_decision',
+  'conflict',
   'mark_inactive',
   'no_change',
 ];
@@ -34,6 +35,7 @@ const BUCKET_LABEL_KEYS: Record<EntraPreflightBucketId, string> = {
   create: 'integrations.entra.preflight.buckets.create.label',
   link: 'integrations.entra.preflight.buckets.link.label',
   needs_decision: 'integrations.entra.preflight.buckets.needsDecision.label',
+  conflict: 'integrations.entra.preflight.buckets.conflict.label',
   mark_inactive: 'integrations.entra.preflight.buckets.markInactive.label',
   no_change: 'integrations.entra.preflight.buckets.noChange.label',
 };
@@ -42,6 +44,7 @@ const BUCKET_DESCRIPTION_KEYS: Record<EntraPreflightBucketId, string> = {
   create: 'integrations.entra.preflight.buckets.create.description',
   link: 'integrations.entra.preflight.buckets.link.description',
   needs_decision: 'integrations.entra.preflight.buckets.needsDecision.description',
+  conflict: 'integrations.entra.preflight.buckets.conflict.description',
   mark_inactive: 'integrations.entra.preflight.buckets.markInactive.description',
   no_change: 'integrations.entra.preflight.buckets.noChange.description',
 };
@@ -54,6 +57,7 @@ const BUCKET_BAR_CLASSES: Record<EntraPreflightBucketId, string> = {
   create: 'bg-success',
   link: 'bg-primary-500',
   needs_decision: 'bg-warning',
+  conflict: 'bg-warning',
   mark_inactive: 'bg-destructive',
   no_change: 'bg-muted-foreground/40',
 };

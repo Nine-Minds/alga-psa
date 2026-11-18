@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "O e-mail já pertence a um contato de outro cliente (ou sem cliente), então a sincronização não o vinculará. Estes vão para a fila de revisão.",
+            "label": "E-mail pertence a outro cliente"
+          },
           "create": {
             "description": "Nenhum contato deste cliente tem o mesmo email, então um novo contato seria criado.",
             "label": "Novos contatos"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Dispensar",
+          "linkAnyway": "Vincular mesmo assim",
           "refresh": "Atualizar",
           "resolveExisting": "Resolver para existir",
           "resolveNew": "Resolver para novo"
@@ -845,12 +850,28 @@
           "loadQueue": "Falha ao carregar a fila de reconciliação.",
           "resolveFailed": "Falha ao resolver o item da fila."
         },
+        "linkAnyway": {
+          "message": "{{identity}} será vinculado a {{name}} em {{client}}, embora esse contato pertença a um cliente diferente do que está sendo sincronizado. Isso é registrado como sua decisão.",
+          "noClient": "sem cliente",
+          "title": "Vincular entre clientes?"
+        },
         "loading": "Carregando fila…",
         "noEmailIdentity": "Sem identidade de e-mail",
+        "owner": {
+          "additionalNote": "O endereço é um e-mail adicional desse contato.",
+          "at": "Pertence a {{name}} em {{client}}",
+          "inactiveNote": "Esse contato está inativo.",
+          "noClient": "Pertence a {{name}} (sem cliente)"
+        },
         "queuedAt": "{{identity}} · {{time}} na fila",
+        "reason": {
+          "emailOwnedByOtherClient": "E-mail pertence a outro cliente",
+          "multipleEmailMatches": "Vários contatos correspondem"
+        },
         "scopedToMappedClient": "As opções de contato existentes estão limitadas a este cliente mapeado.",
         "success": {
           "dismissed": "{{identity}} dispensado. Não volta na próxima sincronização.",
+          "linkedAnyway": "{{identity}} foi vinculado a {{name}}.",
           "resolvedExisting": "Item de fila {{queueItemId}} resolvido para o contato existente {{contactNameId}}.",
           "resolvedNew": "Item da fila {{queueItemId}} resolvido criando o contato {{contactNameId}}."
         },

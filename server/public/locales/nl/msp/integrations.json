@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "Het e-mailadres is al van een contactpersoon bij een andere klant (of zonder klant), dus de synchronisatie koppelt het niet. Deze komen in de beoordelingswachtrij.",
+            "label": "E-mailadres is van een andere klant"
+          },
           "create": {
             "description": "Geen contact bij deze klant komt overeen met het e-mailadres, dus er zou er een worden aangemaakt.",
             "label": "Nieuwe contacten"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Negeren",
+          "linkAnyway": "Toch koppelen",
           "refresh": "Vernieuwen",
           "resolveExisting": "Oplossen naar bestaand",
           "resolveNew": "Oplossen naar nieuw"
@@ -845,12 +850,28 @@
           "loadQueue": "Kan afstemmingswachtrij niet laden.",
           "resolveFailed": "Kan wachtrij-item niet oplossen."
         },
+        "linkAnyway": {
+          "message": "{{identity}} wordt gekoppeld aan {{name}} bij {{client}}, ook al hoort die contactpersoon bij een andere klant dan degene die wordt gesynchroniseerd. Dit wordt vastgelegd als uw beslissing.",
+          "noClient": "geen klant",
+          "title": "Over klanten heen koppelen?"
+        },
         "loading": "Wachtrij laden…",
         "noEmailIdentity": "Geen e-mailidentiteit",
+        "owner": {
+          "additionalNote": "Het adres is een extra e-mailadres van die contactpersoon.",
+          "at": "Van {{name}} bij {{client}}",
+          "inactiveNote": "Die contactpersoon is inactief.",
+          "noClient": "Van {{name}} (geen klant)"
+        },
         "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-mailadres is van een andere klant",
+          "multipleEmailMatches": "Meerdere contactpersonen komen overeen"
+        },
         "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
         "success": {
           "dismissed": "{{identity}} genegeerd. Het komt bij de volgende synchronisatie niet terug.",
+          "linkedAnyway": "{{identity}} is gekoppeld aan {{name}}.",
           "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
           "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
         },

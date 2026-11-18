@@ -78,6 +78,7 @@ function createEmptySummary(totalTenants: number): EntraSyncRunSummary {
     linked: 0,
     updated: 0,
     ambiguous: 0,
+    conflict: 0,
     inactivated: 0,
     skipped: 0,
   };
@@ -164,6 +165,7 @@ export async function entraAllTenantsSyncWorkflow(
     summary.linked += result.linked;
     summary.updated += result.updated;
     summary.ambiguous += result.ambiguous;
+    summary.conflict += result.conflict ?? 0;
     summary.inactivated += result.inactivated;
     summary.skipped += result.skipped;
   }

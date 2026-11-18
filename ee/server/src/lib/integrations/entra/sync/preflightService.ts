@@ -27,6 +27,7 @@ export const ENTRA_PREVIEW_BUCKETS: readonly EntraSyncPreviewBucket[] = [
   'create',
   'link',
   'needs_decision',
+  'conflict',
   'no_change',
   'mark_inactive',
 ] as const;
@@ -53,6 +54,7 @@ export interface EntraPreflightResult {
     linked: number;
     updated: number;
     ambiguous: number;
+    conflict: number;
     inactivated: number;
   };
   buckets: EntraPreflightBucket[];

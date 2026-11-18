@@ -519,6 +519,7 @@ export async function syncTenantUsersActivity(
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
+    conflict: syncResult.counters.conflict,
     inactivated: syncResult.counters.inactivated + portalDisabledCount,
     warnings: syncResult.warnings || [],
     skipped: syncResult.counters.skipped,

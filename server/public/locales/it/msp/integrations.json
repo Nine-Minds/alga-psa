@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "L’indirizzo e-mail appartiene già a un contatto di un altro cliente (o senza cliente), quindi la sincronizzazione non lo collegherà. Questi finiscono nella coda di revisione.",
+            "label": "E-mail appartenente a un altro cliente"
+          },
           "create": {
             "description": "Nessun contatto di questo client corrisponde all'e-mail, quindi ne verrebbe creato uno.",
             "label": "Nuovi contatti"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Ignora",
+          "linkAnyway": "Collega comunque",
           "refresh": "Aggiorna",
           "resolveExisting": "Risolvi su esistente",
           "resolveNew": "Risolvi come nuovo"
@@ -845,12 +850,28 @@
           "loadQueue": "Impossibile caricare la coda di riconciliazione.",
           "resolveFailed": "Impossibile risolvere l'elemento della coda."
         },
+        "linkAnyway": {
+          "message": "{{identity}} verrà collegato a {{name}} presso {{client}}, anche se quel contatto appartiene a un cliente diverso da quello sincronizzato. Viene registrato come tua decisione.",
+          "noClient": "nessun cliente",
+          "title": "Collegare tra clienti?"
+        },
         "loading": "Caricamento coda…",
         "noEmailIdentity": "Nessuna identità email",
+        "owner": {
+          "additionalNote": "L’indirizzo è un’e-mail aggiuntiva di quel contatto.",
+          "at": "Appartiene a {{name}} presso {{client}}",
+          "inactiveNote": "Quel contatto è inattivo.",
+          "noClient": "Appartiene a {{name}} (senza cliente)"
+        },
         "queuedAt": "{{identity}} · accodato {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-mail appartenente a un altro cliente",
+          "multipleEmailMatches": "Più contatti corrispondono"
+        },
         "scopedToMappedClient": "Le opzioni dei contatti esistenti sono limitate a questo cliente mappato.",
         "success": {
           "dismissed": "{{identity}} ignorato. Non tornerà alla prossima sincronizzazione.",
+          "linkedAnyway": "{{identity}} collegato a {{name}}.",
           "resolvedExisting": "Elemento della coda {{queueItemId}} risolto sul contatto esistente {{contactNameId}}.",
           "resolvedNew": "Elemento della coda {{queueItemId}} risolto creando il contatto {{contactNameId}}."
         },

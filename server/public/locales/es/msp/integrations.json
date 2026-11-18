@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "El correo ya pertenece a un contacto de otro cliente (o sin cliente), por lo que la sincronización no lo vinculará. Estos pasan a la cola de revisión.",
+            "label": "El correo pertenece a otro cliente"
+          },
           "create": {
             "description": "Ningún contacto de este cliente coincide con el correo, así que se crearía uno.",
             "label": "Contactos nuevos"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Descartar",
+          "linkAnyway": "Vincular de todos modos",
           "refresh": "Actualizar",
           "resolveExisting": "Resolver en existente",
           "resolveNew": "Resolver en nuevo"
@@ -845,12 +850,28 @@
           "loadQueue": "No se pudo cargar la cola de conciliación.",
           "resolveFailed": "No se pudo resolver el elemento de la cola."
         },
+        "linkAnyway": {
+          "message": "{{identity}} se vinculará a {{name}} en {{client}}, aunque ese contacto pertenece a un cliente distinto del que se está sincronizando. Se registra como decisión suya.",
+          "noClient": "sin cliente",
+          "title": "¿Vincular entre clientes?"
+        },
         "loading": "Cargando cola…",
         "noEmailIdentity": "Sin identidad de correo",
+        "owner": {
+          "additionalNote": "La dirección es un correo adicional de ese contacto.",
+          "at": "Pertenece a {{name}} en {{client}}",
+          "inactiveNote": "Ese contacto está inactivo.",
+          "noClient": "Pertenece a {{name}} (sin cliente)"
+        },
         "queuedAt": "{{identity}} · en cola {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "El correo pertenece a otro cliente",
+          "multipleEmailMatches": "Varios contactos coinciden"
+        },
         "scopedToMappedClient": "Las opciones de contacto existente están limitadas a este cliente asignado.",
         "success": {
           "dismissed": "{{identity}} descartado. No volverá en la próxima sincronización.",
+          "linkedAnyway": "{{identity}} se vinculó a {{name}}.",
           "resolvedExisting": "Elemento de cola {{queueItemId}} resuelto en el contacto existente {{contactNameId}}.",
           "resolvedNew": "Elemento de cola {{queueItemId}} resuelto creando el contacto {{contactNameId}}."
         },

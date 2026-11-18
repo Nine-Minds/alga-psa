@@ -16,6 +16,7 @@ describe('EntraSyncResultAggregator', () => {
       linked: 0,
       updated: 0,
       ambiguous: 0,
+      conflict: 0,
       inactivated: 0,
       skipped: 0,
     });
@@ -34,6 +35,7 @@ describe('EntraSyncResultAggregator', () => {
       linked: 7,
       updated: 0,
       ambiguous: 0,
+      conflict: 0,
       inactivated: 0,
       skipped: 0,
     });
@@ -51,6 +53,24 @@ describe('EntraSyncResultAggregator', () => {
       linked: 0,
       updated: 0,
       ambiguous: 6,
+      conflict: 0,
+      inactivated: 0,
+      skipped: 0,
+    });
+  });
+
+  it('tracks the conflict counter and keeps it in the summary shape', () => {
+    const aggregator = new EntraSyncResultAggregator();
+
+    aggregator.increment('conflict');
+    aggregator.add({ conflict: 2, created: 1 });
+
+    expect(aggregator.toJSON()).toEqual({
+      created: 1,
+      linked: 0,
+      updated: 0,
+      ambiguous: 0,
+      conflict: 3,
       inactivated: 0,
       skipped: 0,
     });

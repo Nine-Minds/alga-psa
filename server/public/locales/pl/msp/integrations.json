@@ -799,6 +799,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "Ten adres e-mail należy już do kontaktu u innego klienta (lub bez klienta), więc synchronizacja go nie połączy. Trafiają do kolejki przeglądu.",
+            "label": "E-mail należy do innego klienta"
+          },
           "create": {
             "description": "Żaden kontakt tego klienta nie pasuje do adresu e-mail, więc zostałby utworzony nowy.",
             "label": "Nowe kontakty"
@@ -833,6 +837,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Odrzuć",
+          "linkAnyway": "Połącz mimo to",
           "refresh": "Odśwież",
           "resolveExisting": "Rozwiąż do istniejącego",
           "resolveNew": "Rozwiąż do nowego"
@@ -851,12 +856,28 @@
           "loadQueue": "Nie udało się załadować kolejki uzgadniania.",
           "resolveFailed": "Nie udało się rozwiązać elementu kolejki."
         },
+        "linkAnyway": {
+          "message": "{{identity}} zostanie połączony z kontaktem {{name}} w firmie {{client}}, mimo że ten kontakt należy do innego klienta niż synchronizowany. Zostanie to zapisane jako Twoja decyzja.",
+          "noClient": "brak klienta",
+          "title": "Połączyć między klientami?"
+        },
         "loading": "Ładowanie kolejki…",
         "noEmailIdentity": "Brak tożsamości e-mail",
+        "owner": {
+          "additionalNote": "Adres jest dodatkowym adresem e-mail tego kontaktu.",
+          "at": "Należy do {{name}} w firmie {{client}}",
+          "inactiveNote": "Ten kontakt jest nieaktywny.",
+          "noClient": "Należy do {{name}} (bez klienta)"
+        },
         "queuedAt": "{{identity}} · w kolejce {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-mail należy do innego klienta",
+          "multipleEmailMatches": "Pasuje wiele kontaktów"
+        },
         "scopedToMappedClient": "Opcje istniejących kontaktów są ograniczone do tego zmapowanego klienta.",
         "success": {
           "dismissed": "Odrzucono {{identity}}. Nie wróci przy następnej synchronizacji.",
+          "linkedAnyway": "Połączono {{identity}} z kontaktem {{name}}.",
           "resolvedExisting": "Rozwiązano element kolejki {{queueItemId}} do istniejącego kontaktu {{contactNameId}}.",
           "resolvedNew": "Rozwiązano element kolejki {{queueItemId}} przez utworzenie kontaktu {{contactNameId}}."
         },

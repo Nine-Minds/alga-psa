@@ -3,6 +3,7 @@ export interface EntraTenantSyncCounters {
   linked: number;
   updated: number;
   ambiguous: number;
+  conflict: number;
   inactivated: number;
   skipped: number;
 }
@@ -12,6 +13,7 @@ export type EntraTenantSyncCounterType =
   | 'linked'
   | 'updated'
   | 'ambiguous'
+  | 'conflict'
   | 'inactivated'
   | 'skipped';
 
@@ -21,6 +23,7 @@ export class EntraSyncResultAggregator {
     linked: 0,
     updated: 0,
     ambiguous: 0,
+    conflict: 0,
     inactivated: 0,
     skipped: 0,
   };
@@ -37,6 +40,7 @@ export class EntraSyncResultAggregator {
     this.increment('linked', counters.linked || 0);
     this.increment('updated', counters.updated || 0);
     this.increment('ambiguous', counters.ambiguous || 0);
+    this.increment('conflict', counters.conflict || 0);
     this.increment('inactivated', counters.inactivated || 0);
     this.increment('skipped', counters.skipped || 0);
   }

@@ -61,6 +61,8 @@ export interface EntraSyncRunSummary {
   linked: number;
   updated: number;
   ambiguous: number;
+  /** Identities skipped because their email belongs to a contact at another client (queued for review). */
+  conflict: number;
   inactivated: number;
   skipped: number;
 }
@@ -80,6 +82,8 @@ export interface EntraTenantSyncResult {
   linked: number;
   updated: number;
   ambiguous: number;
+  /** Optional so results recorded before this counter existed still type-check. */
+  conflict?: number;
   inactivated: number;
   skipped: number;
   warnings?: string[];

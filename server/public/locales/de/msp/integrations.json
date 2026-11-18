@@ -793,6 +793,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "Die E-Mail-Adresse gehört bereits einem Kontakt bei einem anderen Kunden (oder ohne Kunde), daher verknüpft die Synchronisierung sie nicht. Diese landen in der Prüfwarteschlange.",
+            "label": "E-Mail gehört einem anderen Kunden"
+          },
           "create": {
             "description": "Kein Kontakt dieses Clients passt zur E-Mail-Adresse, daher würde einer erstellt.",
             "label": "Neue Kontakte"
@@ -827,6 +831,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Verwerfen",
+          "linkAnyway": "Trotzdem verknüpfen",
           "refresh": "Aktualisieren",
           "resolveExisting": "Auf bestehenden Kontakt auflösen",
           "resolveNew": "Auf neuen Kontakt auflösen"
@@ -845,12 +850,28 @@
           "loadQueue": "Abgleichswarteschlange konnte nicht geladen werden.",
           "resolveFailed": "Warteschlangenelement konnte nicht aufgelöst werden."
         },
+        "linkAnyway": {
+          "message": "{{identity}} wird mit {{name}} bei {{client}} verknüpft, obwohl dieser Kontakt zu einem anderen Kunden gehört als dem, der synchronisiert wird. Dies wird als Ihre Entscheidung protokolliert.",
+          "noClient": "kein Kunde",
+          "title": "Kundenübergreifend verknüpfen?"
+        },
         "loading": "Warteschlange wird geladen…",
         "noEmailIdentity": "Keine E-Mail-Identität",
+        "owner": {
+          "additionalNote": "Die Adresse ist eine zusätzliche E-Mail-Adresse dieses Kontakts.",
+          "at": "Gehört {{name}} bei {{client}}",
+          "inactiveNote": "Dieser Kontakt ist inaktiv.",
+          "noClient": "Gehört {{name}} (kein Kunde)"
+        },
         "queuedAt": "{{identity}} · eingereiht {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-Mail gehört einem anderen Kunden",
+          "multipleEmailMatches": "Mehrere Kontakte passen"
+        },
         "scopedToMappedClient": "Bestehende Kontaktoptionen sind auf diesen zugeordneten Kunden beschränkt.",
         "success": {
           "dismissed": "{{identity}} verworfen. Es kommt bei der nächsten Synchronisierung nicht zurück.",
+          "linkedAnyway": "{{identity}} wurde mit {{name}} verknüpft.",
           "resolvedExisting": "Warteschlangenelement {{queueItemId}} auf bestehenden Kontakt {{contactNameId}} aufgelöst.",
           "resolvedNew": "Warteschlangenelement {{queueItemId}} durch Erstellen des Kontakts {{contactNameId}} aufgelöst."
         },
