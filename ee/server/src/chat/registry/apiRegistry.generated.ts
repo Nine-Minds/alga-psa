@@ -20911,7 +20911,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/documents/download/{fileId}",
     "displayName": "Download or export document file",
     "summary": "Download or export document file",
-    "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients (internal users only; client-portal keys are refused), and runs within the authenticated principal's tenant. Every format uses document read permission and document authorization rules.",
+    "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients (internal users only; client-portal keys are refused), and runs within the authenticated principal's tenant. Every format uses document read permission and document authorization rules. To read what is inside an attachment (image, PDF, document), use the read_attachment tool instead: this endpoint returns raw file bytes, which call_api_endpoint cannot show you.",
     "tags": [
       "Documents"
     ],
@@ -20961,7 +20961,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/documents/{documentId}/download",
     "displayName": "Download document attachment",
     "summary": "Download document attachment",
-    "description": "Downloads the original stored file for a document as an attachment. The documentId path value is resolved against documents.document_id first, then documents.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients, derives the tenant from the authenticated principal, requires document:read permission, and runs document authorization rules before reading the file from storage.",
+    "description": "Downloads the original stored file for a document as an attachment. The documentId path value is resolved against documents.document_id first, then documents.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients, derives the tenant from the authenticated principal, requires document:read permission, and runs document authorization rules before reading the file from storage. To read what is inside an attachment (image, PDF, document), use the read_attachment tool instead: this endpoint returns raw file bytes, which call_api_endpoint cannot show you.",
     "tags": [
       "Documents"
     ],
@@ -66683,7 +66683,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}/documents/{documentId}",
     "displayName": "Download a ticket document",
     "summary": "Download a ticket document",
-    "description": "Downloads a specific document attached to a ticket as binary data with Content-Type and Content-Disposition headers.",
+    "description": "Downloads a specific document attached to a ticket as binary data with Content-Type and Content-Disposition headers. To read what is inside an attachment (image, PDF, document), use the read_attachment tool instead: this endpoint returns raw file bytes, which call_api_endpoint cannot show you.",
     "tags": [
       "Work Management v1"
     ],

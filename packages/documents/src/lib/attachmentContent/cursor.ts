@@ -16,6 +16,9 @@ export interface CursorPayload {
 }
 
 export class InvalidCursorError extends Error {
+  readonly code = 'INVALID_CURSOR';
+  /** HTTP status the REST layer answers with. */
+  readonly statusCode = 400;
   constructor(message = 'The cursor is not valid.') {
     super(message);
     this.name = 'InvalidCursorError';
@@ -24,6 +27,7 @@ export class InvalidCursorError extends Error {
 
 export class CursorStaleError extends Error {
   readonly code = 'CURSOR_STALE';
+  readonly statusCode = 409;
   constructor() {
     super('The attachments changed since this read started; call read_attachment again without a cursor.');
     this.name = 'CursorStaleError';

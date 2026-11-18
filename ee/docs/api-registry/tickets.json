@@ -1435,6 +1435,15 @@
         "rbacResource": "recurring_ticket",
         "approvalRequired": true
       }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/documents/{documentId}"
+      },
+      "metadata": {
+        "description": "Downloads a specific document attached to a ticket as binary data with Content-Type and Content-Disposition headers. To read what is inside an attachment (image, PDF, document), use the read_attachment tool instead: this endpoint returns raw file bytes, which call_api_endpoint cannot show you."
+      }
     }
   ]
 }

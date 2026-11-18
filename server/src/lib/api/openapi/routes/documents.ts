@@ -1,5 +1,6 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
+import { READABLE_ENTITY_TYPES } from '../../schemas/documentContentRead';
 
 export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Documents';
@@ -323,6 +324,63 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
       500: { description: 'Unexpected failure.', schema: AttachDocumentError },
     },
     extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'document', 'x-rbac-action': 'create' },
+    edition: 'both',
+  });
+
+  const ReadContentQuery = registry.registerSchema(
+    'ReadDocumentContentQuery',
+    zOpenApi.object({
+      entity_type: zOpenApi.enum(READABLE_ENTITY_TYPES).describe('Kind of record that owns the attachments.'),
+      entity_id: zOpenApi.string().describe('UUID, or a human number such as a ticket number (SR000674).'),
+      document_id: zOpenApi.string().uuid().optional().describe('Read only this attachment. Omit to read every readable attachment in a stable order.'),
+      cursor: zOpenApi.string().optional().describe('The next_cursor of the previous response; continues where it stopped.'),
+    }),
+  );
+
+  const ReadContentResponse = registry.registerSchema(
+    'ReadDocumentContentResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        header: zOpenApi
+          .record(zOpenApi.string(), zOpenApi.unknown())
+          .describe('entity, served, omitted, limits_applied, remaining, next_cursor, instructions.'),
+        blocks: zOpenApi
+          .array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()))
+          .describe('MCP content blocks (text, image, resource, resource_link) in reading order.'),
+      }),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/documents/content',
+    summary: 'Read an entity\'s attachments as native MCP content blocks',
+    description:
+      'Returns the attachments of one entity (today: a ticket, by UUID or ticket number) in the richest form a model can read: ' +
+      'images as image blocks (downscaled to 1568 px), PDFs as the original file plus per-page text with scanned pages rendered to images, ' +
+      'documents, notes and text files as Markdown, anything else as metadata plus a resource_link. No AI processing happens here. ' +
+      'Each call is bounded by a byte budget and image/page caps and returns header.next_cursor when more remains; a cursor goes stale (409 CURSOR_STALE) if any attachment changed. ' +
+      'Authorization: the ticket read gate (ticket:read, the ticket kernel, client-portal visibility, comment-attachment audience) and, per document, document:read plus the document kernel. A document either gate refuses is left out of a whole-ticket read and answers 404 when requested by document_id. ' +
+      'Used by the read_attachment MCP tool; not exposed through call_api_endpoint because the response carries base64.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: ReadContentQuery },
+    responses: {
+      200: { description: 'Header plus content blocks.', schema: ReadContentResponse },
+      400: { description: 'Invalid query or cursor, or an entity type that cannot be read.', schema: AttachDocumentError },
+      401: { description: 'API key missing/invalid.', schema: AttachDocumentError },
+      403: { description: 'Permission denied (ticket:read).', schema: AttachDocumentError },
+      404: { description: 'Entity or document not found, or not readable by the caller.', schema: AttachDocumentError },
+      409: { description: 'CURSOR_STALE: the attachments changed since the cursor was issued.', schema: AttachDocumentError },
+      500: { description: 'Unexpected failure.', schema: AttachDocumentError },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-rbac-resource': 'ticket',
+      'x-rbac-action': 'read',
+      // Through call_api_endpoint this response would reach the model as base64 inside JSON text. Only read_attachment calls it.
+      'x-chat-exclude': true,
+    },
     edition: 'both',
   });
 
