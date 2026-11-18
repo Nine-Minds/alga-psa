@@ -173,6 +173,10 @@ export function TicketDetailBody({
   const [containerWidth, setContainerWidth] = useState(initialWidth ?? windowWidth);
   const twoColumn = containerWidth >= DETAIL_TWO_COLUMN_MIN_WIDTH;
   const sideColumnWidth = detailSideColumnWidth(containerWidth);
+  // Explicit, not flex: 1. After a rotation into two columns, a flexed column
+  // kept the width its expanded comment WebViews measured at and pushed the
+  // side column off screen.
+  const mainColumnWidth = containerWidth - spacing.xl * 3 - sideColumnWidth;
   const sideYRef = useRef(0);
   // Sections start collapsed whenever the record renders as one column, so the
   // page stays short; only the two-column layout opens every tile.
@@ -584,7 +588,7 @@ export function TicketDetailBody({
           style={twoColumn ? { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl } : undefined}
           onLayout={(event) => { columnsYRef.current = event.nativeEvent.layout.y; }}
         >
-          <View style={twoColumn ? { flex: 1, minWidth: 0 } : undefined}>
+          <View style={twoColumn ? { width: mainColumnWidth } : undefined}>
             <View style={{ marginTop: spacing.md }}>
               <DescriptionSection
                 ticket={ticket}
