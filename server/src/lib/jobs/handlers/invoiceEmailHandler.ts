@@ -131,6 +131,14 @@ export class InvoiceEmailHandler {
           if (!invoice || !invoice.invoice_number) {
             throw new Error(`Failed to get details for Invoice ID ${invoiceId}`);
           }
+          // Every client-facing send must wait for Xero's number (alga-2026-0002746).
+          // The send actions refuse earlier; this covers jobs enqueued by other
+          // producers (prepaid auto-issue) and invoices refinalized after scheduling.
+          if (invoice.invoice_number_source === 'pending_external') {
+            throw new Error(
+              `Invoice ${invoice.invoice_number} is waiting for its invoice number from Xero. Export it to Xero, or wait for the next sync, before sending it.`
+            );
+          }
 
           const client = await getClientRow(tenantId, invoice.client_id);
           if (!client) {

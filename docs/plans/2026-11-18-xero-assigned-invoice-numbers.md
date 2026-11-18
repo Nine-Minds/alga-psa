@@ -137,6 +137,7 @@ What is blocked while the invoice is `pending_external`:
 - `sendInvoiceEmailAction` and `scheduleInvoiceEmailAction` refuse to send. Message: "This invoice is waiting for its invoice number from Xero. Export it to Xero, or wait for the next sync, before sending it."
 - The client portal invoice list (`client-billing.ts`) and the portal PDF/preview actions treat `pending_external` like a draft and leave it out.
 - `startInvoiceAutopay` is deferred: finalize skips it for a `pending_external` invoice, and the settle step's `afterCommit` hook starts it. Autopay receipts and payment records would otherwise quote the provisional number.
+- The `invoice_email` job handler (`server/src/lib/jobs/handlers/invoiceEmailHandler.ts`) refuses a `pending_external` invoice, so producers that bypass the send actions are covered too. Prepaid auto-replenishment is one such producer. Its auto-issued invoice keeps its alert at `pending`, which here means finalized with the email still owed. A subscriber on `INVOICE_NUMBER_ASSIGNED` (`issueReplenishmentAwaitingInvoiceNumber`) sends the email once Xero's number is on the invoice.
 
 MSP users can still see the invoice and its PDF inside Alga. The badge goes in the invoice header beside `InvoiceSyncBadge` (`packages/billing/src/components/invoices/InvoiceSyncBadge.tsx`).
 
