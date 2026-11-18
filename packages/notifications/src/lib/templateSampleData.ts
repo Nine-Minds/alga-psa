@@ -61,7 +61,9 @@ export function getSampleDataForPreview(
  * resolve. One level only: sample data holds a single example item.
  */
 export function expandEachBlocksForPreview(content: string): string {
-  return content.replace(
+  // The single example item is the first, so {{#unless @first}} blocks drop out.
+  const withoutFirstGuards = content.replace(/\{\{#unless\s+@first\s*\}\}[\s\S]*?\{\{\/unless\}\}/g, '');
+  return withoutFirstGuards.replace(
     /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
     (_match, path: string, blockContent: string) =>
       blockContent.replace(

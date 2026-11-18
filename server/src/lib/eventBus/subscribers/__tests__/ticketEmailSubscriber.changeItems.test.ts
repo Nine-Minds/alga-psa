@@ -101,6 +101,12 @@ describe('stock templates render change items', () => {
     const { html, text } = renderEnglish('tickets/ticketUpdated.cjs', { ticket: { changeItems } });
 
     expect(html.match(/Grace Hopper/g)).toHaveLength(1);
+    // Only a heading after the first gets the divider.
+    const twoUpdates = renderEnglish('tickets/ticketUpdated.cjs', { ticket: { changeItems: [
+      ...changeItems, { ...changeItems[0], updatedBy: 'Linus Torvalds' },
+    ] } }).html;
+    expect(twoUpdates.match(/padding-top:12px;border-top/g)).toHaveLength(1);
+    expect(twoUpdates.indexOf('padding-top:12px;border-top')).toBeGreaterThan(twoUpdates.indexOf('Grace Hopper'));
     expect(html.match(/text-decoration:line-through/g)).toHaveLength(1);
     expect(html).toContain('Awaiting &lt;Customer&gt;');
     expect(html).not.toMatch(/#fff9e6|#92400e|#0a7c3c/i);

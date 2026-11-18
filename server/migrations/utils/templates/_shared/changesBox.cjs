@@ -9,7 +9,8 @@
  *
  * Item shape: { label, oldValue, newValue, updatedBy, updatedAt }. oldValue is '' when
  * the change has no previous value. updatedBy/updatedAt are set only on the first item
- * of each update in a bundled ticket email, so a heading prints there.
+ * of each update in a bundled ticket email, so a heading prints there; every heading
+ * after the first is set off by a divider ({{#unless @first}}).
  *
  * The loop is kept flat (no nested {{#each}}) because the template editor preview and
  * the test-email renderer expand only one level.
@@ -33,7 +34,7 @@ const FIELD_LABEL_COLOR = '#475467';
 function buildChangesBoxHtml({ label, itemsPath, grouped = false }) {
   const heading = grouped
     ? `
-                  {{#if this.updatedBy}}<div style="font-size:13px;font-weight:600;color:${BRAND_DARK};margin:6px 0 8px 0;">{{this.updatedBy}} <span style="font-weight:500;color:${OLD_VALUE_COLOR};">&middot; {{this.updatedAt}}</span></div>{{/if}}`
+                  {{#if this.updatedBy}}<div style="font-size:13px;font-weight:600;color:${BRAND_DARK};margin:0 0 8px 0;{{#unless @first}}margin-top:14px;padding-top:12px;border-top:1px solid ${INFO_BOX_BORDER};{{/unless}}">{{this.updatedBy}} <span style="font-weight:500;color:${OLD_VALUE_COLOR};">&middot; {{this.updatedAt}}</span></div>{{/if}}`
     : '';
   return `<div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:${INFO_BOX_BG};border:1px solid ${INFO_BOX_BORDER};">
                   <div style="font-weight:600;color:${BRAND_DARK};margin-bottom:8px;">${label}</div>

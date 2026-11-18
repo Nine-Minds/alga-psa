@@ -27,7 +27,7 @@ const LEGACY_BOX = new RegExp(
   'g',
 );
 
-const HEADING = String.raw`(?:\{\{#if this\.updatedBy\}\}<div style="font-size:13px;font-weight:600;color:${COLOR};margin:6px 0 8px 0;">\{\{this\.updatedBy\}\} <span style="font-weight:500;color:${COLOR};">&middot; \{\{this\.updatedAt\}\}</span></div>\{\{/if\}\}\s*)?`;
+const HEADING = String.raw`(?:\{\{#if this\.updatedBy\}\}<div style="font-size:13px;font-weight:600;color:${COLOR};margin:0 0 8px 0;\{\{#unless @first\}\}margin-top:14px;padding-top:12px;border-top:1px solid ${COLOR};\{\{/unless\}\}">\{\{this\.updatedBy\}\} <span style="font-weight:500;color:${COLOR};">&middot; \{\{this\.updatedAt\}\}</span></div>\{\{/if\}\}\s*)?`;
 
 /** After: the template lays out each item (see server/migrations/utils/templates/_shared/changesBox.cjs). */
 const ITEMS_BOX = new RegExp(
