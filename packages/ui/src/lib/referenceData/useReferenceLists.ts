@@ -20,7 +20,10 @@ export interface UseReferenceListsOptions {
 export interface UseReferenceListsResult<K extends ReferenceListKey> {
   /** Loaded values. A key is absent until it has loaded, and stays absent if its load failed. */
   data: { [P in K]?: ReferenceListValues[P] };
-  /** True until the key has an entry (value or error) for this scope. Cached values are never "loading". */
+  /**
+   * True until the key has an entry (value or error) for this scope, including while the scope is
+   * not known yet. Cached values are never "loading". Without a provider nothing loads, so false.
+   */
   loading: Record<K, boolean>;
   /** Keys whose last load failed. */
   errors: { [P in K]?: string };
@@ -107,7 +110,8 @@ export function useReferenceLists<K extends ReferenceListKey>(
   const errors: Partial<Record<ReferenceListKey, string>> = {};
   for (const key of keys) {
     const entry = entries.get(key);
-    loading[key] = !scope || !entry;
+    // No provider at all degrades to "no options" instead of loading forever.
+    loading[key] = store ? !scope || !entry : false;
     if (entry && entry.value !== undefined) data[key] = entry.value;
     if (entry?.status === 'error') errors[key] = entry.message ?? 'Failed to load';
   }
