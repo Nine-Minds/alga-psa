@@ -2,21 +2,13 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
   buildMetaToolDefinitions,
-  ATTACH_FILE_TOOL,
+  dispatchMetaTool,
+  jsonToolResult,
   MCP_SERVER_INSTRUCTIONS,
-  CALL_API_ENDPOINT_TOOL,
-  SEARCH_API_REGISTRY_TOOL,
-  SEARCH_BUSINESS_DATA_TOOL,
   type ChatApiRegistryEntry,
+  type ToolResult,
 } from '@alga-psa/agent-tooling';
 import type { InstanceClient } from './instanceClient.js';
-import {
-  handleAttachFile,
-  handleCallApiEndpoint,
-  handleSearchApiRegistry,
-  handleSearchBusinessData,
-  type ToolOutcome,
-} from './tools.js';
 
 export interface CreateServerOptions {
   registry: ChatApiRegistryEntry[];
@@ -26,7 +18,7 @@ export interface CreateServerOptions {
 }
 
 /**
- * Build the MCP server exposing the constant meta-tools (search, call, attach_file). The local connector
+ * Build the MCP server exposing the constant meta-tools (search, call, attach_file, read_attachment). The local connector
  * is always user-scoped (CE edition templating — no approval step), regardless
  * of the instance edition that served the registry.
  */
@@ -44,28 +36,23 @@ export function createServer(opts: CreateServerOptions): Server {
     const name = request.params.name;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
 
-    let outcome: ToolOutcome;
+    let result: ToolResult;
     try {
-      if (name === SEARCH_API_REGISTRY_TOOL) {
-        outcome = await handleSearchApiRegistry(opts.registry, args);
-      } else if (name === SEARCH_BUSINESS_DATA_TOOL) {
-        outcome = await handleSearchBusinessData(opts.client, args);
-      } else if (name === CALL_API_ENDPOINT_TOOL) {
-        outcome = await handleCallApiEndpoint(opts.registry, opts.client, args);
-      } else if (name === ATTACH_FILE_TOOL) {
-        outcome = await handleAttachFile(opts.client, args);
-      } else {
-        outcome = { data: { error: `Unknown tool: ${name}` }, isError: true };
-      }
+      result = await dispatchMetaTool(name, args, {
+        registry: opts.registry,
+        transport: opts.client.transport(),
+        searchPath: opts.client.searchPath,
+      });
     } catch (error) {
       // Network/unexpected failures surface as a structured tool error so the
       // model can recover rather than the whole call crashing.
-      outcome = { data: { error: (error as Error).message }, isError: true };
+      result = jsonToolResult({ error: (error as Error).message }, true);
     }
 
     return {
-      content: [{ type: 'text' as const, text: JSON.stringify(outcome.data ?? null, null, 2) }],
-      isError: outcome.isError,
+      content: result.content,
+      ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
+      isError: result.isError,
     };
   });
 

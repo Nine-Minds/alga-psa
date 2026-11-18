@@ -19,11 +19,9 @@ const REGISTRY: ChatApiRegistryEntry[] = [
   },
 ];
 
-function fakeClient(result: EndpointResult): InstanceClient {
-  return {
-    callEndpoint: async () => result,
-    searchBusinessData: async () => result,
-  } as unknown as InstanceClient;
+function fakeClient(result: { status: number; ok: boolean; data: unknown }): InstanceClient {
+  const sent: EndpointResult = { status: result.status, ok: result.ok, body: { kind: 'json', value: result.data } };
+  return { transport: () => ({ send: async () => sent }), searchPath: '/api/v1/search' } as unknown as InstanceClient;
 }
 
 async function connectedClient(client: InstanceClient) {
@@ -35,11 +33,11 @@ async function connectedClient(client: InstanceClient) {
 }
 
 describe('MCP stdio-protocol conformance (T011)', () => {
-  it('lists exactly the 4 meta-tools', async () => {
+  it('lists exactly the 5 meta-tools', async () => {
     const client = await connectedClient(fakeClient({ status: 200, ok: true, data: {} }));
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual(['attach_file', 'call_api_endpoint', 'search_api_registry', 'search_business_data']);
+    expect(names).toEqual(['attach_file', 'call_api_endpoint', 'read_attachment', 'search_api_registry', 'search_business_data']);
   });
 
   it('invokes search_api_registry over the protocol and returns results', async () => {

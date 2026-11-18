@@ -12,10 +12,12 @@ const ID = '11111111-1111-4111-8111-111111111111';
 async function connect() {
   const sent: BuiltRequest[] = [];
   const client = {
-    sendBuilt: async (b: BuiltRequest) => {
-      sent.push(b);
-      return { status: 201, ok: true, data: { data: { document_id: 'd1' } } };
-    },
+    transport: () => ({
+      send: async (b: BuiltRequest) => {
+        sent.push(b);
+        return { status: 201, ok: true, body: { kind: 'json', value: { data: { document_id: 'd1' } } } };
+      },
+    }),
   } as unknown as InstanceClient;
   const server = createServer({ registry: [], client });
   const [ct, st] = InMemoryTransport.createLinkedPair();
@@ -40,7 +42,7 @@ describe('connector attach_file', () => {
     expect(tool.inputSchema.required).not.toContain('file');
   });
 
-  it('sends the mapped request through InstanceClient.sendBuilt', async () => {
+  it('sends the mapped request through the InstanceClient transport', async () => {
     const { mcp, sent } = await connect();
     const res: any = await mcp.callTool({
       name: 'attach_file',

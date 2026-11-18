@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  runRegistrySearch,
-  buildRequest,
   buildMetaToolDefinitions,
-  SEARCH_API_REGISTRY_TOOL,
-  SEARCH_BUSINESS_DATA_TOOL,
   CALL_API_ENDPOINT_TOOL,
-  ATTACH_FILE_TOOL,
   MCP_SERVER_INSTRUCTIONS,
-  buildAttachFileRequest,
-  AttachFileInputError,
+  dispatchMetaTool,
+  jsonToolResult,
+  readResponseBody,
   redactToolArguments,
+  type BuiltRequest,
   type ChatApiRegistryEntry,
-  type CallEndpointArgs,
+  type MetaToolTransport,
+  type ToolResult,
 } from '@alga-psa/agent-tooling';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { loadMcpRegistry } from '@/lib/mcp/loadRegistry';
@@ -55,21 +53,8 @@ interface DispatchCtx {
 /** Header that makes a service-principal key act as a named user (PRD R5). */
 const ACT_AS_HEADER = 'x-alga-act-as';
 
-interface ToolOutcome {
-  content: Array<{ type: 'text'; text: string }>;
-  isError: boolean;
-  /** Upstream HTTP status when the tool dispatched to /api/v1 (for audit granularity). */
-  statusCode?: number;
-}
-
 const rpcResult = (id: unknown, result: unknown) => ({ jsonrpc: '2.0', id, result });
 const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: '2.0', id, error: { code, message } });
-
-const textContent = (data: unknown): Array<{ type: 'text'; text: string }> => [
-  { type: 'text', text: JSON.stringify(data ?? null, null, 2) },
-];
-const toolOk = (data: unknown): ToolOutcome => ({ content: textContent(data), isError: false });
-const toolErr = (message: string): ToolOutcome => ({ content: textContent({ error: message }), isError: true });
 
 function bearerToken(authHeader: string | null): string | null {
   if (!authHeader) return null;
@@ -77,33 +62,27 @@ function bearerToken(authHeader: string | null): string | null {
   return m ? m[1] : null;
 }
 
-// LEVERAGE: pattern registry-resolve-entry — same id-tolerant lookup lives in alga-mcp-connector tools.ts and chat's resolveRegistryEntry
-function resolveEntry(registry: ChatApiRegistryEntry[], entryId: unknown): ChatApiRegistryEntry | null {
-  const want = String(entryId ?? '').replace(/-/g, '_');
-  if (!want) return null;
-  return registry.find((e) => e.id.replace(/-/g, '_') === want) ?? null;
-}
-
-async function selfFetch(
+/**
+ * The hosted transport for `dispatchMetaTool`: sends a built request to this
+ * instance's own /api/v1 under the session's key (and act-as header, when delegated).
+ */
+async function selfSend(
   baseUrl: string,
-  path: string,
-  init: RequestInit,
+  built: BuiltRequest,
   apiKey: string,
   actAsUserId?: string | null,
-): Promise<{ status: number; ok: boolean; data: unknown }> {
-  const headers: Record<string, string> = { ...(init.headers as Record<string, string>), 'x-api-key': apiKey };
-  if (actAsUserId) headers[ACT_AS_HEADER] = actAsUserId;
-  const res = await fetch(`${baseUrl}${path}`, { ...init, headers });
-  const text = await res.text().catch(() => '');
-  let data: unknown = text;
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
+): Promise<Awaited<ReturnType<MetaToolTransport['send']>>> {
+  const qs = new URLSearchParams(built.query).toString();
+  const headers: Record<string, string> = { ...built.headers };
+  const init: RequestInit = { method: built.method };
+  if (built.body !== undefined) {
+    headers['content-type'] = 'application/json';
+    init.body = built.body;
   }
-  return { status: res.status, ok: res.ok, data };
+  headers['x-api-key'] = apiKey;
+  if (actAsUserId) headers[ACT_AS_HEADER] = actAsUserId;
+  const res = await fetch(`${baseUrl}${built.path}${qs ? `?${qs}` : ''}`, { ...init, headers });
+  return { status: res.status, ok: res.ok, body: await readResponseBody(res) };
 }
 
 /** Only agent sessions may delegate; a plain API key never forwards the header. */
@@ -132,66 +111,6 @@ function withActAsArgument<T extends { name: string }>(tools: T[]): T[] {
   });
 }
 
-async function dispatchTool(name: string, args: Record<string, unknown>, ctx: DispatchCtx): Promise<ToolOutcome> {
-  if (name === SEARCH_API_REGISTRY_TOOL) {
-    const r = runRegistrySearch(ctx.registry, args);
-    return r.ok ? toolOk(r.data) : toolErr(r.error);
-  }
-
-  if (name === SEARCH_BUSINESS_DATA_TOOL) {
-    const query = typeof args.query === 'string' ? args.query : '';
-    if (!query.trim()) return toolErr('search_business_data requires a non-empty "query".');
-    const params = new URLSearchParams();
-    params.set('query', query);
-    if (Array.isArray(args.types) && args.types.length > 0) params.set('types', args.types.map(String).join(','));
-    if (args.limit !== undefined && args.limit !== null) params.set('limit', String(args.limit));
-    if (args.cursor) params.set('cursor', String(args.cursor));
-    if (args.sort) params.set('sort', String(args.sort));
-    const r = await selfFetch(ctx.baseUrl, `/api/v1/search?${params.toString()}`, { method: 'GET' }, ctx.apiKey, actAsFromArgs(args, ctx));
-    return { content: textContent(r.data), isError: !r.ok, statusCode: r.status };
-  }
-
-  if (name === CALL_API_ENDPOINT_TOOL) {
-    const entryId = args.entryId;
-    if (!entryId || typeof entryId !== 'string') {
-      return toolErr('call_api_endpoint requires "entryId" (use search_api_registry first).');
-    }
-    const entry = resolveEntry(ctx.registry, entryId);
-    if (!entry) return toolErr(`No registry entry found for entryId "${entryId}".`);
-    const built = buildRequest(entry, args as CallEndpointArgs);
-    const qs = new URLSearchParams(built.query).toString();
-    const path = built.path + (qs ? `?${qs}` : '');
-    const init: RequestInit = { method: built.method, headers: { ...built.headers } };
-    if (built.body !== undefined) {
-      (init.headers as Record<string, string>)['content-type'] = 'application/json';
-      init.body = built.body;
-    }
-    const r = await selfFetch(ctx.baseUrl, path, init, ctx.apiKey, actAsFromArgs(args, ctx));
-    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
-  }
-
-  // LEVERAGE: pattern mcp-tool-dispatch — the same attach_file dispatch lives in alga-mcp-connector tools.ts
-  if (name === ATTACH_FILE_TOOL) {
-    let built;
-    try {
-      built = buildAttachFileRequest(args);
-    } catch (err) {
-      // AttachFileInputError messages are written to never echo the signed URL.
-      if (err instanceof AttachFileInputError) return toolErr(err.message);
-      throw err;
-    }
-    const r = await selfFetch(
-      ctx.baseUrl,
-      built.path,
-      { method: built.method, headers: { 'content-type': 'application/json' }, body: built.body },
-      ctx.apiKey,
-    );
-    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
-  }
-
-  return toolErr(`Unknown tool: ${name}`);
-}
-
 async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | null> {
   const id = m?.id ?? null;
   switch (m?.method) {
@@ -216,11 +135,18 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
       // unresolved path param from buildRequest) must surface as a JSON-RPC
       // tool error — NOT bubble up and become a bare HTTP 500 that aborts the
       // whole MCP request. The MCP client can then see the error and retry.
-      let out: ToolOutcome;
+      let out: ToolResult;
       try {
-        out = await dispatchTool(name, args, ctx);
+        const transport: MetaToolTransport = {
+          send: (req, opts) => selfSend(ctx.baseUrl, req, ctx.apiKey, opts?.actAsUserId),
+        };
+        out = await dispatchMetaTool(name, args, {
+          registry: ctx.registry,
+          transport,
+          actAsUserId: actAsFromArgs(args, ctx),
+        });
       } catch (err) {
-        out = toolErr(`Tool dispatch failed: ${err instanceof Error ? err.message : String(err)}`);
+        out = jsonToolResult({ error: `Tool dispatch failed: ${err instanceof Error ? err.message : String(err)}` }, true);
       }
       if (ctx.agentId && ctx.tenant) {
         const decision = !out.isError
@@ -239,7 +165,8 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
             ok: !out.isError,
             statusCode: out.statusCode ?? null,
             decision,
-            resultSummary: out.content?.[0]?.text,
+            // The header is always content[0] (agent-tooling's header-first contract), so this is never base64.
+            resultSummary: out.content?.[0]?.type === 'text' ? out.content[0].text : undefined,
           });
         } catch {
           // swallow — auditing is non-critical to returning the tool result
