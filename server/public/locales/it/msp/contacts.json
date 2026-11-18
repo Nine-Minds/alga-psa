@@ -653,12 +653,43 @@
     "actions": {
       "openMenu": "Apri menu",
       "quickView": "Anteprima rapida",
-      "addNewContact": "Aggiungi nuovo contatto"
+      "addNewContact": "Aggiungi nuovo contatto",
+      "selectAll": "Seleziona tutti i contatti",
+      "selectContact": "Seleziona {{name}}",
+      "inviteSelected": "Invita al portale ({{selected}})",
+      "inviteAllEligible": "Invita tutti gli idonei"
     },
     "errors": {
       "loadFailed": "Impossibile caricare i contatti.",
       "loadingTitle": "Errore durante il caricamento dei contatti",
       "retryFailed": "Impossibile caricare i contatti. Riprova."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Invita contatti al portale clienti",
+    "description": "Conferma degli inviti massivi al portale con anteprima degli idonei e risultati per contatto",
+    "loading": "Verifica di chi può essere invitato...",
+    "inviteCount": "{{total}} contatti saranno invitati al portale clienti.",
+    "skipCount": "{{total}} saranno ignorati:",
+    "visibilityNote": "Ogni invito concede l’accesso che il contatto ha già: {{grouped}} sono limitati a un gruppo di visibilità del portale, {{full}} ottengono accesso completo ai dati di portale del loro cliente.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ha già accesso al portale",
+      "missingEmail": "nessun indirizzo e-mail utilizzabile",
+      "sharedMailbox": "casella condivisa"
+    },
+    "actions": {
+      "send": "Invia {{total}} inviti",
+      "sending": "Invio..."
+    },
+    "results": {
+      "summary": "{{sent}} inviati, {{skipped}} ignorati, {{failed}} non riusciti.",
+      "sent": "Inviato",
+      "skipped": "Ignorato",
+      "failed": "Non riuscito"
+    },
+    "errors": {
+      "loadFailed": "Non è stato possibile determinare chi invitare. Riprovare.",
+      "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare."
     }
   },
   "contactsLayout": {

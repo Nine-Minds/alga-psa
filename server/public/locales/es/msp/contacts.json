@@ -653,12 +653,43 @@
     "actions": {
       "openMenu": "Abrir menú",
       "quickView": "Vista rápida",
-      "addNewContact": "Añadir nuevo contacto"
+      "addNewContact": "Añadir nuevo contacto",
+      "selectAll": "Seleccionar todos los contactos",
+      "selectContact": "Seleccionar a {{name}}",
+      "inviteSelected": "Invitar al portal ({{selected}})",
+      "inviteAllEligible": "Invitar a todos los elegibles"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los contactos.",
       "loadingTitle": "Error al cargar los contactos",
       "retryFailed": "No se pudieron cargar los contactos. Inténtelo de nuevo."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Invitar contactos al portal del cliente",
+    "description": "Confirmación de invitaciones masivas al portal con vista previa de elegibles y resultados por contacto",
+    "loading": "Verificando a quién se puede invitar...",
+    "inviteCount": "{{total}} contactos serán invitados al portal del cliente.",
+    "skipCount": "{{total}} se omitirán:",
+    "visibilityNote": "Cada invitación otorga el acceso que el contacto ya tiene: {{grouped}} están limitados a un grupo de visibilidad del portal y {{full}} obtienen acceso completo a los datos del portal de su cliente.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ya tiene acceso al portal",
+      "missingEmail": "sin dirección de correo utilizable",
+      "sharedMailbox": "buzón compartido"
+    },
+    "actions": {
+      "send": "Enviar {{total}} invitaciones",
+      "sending": "Enviando..."
+    },
+    "results": {
+      "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
+      "sent": "Enviada",
+      "skipped": "Omitida",
+      "failed": "Fallida"
+    },
+    "errors": {
+      "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
+      "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo."
     }
   },
   "contactsLayout": {

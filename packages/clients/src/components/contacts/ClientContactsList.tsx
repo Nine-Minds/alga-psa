@@ -5,6 +5,7 @@ import type { IContact, IClientWithLocation } from '@alga-psa/types';
 import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -18,6 +19,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useContactQuickViewDrawer } from './bento/useContactQuickViewDrawer';
 import { useContactEditDrawer } from './bento/useContactEditDrawer';
 import QuickAddContact from './QuickAddContact';
+import BulkPortalInvitationDialog, { type BulkPortalInvitationTarget } from './BulkPortalInvitationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ClientContactsListProps {
@@ -50,6 +52,8 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
+  const [invitationTarget, setInvitationTarget] = useState<BulkPortalInvitationTarget | null>(null);
   const openContactQuickView = useContactQuickViewDrawer();
   const openContactEdit = useContactEditDrawer();
 
@@ -184,7 +188,61 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       (contact.locations ?? []).some((location) => location.location_id === locationFilter));
   }, [filteredContacts, locationFilter]);
 
+  // Select-all covers exactly what the filters left on screen, so the header
+  // box never quietly ticks a contact the user cannot see.
+  const selectedOnScreen = useMemo(
+    () => locationFilteredContacts.filter((contact) => selectedContactIds.has(contact.contact_name_id)),
+    [locationFilteredContacts, selectedContactIds],
+  );
+  const allOnScreenSelected = locationFilteredContacts.length > 0
+    && selectedOnScreen.length === locationFilteredContacts.length;
+
+  const toggleContactSelection = (contactId: string, selected: boolean) => {
+    setSelectedContactIds((previous) => {
+      const next = new Set(previous);
+      if (selected) next.add(contactId); else next.delete(contactId);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnScreen = (selected: boolean) => {
+    setSelectedContactIds((previous) => {
+      const next = new Set(previous);
+      for (const contact of locationFilteredContacts) {
+        if (selected) next.add(contact.contact_name_id); else next.delete(contact.contact_name_id);
+      }
+      return next;
+    });
+  };
+
   const columns: ColumnDefinition<IContact>[] = [
+    {
+      title: (
+        <Checkbox
+          id="client-contacts-select-all"
+          checked={allOnScreenSelected}
+          indeterminate={selectedOnScreen.length > 0 && !allOnScreenSelected}
+          onChange={(e) => toggleSelectAllOnScreen(e.target.checked)}
+          aria-label={t('clientContactsList.actions.selectAll', { defaultValue: 'Select all contacts' })}
+        />
+      ),
+      dataIndex: 'contact_name_id',
+      id: 'select',
+      width: '3%',
+      sortable: false,
+      render: (value, record): React.ReactNode => (
+        <Checkbox
+          id={`client-contacts-select-${record.contact_name_id}`}
+          checked={selectedContactIds.has(record.contact_name_id)}
+          onChange={(e) => toggleContactSelection(record.contact_name_id, e.target.checked)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={t('clientContactsList.actions.selectContact', {
+            defaultValue: 'Select {{name}}',
+            name: record.full_name,
+          })}
+        />
+      ),
+    },
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
@@ -407,14 +465,37 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             containerClassName="w-[220px]"
           />
         </div>
-        <Button
-          id="add-new-contact-btn"
-          onClick={() => setIsQuickAddContactOpen(true)}
-        >
-          {t('clientContactsList.actions.addNewContact', {
-            defaultValue: 'Add contact'
-          })}
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedContactIds.size > 0 && (
+            <Button
+              id="invite-selected-contacts-btn"
+              variant="secondary"
+              onClick={() => setInvitationTarget({ mode: 'selected', contactIds: [...selectedContactIds] })}
+            >
+              {t('clientContactsList.actions.inviteSelected', {
+                defaultValue: 'Invite to portal ({{selected}})',
+                selected: selectedContactIds.size
+              })}
+            </Button>
+          )}
+          <Button
+            id="invite-all-eligible-contacts-btn"
+            variant="secondary"
+            onClick={() => setInvitationTarget({ mode: 'allEligible' })}
+          >
+            {t('clientContactsList.actions.inviteAllEligible', {
+              defaultValue: 'Invite all eligible'
+            })}
+          </Button>
+          <Button
+            id="add-new-contact-btn"
+            onClick={() => setIsQuickAddContactOpen(true)}
+          >
+            {t('clientContactsList.actions.addNewContact', {
+              defaultValue: 'Add contact'
+            })}
+          </Button>
+        </div>
       </div>
       <DataTable
         id="client-contacts-list"
@@ -436,6 +517,19 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         }}
         selectedClientId={clientId}
       />
+      {invitationTarget && (
+        <BulkPortalInvitationDialog
+          isOpen
+          clientId={clientId}
+          target={invitationTarget}
+          contacts={contacts}
+          onClose={() => setInvitationTarget(null)}
+          onSent={() => {
+            setSelectedContactIds(new Set());
+            refreshContacts();
+          }}
+        />
+      )}
     </div>
   );
 };

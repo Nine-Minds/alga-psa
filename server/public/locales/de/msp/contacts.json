@@ -649,12 +649,43 @@
     "actions": {
       "openMenu": "Menü öffnen",
       "quickView": "Schnellansicht",
-      "addNewContact": "Neuen Kontakt hinzufügen"
+      "addNewContact": "Neuen Kontakt hinzufügen",
+      "selectAll": "Alle Kontakte auswählen",
+      "selectContact": "{{name}} auswählen",
+      "inviteSelected": "Zum Portal einladen ({{selected}})",
+      "inviteAllEligible": "Alle berechtigten einladen"
     },
     "errors": {
       "loadFailed": "Kontakte konnten nicht geladen werden.",
       "loadingTitle": "Fehler beim Laden der Kontakte",
       "retryFailed": "Kontakte konnten nicht geladen werden. Bitte erneut versuchen."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Kontakte zum Kundenportal einladen",
+    "description": "Bestätigung für Portal-Masseneinladungen mit Vorschau der Berechtigten und Ergebnis je Kontakt",
+    "loading": "Es wird geprüft, wer eingeladen werden kann...",
+    "inviteCount": "{{total}} Kontakte werden zum Kundenportal eingeladen.",
+    "skipCount": "{{total}} werden übersprungen:",
+    "visibilityNote": "Jede Einladung gewährt den Zugriff, den der Kontakt bereits hat: {{grouped}} sind auf eine Portal-Sichtbarkeitsgruppe beschränkt, {{full}} erhalten vollen Zugriff auf die Portaldaten ihres Kunden.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "hat bereits Portalzugriff",
+      "missingEmail": "keine verwendbare E-Mail-Adresse",
+      "sharedMailbox": "gemeinsames Postfach"
+    },
+    "actions": {
+      "send": "{{total}} Einladungen senden",
+      "sending": "Wird gesendet..."
+    },
+    "results": {
+      "summary": "{{sent}} gesendet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
+      "sent": "Gesendet",
+      "skipped": "Übersprungen",
+      "failed": "Fehlgeschlagen"
+    },
+    "errors": {
+      "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
+      "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen."
     }
   },
   "contactsLayout": {

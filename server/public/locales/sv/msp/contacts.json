@@ -653,12 +653,43 @@
     "actions": {
       "openMenu": "Öppna meny",
       "quickView": "Snabbvy",
-      "addNewContact": "Lägg till kontakt"
+      "addNewContact": "Lägg till kontakt",
+      "selectAll": "Markera alla kontakter",
+      "selectContact": "Markera {{name}}",
+      "inviteSelected": "Bjud in till portalen ({{selected}})",
+      "inviteAllEligible": "Bjud in alla behöriga"
     },
     "errors": {
       "loadFailed": "Det gick inte att läsa in kontakterna.",
       "loadingTitle": "Fel vid inläsning av kontakter",
       "retryFailed": "Det gick inte att läsa in kontakterna. Försök igen."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Bjud in kontakter till kundportalen",
+    "description": "Bekräftelse av massinbjudningar till portalen med förhandsgranskning av behöriga och resultat per kontakt",
+    "loading": "Kontrollerar vilka som kan bjudas in…",
+    "inviteCount": "{{total}} kontakter bjuds in till kundportalen.",
+    "skipCount": "{{total}} hoppas över:",
+    "visibilityNote": "Varje inbjudan ger den åtkomst kontakten redan har: {{grouped}} är begränsade till en synlighetsgrupp i portalen, {{full}} får full åtkomst till sin kunds portaldata.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "har redan portalåtkomst",
+      "missingEmail": "ingen användbar e-postadress",
+      "sharedMailbox": "delad brevlåda"
+    },
+    "actions": {
+      "send": "Skicka {{total}} inbjudningar",
+      "sending": "Skickar…"
+    },
+    "results": {
+      "summary": "{{sent}} skickade, {{skipped}} överhoppade, {{failed}} misslyckade.",
+      "sent": "Skickad",
+      "skipped": "Överhoppad",
+      "failed": "Misslyckad"
+    },
+    "errors": {
+      "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
+      "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen."
     }
   },
   "contactsLayout": {
