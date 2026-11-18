@@ -1,4 +1,4 @@
-# Custom Domain Setup — Reverse Proxy Setup (self-hosted)
+# Custom Domain — Reverse Proxy Setup (self-hosted)
 
 This guide is for operators of a **self-hosted** Alga PSA install who want to serve the
 **client portal**, the **MSP/technician app**, or **both** on a branded domain (a "vanity
@@ -97,18 +97,22 @@ portal.acme.com {
 ## Activating the domain
 
 1. Confirm DNS resolves your custom hostname to your proxy and the proxy reaches the server.
-2. In Alga: **Settings → Security → Custom Domains** (or **Settings → Client Portal →
-   Custom Domain** on older appliance versions), enter the hostname and save.
-3. Choose the **Surface** the domain should serve:
-   - **Client portal** — serves only the client-facing portal (original behavior).
-   - **MSP** — serves only the MSP/technician app (`/msp/*` and `/auth/signin`).
-   - **Both** — serves both the client portal and the MSP app on the same host.
-4. For a domain with surface **MSP** or **Both**, confirm the Google/Microsoft OAuth
-   redirect URIs in the settings card. The domain stays in **pending_redirect_uri** status
-   (requests fail closed to the main host) until this confirmation is saved.
-5. The status shows **Active** immediately after confirmation. Portal links in emails and
-   invitations switch to the new domain right away — which is why DNS + proxy must already
-   be live.
+2. In Alga: **Settings → Client Portal → Custom Domain**, enter the hostname.
+3. Under **Serves**, choose what the domain serves, then save:
+   - **Client portal** (the default) — only the client portal.
+   - **MSP app** — only the MSP/technician app (`/msp/*`, `/auth/msp/*`, and `/auth/signin`).
+   - **Both** — the client portal and the MSP app on the same host.
+4. A **Client portal** domain is **Active** as soon as it is saved. An **MSP app** or **Both**
+   domain also needs single sign-on redirect URIs when Google, Microsoft, or Keycloak sign-in
+   is configured (server-wide or with the tenant's own identity provider). The card lists the
+   redirect URIs to register with each provider and shows **Pending Redirect URIs** until you
+   select **I've registered these — confirm**; until then, MSP requests on the domain are
+   sent to the main host. With no SSO provider configured, or with
+   `PORTAL_DOMAIN_SSO_REDIRECT_URIS_PREREGISTERED=true` set on the server, the domain becomes
+   **Active** without this step.
+5. Once the domain is **Active**, links in emails and invitations for the app it serves switch
+   to the new domain right away — which is why DNS + proxy must already be live. An
+   **MSP app** domain does not change client portal links.
 
 To stop using the domain, click **Remove Domain**; the record is deleted and traffic reverts
 to the default host. You can then retire the DNS record and proxy server block.
@@ -132,21 +136,22 @@ Your proxy is not sending `X-Forwarded-Proto: https`. The server then treats the
 HTTP and won't set a secure session cookie. Add the header.
 
 **MSP (internal) staff hitting the domain get redirected to the main host.**
-Expected for a domain with surface **Client portal** — the MSP app is not served there, so
-MSP staff are sent back to the main host. For a domain with surface **MSP** or **Both**, MSP
+Expected for a domain that serves **Client portal** — the MSP app is not served there, so
+MSP staff are sent to `/msp/dashboard` on the main host. For a domain that serves **MSP app** or **Both**, MSP
 staff sign in and land on `/msp/dashboard` on the custom host directly.
 
 ## How it works (for the curious)
 
 The server keeps serving on its primary host (`NEXTAUTH_URL`, e.g. `https://alga.acme.com`).
 When a request arrives on a registered custom domain (one that has an active `portal_domains`
-row), edge middleware checks the domain's configured **surface**:
+row), edge middleware checks what the domain serves (stored as `surface`: `client_portal`,
+`msp`, or `both`):
 
-- **Client portal** surface: client-portal paths are served in place; MSP paths (`/msp/*`,
-  `/auth/signin`) redirect to the main host.
-- **MSP** surface: MSP paths are served in place; client-portal paths redirect to the
+- **Client portal**: client-portal paths are served in place; MSP paths (`/msp/*`,
+  `/auth/msp/*`, `/auth/signin`) redirect to the main host.
+- **MSP app**: MSP paths are served in place; client-portal paths redirect to the
   same-host sign-in or `/msp/dashboard`.
-- **Both** surface: all paths are served in place on the custom host.
+- **Both**: all paths are served in place on the custom host.
 
 For client-portal sign-in, the sign-in page resolves the tenant from the host server-side,
 authenticates on the canonical host scoped to that tenant, and a short-lived one-time token
