@@ -9,7 +9,6 @@
     "newRequestHeading": "Neue Anfrage einreichen"
   },
   "detail": {
-    "version": "Version {{version}}",
     "submitted": "Anfrage eingereicht",
     "unableToSubmit": "Anfrage kann nicht eingereicht werden",
     "formTitle": "Anfrageformular",
@@ -18,9 +17,7 @@
     "datePlaceholder": "Datum auswählen",
     "optionLabel": "Option {{index}}",
     "submit": "Anfrage einreichen",
-    "requiredField": "Dieses Feld ist erforderlich.",
-    "initialValuesTitle": "Anfangswerte",
-    "noInitialValues": "Keine statischen Standardwerte konfiguriert."
+    "requiredField": "Dieses Feld ist erforderlich."
   },
   "myRequests": {
     "title": "Meine Anfragen",
@@ -46,15 +43,11 @@
     "backToMyRequests": "Zurück zu Meine Anfragen",
     "statusSection": "Status",
     "submittedAt": "Eingereicht: {{date}}",
-    "executionStatus": "Ausführungsstatus: {{status}}",
-    "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Eingereichte Antworten",
     "noResponse": "Keine Antwort",
     "attachmentsTitle": "Anhänge",
     "noAttachments": "Keine Anhänge enthalten.",
-    "fileIdLabel": "Datei-ID: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}",
-    "versionLabel": "Version {{version}}",
     "historyTitle": "Verlauf",
     "historyEmpty": "Noch kein Verlauf aufgezeichnet.",
     "historyActor": "von {{actor}}",
@@ -62,7 +55,8 @@
       "service_request_submission_created": "Anfrage eingereicht",
       "service_request_submission_execution_succeeded": "Verarbeitung abgeschlossen",
       "service_request_submission_execution_failed": "Verarbeitung fehlgeschlagen"
-    }
+    },
+    "unnamedAttachment": "Anhang"
   },
   "recent": {
     "title": "Ihre letzten Anfragen",

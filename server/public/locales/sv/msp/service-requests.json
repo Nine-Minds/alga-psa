@@ -150,7 +150,12 @@
         "priorityCalculated": "Prioritet (beräknad)",
         "selectImpactAndUrgency": "Välj påverkan och brådska",
         "priorityFormula": "{{label}} (påverkan {{impact}} x brådska {{urgency}})",
-        "titleFieldKey": "Fältnyckel för titel",
+        "ticketSubject": "Ärendets ämne",
+        "ticketSubjectHelp": "Svar fylls i när förfrågan skickas. Lämna tomt för att använda det första svaret.",
+        "insertField": "Infoga fält",
+        "noInsertableFields": "Det här formuläret har inga fält att infoga ännu.",
+        "unknownFields": "Okänt fält: {{fields}}",
+        "unknownFieldsBlocked": "Åtgärda de okända fälten i ärendets ämne eller beskrivningsprefix innan du sparar.",
         "descriptionPrefix": "Beskrivningsprefix",
         "save": "Spara ärendefördelning"
       },

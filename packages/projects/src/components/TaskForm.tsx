@@ -10,7 +10,8 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { loadServiceOptions } from '@alga-psa/projects/lib/serviceOptions';
+import { projectScreenOffers } from '../lib/projectSurface';
 import { timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
@@ -168,6 +169,9 @@ export default function TaskForm({
   const screen = projectSource.screen;
   // Non-native sources never fall through to the native tenant-bound actions below.
   const sharedMode = projectSource.kind !== 'native';
+  // The service catalog is commercial data. A screen that closes it (a seat technician's) neither loads it nor asks
+  // for the service a task inherits; the service field is hidden by the same screen, so nothing renders from it.
+  const offersServiceCatalog = projectScreenOffers(screen, 'service_catalog');
   const frozen = (field: string) => screen.frozenFields.includes(field) || screen.readOnly;
   const hidden = (field: string) => screen.hiddenFields.includes(field);
   // Hidden fields render nothing; frozen ones render but cannot be operated (fieldset disables native controls, pointer-events covers editors/pickers).
@@ -457,8 +461,7 @@ export default function TaskForm({
         }
 
         // Fetch services for time entry prefill
-        const servicesResponse = await getServices(1, 999);
-        setAvailableServices(servicesResponse.services);
+        if (offersServiceCatalog) setAvailableServices(await loadServiceOptions());
 
         // Fetch all tasks in the project
         if (phase.project_id) {
@@ -477,9 +480,11 @@ export default function TaskForm({
         if (task?.task_id) {
           // Phase/project service default, so the picker can say what a blank
           // task-level service will fall back to.
-          const effectiveService = await getEffectiveTaskService(task.task_id);
-          if (!isReturnedActionError(effectiveService)) {
-            setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+          if (offersServiceCatalog) {
+            const effectiveService = await getEffectiveTaskService(task.task_id);
+            if (!isReturnedActionError(effectiveService)) {
+              setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+            }
           }
 
           // Use checklist items and resources from the task object if they exist
@@ -520,7 +525,7 @@ export default function TaskForm({
       }
     };
     fetchInitialData();
-  }, [task?.task_id, sharedMode, projectSource]);
+  }, [task?.task_id, sharedMode, projectSource, offersServiceCatalog]);
 
   useEffect(() => {
     if (sharedMode) return;
@@ -1562,6 +1567,7 @@ export default function TaskForm({
     serviceName: string | null;
     source: ProjectServiceSource | null;
   }> => {
+    if (!offersServiceCatalog) return { serviceId: null, serviceName: null, source: null };
     const effectiveService = await getEffectiveTaskService(taskId);
     const inherited = isReturnedActionError(effectiveService)
       ? applicableInheritedService
@@ -2188,16 +2194,18 @@ export default function TaskForm({
                     onValueChange={(value) => {
                       setAssignedUser(value === '' ? null : value);
                     }}
-                    onTeamSelect={handleAssignTeam}
+                    // A screen may leave the assignee writable and freeze team assignment (a seat technician's):
+                    // the picker then offers people only, rather than freezing the assignee with the team.
+                    onTeamSelect={frozen('assigned_team_id') ? undefined : handleAssignTeam}
                     size="sm"
                     users={users.filter(u =>
                       !([...taskResources, ...tempTaskResources])
                         .some(r => r.additional_user_id === u.user_id)
                     )}
-                    teams={teams}
+                    teams={frozen('assigned_team_id') ? [] : teams}
                     getUserAvatarUrlsBatch={sharedMode ? undefined : getUserAvatarUrlsBatchAction}
                     getTeamAvatarUrlsBatch={sharedMode ? undefined : getTeamAvatarUrlsBatchAction}
-                    disabled={frozen('assigned_to') || frozen('assigned_team_id')}
+                    disabled={frozen('assigned_to')}
                   />
                   {assignedTeamId && (() => {
                     const assignedTeam = teams.find(t => t.team_id === assignedTeamId);

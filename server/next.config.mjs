@@ -185,7 +185,20 @@ class EditionBuildDiagnosticsPlugin {
   }
 }
 
-const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '20mb';
+// Next's server-action body cap (one global value, not per action). Default 26mb, from two measurements:
+//  - Non-file actions (measured 2026-11, JSON-serialised worst cases): the largest legitimate body is a
+//    BlockNote document at the 1,000,000-char co-managed description cap = 3.65 MB (7.1 MB if every
+//    character were a quote, double-encoded); a 500-id bulk action is 19.5 KB; workflow definitions
+//    are under 60 KB. 8mb would cover all of them.
+//  - Actions that still carry file bytes and buffer by transport (no streaming path): co-managed
+//    attachments at their 25 MiB cap (+64 KiB envelope) set the floor. 26mb is that, rounded up; the
+//    KB import batch (10 MiB raw, 20 MiB worst case escaped) fits under it too. The pinning test
+//    server/src/test/unit/serverActionsBodyLimit.test.ts fails if any of these outgrow the default.
+//  This is not a file-size limit (that is the storage provider's maxFileSize); anything bigger goes
+//  through the chunked upload session API. A body past the cap gets Next's own 413
+//  ("Body exceeded 26mb limit", action-handler.js), never a truncated read. helm/values.yaml
+//  (server.serverActionsBodyLimit) and helm/templates/deployment.yaml carry the same default.
+const serverActionsBodyLimit = process.env.SERVER_ACTIONS_BODY_LIMIT || '26mb';
 // Round 2 (memory campaign 2026-06-04): cap the static-gen / page-data worker
 // pool. The default (== host CPU count) spawns one worker per core (e.g. 31 on a
 // 32-core box), each loading the full app bundle (~290 MB) — the dominant build
@@ -1312,7 +1325,20 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: serverActionsBodyLimit,
     },
-    // Increase middleware body size limit for extension installs
+    // Largest request body that can pass the middleware (src/middleware.ts; its matcher covers every
+    // page and API route, so this bounds every request with a body). Next buffers the body for the
+    // middleware's clone, and past this size it only logs a warning and ENDS the stream (see
+    // next/dist/server/body-streams.js getCloneableBody): the handler then reads a silently
+    // truncated body. middleware.ts therefore answers 413 on a Content-Length over this value
+    // (src/middleware/bodySizeGuard.ts), before any body is read.
+    // It is not a file-size limit: the one upload limit is the storage provider's maxFileSize
+    // (packages/storage/src/config/storage.ts), reached through the chunked session API, whose
+    // chunks are far smaller than this. What still needs this much room is bodies that cannot
+    // stream: the legacy multipart upload route (src/lib/api/services/documents/multipartCap.ts),
+    // import previews, and extension bundle installs (EE extUploadProxy / ext-bundles/upload-proxy,
+    // the original reason for raising it). Excluding those routes from the matcher instead would
+    // also skip the API-key gate and CORS handling, so the cap stays and is not to be raised.
+    // Keep equal to NEXT_PROXY_MAX_BODY_BYTES (packages/storage/src/ingest/bufferedCap.ts; pinned by test).
     proxyClientMaxBodySize: '100mb',
     // Next build "Collecting page data" uses a worker pool sized from this value.
     // Default-capped (see buildCpus above) to bound peak memory; override with

@@ -4,6 +4,7 @@ import path from 'path';
 import { globSync } from 'tinyglobby';
 import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
 import { onUnhandledError } from '../scripts/lib/vitest-unhandled-errors.mjs';
+import { DB_SETUP_HOOK_TIMEOUT_MS } from './test-utils/dbSetupHookTimeout';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -119,7 +120,7 @@ export default defineConfig({
     pool: 'forks',
     logHeapUsage: true,
     testTimeout: 20000,
-    hookTimeout: 120000,
+    hookTimeout: DB_SETUP_HOOK_TIMEOUT_MS,
     // The main vitest process retains every test's console output for the
     // report; across the widened package/shared run the chatty suites (db
     // config dumps, workflow loggers) accumulate into the multi-GB range and

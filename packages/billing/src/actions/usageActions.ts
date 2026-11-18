@@ -33,6 +33,7 @@ import {
 } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { hasCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import {
   actionError,
@@ -647,12 +648,12 @@ export const getEligibleContractLinesForUI = withAuth(
     serviceId: string,
     effectiveDate?: string | Date,
   ): Promise<EligibleContractLinesForUIResult> => {
-    if (!await hasPermission(user, 'billing', 'read')) {
+    if (!await hasCommercialReadPermission(user)) {
       return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
     try {
       const { knex } = await createTenantKnex();
-      return await loadEligibleContractLinesForUI(knex, tenant, clientId, serviceId, effectiveDate);
+      return await loadEligibleContractLinesForUI(user, knex, tenant, clientId, serviceId, effectiveDate);
     } catch (error) {
       const expected = usageActionErrorFrom(error);
       if (expected) return expected;

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   BarChart3,
@@ -28,10 +28,11 @@ import {
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { DateRangePicker, formatLocalYMD, type DateRange } from '@alga-psa/ui/components/DateRangePicker';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ProjectHoursView from './ProjectHoursReport';
 import {
   formatHours,
@@ -54,11 +55,14 @@ import {
   type EmployeeUtilizationReport,
   type ReportBucket,
   type ReportRangeDays,
+  type ReportRangeEcho,
+  type ReportRangeInput,
   type TeamPerformanceReport,
   type TicketAgingReport,
   type TicketWorkloadReport,
   type TimeUtilizationReport,
 } from '@alga-psa/reporting/actions/helpdeskReportActions';
+import { checkReportDateRange, REPORT_RANGE_PROBLEMS } from '@alga-psa/reporting/actions/reportRange';
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';
@@ -258,6 +262,33 @@ function canAccessReport(report: ReportDefinition, productCode: ProductCode, tie
   return report.products.includes(productCode) && tierAtLeast(tier, report.minimumTier);
 }
 
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+type FormatDayFn = (day: string) => string;
+
+/**
+ * Label a window: a rolling preset, or a custom span with its bounds formatted
+ * for the viewer's locale. Pass the window the server echoed whenever there is
+ * one, because that is the window the numbers were filtered by.
+ */
+function rangeSubtitle(window: ReportRangeEcho, t: TranslateFn, formatDay: FormatDayFn): string {
+  return window.range
+    ? t('reportsPage.dateRange.customRange', {
+        defaultValue: '{{start}} to {{end}}',
+        start: formatDay(window.range.from),
+        end: formatDay(window.range.to),
+      })
+    : t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: window.rangeDays });
+}
+
+/** Locale-formatted YYYY-MM-DD calendar days, which never shift by the viewer's timezone. */
+function useFormatDay(): FormatDayFn {
+  const { formatCalendarDate } = useFormatters();
+  return useCallback((day: string) => formatCalendarDate(day), [formatCalendarDate]);
+}
+
+/** Tells the page which window a report really covered once it has loaded. */
+type OnWindowLoaded = (window: ReportRangeEcho) => void;
+
 function formatDurationMinutes(value: number | null, emptyText: string): string {
   if (value === null) return emptyText;
   if (value < 1) return '<1m';
@@ -353,8 +384,9 @@ function PrintBarChart({
   );
 }
 
-function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function TicketWorkloadView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<TicketWorkloadReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -362,13 +394,15 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     let cancelled = false;
     setReport(null);
     setError(null);
-    getTicketWorkloadReport(rangeDays)
+    getTicketWorkloadReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load ticket workload report:', err);
@@ -377,14 +411,14 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
   const printTitle = t('reportsPage.reportCatalog.ticketWorkload.title', { defaultValue: 'Ticket Workload' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
 
   return (
     <>
@@ -421,8 +455,9 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   );
 }
 
-function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function TimeUtilizationView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<TimeUtilizationReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -430,13 +465,15 @@ function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     let cancelled = false;
     setReport(null);
     setError(null);
-    getTimeUtilizationReport(rangeDays)
+    getTimeUtilizationReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load time utilization report:', err);
@@ -445,7 +482,7 @@ function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -456,7 +493,7 @@ function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     label: `${bucket.label} (${formatHours(bucket.count)})`,
   }));
   const printTitle = t('reportsPage.reportCatalog.timeUtilization.title', { defaultValue: 'Time Utilization' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
 
   type ByUserRow = (typeof report.byUser)[number];
   const byUserColumns: PrintableTableColumn<ByUserRow>[] = [
@@ -534,8 +571,9 @@ function formatHoursDuration(value: number | null, emptyText: string): string {
   return formatHours(Math.round(value * 10) / 10);
 }
 
-function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function TeamPerformanceView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<TeamPerformanceReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -543,13 +581,15 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     let cancelled = false;
     setReport(null);
     setError(null);
-    getTeamPerformanceReport(rangeDays)
+    getTeamPerformanceReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load team performance report:', err);
@@ -558,7 +598,7 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -566,7 +606,7 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   const emptyDuration = t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' });
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
   const printTitle = t('reportsPage.reportCatalog.teamPerformance.title', { defaultValue: 'Team Performance' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
 
   type ByAssigneeRow = (typeof report.byAssignee)[number];
   const byAssigneeColumns: PrintableTableColumn<ByAssigneeRow>[] = [
@@ -658,8 +698,9 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   );
 }
 
-function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function EmployeeUtilizationView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<EmployeeUtilizationReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -667,13 +708,15 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
     let cancelled = false;
     setReport(null);
     setError(null);
-    getEmployeeUtilizationReport(rangeDays)
+    getEmployeeUtilizationReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load employee utilization report:', err);
@@ -682,7 +725,7 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -690,7 +733,7 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
   const noCapacityText = t('reportsPage.empty.noCapacity', { defaultValue: 'n/a — no capacity set' });
   const printTitle = t('reportsPage.reportCatalog.employeeUtilization.title', { defaultValue: 'Employee Utilization' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
   const formatPercent = (value: number | null) => (value === null ? noCapacityText : `${value}%`);
   const formatCapacity = (value: number | null) => (value === null ? noCapacityText : formatHours(value));
   // A denominator estimated from the weekly override is worth flagging: it
@@ -807,8 +850,9 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
   );
 }
 
-function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function EmailChannelHealthView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<EmailChannelHealthReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -816,13 +860,15 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     let cancelled = false;
     setReport(null);
     setError(null);
-    getEmailChannelHealthReport(rangeDays)
+    getEmailChannelHealthReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load email channel health report:', err);
@@ -831,7 +877,7 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -843,7 +889,7 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     label: t(`reportsPage.statusValues.${bucket.label}`, { defaultValue: bucket.label }),
   }));
   const printTitle = t('reportsPage.reportCatalog.emailChannelHealth.title', { defaultValue: 'Email Channel Health' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
 
   type ChannelRow = (typeof report.channels)[number];
   const channelColumns: PrintableTableColumn<ChannelRow>[] = [
@@ -983,8 +1029,9 @@ function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   );
 }
 
-function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+function TicketAgingView({ range, onWindowLoaded }: { range: ReportRangeInput; onWindowLoaded?: OnWindowLoaded }) {
   const { t } = useTranslation('msp/reports');
+  const formatDay = useFormatDay();
   const [report, setReport] = useState<TicketAgingReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -992,13 +1039,15 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     let cancelled = false;
     setReport(null);
     setError(null);
-    getTicketAgingReport(rangeDays)
+    getTicketAgingReport(range)
       .then((data) => {
         if (isReportActionError(data)) {
           if (!cancelled) setError(getErrorMessage(data));
           return;
         }
-        if (!cancelled) setReport(data);
+        if (cancelled) return;
+        setReport(data);
+        onWindowLoaded?.(data);
       })
       .catch((err) => {
         console.error('Failed to load ticket aging report:', err);
@@ -1007,14 +1056,14 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
     return () => {
       cancelled = true;
     };
-  }, [rangeDays, t]);
+  }, [range, t, onWindowLoaded]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive))]">{error}</p>;
   if (!report) return <LoadingReport />;
 
   const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
   const printTitle = t('reportsPage.reportCatalog.ticketAging.title', { defaultValue: 'Ticket Aging' });
-  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const printSubtitle = rangeSubtitle(report, t, formatDay);
 
   type OldestTicket = (typeof report.oldestOpenTickets)[number];
   const oldestColumns: PrintableTableColumn<OldestTicket>[] = [
@@ -1050,6 +1099,13 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
           <MetricCard label={t('reportsPage.metrics.days8To30', { defaultValue: '8 to 30 days' })} value={report.summary.days8To30} />
           <MetricCard label={t('reportsPage.metrics.over30Days', { defaultValue: 'Over 30 days' })} value={report.summary.over30Days} />
         </div>
+        {/* The counts and buckets are a snapshot of what is open now; only the
+            oldest-tickets list below is narrowed by the date range. */}
+        <p id="reports-ticket-aging-snapshot-note" className="text-xs text-[rgb(var(--color-text-500))]">
+          {t('reportsPage.dateRange.agingSnapshotNote', {
+            defaultValue: 'Counts and age groups show tickets open right now. The date range only filters the oldest open tickets list.',
+          })}
+        </p>
         <div className="grid gap-4 lg:grid-cols-2">
           <BucketList title={t('reportsPage.sections.ageDistribution', { defaultValue: 'Age distribution' })} buckets={report.byAge} emptyText={emptyText} />
           <BucketList title={t('reportsPage.sections.responseOwnership', { defaultValue: 'Response ownership' })} buckets={report.byResponseState} emptyText={emptyText} />
@@ -1115,6 +1171,32 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const { t } = useTranslation('msp/reports');
   const [selectedReportId, setSelectedReportId] = useState<EmbeddedReportId>('ticket-workload');
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(30);
+  const [customRange, setCustomRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const formatDay = useFormatDay();
+  // The viewer's today, fixed for the life of the page.
+  const [today] = useState(() => new Date());
+  // Half a range filters nothing, so the preset stays in charge until both
+  // bounds are picked. A complete span the report cannot cover is not sent:
+  // the preset stays in charge and the problem is shown beside the picker, so
+  // nothing is labelled with dates it was not filtered by.
+  const customPick = useMemo(() => {
+    if (!(customRange.from && customRange.to)) return null;
+    const picked = { from: formatLocalYMD(customRange.from), to: formatLocalYMD(customRange.to) };
+    return { range: picked, problem: checkReportDateRange(picked, formatLocalYMD(today)) };
+  }, [customRange, today]);
+  // Memoised so the views' effects do not refetch per render.
+  const range = useMemo<ReportRangeInput>(
+    () => (customPick && !customPick.problem ? customPick.range : rangeDays),
+    [customPick, rangeDays],
+  );
+  // The window the shown report really covered, as the server echoed it; null
+  // while it loads (or failed), when the header falls back to the request.
+  const [loadedWindow, setLoadedWindow] = useState<ReportRangeEcho | null>(null);
+  useEffect(() => {
+    setLoadedWindow(null);
+  }, [range, selectedReportId]);
+  const rangeApplies = selectedReportId !== 'project-hours';
+  const customProblem = customPick?.problem ? REPORT_RANGE_PROBLEMS[customPick.problem] : null;
   const visibleReports = useMemo(
     () => REPORTS.filter((report) => report.products.includes(productCode)),
     [productCode],
@@ -1136,18 +1218,43 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               })}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {[7, 30, 90].map((days) => (
               <Button
                 key={days}
                 id={`reports-range-${days}`}
-                variant={rangeDays === days ? 'default' : 'outline'}
+                variant={typeof range === 'number' && rangeDays === days ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setRangeDays(days as ReportRangeDays)}
+                // Project hours are life-to-date, so no range narrows them.
+                disabled={!rangeApplies}
+                // A preset is the way back out of a custom span.
+                onClick={() => {
+                  setRangeDays(days as ReportRangeDays);
+                  setCustomRange({ from: undefined, to: undefined });
+                }}
               >
                 {days}d
               </Button>
             ))}
+            <DateRangePicker
+              id="reports-custom-range"
+              value={customRange}
+              onChange={setCustomRange}
+              containerClassName=""
+              datePickerClassName="min-w-[150px]"
+              fromPlaceholder={t('reportsPage.dateRange.customFrom', { defaultValue: 'From date' })}
+              toPlaceholder={t('reportsPage.dateRange.customTo', { defaultValue: 'To date' })}
+              disabled={!rangeApplies}
+              // Backwards and future spans cannot be picked at all; the check
+              // above still catches a typed one and the 366-day cap.
+              constrainOrder
+              maxDate={today}
+            />
+            {customProblem ? (
+              <p id="reports-custom-range-error" role="alert" className="w-full text-xs text-[rgb(var(--color-destructive))]">
+                {t(customProblem.key, { defaultValue: customProblem.template, ...customProblem.params })}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -1249,10 +1356,12 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                       ? t('reportsPage.dateRange.allActiveProjects', {
                           defaultValue: 'All active projects, life-to-date',
                         })
-                      : t('reportsPage.dateRange.lastDays', {
-                          defaultValue: 'Last {{count}} days',
-                          count: rangeDays,
-                        })}
+                      : rangeSubtitle(
+                          loadedWindow ??
+                            (typeof range === 'number' ? { rangeDays: range, range: null } : { rangeDays: 0, range }),
+                          t,
+                          formatDay,
+                        )}
                   </p>
                 </div>
               </div>
@@ -1265,19 +1374,19 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
           </CardHeader>
           <CardContent>
             {selectedReportId === 'ticket-aging' ? (
-              <TicketAgingView rangeDays={rangeDays} />
+              <TicketAgingView range={range} onWindowLoaded={setLoadedWindow} />
             ) : selectedReportId === 'email-channel-health' ? (
-              <EmailChannelHealthView rangeDays={rangeDays} />
+              <EmailChannelHealthView range={range} onWindowLoaded={setLoadedWindow} />
             ) : selectedReportId === 'time-utilization' ? (
-              <TimeUtilizationView rangeDays={rangeDays} />
+              <TimeUtilizationView range={range} onWindowLoaded={setLoadedWindow} />
             ) : selectedReportId === 'team-performance' ? (
-              <TeamPerformanceView rangeDays={rangeDays} />
+              <TeamPerformanceView range={range} onWindowLoaded={setLoadedWindow} />
             ) : selectedReportId === 'employee-utilization' ? (
-              <EmployeeUtilizationView rangeDays={rangeDays} />
+              <EmployeeUtilizationView range={range} onWindowLoaded={setLoadedWindow} />
             ) : selectedReportId === 'project-hours' ? (
               <ProjectHoursView />
             ) : (
-              <TicketWorkloadView rangeDays={rangeDays} />
+              <TicketWorkloadView range={range} onWindowLoaded={setLoadedWindow} />
             )}
           </CardContent>
         </Card>

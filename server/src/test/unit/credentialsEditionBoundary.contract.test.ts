@@ -259,7 +259,7 @@ describe('credentials boundary scanner metadata handling', () => {
 
   it.each(catalogs)('accepts literal catalog data in %s', (file, declaration) => {
     const source = `export const ${declaration} = [
-      { table: 'credentials', deletion: 'ordered', clientKeyed: true },
+      { table: 'credentials', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id' } },
       { child: 'credential_associations', parent: 'credentials' },
       { credential_access_grants: { reason: 'write policy' } },
     ] as const;`;

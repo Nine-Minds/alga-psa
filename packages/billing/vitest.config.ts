@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -93,6 +94,10 @@ export default defineConfig({
       // resolved target's realm + Intuit environment that the invoice deep
       // link reads — listed for the same reason as the suites above.
       'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/accountingSyncActions.disconnectScope.test.ts',
+      'src/actions/accountingSyncActions.erroredOps.test.ts',
+      'src/services/accountingSync/syncOperationsRepository.listErrored.test.ts',
+      'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.syncButton.test.tsx',
       'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
@@ -100,8 +105,11 @@ export default defineConfig({
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
-      'src/lib/adapters/salesOrderAdapters.test.ts',
+      // The quote view model its by-location bands are built from — its sibling
+      // adapters were already listed, this one was only reached by the
+      // server-wide glob.
       'src/lib/adapters/quoteAdapters.test.ts',
+      'src/lib/adapters/salesOrderAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
@@ -116,6 +124,10 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
       'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      // Multi-location quote editing (alga-2026-0002902): client-change
+      // clearing, discount lines staying unsited, the remove-location
+      // move/delete choice, and the create-from-template item override.
+      'src/components/billing-dashboard/quotes/QuoteForm.locations.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
@@ -265,10 +277,8 @@ export default defineConfig({
         find: /^@alga-psa\/core\/i18n\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
-      {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
-        replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
-      },
+      // Published @alga-psa/db subpaths come from its exports map (most live under src/lib).
+      ...exportedSourceAliases('@alga-psa/db', path.resolve(__dirname, '../db')),
       {
         find: /^@alga-psa\/auth\/sso\/entry$/,
         replacement: path.resolve(__dirname, '../auth/src/components/SsoProviderButtons.tsx'),

@@ -9,7 +9,6 @@
     "newRequestHeading": "Submit a new request"
   },
   "detail": {
-    "version": "Version {{version}}",
     "submitted": "Request submitted",
     "unableToSubmit": "Unable to submit request",
     "formTitle": "Request Form",
@@ -18,9 +17,7 @@
     "datePlaceholder": "Select date",
     "optionLabel": "Option {{index}}",
     "submit": "Submit Request",
-    "requiredField": "This field is required.",
-    "initialValuesTitle": "Initial Values",
-    "noInitialValues": "No static defaults configured."
+    "requiredField": "This field is required."
   },
   "myRequests": {
     "title": "My Requests",
@@ -46,15 +43,11 @@
     "backToMyRequests": "Back to My Requests",
     "statusSection": "Status",
     "submittedAt": "Submitted: {{date}}",
-    "executionStatus": "Execution status: {{status}}",
-    "workflowLabel": "Workflow: {{id}}",
     "submittedAnswersTitle": "Submitted Answers",
     "noResponse": "No response",
     "attachmentsTitle": "Attachments",
     "noAttachments": "No attachments included.",
-    "fileIdLabel": "File ID: {{id}}",
     "fileTypeLabel": "Type: {{mime}}",
-    "versionLabel": "Version {{version}}",
     "historyTitle": "History",
     "historyEmpty": "No history recorded yet.",
     "historyActor": "by {{actor}}",
@@ -62,7 +55,8 @@
       "service_request_submission_created": "Request submitted",
       "service_request_submission_execution_succeeded": "Request processing completed",
       "service_request_submission_execution_failed": "Request processing failed"
-    }
+    },
+    "unnamedAttachment": "Attachment"
   },
   "recent": {
     "title": "Your recent requests",

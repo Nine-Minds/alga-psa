@@ -113,7 +113,8 @@
     "signOut": "Afmelden",
     "coManaged": "Gezamenlijk beheerde IT",
     "coManagedArchive": "Archief gezamenlijk beheer",
-    "coManagedAdministration": "Toegang en beheer"
+    "coManagedAdministration": "Toegang en beheer",
+    "assetsAudits": "Locatieaudits"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

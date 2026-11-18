@@ -13,7 +13,7 @@ import CoManagedRelationshipHistory from './CoManagedRelationshipHistory';
 /** Embeddable client-relationship sections: status/setup, capacity, access and
  * SLA, delegation, and history/departure. Detailed settings mount only while
  * this view is open, and every control is namespaced by the instance prefix. */
-export default function CoManagedClientView({ view, clientId, clientName, idPrefix, relationshipId, onSelectRelationship, onReload, resetKey, onDirtyChange }: {
+export default function CoManagedClientView({ view, clientId, clientName, idPrefix, relationshipId, onSelectRelationship, onReload, resetKey, onDirtyChange, renderSetup }: {
   view: CoManagedClientManagementView;
   clientId: string;
   clientName: string;
@@ -23,6 +23,8 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   onReload?: () => Promise<void> | void;
   resetKey?: number;
   onDirtyChange?: (dirty: boolean) => void;
+  /** Wraps the workspace setup in the shape chooser when the seat shape is open; absent, the setup renders as it always has. */
+  renderSetup?: (workspaceSetup: React.ReactNode) => React.ReactNode;
 }) {
   const { t } = useTranslation('msp/licensing');
   const { formatDate } = useFormatters();
@@ -127,10 +129,12 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </CardContent>
       </Card>
 
-      {!hasLiveRelationship && !hasRetainedRelationship && !view.inconsistent && view.canManage && (
-        <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
-          onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />
-      )}
+      {!hasLiveRelationship && !hasRetainedRelationship && !view.inconsistent && view.canManage && (() => {
+        const setup = <CoManagedClientSetup key={resetKey} clientId={clientId} clientName={clientName} idPrefix={idPrefix}
+          onProvisioned={() => onReload?.()} onDirtyChange={onDirtyChange} />;
+        // LEVERAGE: friction co-managed-setup-slot — the shape chooser has to wrap the workspace setup through a render prop because this view owns the "setup is open" derivation; a setup slot that knows its shapes would let the chooser sit beside it.
+        return renderSetup ? renderSetup(setup) : setup;
+      })()}
 
       {selected && needsRecovery && (
         <Card aria-labelledby={`${idPrefix}-recovery-title`}>

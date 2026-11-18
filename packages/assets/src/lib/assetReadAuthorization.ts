@@ -11,6 +11,7 @@ import {
   type AssetAuthorizationAction,
 } from '@alga-psa/authorization/assetReadAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { RequestLocalAuthorizationCache } from '@alga-psa/authorization/kernel';
 
 /**
  * Require both the coarse asset permission and the kernel's per-verb policy
@@ -34,13 +35,15 @@ export async function assertAssetAccess(
     throw new Error('Asset not found');
   }
 
-  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const requestCache = new RequestLocalAuthorizationCache();
+  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user, undefined, requestCache);
   let rules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
   try {
     rules = await resolveBundleNarrowingRulesForEvaluation(trx, {
       subject,
       resource: { type: 'asset', action, id: asset.asset_id },
       record: { id: asset.asset_id, clientId: asset.client_id, ownerUserId: null, assignedUserIds: [], teamIds: [] },
+      requestCache,
       knex: trx,
     });
   } catch {
@@ -48,7 +51,7 @@ export async function assertAssetAccess(
   }
   // Bundle rules narrow RBAC grants. The kernel also enforces built-in client
   // scope when no bundle rule applies to this action.
-  const context = await createAssetReadContextWithRules(trx, subject, rules);
+  const context = await createAssetReadContextWithRules(trx, subject, rules, requestCache);
   if (!await isAssetActionAllowed(trx, tenant, context, asset, action)) {
     throw new Error('Asset not found');
   }

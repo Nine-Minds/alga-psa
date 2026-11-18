@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Check, Copy, ExternalLink, Search } from "lucide-react";
 import {
+  CLIENT_TICKET_EMAIL_TEMPLATES,
   templateVariableCategories,
   templateVariableRegistry,
   type VariableDef,
@@ -76,6 +77,11 @@ function VariableRow({
             >
               {variable.type}
             </Badge>
+            {variable.audience === "msp" && (
+              <Badge size="sm" variant="warning">
+                {t('notifications.templateVariables.mspOnly')}
+              </Badge>
+            )}
           </div>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-[rgb(var(--color-text-600))]">
             {variable.description}
@@ -139,6 +145,11 @@ export function TemplateVariablePanel({
                 ? t('notifications.templateVariables.insertHelp')
                 : t('notifications.templateVariables.availableHelp')}
             </p>
+            {CLIENT_TICKET_EMAIL_TEMPLATES.has(templateName) && (
+              <p className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
+                {t('notifications.templateVariables.clientSafeHelp')}
+              </p>
+            )}
           </div>
           <Badge size="sm" variant="info">
             {entry?.variables.length ?? 0}

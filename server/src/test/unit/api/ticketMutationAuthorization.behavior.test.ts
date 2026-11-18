@@ -11,10 +11,26 @@ import { NextRequest } from 'next/server';
 const state = vi.hoisted(() => ({
   deniedActions: new Set<string>(),
   seenActions: [] as string[],
+  locked: false,
+  denyLockedRead: false,
+  denyLockedMutation: false,
+  lockedRedactions: [] as string[],
+  writes: 0,
+  transaction: { isTransaction: true },
 }));
 
 const svc = vi.hoisted(() => ({
-  update: vi.fn(async () => ({ ticket_id: 'x' })),
+  update: vi.fn(async (_id: string, data: Record<string, unknown>, _context: unknown, options?: { authorize?: (ticket: Record<string, unknown>, trx: any) => Promise<void> }) => {
+    const lockedTicket = { ticket_id: '22222222-2222-2222-2222-222222222222', description: 'Private locked description', assigned_to: null };
+    state.locked = true;
+    try {
+      await options?.authorize?.(lockedTicket, state.transaction);
+      state.writes += 1;
+      return { ...lockedTicket, ...data };
+    } finally {
+      state.locked = false;
+    }
+  }),
   delete: vi.fn(async () => undefined),
   addComment: vi.fn(async () => ({ comment_id: 'c' })),
   addWatcher: vi.fn(async () => []),
@@ -24,11 +40,36 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
   getAuthorizationKernel: vi.fn(async () => ({
     authorizeResource: vi.fn(async (input: any) => {
       state.seenActions.push(input.resource.action);
-      return { allowed: !state.deniedActions.has(input.resource.action) };
+      return {
+        allowed: !state.deniedActions.has(input.resource.action) && !(state.locked && state.denyLockedRead),
+        redactedFields: state.locked ? state.lockedRedactions : [],
+      };
+    }),
+    // Like the kernel: a mutation is refused unless read is allowed, then decided by its own action.
+    authorizeMutation: vi.fn(async (input: any) => {
+      state.seenActions.push(input.resource.action);
+      return { allowed: !state.deniedActions.has('read') && !state.deniedActions.has(input.resource.action) && !(state.locked && state.denyLockedMutation) };
     }),
   })),
 }));
 
+vi.mock('@alga-psa/authorization/subject', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/subject')>()),
+  resolveAuthorizationSubject: vi.fn(async (
+    _knex: unknown,
+    input: { tenant: string; user: { user_id: string; user_type?: string; role_ids?: string[] }; apiKeyId?: string | null },
+  ) => ({
+    tenant: input.tenant,
+    userId: input.user.user_id,
+    userType: input.user.user_type === 'client' ? 'client' : input.user.user_type === 'service' ? 'service' : 'internal',
+    roleIds: input.user.role_ids ?? [],
+    teamIds: [],
+    managedUserIds: [],
+    clientId: null,
+    portfolioClientIds: [],
+    ...(input.apiKeyId ? { apiKeyId: input.apiKeyId } : {}),
+  })),
+}));
 vi.mock('@alga-psa/authorization/assetReadAuthorization', () => ({
   resolveAuthorizationSubjectForUser: vi.fn(async (
     _knex: unknown,
@@ -119,6 +160,8 @@ vi.mock('../../../lib/api/services/TicketService', () => ({
 
 import { GET, PUT, DELETE } from '../../../app/api/v1/tickets/[id]/route';
 import { POST as commentPOST } from '../../../app/api/v1/tickets/[id]/comments/route';
+import { PUT as statusPUT } from '../../../app/api/v1/tickets/[id]/status/route';
+import { PUT as assignmentPUT } from '../../../app/api/v1/tickets/[id]/assignment/route';
 import { POST as watcherPOST } from '../../../app/api/v1/tickets/[id]/watchers/route';
 
 const TICKET = '22222222-2222-2222-2222-222222222222';
@@ -133,6 +176,11 @@ describe('ticket mutations are authorized against update/delete scope, not read'
   beforeEach(() => {
     state.deniedActions = new Set();
     state.seenActions = [];
+    state.locked = false;
+    state.denyLockedRead = false;
+    state.denyLockedMutation = false;
+    state.lockedRedactions = [];
+    state.writes = 0;
     Object.values(svc).forEach((m) => m.mockClear());
   });
 
@@ -199,9 +247,52 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     expect((await DELETE(req('DELETE'), ctx as any)).status).toBe(204);
   });
 
-  it('read denial still blocks mutation (404/403 semantics preserved)', async () => {
+  it('read denial returns not found and blocks mutation without a write', async () => {
     state.deniedActions = new Set(['read']);
-    expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(403);
+    expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(404);
     expect(svc.update).not.toHaveBeenCalled();
+  });
+});
+
+
+describe.each([
+  ['ticket', PUT, '', { title: 'Visible updated title' }],
+  ['status', statusPUT, '/status', { status_id: '33333333-3333-3333-3333-333333333333' }],
+  ['assignment', assignmentPUT, '/assignment', { assigned_to: null }],
+] as const)('%s updates retain locked-row admission and projection', (_name, route, suffix, data) => {
+  beforeEach(() => {
+    state.deniedActions = new Set();
+    state.seenActions = [];
+    state.locked = false;
+    state.denyLockedRead = false;
+    state.denyLockedMutation = false;
+    state.lockedRedactions = [];
+    state.writes = 0;
+    Object.values(svc).forEach((mock) => mock.mockClear());
+  });
+  it('refuses a row that leaves read scope between preflight and the lock without writing', async () => {
+    state.denyLockedRead = true;
+    const response = await route(req('PUT', suffix, data), ctx as any);
+    expect(response.status).toBe(404);
+    expect(state.writes).toBe(0);
+  });
+  it('refuses a row that leaves update scope between preflight and the lock without writing', async () => {
+    state.denyLockedMutation = true;
+    const response = await route(req('PUT', suffix, data), ctx as any);
+    expect(response.status).toBe(403);
+    expect(state.writes).toBe(0);
+  });
+  it('serializes under the policy obtained for the locked row', async () => {
+    state.lockedRedactions = ['tickets.description'];
+    const response = await route(req('PUT', suffix, data), ctx as any);
+    expect(response.status).toBe(200);
+    expect(state.writes).toBe(1);
+    expect((await response.json()).data).not.toHaveProperty('description');
+  });
+  it('preserves visible writes and responses', async () => {
+    const response = await route(req('PUT', suffix, data), ctx as any);
+    expect(response.status).toBe(200);
+    expect(state.writes).toBe(1);
+    expect((await response.json()).data.description).toBe('Private locked description');
   });
 });

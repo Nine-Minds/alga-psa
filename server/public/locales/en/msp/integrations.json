@@ -2280,7 +2280,41 @@
         "refreshTokenValidUntilProvider": "{{provider}} authorization valid until {{date}}. Tokens refresh automatically.",
         "autoProvisionCustomersLabelProvider": "Create {{provider}} customers automatically",
         "syncSucceeded": "Sync completed",
-        "syncStopped": "Sync stopped"
+        "syncStopped": "Sync stopped",
+        "erroredOpsDialogTitle": "Errored {{provider}} sync operations",
+        "erroredOpsDialogDescription": "Operations that failed or were skipped after repeated attempts.",
+        "erroredOpsOpen": "View errored operations",
+        "erroredOpsColItem": "Item",
+        "erroredOpsColOperation": "Operation",
+        "erroredOpsColError": "Error",
+        "erroredOpsColWhen": "When",
+        "erroredOpsColBatch": "Export batch",
+        "erroredOpsLoading": "Loading errored operations…",
+        "erroredOpsEmpty": "No errored operations.",
+        "erroredOpsLoadError": "Failed to load errored operations.",
+        "erroredOpsNoError": "No error details were recorded.",
+        "erroredOpsBatchLink": "View {{batch}} batch",
+        "erroredOpsClose": "Close",
+        "erroredOpsDeleted": {
+          "invoice": "Deleted invoice",
+          "credit_memo": "Deleted credit memo",
+          "vendor_bill": "Deleted vendor bill",
+          "payment": "Deleted payment",
+          "credit_application": "Deleted credit application",
+          "other": "Unavailable item"
+        },
+        "erroredOpsItem": {
+          "payment": "Payment on {{invoice}}",
+          "creditApplication": "Credit applied to {{invoice}}"
+        },
+        "erroredOpsOperation": {
+          "export_invoice": "Export invoice",
+          "export_credit_memo": "Export credit memo",
+          "export_vendor_bill": "Export vendor bill",
+          "apply_credit": "Apply credit",
+          "record_payment": "Record payment",
+          "void_invoice": "Void invoice"
+        }
       },
       "itemImport": {
         "description": "Import your QuickBooks products and services into the Alga service catalog for the connected QuickBooks company. QuickBooks stays the source of truth for names, rates, SKUs, descriptions, and costs; billing method, unit of measure, and service type are set here and owned by Alga afterwards. This step is optional — skip it with Next.",

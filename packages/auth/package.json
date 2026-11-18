@@ -82,6 +82,14 @@
       "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
     },
+    "./lib/clientBillingProjection": {
+      "import": "./src/lib/clientBillingProjection.ts",
+      "types": "./src/lib/clientBillingProjection.ts"
+    },
+    "./lib/commercialAccess": {
+      "import": "./src/lib/commercialAccess.ts",
+      "types": "./src/lib/commercialAccess.ts"
+    },
     "./lib/authPolicy": {
       "import": "./src/lib/authPolicy.ts",
       "types": "./src/lib/authPolicy.ts"

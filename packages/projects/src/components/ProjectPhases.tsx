@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
 import { getServices } from '../actions/serviceCatalogActions';
+import { projectScreenOffers } from '../lib/projectSurface';
 import type { PhaseBillingBadge, TimeEntryServiceChoice } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
@@ -111,7 +112,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   // One catalog load for the whole list — the picker in the phase editor and the
   // service name on phases that already have a default both read from it.
   const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
-  const needsServices = !sharedMode && (Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id)));
+  const needsServices = !sharedMode && projectScreenOffers(screen, 'service_catalog') && (Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id)));
   useEffect(() => {
     if (!needsServices || services.length > 0) return;
     let cancelled = false;

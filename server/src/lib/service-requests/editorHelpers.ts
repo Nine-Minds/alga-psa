@@ -10,6 +10,7 @@ const TICKET_ROUTING_EXECUTION_CONFIG_KEYS = [
   'itilImpact',
   'itilUrgency',
   'titleFieldKey',
+  'titleTemplate',
   'descriptionPrefix',
 ] as const;
 
@@ -32,6 +33,19 @@ export function getServiceRequestDraftLifecycleLabel(
   return lifecycleState;
 }
 
+/** The editor's Ticket subject value: `titleTemplate`, else a legacy `titleFieldKey` as `{{key}}`, else empty. */
+export function resolveTicketSubjectTemplate(config: Record<string, unknown> | null | undefined): string {
+  const template = config?.titleTemplate;
+  if (typeof template === 'string' && template.trim().length > 0) {
+    return template;
+  }
+  const legacyKey = config?.titleFieldKey;
+  if (typeof legacyKey === 'string' && legacyKey.trim().length > 0) {
+    return `{{${legacyKey.trim()}}}`;
+  }
+  return '';
+}
+
 export interface TicketRoutingConfigInput {
   boardId: string;
   statusId: string;
@@ -41,7 +55,7 @@ export interface TicketRoutingConfigInput {
   assignedToUserId: string;
   itilImpact: string;
   itilUrgency: string;
-  titleFieldKey: string;
+  titleTemplate: string;
   descriptionPrefix: string;
 }
 
@@ -77,7 +91,8 @@ export function buildTicketRoutingExecutionConfig({
   addStringConfig('statusId', ticketRoutingConfigInput.statusId);
   addStringConfig('priorityId', ticketRoutingConfigInput.priorityId);
   addStringConfig('assignedToUserId', ticketRoutingConfigInput.assignedToUserId);
-  addStringConfig('titleFieldKey', ticketRoutingConfigInput.titleFieldKey);
+  // The legacy `titleFieldKey` is folded into the template: it was deleted above and is never written back.
+  addStringConfig('titleTemplate', ticketRoutingConfigInput.titleTemplate);
   addStringConfig('descriptionPrefix', ticketRoutingConfigInput.descriptionPrefix);
 
   if (selectedCategory) {

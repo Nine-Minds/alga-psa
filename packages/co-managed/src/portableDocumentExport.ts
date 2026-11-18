@@ -11,7 +11,8 @@ import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActo
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES,
   commercialPortableDocumentIds, draftAttachmentPortableDocumentIds, filterCommercialPortableDocuments, type CoManagedPortableDocumentRecords, type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
 
-/** One file may not exceed this and the package may not exceed the total. A file
+/** Not an upload or storage limit (that is the provider's maxFileSize, 500 MiB by default): it only bounds what an export package carries.
+ * One file may not exceed this and the package may not exceed the total. A file
  * over either cap is never truncated: it is left out and named in the section's
  * exclusions, and its row keeps the file id so restore can see it is missing. */
 export const CO_MANAGED_PORTABLE_FILE_CAPS = Object.freeze({ perFileBytes: 100 * 1024 * 1024, packageBytes: 1024 * 1024 * 1024 });
