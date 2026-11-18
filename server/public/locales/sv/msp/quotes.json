@@ -606,6 +606,13 @@
       "needMoreLocations": "Den här kunden har bara en aktiv plats. Lägg till en andra plats i kundinställningarna för att kunna skapa offerter för flera platser.",
       "allLocationsInUse": "Varje aktiv plats för den här kunden har redan en grupp i den här offerten.",
       "emptyGroup": "Inga rader för den här platsen ännu."
+    },
+    "productDescription": {
+      "edited": "Redigerad för denna offert",
+      "label": "Produktbeskrivning",
+      "matchesProduct": "Matchar produkten",
+      "productGone": "Produkten finns inte längre i katalogen",
+      "useCurrent": "Använd aktuell produktbeskrivning"
     }
   },
   "quoteRecipients": {

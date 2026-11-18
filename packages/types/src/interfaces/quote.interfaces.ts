@@ -36,9 +36,14 @@ export interface IQuoteItem extends TenantEntity {
   /** Snapshot of the catalog item's description taken when the line was added
    *  or its catalog selection changed. Null for custom/discount lines, for
    *  catalog rows whose description was empty at capture time, and for rows
-   *  created before this column existed. Never refreshed from the catalog
-   *  after capture. */
+   *  created before this column existed. Never refreshed automatically: it
+   *  changes only through an explicit write that names this line (a user edit
+   *  or "Use current product description"). */
   catalog_description?: string | null;
+  /** True when, at the line's last explicit write, `catalog_description`
+   *  differed from the product's catalog text. Server-derived; never accepted
+   *  from callers. */
+  catalog_description_edited?: boolean;
   quantity: number;
   unit_price: number;
   cost?: number | null;

@@ -606,6 +606,13 @@
       "needMoreLocations": "Este cliente solo tiene una ubicación activa. Añada una segunda ubicación en la configuración del cliente para habilitar cotizaciones multi-sede.",
       "allLocationsInUse": "Todas las ubicaciones activas de este cliente ya tienen un grupo en esta cotización.",
       "emptyGroup": "Aún no hay elementos para esta ubicación."
+    },
+    "productDescription": {
+      "edited": "Editada para este presupuesto",
+      "label": "Descripción del producto",
+      "matchesProduct": "Coincide con el producto",
+      "productGone": "El producto ya no está en el catálogo",
+      "useCurrent": "Usar la descripción actual del producto"
     }
   },
   "quoteRecipients": {

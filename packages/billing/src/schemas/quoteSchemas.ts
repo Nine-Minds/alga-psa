@@ -87,11 +87,12 @@ const createQuoteItemBaseSchema = z.object({
   quote_id: z.string().guid(),
   service_id: z.string().guid().optional().nullable(),
   description: z.string().trim().min(1),
-  // The catalog-description snapshot is intentionally absent from this input
-  // shape: it is a server-captured, tenant-scoped snapshot of the catalog row,
-  // authoritative and immutable from the caller's perspective. Zod strips
-  // unknown keys, so any client-supplied value is dropped here and never
-  // reaches the model.
+  // Explicit write of the line's product description. The model honours it
+  // only on a catalog-backed line (service_id set, and unchanged on update);
+  // custom, discount and deleted-product lines drop it. Omitting the key always
+  // means "no change". `catalog_description_edited` is deliberately absent: the
+  // server derives it, and zod strips any client-supplied value.
+  catalog_description: z.string().max(4000).optional().nullable(),
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
   unit_of_measure: z.string().trim().optional().nullable(),

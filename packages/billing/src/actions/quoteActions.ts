@@ -75,8 +75,8 @@ export type CreateQuoteFromTemplateItemInput = Partial<
     | 'total_price'
     | 'net_amount'
     | 'tax_amount'
-    // Server-captured snapshot: never accepted from a caller.
-    | 'catalog_description'
+    // Server-derived divergence flag: never accepted from a caller.
+    | 'catalog_description_edited'
     | 'created_at'
     | 'updated_at'
   >
@@ -1325,7 +1325,10 @@ export async function copyQuoteItemsToQuote(
       cost_currency: sourceItem.cost_currency ?? null,
       location_id: sourceItem.location_id ?? null,
       created_by: options.createdBy,
-    }, { catalogDescriptionSnapshot: sourceItem.catalog_description ?? null });
+    }, {
+      catalogDescriptionSnapshot: sourceItem.catalog_description ?? null,
+      catalogDescriptionEdited: sourceItem.catalog_description_edited ?? false,
+    });
   };
 
   for (const item of baseItems) {
@@ -1402,6 +1405,9 @@ async function createDraftItemsOnQuote(
       cost: draft.cost ?? null,
       cost_currency: draft.cost_currency ?? null,
       location_id: options.resolveLocationId(draft.location_id),
+      // Override text is an explicit payload write (not the snapshot channel),
+      // so the model derives the edited flag. Only present when the editor sent it.
+      ...(draft.catalog_description !== undefined ? { catalog_description: draft.catalog_description } : {}),
       created_by: options.createdBy,
     } as any);
   };

@@ -132,34 +132,48 @@ describe('Quote types and schemas', () => {
     );
   });
 
-  it('T014a: createQuoteItemSchema strips a caller-supplied catalog_description (snapshot is server-captured)', () => {
-    const result = createQuoteItemSchema.safeParse({
-      quote_id: '11111111-1111-4111-8111-111111111111',
-      service_id: '11111111-1111-4111-8111-111111111111',
-      description: 'Managed Firewall Service',
-      quantity: 1,
-      unit_price: 25000,
-      catalog_description: 'CALLER FORGED SNAPSHOT',
-    });
+  const itemBase = {
+    quote_id: '11111111-1111-4111-8111-111111111111',
+    service_id: '11111111-1111-4111-8111-111111111111',
+    description: 'Managed Firewall Service',
+    quantity: 1,
+    unit_price: 25000,
+  };
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect('catalog_description' in result.data).toBe(false);
-    }
+  it('T014a: createQuoteItemSchema accepts an explicit catalog_description (string, null or absent) and caps it at 4000 characters', () => {
+    const accepted = createQuoteItemSchema.safeParse({ ...itemBase, catalog_description: 'Includes: setup' });
+    expect(accepted.success).toBe(true);
+    if (accepted.success) expect(accepted.data.catalog_description).toBe('Includes: setup');
+
+    expect(createQuoteItemSchema.safeParse({ ...itemBase, catalog_description: null }).success).toBe(true);
+
+    const absent = createQuoteItemSchema.safeParse(itemBase);
+    expect(absent.success).toBe(true);
+    if (absent.success) expect('catalog_description' in absent.data).toBe(false);
+
+    expect(createQuoteItemSchema.safeParse({ ...itemBase, catalog_description: 'x'.repeat(4000) }).success).toBe(true);
+    expect(createQuoteItemSchema.safeParse({ ...itemBase, catalog_description: 'x'.repeat(4001) }).success).toBe(false);
   });
 
-  it('T014b: updateQuoteItemSchema strips a caller-supplied catalog_description', () => {
+  it('T014b: updateQuoteItemSchema accepts catalog_description and caps it at 4000 characters', () => {
     const result = updateQuoteItemSchema.safeParse({
       quote_id: '11111111-1111-4111-8111-111111111111',
       description: 'Edited line description',
       quantity: 2,
       unit_price: 30000,
-      catalog_description: 'CALLER FORGED SNAPSHOT',
+      catalog_description: 'Edited wording',
     });
-
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect('catalog_description' in result.data).toBe(false);
+    if (result.success) expect(result.data.catalog_description).toBe('Edited wording');
+
+    expect(updateQuoteItemSchema.safeParse({ catalog_description: 'x'.repeat(4001) }).success).toBe(false);
+  });
+
+  it('T014c: catalog_description_edited is never accepted from callers (stripped by both schemas)', () => {
+    for (const schema of [createQuoteItemSchema, updateQuoteItemSchema]) {
+      const result = schema.safeParse({ ...itemBase, catalog_description_edited: true });
+      expect(result.success).toBe(true);
+      if (result.success) expect('catalog_description_edited' in result.data).toBe(false);
     }
   });
 

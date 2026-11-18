@@ -606,6 +606,13 @@
       "needMoreLocations": "This client only has one active location. Add a second location in Client settings to enable multi-site quoting.",
       "allLocationsInUse": "Every active location for this client already has a group on this quote.",
       "emptyGroup": "No items yet for this location."
+    },
+    "productDescription": {
+      "edited": "Edited for this quote",
+      "label": "Product description",
+      "matchesProduct": "Matches the product",
+      "productGone": "Product no longer in the catalog",
+      "useCurrent": "Use current product description"
     }
   },
   "quoteRecipients": {

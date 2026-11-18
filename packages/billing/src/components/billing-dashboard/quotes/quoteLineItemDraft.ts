@@ -6,6 +6,7 @@ import { isPendingOptional } from '../../../lib/quoteItemInclusion';
 import { buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from '../../../lib/quoteTotals';
 import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
 import { formatCurrencyWithSymbol } from '@alga-psa/core/formatters';
+import { normalizeCatalogDescription, resolveCatalogDescriptionWrite } from '../../../lib/quoteItemCatalogDescription';
 
 export type DraftQuoteItem = {
   local_id: string;
@@ -16,10 +17,18 @@ export type DraftQuoteItem = {
   service_sku?: string | null;
   billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
   description: string;
-  /** Quote-time snapshot of the catalog item's description (null for custom,
-   *  discount, and legacy lines). Carried for immediate draft preview only —
-   *  the server re-resolves the authoritative snapshot on persistence. */
+  /** The line's product description (null for custom, discount, and legacy
+   *  lines). For a picker-added line this is preview text only: the server
+   *  captures the authoritative text on persistence. It is written back only
+   *  when `catalog_description_dirty` is set. */
   catalog_description?: string | null;
+  /** From the server row: the text differed from the product at the line's
+   *  last explicit write. Never sent back; the server derives it. */
+  catalog_description_edited?: boolean;
+  /** Client only: the user changed or refreshed this text in this session.
+   *  Only dirty lines send `catalog_description`; cleared when the draft is
+   *  rebuilt from the saved row. */
+  catalog_description_dirty?: boolean;
   quantity: number;
   unit_price: number;
   /** Product cost snapshot in minor currency units (from service_catalog). */
@@ -77,6 +86,7 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     billing_method: item.billing_method ?? null,
     description: item.description,
     catalog_description: item.catalog_description ?? null,
+    catalog_description_edited: item.catalog_description_edited ?? false,
     quantity: Number(item.quantity ?? 1),
     unit_price: Number(item.unit_price ?? 0),
     cost: item.cost ?? null,
@@ -115,7 +125,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     service_sku: item.sku ?? null,
     billing_method: item.billing_method,
     description: item.service_name,
-    catalog_description: item.description && item.description.trim() ? item.description.trim() : null,
+    catalog_description: normalizeCatalogDescription(item.description),
     quantity: 1,
     unit_price: needsPrice ? 0 : Number(item.currency_rate ?? item.default_rate ?? 0),
     cost: item.item_kind === 'product' ? (item.cost ?? null) : null,
@@ -213,6 +223,27 @@ export function createDraftDiscountQuoteItem(input: {
     tax_rate: 0,
     location_id: null,
   };
+}
+
+/**
+ * Apply a product-description change to a draft line: stores the text and marks
+ * the line dirty so the save payload carries it. Shared by typing and by
+ * "Use current product description".
+ */
+export function withEditedCatalogDescription(item: DraftQuoteItem, text: string | null): DraftQuoteItem {
+  return { ...item, catalog_description: text, catalog_description_dirty: true };
+}
+
+/**
+ * Whether to show the "Edited for this quote" caption: the line is flagged by
+ * the server or edited in this session, and its text differs from the product's
+ * current text. `currentText` is `undefined` while loading or when the product
+ * is gone, in which case there is nothing to compare against and no caption.
+ */
+export function isCatalogDescriptionDiverged(item: DraftQuoteItem, currentText: string | null | undefined): boolean {
+  if (currentText === undefined) return false;
+  if (!item.catalog_description_edited && !item.catalog_description_dirty) return false;
+  return resolveCatalogDescriptionWrite(item.catalog_description, currentText).catalog_description_edited;
 }
 
 const draftBaseItemId = (item: DraftQuoteItem): string => item.quote_item_id ?? item.local_id;

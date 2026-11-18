@@ -82,7 +82,8 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
       service_name: zOpenApi.string().max(255).nullable().optional().describe('Overrides the snapshotted catalog service name.'),
       service_sku: zOpenApi.string().max(100).nullable().optional().describe('Overrides the snapshotted catalog SKU.'),
       service_item_kind: zOpenApi.string().max(50).nullable().optional().describe('Item kind, e.g. product or service. Falls back to the catalog value.'),
-    }).describe('Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is a server-captured snapshot and is ignored if sent.'),
+      catalog_description: zOpenApi.string().max(4000).nullable().optional().describe('Product description printed under the line. Send it only to change it on a catalog-backed line (service_id set and unchanged); omitted means unchanged, and custom, discount and deleted-product lines ignore it. Writing the product\'s current catalog text resets the line to match the product.'),
+    }).describe('Quote item body for POST /quotes/{id}/items. PUT /quotes/{id}/items/{itemId} takes any subset of the same fields. catalog_description is described on its own field. The server derives catalog_description_edited; it is never accepted.'),
   );
 
   const QuoteBodyFields = {

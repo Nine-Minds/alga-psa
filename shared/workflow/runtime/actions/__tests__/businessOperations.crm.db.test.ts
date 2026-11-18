@@ -428,6 +428,7 @@ async function createQuoteItemRecord(
     serviceId?: string | null;
     serviceName?: string | null;
     catalogDescription?: string | null;
+    catalogDescriptionEdited?: boolean;
   }
 ): Promise<string> {
   const quoteItemId = uuidv4();
@@ -442,6 +443,7 @@ async function createQuoteItemRecord(
     service_id: params.serviceId ?? null,
     service_name: params.serviceName ?? null,
     catalog_description: params.catalogDescription ?? null,
+    catalog_description_edited: params.catalogDescriptionEdited ?? false,
     description: params.description,
     quantity,
     unit_price: unitPrice,
@@ -848,6 +850,7 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       serviceId: null,
       serviceName: '24-inch Business Tiny-in-One Monitor',
       catalogDescription: CATALOG_SNAPSHOT,
+      catalogDescriptionEdited: true,
       description: '24-inch Business Tiny-in-One Monitor',
       unitPrice: 45000,
       displayOrder: 0,
@@ -895,8 +898,11 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     // gone (service_id null) — not nulled, not recaptured from live catalog.
     expect(catalogLine?.catalog_description).toBe(CATALOG_SNAPSHOT);
     expect(catalogLine?.service_id).toBeNull();
+    // The divergence flag travels with the text (alga-2026-0002804).
+    expect(catalogLine?.catalog_description_edited).toBe(true);
     // Custom line stays null.
     expect(customLine?.catalog_description).toBeNull();
+    expect(customLine?.catalog_description_edited).toBe(false);
 
     // No forged caller value leaked onto any persisted line.
     expect(persistedItems.map((row: any) => row.catalog_description)).not.toContain(
