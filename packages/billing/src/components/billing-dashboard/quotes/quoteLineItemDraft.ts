@@ -87,6 +87,9 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     description: item.description,
     catalog_description: item.catalog_description ?? null,
     catalog_description_edited: item.catalog_description_edited ?? false,
+    // Explicit, so merging a saved row over a draft (`{ ...draft, ...fromRow }`)
+    // clears the session marker instead of inheriting it.
+    catalog_description_dirty: false,
     quantity: Number(item.quantity ?? 1),
     unit_price: Number(item.unit_price ?? 0),
     cost: item.cost ?? null,
