@@ -11,6 +11,7 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { RmmRemoteConnectionType } from '../../lib/rmm/assetDeviceActions';
+import { isSafeRemoteSessionUrl, parseRmmConnectionType } from '../../lib/rmm/connectionTypes';
 import {
   isOperationClosed,
   loadAssetRmmData,
@@ -137,14 +138,22 @@ export const getAssetRemoteControlUrl = withAuth(async (
 ): Promise<string | null> => {
   await requireAssetPermission(user, 'update');
   if (await isOperationClosed(user, tenant, 'remote_access')) throw new Error(OPERATION_CLOSED_MESSAGE);
+  // Server actions are a client boundary too: accept any provider id, but only a well-formed one.
+  const type = parseRmmConnectionType(connectionType);
+  if (!type) throw new Error('Invalid remote control type');
   const { asset, ref, actions } = await resolveDevice(tenant, assetId);
   // A Web Remote session is at least as powerful as a reboot.
   if (!(await canExecuteCommands(user, asset.rmm_provider))) throw new Error(EXECUTE_COMMAND_DENIED_MESSAGE);
   if (!actions.remoteControlUrl) return null;
+  let url: string | null;
   try {
-    return await actions.remoteControlUrl(ref, connectionType);
+    url = await actions.remoteControlUrl(ref, type);
   } catch (error) {
     console.warn('Remote control link not available:', error);
     return null;
   }
+  if (url === null || isSafeRemoteSessionUrl(url)) return url;
+  // Provider URLs are opened in the user's browser; a script/data scheme there would run in our origin's tab.
+  console.warn(`Refused unsafe ${asset.rmm_provider} remote control URL for type "${type}" on asset ${assetId}`);
+  return null;
 });

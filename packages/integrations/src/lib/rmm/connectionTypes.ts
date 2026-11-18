@@ -10,6 +10,8 @@ export {
   describeRmmConnectionType,
   parseRmmConnectionType,
   rmmConnectionTypesForProvider,
+  orderRmmConnectionTypes,
+  isSafeRemoteSessionUrl,
 } from '@alga-psa/types';
 export type {
   RmmConnectionIcon,

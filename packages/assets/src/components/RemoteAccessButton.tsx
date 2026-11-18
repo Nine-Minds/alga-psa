@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { describeRmmConnectionType, rmmConnectionTypesForProvider } from '@alga-psa/types';
+import { describeRmmConnectionType, orderRmmConnectionTypes } from '@alga-psa/types';
 import { useAssetCrossFeature, type AssetRemoteConnectionType } from '../context/AssetCrossFeatureContext';
 import { getRemoteAccessLinksForAsset, type RenderedRemoteAccessLink } from '../actions/remoteAccessLinkActions';
 import { assetActionErrorMessage, isAssetActionError } from '../actions/assetActionErrors';
@@ -27,19 +27,6 @@ function connectionLabel(type: AssetRemoteConnectionType, t: (key: string, optio
   const { labelKey, fallbackLabel } = describeRmmConnectionType(type);
   if (labelKey) return t(labelKey, { defaultValue: fallbackLabel || undefined });
   return fallbackLabel;
-}
-
-/** Providers that publish a closed set keep it (in their order); everything else is shown as the adapter returned it, in registry order. */
-function presentableTypes(provider: string | null | undefined, reported: AssetRemoteConnectionType[]): AssetRemoteConnectionType[] {
-  const allowed = rmmConnectionTypesForProvider(provider);
-  const hint = allowed ?? [];
-  const rank = (type: AssetRemoteConnectionType) => {
-    const index = hint.indexOf(type);
-    return index >= 0 ? index : hint.length;
-  };
-  return [...new Set(reported)]
-    .filter((type) => !allowed || allowed.includes(type))
-    .sort((a, b) => rank(a) - rank(b) || describeRmmConnectionType(a).order - describeRmmConnectionType(b).order);
 }
 
 /** Not rendered at all when the server's seat authority closes remote access to the signed-in user. */
@@ -66,7 +53,7 @@ function RemoteAccessButtonControl({ asset, variant = 'default', size = 'sm', cl
     setLoadFailed(false);
     const typeRequest = hasRmmCandidates
       ? rmm.getAssetRemoteControlTypes(asset.asset_id)
-          .then((types) => setAvailableTypes(presentableTypes(asset.rmm_provider, types)))
+          .then((types) => setAvailableTypes(orderRmmConnectionTypes(asset.rmm_provider, types)))
           .catch(() => { setAvailableTypes([]); setLoadFailed(true); })
       : Promise.resolve().then(() => setAvailableTypes([]));
     const linkRequest = getRemoteAccessLinksForAsset(asset.asset_id)

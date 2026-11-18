@@ -8,9 +8,10 @@
  * types we recognise. Unrecognised types are passed through and rendered with a
  * generic presentation.
  *
- * `server/src/lib/api/openapi/routes/assets.ts` and the generated chat registry
- * (`ee/server/src/chat/registry/apiRegistry.generated.ts`) list the known ids;
- * keep them in step with this tuple.
+ * The OpenAPI description of `GET /api/v1/assets/{id}/rmm/remote-control`
+ * (`server/src/lib/api/openapi/routes/assets.ts`) reads its known ids from this
+ * tuple; regenerate the OpenAPI and chat/MCP registries (`npm run
+ * generate:openapi && npm run mcp:registry:generate`) after changing it.
  */
 
 export type RmmConnectionIcon = 'monitor' | 'terminal';
@@ -106,16 +107,50 @@ export function parseRmmConnectionType(raw: unknown): RmmRemoteConnectionType | 
   return /^[a-z0-9][a-z0-9_]*$/.test(normalized) ? normalized : null;
 }
 
-const PROVIDER_CONNECTION_TYPES: Readonly<Record<string, readonly KnownRmmRemoteConnectionType[]>> = {
+/** Display order hints for providers whose adapters publish a fixed set; types not listed sort after them. */
+const PROVIDER_CONNECTION_ORDER: Readonly<Record<string, readonly KnownRmmRemoteConnectionType[]>> = {
   tacticalrmm: ['splashtop', 'shell'], // Tactical's `control` URL is its desktop session.
   datto: ['splashtop'], // Datto Web Remote, shown as Remote Desktop.
 };
 
 /**
- * Per-provider hint. A provider that publishes a closed set returns that set in
- * display order; `null` means unconstrained, so every type the adapter returns
- * (including ones with no metadata) is offered in registry order.
+ * Per-provider display order hint, never a gate: the adapter already returns
+ * only the types the device publishes. Empty means "registry order".
  */
-export function rmmConnectionTypesForProvider(provider: string | null | undefined): readonly RmmRemoteConnectionType[] | null {
-  return (provider && PROVIDER_CONNECTION_TYPES[provider]) || null;
+export function rmmConnectionTypesForProvider(provider: string | null | undefined): readonly RmmRemoteConnectionType[] {
+  return (provider && PROVIDER_CONNECTION_ORDER[provider]) || [];
+}
+
+/** De-duplicate and order the types an adapter reported: provider hint first, then registry order, then provider order. */
+export function orderRmmConnectionTypes(
+  provider: string | null | undefined,
+  reported: readonly RmmRemoteConnectionType[],
+): RmmRemoteConnectionType[] {
+  const hint = rmmConnectionTypesForProvider(provider);
+  const rank = (type: RmmRemoteConnectionType) => {
+    const index = hint.indexOf(type);
+    return index >= 0 ? index : hint.length;
+  };
+  // Array.prototype.sort is stable, so equal ranks keep the provider's order.
+  return [...new Set(reported)].sort((a, b) =>
+    rank(a) - rank(b) || describeRmmConnectionType(a).order - describeRmmConnectionType(b).order);
+}
+
+/** Schemes that run code or read local data in the browser instead of opening a remote session. */
+const UNSAFE_SESSION_URL_SCHEMES: ReadonlySet<string> = new Set(['javascript', 'vbscript', 'data', 'file', 'blob']);
+
+/**
+ * True when a provider-supplied session URL may be handed to the browser.
+ * Only genuinely unsafe schemes are refused; https and provider app-launch
+ * schemes (whatever a remote tool registers) pass. Browsers ignore ASCII
+ * whitespace and control characters inside a scheme, so they are stripped
+ * before the check.
+ */
+export function isSafeRemoteSessionUrl(url: unknown): url is string {
+  if (typeof url !== 'string') return false;
+  // eslint-disable-next-line no-control-regex
+  const compact = url.replace(/[\u0000-\u0020\u007f]+/g, '');
+  if (!compact) return false;
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(compact)?.[1]?.toLowerCase();
+  return !scheme || !UNSAFE_SESSION_URL_SCHEMES.has(scheme);
 }

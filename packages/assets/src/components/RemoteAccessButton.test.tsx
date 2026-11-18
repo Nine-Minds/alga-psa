@@ -88,9 +88,10 @@ describe('RemoteAccessButton availability', () => {
     open.mockRestore();
   });
 
-  it('offers only Remote Desktop for Datto assets and opens the Web Remote URL', async () => {
+  it('offers Datto Web Remote as Remote Desktop and opens the Web Remote URL', async () => {
     mockGetLinks.mockResolvedValue([]);
-    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop', 'shell']);
+    // The Datto adapter reports only its Web Remote slot; the menu shows what the adapter reports.
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['splashtop']);
     mockRmm.getAssetRemoteControlUrl.mockResolvedValue('https://concord.centrastage.net/csm/remote/dev-1');
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     render(<RemoteAccessButton asset={asset({ rmm_provider: 'datto', rmm_device_id: 'dev-1' })} />);
@@ -175,5 +176,14 @@ describe('RemoteAccessButton availability', () => {
     const item = label.closest('button')!;
     expect(item.querySelector('svg.lucide-monitor')).toBeTruthy();
     expect(item.querySelector('svg.lucide-terminal')).toBeNull();
+  });
+
+  it('offers every type the adapter reports, ordering by provider hint without gating on it', async () => {
+    mockRmm.getAssetRemoteControlTypes.mockResolvedValue(['vnc', 'shell', 'splashtop']);
+    render(<RemoteAccessButton asset={asset({ rmm_provider: 'tacticalrmm', rmm_device_id: 'agent-1' })} />);
+    fireEvent.click(screen.getByTestId('open-menu'));
+    await screen.findByText('remoteAccess.connectionTypes.vnc');
+    const labels = screen.getAllByText(/^remoteAccess\.(remoteDesktop|remoteShell|connectionTypes\.vnc)$/).map((el) => el.textContent);
+    expect(labels).toEqual(['remoteAccess.remoteDesktop', 'remoteAccess.remoteShell', 'remoteAccess.connectionTypes.vnc']);
   });
 });
