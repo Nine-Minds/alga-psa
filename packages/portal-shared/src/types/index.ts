@@ -31,7 +31,9 @@ export type PortalInvitationErrorCode =
   | 'NO_LOCATION_EMAIL'
   | 'BASE_URL_NOT_CONFIGURED'
   | 'INVITATION_NOT_FOUND'
-  | 'REVOKE_FAILED';
+  | 'REVOKE_FAILED'
+  | 'BATCH_LIMIT_EXCEEDED'
+  | 'NO_TARGETS_SELECTED';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -39,6 +41,42 @@ export interface SendInvitationResult {
   message?: string;
   error?: string;
   errorCode?: PortalInvitationErrorCode;
+}
+
+/**
+ * Per-contact outcome of a bulk invitation run. `skipped` means the contact is
+ * not invitable as it stands (no email, bad email, already a portal user, a
+ * shared mailbox); `failed` means the invitation could not be delivered.
+ */
+export type BulkInvitationStatus = 'sent' | 'skipped' | 'failed';
+
+export interface BulkSendInvitationItemResult {
+  contactId: string;
+  email?: string;
+  status: BulkInvitationStatus;
+  invitationId?: string;
+  errorCode?: PortalInvitationErrorCode;
+  message?: string;
+}
+
+export interface BulkSendInvitationResult {
+  success: boolean;
+  total: number;
+  sent: number;
+  skipped: number;
+  failed: number;
+  results: BulkSendInvitationItemResult[];
+  error?: string;
+  errorCode?: PortalInvitationErrorCode;
+}
+
+export interface SendBulkPortalInvitationsParams {
+  /** Restricts the batch to one client, and validates every explicit contact against it. */
+  clientId?: string;
+  /** Explicit contacts to invite. Takes precedence over `allEligible`. */
+  contactIds?: string[];
+  /** Invite every contact without a portal user (optionally within `clientId`). */
+  allEligible?: boolean;
 }
 
 export interface PortalInvitationEntraPrelink {
