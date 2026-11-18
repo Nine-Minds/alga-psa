@@ -13,7 +13,8 @@
  *    that is *removed* is the one destructive case: its rows at or before today
  *    are deleted.
  *  - future window    = rows with `effective_date > today`. `scheduled` replaces
- *    the whole window; `scheduledAt` merges one date (the rollout dialog) and
+ *    the rows that belong to no price book (price book rows are kept; only
+ *    withdrawing the price book removes them); `scheduledAt` merges one date (the rollout dialog) and
  *    `appendAt` inserts one date for a price book (insert-only).
  *  - a window that is not supplied is left untouched, so an ordinary save never
  *    revokes a scheduled increase.
@@ -411,12 +412,40 @@ export async function writeServiceCatalogPricing(
   }
 
   if (scheduled !== undefined) {
+    // `scheduled` owns the unaffiliated future window only. Price book rows are
+    // removed solely by withdrawing their price book (plan §3.2, §6), so a
+    // scheduled-prices write must never delete them, even though they are
+    // future-dated and a GET returns them among `scheduled_prices`.
     await db.table('service_prices')
       .where({ service_id: serviceId })
       .where('effective_date', '>', today)
+      .whereNull('price_book_id')
       .del();
+    const bookRows = await db.table<PriceRow>('service_prices')
+      .where({ service_id: serviceId })
+      .where('effective_date', '>', today)
+      .whereNotNull('price_book_id');
+    const bookRowAt = (currency: string, date: string) =>
+      bookRows.find((row) => row.currency_code === currency && dateOf(row.effective_date) === date);
+    const conflicts: string[] = [];
+    // A client that round-trips GET → PUT sends the price book rows back
+    // unchanged; those are already in place. A different rate at a price book
+    // row's key would revise the price book behind its back, so it is refused.
+    const toWrite = scheduled.filter((price) => {
+      const bookRow = bookRowAt(price.currency_code, price.effective_date);
+      if (!bookRow) return true;
+      if (Number(bookRow.rate) === price.rate) {
+        unchanged.push(bookRow);
+      } else {
+        conflicts.push(
+          `cannot schedule ${price.currency_code} price ${price.rate} at ${price.effective_date}: the catalog already has ${describeRow(bookRow)}; revise or withdraw the price book instead`,
+        );
+      }
+      return false;
+    });
+    if (conflicts.length > 0) throw new ServiceCatalogPricingError(conflicts);
     const indexByDate = new Map<string, number>();
-    const rows = scheduled.map((price) => {
+    const rows = toWrite.map((price) => {
       const index = indexByDate.get(price.effective_date) ?? 0;
       indexByDate.set(price.effective_date, index + 1);
       return {

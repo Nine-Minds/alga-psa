@@ -487,10 +487,16 @@ async function configureJob(
     .update({ configuration: JSON.stringify(configuration) });
 }
 
-/** The original six-entity sample; products need a service type, so they have their own tests. */
+/**
+ * The original six-entity sample. The catalog entities (products, services,
+ * their catalog_prices and vendor offers) need a service type and reference each
+ * other, so they have their own tests; dropping a parent drops its dependants.
+ */
 function legacySampleRows(): AmpPackageRows {
   const rows = sampleEntityRows();
   delete rows.products;
+  delete rows.services;
+  delete rows.catalog_prices;
   delete rows.vendor_products;
   return rows;
 }
@@ -578,6 +584,8 @@ describe('AMP migration pipeline integration', () => {
       ticket_comments: 1,
       assets: 1,
       products: 0,
+      services: 0,
+      catalog_prices: 0,
       vendor_products: 0,
     });
     expect(await stagedCountsByEntity(fixture.tenantId, migrationJobId)).toEqual({

@@ -190,6 +190,75 @@ describe('pricebook catalog pricing: the single writer', () => {
     });
   });
 
+  describe('scheduled window never deletes price book rows', () => {
+    async function seedScheduledBook() {
+      const serviceId = await createTestService(context, { service_name: 'Managed Firewall', billing_method: 'fixed', default_rate: 100 });
+      const book = await makeBook('Next year', FUTURE_2);
+      await stamp(serviceId, 300, FUTURE_2, book);
+      return { serviceId, book };
+    }
+
+    it('writer: scheduled replaces only unaffiliated future rows', async () => {
+      const { serviceId, book } = await seedScheduledBook();
+      await trxWrite(serviceId, { scheduled: [{ currency_code: 'USD', rate: 150, effective_date: FUTURE }] });
+      await trxWrite(serviceId, { scheduled: [{ currency_code: 'USD', rate: 160, effective_date: FUTURE }] });
+      const rows = (await tenantRows(serviceId)).map(asTuple);
+      expect(rows).toContainEqual(['USD', 160, FUTURE, null]);
+      expect(rows).not.toContainEqual(['USD', 150, FUTURE, null]);
+      expect(rows).toContainEqual(['USD', 300, FUTURE_2, book]);
+
+      await trxWrite(serviceId, { scheduled: [] });
+      expect((await tenantRows(serviceId)).map(asTuple)).toContainEqual(['USD', 300, FUTURE_2, book]);
+    });
+
+    it('writer: a price book row sent back unchanged is a no-op; a different rate at its key is refused', async () => {
+      const { serviceId, book } = await seedScheduledBook();
+      const result = await trxWrite(serviceId, { scheduled: [{ currency_code: 'USD', rate: 300, effective_date: FUTURE_2 }] });
+      expect(result.unchangedPrices.map(asTuple)).toEqual([['USD', 300, FUTURE_2, book]]);
+      await expect(
+        trxWrite(serviceId, { scheduled: [{ currency_code: 'USD', rate: 310, effective_date: FUTURE_2 }] }),
+      ).rejects.toThrow(/revise or withdraw the price book/);
+      expect((await tenantRows(serviceId)).map(asTuple)).toContainEqual(['USD', 300, FUTURE_2, book]);
+    });
+
+    it('caller: ServiceCatalogService.update with scheduled_prices keeps the price book row, and the price book still resolves', async () => {
+      const { ServiceCatalogService } = await import('@/lib/api/services/ServiceCatalogService');
+      const { listPriceBooks, loadCatalogAsOf } = await import('@alga-psa/billing/lib/catalog/priceBooks');
+      const { serviceId, book } = await seedScheduledBook();
+      const service = new ServiceCatalogService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db, tenant: context.tenantId });
+      await service.update(
+        serviceId,
+        { scheduled_prices: [{ currency_code: 'USD', rate: 150, effective_date: FUTURE }] } as never,
+        { tenant: context.tenantId, userId: context.userId } as never,
+      );
+      const rows = (await tenantRows(serviceId)).map(asTuple);
+      expect(rows).toContainEqual(['USD', 150, FUTURE, null]);
+      expect(rows).toContainEqual(['USD', 300, FUTURE_2, book]);
+
+      const summary = (await listPriceBooks(context.db, context.tenantId)).find((b) => b.price_book_id === book);
+      expect(summary).toBeTruthy();
+      expect(summary!).toMatchObject({ status: 'scheduled', displayStatus: 'scheduled', itemCount: 1 });
+      const asOfBook = (await loadCatalogAsOf(context.db, context.tenantId, FUTURE_2, book))
+        .find((row) => row.serviceId === serviceId && row.currency === 'USD');
+      expect(asOfBook).toMatchObject({ rateMinor: 300, priceBookId: book, fromThisPriceBook: true });
+    });
+
+    it('caller: ProductCatalogService.update with scheduled_prices keeps the price book row', async () => {
+      const { ProductCatalogService } = await import('@/lib/api/services/ProductCatalogService');
+      const { serviceId, book } = await seedScheduledBook();
+      await context.db('service_catalog').where({ tenant: context.tenantId, service_id: serviceId }).update({ item_kind: 'product' });
+      const service = new ProductCatalogService();
+      vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db, tenant: context.tenantId });
+      await service.update(
+        serviceId,
+        { scheduled_prices: [{ currency_code: 'USD', rate: 150, effective_date: FUTURE }] } as never,
+        { tenant: context.tenantId, userId: context.userId } as never,
+      );
+      expect((await tenantRows(serviceId)).map(asTuple)).toContainEqual(['USD', 300, FUTURE_2, book]);
+    });
+  });
+
   describe('T2: appendAt', () => {
     it('inserts dated rows stamped with the price book and the writer', async () => {
       const serviceId = await createTestService(context, { service_name: 'Appendable', billing_method: 'fixed', default_rate: 100 });
