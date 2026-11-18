@@ -188,6 +188,7 @@
     "search": "Tickets und Kommentare suchen...",
     "button": "Filter",
     "unassigned": "Nicht zugewiesen",
+    "me": "Ich",
     "category": "Nach Kategorie filtern",
     "removeFilterChip": "Filter entfernen: {{label}}",
     "assignee": "Zuständiger",

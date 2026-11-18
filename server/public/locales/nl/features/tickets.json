@@ -220,6 +220,7 @@
     "search": "Tickets en opmerkingen zoeken...",
     "button": "Filters",
     "unassigned": "Niet toegewezen",
+    "me": "Ik",
     "category": "Filter op categorie",
     "removeFilterChip": "Filter verwijderen: {{label}}",
     "assignee": "Toegewezene",

@@ -222,6 +222,7 @@
     "search": "Szukaj zgłoszeń i komentarzy...",
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
+    "me": "Ja",
     "category": "Filtruj według kategorii",
     "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",

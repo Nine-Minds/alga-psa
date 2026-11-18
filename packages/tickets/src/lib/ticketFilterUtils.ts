@@ -1,4 +1,4 @@
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 import { decodeTicketWhere } from './ticketWhereUrl';
 import {
   isTicketStatusOpenFilter,
@@ -38,7 +38,8 @@ const ASSIGNEE_UUID_PATTERN =
  * is a public boundary — it can be hand-edited, stale, or shared — and any
  * token that is not an assignee id used to reach ticketListFiltersSchema's
  * `z.string().guid()` and throw, blanking the list. Parsing here means the
- * schema only ever sees well-formed ids. The `unassigned` pseudo-value is
+ * schema only ever sees well-formed ids. The `me` sentinel (TICKET_ASSIGNEE_ME) is kept as-is; it is
+ * resolved to the viewer only when the filter compiles to SQL. The `unassigned` pseudo-value is
  * translated to the `includeUnassigned` boolean the list already uses for
  * "no assignee" instead of being dropped.
  */
@@ -56,7 +57,10 @@ export function normalizeAssignedToIds(raw: string | null | undefined): {
     if (value.length === 0) continue;
     if (value === UNASSIGNED_FILTER_SENTINEL) {
       includeUnassigned = true;
-    } else if (ASSIGNEE_UUID_PATTERN.test(value) && !assignedToIds.includes(value)) {
+    } else if (
+      (value === TICKET_ASSIGNEE_ME || ASSIGNEE_UUID_PATTERN.test(value)) &&
+      !assignedToIds.includes(value)
+    ) {
       assignedToIds.push(value);
     }
   }
@@ -74,7 +78,7 @@ export function normalizeAssignedToIds(raw: string | null | undefined): {
  * document can hold anything — and on the SSR remembered-board path the
  * known-user universe is not loaded, so membership validation cannot remove
  * them. The UUID-only ticket-list schema then rejects the whole request and the
- * board fails to load. Shape-validate here: keep valid UUIDs, deduplicate, and
+ * board fails to load. Shape-validate here: keep valid UUIDs and the `me` sentinel, deduplicate, and
  * drop everything else (including the `unassigned` URL sentinel, which the list
  * models with `includeUnassigned`). Returns `undefined` when nothing survives,
  * so callers omit the key rather than forwarding an empty list.
@@ -89,7 +93,7 @@ export function normalizeAssignedToIdList(
     if (typeof raw !== 'string') continue;
     const value = raw.trim();
     if (value === UNASSIGNED_FILTER_SENTINEL) continue;
-    if (ASSIGNEE_UUID_PATTERN.test(value) && !normalized.includes(value)) {
+    if ((value === TICKET_ASSIGNEE_ME || ASSIGNEE_UUID_PATTERN.test(value)) && !normalized.includes(value)) {
       normalized.push(value);
     }
   }

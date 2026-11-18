@@ -6,7 +6,7 @@
  */
 import { Temporal } from '@js-temporal/polyfill';
 import type { PredicateClause, PredicateGroup } from '@alga-psa/predicates';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 import { shouldApplyOpenOnlyStatusFilter, parseTicketStatusFilterValue } from './ticketStatusFilter';
 
 export interface TicketFilterCodecContext {
@@ -14,9 +14,12 @@ export interface TicketFilterCodecContext {
   nowIso: string;
   /** IANA zone for the "today" due-date preset. */
   timeZone: string;
-  /** The caller's user id (for `assignedToMe`). */
+  /** The caller's authenticated user id. Resolves the assignee "Me" sentinel and the `assignedToMe` scope. */
   userId: string;
-  /** True when the caller holds `project:read`; `assignedToMe` is then a no-op, as before. */
+  /**
+   * True when the caller holds `project:read`. Only the task-link "involves me" scope (`assignedToMe`) is
+   * bypassed by it; the assignee "Me" (`TICKET_ASSIGNEE_ME`) is never bypassed.
+   */
   assignedToMeBypass: boolean;
   /** Ticket tag definition ids by tag text, for the legacy `tags` key. Unknown texts are absent. */
   ticketTagIdsByText: Record<string, string>;
@@ -108,13 +111,22 @@ export function ticketFiltersToPredicates(
 
   // Assignee / team / unassigned are one OR group.
   const assigneeParts: PredicateGroup['clauses'] = [];
-  if (filters.assignedToIds?.length) assigneeParts.push(clause('assigned_to', 'in', filters.assignedToIds));
+  if (filters.assignedToIds?.length) {
+    // "Me" is resolved here, and only here, to the viewing user (assigned_to only; not involves_user).
+    const assigneeIds = Array.from(
+      new Set(filters.assignedToIds.map((id) => (id === TICKET_ASSIGNEE_ME ? context.userId : id))),
+    );
+    assigneeParts.push(clause('assigned_to', 'in', assigneeIds));
+  }
   if (filters.assignedTeamIds?.length) assigneeParts.push(clause('assigned_team_id', 'in', filters.assignedTeamIds));
   if (filters.includeUnassigned) assigneeParts.push(clause('assigned_to', 'is_empty'));
   if (assigneeParts.length > 0) {
     all.push(assigneeParts.length === 1 ? assigneeParts[0] : or(assigneeParts));
   }
 
+  // Task-link "involves me" scope: assignee, additional agent or member of the assigned team; skipped for
+  // callers with `project:read`. This is NOT the assignee filter's "Me" (handled above via assignedToIds).
+  // LEVERAGE: friction ticket-involves-me-scope — a visibility scope is carried as a list filter key
   if (filters.assignedToMe && !context.assignedToMeBypass) {
     all.push(clause('involves_user', 'equals', context.userId));
   }

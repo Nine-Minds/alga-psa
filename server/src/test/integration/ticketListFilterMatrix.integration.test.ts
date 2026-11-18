@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { TICKET_STATUS_FILTER_ALL, createTicketStatusNameFilterValue } from '@alga-psa/tickets/lib';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 
 /**
  * Table-driven proof for the ticket list filters, all of which compile through the predicate
@@ -514,6 +514,40 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
       allowAll();
       const admin = await names({ ...base, assignedToMe: true, bundleView: 'individual' });
       expect(admin.names).toEqual(EVERY);
+    } finally {
+      allowAll();
+      authMocks.user = { user_id: fx.actorId, user_type: 'internal', tenant: fx.tenantId };
+    }
+  });
+
+  it('assignee "Me" resolves to the viewer: assigned_to only, ORs with unassigned, and is never bypassed', async () => {
+    const asUser = (userId: string) => {
+      authMocks.user = { user_id: userId, user_type: 'internal', tenant: fx.tenantId };
+    };
+    try {
+      // Y is the assignee of T4, an additional agent on T1 and a member of T2's team; only T4 is "Me".
+      asUser(fx.agentY);
+      const mineY = await names({ ...base, assignedToIds: [TICKET_ASSIGNEE_ME], bundleView: 'individual' });
+      expect(mineY.names).toEqual(['T4']);
+      expect(mineY.total).toBe(1);
+
+      const mineOrUnassigned = await names({
+        ...base,
+        assignedToIds: [TICKET_ASSIGNEE_ME],
+        includeUnassigned: true,
+        bundleView: 'individual',
+      });
+      const unassignedOnly = await names({ ...base, includeUnassigned: true, bundleView: 'individual' });
+      expect(mineOrUnassigned.names).toEqual([...new Set([...unassignedOnly.names, 'T4'])].sort());
+
+      // The same stored filter shows another viewer their own tickets.
+      asUser(fx.agentX);
+      expect((await names({ ...base, assignedToIds: [TICKET_ASSIGNEE_ME], bundleView: 'individual' })).names).toEqual(['T1']);
+
+      // project:read must not bypass "Me" (unlike assignedToMe).
+      asUser(fx.agentY);
+      authMocks.hasPermission.mockImplementation(async () => true);
+      expect((await names({ ...base, assignedToIds: [TICKET_ASSIGNEE_ME], bundleView: 'individual' })).names).toEqual(['T4']);
     } finally {
       allowAll();
       authMocks.user = { user_id: fx.actorId, user_type: 'internal', tenant: fx.tenantId };
