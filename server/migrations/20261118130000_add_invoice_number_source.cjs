@@ -8,7 +8,8 @@
  *                      written onto the invoice.
  *
  * Citus-safe: a constant DEFAULT with NOT NULL is a metadata-only add on the
- * distributed table; the CHECK constraint is added separately and is
+ * distributed table. The CHECK constraint is added NOT VALID (no scan under
+ * the ACCESS EXCLUSIVE lock) and validated by 20261118130100; both steps are
  * idempotent so a re-run is harmless.
  *
  * @param {import('knex').Knex} knex
@@ -28,7 +29,7 @@ exports.up = async function up(knex) {
     await knex.raw(`
       ALTER TABLE invoices
       ADD CONSTRAINT invoices_invoice_number_source_check
-      CHECK (invoice_number_source IN ('alga', 'pending_external', 'external'))
+      CHECK (invoice_number_source IN ('alga', 'pending_external', 'external')) NOT VALID
     `);
   }
 };
