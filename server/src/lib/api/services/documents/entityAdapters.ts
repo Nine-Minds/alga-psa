@@ -20,6 +20,10 @@ import { hasApiContextPermission } from '../../middleware/apiContextPermission';
 import { projectApiResourceRead } from '../../controllers/authorizationKernel';
 import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
 import { AssetService } from '../AssetService';
+import type { TicketService } from '../TicketService';
+import { authorizeTicketDocuments } from '../../controllers/ticketDocumentAuthorization';
+import { reprojectUnderDecision } from '../../controllers/authorizationKernel';
+import { TICKET_DOCUMENT_DOWNLOAD_SOURCE } from '@alga-psa/authorization/recordProjectionDescriptors';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { subjectFromServiceContext } from '../serviceContextSubject';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
@@ -52,6 +56,18 @@ export interface InTransactionArgs {
   options: AttachHookOptions;
 }
 
+/** A document the entity's own read gate admits, in the stable order `read_attachment` paginates. */
+export interface ReadableDocument {
+  document_id: string;
+  association_created_at: string | null;
+}
+
+export interface ReadableDocumentList {
+  /** Human label of the entity (e.g. the ticket number), or null when the gate redacted it. */
+  entityLabel: string | null;
+  documents: ReadableDocument[];
+}
+
 export interface EntityAdapter {
   entityType: AttachableEntityType;
   /** RBAC resource whose `update` permission is required to attach to this entity. */
@@ -70,6 +86,36 @@ export interface EntityAdapter {
   documentOverrides?(options: AttachHookOptions): Partial<IDocument> & { is_client_visible?: boolean };
   /** Runs inside the document transaction, after the document and association rows are inserted. */
   inTransaction?(args: InTransactionArgs): Promise<void>;
+  /**
+   * Reading (optional): only entities that implement both members can be read through `read_attachment`.
+   * `resolveEntityId` maps what the caller typed (a UUID, or a human number) to the entity id; an unknown
+   * value is a NotFoundError, indistinguishable from an entity the caller may not read.
+   */
+  resolveEntityId?(apiRequest: AuthenticatedApiRequest, idOrNumber: string, knex: Knex): Promise<string>;
+  /**
+   * The entity's read gate, ending in the documents it admits. Throws ForbiddenError (RBAC) / NotFoundError
+   * (missing or denied entity). Document-level gates (document:read, the document kernel) are applied by the caller.
+   */
+  listReadableDocuments?(apiRequest: AuthenticatedApiRequest, entityId: string, knex: Knex): Promise<ReadableDocumentList>;
+}
+
+/** Adapters that can be read through `read_attachment`. */
+export function readableEntityTypes(): AttachableEntityType[] {
+  return (Object.values(ENTITY_ADAPTERS) as EntityAdapter[])
+    .filter((a) => typeof a.listReadableDocuments === 'function')
+    .map((a) => a.entityType);
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// TicketService imports attachDocument, which imports this module: construct it lazily to avoid the cycle.
+let ticketServiceInstance: TicketService | undefined;
+async function getTicketService(): Promise<TicketService> {
+  if (!ticketServiceInstance) {
+    const { TicketService: Service } = await import('../TicketService');
+    ticketServiceInstance = new Service();
+  }
+  return ticketServiceInstance;
 }
 
 /**
@@ -189,6 +235,45 @@ const ticketAdapter: EntityAdapter = {
       .select('folder_path')
       .first();
     return folder?.folder_path ?? undefined;
+  },
+  async resolveEntityId(apiRequest, idOrNumber, knex) {
+    const value = idOrNumber.trim();
+    if (UUID_PATTERN.test(value)) return value.toLowerCase();
+    // A ticket number such as SR000674. Tenant-scoped lookup only; every gate runs afterwards on the id.
+    const row = await tenantDb(knex, apiRequest.context.tenant)
+      .table('tickets')
+      .whereRaw('upper(ticket_number) = ?', [value.toUpperCase()])
+      .select('ticket_id')
+      .first<{ ticket_id: string }>();
+    if (!row) throw new NotFoundError('Ticket not found');
+    return row.ticket_id;
+  },
+  async listReadableDocuments(apiRequest, ticketId, knex) {
+    const { ticketGate, documents } = await authorizeTicketDocuments(await getTicketService(), apiRequest, ticketId, knex);
+    const admitted: ReadableDocument[] = [];
+    for (const document of documents as Array<Record<string, any>>) {
+      // The same two-step projection the REST download uses: the document, then its file metadata.
+      const documentGate = reprojectUnderDecision(ticketGate, document, TICKET_DOCUMENT_DOWNLOAD_SOURCE);
+      if (!documentGate) continue;
+      const file = reprojectUnderDecision(
+        documentGate,
+        { fileName: document.document_name, mimeType: document.mime_type, disposition: 'attachment' as const },
+        TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+      );
+      if (!file) continue;
+      const created = document.association_created_at;
+      admitted.push({
+        document_id: document.document_id,
+        association_created_at: created ? new Date(created).toISOString() : null,
+      });
+    }
+    // Stable key: getTicketDocuments orders by updated_at desc, which can reorder between calls.
+    admitted.sort((a, b) => {
+      const byTime = (a.association_created_at ?? '').localeCompare(b.association_created_at ?? '');
+      return byTime !== 0 ? byTime : a.document_id.localeCompare(b.document_id);
+    });
+    const label = (ticketGate as Record<string, any>).ticket_number;
+    return { entityLabel: typeof label === 'string' ? label : null, documents: admitted };
   },
   documentOverrides: (options) => (options.commentAttachmentDraft ? { is_client_visible: true } : {}),
   async inTransaction({ trx, tenant, actorUserId, viaPrincipalUserId, entityId, document, options }) {
