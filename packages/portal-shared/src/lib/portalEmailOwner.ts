@@ -1,3 +1,5 @@
+import { isClientUserType } from '@alga-psa/types';
+
 /**
  * Classification of the user row (if any) that already owns a contact's email
  * address inside one tenant.
@@ -27,7 +29,7 @@ export function classifyPortalEmailOwner(
   owner: PortalEmailOwnerRow,
   contactId: string
 ): PortalEmailOwnerStatus {
-  if (owner.user_type !== 'client') {
+  if (!isClientUserType(owner.user_type)) {
     return 'internal';
   }
   if (!owner.contact_id || !owner.linked_contact_id) {
