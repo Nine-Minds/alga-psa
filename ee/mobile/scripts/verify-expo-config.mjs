@@ -32,6 +32,31 @@ if (!Number.isInteger(androidVersionCode) || androidVersionCode < 30) {
   throw new Error('Android versionCode must be an integer at or above 30');
 }
 
+// Apple only fills the iPhone Duo inner display, and Android 17 only honours a
+// resizable window, when the app ships unlocked. Keep these from regressing if a
+// future `expo install --fix` or template merge re-introduces the portrait lock.
+if (config.orientation && config.orientation !== 'default') {
+  throw new Error(
+    `Expo orientation must stay unlocked ("default"), found "${config.orientation}"`,
+  );
+}
+
+if (config.ios?.supportsTablet !== true) {
+  throw new Error('iOS supportsTablet must stay enabled for large-screen layouts');
+}
+
+const buildProperties = config.plugins?.find(
+  (plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties',
+);
+for (const key of ['compileSdkVersion', 'targetSdkVersion']) {
+  const sdkVersion = buildProperties?.[1]?.android?.[key];
+  if (!Number.isInteger(sdkVersion) || sdkVersion < 37) {
+    throw new Error(
+      `Android ${key} must be an integer at or above 37 so Android 17 treats the app as resizable, found ${sdkVersion ?? '<missing>'}`,
+    );
+  }
+}
+
 const androidPermissions = config.android?.permissions ?? [];
 if (androidPermissions.includes('android.permission.RECORD_AUDIO')) {
   throw new Error('Android RECORD_AUDIO permission must not be included');

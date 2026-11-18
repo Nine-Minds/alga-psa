@@ -45,6 +45,8 @@ export interface ServiceRequestClientSubmissionDetail {
   submitted_payload: Record<string, unknown>;
   execution_status: 'pending' | 'succeeded' | 'failed';
   created_ticket_id: string | null;
+  /** Display number of the linked ticket (joined from tickets table). */
+  ticket_number: string | null;
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
   attachments: ServiceRequestClientSubmissionAttachment[];
@@ -365,6 +367,10 @@ export async function getClientServiceRequestSubmissionDetail(
   db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
     rootTenantColumn: 'submission.tenant',
   });
+  db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
+    type: 'left',
+    rootTenantColumn: 'submission.tenant',
+  });
   const row = await query
     .where({
       'submission.client_id': clientId,
@@ -376,6 +382,7 @@ export async function getClientServiceRequestSubmissionDetail(
       'submission.submitted_payload',
       'submission.execution_status',
       'submission.created_ticket_id',
+      'ticket.ticket_number',
       'submission.created_at as submitted_at',
       'version.form_schema_snapshot'
     );

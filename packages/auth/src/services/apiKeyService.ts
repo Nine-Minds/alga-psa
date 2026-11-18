@@ -2,11 +2,14 @@ import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, i
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
-import { isLicensedUserType } from '@alga-psa/types';
+import { isLicensedUserType, principalApiKeyPrefix } from '@alga-psa/types';
 import {
   ApiCredentialsRefusedError,
   mayHoldApiCredentials,
+  principalKindAdmitsCredential,
   principalMemberColumns,
+  resolvePrincipalKind,
+  type ApiCredentialInput,
 } from '@alga-psa/authorization/subject/principalKind';
 
 interface ApiKey {
@@ -50,7 +53,8 @@ export class ApiKeyService {
   private static async getKeyGateReason(
     knex: Knex,
     tenant: string,
-    userId: string
+    userId: string,
+    credential: ApiCredentialInput
   ): Promise<'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'principal_refused' | 'tenant_suspended' | null> {
     const user = await tenantDb(knex, tenant)
       .table('users')
@@ -59,7 +63,7 @@ export class ApiKeyService {
     if (!user || user.is_inactive) return 'user_inactive';
     if (user.user_type === 'client') return 'client_owner';
     // A key that predates the owner's principal kind (a technician who became a seat technician) stops here.
-    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: user.principal_member }))) return 'principal_refused';
+    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: user.principal_member, credential }))) return 'principal_refused';
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {
@@ -153,13 +157,18 @@ export class ApiKeyService {
       throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
     }
     // Issuance boundary for every purpose and every caller (the profile action, mobile, MCP, temporary AI
-    // keys): a principal kind that may not hold API credentials is refused here, on the server.
-    if (!(await mayHoldApiCredentials(knex, { tenant, userId, member: owner.principal_member }))) {
+    // keys): a principal kind that may not hold API credentials is refused here, on the server, except for the
+    // purposes the kind names. Those keys carry the kind's prefix, which the edge holds to the kind's API surface.
+    const purpose = options?.purpose ?? 'general';
+    const principalKind = await resolvePrincipalKind(knex, { tenant, userId, member: owner.principal_member });
+    if (!principalKindAdmitsCredential(principalKind, { purpose })) {
       throw new ApiCredentialsRefusedError();
     }
 
     try {
-      const plaintextKey = this.generateApiKey();
+      const plaintextKey = principalKind?.apiCredentials === 'refused'
+        ? `${principalApiKeyPrefix(principalKind.kind)}${this.generateApiKey()}`
+        : this.generateApiKey();
       const hashedKey = this.hashApiKey(plaintextKey);
 
       const insertPayload: Record<string, unknown> = {
@@ -167,7 +176,7 @@ export class ApiKeyService {
         user_id: userId,
         tenant,
         description: description ?? null,
-        purpose: options?.purpose ?? 'general',
+        purpose,
         usage_limit: options?.usageLimit ?? null,
         usage_count: options?.usageCount ?? 0,
         expires_at: expiresAt ?? null,
@@ -232,7 +241,7 @@ export class ApiKeyService {
       // (cancelled, pending deletion) must not authenticate. Reversible:
       // reactivation restores the same keys untouched. A client-owned key is
       // additionally deactivated as best-effort cleanup before rejection.
-      const gateReason = await this.getKeyGateReason(knex, tenant, record.user_id);
+      const gateReason = await this.getKeyGateReason(knex, tenant, record.user_id, { purpose: record.purpose, plaintext: plaintextKey });
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${tenant}`);
         if (gateReason === 'client_owner') {

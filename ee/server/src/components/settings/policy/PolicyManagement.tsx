@@ -25,6 +25,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import {
@@ -262,6 +264,9 @@ export default function PolicyManagement() {
   const resourceSections = useMemo(() => buildResourceSections(resourceTypes), [resourceTypes]);
   const [baselineSaving, setBaselineSaving] = useState(false);
   const [ruleDrafts, setRuleDrafts] = useState<Record<string, RuleDraftFormState>>({});
+  // A scope may name an inactive client, so the scope picker searches all clients by default.
+  const [clientScopeFilterState, setClientScopeFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientScopeTypeFilter, setClientScopeTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [publishingBundleId, setPublishingBundleId] = useState<string | null>(null);
   const [assignmentBundleId, setAssignmentBundleId] = useState<string | null>(null);
   const [assignmentData, setAssignmentData] = useState<AuthorizationBundleAssignmentViewerPayload | null>(null);
@@ -366,12 +371,22 @@ export default function PolicyManagement() {
     [entries]
   );
 
-  const clientNameById = useMemo(
+  // Client scopes are picked by server search; only the clients the rules name are looked up, by id.
+  const { searchClients } = useClientPickerSearch();
+  const scopedClientIds = useMemo(
     () =>
-      new Map(
-        (editorData?.availableClients ?? []).map((client) => [client.client_id, client.client_name])
+      Array.from(
+        new Set([
+          ...(editorData?.rules ?? []).flatMap((rule) => rule.selectedClientIds),
+          ...Object.values(ruleDrafts).flatMap((draft) => draft.selectedClientIds),
+        ])
       ),
-    [editorData]
+    [editorData, ruleDrafts]
+  );
+  const { clients: scopedClients } = useClientNames(scopedClientIds, searchClients);
+  const clientNameById = useMemo(
+    () => new Map(Object.values(scopedClients).map((client) => [client.client_id, client.client_name])),
+    [scopedClients]
   );
 
   const boardNameById = useMemo(
@@ -1408,11 +1423,6 @@ export default function PolicyManagement() {
                         value: template,
                         label: template,
                       }));
-                      const clientOptions: SelectOption[] = editorData.availableClients.map((client) => ({
-                        value: client.client_id,
-                        label: client.client_name,
-                        is_inactive: client.is_inactive,
-                      }));
                       const boardOptions: SelectOption[] = editorData.availableBoards.map((board) => ({
                         value: board.board_id,
                         label: board.board_name,
@@ -1601,12 +1611,17 @@ export default function PolicyManagement() {
                                 <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                                   <div className="text-sm font-medium">{t('policyManagement.editor.scopes.clientTitle')}</div>
                                   <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                                    <CustomSelect
+                                    <ClientPicker
                                       id={`authorization-bundle-rule-client-scope-${section.resourceType}`}
-                                      options={clientOptions}
-                                      value={draft.pendingClientId}
-                                      onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingClientId: value })}
+                                      selectedClientId={draft.pendingClientId || null}
+                                      onSelect={(clientId) => updateRuleDraft(section.resourceType, { pendingClientId: clientId ?? '' })}
+                                      excludeIds={draft.selectedClientIds}
+                                      filterState={clientScopeFilterState}
+                                      onFilterStateChange={setClientScopeFilterState}
+                                      clientTypeFilter={clientScopeTypeFilter}
+                                      onClientTypeFilterChange={setClientScopeTypeFilter}
                                       placeholder={t('policyManagement.editor.scopes.selectClient')}
+                                      className="w-full"
                                     />
                                     <Button
                                       id={`authorization-bundle-add-client-scope-${section.resourceType}`}

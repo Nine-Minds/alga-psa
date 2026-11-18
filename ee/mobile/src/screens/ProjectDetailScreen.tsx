@@ -7,6 +7,8 @@ import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
 import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
+import { FilterChip } from "../ui/components/FilterChip";
+import { SearchBar } from "../ui/components/SearchBar";
 import { Card } from "../ui/components/Card";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
@@ -37,6 +39,13 @@ import { getUserDisplayName, listUsers } from "../api/users";
 import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { logger } from "../logging/logger";
+import {
+  EMPTY_TASK_FILTERS,
+  assigneeOptions,
+  filterProjectTasks,
+  hasActiveTaskFilters,
+  type ProjectTaskFilters,
+} from "./projectTaskFilters";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ProjectDetail">;
 
@@ -84,6 +93,7 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
   const [expandedDescription, setExpandedDescription] = useState(false);
   const [showCompleted, setShowCompleted] = useState<Record<string, boolean>>({});
   const [createPhase, setCreatePhase] = useState<{ phaseId: string; phaseName: string } | null>(null);
+  const [taskFilters, setTaskFilters] = useState<ProjectTaskFilters>(EMPTY_TASK_FILTERS);
   const [createBlocked, setCreateBlocked] = useState(false);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -174,11 +184,30 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
     [navigation],
   );
 
-  const sections = useMemo(
+  const allSections = useMemo(
     () => groupTasksByPhase(project?.phases ?? [], tasks, mappings),
     [mappings, project?.phases, tasks],
   );
-  const progress = useMemo(() => projectProgress(sections), [sections]);
+  // Progress always counts every task; search and filters only change what is listed.
+  const progress = useMemo(() => projectProgress(allSections), [allSections]);
+  const meUserId = session?.user?.id ?? null;
+  const filtersActive = hasActiveTaskFilters(taskFilters);
+  const visibleTasks = useMemo(
+    () => (filtersActive ? filterProjectTasks(tasks, taskFilters, { meUserId, assigneeNames: userNames }) : tasks),
+    [filtersActive, meUserId, taskFilters, tasks, userNames],
+  );
+  const sections = useMemo(() => {
+    if (!filtersActive) return allSections;
+    return groupTasksByPhase(project?.phases ?? [], visibleTasks, mappings).filter((section) => section.tasks.length > 0);
+  }, [allSections, filtersActive, mappings, project?.phases, visibleTasks]);
+  const assignees = useMemo(() => assigneeOptions(tasks, userNames), [tasks, userNames]);
+  const statusChoices = useMemo(
+    () =>
+      mappings
+        .filter((mapping) => mapping.is_visible !== false)
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)),
+    [mappings],
+  );
   const closedMappings = useMemo(
     () => new Set(mappings.filter((mapping) => mapping.is_closed).map((m) => m.project_status_mapping_id)),
     [mappings],
@@ -256,44 +285,38 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
           </View>
         ) : null}
 
-        {project.client_id ? (
-          <Pressable
-            testID="project-client"
-            onPress={() =>
-              navigation.navigate("ClientDetail", {
-                clientId: project.client_id,
-                clientName: clientName ?? undefined,
-              })
-            }
-            accessibilityRole="button"
-            accessibilityLabel={clientName ?? t("detail.client", "Client")}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: theme.spacing.lg,
-              padding: theme.spacing.md,
-              borderRadius: theme.borderRadius.md,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.card,
-              opacity: pressed ? 0.95 : 1,
-            })}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
-                {t("detail.client", "Client")}
-              </Text>
-              <Text style={{ ...theme.typography.body, color: theme.colors.text }} numberOfLines={1}>
-                {clientName ?? project.client_id}
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={theme.colors.textSecondary} />
-          </Pressable>
-        ) : null}
-
-        {dates ? <Field label={t("detail.dates", "Dates")} value={dates} /> : null}
-        <Field label={t("detail.manager", "Manager")} value={managerName ?? t("detail.unassigned", "Unassigned")} />
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: theme.spacing.sm,
+            marginTop: theme.spacing.md,
+          }}
+        >
+          {project.client_id ? (
+            <Pressable
+              testID="project-client"
+              onPress={() =>
+                navigation.navigate("ClientDetail", {
+                  clientId: project.client_id,
+                  clientName: clientName ?? undefined,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={clientName ?? t("detail.client", "Client")}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+            >
+              <MetaItem icon="briefcase" text={clientName ?? project.client_id} link />
+            </Pressable>
+          ) : null}
+          <MetaItem
+            icon="user"
+            text={managerName ?? t("detail.unassigned", "Unassigned")}
+            accessibilityLabel={`${t("detail.manager", "Manager")}: ${managerName ?? t("detail.unassigned", "Unassigned")}`}
+          />
+          {dates ? <MetaItem icon="calendar" text={dates} /> : null}
+        </View>
 
         {project.description ? (
           <>
@@ -317,10 +340,112 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
           </>
         ) : null}
 
-        <View style={{ height: theme.spacing.lg }} />
+        <View style={{ marginTop: theme.spacing.xl }}>
+          <Text style={{ ...theme.typography.subtitle, color: theme.colors.text, marginBottom: theme.spacing.sm }}>
+            {t("detail.tasks", "Tasks")}
+          </Text>
+          <SearchBar
+            value={taskFilters.query}
+            onChangeText={(query) => setTaskFilters((current) => ({ ...current, query }))}
+            placeholder={t("detail.searchTasks", "Search tasks")}
+            accessibilityLabel={t("detail.searchTasksAccessibility", "Search tasks by name, description or assignee")}
+          />
+          <ChipRow>
+            <FilterChip
+              testID="project-task-status-all"
+              label={t("detail.allStatuses", "All statuses")}
+              selected={taskFilters.statusMappingIds.length === 0}
+              onPress={() => setTaskFilters((current) => ({ ...current, statusMappingIds: [] }))}
+            />
+            {statusChoices.map((mapping) => {
+              const id = mapping.project_status_mapping_id;
+              const selected = taskFilters.statusMappingIds.includes(id);
+              return (
+                <FilterChip
+                  key={id}
+                  testID={`project-task-status-${id}`}
+                  label={statusMappingLabel(mapping)}
+                  selected={selected}
+                  onPress={() =>
+                    setTaskFilters((current) => ({
+                      ...current,
+                      statusMappingIds: selected
+                        ? current.statusMappingIds.filter((value) => value !== id)
+                        : [...current.statusMappingIds, id],
+                    }))
+                  }
+                />
+              );
+            })}
+          </ChipRow>
+          <ChipRow>
+            <FilterChip
+              testID="project-task-assignee-any"
+              label={t("detail.anyAssignee", "Anyone")}
+              selected={taskFilters.assignee === "any"}
+              onPress={() => setTaskFilters((current) => ({ ...current, assignee: "any" }))}
+            />
+            {meUserId ? (
+              <FilterChip
+                testID="project-task-assignee-me"
+                label={t("detail.assignedToMe", "Me")}
+                selected={taskFilters.assignee === "me"}
+                onPress={() => setTaskFilters((current) => ({ ...current, assignee: "me" }))}
+              />
+            ) : null}
+            <FilterChip
+              testID="project-task-assignee-unassigned"
+              label={t("detail.unassigned", "Unassigned")}
+              selected={taskFilters.assignee === "unassigned"}
+              onPress={() => setTaskFilters((current) => ({ ...current, assignee: "unassigned" }))}
+            />
+            {assignees.map((person) => (
+              <FilterChip
+                key={person.userId}
+                testID={`project-task-assignee-${person.userId}`}
+                label={person.name}
+                count={person.count}
+                selected={typeof taskFilters.assignee === "object" && taskFilters.assignee.userId === person.userId}
+                onPress={() => setTaskFilters((current) => ({ ...current, assignee: { userId: person.userId } }))}
+              />
+            ))}
+          </ChipRow>
+          {filtersActive ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginTop: theme.spacing.sm,
+              }}
+            >
+              <Text testID="project-task-match-count" style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+                {t("detail.matchCount", { count: visibleTasks.length })}
+              </Text>
+              <Pressable
+                testID="project-task-filters-clear"
+                onPress={() => setTaskFilters(EMPTY_TASK_FILTERS)}
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "700" }}>
+                  {t("detail.clearFilters", "Clear")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ height: theme.spacing.md }} />
 
         {sections.length === 0 ? (
-          <EmptyState title={t("detail.noPhases", "No phases yet. Add phases on the web.")} />
+          <EmptyState
+            title={
+              filtersActive
+                ? t("detail.noMatches", "No tasks match these filters.")
+                : t("detail.noPhases", "No phases yet. Add phases on the web.")
+            }
+          />
         ) : (
           sections.map((section) => (
             <PhaseSection
@@ -330,6 +455,7 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
               mappingLabels={mappingLabels}
               userNames={userNames}
               showCompleted={showCompleted[section.phase.phase_id] === true}
+              filtered={filtersActive}
               onToggleCompleted={() =>
                 setShowCompleted((current) => ({
                   ...current,
@@ -369,17 +495,44 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function MetaItem({
+  icon,
+  text,
+  link = false,
+  accessibilityLabel,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  text: string;
+  link?: boolean;
+  accessibilityLabel?: string;
+}) {
+  const theme = useTheme();
+  const color = link ? theme.colors.primary : theme.colors.textSecondary;
+  return (
+    <View
+      accessibilityLabel={accessibilityLabel}
+      style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, paddingRight: theme.spacing.sm }}
+    >
+      <Feather name={icon} size={14} color={color} />
+      <Text style={{ ...theme.typography.caption, color, fontWeight: link ? "600" : "400" }} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+function ChipRow({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   return (
-    <>
-      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>
-        {label}
-      </Text>
-      <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: theme.spacing.xs }}>
-        {value}
-      </Text>
-    </>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      style={{ marginTop: theme.spacing.sm }}
+      contentContainerStyle={{ gap: theme.spacing.sm, paddingRight: theme.spacing.lg }}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
@@ -389,6 +542,7 @@ function PhaseSection({
   mappingLabels,
   userNames,
   showCompleted,
+  filtered,
   onToggleCompleted,
   canCreateTask,
   onAddTask,
@@ -399,6 +553,8 @@ function PhaseSection({
   mappingLabels: Map<string, string>;
   userNames: Map<string, string>;
   showCompleted: boolean;
+  /** Search/filters active: show every matching task and drop the completed toggle. */
+  filtered: boolean;
   onToggleCompleted: () => void;
   canCreateTask: boolean;
   onAddTask: () => void;
@@ -412,6 +568,7 @@ function PhaseSection({
     (task.project_status_mapping_id ? closedMappings.has(task.project_status_mapping_id) : false);
   const openTasks = section.tasks.filter((task) => !isDone(task));
   const doneTasks = section.tasks.filter(isDone);
+  const showDone = filtered || showCompleted;
   const title =
     phaseId === ORPHAN_PHASE_ID ? t("detail.otherPhase", "Other tasks") : section.phase.phase_name;
 
@@ -459,7 +616,7 @@ function PhaseSection({
               <TaskRow
                 key={task.task_id}
                 task={task}
-                last={index === openTasks.length - 1 && (doneTasks.length === 0 || !showCompleted)}
+                last={index === openTasks.length - 1 && (doneTasks.length === 0 || !showDone)}
                 statusLabel={
                   task.project_status_mapping_id
                     ? mappingLabels.get(task.project_status_mapping_id) ?? null
@@ -470,7 +627,7 @@ function PhaseSection({
                 onPress={() => onOpenTask(task.task_id)}
               />
             ))}
-            {showCompleted
+            {showDone
               ? doneTasks.map((task, index) => (
                   <TaskRow
                     key={task.task_id}
@@ -491,7 +648,7 @@ function PhaseSection({
         )}
       </Card>
 
-      {doneTasks.length > 0 ? (
+      {doneTasks.length > 0 && !filtered ? (
         <Pressable
           testID={`project-phase-${phaseId}-show-completed`}
           onPress={onToggleCompleted}
@@ -556,18 +713,33 @@ function TaskRow({
         >
           {task.task_name}
         </Text>
-        {task.due_date ? (
-          <Text
-            testID={`project-task-due-${task.task_id}`}
-            style={{
-              ...theme.typography.caption,
-              color: overdue ? theme.colors.danger : theme.colors.textSecondary,
-              marginTop: 2,
-              fontWeight: overdue ? "700" : "400",
-            }}
-          >
-            {formatDateShort(task.due_date)}
-          </Text>
+        {assigneeName || task.due_date ? (
+          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: theme.spacing.xs, marginTop: 2 }}>
+            {assigneeName ? (
+              <Text
+                testID={`project-task-assignee-${task.task_id}`}
+                style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}
+                numberOfLines={1}
+              >
+                {assigneeName}
+              </Text>
+            ) : null}
+            {assigneeName && task.due_date ? (
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>·</Text>
+            ) : null}
+            {task.due_date ? (
+              <Text
+                testID={`project-task-due-${task.task_id}`}
+                style={{
+                  ...theme.typography.caption,
+                  color: overdue ? theme.colors.danger : theme.colors.textSecondary,
+                  fontWeight: overdue ? "700" : "400",
+                }}
+              >
+                {formatDateShort(task.due_date)}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
       </View>
       {statusLabel ? <Badge label={statusLabel} tone={done ? "success" : "info"} /> : null}

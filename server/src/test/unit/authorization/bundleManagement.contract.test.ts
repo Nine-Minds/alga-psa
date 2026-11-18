@@ -56,7 +56,8 @@ describe('EE bundle management contracts', () => {
     expect(actionSource).toContain('selectedClientIds: string[];');
     expect(actionSource).toContain('selectedBoardIds: string[];');
     expect(actionSource).toContain('redactedFields: string[];');
-    expect(actionSource).toContain('availableClients: Array<{');
+    // Client scopes are picked by server search, so the editor payload never lists the tenant's clients.
+    expect(actionSource).not.toContain('availableClients');
     expect(actionSource).toContain('availableBoards: Array<{');
     expect(actionSource).toContain('const revisionChangeSummary = bundle.published_revision_id');
   });

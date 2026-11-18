@@ -103,15 +103,22 @@ vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   ClientPicker: ({
     id,
-    clients,
+    searchClients,
     selectedClientId,
     onSelect,
   }: {
     id?: string;
-    clients: Array<{ client_id: string; client_name: string }>;
+    searchClients?: unknown;
     selectedClientId: string | null;
     onSelect: (value: string | null) => void;
-  }) => (
+  }) => {
+    // The real picker searches on the server through this searcher; the stand-in offers fixed rows.
+    expect(typeof searchClients).toBe('function');
+    const clients = [
+      { client_id: 'client-1', client_name: 'Acme' },
+      { client_id: 'client-2', client_name: 'Globex' },
+    ];
+    return (
     <div id={id ? `${id}-container` : undefined}>
       <select
         data-testid={id}
@@ -126,7 +133,12 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
         ))}
       </select>
     </div>
-  ),
+    );
+  },
+}));
+
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn(async () => ({ clients: [], total: 0 })),
 }));
 
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
@@ -318,10 +330,6 @@ vi.mock('@alga-psa/integrations/actions', () => ({
         { id: 'category-2', name: 'Networking', parent_id: null, board_id: 'board-2' },
         { id: 'subcategory-1', name: 'Printer', parent_id: 'category-1', board_id: 'board-1' },
         { id: 'subcategory-2', name: 'Router', parent_id: 'category-2', board_id: 'board-2' },
-      ],
-      clients: [
-        { id: 'client-1', name: 'Acme' },
-        { id: 'client-2', name: 'Globex' },
       ],
       users: [{ id: 'user-1', name: 'Alex Agent' }],
       locations: [

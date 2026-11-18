@@ -1084,6 +1084,7 @@
       "noClient": "No client matched",
       "outcome": {
         "assignClient": "Ticket assigned to client \"{{client}}\"",
+        "matchedClient": "the matched client",
         "fallback": "No client matched — ticket routed to the fallback destination",
         "none": "Rule did not resolve — normal processing continues",
         "setDestination": "Ticket routed to the selected destination",

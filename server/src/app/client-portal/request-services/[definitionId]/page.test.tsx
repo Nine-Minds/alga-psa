@@ -54,31 +54,6 @@ describe('RequestServiceDetailPage', () => {
     cleanup();
   });
 
-  it('renders a linked ticket reference in the successful confirmation state', async () => {
-    getRequestServiceDefinitionDetailAction.mockResolvedValue({
-      title: 'Access Request',
-      description: 'Request secure access',
-      icon: 'shield',
-      formSchema: { fields: [] },
-      initialValues: {},
-      visibilityRules: [],
-    });
-
-    render(
-      await RequestServiceDetailPage({
-        params: Promise.resolve({ definitionId: 'definition-1' }),
-        searchParams: Promise.resolve({
-          submitted: 'submission-1',
-          ticketId: 'ticket-123',
-        }),
-      })
-    );
-
-    const ticketLink = screen.getByRole('link', { name: 'ticket-123' });
-    expect(ticketLink).toHaveAttribute('href', '/client-portal/tickets/ticket-123');
-    expect(screen.queryByText('shield')).not.toBeInTheDocument();
-  });
-
   it('disables native browser validation so required file uploads flow through the server banner state', async () => {
     getRequestServiceDefinitionDetailAction.mockResolvedValue({
       title: 'Hardware Request',

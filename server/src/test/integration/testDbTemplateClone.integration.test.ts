@@ -1,7 +1,6 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection, schemaTemplateName } from '../../../test-utils/dbConfig';
-import { DB_SETUP_HOOK_TIMEOUT_MS } from '../../../test-utils/dbSetupHookTimeout';
 import path from 'node:path';
 
 /**
@@ -11,6 +10,8 @@ import path from 'node:path';
  */
 describe('test database schema template clone', () => {
   const connections: Knex[] = [];
+  let first: Knex;
+
   afterAll(async () => {
     for (const db of connections) await db.destroy().catch(() => undefined);
   });
@@ -22,18 +23,21 @@ describe('test database schema template clone', () => {
     true,
   );
 
-  // When this file is the first in its shard to call createTestDbConnection(),
-  // it pays for the cold build (migrate+seed from scratch, 15s+ per the
-  // comment below) rather than the steady-state clone (~1s): every other
-  // suite doing the same disposable-database work budgets
-  // DB_SETUP_HOOK_TIMEOUT_MS via hookTimeout because it runs in a beforeAll;
-  // this one calls it from the test body, so it needs the same budget
-  // explicitly or the default 20s testTimeout clips a legitimate cold build.
+  // Building the template from ~1000 migrations on a cold, busy runner can
+  // take 15s+ (see dbConfig.ts), which blew the 20s default testTimeout and
+  // raced vitest's --retry=1 against the still-running bootstrap (surfacing
+  // as "database test_database does not exist"). Every other suite pays this
+  // cost inside beforeAll, which gets the much larger DB_SETUP_HOOK_TIMEOUT_MS
+  // budget; do the same here instead of inside the timed `it`.
+  beforeAll(async () => {
+    if (process.env.TEST_DB_TEMPLATE_CLONE === '0' || process.env.TEST_DB_BACKEND === 'citus') return;
+    first = await createTestDbConnection();
+    connections.push(first);
+  });
+
   it('bootstraps the suite database from a content-addressed template', async () => {
     if (process.env.TEST_DB_TEMPLATE_CLONE === '0' || process.env.TEST_DB_BACKEND === 'citus') return;
 
-    const first = await createTestDbConnection();
-    connections.push(first);
     const template = await first.raw('SELECT 1 FROM pg_database WHERE datname = ?', [templateName]);
     expect(template.rows).toHaveLength(1);
 
@@ -64,5 +68,5 @@ describe('test database schema template clone', () => {
     expect(migrationsAgain).toBe(migrations);
     // Replaying ~1000 migrations takes 15s+; a template copy takes about a second.
     expect(elapsedMs).toBeLessThan(10_000);
-  }, DB_SETUP_HOOK_TIMEOUT_MS);
+  });
 });

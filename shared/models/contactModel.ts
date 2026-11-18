@@ -25,6 +25,7 @@ import {
   type UpdateContactInput,
 } from '../interfaces/contact.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
+import { checkContactPhoneNumberValue, normalizePhoneForSearch } from './contactPhoneValue';
 
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
@@ -354,7 +355,6 @@ type PreparedPrimaryEmailTypeInput = {
 
 type ContactWithPhones = ContactRecord & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type'>;
 
-const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
@@ -423,10 +423,6 @@ export function parseFullName(fullName: string): { firstName: string; lastName: 
 
 function normalizeCustomTypeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizePhoneForSearch(phoneNumber: string): string {
-  return phoneNumber.replace(/\D/g, '');
 }
 
 function normalizeEmailAddress(emailAddress: string): string {
@@ -626,14 +622,12 @@ export class ContactModel {
         };
       }
 
-      const trimmedPhoneNumber = parsedRow.data.phone_number.trim();
+      const phoneValueCheck = checkContactPhoneNumberValue(parsedRow.data.phone_number);
+      if (phoneValueCheck.valid === false) {
+        return { valid: false, errors: [`phone_numbers.${index}.phone_number: ${phoneValueCheck.message}`] };
+      }
+      const trimmedPhoneNumber = phoneValueCheck.phoneNumber;
       const normalizedDigits = normalizePhoneForSearch(trimmedPhoneNumber);
-      if (!normalizedDigits) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number must contain at least one digit`] };
-      }
-      if (!phonePattern.test(trimmedPhoneNumber)) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number contains unsupported characters`] };
-      }
 
       const canonicalType = parsedRow.data.canonical_type ?? null;
       const customType = parsedRow.data.custom_type?.trim() || null;

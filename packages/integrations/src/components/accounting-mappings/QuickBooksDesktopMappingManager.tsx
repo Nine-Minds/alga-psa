@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useClientAlgaSearch } from './clientAlgaSearch';
 import { AccountingMappingManager } from './AccountingMappingManager';
 import type { AccountingMappingContext } from './types';
 import { createQuickBooksDesktopMappingModules } from './quickBooksDesktopMappingModule';
@@ -9,7 +10,8 @@ import { createQuickBooksDesktopMappingModules } from './quickBooksDesktopMappin
 /** Every QuickBooks Desktop (IIF) mapping in one place: clients, services, discounts, tax codes and terms. */
 export function QuickBooksDesktopMappingManager() {
   const { t } = useTranslation('msp/integrations');
-  const modules = useMemo(() => createQuickBooksDesktopMappingModules(t), [t]);
+  const clients = useClientAlgaSearch();
+  const modules = useMemo(() => createQuickBooksDesktopMappingModules(t, clients), [t, clients]);
   const context = useMemo<AccountingMappingContext>(() => ({ realmId: null }), []);
 
   const tabStyles = {
