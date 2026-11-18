@@ -56,11 +56,14 @@
       "formSubheading": "Aanvraagformulier"
     },
     "linkage": {
+      "title": "Koppeling",
       "linkedService": "Gekoppelde service",
-      "searchPlaceholder": "Zoek in de servicecatalogus",
+      "searchPlaceholder": "Servicecatalogus zoeken",
+      "search": "Zoeken",
+      "clear": "Wissen",
+      "select": "Selecteren",
       "noDescription": "Geen beschrijving",
-      "unset": "-",
-      "none": "Niet gekoppeld"
+      "unset": "-"
     },
     "form": {
       "title": "Formulier",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
       "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
-      "audienceSaveFailed": "Doelgroep bijwerken mislukt",
-      "linkedServiceUpdateFailed": "Gekoppelde service kon niet worden bijgewerkt"
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
     }
   },
   "designer": {

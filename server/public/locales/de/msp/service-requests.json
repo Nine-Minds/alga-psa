@@ -56,11 +56,14 @@
       "formSubheading": "Anforderungsformular"
     },
     "linkage": {
+      "title": "Verknüpfung",
       "linkedService": "Verknüpfter Service",
       "searchPlaceholder": "Servicekatalog durchsuchen",
+      "search": "Suchen",
+      "clear": "Löschen",
+      "select": "Auswählen",
       "noDescription": "Keine Beschreibung",
-      "unset": "-",
-      "none": "Nicht verknüpft"
+      "unset": "-"
     },
     "form": {
       "title": "Formular",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
       "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
       "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
-      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden",
-      "linkedServiceUpdateFailed": "Verknüpfter Service konnte nicht aktualisiert werden"
+      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
     }
   },
   "designer": {

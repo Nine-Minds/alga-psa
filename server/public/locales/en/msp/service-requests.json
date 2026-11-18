@@ -56,11 +56,14 @@
       "formSubheading": "Request Form"
     },
     "linkage": {
+      "title": "Linkage",
       "linkedService": "Linked Service",
-      "searchPlaceholder": "Search the service catalog",
+      "searchPlaceholder": "Search service catalog",
+      "search": "Search",
+      "clear": "Clear",
+      "select": "Select",
       "noDescription": "No description",
-      "unset": "-",
-      "none": "Not linked"
+      "unset": "-"
     },
     "form": {
       "title": "Form",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
       "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
-      "audienceSaveFailed": "Failed to update audience",
-      "linkedServiceUpdateFailed": "Failed to update the linked service"
+      "audienceSaveFailed": "Failed to update audience"
     }
   },
   "designer": {

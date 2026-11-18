@@ -56,11 +56,14 @@
       "formSubheading": "Modulo di richiesta"
     },
     "linkage": {
+      "title": "Collegamento",
       "linkedService": "Servizio collegato",
       "searchPlaceholder": "Cerca nel catalogo servizi",
+      "search": "Cerca",
+      "clear": "Cancella",
+      "select": "Seleziona",
       "noDescription": "Nessuna descrizione",
-      "unset": "-",
-      "none": "Non collegato"
+      "unset": "-"
     },
     "form": {
       "title": "Modulo",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "La configurazione della visibilità deve essere un oggetto JSON",
       "visibilityInvalid": "JSON della visibilità non valido",
       "saveAllPartial": "Impossibile salvare alcune sezioni: {{sections}}",
-      "audienceSaveFailed": "Impossibile aggiornare i destinatari",
-      "linkedServiceUpdateFailed": "Impossibile aggiornare il servizio collegato"
+      "audienceSaveFailed": "Impossibile aggiornare i destinatari"
     }
   },
   "designer": {

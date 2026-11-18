@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDrawer } from '@alga-psa/ui';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -54,9 +54,6 @@ import {
 import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import AsyncSearchableSelect, {
-  type SelectOption as AsyncSelectOption,
-} from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
@@ -311,9 +308,10 @@ export default function ServiceRequestDefinitionEditorPage() {
   const [isPublishing, setIsPublishing] = useState(false);
   // The questions are authored in the builder; the read-back list opens on request.
   const [isFormSummaryCollapsed, setIsFormSummaryCollapsed] = useState(true);
-  // Names of services the picker has shown, so a selection can be reported by name without
-  // a second round trip.
-  const linkedServiceNames = useRef(new Map<string, string>());
+  const [linkedServiceQuery, setLinkedServiceQuery] = useState('');
+  const [linkedServiceResults, setLinkedServiceResults] = useState<
+    Array<{ service_id: string; service_name: string; description: string | null }>
+  >([]);
   const [submissions, setSubmissions] = useState<DefinitionSubmissionRow[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [selectedSubmissionDetail, setSelectedSubmissionDetail] = useState<DefinitionSubmissionDetail | null>(null);
@@ -494,28 +492,6 @@ export default function ServiceRequestDefinitionEditorPage() {
       setTicketRoutingLoading(false);
     }
   };
-
-  // One page of the catalog per request, so a long catalog is searched in the dropdown
-  // rather than typed at blind. "Not linked" rides on the first page so the link can be
-  // dropped from the same control that sets it.
-  const loadLinkedServiceOptions = useCallback(
-    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
-      const result = await searchLinkedServicesForDefinitionAction(search, page, limit);
-      const options: AsyncSelectOption[] = result.items.map((item) => {
-        linkedServiceNames.current.set(item.service_id, item.service_name);
-        return {
-          value: item.service_id,
-          label: item.service_name,
-          secondaryLabel: item.description ?? undefined,
-        };
-      });
-      if (page === 1) {
-        options.unshift({ value: '', label: t('editor.linkage.none') });
-      }
-      return { options, total: result.total + 1 };
-    },
-    [t]
-  );
 
   const reloadDefinitionEditorState = async (
     targetDefinitionId: string,
@@ -1037,6 +1013,69 @@ export default function ServiceRequestDefinitionEditorPage() {
         </div>
       </Card>
 
+      <Card id="service-request-editor-linkage" className="p-4 space-y-3">
+        <h2 className="text-lg font-semibold">{t('editor.linkage.title')}</h2>
+        <FieldRow label={t('editor.linkage.linkedService')} value={data.linkage.linkedServiceName ?? data.linkage.linkedServiceId ?? '-'} />
+        <div className="flex gap-2">
+          <input
+            id="service-request-linked-service-search"
+            className="border rounded px-3 py-2 text-sm flex-1"
+            placeholder={t('editor.linkage.searchPlaceholder')}
+            value={linkedServiceQuery}
+            onChange={(event) => setLinkedServiceQuery(event.target.value)}
+          />
+          <Button
+            id="service-request-linked-service-search-button"
+            variant="outline"
+            onClick={async () => {
+              const results = await searchLinkedServicesForDefinitionAction(linkedServiceQuery);
+              setLinkedServiceResults(results);
+            }}
+          >
+            {t('editor.linkage.search')}
+          </Button>
+          <Button
+            id="service-request-linked-service-clear"
+            variant="outline"
+            onClick={async () => {
+              await setLinkedServiceForDefinitionAction(data.definitionId, null);
+              await reloadDefinitionEditorState(data.definitionId);
+              toast.success(t('messages.success.linkedServiceCleared'));
+            }}
+          >
+            {t('editor.linkage.clear')}
+          </Button>
+        </div>
+        {linkedServiceResults.length > 0 && (
+          <ul className="space-y-2 text-sm">
+            {linkedServiceResults.map((result) => (
+              <li
+                key={result.service_id}
+                className="flex items-center justify-between border rounded p-2"
+              >
+                <div>
+                  <div className="font-medium">{result.service_name}</div>
+                  <div className="text-xs text-[rgb(var(--color-text-600))]">
+                    {result.description ?? t('editor.linkage.noDescription')}
+                  </div>
+                </div>
+                <Button
+                  id={`service-request-linked-service-select-${result.service_id}`}
+                  variant="outline"
+                  onClick={async () => {
+                    await setLinkedServiceForDefinitionAction(data.definitionId, result.service_id);
+                    await reloadDefinitionEditorState(data.definitionId);
+                    toast.success(t('messages.success.linkedService', { name: result.service_name }));
+                  }}
+                >
+                  {t('editor.linkage.select')}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card id="service-request-editor-form" className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
@@ -1166,39 +1205,6 @@ export default function ServiceRequestDefinitionEditorPage() {
               } catch (error) {
                 console.error('Failed to update visibility provider', error);
                 toast.error(t('messages.error.visibilityProviderUpdateFailed'));
-              }
-            }}
-          />
-        </div>
-        {/* What the request bills against lives with the rest of what happens when it is
-            submitted, and is picked from the catalog rather than searched for by hand. */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <AsyncSearchableSelect
-            id="service-request-linked-service"
-            label={t('editor.linkage.linkedService')}
-            value={data.linkage.linkedServiceId ?? ''}
-            selectedLabel={data.linkage.linkedServiceName ?? undefined}
-            placeholder={t('editor.linkage.none')}
-            searchPlaceholder={t('editor.linkage.searchPlaceholder')}
-            dropdownMode="overlay"
-            overlayFlip
-            overlayMinWidth={340}
-            loadOptions={loadLinkedServiceOptions}
-            onChange={async (value) => {
-              try {
-                await setLinkedServiceForDefinitionAction(data.definitionId, value || null);
-                await reloadDefinitionEditorState(data.definitionId);
-                toast.success(
-                  value
-                    ? t('messages.success.linkedService', {
-                        name:
-                          linkedServiceNames.current.get(value) ?? t('editor.linkage.linkedService'),
-                      })
-                    : t('messages.success.linkedServiceCleared')
-                );
-              } catch (error) {
-                console.error('Failed to set linked service', error);
-                toast.error(t('messages.error.linkedServiceUpdateFailed'));
               }
             }}
           />

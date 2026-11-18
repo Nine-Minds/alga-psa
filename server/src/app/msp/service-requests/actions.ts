@@ -603,13 +603,11 @@ export const publishServiceRequestDefinitionAction = withAuth(async (
 export const searchLinkedServicesForDefinitionAction = withAuth(async (
   user,
   { tenant },
-  query: string,
-  page: number = 1,
-  limit: number = 20
-): Promise<{ items: LinkableServiceOption[]; total: number }> => {
+  query: string
+): Promise<LinkableServiceOption[]> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
-  return searchServiceCatalogForLinking(knex, tenant, query, { page, limit });
+  return searchServiceCatalogForLinking(knex, tenant, query);
 });
 
 export const setLinkedServiceForDefinitionAction = withAuth(async (

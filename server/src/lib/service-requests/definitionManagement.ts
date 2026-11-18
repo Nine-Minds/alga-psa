@@ -470,36 +470,22 @@ export async function saveServiceRequestDefinitionDraft({
   return saved;
 }
 
-/**
- * One page of the service catalog for the editor's linked-service picker. An empty query
- * lists the catalog from the top, so opening the dropdown already shows what can be picked
- * rather than demanding a guess; `total` lets the picker offer the next page.
- */
 export async function searchServiceCatalogForLinking(
   knex: Knex,
   tenant: string,
   query: string,
-  options: { page?: number; limit?: number } = {}
-): Promise<{ items: LinkableServiceOption[]; total: number }> {
-  const limit = Math.max(1, options.limit ?? 20);
-  const page = Math.max(1, options.page ?? 1);
+  limit: number = 20
+): Promise<LinkableServiceOption[]> {
   const trimmed = query.trim();
+  if (!trimmed) {
+    return [];
+  }
 
-  const scope = () => {
-    const builder = tenantDb(knex, tenant).table('service_catalog');
-    return trimmed ? builder.andWhereILike('service_name', `%${trimmed}%`) : builder;
-  };
-
-  const [items, countRow] = await Promise.all([
-    scope()
-      .orderBy('service_name', 'asc')
-      .limit(limit)
-      .offset((page - 1) * limit)
-      .select('service_id', 'service_name', 'description') as Promise<LinkableServiceOption[]>,
-    scope().count<{ count: string }>({ count: '*' }).first(),
-  ]);
-
-  return { items, total: Number(countRow?.count ?? items.length) };
+  return (await tenantDb(knex, tenant).table('service_catalog')
+    .andWhereILike('service_name', `%${trimmed}%`)
+    .orderBy('service_name', 'asc')
+    .limit(limit)
+    .select('service_id', 'service_name', 'description')) as LinkableServiceOption[];
 }
 
 export async function setLinkedServiceForServiceRequestDefinitionDraft(input: {

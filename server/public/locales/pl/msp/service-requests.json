@@ -56,11 +56,14 @@
       "formSubheading": "Formularz zgłoszenia"
     },
     "linkage": {
+      "title": "Powiązanie",
       "linkedService": "Powiązana usługa",
-      "searchPlaceholder": "Szukaj w katalogu usług",
+      "searchPlaceholder": "Przeszukaj katalog usług",
+      "search": "Szukaj",
+      "clear": "Wyczyść",
+      "select": "Wybierz",
       "noDescription": "Brak opisu",
-      "unset": "-",
-      "none": "Niepowiązana"
+      "unset": "-"
     },
     "form": {
       "title": "Formularz",
@@ -506,8 +509,7 @@
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
       "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
-      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców",
-      "linkedServiceUpdateFailed": "Nie udało się zaktualizować powiązanej usługi"
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
     }
   },
   "designer": {

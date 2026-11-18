@@ -56,11 +56,14 @@
       "formSubheading": "Formulaire de demande"
     },
     "linkage": {
+      "title": "Liaison",
       "linkedService": "Service lié",
       "searchPlaceholder": "Rechercher dans le catalogue de services",
+      "search": "Rechercher",
+      "clear": "Effacer",
+      "select": "Sélectionner",
       "noDescription": "Aucune description",
-      "unset": "-",
-      "none": "Non lié"
+      "unset": "-"
     },
     "form": {
       "title": "Formulaire",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "La configuration de la visibilité doit être un objet JSON",
       "visibilityInvalid": "JSON de visibilité non valide",
       "saveAllPartial": "Certaines sections n'ont pas pu être enregistrées : {{sections}}",
-      "audienceSaveFailed": "Échec de la mise à jour de l'audience",
-      "linkedServiceUpdateFailed": "Échec de la mise à jour du service lié"
+      "audienceSaveFailed": "Échec de la mise à jour de l'audience"
     }
   },
   "designer": {

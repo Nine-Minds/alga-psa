@@ -69,18 +69,12 @@ describe('service request linked-service picker', () => {
     });
 
     const matches = await searchServiceCatalogForLinking(db, tenant, 'Onboard');
-    expect(matches.items).toHaveLength(1);
-    expect(matches.total).toBe(1);
-    expect(matches.items[0].service_id).toBe(firstServiceId);
-    expect(matches.items[0].service_name).toBe('Endpoint Onboarding');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].service_id).toBe(firstServiceId);
+    expect(matches[0].service_name).toBe('Endpoint Onboarding');
 
-    // The dropdown opens before anything is typed, so an empty query lists the catalog
-    // from the top instead of returning nothing, and pages through it.
-    const firstPage = await searchServiceCatalogForLinking(db, tenant, '', { page: 1, limit: 1 });
-    expect(firstPage.items.map((item) => item.service_name)).toEqual(['Access Governance']);
-    expect(firstPage.total).toBe(2);
-    const secondPage = await searchServiceCatalogForLinking(db, tenant, '', { page: 2, limit: 1 });
-    expect(secondPage.items.map((item) => item.service_name)).toEqual(['Endpoint Onboarding']);
+    // Nothing typed, nothing searched: the card lists results only once the author asks.
+    expect(await searchServiceCatalogForLinking(db, tenant, '   ')).toEqual([]);
 
     await setLinkedServiceForServiceRequestDefinitionDraft({
       knex: db,

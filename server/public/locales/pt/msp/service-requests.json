@@ -56,11 +56,14 @@
       "formSubheading": "Formulário de solicitação"
     },
     "linkage": {
+      "title": "Ligação",
       "linkedService": "Serviço vinculado",
-      "searchPlaceholder": "Pesquisar no catálogo de serviços",
+      "searchPlaceholder": "Catálogo de serviços de pesquisa",
+      "search": "Procurar",
+      "clear": "Limpar",
+      "select": "Selecione",
       "noDescription": "Sem descrição",
-      "unset": "-",
-      "none": "Não vinculado"
+      "unset": "-"
     },
     "form": {
       "title": "Formulário",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "A configuração de visibilidade precisa ser um objeto JSON",
       "visibilityInvalid": "Visibilidade JSON inválida",
       "saveAllPartial": "Algumas seções não puderam ser salvas: {{sections}}",
-      "audienceSaveFailed": "Falha ao atualizar o público-alvo",
-      "linkedServiceUpdateFailed": "Falha ao atualizar o serviço vinculado"
+      "audienceSaveFailed": "Falha ao atualizar o público-alvo"
     }
   },
   "designer": {

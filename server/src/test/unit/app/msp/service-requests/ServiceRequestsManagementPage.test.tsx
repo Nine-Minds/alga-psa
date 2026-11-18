@@ -142,17 +142,21 @@ describe('ServiceRequestsManagementPage', () => {
     });
   });
 
-  it('creates a blank draft and opens its editor page immediately', async () => {
+  it('creates a blank draft and reloads the table it was added to', async () => {
     render(<ServiceRequestsManagementPage />);
 
     await screen.findByText('New Hire Onboarding');
+    listServiceRequestDefinitionsActionMock.mockClear();
 
     fireEvent.click(document.getElementById('service-request-create-blank')!);
 
     await waitFor(() => {
       expect(createBlankServiceRequestDefinitionActionMock).toHaveBeenCalled();
     });
-    expect(pushMock).toHaveBeenCalledWith('/msp/service-requests/definition-456');
+    await waitFor(() => {
+      expect(listServiceRequestDefinitionsActionMock).toHaveBeenCalled();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('creates a draft from an example and opens the editor page immediately', async () => {

@@ -56,11 +56,14 @@
       "formSubheading": "Förfrågningsformulär"
     },
     "linkage": {
+      "title": "Koppling",
       "linkedService": "Kopplad tjänst",
       "searchPlaceholder": "Sök i tjänstekatalogen",
+      "search": "Sök",
+      "clear": "Rensa",
+      "select": "Välj",
       "noDescription": "Ingen beskrivning",
-      "unset": "-",
-      "none": "Inte kopplad"
+      "unset": "-"
     },
     "form": {
       "title": "Formulär",
@@ -504,8 +507,7 @@
       "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
       "visibilityInvalid": "Ogiltig JSON för synlighet",
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
-      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen",
-      "linkedServiceUpdateFailed": "Det gick inte att uppdatera den kopplade tjänsten"
+      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
     }
   },
   "designer": {
