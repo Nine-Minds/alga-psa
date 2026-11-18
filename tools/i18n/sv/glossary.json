@@ -533,6 +533,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "true",
       "{{actor}} • {{eventType}}",
       "Markdown",
       "{{from}} → {{to}}",

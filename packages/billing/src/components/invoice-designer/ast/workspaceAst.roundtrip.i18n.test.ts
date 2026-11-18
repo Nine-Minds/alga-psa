@@ -140,3 +140,58 @@ describe('designer round-trip preserves translatable labels', () => {
     expect(nodeOf(roundTripped, 'totals')).toMatchObject({ rows: [{ label: 'Subtotal' }] });
   });
 });
+
+describe('designer round-trip preserves valueLabels', () => {
+  const labels = {
+    true: { i18nKey: 'labels.yes', defaultValue: 'Yes' },
+    false: '',
+    monthly: 'Every month',
+  };
+
+  it('keeps value labels on columns, stacked lines, fields and totals rows', () => {
+    const source = createAstDocument(
+      [
+        { id: 'flag', type: 'field', binding: { bindingId: 'flag' }, valueLabels: labels },
+        {
+          id: 'items',
+          type: 'dynamic-table',
+          repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+          columns: [
+            {
+              id: 'recurring',
+              header: 'Recurring',
+              value: { type: 'path', path: 'is_recurring' },
+              valueLabels: labels,
+              lines: [{ id: 'line-1', value: { type: 'path', path: 'is_recurring' }, valueLabels: { true: 'Recurs' } }],
+            },
+          ],
+          childRows: {
+            sourcePath: 'item.components',
+            itemBinding: 'component',
+            cells: { recurring: { value: { type: 'path', path: 'component.flag' }, valueLabels: { true: 'On' } } },
+          },
+        },
+        {
+          id: 'totals',
+          type: 'totals',
+          sourceBinding: { bindingId: 'lineItems' },
+          rows: [{ id: 'flag-row', label: 'Flag', value: { type: 'path', path: 'flag' }, valueLabels: { true: 'Included' } }],
+        },
+      ],
+      {
+        bindings: {
+          values: { flag: { id: 'flag', kind: 'value', path: 'flag' } },
+          collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'items' } },
+        },
+      }
+    );
+
+    const roundTripped = roundTripAst(source);
+    expect(nodeOf(roundTripped, 'flag')).toMatchObject({ valueLabels: labels });
+    expect(nodeOf(roundTripped, 'items')).toMatchObject({
+      columns: [{ valueLabels: labels, lines: [{ valueLabels: { true: 'Recurs' } }] }],
+      childRows: { cells: { recurring: { valueLabels: { true: 'On' } } } },
+    });
+    expect(nodeOf(roundTripped, 'totals')).toMatchObject({ rows: [{ valueLabels: { true: 'Included' } }] });
+  });
+});

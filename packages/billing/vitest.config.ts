@@ -138,6 +138,13 @@ export default defineConfig({
       'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
+      // Template value wording (alga-2026-0003138): the shared formatter, the author's
+      // valueLabels map, and the standard quote template's Optional/Recurring columns.
+      'src/lib/invoice-template-ast/valueFormatting.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.valueLabels.test.tsx',
+      'src/lib/quote-template-ast/standardTemplates.optionalRecurring.test.ts',
+      'src/components/invoice-designer/ast/workspaceAst.roundtrip.i18n.test.ts',
+      'src/components/invoice-designer/inspector/widgets/ValueLabelsEditor.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,
       // opt-in layout + back-compat renders, the derivation helper's call sites, and

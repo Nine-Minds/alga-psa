@@ -132,6 +132,21 @@ const exportI18nText = (text: string, ref: unknown): TemplateI18nText | undefine
   return text.length > 0 ? text : undefined;
 };
 
+/**
+ * Value labels are stored in the workspace exactly as the AST carries them
+ * (`{ [String(value)]: TemplateI18nText }`), so key references survive a
+ * designer roundtrip. Entries that are not a string or key reference are dropped.
+ */
+const mapValueLabels = (value: unknown): Record<string, TemplateI18nText> | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const entries = Object.entries(value).filter(
+    (entry): entry is [string, TemplateI18nText] => typeof entry[1] === 'string' || isTemplateI18nRef(entry[1])
+  );
+  return entries.length > 0 ? Object.fromEntries(entries.map(([key, label]) => [key, typeof label === 'string' ? label : { ...label }])) : undefined;
+};
+
 const resolveExpressionPreviewText = (
   expression: TemplateValueExpression,
   astInput: TemplateAst,
@@ -927,6 +942,10 @@ const mapWorkspaceColumnLines = (
     if (style) {
       line.style = style;
     }
+    const lineValueLabels = mapValueLabels(entry.valueLabels);
+    if (lineValueLabels) {
+      line.valueLabels = lineValueLabels;
+    }
     if (entry.supplemental === true) {
       line.supplemental = true;
     }
@@ -1000,6 +1019,10 @@ const mapTableColumns = (node: WorkspaceNode, documentKind: DesignerDocumentKind
       }
       if (parsedFormat) {
         mapped.format = parsedFormat;
+      }
+      const columnValueLabels = mapValueLabels(column.valueLabels);
+      if (columnValueLabels) {
+        mapped.valueLabels = columnValueLabels;
       }
       return mapped;
     })
@@ -1276,6 +1299,10 @@ const mapDesignerNodeToAstNode = (
       if (displayFormat && supportsFieldDisplayFormat(bindingPath)) {
         mapped.displayFormat = displayFormat;
       }
+      const fieldValueLabels = mapValueLabels(metadata.valueLabels);
+      if (fieldValueLabels) {
+        mapped.valueLabels = fieldValueLabels;
+      }
       const labelStyle = resolveLabelStyleRef(metadata);
       if (labelStyle) {
         mapped.labelStyle = labelStyle;
@@ -1359,6 +1386,10 @@ const mapDesignerNodeToAstNode = (
               };
               if (format) {
                 mappedRow.format = format;
+              }
+              const rowValueLabels = mapValueLabels(row.valueLabels);
+              if (rowValueLabels) {
+                mappedRow.valueLabels = rowValueLabels;
               }
               if (row.emphasize === true) {
                 mappedRow.emphasize = true;
@@ -2069,6 +2100,9 @@ export const importTemplateAstToWorkspace = (
           if (inputNode.displayFormat) {
             metadata.displayFormat = inputNode.displayFormat;
           }
+          if (inputNode.valueLabels) {
+            metadata.valueLabels = cloneJson(inputNode.valueLabels);
+          }
           if (inputNode.borderStyle) {
             metadata.fieldBorderStyle = inputNode.borderStyle;
           } else {
@@ -2123,6 +2157,9 @@ export const importTemplateAstToWorkspace = (
               mappedColumn.type = column.format;
               mappedColumn.format = column.format;
             }
+            if (column.valueLabels) {
+              mappedColumn.valueLabels = cloneJson(column.valueLabels);
+            }
             if (column.style) {
               mappedColumn.style = { ...column.style } as Record<string, unknown>;
             }
@@ -2145,6 +2182,9 @@ export const importTemplateAstToWorkspace = (
                 }
                 if (line.style) {
                   mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                if (line.valueLabels) {
+                  mappedLine.valueLabels = cloneJson(line.valueLabels);
                 }
                 if (line.supplemental) {
                   mappedLine.supplemental = true;
@@ -2188,6 +2228,7 @@ export const importTemplateAstToWorkspace = (
               valuePath: row.value.type === 'path' ? row.value.path : '',
               type: row.format,
               format: row.format,
+              ...(row.valueLabels ? { valueLabels: cloneJson(row.valueLabels) } : {}),
               emphasize: row.emphasize === true,
               ...(row.hideWhenZero === true ? { hideWhenZero: true } : {}),
               ...(row.style ? { style: cloneJson(row.style) } : {}),
