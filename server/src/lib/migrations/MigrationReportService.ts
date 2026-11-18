@@ -88,7 +88,13 @@ export class MigrationReportService {
         const detail = this.parseWarnings(outcome.warnings)
           .filter((w) => w.startsWith(CATALOG_PRICE_OUTCOME_PREFIX))
           .map((w) => JSON.parse(w.slice(CATALOG_PRICE_OUTCOME_PREFIX.length)))[0];
-        if (outcome.action === 'failed') return { ...base, result: 'failed', message: errors.join('; ') || null };
+        if (outcome.action === 'failed') {
+          // A row the applier refused with a price code is reported as blocked, like the planner's.
+          const coded = /^(CATALOG_PRICE_[A-Z_]+): /.exec(errors[0] ?? '');
+          return coded
+            ? { ...base, result: `blocked:${coded[1]}`, message: errors[0].slice(coded[0].length) }
+            : { ...base, result: 'failed', message: errors.join('; ') || null };
+        }
         if (detail) {
           const already = outcome.action === 'skipped' && detail.message === 'Already applied.';
           return {

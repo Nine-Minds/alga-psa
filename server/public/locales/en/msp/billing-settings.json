@@ -938,7 +938,13 @@
       "deactivate": "Failed to deactivate service"
     },
     "emptySearch": "No services match your search.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "removePrices": {
+      "title": "Remove historical prices",
+      "message": "This removes {{count}} historical price(s) for the removed currency.",
+      "messageWithBooks": "This removes {{count}} historical price(s), including price book {{names}}.",
+      "confirm": "Remove prices"
+    }
   },
   "products": {
     "title": "Products",

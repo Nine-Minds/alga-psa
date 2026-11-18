@@ -30,6 +30,8 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import {
   isServiceCatalogPricingError,
   writeServiceCatalogPricing,
+  previewRemovedCurrentPrices,
+  type RemovedPricesPreview,
 } from '../lib/catalog/serviceCatalogPricing';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 
@@ -1629,4 +1631,23 @@ export const validateServiceCurrencyPrices = withAuth(async (
     console.error(`Error validating currency prices for services:`, error);
     throw error;
   }
+});
+
+/**
+ * Read-only companion of `updateServicePricing`: how many historical prices (and
+ * which price books) saving this price list would delete. The service form asks
+ * before saving a list that drops a currency.
+ */
+export const previewServicePriceRemoval = withAuth(async (
+  user,
+  { tenant },
+  serviceId: string,
+  keptCurrencies: string[],
+): Promise<RemovedPricesPreview | ServiceActionError | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'service', 'update'))) {
+    return permissionError('Permission denied: Cannot update services/products', 'msp/service-catalog:errors.permissions.updateServices');
+  }
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, (trx: Knex.Transaction) =>
+    previewRemovedCurrentPrices(trx, tenant, serviceId, keptCurrencies));
 });

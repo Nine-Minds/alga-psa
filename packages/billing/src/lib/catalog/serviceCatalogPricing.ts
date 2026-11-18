@@ -566,3 +566,38 @@ export async function reviseScheduledPriceBookRate(
   }
   return updated;
 }
+
+export interface RemovedPricesPreview {
+  /** Rows at or before today that a `current` write would delete. */
+  removedCount: number;
+  /** The currencies being removed. */
+  currencies: string[];
+  /** Price books whose rows would be deleted, by name. */
+  priceBookNames: string[];
+}
+
+/**
+ * Read-only: what a `current` write with these currencies would delete. A
+ * currency missing from the list loses every row at or before today (the one
+ * destructive case of the writer), including price book rows.
+ */
+export async function previewRemovedCurrentPrices(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  serviceId: string,
+  keptCurrencies: readonly string[],
+  today: string = todayCalendarDate(),
+): Promise<RemovedPricesPreview> {
+  const db = tenantDb(trx, tenant);
+  const query = db.table<PriceRow>('service_prices').where({ service_id: serviceId }).where('effective_date', '<=', today);
+  const rows = await (keptCurrencies.length > 0 ? query.whereNotIn('currency_code', [...keptCurrencies]) : query);
+  const bookIds = [...new Set(rows.map((row) => row.price_book_id).filter((id): id is string => Boolean(id)))];
+  const books = bookIds.length > 0
+    ? await db.table('catalog_price_books').whereIn('price_book_id', bookIds).select('name').orderBy('name')
+    : [];
+  return {
+    removedCount: rows.length,
+    currencies: [...new Set(rows.map((row) => row.currency_code))].sort(),
+    priceBookNames: books.map((book: { name: string }) => book.name),
+  };
+}

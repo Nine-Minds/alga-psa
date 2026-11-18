@@ -5,7 +5,8 @@
     "quoting": "Citando",
     "tax": "Tassare",
     "payments": "Pagamenti",
-    "costRates": "Tariffe di costo"
+    "costRates": "Tariffe di costo",
+    "priceBooks": "Listini"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Impossibile disattivare il servizio"
     },
     "emptySearch": "Nessun servizio corrisponde alla ricerca.",
-    "clearFilters": "Cancella filtri"
+    "clearFilters": "Cancella filtri",
+    "removePrices": {
+      "title": "Rimuovi prezzi storici",
+      "message": "Questa operazione rimuove {{count}} prezzo/i storico/i della valuta rimossa.",
+      "messageWithBooks": "Questa operazione rimuove {{count}} prezzo/i storico/i, incluso il listino {{names}}.",
+      "confirm": "Rimuovi prezzi"
+    }
   },
   "products": {
     "title": "Prodotti",
@@ -1842,6 +1849,167 @@
       "exact": "Corrispondenza esatta",
       "differs": "Differisce dal catalogo",
       "needsDecision": "Richiede una decisione"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Scarta",
+      "download": "Scarica",
+      "makeActiveAgain": "Riattiva",
+      "menu": "Azioni del listino",
+      "newFromCsv": "Nuovo listino da CSV",
+      "withdraw": "Ritira"
+    },
+    "columns": {
+      "appliedAt": "Applicato",
+      "appliedBy": "Applicato da",
+      "currencies": "Valute",
+      "effectiveDate": "Data di entrata in vigore",
+      "items": "Articoli",
+      "name": "Nome",
+      "status": "Stato"
+    },
+    "confirm": {
+      "discardMessage": "Scartare la bozza \"{{name}}\"?",
+      "discardTitle": "Scarta bozza",
+      "withdrawMessage": "Ritirare \"{{name}}\"? I suoi prezzi non sono ancora entrati in vigore e verranno rimossi.",
+      "withdrawTitle": "Ritira listino"
+    },
+    "description": "Un listino è un insieme di prezzi di catalogo con nome e data. Quello attivo è il più recente la cui data è arrivata.",
+    "errors": {
+      "discardFailed": "Impossibile scartare il listino.",
+      "makeActiveFailed": "Impossibile creare il listino.",
+      "notApplied": "Solo un listino applicato può essere riattivato.",
+      "notEnabled": "I listini non sono abilitati per questo account.",
+      "notFound": "Listino non trovato.",
+      "permissionDenied": "Non hai l'autorizzazione per eseguire questa operazione.",
+      "withdrawFailed": "Impossibile ritirare il listino."
+    },
+    "import": {
+      "apply": "Applica listino",
+      "applying": "Applicazione del listino in corso…",
+      "back": "Indietro",
+      "cancel": "Annulla",
+      "config": {
+        "billingMethod": "Metodo di fatturazione per i nuovi servizi",
+        "method": {
+          "fixed": "Fisso",
+          "hourly": "Orario",
+          "usage": "A consumo"
+        },
+        "save": "Aggiorna anteprima",
+        "serviceType": "Tipo di servizio per i nuovi articoli",
+        "serviceTypePlaceholder": "Seleziona un tipo di servizio"
+      },
+      "errors": {
+        "slow": "L'importazione è ancora in corso. Controlla l'elenco dei listini tra poco.",
+        "unreadable": "Impossibile leggere il file. Verifica che sia un file CSV o XLSX con riga di intestazione."
+      },
+      "impact": {
+        "columns": {
+          "client": "Cliente",
+          "contract": "Contratto",
+          "line": "Riga",
+          "rate": "Tariffa"
+        },
+        "custom": "Mantieni prezzo personalizzato",
+        "excluded": "Escluso",
+        "monthly": "Variazione dei ricavi mensili ({{currency}}): {{amount}}",
+        "title": "Impatto sui contratti",
+        "unreviewed": "Non ancora rivisto",
+        "willChange": "Cambierà"
+      },
+      "kind": {
+        "product": "Prodotto",
+        "service": "Servizio"
+      },
+      "map": {
+        "help": "Verifica cosa contiene ogni colonna. Le colonne impostate su \"Ignora\" non vengono importate.",
+        "ignore": "Ignora",
+        "mapsTo": "Corrisponde a",
+        "preview": "Anteprima",
+        "required": "Associa una colonna di prezzo e almeno una tra SKU, nome o riferimento articolo.",
+        "sampleValues": "Valori di esempio",
+        "sourceColumn": "Colonna nel file"
+      },
+      "next": "Avanti",
+      "outcome": {
+        "ambiguous": "Ambiguo",
+        "conflict": "Conflitto",
+        "create": "Crea",
+        "invalid": "Non valido",
+        "unchanged": "Invariato",
+        "unmatched": "Senza corrispondenza",
+        "update": "Aggiorna"
+      },
+      "preview": {
+        "allOutcomes": "Tutti gli esiti",
+        "blocked": "{{count}} righe non verranno importate. Correggi il file e caricalo di nuovo, oppure applica il resto.",
+        "columns": {
+          "change": "Variazione",
+          "currency": "Valuta",
+          "current": "Prezzo attuale",
+          "item": "Articolo",
+          "kind": "Tipo",
+          "new": "Nuovo prezzo",
+          "outcome": "Esito",
+          "row": "Riga"
+        },
+        "noWrites": "Questa è un'anteprima. Nel catalogo non è stato ancora scritto nulla."
+      },
+      "result": {
+        "blocked": "Non importato",
+        "created": "Creato",
+        "done": "Fatto",
+        "download": "Scarica report",
+        "failed": "Non riuscito",
+        "pending": "In sospeso",
+        "unchanged": "Invariato",
+        "updated": "Aggiornato"
+      },
+      "targets": {
+        "category": "Categoria",
+        "cost": "Costo",
+        "cost_currency": "Valuta del costo",
+        "currency": "Valuta",
+        "description": "Descrizione",
+        "is_active": "Attivo",
+        "item_kind": "Tipo (prodotto o servizio)",
+        "item_ref": "Riferimento articolo",
+        "name": "Nome",
+        "price": "Prezzo",
+        "priceIn": "Prezzo in {{currency}}",
+        "service_type": "Tipo di servizio",
+        "sku": "SKU",
+        "unit_of_measure": "Unità di misura"
+      },
+      "title": "Nuovo listino da CSV",
+      "upload": {
+        "currency": "Valuta per le celle di valuta vuote",
+        "effectiveDate": "Data di entrata in vigore",
+        "file": "File CSV o XLSX",
+        "name": "Nome del listino",
+        "namePlaceholder": "ad es. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Crea listino",
+      "date": "Data di entrata in vigore",
+      "help": "Questa operazione crea un nuovo listino con le tariffe di \"{{name}}\". L'originale non viene modificato.",
+      "impact": "{{willChange}} righe di contratto cambieranno, {{custom}} mantengono un prezzo personalizzato e {{unreviewed}} non sono ancora state riviste.",
+      "name": "Nome del nuovo listino",
+      "title": "Riattiva listino"
+    },
+    "status": {
+      "active": "Attivo",
+      "draft": "Bozza",
+      "scheduled": "Programmato",
+      "superseded": "Sostituito"
+    },
+    "toast": {
+      "discarded": "Bozza scartata.",
+      "reactivated": "Listino creato.",
+      "withdrawn": "Listino ritirato."
     }
   }
 }

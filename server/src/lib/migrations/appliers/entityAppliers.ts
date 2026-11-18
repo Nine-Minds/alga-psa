@@ -51,7 +51,7 @@ import {
 } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 import { getPriceBook } from '@alga-psa/billing/lib/catalog/priceBooks';
 import type { ApplierContext } from './context';
-import { CATALOG_PRICE_OUTCOME_PREFIX, SKU_MATCH_WARNING_PREFIX } from '../types';
+import { CATALOG_PRICE_ALREADY_EFFECTIVE, CATALOG_PRICE_OUTCOME_PREFIX, SKU_MATCH_WARNING_PREFIX } from '../types';
 
 export interface AppliedTarget {
   targetEntityType: string;
@@ -894,7 +894,11 @@ export class CatalogPriceMigrationApplier implements EntityApplier {
     const oldRate = inEffect ? Number(inEffect.rate) : null;
     const today = todayCalendarDate();
 
-    // A different file for the same date may revise a row nobody has been billed at.
+    // A different file for the same date may revise a row nobody has been billed at;
+    // once the row is in effect it is history and the planner's code is repeated here.
+    if (atDate && atDate.price_book_id === book.price_book_id && Number(atDate.rate) !== rate && effective <= today) {
+      throw new Error(`${CATALOG_PRICE_ALREADY_EFFECTIVE}: This price book row is already in effect; use a new price book with a later date.`);
+    }
     if (atDate && atDate.price_book_id === book.price_book_id && Number(atDate.rate) !== rate) {
       const revised = await reviseScheduledPriceBookRate(trx, context.tenant, serviceId, {
         priceBookId: book.price_book_id, currency, effectiveDate: effective, rate,

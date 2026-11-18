@@ -209,6 +209,9 @@ export const SKU_MATCH_WARNING_PREFIX = 'sku_match: ';
  * JSON tail carries the structured price outcome the report reads back.
  */
 // LEVERAGE: friction outcome-structured-reason — a second structured payload riding the same prefixed free-text warning.
+/** Block/failure code for a price row whose price book row is already in effect. */
+export const CATALOG_PRICE_ALREADY_EFFECTIVE = 'CATALOG_PRICE_ALREADY_EFFECTIVE';
+
 export const CATALOG_PRICE_OUTCOME_PREFIX = 'price_outcome: ';
 
 /** The prior migration whose identity mapping claimed a skipped record. */

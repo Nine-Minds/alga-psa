@@ -2562,7 +2562,9 @@
         "unknown": "De upload is mislukt. Probeer het opnieuw.",
         "loadJobs": "Migratieachtergrondtaken konden niet worden geladen.",
         "loadJob": "De migratieachtergrondtaak kon niet worden geladen.",
-        "jobNotFound": "Migratieachtergrondtaak niet gevonden."
+        "jobNotFound": "Migratieachtergrondtaak niet gevonden.",
+        "priceBookInvalid": "De prijslijst kon niet worden aangemaakt. Controleer de naam, of de ingangsdatum vandaag of later is, en of de naam niet al met een andere datum wordt gebruikt.",
+        "priceBookPermissionDenied": "U hebt toestemming nodig om facturatie te bekijken om een prijslijst te importeren."
       },
       "preflight": {
         "title": "Voorcontrole",

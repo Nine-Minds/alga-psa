@@ -5,7 +5,8 @@
     "quoting": "Citeren",
     "tax": "Belasting",
     "payments": "Betalingen",
-    "costRates": "Kostentarieven"
+    "costRates": "Kostentarieven",
+    "priceBooks": "Prijslijsten"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Kan de service niet deactiveren"
     },
     "emptySearch": "Geen services komen overeen met uw zoekopdracht.",
-    "clearFilters": "Filters wissen"
+    "clearFilters": "Filters wissen",
+    "removePrices": {
+      "title": "Historische prijzen verwijderen",
+      "message": "Hierdoor worden {{count}} historische prijs/prijzen van de verwijderde valuta verwijderd.",
+      "messageWithBooks": "Hierdoor worden {{count}} historische prijs/prijzen verwijderd, waaronder prijslijst {{names}}.",
+      "confirm": "Prijzen verwijderen"
+    }
   },
   "products": {
     "title": "Producten",
@@ -1842,6 +1849,167 @@
       "exact": "Exacte overeenkomst",
       "differs": "Wijkt af van catalogus",
       "needsDecision": "Vereist een beslissing"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Verwerpen",
+      "download": "Downloaden",
+      "makeActiveAgain": "Opnieuw activeren",
+      "menu": "Acties voor prijslijst",
+      "newFromCsv": "Nieuwe prijslijst uit CSV",
+      "withdraw": "Intrekken"
+    },
+    "columns": {
+      "appliedAt": "Toegepast",
+      "appliedBy": "Toegepast door",
+      "currencies": "Valuta's",
+      "effectiveDate": "Ingangsdatum",
+      "items": "Items",
+      "name": "Naam",
+      "status": "Status"
+    },
+    "confirm": {
+      "discardMessage": "Het concept \"{{name}}\" verwerpen?",
+      "discardTitle": "Concept verwerpen",
+      "withdrawMessage": "\"{{name}}\" intrekken? De prijzen zijn nog niet ingegaan en worden verwijderd.",
+      "withdrawTitle": "Prijslijst intrekken"
+    },
+    "description": "Een prijslijst is een benoemde, gedateerde set catalogusprijzen. De actieve is de meest recente waarvan de datum is bereikt.",
+    "errors": {
+      "discardFailed": "De prijslijst kon niet worden verworpen.",
+      "makeActiveFailed": "De prijslijst kon niet worden aangemaakt.",
+      "notApplied": "Alleen een toegepaste prijslijst kan opnieuw worden geactiveerd.",
+      "notEnabled": "Prijslijsten zijn niet ingeschakeld voor dit account.",
+      "notFound": "Prijslijst niet gevonden.",
+      "permissionDenied": "U hebt hiervoor geen toestemming.",
+      "withdrawFailed": "De prijslijst kon niet worden ingetrokken."
+    },
+    "import": {
+      "apply": "Prijslijst toepassen",
+      "applying": "Prijslijst wordt toegepast…",
+      "back": "Terug",
+      "cancel": "Annuleren",
+      "config": {
+        "billingMethod": "Factureringsmethode voor nieuwe services",
+        "method": {
+          "fixed": "Vast",
+          "hourly": "Per uur",
+          "usage": "Gebruiksafhankelijk"
+        },
+        "save": "Voorbeeld bijwerken",
+        "serviceType": "Servicetype voor nieuwe items",
+        "serviceTypePlaceholder": "Selecteer een servicetype"
+      },
+      "errors": {
+        "slow": "De import is nog bezig. Controleer de prijslijsten zo meteen opnieuw.",
+        "unreadable": "Dat bestand kon niet worden gelezen. Controleer of het een CSV- of XLSX-bestand met een koprij is."
+      },
+      "impact": {
+        "columns": {
+          "client": "Klant",
+          "contract": "Contract",
+          "line": "Regel",
+          "rate": "Tarief"
+        },
+        "custom": "Eigen prijs behouden",
+        "excluded": "Uitgesloten",
+        "monthly": "Maandelijkse omzetwijziging ({{currency}}): {{amount}}",
+        "title": "Gevolgen voor contracten",
+        "unreviewed": "Nog niet beoordeeld",
+        "willChange": "Wordt gewijzigd"
+      },
+      "kind": {
+        "product": "Product",
+        "service": "Service"
+      },
+      "map": {
+        "help": "Controleer welke kolom wat bevat. Kolommen die op \"Negeren\" staan, worden niet geïmporteerd.",
+        "ignore": "Negeren",
+        "mapsTo": "Wordt gekoppeld aan",
+        "preview": "Voorbeeld",
+        "required": "Koppel een prijskolom en minstens één van SKU, naam of itemverwijzing.",
+        "sampleValues": "Voorbeeldwaarden",
+        "sourceColumn": "Kolom in bestand"
+      },
+      "next": "Volgende",
+      "outcome": {
+        "ambiguous": "Dubbelzinnig",
+        "conflict": "Conflict",
+        "create": "Aanmaken",
+        "invalid": "Ongeldig",
+        "unchanged": "Ongewijzigd",
+        "unmatched": "Niet gekoppeld",
+        "update": "Bijwerken"
+      },
+      "preview": {
+        "allOutcomes": "Alle resultaten",
+        "blocked": "{{count}} rijen worden niet geïmporteerd. Corrigeer het bestand en upload het opnieuw, of pas de rest toe.",
+        "columns": {
+          "change": "Wijziging",
+          "currency": "Valuta",
+          "current": "Huidige prijs",
+          "item": "Item",
+          "kind": "Soort",
+          "new": "Nieuwe prijs",
+          "outcome": "Resultaat",
+          "row": "Rij"
+        },
+        "noWrites": "Dit is een voorbeeld. Er is nog niets naar de catalogus geschreven."
+      },
+      "result": {
+        "blocked": "Niet geïmporteerd",
+        "created": "Aangemaakt",
+        "done": "Klaar",
+        "download": "Rapport downloaden",
+        "failed": "Mislukt",
+        "pending": "In behandeling",
+        "unchanged": "Ongewijzigd",
+        "updated": "Bijgewerkt"
+      },
+      "targets": {
+        "category": "Categorie",
+        "cost": "Kosten",
+        "cost_currency": "Kostenvaluta",
+        "currency": "Valuta",
+        "description": "Beschrijving",
+        "is_active": "Actief",
+        "item_kind": "Type (product of service)",
+        "item_ref": "Itemverwijzing",
+        "name": "Naam",
+        "price": "Prijs",
+        "priceIn": "Prijs in {{currency}}",
+        "service_type": "Servicetype",
+        "sku": "SKU",
+        "unit_of_measure": "Maateenheid"
+      },
+      "title": "Nieuwe prijslijst uit CSV",
+      "upload": {
+        "currency": "Valuta voor lege valutacellen",
+        "effectiveDate": "Ingangsdatum",
+        "file": "CSV- of XLSX-bestand",
+        "name": "Naam van de prijslijst",
+        "namePlaceholder": "bijv. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Prijslijst aanmaken",
+      "date": "Ingangsdatum",
+      "help": "Hiermee maakt u een nieuwe prijslijst met de tarieven van \"{{name}}\". Het origineel wordt niet gewijzigd.",
+      "impact": "{{willChange}} contractregels worden gewijzigd, {{custom}} behouden een eigen prijs en {{unreviewed}} zijn nog niet beoordeeld.",
+      "name": "Naam van de nieuwe prijslijst",
+      "title": "Prijslijst opnieuw activeren"
+    },
+    "status": {
+      "active": "Actief",
+      "draft": "Concept",
+      "scheduled": "Gepland",
+      "superseded": "Vervangen"
+    },
+    "toast": {
+      "discarded": "Concept verworpen.",
+      "reactivated": "Prijslijst aangemaakt.",
+      "withdrawn": "Prijslijst ingetrokken."
     }
   }
 }

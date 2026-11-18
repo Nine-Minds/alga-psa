@@ -5,7 +5,8 @@
     "quoting": "Devis",
     "tax": "Impôt",
     "payments": "Paiements",
-    "costRates": "Taux de coût"
+    "costRates": "Taux de coût",
+    "priceBooks": "Listes de prix"
   },
   "general": {
     "currency": {
@@ -937,7 +938,13 @@
       "deactivate": "Échec de la désactivation du service"
     },
     "emptySearch": "Aucun service ne correspond à votre recherche.",
-    "clearFilters": "Effacer les filtres"
+    "clearFilters": "Effacer les filtres",
+    "removePrices": {
+      "title": "Supprimer les prix historiques",
+      "message": "Cela supprime {{count}} prix historique(s) de la devise retirée.",
+      "messageWithBooks": "Cela supprime {{count}} prix historique(s), dont la liste de prix {{names}}.",
+      "confirm": "Supprimer les prix"
+    }
   },
   "products": {
     "title": "Produits",
@@ -1842,6 +1849,167 @@
       "exact": "Correspondance exacte",
       "differs": "Diffère du catalogue",
       "needsDecision": "Décision requise"
+    }
+  },
+  "priceBooks": {
+    "actions": {
+      "discard": "Abandonner",
+      "download": "Télécharger",
+      "makeActiveAgain": "Réactiver",
+      "menu": "Actions de la liste de prix",
+      "newFromCsv": "Nouvelle liste de prix depuis un CSV",
+      "withdraw": "Retirer"
+    },
+    "columns": {
+      "appliedAt": "Appliquée",
+      "appliedBy": "Appliquée par",
+      "currencies": "Devises",
+      "effectiveDate": "Date d'effet",
+      "items": "Articles",
+      "name": "Nom",
+      "status": "Statut"
+    },
+    "confirm": {
+      "discardMessage": "Abandonner le brouillon « {{name}} » ?",
+      "discardTitle": "Abandonner le brouillon",
+      "withdrawMessage": "Retirer « {{name}} » ? Ses prix ne sont pas encore entrés en vigueur et seront supprimés.",
+      "withdrawTitle": "Retirer la liste de prix"
+    },
+    "description": "Une liste de prix est un ensemble de prix du catalogue, nommé et daté. La liste active est la plus récente dont la date est arrivée.",
+    "errors": {
+      "discardFailed": "Impossible d'abandonner la liste de prix.",
+      "makeActiveFailed": "Impossible de créer la liste de prix.",
+      "notApplied": "Seule une liste de prix appliquée peut être réactivée.",
+      "notEnabled": "Les listes de prix ne sont pas activées pour ce compte.",
+      "notFound": "Liste de prix introuvable.",
+      "permissionDenied": "Vous n'avez pas l'autorisation d'effectuer cette action.",
+      "withdrawFailed": "Impossible de retirer la liste de prix."
+    },
+    "import": {
+      "apply": "Appliquer la liste de prix",
+      "applying": "Application de la liste de prix…",
+      "back": "Retour",
+      "cancel": "Annuler",
+      "config": {
+        "billingMethod": "Mode de facturation des nouveaux services",
+        "method": {
+          "fixed": "Forfaitaire",
+          "hourly": "Horaire",
+          "usage": "À l'usage"
+        },
+        "save": "Actualiser l'aperçu",
+        "serviceType": "Type de service pour les nouveaux articles",
+        "serviceTypePlaceholder": "Sélectionnez un type de service"
+      },
+      "errors": {
+        "slow": "L'importation est toujours en cours. Consultez la liste de prix dans un instant.",
+        "unreadable": "Impossible de lire ce fichier. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX avec une ligne d'en-tête."
+      },
+      "impact": {
+        "columns": {
+          "client": "Client",
+          "contract": "Contrat",
+          "line": "Ligne",
+          "rate": "Tarif"
+        },
+        "custom": "Conserver le prix personnalisé",
+        "excluded": "Exclu",
+        "monthly": "Variation du revenu mensuel ({{currency}}) : {{amount}}",
+        "title": "Impact sur les contrats",
+        "unreviewed": "Pas encore vérifié",
+        "willChange": "Sera modifié"
+      },
+      "kind": {
+        "product": "Produit",
+        "service": "Service"
+      },
+      "map": {
+        "help": "Vérifiez ce que contient chaque colonne. Les colonnes réglées sur « Ignorer » ne sont pas importées.",
+        "ignore": "Ignorer",
+        "mapsTo": "Correspond à",
+        "preview": "Aperçu",
+        "required": "Associez une colonne de prix et au moins l'une des colonnes SKU, nom ou référence d'article.",
+        "sampleValues": "Exemples de valeurs",
+        "sourceColumn": "Colonne du fichier"
+      },
+      "next": "Suivant",
+      "outcome": {
+        "ambiguous": "Ambigu",
+        "conflict": "Conflit",
+        "create": "Créer",
+        "invalid": "Non valide",
+        "unchanged": "Inchangé",
+        "unmatched": "Sans correspondance",
+        "update": "Mettre à jour"
+      },
+      "preview": {
+        "allOutcomes": "Tous les résultats",
+        "blocked": "{{count}} lignes ne seront pas importées. Corrigez le fichier et téléversez-le à nouveau, ou appliquez le reste.",
+        "columns": {
+          "change": "Variation",
+          "currency": "Devise",
+          "current": "Prix actuel",
+          "item": "Article",
+          "kind": "Type",
+          "new": "Nouveau prix",
+          "outcome": "Résultat",
+          "row": "Ligne"
+        },
+        "noWrites": "Ceci est un aperçu. Rien n'a encore été écrit dans le catalogue."
+      },
+      "result": {
+        "blocked": "Non importé",
+        "created": "Créé",
+        "done": "Terminé",
+        "download": "Télécharger le rapport",
+        "failed": "Échec",
+        "pending": "En attente",
+        "unchanged": "Inchangé",
+        "updated": "Mis à jour"
+      },
+      "targets": {
+        "category": "Catégorie",
+        "cost": "Coût",
+        "cost_currency": "Devise du coût",
+        "currency": "Devise",
+        "description": "Description",
+        "is_active": "Actif",
+        "item_kind": "Type (produit ou service)",
+        "item_ref": "Référence d'article",
+        "name": "Nom",
+        "price": "Prix",
+        "priceIn": "Prix en {{currency}}",
+        "service_type": "Type de service",
+        "sku": "SKU",
+        "unit_of_measure": "Unité de mesure"
+      },
+      "title": "Nouvelle liste de prix depuis un CSV",
+      "upload": {
+        "currency": "Devise pour les cellules de devise vides",
+        "effectiveDate": "Date d'effet",
+        "file": "Fichier CSV ou XLSX",
+        "name": "Nom de la liste de prix",
+        "namePlaceholder": "p. ex. 2025"
+      }
+    },
+    "reactivate": {
+      "confirm": "Créer la liste de prix",
+      "date": "Date d'effet",
+      "help": "Cela crée une nouvelle liste de prix avec les tarifs de « {{name}} ». L'originale n'est pas modifiée.",
+      "impact": "{{willChange}} lignes de contrat vont changer, {{custom}} conservent un prix personnalisé et {{unreviewed}} ne sont pas encore vérifiées.",
+      "name": "Nom de la nouvelle liste de prix",
+      "title": "Réactiver la liste de prix"
+    },
+    "status": {
+      "active": "Active",
+      "draft": "Brouillon",
+      "scheduled": "Planifiée",
+      "superseded": "Remplacée"
+    },
+    "toast": {
+      "discarded": "Brouillon abandonné.",
+      "reactivated": "Liste de prix créée.",
+      "withdrawn": "Liste de prix retirée."
     }
   }
 }

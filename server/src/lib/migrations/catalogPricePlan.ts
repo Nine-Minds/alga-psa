@@ -21,6 +21,7 @@ import { getPriceBook } from '@alga-psa/billing/lib/catalog/priceBooks';
 import { todayCalendarDate } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 import { getTenantDefaultCurrency } from '@alga-psa/billing/lib/catalog/tenantDefaultCurrency';
 import {
+  CATALOG_PRICE_ALREADY_EFFECTIVE,
   CATALOG_PRICE_OUTCOMES,
   type CatalogPriceOutcome,
   type CatalogPricePlan,
@@ -359,8 +360,8 @@ export async function planCatalogPrices(
           rows.push({ ...base, outcome: 'update', currentRateMinor: atDate.rate, message: 'Revises a price in this price book that has not taken effect yet.' });
         } else {
           const message = 'This price book row is already in effect; use a new price book with a later date.';
-          rows.push({ ...base, outcome: 'invalid', code: 'CATALOG_PRICE_ALREADY_EFFECTIVE', message });
-          addBlock(row, 'CATALOG_PRICE_ALREADY_EFFECTIVE', message);
+          rows.push({ ...base, outcome: 'invalid', code: CATALOG_PRICE_ALREADY_EFFECTIVE, message });
+          addBlock(row, CATALOG_PRICE_ALREADY_EFFECTIVE, message);
         }
       } else {
         const message = 'The catalog already has a price for this item and currency on that date from another source.';

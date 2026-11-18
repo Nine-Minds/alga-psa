@@ -16,7 +16,7 @@ import { useRangeSelection } from '@alga-psa/ui/hooks';
 import toast from 'react-hot-toast';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
-import { getServices, updateService, updateServicePricing, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
+import { getServices, updateService, updateServicePricing, previewServicePriceRemoval, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '../../../actions/serviceActions';
 import { getServiceContractUsage, applyServicePriceChange, type ServiceContractUsage } from '../../../actions/servicePriceRolloutActions';
 import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
 import RateReviewDialog from './RateReviewDialog';
@@ -117,6 +117,9 @@ const ServiceCatalogManager: React.FC = () => {
     service: IService;
     prices: Array<{ currency_code: string; rate: number }>;
   } | null>(null);
+  // Removing a currency deletes its history (price book rows included): ask first.
+  const [pendingRemoval, setPendingRemoval] = useState<{ count: number; priceBookNames: string[] } | null>(null);
+  const removalConfirmedRef = useRef(false);
   const [isRateReviewOpen, setIsRateReviewOpen] = useState(false);
   // Entry point B (plan §3.2): "used on N contracts" per catalog service, and
   // the read-only dialog it opens with no pending price change.
@@ -421,6 +424,18 @@ const ServiceCatalogManager: React.FC = () => {
     const effectivePrices = prices.map((price, index) =>
       index === 0 ? { ...price, rate: newRateCents } : price,
     );
+
+    // A save that drops a currency deletes that currency's rows at or before
+    // today, including price book rows. Count them and confirm first.
+    if (removalConfirmedRef.current) {
+      removalConfirmedRef.current = false;
+    } else {
+      const removal = await previewServicePriceRemoval(service.service_id, effectivePrices.map((price) => price.currency_code));
+      if ('removedCount' in removal && removal.removedCount > 0) {
+        setPendingRemoval({ count: removal.removedCount, priceBookNames: removal.priceBookNames });
+        return;
+      }
+    }
 
     // A changed rate on a service that is on at least one contract opens the
     // rollout dialog so the operator can choose when it takes effect.
@@ -1216,6 +1231,29 @@ const ServiceCatalogManager: React.FC = () => {
         ]}
         onClear={clearSelection}
         clearLabel={t('serviceCatalog.bulk.clear', { defaultValue: 'Clear' })}
+      />
+      <ConfirmationDialog
+        id="service-catalog-remove-prices-dialog"
+        isOpen={pendingRemoval !== null}
+        onClose={() => setPendingRemoval(null)}
+        onConfirm={async () => {
+          removalConfirmedRef.current = true;
+          setPendingRemoval(null);
+          await handleUpdateService();
+        }}
+        title={t('serviceCatalog.removePrices.title', { defaultValue: 'Remove historical prices' })}
+        message={pendingRemoval && pendingRemoval.priceBookNames.length > 0
+          ? t('serviceCatalog.removePrices.messageWithBooks', {
+              defaultValue: 'This removes {{count}} historical price(s), including price book {{names}}.',
+              count: pendingRemoval.count,
+              names: pendingRemoval.priceBookNames.join(', '),
+            })
+          : t('serviceCatalog.removePrices.message', {
+              defaultValue: 'This removes {{count}} historical price(s) for the removed currency.',
+              count: pendingRemoval?.count ?? 0,
+            })}
+        confirmLabel={t('serviceCatalog.removePrices.confirm', { defaultValue: 'Remove prices' })}
+        cancelLabel={t('serviceCatalog.actions.cancel', { defaultValue: 'Cancel' })}
       />
       <ConfirmationDialog
         id="service-catalog-bulk-delete-dialog"

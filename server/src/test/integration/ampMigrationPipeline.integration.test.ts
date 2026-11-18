@@ -1812,6 +1812,34 @@ describe('AMP migration pipeline integration', () => {
       sessionUser.value = null;
     }, HOOK_TIMEOUT);
 
+    it('a price book row that is already in effect is CATALOG_PRICE_ALREADY_EFFECTIVE in the preview, the applier and the report', async () => {
+      const fixture = await createFixture();
+      const typeId = await tenantWith(fixture, 'CAD');
+      const productId = await seedProduct(fixture, typeId, 'EFF-1', 'In effect', 1000);
+      const today = new Date().toISOString().slice(0, 10);
+      const options = { serviceTypeId: typeId, name: 'Starts today', date: today };
+      const first = await stageImport(fixture, 'SKU,Name,Price\nEFF-1,In effect,20.00\n', options);
+      await preflight(fixture, first.migrationJobId);
+      await apply(fixture, first.migrationJobId);
+
+      // A different file for the same book: the row dated today is already in effect.
+      const second = await stageImport(fixture, 'SKU,Name,Price\nEFF-1,In effect,25.00\n', options);
+      await preflight(fixture, second.migrationJobId);
+      expect((await planOf(fixture, second.migrationJobId)).rows[0]).toMatchObject({ outcome: 'invalid', code: 'CATALOG_PRICE_ALREADY_EFFECTIVE' });
+      const planned = await new MigrationReportService(db, fixture.tenantId).getPriceReport(second.migrationJobId);
+      expect(planned[0].result).toBe('blocked:CATALOG_PRICE_ALREADY_EFFECTIVE');
+
+      // The applier refuses it with the same code even when the planner's block is bypassed.
+      await tenantTable(fixture.tenantId, 'migration_staged_records').where({ migration_job_id: second.migrationJobId }).update({ validation_state: 'valid', validation_errors: '[]' });
+      const applied = await apply(fixture, second.migrationJobId);
+      expect(applied.failed).toBe(1);
+      const outcome = await tenantTable(fixture.tenantId, 'migration_record_outcomes').where({ migration_job_id: second.migrationJobId }).first();
+      expect(JSON.stringify(outcome.errors)).toContain('CATALOG_PRICE_ALREADY_EFFECTIVE');
+      const report = await new MigrationReportService(db, fixture.tenantId).getPriceReport(second.migrationJobId);
+      expect(report[0].result).toBe('blocked:CATALOG_PRICE_ALREADY_EFFECTIVE');
+      expect((await pricesOf(fixture, productId)).map((r: any) => Number(r.rate))).toEqual([1000, 2000]);
+    }, HOOK_TIMEOUT);
+
     it('T15: the applier re-checks RBAC: no service:update fails the run; no service:create creates nothing', async () => {
       const fixture = await createFixture();
       const typeId = await tenantWith(fixture, 'CAD');

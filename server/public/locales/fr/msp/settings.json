@@ -2562,7 +2562,9 @@
         "unknown": "Le téléversement a échoué. Veuillez réessayer.",
         "loadJobs": "Impossible de charger les tâches de migration en arrière-plan.",
         "loadJob": "Impossible de charger la tâche de migration en arrière-plan.",
-        "jobNotFound": "Tâche de migration en arrière-plan introuvable."
+        "jobNotFound": "Tâche de migration en arrière-plan introuvable.",
+        "priceBookInvalid": "Impossible de créer la liste de prix. Vérifiez son nom, que sa date d'effet est aujourd'hui ou ultérieure, et que ce nom n'est pas déjà utilisé avec une autre date.",
+        "priceBookPermissionDenied": "Vous avez besoin de l'autorisation de consulter la facturation pour importer une liste de prix."
       },
       "preflight": {
         "title": "Vérification préalable",

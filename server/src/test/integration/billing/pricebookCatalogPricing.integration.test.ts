@@ -35,6 +35,7 @@ const { beforeAll: setupContext, beforeEach: resetContext, afterEach: rollbackCo
   TestContext.createHelpers();
 
 import { writeServiceCatalogPricing } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
+import { previewServicePriceRemoval } from '@alga-psa/billing/actions/serviceActions';
 import { applyServicePriceChange, previewServicePriceChange } from '@alga-psa/billing/actions/servicePriceRolloutActions';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -258,6 +259,30 @@ describe('pricebook catalog pricing: the single writer', () => {
       await expect(
         trxWrite(serviceId, { scheduledAt: { effectiveDate: FUTURE_2, prices: [{ currency_code: 'USD', rate: 310 }] } }),
       ).rejects.toThrow(/already has/);
+    });
+  });
+
+  describe('removing a currency (spec 3.3)', () => {
+    it('previewServicePriceRemoval counts the rows a save would delete and names the price books, writing nothing', async () => {
+      const serviceId = await createTestService(context, { service_name: 'Removal item', billing_method: 'fixed', default_rate: 100 });
+      const book = await makeBook('2024 CAD', '2024-01-01');
+      await context.db('service_prices').insert([
+        { price_id: uuidv4(), tenant: context.tenantId, service_id: serviceId, currency_code: 'CAD', rate: 130, effective_date: '1970-01-01', display_order: 1 },
+        { price_id: uuidv4(), tenant: context.tenantId, service_id: serviceId, currency_code: 'CAD', rate: 140, effective_date: '2024-01-01', display_order: 1, price_book_id: book },
+        { price_id: uuidv4(), tenant: context.tenantId, service_id: serviceId, currency_code: 'CAD', rate: 150, effective_date: addDays(TODAY, 30), display_order: 1 },
+      ]);
+      const total = (await tenantRows(serviceId)).length;
+
+      const dropCad = await previewServicePriceRemoval(serviceId, ['USD']);
+      // The future CAD row is outside the current window, so only the two historical rows count.
+      expect(dropCad).toEqual({ removedCount: 2, currencies: ['CAD'], priceBookNames: ['2024 CAD'] });
+      expect(await previewServicePriceRemoval(serviceId, ['USD', 'CAD'])).toEqual({ removedCount: 0, currencies: [], priceBookNames: [] });
+      expect(await previewServicePriceRemoval(serviceId, [])).toMatchObject({ removedCount: 3, currencies: ['CAD', 'USD'] });
+      expect((await tenantRows(serviceId)).length).toBe(total);
+
+      // And the writer deletes exactly what the preview said.
+      await trxWrite(serviceId, { current: [{ currency_code: 'USD', rate: 100 }] });
+      expect((await tenantRows(serviceId)).filter((r: any) => r.currency_code === 'CAD').map((r: any) => Number(r.rate))).toEqual([150]);
     });
   });
 
