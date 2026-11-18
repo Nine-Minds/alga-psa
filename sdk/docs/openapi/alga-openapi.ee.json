@@ -66483,13 +66483,16 @@
     "/api/documents/download/{fileId}": {
       "get": {
         "summary": "Download or export document file",
-        "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route requires an Auth.js session cookie and runs within the session tenant. The normal download path uses document read permission and document authorization rules; PDF and Markdown export paths perform tenant-scoped document lookup and generation.",
+        "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients (internal users only; client-portal keys are refused), and runs within the authenticated principal's tenant. Every format uses document read permission and document authorization rules.",
         "tags": [
           "Documents"
         ],
         "security": [
           {
             "SessionCookieAuth": []
+          },
+          {
+            "ApiKeyAuth": []
           }
         ],
         "extensions": {
@@ -66497,6 +66500,10 @@
             "original",
             "pdf",
             "markdown"
+          ],
+          "x-auth-modes": [
+            "session-cookie",
+            "api-key"
           ],
           "x-api-key-auth-skipped": true
         },
@@ -66529,6 +66536,16 @@
             "description": "Optional export format. pdf generates a PDF; markdown or md exports markdown; omitted downloads the original stored file.",
             "name": "format",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present."
+            },
+            "required": false,
+            "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present.",
+            "name": "x-api-key",
+            "in": "header"
           }
         ],
         "responses": {
@@ -66553,7 +66570,7 @@
             }
           },
           "401": {
-            "description": "No valid session is present.",
+            "description": "No valid session or API key was supplied, or the API key belongs to a client-portal user.",
             "content": {
               "application/json": {
                 "schema": {

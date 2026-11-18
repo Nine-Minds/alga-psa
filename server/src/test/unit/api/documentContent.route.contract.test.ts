@@ -12,11 +12,17 @@ function readRouteSource(): string {
 
 describe('Document content route contract', () => {
   it('T064: supports API key authentication for AI tool execution', () => {
-    const source = readRouteSource();
+    // The session-then-API-key block moved into the shared document-route principal.
+    expect(readRouteSource()).toContain('resolveDocumentRoutePrincipal(request)');
+    const principal = fs.readFileSync(
+      path.resolve(__dirname, '../../../lib/api/documentRoutePrincipal.ts'),
+      'utf8',
+    );
 
-    expect(source).toContain("request.headers.get('x-api-key')");
-    expect(source).toContain('ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey)');
-    expect(source).toContain('findUserByIdForApi(keyRecord.user_id, keyRecord.tenant)');
+    expect(principal).toContain("request.headers.get('x-api-key')");
+    expect(principal).toContain('ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey)');
+    expect(principal).toContain('findUserByIdForApi(keyRecord.user_id, keyRecord.tenant)');
+    expect(principal).toContain('assertApiPrincipal(apiUser)');
   });
 
   it('T065: reads both block and text in-app document content tables', () => {

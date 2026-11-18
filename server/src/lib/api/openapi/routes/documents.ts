@@ -99,12 +99,13 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/documents/download/{fileId}',
     summary: 'Download or export document file',
     description:
-      'Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route requires an Auth.js session cookie and runs within the session tenant. The normal download path uses document read permission and document authorization rules; PDF and Markdown export paths perform tenant-scoped document lookup and generation.',
+      'Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients (internal users only; client-portal keys are refused), and runs within the authenticated principal\'s tenant. Every format uses document read permission and document authorization rules.',
     tags: [tag],
-    security: [{ SessionCookieAuth: [] }],
+    security: [{ SessionCookieAuth: [] }, { ApiKeyAuth: [] }],
     request: {
       params: DocumentDownloadParams,
       query: DocumentDownloadQuery,
+      headers: DocumentIdDownloadHeaders,
     },
     responses: {
       200: {
@@ -118,7 +119,7 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
         schema: DocumentDownloadError,
       },
       401: {
-        description: 'No valid session is present.',
+        description: 'No valid session or API key was supplied, or the API key belongs to a client-portal user.',
         schema: DocumentDownloadError,
       },
       404: {
@@ -132,6 +133,7 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     },
     extensions: {
       'x-download-formats': ['original', 'pdf', 'markdown'],
+      'x-auth-modes': ['session-cookie', 'api-key'],
       'x-api-key-auth-skipped': true,
     },
     edition: 'both',
