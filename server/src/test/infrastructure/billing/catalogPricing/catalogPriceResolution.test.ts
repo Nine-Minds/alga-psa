@@ -1094,7 +1094,7 @@ describe('Catalog price resolution – fixed path', () => {
     expect(next.subtotal).toBe(12000);
   }, 120000);
 
-  it('applyServicePriceChange without an effective date replaces the current row and leaves future rows', async () => {
+  it('applyServicePriceChange without an effective date writes at today, keeps the earlier row and leaves future rows', async () => {
     const futureStart = monthStart(1);
     const { serviceId } = await seedInheritedLine('Immediate write service', 10000, monthStart(0));
     await context.db('service_prices').insert({
@@ -1111,6 +1111,8 @@ describe('Catalog price resolution – fixed path', () => {
     });
     expect(result).toEqual({ success: true });
 
+    // History is kept (pricebooks depend on it): the epoch row stays, and the
+    // edit is a new row at today.
     const epoch = await context.db('service_prices')
       .where({
         tenant: context.tenantId,
@@ -1119,7 +1121,16 @@ describe('Catalog price resolution – fixed path', () => {
         effective_date: '1970-01-01',
       })
       .first('rate');
-    expect(Number(epoch.rate)).toBe(11000);
+    expect(Number(epoch.rate)).toBe(10000);
+    const today = await context.db('service_prices')
+      .where({
+        tenant: context.tenantId,
+        service_id: serviceId,
+        currency_code: 'USD',
+        effective_date: new Date().toISOString().slice(0, 10),
+      })
+      .first('rate');
+    expect(Number(today.rate)).toBe(11000);
 
     const scheduled = await context.db('service_prices')
       .where({

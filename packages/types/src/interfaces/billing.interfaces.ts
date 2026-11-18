@@ -622,6 +622,10 @@ export interface IServicePrice extends TenantEntity {
   effective_date?: string | null;
   /** Explicit primary order within the price's window; 0 is the primary price. */
   display_order?: number;
+  /** The price book this row belongs to; null for a one-off catalog price change. */
+  price_book_id?: string | null;
+  /** The user who wrote the row, when known. */
+  created_by?: string | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

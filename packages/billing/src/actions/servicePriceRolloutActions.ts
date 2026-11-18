@@ -24,6 +24,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { writeServiceCatalogPricing } from '../lib/catalog/serviceCatalogPricing';
+import { getTenantDefaultCurrency } from '../lib/catalog/tenantDefaultCurrency';
 import {
   loadFixedLineRateInputs,
   toResolverInput,
@@ -268,6 +269,8 @@ export const previewServicePriceChange = withAuth(
           );
         }
 
+        // The service's own price row names its currency; failing that, the
+        // tenant default. Never a literal currency code.
         const priceCurrency =
           currency ||
           (
@@ -276,7 +279,13 @@ export const previewServicePriceChange = withAuth(
               .where({ service_id: serviceId })
               .first('currency_code')
           )?.currency_code ||
-          'USD';
+          (await getTenantDefaultCurrency(trx, tenant));
+        if (!priceCurrency) {
+          return actionError(
+            'This service has no price and the tenant has no default currency. Set a default currency in billing settings.',
+            'msp/billing:errors.rollout.currencyMissing',
+          );
+        }
 
         const currentPrice = await db
           .table('service_prices')
@@ -511,8 +520,9 @@ export const applyServicePriceChange = withAuth(
                       effectiveDate: input.effectiveDate!,
                       prices: normalizedPrices,
                     },
+                    actorUserId: user.user_id,
                   }
-                : { current: normalizedPrices },
+                : { current: normalizedPrices, actorUserId: user.user_id },
             );
 
         // Route service fields through Service.update: it strips virtual fields

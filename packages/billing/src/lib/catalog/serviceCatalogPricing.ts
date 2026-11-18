@@ -6,11 +6,15 @@
  * `writeServiceCatalogPricing`, so the window-replace rules, the `default_rate`
  * mirror, the billing lock and the primary-price order are defined once.
  *
- * Windows (see plan D2):
- *  - current window   = rows with `effective_date <= today`. `current` replaces
- *    the whole window and writes the rows at the epoch.
+ * Windows (see plan D2, amended by docs/plans/2026-11-18-pricebooks-csv-import.md §3.3):
+ *  - current window   = rows with `effective_date <= today`. `current` upserts
+ *    each submitted currency at today and keeps every earlier row, so effective-
+ *    dated history (and price book rows) survive an ordinary save. A currency
+ *    that is *removed* is the one destructive case: its rows at or before today
+ *    are deleted.
  *  - future window    = rows with `effective_date > today`. `scheduled` replaces
- *    the whole window; `scheduledAt` upserts one date (the rollout dialog).
+ *    the whole window; `scheduledAt` merges one date (the rollout dialog) and
+ *    `appendAt` inserts one date for a price book (insert-only).
  *  - a window that is not supplied is left untouched, so an ordinary save never
  *    revokes a scheduled increase.
  *
@@ -76,6 +80,8 @@ const echoShape = {
   created_at: z.unknown().optional(),
   updated_at: z.unknown().optional(),
   display_order: z.unknown().optional(),
+  price_book_id: z.unknown().optional(),
+  created_by: z.unknown().optional(),
 };
 
 function calendarDateOf(value: unknown): string | null {
@@ -170,25 +176,46 @@ export function defaultRateConflictsWithPrimaryPrice(
 export const DEFAULT_RATE_CONFLICT_MESSAGE =
   'default_rate conflicts with prices[0].rate; send only prices (default_rate mirrors the primary price) or make them equal';
 
+export interface AppendServicePricesInput {
+  /** `YYYY-MM-DD`, today or later. */
+  effectiveDate: string;
+  /** The price book the rows belong to; null for an unaffiliated dated insert. */
+  priceBookId: string | null;
+  prices: ServicePriceInput[];
+}
+
 export interface WriteServiceCatalogPricingInput {
-  /** Replaces the current window. `[]` clears it. Omit to leave it alone. */
+  /**
+   * Upserts each submitted currency at today and keeps earlier rows. A currency
+   * missing from the list is removed (all its rows at or before today). `[]`
+   * clears the current window. Omit to leave it alone.
+   */
   current?: ServicePriceInput[];
   /** Replaces the future window. `[]` cancels all scheduled changes. Omit to leave it alone. */
   scheduled?: ScheduledServicePriceInput[];
-  /** Upserts the given currencies at one future date (rollout dialog). Other rows are untouched. */
+  /** Merges the given currencies at one future date (rollout dialog). Other rows are untouched. */
   scheduledAt?: { effectiveDate: string; prices: ServicePriceInput[] };
   /**
+   * Insert-only dated write used by price books. Same rate and same price book
+   * is a no-op; any other conflicting row is an error that names it.
+   */
+  appendAt?: AppendServicePricesInput;
+  /**
    * The `default_rate` the caller is setting. With `current` it must equal
-   * `current[0].rate`; without `current` the primary current row is rewritten to it.
+   * `current[0].rate`; without `current` the primary current price is upserted at today.
    */
   defaultRate?: number;
+  /** Who is writing; recorded on inserted rows and in audit entries. */
+  actorUserId?: string | null;
   /** Test seam; defaults to today (UTC calendar date). */
   today?: string;
 }
 
 export interface WriteServiceCatalogPricingResult {
-  /** Rows inserted/updated by this call. */
+  /** Rows inserted/updated by this call, plus rows an `appendAt` found already in place. */
   prices: IServicePrice[];
+  /** The subset of `prices` that `appendAt` found already present (no write happened). */
+  unchangedPrices: IServicePrice[];
   /** Fields the caller must apply to `service_catalog` (through `Service.update` or equivalent). */
   servicePatch: { default_rate?: number };
 }
@@ -207,6 +234,13 @@ function parseOrThrow<T>(schema: z.ZodType<T, unknown>, value: unknown, label: s
 }
 
 type PriceRow = IServicePrice & { display_order?: number | null };
+
+const dateOf = (value: unknown): string => calendarDateOf(value) ?? String(value);
+
+function describeRow(row: PriceRow): string {
+  return `${row.currency_code} price ${row.rate} dated ${dateOf(row.effective_date)}`
+    + (row.price_book_id ? ` in price book ${row.price_book_id}` : ' (not in a price book)');
+}
 
 /**
  * Writes catalog prices inside the caller's transaction. Takes the tenant
@@ -236,6 +270,23 @@ export async function writeServiceCatalogPricing(
   if (scheduledAt && !(CALENDAR_DATE.test(scheduledAt.effectiveDate) && scheduledAt.effectiveDate > today)) {
     throw new ServiceCatalogPricingError(['effective_date must be a YYYY-MM-DD date after today']);
   }
+  const appendAt = input.appendAt === undefined
+    ? undefined
+    : {
+        effectiveDate: input.appendAt.effectiveDate,
+        priceBookId: input.appendAt.priceBookId,
+        prices: parseOrThrow(servicePricesInputSchema, input.appendAt.prices, 'prices'),
+      };
+  if (appendAt) {
+    if (!CALENDAR_DATE.test(appendAt.effectiveDate) || Number.isNaN(Date.parse(`${appendAt.effectiveDate}T00:00:00Z`))) {
+      throw new ServiceCatalogPricingError(['effective_date must be a YYYY-MM-DD date']);
+    }
+    if (appendAt.effectiveDate < today) {
+      throw new ServiceCatalogPricingError([
+        `effective_date ${appendAt.effectiveDate} is before today (${today}); dated catalog prices cannot be back-dated`,
+      ]);
+    }
+  }
   if (current !== undefined && defaultRateConflictsWithPrimaryPrice(input.defaultRate, current)) {
     throw new ServiceCatalogPricingError([DEFAULT_RATE_CONFLICT_MESSAGE]);
   }
@@ -246,31 +297,101 @@ export async function writeServiceCatalogPricing(
   await lockTenantBilling(trx, tenant);
   const db = tenantDb(trx, tenant);
   const written: IServicePrice[] = [];
+  const unchanged: IServicePrice[] = [];
   const servicePatch: { default_rate?: number } = {};
+  const actor = input.actorUserId ?? null;
+
+  /**
+   * Upserts one currency at today. The latest row effective today decides:
+   *  - dated today: merge the rate into it (a price book row is detached and
+   *    the detachment audited, because the key leaves room for one row);
+   *  - dated earlier with the same rate: keep it, only refresh the order;
+   *  - otherwise: insert a new row at today and keep the earlier one.
+   */
+  const upsertAtToday = async (currency: string, rate: number, displayOrder: number): Promise<void> => {
+    const latest = await db.table<PriceRow>('service_prices')
+      .where({ service_id: serviceId, currency_code: currency })
+      .where('effective_date', '<=', today)
+      .orderBy('effective_date', 'desc')
+      .first();
+
+    if (latest && dateOf(latest.effective_date) === today) {
+      const rateChanged = Number(latest.rate) !== rate;
+      const detach = rateChanged && Boolean(latest.price_book_id);
+      if (detach) {
+        // audit_logs is row-level-secured on the tenant GUC; make sure it is
+        // set for this transaction (it is the caller's tenant already).
+        await trx.raw("SELECT set_config('app.current_tenant', ?, true)", [tenant]);
+        await db.table('audit_logs').insert({
+          audit_id: uuidv4(),
+          user_id: actor,
+          operation: 'service_price.price_book_row_detached',
+          table_name: 'service_prices',
+          record_id: latest.price_id,
+          changed_data: { rate: { old: Number(latest.rate), new: rate }, price_book_id: { old: latest.price_book_id, new: null } },
+          details: {
+            service_id: serviceId,
+            currency_code: currency,
+            effective_date: today,
+            price_book_id: latest.price_book_id,
+            note: 'Edited on the day its price book took effect; the row no longer belongs to the price book.',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+      const [updated] = await db.table<PriceRow>('service_prices')
+        .where({ price_id: latest.price_id })
+        .update({
+          rate,
+          display_order: displayOrder,
+          ...(detach ? { price_book_id: null } : {}),
+          updated_at: trx.fn.now(),
+        })
+        .returning('*');
+      written.push(updated);
+      return;
+    }
+
+    if (latest && Number(latest.rate) === rate) {
+      const [updated] = await db.table<PriceRow>('service_prices')
+        .where({ price_id: latest.price_id })
+        .update({ display_order: displayOrder, updated_at: trx.fn.now() })
+        .returning('*');
+      written.push(updated);
+      return;
+    }
+
+    const [inserted] = await db.table<PriceRow>('service_prices')
+      .insert({
+        price_id: uuidv4(),
+        tenant,
+        service_id: serviceId,
+        currency_code: currency,
+        rate,
+        effective_date: today,
+        display_order: displayOrder,
+        price_book_id: null,
+        created_by: actor,
+      })
+      .returning('*');
+    written.push(inserted);
+  };
 
   if (current !== undefined) {
-    await db.table('service_prices')
+    const keep = current.map((price) => price.currency_code);
+    // The one destructive case: a removed currency loses its rows at or before today.
+    const removal = db.table('service_prices')
       .where({ service_id: serviceId })
-      .where('effective_date', '<=', today)
-      .del();
-    if (current.length > 0) {
-      const inserted = await db.table<PriceRow>('service_prices')
-        .insert(current.map((price, index) => ({
-          price_id: uuidv4(),
-          tenant,
-          service_id: serviceId,
-          currency_code: price.currency_code,
-          rate: price.rate,
-          effective_date: EPOCH_EFFECTIVE_DATE,
-          display_order: index,
-        })))
-        .returning('*');
-      written.push(...inserted);
-      servicePatch.default_rate = current[0].rate;
+      .where('effective_date', '<=', today);
+    await (keep.length > 0 ? removal.whereNotIn('currency_code', keep) : removal).del();
+    for (const [index, price] of current.entries()) {
+      await upsertAtToday(price.currency_code, price.rate, index);
     }
+    if (current.length > 0) servicePatch.default_rate = current[0].rate;
   } else if (input.defaultRate !== undefined) {
     // default_rate alone: the catalog displays the primary current row, so
-    // rewrite that row rather than leave default_rate and the display apart.
+    // upsert that currency's price at today rather than leave default_rate and
+    // the display apart.
     servicePatch.default_rate = input.defaultRate;
     const rows = await db.table<PriceRow>('service_prices')
       .where({ service_id: serviceId })
@@ -282,13 +403,7 @@ export async function writeServiceCatalogPricing(
       ]);
     const primary = rows[0];
     if (primary) {
-      // The row the catalog shows for this currency: the latest one effective today.
-      const displayed = rows.find((row) => row.currency_code === primary.currency_code)!;
-      const [updated] = await db.table<PriceRow>('service_prices')
-        .where({ price_id: displayed.price_id })
-        .update({ rate: input.defaultRate, updated_at: trx.fn.now() })
-        .returning('*');
-      written.push(updated);
+      await upsertAtToday(primary.currency_code, input.defaultRate, primary.display_order ?? 0);
     }
   }
 
@@ -309,6 +424,7 @@ export async function writeServiceCatalogPricing(
         rate: price.rate,
         effective_date: price.effective_date,
         display_order: index,
+        created_by: actor,
       };
     });
     if (rows.length > 0) {
@@ -316,22 +432,93 @@ export async function writeServiceCatalogPricing(
     }
   }
 
-  if (scheduledAt && scheduledAt.prices.length > 0) {
-    const upserted = await db.table<PriceRow>('service_prices')
-      .insert(scheduledAt.prices.map((price, index) => ({
+  /**
+   * Insert-only dated write. Rows already in place with the same rate and the
+   * same price book are no-ops; any other row at the same key is an error.
+   * Rows dated today also refresh the `default_rate` mirror.
+   */
+  const appendRows = async (
+    effectiveDate: string,
+    priceBookId: string | null,
+    prices: ServicePriceInput[],
+    order: 'submitted' | 'catalog',
+  ): Promise<void> => {
+    if (prices.length === 0) return;
+    const existing = await db.table<PriceRow>('service_prices')
+      .where({ service_id: serviceId })
+      .orderBy('display_order', 'asc');
+    const orderOf = new Map<string, number>();
+    for (const row of existing) {
+      if (!orderOf.has(row.currency_code)) orderOf.set(row.currency_code, row.display_order ?? 0);
+    }
+    let nextOrder = existing.length === 0 ? 0 : Math.max(...existing.map((row) => row.display_order ?? 0)) + 1;
+
+    const toInsert: Array<Record<string, unknown>> = [];
+    for (const [index, price] of prices.entries()) {
+      const clash = existing.find((row) => row.currency_code === price.currency_code && dateOf(row.effective_date) === effectiveDate);
+      if (clash) {
+        if (Number(clash.rate) === price.rate && (clash.price_book_id ?? null) === priceBookId) {
+          unchanged.push(clash);
+          continue;
+        }
+        throw new ServiceCatalogPricingError([
+          `cannot add ${price.currency_code} price ${price.rate} at ${effectiveDate}: the catalog already has ${describeRow(clash)}`,
+        ]);
+      }
+      let displayOrder = order === 'submitted' ? index : orderOf.get(price.currency_code);
+      if (displayOrder === undefined) {
+        displayOrder = existing.length === 0 ? index : nextOrder++;
+        orderOf.set(price.currency_code, displayOrder);
+      }
+      toInsert.push({
         price_id: uuidv4(),
         tenant,
         service_id: serviceId,
         currency_code: price.currency_code,
         rate: price.rate,
-        effective_date: scheduledAt.effectiveDate,
-        display_order: index,
-      })))
-      .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
-      .merge(['rate', 'display_order'])
-      .returning('*');
-    written.push(...upserted);
+        effective_date: effectiveDate,
+        display_order: displayOrder,
+        price_book_id: priceBookId,
+        created_by: actor,
+      });
+    }
+    if (toInsert.length > 0) {
+      written.push(...(await db.table<PriceRow>('service_prices').insert(toInsert).returning('*')));
+    }
+    if (effectiveDate === today) {
+      // default_rate follows the primary price effective today.
+      const all = [...written, ...unchanged].filter((row) => dateOf(row.effective_date) === today);
+      const primary = all.find((row) => (row.display_order ?? 0) === 0 || orderOf.get(row.currency_code) === 0);
+      if (primary) servicePatch.default_rate = Number(primary.rate);
+    }
+  };
+
+  if (scheduledAt && scheduledAt.prices.length > 0) {
+    // The rollout dialog re-submits its own date: merge into its previous
+    // unaffiliated row, then let the insert-only path add whatever is new.
+    // A row that belongs to a price book stays a conflict and is refused.
+    for (const [index, price] of scheduledAt.prices.entries()) {
+      const [merged] = await db.table<PriceRow>('service_prices')
+        .where({ service_id: serviceId, currency_code: price.currency_code, effective_date: scheduledAt.effectiveDate })
+        .whereNull('price_book_id')
+        .update({ rate: price.rate, display_order: index, updated_at: trx.fn.now() })
+        .returning('*');
+      if (merged) written.push(merged);
+    }
+    const mergedCurrencies = new Set(
+      written.filter((row) => dateOf(row.effective_date) === scheduledAt.effectiveDate).map((row) => row.currency_code),
+    );
+    await appendRows(
+      scheduledAt.effectiveDate,
+      null,
+      scheduledAt.prices.filter((price) => !mergedCurrencies.has(price.currency_code)),
+      'submitted',
+    );
   }
 
-  return { prices: written, servicePatch };
+  if (appendAt) {
+    await appendRows(appendAt.effectiveDate, appendAt.priceBookId, appendAt.prices, 'catalog');
+  }
+
+  return { prices: [...written, ...unchanged], unchangedPrices: unchanged, servicePatch };
 }
