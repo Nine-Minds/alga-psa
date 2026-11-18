@@ -19,6 +19,36 @@ Tickets created over REST used to ignore the board's default assignment and arri
 
 **Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
 
+## 2026-11-15 — Client billing profiles over REST (read-only)
+
+**New endpoints:** `GET /api/v1/clients/{id}/billing-profiles`, `GET /api/v1/clients/{id}/billing-profiles/{profileId}`
+
+Before this, an integration could manage a billing profile's contacts but could not list a client's billing profiles or read their settings. You can now read them, which is also how you discover `billing_profile_id` values. Nothing can be created, updated or deleted through these endpoints, and the client detail response is unchanged.
+
+**Changes:**
+
+- Both endpoints require `client:read`, not a separate billing-profile permission.
+- The list includes inactive profiles. The default profile comes first, then the rest by name, then by `billing_profile_id`.
+- A profile that belongs to another client returns `404`, never `403`.
+- Each profile carries its invoicing settings: bill-to name and location, billing contact and email, tax exemption and certificate, tax ID, PO number and whether a PO is required, invoice delivery method and template, billing cycle, payment terms, preferred payment method, plus `is_default`, `is_system_managed_default`, `is_active` and `bills_separately`. A `null` setting means the profile inherits it from the client; it is returned as stored, not resolved.
+- `bill_to_location_name`, `billing_contact_name` and `invoice_template_name` are display names for the matching IDs. Each is `null` when its ID is unset, and `invoice_template_name` is also `null` when the referenced template has since been deleted.
+
+## 2026-11-15 — Admin API keys can call `/meta`, `/roles` and `/webhooks`; webhook calls are tenant-scoped
+
+**Affected endpoints:** `/api/v1/meta/*`, `/api/v1/roles*`, `/api/v1/webhooks*`
+
+These routes checked the permissions `metadata`, `role` and `webhook`, but those permissions did not exist, so every caller got `403`, including an MSP Admin API key. They now exist and are granted by default to the MSP Admin role only. Admin keys get `200`; other roles still get `403` unless you add the permission to them.
+
+**Changes:**
+
+- New permissions: `metadata:read`; `role:read|create|update|delete`; and `webhook:read|create|update|delete|test|trigger|retry|verify|analytics|export|bulk_update|manage_security|manage_subscriptions|system_settings`. A migration adds them to every existing tenant's Admin role. Technician and Manager gain nothing.
+- `metadata:read` also exists on co-managed seats, since `/api/v1/meta` is reachable there. The roles and webhooks routes are not available on co-managed seats.
+- Every webhook operation is now scoped to the caller's tenant. A webhook ID from another tenant returns `404`. Deleting a webhook removes its deliveries and its signing secret. Before this change, delete did not filter by tenant.
+- `GET /webhooks/{id}/deliveries` returns `404` for an unknown webhook. Test sends are recorded as deliveries with `is_test`.
+- `PUT /webhooks/{id}` persists only fields that have a column. Event types are stored on the webhook's `event_types`.
+- Webhook templates are not implemented. `GET /webhooks/templates` returns `200` with an empty list, and `GET /webhooks/templates/{id}` returns `404`. `POST /webhooks/templates`, `PUT` and `DELETE /webhooks/templates/{id}`, and `POST /webhooks/templates/{id}/create` return `501 NOT_IMPLEMENTED`.
+- Still `403` for every caller, including Admin: `/api/v1/rbac/permissions`, and endpoints that check the `category`, `country` or `search` permissions. These permissions are not declared yet.
+
 ## 2026-11-14 — Recurring ticket definitions over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/recurring`, `POST /api/v1/tickets/recurring/preview`, `GET|PUT|DELETE /api/v1/tickets/recurring/{definitionId}`, `POST /api/v1/tickets/recurring/{definitionId}/pause`, `POST /api/v1/tickets/recurring/{definitionId}/resume`, `GET /api/v1/tickets/recurring/{definitionId}/upcoming`, `GET /api/v1/tickets/recurring/{definitionId}/occurrences`, `POST /api/v1/tickets/recurring/{definitionId}/clients`, `PUT|DELETE /api/v1/tickets/recurring/{definitionId}/clients/{clientId}`, `POST /api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause|resume`
