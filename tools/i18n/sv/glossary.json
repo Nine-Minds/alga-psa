@@ -538,6 +538,7 @@
       "{{from}} → {{to}}",
       "{{field}}: {{from}} → {{to}}",
       "RMA {{id}}",
+      "{{width}} × {{height}} mm",
       "RMA {{number}} · {{status}}",
       "Datto RMM",
       "TeamViewer",
