@@ -79,6 +79,10 @@ export interface DataTableProps<T> {
   columnSizing?: Record<string, number>;
   /** Reports every column width change, controlled or not. */
   onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
+  /** Controlled "Show all" columns state. Wins over the saved per-id value while passed. */
+  showAllColumns?: boolean;
+  /** Called when the user clicks "Show all" / "Show less". */
+  onShowAllColumnsChange?: (showAll: boolean) => void;
   /**
    * Controlled column visibility by column id. `false` removes the column
    * before the auto-fit runs; columns absent from the map stay visible.
