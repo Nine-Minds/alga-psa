@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Fuseau horaire par défaut",
-        "help": "Utilisé pour les courriels et les notifications lorsqu'un utilisateur n'a pas défini son propre fuseau horaire."
+        "help": "Utilisé pour les courriels, les notifications ainsi que les heures et dates des saisies du temps lorsqu'un utilisateur n'a pas défini son propre fuseau horaire."
       }
     },
     "actions": {

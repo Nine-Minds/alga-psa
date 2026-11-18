@@ -52,7 +52,7 @@
       },
       "defaultTimezone": {
         "label": "Standardtidszon",
-        "help": "Används för e-post och aviseringar när en användare inte har angett en egen tidszon."
+        "help": "Används för e-post, aviseringar samt tider och datum i tidposter när en användare inte har angett en egen tidszon."
       }
     },
     "actions": {
