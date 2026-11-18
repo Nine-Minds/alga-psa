@@ -1332,7 +1332,7 @@
       "actions": "Aktionen",
       "name": "Name",
       "description": "Beschreibung",
-      "order": "Befehl",
+      "order": "Reihenfolge",
       "code": "Code",
       "status": "Status",
       "billingMethod": "Abrechnungsmethode",
@@ -1379,7 +1379,7 @@
     "headers": {
       "name": "Name",
       "description": "Beschreibung",
-      "order": "Befehl",
+      "order": "Reihenfolge",
       "billingMethod": "Abrechnungsmethode"
     }
   },

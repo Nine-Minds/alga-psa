@@ -2162,6 +2162,12 @@
   ],
   "forbiddenTerms": [
     {
+      "term": "befehl",
+      "preferred": "Reihenfolge",
+      "enWhen": "\\border\\b",
+      "reason": "Wrong sense for sequence/sort order; Befehl means a command. English 'Order' as a list/column header or sort field is Reihenfolge. Befehl remains correct only for Command (Befehlspalette, Sprachbefehle), whose English sources never contain 'order'."
+    },
+    {
       "term": "berufsverlauf",
       "preferred": "Jobverlauf",
       "reason": "False friend in the background-job monitor; Berufsverlauf means employment/career history."
