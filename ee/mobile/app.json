@@ -2,20 +2,14 @@
   "expo": {
     "name": "AlgaPSA",
     "slug": "mobile",
-    "version": "1.6.5",
+    "version": "2.0.0",
     "scheme": "alga",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#8a4dea"
-    },
     "ios": {
       "bundleIdentifier": "com.nineminds.algapsa",
-      "buildNumber": "39",
+      "buildNumber": "42",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -26,12 +20,11 @@
     },
     "android": {
       "package": "com.alga.psa.mobile",
-      "versionCode": 39,
+      "versionCode": 42,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
@@ -89,6 +82,15 @@
       "expo-web-browser",
       "expo-apple-authentication",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#8a4dea"
+        }
+      ],
+      [
         "@sentry/react-native/expo",
         {
           "organization": "nine-minds",
@@ -99,6 +101,8 @@
         "expo-build-properties",
         {
           "android": {
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 37,
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
           }
@@ -108,9 +112,9 @@
     "extra": {
       "eas": {
         "projectId": "2bca0b9d-3deb-4e30-8134-55e03b7479d7"
-      }
+      },
+      "privacyPolicyUrl": "https://algapsa.com/static/privacy_policy"
     },
-    "privacyPolicyUrl": "https://algapsa.com/static/privacy_policy",
     "owner": "nine-minds-llc"
   }
 }

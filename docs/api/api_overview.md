@@ -136,11 +136,11 @@ The following REST API groups are available in the Community Edition under the b
 - [Unified Full-Text Search](search.md)
 - **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, agent/team assignment, and watch-list management sub-resources (see below). `POST /api/v1/tickets` applies the board's default user and team when `assigned_to` and `assigned_team_id` are omitted, the same as Quick Add and inbound email; send `null` for either field to opt out (see the 2026-11-18 entry in `CHANGELOG.md`). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
 - **Opportunities** — Manage sales opportunities from creation through close. Create deals with a required next action, link quotes, record qualification evidence, and mark outcomes won or lost. `PATCH /api/v1/opportunities/{id}` accepts a partial body and is an alias for `PUT`. `POST /api/v1/opportunities/{id}/stage` moves an open deal to a different stage in the same pipeline without closing it. `expected_close_date` is returned as a `YYYY-MM-DD` date string. For opportunities managed by a pipeline automation flow, `pipeline_id`, `stage_id`, and `probability` are flow-owned and are rejected on `PUT`/`PATCH` — use `/stage` to advance flow-managed deals between stages.
-- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below). On `POST /api/v1/assets`, `asset_tag` is optional: omit it or send an empty string to have the tag allocated from the tenant-wide `ASSET` sequence, prefixed with the client's asset prefix when one is set. A supplied tag must be unique in the tenant (compared case-insensitively after trimming leading and trailing spaces); a tag already used by another asset or held by a printed label returns `409` with code `ASSET_TAG_CONFLICT`, on create and on `PUT /api/v1/assets/{id}`.
+- **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below). On `POST /api/v1/assets`, `asset_tag` is optional: omit it or send an empty string to have the tag allocated from the tenant-wide `ASSET` sequence, prefixed with the client's asset prefix when one is set. A supplied tag must be unique in the tenant (compared case-insensitively after trimming leading and trailing spaces); a tag already used by another asset or held by a printed label returns `409` with code `ASSET_TAG_CONFLICT`, on create and on `PUT /api/v1/assets/{id}`. Assets also carry procurement fields, contact assignment history, a tenant-managed status, and optional bundle or shared-workspace groups; see the asset sections below.
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
 - **Billing** — Access contracts, contract lines, invoices, and billing analytics.
 - **Email Templates** — Read, create, and delete per-language notification email templates. `GET /api/v1/email/templates` lists all effective templates, merging system defaults with tenant overrides, and is filterable by `name`, `language`, `category`, and `customized` (pass `customized=true` to list only templates the tenant has overridden). `GET`, `PUT`, and `DELETE` on `/api/v1/email/templates/{name}` read, upsert, and remove individual tenant overrides; on the first `PUT` the system default is cloned as the baseline. Write and delete operations require the `settings` write permission and are flagged as requiring approval in the AI/MCP tool registry.
-- **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. See the Client Merge and Billing Profile Contacts sections below for new sub-resources.
+- **Companies (Clients)** — Create, read, update, and delete client records. `GET /api/v1/clients` and `GET /api/v1/clients/{id}` include `phone_no`, `email`, and `address` fields populated from the client's default active location, so callers do not need a separate locations fetch for basic contact display. `lifecycle_status` (`active`, `prospect`, or `former`) defaults to `active`; prospect and former clients are hidden from the default Clients list in the AlgaPSA web UI, while `GET /api/v1/clients` returns clients of every lifecycle status. See the Client Lifecycle Status, Client Merge, and Billing Profile Contacts sections below.
 - **Label Printing** — Generate PDF labels for tickets, assets, and stock inventory units via `POST /api/labels/pdf`. See **Label Printing** below.
 - Additional endpoints: contacts, projects, boards, categories, priorities, statuses, time entries, schedules, and more.
 
@@ -253,6 +253,18 @@ Agents can Cc or Bcc one-off external email addresses when posting a public tick
 
 The single-ticket detail endpoint `GET /api/v1/tickets/{id}` includes `location_address` alongside `location_name` in its response. `location_address` is the full formatted postal address of the ticket's linked location — `address_line1`, `city`, `state_province`, `postal_code`, and `country_name` joined with commas — or `null` if the location has no address data. Use this field when building map links or displaying location context in field-service workflows; the location name alone is a poor geocoding input.
 
+#### Client Lifecycle Status
+
+The `lifecycle_status` field on a client record controls whether the client appears in the AlgaPSA web UI's Clients list under its default **Lifecycle** filter, which shows only `active` clients (users can change the filter to see the others). It defaults to `active` when a client is created without specifying this field. The REST API does not filter by lifecycle status: `GET /api/v1/clients` returns clients of every status. A prospect is promoted to `active` automatically when one of its opportunities is won.
+
+| Value | Default web UI Clients list | Use case |
+|-------|--------------------------------|----------|
+| `active` | **Visible** (this is the default) | All live customers. Omitting `lifecycle_status` on create produces an `active` client. |
+| `prospect` | **Hidden** | Prospective customers tracked in AlgaPSA before an agreement is signed. Use only when the end user explicitly requests a prospect record. |
+| `former` | **Hidden** | Past clients whose relationship has ended; billing and ticket history is preserved. Use only when the end user explicitly asks to mark a client as former. |
+
+> ⚠️ **AI/MCP callers:** omitting `lifecycle_status` creates an `active` client, which is the correct default for almost every case. Passing `lifecycle_status: "prospect"` causes the newly created client to be absent from the default Clients list in the web UI, a common source of user confusion (e.g. the MCP creating a client that then appears "missing"). Only pass a non-`active` value when the end user explicitly requests that classification.
+
 #### Client Merge
 
 When a company is acquired or multiple client records represent the same entity, you can merge one client into another. The source client's billing profiles — including their invoices, billing cycles, payment methods, transactions, credits, and tax settings — are re-parented to the target rather than copied, so the financial history stays intact. Work items such as tickets, projects, assets, and contacts are re-attributed to the target. The merge is permanent; the source client becomes a tombstone record and can no longer be edited or billed.
@@ -260,11 +272,13 @@ When a company is acquired or multiple client records represent the same entity,
 | Method | Path | Purpose |
 |--------|------|-------|
 | `POST` | `/clients/{id}/merge/preview` | Dry run: returns the merge plan and any blockers without committing |
-| `POST` | `/clients/{id}/merge` | Execute the merge; `{id}` is the **source** client being absorbed |
+| `POST` | `/clients/{id}/merge` | Execute the merge; `{id}` is the **target** client that absorbs the source |
 
-Both endpoints require `client:update` and `client:delete` permissions. The execute endpoint is flagged `approvalRequired: true` in the AI/MCP tool registry so AI-driven callers prompt for human confirmation before proceeding. The preview endpoint is safe to call at any time; it identifies blockers (source already merged, tenant-default client, parent-link cycle, invalid contract cutover) and describes the full plan.
+The preview endpoint requires `client:update`; the execute endpoint requires `client:update` and `client:delete`. The execute endpoint is flagged `approvalRequired: true` in the AI/MCP tool registry so AI-driven callers prompt for human confirmation before proceeding. The preview endpoint is safe to call at any time; it identifies blockers (source already merged, tenant-default client, parent-link cycle, invalid contract cutover) and describes the full plan.
 
-Supply `target_client_id` in the request body. Additional options control per-contract date treatment (`original` vs `cutover`), contact-to-billing-profile mapping, and whether existing portal access grants are pinned to the target profile.
+Supply `source_client_id` in the request body. Additional options control per-contract date treatment (`original` vs `cutover`), contact-to-billing-profile mapping, and whether existing portal access grants are pinned to the target profile.
+
+`billing_strategy` decides what happens to moving tickets, projects, assets, and RMM organization mappings that have no billing profile of their own. `source_profile` (the default) stamps them with the source's moved default billing profile; `target_default` leaves them unset so they inherit the target client's default profile.
 
 #### Billing Profile Contacts
 
@@ -276,6 +290,52 @@ After a merge, a target client may carry multiple billing profiles — one per a
 | `PUT` | `/clients/{id}/billing-profiles/{profileId}/contacts` | Replace the full contact list for a billing profile |
 
 A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
+
+#### Asset Procurement Fields
+
+Assets carry `manufacturer`, `model`, `vendor_id`, `purchase_cost`, `purchase_cost_currency`, and `order_number`. `purchase_cost` is an integer in minor units (cents) paired with a 3-letter `purchase_cost_currency`. Existing RMM-managed assets were backfilled from their hardware data when the fields were introduced.
+
+#### Asset Assignments
+
+An asset can be assigned to a client contact to record who holds it. Every assign and unassign is kept as history, with `assigned_at`, `unassigned_at`, the acting users, a `source` (`manual`, `api`, `rmm`, `bundle`, `import`, `merge`, or `system`), and an optional `note`.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/assets/{id}/assignments` | List the asset's assignment history |
+
+Requires `asset:read` and `ticket:read`. An asset in another tenant returns `404`. Assigning and unassigning are done in the AlgaPSA UI; the REST API is read-only for assignments.
+
+#### Asset Statuses
+
+Asset statuses are a tenant-managed registry rather than a fixed list. Each status has a `slug`, a display `label`, a `kind` (`deployable`, `pending`, `undeployable`, or `archived`), a `display_order`, and an `is_active` flag. Five built-in statuses are seeded for every tenant: `active`, `in_stock`, `maintenance`, `inactive`, and `retired`; their labels and order can be changed. `assets.status` stores the status slug. RMM sync sets a status only when it creates an asset (and `retired` when the device is deleted in the RMM), so a manually set status is not overwritten.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/asset-statuses` | List the tenant's statuses ordered by `display_order`. Pass `include_archived=true` to include archived statuses |
+
+Requires `asset:read` and `ticket:read`. Statuses are created, edited, and archived in **Settings**; a status that is still used by assets cannot be archived.
+
+#### Asset Groups (Bundles and Shared Workspaces)
+
+An asset group belongs to one client and has a `kind`:
+- `bundle` — devices that travel or are managed as a unit (for example, a laptop and its docking station).
+- `shared_workspace` — devices at a shared location used by several contacts (for example, a reception desk).
+
+An asset can be a member of only one group. Contacts are attached to a group with a role of `owner` or `user`.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/asset-groups?client_id={clientId}` | List a client's groups. `client_id` is required |
+| `POST` | `/asset-groups` | Create a group. Body: `client_id`, `name`, `kind`, optional `location_id`, `description`, and `asset_ids` |
+| `GET` | `/asset-groups/{id}` | Retrieve a group with its members and contacts |
+| `PUT` | `/asset-groups/{id}` | Update `name`, `kind`, `location_id`, or `description` |
+| `DELETE` | `/asset-groups/{id}` | Delete a group; member assets are not deleted |
+| `POST` | `/asset-groups/{id}/members` | Add assets. Body: `asset_ids` (at least one) |
+| `DELETE` | `/asset-groups/{id}/members?asset_id={assetId}` | Remove an asset from the group |
+| `POST` | `/asset-groups/{id}/contacts` | Attach a contact. Body: `contact_name_id`, `role` (`owner` or `user`) |
+| `DELETE` | `/asset-groups/{id}/contacts?contact_name_id={contactId}` | Detach a contact |
+
+**Permissions:** list and get require `asset:read`; create requires `asset:create`; update and the member and contact routes require `asset:update`; delete requires `asset:delete`.
 
 #### Time Periods
 

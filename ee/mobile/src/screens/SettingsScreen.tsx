@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import * as Application from "expo-application";
 import { Feather } from "@expo/vector-icons";
@@ -57,6 +57,7 @@ export function SettingsScreen() {
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const logoutInFlightRef = useRef(false);
   const [hideSensitiveEnabled, setHideSensitiveEnabled] = useState(false);
   const [hideSensitiveBusy, setHideSensitiveBusy] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -305,13 +306,15 @@ export function SettingsScreen() {
                 style: "destructive",
                 onPress: () => {
                   void (async () => {
-                    if (logoutBusy) return;
+                    if (logoutInFlightRef.current) return;
+                    logoutInFlightRef.current = true;
                     setLogoutBusy(true);
                     try {
                       await logout();
                     } catch {
                       Alert.alert(t("account.signOutFailed"), t("account.signOutFailedMessage"));
                     } finally {
+                      logoutInFlightRef.current = false;
                       setLogoutBusy(false);
                     }
                   })();

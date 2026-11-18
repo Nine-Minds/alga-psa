@@ -45,6 +45,22 @@ export interface SurfaceKind {
    * route the kind opens. Absent: the kind has no home, and the MSP home answers not found like any closed route.
    */
   home?: string;
+  /**
+   * REST requests the kind's own API keys may make (`principalApiKeyPrefix`), first match wins; anything no rule
+   * opens is closed. Absent: the kind has no API surface. Only open an endpoint whose reads and writes the
+   * kind's authorization rules already narrow: RBAC alone does not scope a record to the kind.
+   */
+  api?: readonly SurfaceApiRule[];
+}
+
+export type SurfaceApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export interface SurfaceApiRule {
+  group: string;
+  /** Path patterns: `*` matches one segment, `**` as the last segment matches the rest (zero segments or more). */
+  paths: readonly string[];
+  methods: readonly SurfaceApiMethod[];
+  access: 'open' | 'closed';
 }
 
 /**
@@ -93,6 +109,108 @@ export const SURFACE_KINDS: Readonly<Record<string, SurfaceKind>> = Object.freez
     ],
     capabilities: ['scheduling_time_actions'],
     home: '/msp/tickets',
+    // The mobile app's operational screens. Each endpoint opened here was traced to the seat rules narrowing its
+    // reads and writes; the static siblings of a wildcard are closed first because `*` would match them.
+    api: [
+      {
+        group: 'seat_api_closed_siblings',
+        access: 'closed',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        paths: [
+          '/api/v1/tickets/search', '/api/v1/tickets/recurring/**', '/api/v1/tickets/templates/**',
+          '/api/v1/tickets/by-external-link/**', '/api/v1/tickets/from-asset',
+          '/api/v1/projects/export', '/api/v1/projects/search', '/api/v1/projects/stats', '/api/v1/projects/tasks',
+          '/api/v1/assets/export', '/api/v1/assets/search', '/api/v1/assets/stats', '/api/v1/assets/documents',
+          '/api/v1/assets/maintenance', '/api/v1/assets/relationships',
+          '/api/v1/contacts/export', '/api/v1/contacts/search', '/api/v1/contacts/stats',
+        ],
+      },
+      {
+        group: 'seat_api_tickets',
+        access: 'open',
+        methods: ['GET'],
+        paths: [
+          '/api/v1/tickets', '/api/v1/tickets/stats', '/api/v1/tickets/statuses', '/api/v1/tickets/priorities',
+          '/api/v1/tickets/categories',
+          '/api/v1/tickets/*', '/api/v1/tickets/*/comments', '/api/v1/tickets/*/checklist', '/api/v1/tickets/*/documents',
+          '/api/v1/tickets/*/time-entries', '/api/v1/tickets/*/assets', '/api/v1/tickets/*/bundle',
+          '/api/v1/statuses', '/api/v1/priorities', '/api/v1/boards', '/api/v1/asset-statuses',
+        ],
+      },
+      {
+        group: 'seat_api_ticket_writes',
+        access: 'open',
+        methods: ['POST'],
+        paths: [
+          '/api/v1/tickets', '/api/v1/tickets/*/comments', '/api/v1/tickets/*/comments/*/reactions',
+          '/api/v1/tickets/*/checklist', '/api/v1/tickets/*/documents',
+        ],
+      },
+      {
+        group: 'seat_api_ticket_updates',
+        access: 'open',
+        methods: ['PUT', 'PATCH'],
+        paths: [
+          '/api/v1/tickets/*', '/api/v1/tickets/*/status', '/api/v1/tickets/*/assignment',
+          '/api/v1/tickets/*/comments/*', '/api/v1/tickets/*/checklist/*',
+        ],
+      },
+      {
+        group: 'seat_api_projects',
+        access: 'open',
+        methods: ['GET'],
+        paths: [
+          '/api/v1/projects', '/api/v1/projects/*', '/api/v1/projects/*/phases', '/api/v1/projects/*/phases/*/tasks',
+          '/api/v1/projects/*/tasks', '/api/v1/projects/*/task-status-mappings', '/api/v1/projects/tasks/*',
+          '/api/v1/projects/tasks/*/checklist', '/api/v1/projects/tasks/*/comments',
+        ],
+      },
+      {
+        group: 'seat_api_project_task_comments',
+        access: 'open',
+        methods: ['POST', 'PUT', 'DELETE'],
+        paths: ['/api/v1/projects/tasks/*/comments', '/api/v1/projects/tasks/*/comments/*', '/api/v1/projects/tasks/*/comments/*/reactions'],
+      },
+      {
+        group: 'seat_api_assets',
+        access: 'open',
+        methods: ['GET'],
+        paths: [
+          '/api/v1/assets', '/api/v1/assets/*', '/api/v1/assets/*/history', '/api/v1/assets/*/notes',
+          '/api/v1/assets/*/software', '/api/v1/assets/*/tickets',
+        ],
+      },
+      {
+        group: 'seat_api_contacts',
+        access: 'open',
+        methods: ['GET'],
+        paths: ['/api/v1/contacts', '/api/v1/contacts/*', '/api/v1/clients/*/contacts'],
+      },
+      {
+        // Own operational entries only (TimeEntryService narrows a seat's reads). Writes stay closed: REST time
+        // writes do not yet carry the operational mode, and the stopwatch logs commercial time by design.
+        group: 'seat_api_time',
+        access: 'open',
+        methods: ['GET'],
+        paths: ['/api/v1/time-entries', '/api/v1/time-periods', '/api/v1/time-periods/current', '/api/v1/stopwatch/active'],
+      },
+      {
+        group: 'seat_api_documents',
+        access: 'open',
+        methods: ['GET'],
+        paths: ['/api/documents/view/*', '/api/documents/*/content', '/api/documents/*/download'],
+      },
+      {
+        group: 'seat_api_mobile_session',
+        access: 'open',
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        paths: [
+          '/api/v1/mobile/auth/refresh', '/api/v1/mobile/auth/revoke', '/api/v1/mobile/auth/capabilities',
+          '/api/v1/mobile/me/capabilities', '/api/v1/mobile/push-token', '/api/v1/mobile/push-token/test',
+          '/api/v1/mobile/moderation/mutes', '/api/v1/mobile/moderation/mutes/*', '/api/v1/mobile/moderation/report',
+        ],
+      },
+    ],
   },
 });
 
@@ -133,4 +251,25 @@ export function surfaceHomeRedirect(kind: string, pathname: string): string | nu
 
 export function surfaceAllowsCapability(kind: string, capability: string): boolean {
   return surfaceKindRules(kind).capabilities.includes(capability);
+}
+
+function apiPathMatches(pattern: string, path: string): boolean {
+  const want = pattern.split('/').filter(Boolean);
+  const got = path.split('/').filter(Boolean);
+  for (let i = 0; i < want.length; i++) {
+    if (want[i] === '**' && i === want.length - 1) return true;
+    if (i >= got.length || (want[i] !== '*' && want[i] !== got[i])) return false;
+  }
+  return got.length === want.length;
+}
+
+/** Whether a request carrying the kind's own API key may reach `method pathname`. */
+export function surfaceAllowsApiRequest(kind: string, method: string, pathname: string): boolean {
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '');
+  const verb = method.toUpperCase();
+  const rule = (surfaceKindRules(kind).api ?? []).find(
+    (candidate) => (candidate.methods as readonly string[]).includes(verb)
+      && candidate.paths.some((pattern) => apiPathMatches(pattern, path)),
+  );
+  return rule?.access === 'open';
 }
