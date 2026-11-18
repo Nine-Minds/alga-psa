@@ -39,6 +39,17 @@ describe('operators offered per source type', () => {
       'is-empty',
     ]);
   });
+
+  it('offers no ticking to a source with no type at all, such as context.*', () => {
+    for (const source of [undefined, null, '']) {
+      expect(getVisibilityOperatorsForType(source)).toEqual([
+        'equals',
+        'not-equals',
+        'has-value',
+        'is-empty',
+      ]);
+    }
+  });
 });
 
 describe('fieldVisibilityModel', () => {

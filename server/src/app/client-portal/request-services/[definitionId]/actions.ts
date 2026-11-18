@@ -13,6 +13,7 @@ import {
   resolveSubmissionVisibility,
   collectSubmissionValidationIssues,
   toPortalFormView,
+  ServiceRequestSubmissionValidationError,
   type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
 import type { FormFieldIssue } from '../../../../lib/service-requests/formValidation';
@@ -328,9 +329,15 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         )
       );
 
+      // The server validates once more against the published schema it just read; if that
+      // second pass rejects the submission the requester hears it in their language too,
+      // never the English the error message carries for the API and the logs.
       return {
         status: 'error' as const,
-        message: requestServiceSubmitErrorMessage(error),
+        message:
+          error instanceof ServiceRequestSubmissionValidationError
+            ? await describeSubmissionIssuesForRequester(error.issues)
+            : requestServiceSubmitErrorMessage(error),
       };
     }
   });

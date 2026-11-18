@@ -247,6 +247,21 @@ export function collectSubmissionValidationIssues(
   });
 }
 
+/**
+ * A submission the published schema rejected, with the failures still as data. The message is
+ * the English rendering the API and the logs have always carried; a caller that can reach a
+ * requester reads `issues` instead and says it in their language.
+ */
+export class ServiceRequestSubmissionValidationError extends Error {
+  readonly issues: FormFieldIssue[];
+
+  constructor(message: string, issues: FormFieldIssue[]) {
+    super(message);
+    this.name = 'ServiceRequestSubmissionValidationError';
+    this.issues = issues;
+  }
+}
+
 export function validateSubmissionAgainstPublishedSchema(
   input: SubmissionValidationInput
 ): string[] {
@@ -332,14 +347,18 @@ export async function submitPortalServiceRequest(
     visibleFieldKeySet.has(attachment.fieldKey)
   );
 
-  const validationErrors = validateSubmissionAgainstPublishedSchema({
+  const validationInput = {
     formSchema: definitionDetail.formSchema,
     payload: visiblePayload,
     attachments: visibleAttachments,
     visibleFieldKeys,
-  });
+  };
+  const validationErrors = validateSubmissionAgainstPublishedSchema(validationInput);
   if (validationErrors.length > 0) {
-    throw new Error(`Submission validation failed: ${validationErrors.join('; ')}`);
+    throw new ServiceRequestSubmissionValidationError(
+      `Submission validation failed: ${validationErrors.join('; ')}`,
+      collectSubmissionValidationIssues(validationInput)
+    );
   }
 
   if (visibleAttachments.length > 0) {

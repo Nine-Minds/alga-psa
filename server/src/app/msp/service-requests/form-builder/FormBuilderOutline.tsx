@@ -9,7 +9,6 @@ import React from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { Asterisk, Eye, GripVertical } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getFieldType } from '@alga-psa/ui/form-fields';
 import {
   groupFormElementsBySection,
   type BasicFormField,
@@ -168,9 +167,4 @@ export function FormBuilderOutline({
       ))}
     </div>
   );
-}
-
-/** The type label shown on an outline row; exported for the canvas chips. */
-export function getElementTypeGroup(element: BasicFormField): string {
-  return getFieldType(element.type)?.group ?? 'text';
 }

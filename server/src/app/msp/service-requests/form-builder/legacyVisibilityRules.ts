@@ -62,7 +62,8 @@ function canEditorSay(
   indexByKey: ReadonlyMap<string, number>
 ): boolean {
   if (contextSources.has(rule.source)) {
-    return true;
+    // A context source carries no field type, so it offers the typeless operators only.
+    return getVisibilityOperatorsForType(undefined).includes(rule.operator);
   }
   const source = sourceFields.get(rule.source);
   if (!source) {

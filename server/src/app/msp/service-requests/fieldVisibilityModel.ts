@@ -35,14 +35,27 @@ export const VISIBILITY_OPERATOR_AS_PREDICATE: Readonly<
  *
  * `is-true` / `is-false` are asking whether a box is ticked, so they belong to a checkbox and
  * nowhere else — the predicate adapter alone cannot tell, because it maps them onto `equals` /
- * `not_equals`, which every type supports. An unknown type keeps the whole dialect: a rule
- * stored against a type this build does not know must still round-trip.
+ * `not_equals`, which every type supports. An unknown type *name* keeps the whole dialect: a
+ * rule stored against a type this build does not know must still round-trip. No type at all is
+ * a `context.*` source — a requester, client or contact identifier — which is compared as text.
  */
 const CHECKBOX_ONLY_OPERATORS: ReadonlySet<VisibilityRuleOperator> = new Set(['is-true', 'is-false']);
 
+/** What a source with no field type offers: identifiers compare and can be absent, nothing ticks. */
+const TYPELESS_SOURCE_OPERATORS: VisibilityRuleOperator[] = [
+  'equals',
+  'not-equals',
+  'has-value',
+  'is-empty',
+];
+
 export function getVisibilityOperatorsForType(type: unknown): VisibilityRuleOperator[] {
   const definition = getFieldType(type);
-  if (!definition) return VISIBILITY_OPERATORS;
+  if (!definition) {
+    return typeof type === 'string' && type.trim().length > 0
+      ? VISIBILITY_OPERATORS
+      : TYPELESS_SOURCE_OPERATORS;
+  }
   if (definition.key === 'checkbox') {
     // A box always holds an answer, so "has a value" and "is empty" say nothing about it.
     return ['is-true', 'is-false', 'equals', 'not-equals'];

@@ -60,9 +60,19 @@ vi.mock('../../../../../lib/service-requests', () => ({
   collectSubmissionValidationIssues: collectSubmissionValidationIssuesMock,
   toPortalFormView: vi.fn(),
   resolveSubmissionVisibility: resolveSubmissionVisibilityMock,
+  ServiceRequestSubmissionValidationError: class ServiceRequestSubmissionValidationError extends Error {
+    issues: unknown[];
+
+    constructor(message: string, issues: unknown[]) {
+      super(message);
+      this.name = 'ServiceRequestSubmissionValidationError';
+      this.issues = issues;
+    }
+  },
 }));
 
 import { submitRequestServiceDefinitionAction } from '../../../../../app/client-portal/request-services/[definitionId]/actions';
+import { ServiceRequestSubmissionValidationError } from '../../../../../lib/service-requests';
 
 describe('submitRequestServiceDefinitionAction', () => {
   beforeEach(() => {
@@ -270,5 +280,40 @@ describe('submitRequestServiceDefinitionAction', () => {
     expect(redirectUrl).toContain('5');
     expect(redirectUrl).not.toContain('must be at most');
     expect(redirectUrl).not.toContain('Required field missing');
+  });
+
+  it('says the server second pass rejection in the requester language too', async () => {
+    getVisiblePublishedServiceRequestDefinitionDetailMock.mockResolvedValue({
+      definitionId: 'definition-1',
+      versionId: 'version-1',
+      formSchema: { fields: [{ key: 'seats', type: 'number', label: 'Seats' }] },
+      initialValues: {},
+      visibleFieldKeys: ['seats'],
+      formBehaviorProvider: 'basic',
+      formBehaviorConfig: {},
+    });
+    resolveSubmissionVisibilityMock.mockReturnValue(['seats']);
+    // The browser's copy of the rules passes; the published schema the server re-reads does not.
+    collectSubmissionValidationIssuesMock.mockReturnValue([]);
+    submitPortalServiceRequestMock.mockRejectedValue(
+      new ServiceRequestSubmissionValidationError(
+        'Submission validation failed: "Seats" must be at most 5',
+        [{ fieldKey: 'seats', label: 'Seats', issue: { rule: 'max', params: { max: 5 } } }]
+      )
+    );
+
+    withTransactionMock.mockImplementation(
+      async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback({ trx: true })
+    );
+
+    const formData = new FormData();
+    formData.set('seats', '9');
+    await submitRequestServiceDefinitionAction('definition-1', formData);
+
+    const redirectUrl = decodeURIComponent(redirectMock.mock.calls[0]?.[0] ?? '');
+    expect(redirectUrl).toContain('"Seats"');
+    expect(redirectUrl).toContain('5');
+    expect(redirectUrl).not.toContain('Submission validation failed');
+    expect(redirectUrl).not.toContain('must be at most');
   });
 });
