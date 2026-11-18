@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
@@ -287,6 +287,9 @@ afterAll(async () => {
     await db.destroy();
   }
 }, HOOK_TIMEOUT);
+
+// Tests run in random order: every test starts as an internal user of tenant A with every gate open.
+beforeEach(() => act(A));
 
 afterEach(() => {
   act(A);
