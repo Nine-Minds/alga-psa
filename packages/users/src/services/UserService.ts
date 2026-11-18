@@ -1161,9 +1161,9 @@ export class UserService extends BaseService<IUser> {
         const userData = users[i];
         try {
           const createdUser = await this.create(userData, context);
-          // force_password_reset is the preference the sign-in flow reads, not
-          // just a flag on the request: without it the account would keep the
-          // password the caller chose for its owner.
+          // Same pair an admin-initiated password reset records. Nothing reads
+          // must_change_password at sign-in yet, so send_welcome_email is what
+          // actually gets the owner off the password the importer chose.
           if (options.force_password_reset) {
             await UserPreferences.upsert(trx, {
               user_id: createdUser.user_id,

@@ -519,7 +519,11 @@ export const sendPortalInvitation = withAuth(async (
     }
 
     // A single send is a batch of one: the tenant-wide prerequisites resolve the
-    // same way, and the per-contact work below is the identical code path.
+    // same way, and the per-contact work below is the identical code path. A
+    // tenant that cannot send at all now answers with that (EMAIL_NOT_CONFIGURED,
+    // NO_DEFAULT_CLIENT) ahead of anything about this contact — the tenant-wide
+    // fault is the one worth fixing first, and in a healthy tenant nothing here
+    // can fail.
     const batchContext = await resolvePortalInvitationBatchContext(tenant, knex);
     const { result } = await sendPortalInvitationForContact(tenant, knex, contactId, batchContext, options);
     return result;

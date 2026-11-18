@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * bulkCreateUsers has to honour the options it documents: force_password_reset
- * is the must_change_password preference the sign-in flow reads, and
- * send_welcome_email mails each new account a link to set its own password —
- * after the batch commits, never inside the transaction.
+ * records the must_change_password preference pair, and send_welcome_email
+ * mails each new account a link to set its own password — after the batch
+ * commits, never inside the transaction.
  */
 
 const hoisted = vi.hoisted(() => ({
