@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Geral",
           "defaultClient": "Cliente padrão para registros órfãos",
-          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente."
+          "defaultClientHelp": "Contatos e ativos cuja organização não pode ser identificada são vinculados a este cliente.",
+          "clearDefaultClient": "Limpar"
         },
         "saved": "Configuração salva. Execute a verificação prévia para validá-la em relação aos registros preparados.",
         "saving": "Salvando…",

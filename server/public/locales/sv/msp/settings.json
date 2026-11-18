@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Allmänt",
           "defaultClient": "Standardkund för poster utan organisation",
-          "defaultClientHelp": "Kontakter och tillgångar vars organisation inte kan identifieras kopplas till den här kunden."
+          "defaultClientHelp": "Kontakter och tillgångar vars organisation inte kan identifieras kopplas till den här kunden.",
+          "clearDefaultClient": "Rensa"
         },
         "saved": "Konfigurationen har sparats. Kör förkontrollen för att validera den mot de mellanlagrade posterna.",
         "saving": "Sparar…",

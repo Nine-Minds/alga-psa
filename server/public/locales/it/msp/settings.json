@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Generale",
           "defaultClient": "Cliente predefinito per i record orfani",
-          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente."
+          "defaultClientHelp": "I contatti e gli asset la cui organizzazione non può essere identificata vengono associati a questo cliente.",
+          "clearDefaultClient": "Cancella"
         },
         "saved": "Configurazione salvata. Esegui la verifica preliminare per convalidarla rispetto ai record preparati.",
         "saving": "Salvataggio…",

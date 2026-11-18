@@ -2717,7 +2717,8 @@
         "general": {
           "title": "Algemeen",
           "defaultClient": "Standaardklant voor records zonder organisatie",
-          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld."
+          "defaultClientHelp": "Contacten en assets waarvan de organisatie niet kan worden bepaald, worden aan deze klant gekoppeld.",
+          "clearDefaultClient": "Wissen"
         },
         "saved": "Configuratie opgeslagen. Voer de voorcontrole uit om deze te controleren aan de hand van de klaargezette records.",
         "saving": "Opslaan…",

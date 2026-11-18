@@ -2721,7 +2721,8 @@
         "general": {
           "title": "Ogólne",
           "defaultClient": "Domyślny klient dla rekordów bez powiązania",
-          "defaultClientHelp": "Kontakty i zasoby, których organizacji nie można ustalić, są przypisywane do tego klienta."
+          "defaultClientHelp": "Kontakty i zasoby, których organizacji nie można ustalić, są przypisywane do tego klienta.",
+          "clearDefaultClient": "Wyczyść"
         },
         "saved": "Zapisano konfigurację. Uruchom kontrolę wstępną, aby sprawdzić ją względem przygotowanych rekordów.",
         "saving": "Zapisywanie…",
