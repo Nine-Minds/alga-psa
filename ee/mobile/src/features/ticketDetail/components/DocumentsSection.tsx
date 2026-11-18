@@ -55,12 +55,15 @@ export function DocumentsSection({
   ticketId,
   baseUrl,
   initiallyCollapsed = false,
+  canDelete = true,
 }: {
   client: ApiClient | null;
   apiKey: string;
   ticketId: string;
   baseUrl: string | null;
   initiallyCollapsed?: boolean;
+  /** False hides the delete control (an operational-only session may attach documents, not delete them). */
+  canDelete?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -488,20 +491,22 @@ export function DocumentsSection({
                   {[document.type_name ?? t("documents.unknownType"), formatBytes(document.file_size), formatDateTime(document.updated_at)].join(" • ")}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => handleDeleteDocument(document)}
-                disabled={deleting === document.document_id}
-                accessibilityRole="button"
-                accessibilityLabel={t("documents.delete")}
-                hitSlop={8}
-                style={{ padding: spacing.xs }}
-              >
-                {deleting === document.document_id ? (
-                  <ActivityIndicator size={16} color={colors.danger} />
-                ) : (
-                  <Feather name="trash-2" size={16} color={colors.danger} />
-                )}
-              </Pressable>
+              {canDelete ? (
+                <Pressable
+                  onPress={() => handleDeleteDocument(document)}
+                  disabled={deleting === document.document_id}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("documents.delete")}
+                  hitSlop={8}
+                  style={{ padding: spacing.xs }}
+                >
+                  {deleting === document.document_id ? (
+                    <ActivityIndicator size={16} color={colors.danger} />
+                  ) : (
+                    <Feather name="trash-2" size={16} color={colors.danger} />
+                  )}
+                </Pressable>
+              ) : null}
             </Pressable>
           ))}
         </View>
