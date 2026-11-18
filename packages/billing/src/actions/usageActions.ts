@@ -661,21 +661,3 @@ export const getEligibleContractLinesForUI = withAuth(
     }
   },
 );
-
-interface Client {
-  client_id: string;
-  client_name: string;
-}
-
-export const getClients = withAuth(async (_user, { tenant }) => {
-  const { knex } = await createTenantKnex();
-
-  const clients = await tenantScopedTable(knex, tenant, 'clients')
-    .select('client_id', 'client_name')
-    .orderBy('client_name') as Client[];
-
-  return clients.map((client: Client) => ({
-    value: client.client_id,
-    label: client.client_name
-  }));
-});
