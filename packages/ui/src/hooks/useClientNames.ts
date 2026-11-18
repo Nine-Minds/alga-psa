@@ -12,6 +12,30 @@ export function chunkIds(ids: readonly string[], size: number = CLIENT_NAME_LOOK
   return chunks;
 }
 
+/**
+ * Resolves client ids to display rows in one go, chunked to the server's cap, without loading the
+ * client list. For a screen that shows many mapped clients (an integration mapping table): look the
+ * mapped ids up once when the table loads and hand the rows to each row's picker as `knownClients`,
+ * so the pickers do not each ask. A chunk that fails is skipped; its rows resolve on their own.
+ */
+export async function lookupClientsByIds(
+  search: ClientPickerSearchFn,
+  ids: readonly string[],
+): Promise<PickerClientOption[]> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  const results = await Promise.all(
+    chunkIds(unique).map((chunk) =>
+      search({ ids: chunk, status: 'all' })
+        .then((result) => result.clients)
+        .catch((error) => {
+          console.error('[lookupClientsByIds] Failed to look up clients:', error);
+          return [] as PickerClientOption[];
+        }),
+    ),
+  );
+  return results.flat();
+}
+
 export interface ClientNames {
   /** Every client resolved so far, by id. */
   clients: Readonly<Record<string, PickerClientOption>>;
@@ -30,10 +54,14 @@ export interface ClientNames {
 export function useClientNames(
   ids: readonly string[],
   searchClients: ClientPickerSearchFn | undefined,
+  /** Rows the caller already holds (see `lookupClientsByIds`); never looked up again. */
+  knownClients?: readonly PickerClientOption[],
 ): ClientNames {
-  const [clients, setClients] = useState<Record<string, PickerClientOption>>({});
+  const [clients, setClients] = useState<Record<string, PickerClientOption>>(() =>
+    Object.fromEntries((knownClients ?? []).map((row) => [row.client_id, row])),
+  );
   const [unresolved, setUnresolved] = useState<ReadonlySet<string>>(() => new Set());
-  const requestedRef = useRef<Set<string>>(new Set());
+  const requestedRef = useRef<Set<string>>(new Set((knownClients ?? []).map((row) => row.client_id)));
   const searchRef = useRef(searchClients);
   searchRef.current = searchClients;
   const idsKey = ids.join(',');
@@ -53,6 +81,13 @@ export function useClientNames(
       return next;
     });
   }, []);
+
+  // Declared before the lookup below so rows handed in later are known before it decides what to ask for.
+  const knownKey = (knownClients ?? []).map((row) => row.client_id).join(',');
+  useEffect(() => {
+    if (knownClients && knownClients.length > 0) remember(knownClients);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [knownKey, remember]);
 
   useEffect(() => {
     const search = searchRef.current;
