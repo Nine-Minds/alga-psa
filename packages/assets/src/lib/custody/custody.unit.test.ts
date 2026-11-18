@@ -9,6 +9,7 @@ import { formatCustodyForLabel, formatCustodyForLabelSubject, formatFollowUpDate
 // cold-import cost out of each test's 5s timeout, which a loaded CI runner exceeded with in-test dynamic imports.
 import { resolveCustodyToday } from './today';
 import { toCustodyResult } from './actionResult';
+import { CUSTODY_RETURNING, mapCustodyRow } from './shared';
 import { attributeValidationError, invalidAssetTypeError } from '../assetTypeAttributes';
 
 describe('custody state machine', () => {
@@ -155,5 +156,19 @@ describe('toCustodyResult asset-layer errors', () => {
 
   it('still rethrows unrelated errors', async () => {
     await expect(toCustodyResult(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
+  });
+});
+
+describe('custody write RETURNING', () => {
+  it('returns only plain columns (Citus rejects to_char in RETURNING)', () => {
+    expect(CUSTODY_RETURNING.every((column) => /^[a-z_]+$/.test(column))).toBe(true);
+    expect(CUSTODY_RETURNING).toContain('follow_up_on');
+  });
+
+  it('maps a raw date column to its calendar string', () => {
+    const base = { opened_at: new Date(), created_at: new Date(), updated_at: new Date() };
+    expect(mapCustodyRow({ ...base, follow_up_on: new Date(2026, 10, 18) }).follow_up_on).toBe('2026-11-18');
+    expect(mapCustodyRow({ ...base, follow_up_on: '2026-11-18' }).follow_up_on).toBe('2026-11-18');
+    expect(mapCustodyRow({ ...base, follow_up_on: null }).follow_up_on).toBeNull();
   });
 });

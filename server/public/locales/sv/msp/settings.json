@@ -4625,7 +4625,6 @@
       "title": "Tillgångsnumrering",
       "description": "En gemensam nummerserie för klientorganisationen formateras med varje kunds prefix. Förhandsgranskning och utskrift tilldelar inga nummer. Utfärdade nummer som överges lämnar luckor och återanvänds aldrig.",
       "clientPrefixes": "Kundprefix",
-      "noPrefix": "Inget prefix",
       "prefixSaved": "Kundprefix sparat",
       "uniquenessEnabled": "Unika inventarienummer är aktiverade",
       "legacyAudit": "Granskning av befintliga inventarienummer",
@@ -4639,7 +4638,25 @@
       "continuationReview": "Granskningen av befintliga data omfattade {{scanned}} sparade inventarienummer; {{numeric}} har numeriska suffix. Det högsta suffixet är {{maximum}}; granska startvärdet {{next}}. Detta är endast ett förslag. Ange och spara det godkända fortsättningsvärdet ovan. Granskningen förbrukar inget värde i nummerserien.",
       "continuationExamples": "Exempel: {{examples}}",
       "blankTag": "(tomt inventarienummer)",
-      "normalizedTag": "Normaliserat: {{tag}}"
+      "normalizedTag": "Normaliserat: {{tag}}",
+      "loadFailed": "Det gick inte att läsa in inställningarna för tillgångsnumrering",
+      "readOnly": "Du kan visa tillgångsnumreringen. För att ändra den behöver du behörighet att uppdatera systeminställningar.",
+      "columns": {
+        "client": "Kund",
+        "prefix": "Prefix"
+      },
+      "addPrefix": "Lägg till prefix",
+      "addPrefixTitle": "Lägg till kundprefix",
+      "editPrefixTitle": "Redigera kundprefix",
+      "prefixHelp": "Upp till 10 bokstäver, siffror eller bindestreck.",
+      "edit": "Redigera",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort prefix?",
+      "removeMessage": "Ta bort prefixet för {{client}}? Nya inventarienummer för den här kunden får inget prefix. Befintliga inventarienummer ändras inte.",
+      "prefixRemoved": "Kundprefix borttaget",
+      "noPrefixes": "Inga kundprefix ännu.",
+      "openMenu": "Öppna meny",
+      "inactive": "Inaktiv"
     }
   }
 }

@@ -4625,7 +4625,6 @@
       "title": "Numérotation des actifs",
       "description": "Une séquence unique pour le locataire est formatée avec le préfixe de chaque client. L’aperçu et l’impression n’attribuent aucun numéro. Les numéros attribués puis abandonnés laissent des trous et ne sont jamais réutilisés.",
       "clientPrefixes": "Préfixes des clients",
-      "noPrefix": "Aucun préfixe",
       "prefixSaved": "Préfixe du client enregistré",
       "uniquenessEnabled": "L’unicité des étiquettes d’actifs est activée",
       "legacyAudit": "Audit des étiquettes existantes",
@@ -4639,7 +4638,25 @@
       "continuationReview": "L’examen des données existantes a analysé {{scanned}} étiquettes enregistrées ; {{numeric}} ont un suffixe numérique. Le suffixe le plus élevé est {{maximum}} ; examinez une valeur de départ de {{next}}. Il s’agit d’une simple recommandation. Saisissez et enregistrez ci-dessus la valeur de continuation approuvée ; cet examen ne consomme aucune valeur de la séquence.",
       "continuationExamples": "Exemples : {{examples}}",
       "blankTag": "(étiquette vide)",
-      "normalizedTag": "Normalisée : {{tag}}"
+      "normalizedTag": "Normalisée : {{tag}}",
+      "loadFailed": "Impossible de charger les paramètres de numérotation des actifs",
+      "readOnly": "Vous pouvez consulter la numérotation des actifs. Pour la modifier, vous devez avoir l'autorisation de mettre à jour les paramètres système.",
+      "columns": {
+        "client": "Client",
+        "prefix": "Préfixe"
+      },
+      "addPrefix": "Ajouter un préfixe",
+      "addPrefixTitle": "Ajouter un préfixe client",
+      "editPrefixTitle": "Modifier le préfixe client",
+      "prefixHelp": "Jusqu’à 10 lettres, chiffres ou tirets.",
+      "edit": "Modifier",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer le préfixe ?",
+      "removeMessage": "Supprimer le préfixe de {{client}} ? Les nouveaux numéros d’actif de ce client n’auront pas de préfixe. Les étiquettes existantes ne sont pas modifiées.",
+      "prefixRemoved": "Préfixe client supprimé",
+      "noPrefixes": "Aucun préfixe client pour l’instant.",
+      "openMenu": "Ouvrir le menu",
+      "inactive": "Inactif"
     }
   }
 }
