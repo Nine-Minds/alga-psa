@@ -31,12 +31,12 @@ export const voidInvoice = withAuth(async (
   reason: string
 ): Promise<VoidInvoiceResult> => {
   // Voiding reverses credits and pushes voids to accounting integrations —
-  // internal MSP users with invoice update permission only.
+  // internal MSP users holding the dedicated invoice:void permission only.
   if (user.user_type === 'client') {
     return { success: false, error: 'Permission denied: operation not available in client portal' };
   }
-  if (!await hasPermission(user, 'invoice', 'update')) {
-    return { success: false, error: 'Permission denied: invoice update required' };
+  if (!await hasPermission(user, 'invoice', 'void')) {
+    return { success: false, error: 'Permission denied: invoice void required' };
   }
 
   const trimmedReason = reason?.trim();

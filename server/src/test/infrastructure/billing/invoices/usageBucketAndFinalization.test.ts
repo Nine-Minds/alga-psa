@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
-import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
@@ -15,7 +15,8 @@ import {
   createFixedPlanAssignment,
   createBucketOverlayForPlan,
   createBucketUsageRecord,
-  ensureClientPlanBundlesTable
+  ensureClientPlanBundlesTable,
+  generateInvoiceForCycle,
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Force connection directly to PostgreSQL (not pgbouncer on 6432)
@@ -267,7 +268,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       ]);
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       expect(result).not.toBeNull();
 
       // Assert - Verify invoice totals including tax
@@ -383,7 +384,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       });
 
       // Act
-      const result = await generateInvoice(billingCycleId);
+      const result = await generateInvoiceForCycle(billingCycleId);
       expect(result).not.toBeNull();
 
       // Assert - Verify invoice totals including tax
@@ -464,7 +465,7 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       });
 
       // Generate draft invoice
-      let invoice = await generateInvoice(billingCycleId);
+      let invoice = await generateInvoiceForCycle(billingCycleId);
       expect(invoice).not.toBeNull();
 
       // Verify pre-finalization state

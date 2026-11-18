@@ -217,4 +217,44 @@ describe('qboItemResolver', () => {
     }
     expect(resolution.fieldChanges?.map((c) => c.field).sort()).toEqual(['default_rate', 'description']);
   });
+
+  describe('items shared by several services', () => {
+    const services = [
+      serviceRow({ service_id: 's1', service_name: 'Managed Backup', default_rate: 100 }),
+      serviceRow({ service_id: 's2', service_name: 'Managed Firewall', default_rate: 200 }),
+      serviceRow({ service_id: 's3', service_name: 'Services', default_rate: 0 })
+    ];
+    const live = [
+      { id: 'm1', alga_entity_id: 's1', external_entity_id: 'q1' },
+      { id: 'm2', alga_entity_id: 's2', external_entity_id: 'q1' }
+    ];
+    // Same name as an unrelated service: must NOT fall through to name matching.
+    const item = qboItem({ Id: 'q1', Name: 'Services', UnitPrice: 5 });
+
+    it.each([
+      ['mapping order', live],
+      ['reversed mapping order', [...live].reverse()]
+    ])('skips with a reason, never matching by name (%s)', (_label, mappings) => {
+      const [resolution] = resolveQboItems([item], services, mappings, noTax, 'USD');
+      expect(resolution.action).toBe('skip');
+      expect(resolution.flags).toContain('shared_item_mapping');
+      expect(resolution.reason).toMatch(/2 services/);
+      expect(resolution.matchedServiceId).toBeUndefined();
+      expect(resolution.fieldChanges).toBeUndefined();
+    });
+
+    it('still imports an unrelated single-mapped item normally alongside the skipped one', () => {
+      const other = qboItem({ Id: 'q2', Name: 'Managed Firewall', UnitPrice: 250 });
+      const mappings = [...live, { id: 'm3', alga_entity_id: 's2', external_entity_id: 'q2' }].filter((m) => m.id !== 'm2');
+      const resolutions = resolveQboItems([item, other], services, [...mappings, { id: 'm2', alga_entity_id: 's3', external_entity_id: 'q1' }], noTax, 'USD');
+      expect(resolutions[0].action).toBe('skip');
+      expect(resolutions[1]).toMatchObject({ action: 'update', matchedServiceId: 's2' });
+    });
+
+    it('treats one live mapping (tombstones are filtered before resolution) as unambiguous', () => {
+      const [resolution] = resolveQboItems([item], services, [live[0]], noTax, 'USD');
+      expect(resolution.action).toBe('update');
+      expect(resolution.matchedServiceId).toBe('s1');
+    });
+  });
 });

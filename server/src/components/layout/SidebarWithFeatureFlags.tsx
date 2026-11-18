@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useCapability, useFeatureFlag, useServedCapabilities } from '@alga-psa/ui/hooks';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
 import '@/config/coManagedMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -27,6 +27,8 @@ import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
+/** Menu rows that exist only while the co-managed capability is served. */
+export const CO_MANAGED_GATED_HREFS: ReadonlySet<string> = new Set([CO_MANAGED_ADMINISTRATION_HREF, '/msp/tickets/customer']);
 
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
@@ -156,6 +158,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
   const { enabled: coManagedServed } = useCapability('co-managed');
+  const servedCapabilities = useServedCapabilities();
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -164,7 +167,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const { hasFeature } = useTier();
   // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
-  const { productCode, edition } = useProduct();
+  const { productCode, surfaceKind, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
   useEffect(() => {
@@ -215,10 +218,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const menuSections = useMemo<NavigationSection[]>(() => {
     // Capability-gated contributions join before the edition → tier →
     // permission → product chain, which then filters them like any menu item.
-    const contributedSections = resolveUiSlots<NavigationSection>(
-      'msp.navigation.group',
-      new Set(coManagedServed ? ['co-managed' as const] : []),
-    ).flatMap((slot) => (slot.props ? [slot.props] : []));
+    const contributedSections = resolveUiSlots<NavigationSection>('msp.navigation.group', servedCapabilities).flatMap((slot) => (slot.props ? [slot.props] : []));
     const baseSections = useNavigationSections
       ? [...originalSections, ...contributedSections]
       : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
@@ -226,9 +226,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
-        .filter((item) => coManagedServed || item.href !== CO_MANAGED_ADMINISTRATION_HREF)
-        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href === CO_MANAGED_ADMINISTRATION_HREF)
-          ? { ...item, subItems: item.subItems.filter((sub) => sub.href !== CO_MANAGED_ADMINISTRATION_HREF) }
+        .filter((item) => coManagedServed || !item.href || !CO_MANAGED_GATED_HREFS.has(item.href))
+        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href && CO_MANAGED_GATED_HREFS.has(sub.href))
+          ? { ...item, subItems: item.subItems.filter((sub) => !sub.href || !CO_MANAGED_GATED_HREFS.has(sub.href)) }
           : item))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
@@ -248,23 +248,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const editionSections = filterNavigationSectionsByEdition(filteredSections, edition);
 
     return filterMenuSectionsByProduct(
-      productCode,
+      { productCode, surfaceKind },
       filterNavigationSectionsByPermission(
         filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, surfaceKind, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed, servedCapabilities]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);
-    const productSections = filterMenuSectionsByProduct(productCode, editionSections);
+    const productSections = filterMenuSectionsByProduct({ productCode, surfaceKind }, editionSections);
 
     return filterNavigationSectionsBySelfHost(
       productSections,
       selfHostMode,
     );
-  }, [edition, productCode, selfHostMode]);
+  }, [edition, productCode, surfaceKind, selfHostMode]);
+
+  // The footer links answer to the same principal as the sections above: a seat technician's surface
+  // reaches neither settings nor the external support link.
+  const footerItems = useMemo(
+    () => filterMenuSectionsByProduct({ productCode, surfaceKind }, [{ items: bottomMenuItems }]).flatMap((section) => section.items),
+    [productCode, surfaceKind],
+  );
 
   const billingSections = useMemo(
     () => filterNavigationSectionsByPermission(
@@ -286,7 +293,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     <Sidebar
       {...props}
       menuSections={menuSections}
-      bottomMenuItems={bottomMenuItems}
+      bottomMenuItems={footerItems}
       appDisplayName={isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA'}
       appLogoAlt={t('sidebar.appLogoAlt', {
         appName: isAlgaDesk ? 'AlgaDesk' : 'AlgaPSA',

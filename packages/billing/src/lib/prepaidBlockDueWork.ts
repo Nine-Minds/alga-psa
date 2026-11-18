@@ -66,6 +66,8 @@ export interface PrepaidBlockDueWorkGroupingMetadata {
   currencyCode?: string | null;
   taxSource?: string | null;
   exportShapeKey?: string | null;
+  /** The issuing contract line; lets the listing resolve the invoice profile the block lands on. */
+  contractLineId?: string | null;
 }
 
 const toDateOnly = (value: unknown): ISO8601String | null => toDateOnlyValue(value) as ISO8601String | null;
@@ -241,6 +243,7 @@ export async function fetchPrepaidBlockIssuanceDueWorkRows(
         currencyCode: issuance.currency_code ?? null,
         taxSource,
         exportShapeKey: null,
+        contractLineId: issuance.contract_line_id ?? null,
       });
 
       const dueWorkRow = buildRecurringDueWorkRow({

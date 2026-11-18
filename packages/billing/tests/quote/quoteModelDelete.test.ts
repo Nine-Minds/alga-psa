@@ -34,12 +34,13 @@ vi.mock('@alga-psa/core/server', async (importOriginal) => ({
 import Quote from '../../src/models/quote';
 
 describe('Quote.delete', () => {
-  it('deletes quote_activities explicitly before the quote row', async () => {
+  it('deletes quote_activities and quote_access_links explicitly before the quote row', async () => {
     const result = await Quote.delete({} as never, 'tenant-1', 'quote-1');
 
     expect(result).toMatchObject({ deleted: true });
     expect(deleteCalls).toEqual([
       { table: 'quote_activities', where: { quote_id: 'quote-1' } },
+      { table: 'quote_access_links', where: { quote_id: 'quote-1' } },
       { table: 'quotes', where: { quote_id: 'quote-1' } },
     ]);
   });

@@ -3,6 +3,7 @@
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
+import { authorizeTicketRecordAccessConcealed } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { getCurrentUser } from './getCurrentUser';
 import { hasPermission } from './rbac';
 
@@ -93,9 +94,25 @@ export async function preCheckDeletion(
       }
     }
 
-    const canDelete = await hasPermission(user, permission.resource, permission.action, trx);
-    if (!canDelete) {
-      return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
+    if (entityType === 'ticket') {
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId: entityId,
+          action: 'delete'
+        });
+      } catch {
+        // The record gate intentionally conceals client ticket visibility. Keep
+        // preflight failures metadata-free for every denied or unresolved row.
+        return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
+      }
+    } else {
+      const canDelete = await hasPermission(user, permission.resource, permission.action, trx);
+      if (!canDelete) {
+        return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
+      }
     }
 
     return validateDeletion(trx, config, entityId, tenant);

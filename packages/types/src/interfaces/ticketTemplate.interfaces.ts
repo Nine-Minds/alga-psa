@@ -1,6 +1,7 @@
 /**
  * Ticket templates: a reusable starting point for a ticket (fields, description, tags, checklist,
- * custom fields). Not client-specific; status, assignment, client and contact are never templated.
+ * custom fields). A template is tenant-wide (`client_id: null`) or bound to one client; status,
+ * assignment, client and contact are never templated.
  */
 
 /** A checklist item as the template editor holds it (no completion state, no assignee). */
@@ -17,6 +18,26 @@ export interface ITicketTemplateChecklistItem extends TicketTemplateChecklistIte
   order_number: number;
 }
 
+/**
+ * A documentation link a template carries. Always copied onto generated tickets as a `reference`
+ * external link; `url` is stored absolute and never re-resolved at ticket creation.
+ */
+export interface TicketTemplateLinkDraft {
+  /** Registry key: built-in or `custom:<slug>`. */
+  system: string;
+  external_id: string;
+  realm: string | null;
+  url: string | null;
+  title: string | null;
+  /** e.g. `{ hudu: { article_id, company_id } }` when picked through the Hudu picker. */
+  metadata: Record<string, unknown> | null;
+}
+
+export interface ITicketTemplateLink extends TicketTemplateLinkDraft {
+  template_link_id: string;
+  order_number: number;
+}
+
 /** The editor's shape; also what the from-ticket loader returns. */
 export interface TicketTemplateDraft {
   name: string;
@@ -25,6 +46,8 @@ export interface TicketTemplateDraft {
   title: string;
   /** Same format as `tickets.attributes.description` (serialized BlockNote JSON or plain text). */
   description: string | null;
+  /** Client the template is bound to; null = offered for every client (tenant-wide). */
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -35,9 +58,10 @@ export interface TicketTemplateDraft {
   tags: string[];
   custom_fields: Record<string, unknown>;
   checklist: TicketTemplateChecklistItemDraft[];
+  links: TicketTemplateLinkDraft[];
 }
 
-export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> {
+export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist' | 'links'> {
   tenant: string;
   template_id: string;
   is_active: boolean;
@@ -49,6 +73,7 @@ export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> 
   created_at: string;
   updated_at: string;
   checklist: ITicketTemplateChecklistItem[];
+  links: ITicketTemplateLink[];
 }
 
 /** A recurring schedule that uses a template (non-archived definitions only). */
@@ -68,7 +93,7 @@ export interface TicketTemplateReferenceProblem {
   /** Template saves only ever report the first four; the wider set is shared with recurring schedules. */
   field:
     | 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id' | 'status_id' | 'assigned_to'
-    | 'assigned_team_id' | 'additional_agent_ids' | 'contact_id' | 'location_id' | 'asset_ids';
+    | 'assigned_team_id' | 'additional_agent_ids' | 'client_id' | 'contact_id' | 'location_id' | 'asset_ids';
   /** Actionable, user-facing English message. */
   message: string;
 }
@@ -77,6 +102,9 @@ export interface TicketTemplateListItem {
   template_id: string;
   name: string;
   title: string;
+  client_id: string | null;
+  /** Name of the client the template is bound to; null for a tenant-wide template. */
+  client_name: string | null;
   board_id: string | null;
   board_name: string | null;
   checklist_count: number;
@@ -88,10 +116,11 @@ export interface TicketTemplateListItem {
   updated_at: string;
 }
 
-/** Picker entry for Quick Add. */
+/** Picker entry for Quick Add. `client_id` null = offered for every client. */
 export interface TicketTemplateOption {
   template_id: string;
   name: string;
+  client_id: string | null;
   board_id: string | null;
 }
 
@@ -101,6 +130,7 @@ export interface TicketTemplateForCreate {
   name: string;
   title: string;
   description: string;
+  client_id: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -116,13 +146,16 @@ export interface TicketTemplateForCreate {
     is_new: boolean;
   }[];
   checklist: { item_name: string; is_required: boolean }[];
+  /** Documentation links the created ticket will carry, resolved for display. Links are always copied. */
+  links: { title: string | null; href: string | null; systemLabel: string }[];
   custom_field_count: number;
   /** Dangling references that were dropped from the prefill (e.g. "Board no longer exists"). */
   warnings: string[];
 }
 
 export interface TicketTemplateDraftFromTicket {
-  draft: TicketTemplateDraft;
+  /** The source ticket's client is never copied, so the scope is the editor's to pick. */
+  draft: Omit<TicketTemplateDraft, 'client_id'>;
   source_ticket_id: string;
   source_ticket_number: string;
   /** True when the description embeds images that point at the source ticket's documents (R2). */

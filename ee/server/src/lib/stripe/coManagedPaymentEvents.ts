@@ -11,18 +11,34 @@
  */
 import type Stripe from 'stripe';
 import type { Knex } from 'knex';
-import { admits, forcedValue } from '@alga-psa/core/capability';
+import { admits, forcedValue, serves } from '@alga-psa/core/capability';
 import logger from '@alga-psa/core/logger';
 import { recordCoManagedPaymentFailure } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
 import { CO_MANAGED_SUBSCRIPTION_KIND } from './coManagedSubscription';
 import type { PaymentEventHandler } from './paymentEventRegistry';
+import { INDEPENDENT_UPGRADE_SOURCE } from './coManagedUpgradeSource';
 
 export interface CoManagedPaymentDeps {
   /** Configured SKU; absent means the whole co-managed purchase path is inert. */
   priceId(): string | undefined;
   sync(tenantId: string, subscriptionId: string, db: Knex): Promise<void>;
   finalizeCheckout(session: Stripe.Checkout.Session, tenantId: string, db: Knex): Promise<void>;
+  /** Independent-upgrade (L8b) reconciliation; resolved lazily so no Stripe client exists until needed.
+   * Returns true when the event belonged to an authorised independent purchase and was applied. */
+  upgradePayment?(event: Stripe.Event, tenantId: string, db: Knex): Promise<boolean>;
+}
+
+const UPGRADE_EVENTS = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed', 'checkout.session.expired', 'customer.subscription.created',
+  'customer.subscription.updated', 'customer.subscription.deleted', 'invoice.paid', 'invoice.payment_failed']);
+
+/** Pure payload test: ownership is proved by our own metadata marker, never by customer email. */
+export function isCoManagedUpgradePaymentEvent(event: Stripe.Event): boolean {
+  if (!UPGRADE_EVENTS.has(event.type)) return false;
+  const object = event.data.object as any;
+  const details = event.type.startsWith('invoice.') ? (object.subscription_details ?? object.parent?.subscription_details) : object;
+  return details?.metadata?.source === INDEPENDENT_UPGRADE_SOURCE && Boolean(details?.metadata?.tenant_id);
 }
 
 const SUBSCRIPTION_EVENTS = new Set(['customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted']);
@@ -58,7 +74,15 @@ function killSwitchOpen(): boolean {
   return state !== 'off' && state !== 'malformed';
 }
 
+/** Default reconciliation: loaded and constructed only when an admitted upgrade event arrives. */
+async function defaultUpgradePayment(event: Stripe.Event, tenantId: string, db: Knex): Promise<boolean> {
+  const { handleCoManagedUpgradePaymentEvent, independentCheckoutStripeContext } = await import('./coManagedUpgradeCheckout');
+  const { stripe } = await independentCheckoutStripeContext();
+  return handleCoManagedUpgradePaymentEvent(db, stripe, tenantId, event);
+}
+
 export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): PaymentEventHandler[] {
+  const upgradePayment = deps.upgradePayment ?? defaultUpgradePayment;
   return [
     {
       name: 'co-managed-subscription',
@@ -101,6 +125,32 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
           logger.error('[StripeService] Base-subscription co-managed sync failed', error);
         }
         return 'continue';
+      },
+    },
+    {
+      // Independent upgrade (L8b). Claimed only by our metadata marker. The paying tenant is the
+      // co-managed CUSTOMER, which only ever `serves` (participates) and never `admits` (release flag +
+      // sponsor entitlement), so the gate is `serves` (participation; cached). Only the claims() marker check keeps
+      // ordinary events away from it, so a non-upgrade event never consults the gate. An upgrade-marked event is CONSUMED when the gate is closed (kill
+      // switch, not participating): it must never reach the MSP licence handlers in StripeService,
+      // which would fail on it. The customer's in-app "Resume purchase" reconcile recovers from Stripe.
+      name: 'co-managed-independent-upgrade',
+      claims: (event) => isCoManagedUpgradePaymentEvent(event),
+      admits: async ({ tenantId }) => killSwitchOpen() && (await serves('co-managed', tenantId)).served,
+      consumeWhenClosed: true,
+      async handle({ event, tenantId, knex }) {
+        const object = event.data.object as any;
+        const meta = (object.metadata ?? object.subscription_details?.metadata ?? object.parent?.subscription_details?.metadata) as Record<string, string> | undefined;
+        // The event's own tenant claim must match the webhook-resolved tenant.
+        if (meta?.tenant_id !== tenantId) {
+          // Marked as an upgrade but for another tenant: never hand it to the MSP licence handlers.
+          logger.warn('[StripeService] Independent-upgrade event tenant mismatch; consumed without action', {
+            eventId: event.id, eventType: event.type });
+          return 'consumed';
+        }
+        // Authorised-or-not, a marked event is ours; an unauthorised one is a no-op, not an MSP licence event.
+        await upgradePayment(event, tenantId, knex);
+        return 'consumed';
       },
     },
   ];

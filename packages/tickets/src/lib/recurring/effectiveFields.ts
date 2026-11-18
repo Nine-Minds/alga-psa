@@ -11,24 +11,26 @@ const uuid = z.string().guid();
 
 export const recurringTicketOverridesSchema = z
   .object({
-    board: z.object({ board_id: uuid, status_id: uuid.nullable() }).strict().optional(),
-    priority: z.object({ priority_id: uuid }).strict().optional(),
+    board: z.object({ board_id: uuid.describe('Board for created tickets.'), status_id: uuid.nullable().describe('Status on that board; null for the board default.') }).strict().optional().describe('Override board and status together.'),
+    priority: z.object({ priority_id: uuid.describe('Priority for created tickets.') }).strict().optional().describe('Override the priority.'),
     category: z
-      .object({ category_id: uuid.nullable(), subcategory_id: uuid.nullable() })
+      .object({ category_id: uuid.nullable().describe('Category; null for none.'), subcategory_id: uuid.nullable().describe('Subcategory; requires a category.') })
       .strict()
       .refine((value) => value.category_id !== null || value.subcategory_id === null, {
         message: 'A subcategory requires a category',
         path: ['subcategory_id'],
       })
-      .optional(),
+      .optional()
+      .describe('Override category and subcategory together.'),
     assignment: z
       .object({
-        assigned_to: uuid.nullable(),
-        assigned_team_id: uuid.nullable(),
-        additional_agent_ids: z.array(uuid),
+        assigned_to: uuid.nullable().describe('Assignee user UUID; null means unassigned.'),
+        assigned_team_id: uuid.nullable().describe('Assigned team UUID; null for none.'),
+        additional_agent_ids: z.array(uuid).describe('Additional agent user UUIDs.'),
       })
       .strict()
-      .optional(),
+      .optional()
+      .describe('Override assignment (assignee, team and additional agents) as a unit.'),
   })
   .strict();
 

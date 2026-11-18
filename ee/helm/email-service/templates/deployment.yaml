@@ -71,8 +71,43 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.waitForBootstrap.enabled }}
+      {{- if or .Values.waitForBootstrap.enabled (and .Values.fixPermissions.enabled .Values.sharedTenantSecrets.enabled) }}
       initContainers:
+        {{- if and .Values.fixPermissions.enabled .Values.sharedTenantSecrets.enabled }}
+        # Root, capability-limited: hands the shared tenant-secret store to the
+        # application uid (hostPath volumes ignore fsGroup).
+        - name: fix-permissions
+          image: "{{ required "fixPermissions.image.repository (the alga-psa server image) is required when fixPermissions.enabled" .Values.fixPermissions.image.repository }}:{{ required "fixPermissions.image.tag is required when fixPermissions.enabled" .Values.fixPermissions.image.tag }}"
+          imagePullPolicy: {{ .Values.fixPermissions.image.pullPolicy }}
+          command: ["/usr/local/bin/alga-runtime-permissions"]
+          env:
+            - name: TARGET_UID
+              value: {{ .Values.fixPermissions.uid | quote }}
+            - name: TARGET_GID
+              value: {{ .Values.fixPermissions.gid | quote }}
+            - name: FILES_DIR
+              value: /nonexistent/files
+            - name: SECRETS_DIR
+              value: /nonexistent/secrets
+            - name: TENANTS_DIR
+              value: {{ .Values.sharedTenantSecrets.mountPath | quote }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+          volumeMounts:
+            - name: shared-tenant-secrets
+              mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
+        {{- end }}
+        {{- if .Values.waitForBootstrap.enabled }}
         - name: wait-for-bootstrap
           {{- with .Values.securityContext }}
           securityContext:
@@ -104,6 +139,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.db.serverPasswordSecret.name }}
                   key: {{ .Values.db.serverPasswordSecret.key }}
+        {{- end }}
       {{- end }}
       containers:
         - name: email-service
@@ -183,6 +219,8 @@ spec:
             - name: SECRET_FS_BASE_PATH
               value: "{{ .Values.sharedTenantSecrets.mountPath }}"
             {{- end }}
+            - name: STORAGE_LOCAL_BASE_PATH
+              value: {{ .Values.filesStorage.mountPath | quote }}
             {{- if .Values.secretsProvider.vault.addr }}
             - name: VAULT_ADDR
               value: "{{ .Values.secretsProvider.vault.addr }}"
@@ -298,6 +336,8 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
 
           volumeMounts:
+            - name: files-storage
+              mountPath: {{ .Values.filesStorage.mountPath }}
             {{- if .Values.sharedTenantSecrets.enabled }}
             - name: shared-tenant-secrets
               mountPath: {{ .Values.sharedTenantSecrets.mountPath }}
@@ -307,6 +347,13 @@ spec:
             {{- end }}
 
       volumes:
+        - name: files-storage
+          {{- if .Values.filesStorage.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.filesStorage.existingClaim | quote }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         {{- if .Values.sharedTenantSecrets.enabled }}
         - name: shared-tenant-secrets
           hostPath:

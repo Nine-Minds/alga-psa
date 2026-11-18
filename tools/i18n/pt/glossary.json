@@ -2590,6 +2590,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "· {{count}} item",
+      "Markdown",
       "Offline",
       "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
@@ -2615,6 +2617,7 @@
       "SMS",
       "SSO",
       "Status",
+      "Status:",
       "Total",
       "URL",
       "UUID",
@@ -2730,7 +2733,19 @@
       "{{size}} GB",
       "Code 128",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "Ticket {{number}}",
+      "Tickets",
+      "ticket",
+      "tickets",
+      "CPU",
+      "RAM",
+      "Firmware",
+      "{{count}} ticket(s)",
+      "status",
+      "{{actor}} • {{eventType}}",
+      "Natural",
+      "Layout"
     ],
     "caseInsensitive": [
       "api",

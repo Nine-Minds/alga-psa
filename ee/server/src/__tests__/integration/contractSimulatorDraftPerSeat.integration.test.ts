@@ -86,6 +86,15 @@ describe("Draft contract simulation – per-seat fixed services", () => {
     unit_rate,
   });
 
+  it("a draft scenario carries no billing identity (nothing is assigned yet)", async () => {
+    const scenario = await draftContractToScenario(
+      context.db,
+      context.tenantId,
+      draft([unit(user, 1, 1_000)]),
+    );
+    expect(scenario.billing_identity).toBeNull();
+  });
+
   it("charges the overridden unit rate and an explicit zero, matching the wizard review ($3,300)", async () => {
     const items = [unit(user, 20, 9_000), unit(endpoint, 30, 5_000), unit(location, 0, 20_000)];
     const { total, byService } = await simulatedFixedTotal(draft(items));

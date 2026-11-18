@@ -108,10 +108,13 @@
     "ticketsTemplates": "Plantillas de tickets",
     "assetsCustody": "Equipos en custodia",
     "ticketsCannedResponses": "Respuestas predefinidas",
+    "ticketsCustomer": "Tickets de clientes",
     "profile": "Perfil",
     "signOut": "Cerrar sesión",
     "coManaged": "TI cogestionada",
-    "coManagedAdministration": "Acceso y administración"
+    "coManagedArchive": "Archivo de TI cogestionada",
+    "coManagedAdministration": "Acceso y administración",
+    "assetsAudits": "Auditorías de sitios"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

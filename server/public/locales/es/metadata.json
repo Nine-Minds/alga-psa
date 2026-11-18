@@ -374,6 +374,10 @@
       "title": "Activos",
       "custody": {
         "title": "Equipos en custodia"
+      },
+      "audits": {
+        "title": "Auditorías de sitios",
+        "detailTitle": "Auditoría de sitio"
       }
     },
     "chat": {
@@ -521,7 +525,10 @@
       "defaultTitle": "Panel | AlgaPSA"
     },
     "coManaged": {
-      "title": "TI cogestionada"
+      "title": "TI cogestionada",
+      "archive": {
+        "title": "Archivo de TI cogestionada"
+      }
     },
     "coManagement": {
       "title": "Acceso cogestionado",
@@ -541,6 +548,18 @@
         "title": "Tareas compartidas",
         "taskTitle": "Tarea compartida",
         "projectTitle": "Proyecto compartido"
+      },
+      "departure": {
+        "title": "Finalizar TI cogestionada"
+      },
+      "sla": {
+        "title": "Prioridades de SLA cogestionado"
+      },
+      "export": {
+        "title": "Exportar espacio de trabajo"
+      },
+      "upgrade": {
+        "title": "Cambiar a AlgaPSA"
       }
     }
   },

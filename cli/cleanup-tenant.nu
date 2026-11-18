@@ -319,8 +319,8 @@ def "main cleanup" [
         "project_template_tasks" "project_template_phases" "project_templates"
 
         # Quote details
-        "quote_activities" "quote_items" "quote_document_template_assignments"
-        "quote_document_templates" "standard_quote_document_templates" "quotes"
+        "quote_activities" "quote_decisions" "quote_items" "quote_document_template_assignments"
+        "quote_document_templates" "standard_quote_document_templates" "quote_access_links" "quotes"
 
         # Hour blocks (ad-hoc prepaid hour blocks): allocations/scopes/audit
         # reference hour_blocks, which references invoices/clients/service_catalog.

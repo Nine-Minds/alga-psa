@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Descripción de la línea de factura",
         "invoiceLineDescriptionPlaceholder": "p.ej. Mantenimiento mensual del sistema telefónico según el acuerdo de 2019",
         "nameLabel": "Nombre de la línea de contrato *",
-        "namePlaceholder": "p.ej. Soporte gestionado - Oro"
+        "namePlaceholder": "p.ej. Soporte gestionado - Oro",
+        "invoiceLineSubtitleLabel": "Subtítulo de la línea de factura",
+        "invoiceLineSubtitlePlaceholder": "p. ej. Servicios gestionados de equipos y copias de seguridad",
+        "invoiceLineSubtitleHelp": "Se muestra como una segunda línea atenuada bajo el título cuando esta línea fija aparece en una factura."
       },
       "cardTitle": "Editar línea de contrato: {{name}} (fijo)",
       "errors": {

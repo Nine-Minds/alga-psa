@@ -281,8 +281,14 @@ tenant is eligible.
 
 ## Capabilities
 
-`@alga-psa/core/capability` is a registry of capability gates. `co-managed` is keyed on
-`release-v2-0-feature`.
+`@alga-psa/core/capability` is a registry of capability gates. `co-managed` and
+`co-managed-seat` are both keyed on `release-v2-0-feature`; each has its own resolvers and
+its own `FORCE_CAPABILITIES` key.
+
+| Capability | Admits (with the flag) | Serves |
+| --- | --- | --- |
+| `co-managed` | an entitlement row | a relationship row (either side), an entitlement row, or a `co_managed` tenant |
+| `co-managed-seat` | an entitlement row on a `psa` tenant | any seat arrangement row |
 
 - `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
   Eligibility defaults to false until a resolver is registered.
@@ -320,7 +326,8 @@ while the gate is closed. It accepts no parameters.
 **Kill switch `FORCE_CAPABILITIES`** (server env): comma-separated `key:on|off`, e.g.
 `co-managed:off`. A malformed value on a known key forces that capability off. It overrides
 the flag and resolvers for that capability only; `release-v2-0-feature` and the Timeline are
-unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
+unaffected. Keys are matched whole: `co-managed-seat:off` closes the seat shape for every tenant
+and leaves `co-managed` as it was, and `co-managed:off` does not close `co-managed-seat`. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
 the bootstrap key is absent, and is ignored in production builds.
 
 ## Implementation Details

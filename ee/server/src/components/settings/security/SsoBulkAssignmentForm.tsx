@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type MouseEvent, type ReactElement } from "react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
@@ -10,6 +10,7 @@ import { Badge } from "@alga-psa/ui/components/Badge";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import { Tooltip } from "@alga-psa/ui/components/Tooltip";
 import Spinner from "@alga-psa/ui/components/Spinner";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "server/src/hooks/use-toast";
@@ -73,6 +74,7 @@ function useFormatProviderName() {
 
 function ActionButtons({
   disableActions,
+  disabledReason,
   isPending,
   lastMode,
   onPreview,
@@ -81,6 +83,7 @@ function ActionButtons({
   mode,
 }: {
   disableActions: boolean;
+  disabledReason: string | null;
   isPending: boolean;
   lastMode: "preview" | "execute" | null;
   onPreview: () => void;
@@ -96,9 +99,16 @@ function ActionButtons({
   const previewLabel = mode === "unlink"
     ? t("ssoBulk.form.actions.previewUnlink")
     : t("ssoBulk.form.actions.previewLink");
+  // Disabled buttons swallow pointer events, so the tooltip hangs off a wrapper.
+  const withReason = (button: ReactElement) =>
+    disabledReason ? (
+      <Tooltip content={disabledReason}>
+        <span className="inline-flex" tabIndex={0}>{button}</span>
+      </Tooltip>
+    ) : button;
   return (
     <div className="flex flex-wrap gap-3" aria-label={t("ssoBulk.form.actions.bulkLabel", { location })}>
-      <Button
+      {withReason(<Button
         id={`sso-bulk-${location}-preview-${mode}-button`}
         type="button"
         variant={isTop ? "secondary" : "outline"}
@@ -112,8 +122,8 @@ function ActionButtons({
         ) : (
           previewLabel
         )}
-      </Button>
-      <Button
+      </Button>)}
+      {withReason(<Button
         id={`sso-bulk-${location}-execute-${mode}-button`}
         type="button"
         onClick={onExecute}
@@ -129,7 +139,7 @@ function ActionButtons({
         ) : (
           actionLabel
         )}
-      </Button>
+      </Button>)}
     </div>
   );
 }
@@ -371,6 +381,13 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
   const disableActions =
     isPending || !selectedProvider || !selectedProviderConfigured || selectedUserIds.size === 0;
+  const disabledReason = isPending
+    ? null
+    : !selectedProvider || !selectedProviderConfigured
+      ? t("ssoBulk.form.providerNotConfiguredAlert")
+      : selectedUserIds.size === 0
+        ? t("ssoBulk.form.actions.disabledSelectUsers")
+        : null;
 
   const handlePageChange = (newPage: number) => setPage(newPage);
   const handlePageSizeChange = (newSize: number) => {
@@ -575,6 +592,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
 
             <ActionButtons
               disableActions={disableActions}
+              disabledReason={disabledReason}
               isPending={isPending}
               lastMode={lastMode}
               onPreview={handlePreview}
@@ -685,6 +703,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
         )}
         <ActionButtons
           disableActions={disableActions}
+          disabledReason={disabledReason}
           isPending={isPending}
           lastMode={lastMode}
           onPreview={handlePreview}

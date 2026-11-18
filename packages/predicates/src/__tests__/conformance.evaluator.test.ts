@@ -36,7 +36,10 @@ describe('conformance completeness (T028)', () => {
   it('reports a set operator with no case', () => {
     const trimmed: ConformanceTable = {
       version: 1,
-      cases: conformance.cases.filter((c) => c.id !== 'set-not-in'),
+      // Every set `not_in` case, whichever path it reads: the gap is per operator, not per case id.
+      cases: conformance.cases.filter(
+        (c) => !(c.covers.pathKind === 'set' && c.covers.operators.includes('not_in')),
+      ),
     };
     expect(checkConformanceCompleteness(trimmed)).toContain('no set case for operator not_in');
   });

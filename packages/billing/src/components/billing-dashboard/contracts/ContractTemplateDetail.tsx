@@ -53,6 +53,7 @@ import {
   getDetailedContractLines,
   updateContractLineRate,
 } from "@alga-psa/billing/actions/contractActions";
+import { updateContractLine } from "@alga-psa/billing/actions/contractLineAction";
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
@@ -142,6 +143,10 @@ type TemplateContractLine = {
   rate?: number | null;
   /** 'PrepaidBlock' for an Hourly template line carrying a block config; otherwise the line type. */
   display_kind?: string;
+  /** Bundle title on invoices; blank falls back to the line name. */
+  invoice_line_description?: string | null;
+  /** Muted second line under the bundle title (Fixed lines). */
+  invoice_line_subtitle?: string | null;
   services: TemplateLineService[];
 };
 
@@ -151,6 +156,8 @@ type DetailedContractLineRow = {
   contract_line_type: string;
   billing_frequency: string;
   billing_timing?: "arrears" | "advance";
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
 };
 
 type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
@@ -578,6 +585,8 @@ const ContractTemplateDetail: React.FC = () => {
                 | "advance",
               rate: line.rate ?? null,
               display_kind: (line as { display_kind?: string }).display_kind,
+              invoice_line_description: (line as DetailedContractLineRow).invoice_line_description ?? null,
+              invoice_line_subtitle: (line as DetailedContractLineRow).invoice_line_subtitle ?? null,
               services,
             } as TemplateContractLine;
           }),
@@ -2112,6 +2121,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     rateCents: number,
     billingTiming: "arrears" | "advance",
     invoiceLineDescription: string | null,
+    invoiceLineSubtitle?: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2123,6 +2133,13 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
+      }
+      if (invoiceLineSubtitle !== undefined) {
+        // Template-line branch of updateContractLine: text-only patch.
+        const textResult = await updateContractLine(contractLineId, { invoice_line_subtitle: invoiceLineSubtitle });
+        if (isReturnedActionError(textResult)) {
+          throw new Error(getErrorMessage(textResult));
+        }
       }
       setEditingLine(null);
       onServicesChanged();
@@ -2256,6 +2273,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             billing_timing: editingLine.billing_timing,
             contract_line_type: editingLine.contract_line_type,
             invoice_line_description: editingLine.invoice_line_description ?? null,
+            invoice_line_subtitle: editingLine.invoice_line_subtitle ?? null,
           }}
           currencyCode={currencyCode}
           exactMinorUnits

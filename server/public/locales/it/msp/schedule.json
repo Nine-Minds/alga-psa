@@ -472,18 +472,37 @@
         "noLimit": "Nessun limite"
       },
       "actions": {
-        "save": "Salva regole di servizio"
+        "save": "Salva regole di servizio",
+        "savePortalBooking": "Salva impostazioni di prenotazione del portale"
       },
       "feedback": {
         "selectServiceError": "Seleziona un servizio",
         "saveSuccess": "Regole del servizio salvate",
         "saveError": "Impossibile salvare le regole del servizio",
         "deleteSuccess": "Regole del servizio eliminate",
-        "deleteError": "Impossibile eliminare le regole del servizio"
+        "deleteError": "Impossibile eliminare le regole del servizio",
+        "portalBookingSaveSuccess": "Impostazioni di prenotazione del portale clienti salvate"
       },
       "deleteDialog": {
         "title": "Elimina regole del servizio",
         "message": "Sei sicuro di voler eliminare le regole per {{serviceName}}? Questa azione non può essere annullata."
+      },
+      "portalBooking": {
+        "title": "Prenotazioni nel portale clienti",
+        "description": "Ciò che i clienti vedono quando richiedono un appuntamento dal portale."
+      },
+      "portalHideContractServices": {
+        "label": "Mostra nel portale clienti solo i servizi configurati per la prenotazione",
+        "help": "Nasconde i servizi che i clienti ereditano dai loro contratti: il portale elenca solo i servizi configurati sopra con «Consenti prenotazione senza contratto»."
+      },
+      "portalDefaultService": {
+        "label": "Servizio di prenotazione predefinito",
+        "none": "Nessun valore predefinito: scelta del cliente",
+        "help": "Viene preselezionato per i clienti, così non devono mai scegliere un servizio. Scegli uno dei servizi configurati: finché non lo fai, non viene preselezionato nulla."
+      },
+      "portalShowServiceRates": {
+        "label": "Mostra ai clienti le tariffe dei servizi",
+        "help": "Se disattivato, i clienti non vedono mai il prezzo di un servizio durante la prenotazione."
       }
     },
     "exceptions": {

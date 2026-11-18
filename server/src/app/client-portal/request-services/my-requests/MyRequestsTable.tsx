@@ -6,6 +6,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { getSubmissionStatusPresentation } from '../submissionStatusPresentation';
 
 export interface MyRequestsTableRow {
   submission_id: string;
@@ -69,18 +70,7 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
         dataIndex: 'execution_status',
         render: (value) => {
           const status = value as MyRequestsTableRow['execution_status'];
-          const tone =
-            status === 'succeeded'
-              ? 'success'
-              : status === 'failed'
-                ? 'error'
-                : 'warning';
-          const label =
-            status === 'succeeded'
-              ? labels.statuses.succeeded
-              : status === 'failed'
-                ? labels.statuses.failed
-                : labels.statuses.pending;
+          const { tone, label } = getSubmissionStatusPresentation(status, labels.statuses);
           return <Badge variant={tone}>{label}</Badge>;
         },
       },

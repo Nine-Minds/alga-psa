@@ -14,6 +14,7 @@ import { MutedUsersScreen } from "../screens/MutedUsersScreen";
 import { ClientDetailScreen } from "../screens/ClientDetailScreen";
 import { ContactDetailScreen } from "../screens/ContactDetailScreen";
 import { ProjectTaskDetailScreen } from "../screens/ProjectTaskDetailScreen";
+import { ProjectDetailScreen } from "../screens/ProjectDetailScreen";
 import { WorkflowTaskDetailScreen } from "../screens/WorkflowTaskDetailScreen";
 import { StockProductDetailScreen } from "../screens/StockProductDetailScreen";
 import { StockUnitDetailScreen } from "../screens/StockUnitDetailScreen";
@@ -22,6 +23,11 @@ import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
 import { CountSessionScreen } from "../screens/CountSessionScreen";
 import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
 import { AssetDetailScreen } from "../screens/AssetDetailScreen";
+import { ScanScreen } from "../screens/ScanScreen";
+import { SearchScreen } from "../screens/SearchScreen";
+import { AuditSetupScreen } from "../screens/AuditSetupScreen";
+import { AuditSessionScreen } from "../screens/AuditSessionScreen";
+import { AuditSummaryScreen } from "../screens/AuditSummaryScreen";
 import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -41,6 +47,9 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tUserActivities } = useTranslation("userActivities");
   const { t: tInventory } = useTranslation("inventory");
   const { t: tOpportunities } = useTranslation("opportunities");
+  const { t: tProjects } = useTranslation("projects");
+  const { t: tAssets } = useTranslation("assets");
+  const { t: tSearch } = useTranslation("search");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -129,6 +138,14 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             })}
           />
           <Stack.Screen
+            name="ProjectDetail"
+            component={ProjectDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.projectName ?? tProjects("title", "Projects"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
             name="WorkflowTaskDetail"
             component={WorkflowTaskDetailScreen}
             options={({ navigation }) => ({
@@ -189,6 +206,46 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={AssetDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.assetName ?? tInventory("asset.title", "Asset"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="Scan"
+            component={ScanScreen}
+            options={({ navigation }) => ({
+              title: tInventory("segments.scan", "Scan"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="Search"
+            component={SearchScreen}
+            options={({ navigation }) => ({
+              title: tSearch("title", "Search"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSetup"
+            component={AuditSetupScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.setupTitle", "New audit"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSession"
+            component={AuditSessionScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.sessionTitle", "Audit"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AuditSummary"
+            component={AuditSummaryScreen}
+            options={({ navigation }) => ({
+              title: tAssets("audit.summaryTitle", "Audit summary"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

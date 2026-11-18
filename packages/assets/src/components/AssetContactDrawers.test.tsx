@@ -12,6 +12,7 @@ import { ContactDrawerContext } from '@alga-psa/ui';
 
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { ContactAssetsSection } from './ContactAssetsSection';
+import { AssetSurfaceAccessProvider } from '../context/AssetSurfaceAccessContext';
 
 const mockLoadDrawerData = vi.fn();
 const mockGetContactAssignedAssets = vi.fn();
@@ -113,6 +114,21 @@ describe('asset ↔ contact drawers', () => {
     const link = document.getElementById('asset-assignee-link')!;
     expect(link.tagName).toBe('A');
     expect(link.getAttribute('href')).toBe('/msp/contacts/contact-1');
+  });
+
+  it('offers Assign on an open surface and leaves it out of a read-only one (S30 seat technician)', () => {
+    render(assigneeRow(undefined));
+    expect(document.getElementById('asset-assign-button')).toBeTruthy();
+    cleanup();
+
+    render(
+      <AssetSurfaceAccessProvider access={{ closedActions: ['create', 'update', 'delete'], closedOperations: [], closedFields: [] }}>
+        {assigneeRow(undefined)}
+      </AssetSurfaceAccessProvider>
+    );
+    // The assignee is still shown; only the write control is gone.
+    expect(document.getElementById('asset-assignee-link')?.textContent).toBe('Dorothy Gale');
+    expect(document.getElementById('asset-assign-button')).toBeNull();
   });
 
   it('opens an assigned asset in the asset drawer from the contact page', async () => {

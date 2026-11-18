@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import {
   TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_SOURCE,
   type TicketActivityChanges,
   type WriteTicketActivityInput,
 } from './types';
@@ -167,6 +168,26 @@ export async function writeTicketActivity(
     }
   }
 
+  // A service-principal user acting as itself is a distinct actor kind. Under
+  // act-as the actor stays the human (`user`) and the principal is recorded via.
+  let actorType: string = actor.actorType;
+  const viaPrincipalUserId = actor.viaPrincipalUserId ?? null;
+  // The human is the actor under act-as, whichever channel the request arrived on.
+  if (viaPrincipalUserId && actorType === TICKET_ACTIVITY_ACTOR.API) actorType = TICKET_ACTIVITY_ACTOR.USER;
+  // Service identities enter through the API boundary; interactive UI and
+  // inbound-email writes already know their actor kind and need no user lookup.
+  if (
+    input.source === TICKET_ACTIVITY_SOURCE.API &&
+    (actorType === TICKET_ACTIVITY_ACTOR.USER || actorType === TICKET_ACTIVITY_ACTOR.API) &&
+    actor.userId &&
+    !viaPrincipalUserId
+  ) {
+    const owner = await tenantScopedTable(knex, 'users', input.tenant)
+      .where({ user_id: actor.userId })
+      .first('user_type');
+    if (owner?.user_type === 'service') actorType = TICKET_ACTIVITY_ACTOR.SERVICE_PRINCIPAL;
+  }
+
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
@@ -177,7 +198,7 @@ export async function writeTicketActivity(
     event_type: input.eventType,
     entity_type: input.entityType,
     entity_id: input.entityId ?? null,
-    actor_type: actor.actorType,
+    actor_type: actorType,
     actor_user_id: actor.userId ?? null,
     actor_contact_id: actor.contactId ?? null,
     actor_display_name: displayName,
@@ -187,6 +208,7 @@ export async function writeTicketActivity(
     changes: JSON.stringify(changes),
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),
+    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
   });
 
   return auditId;

@@ -1,0 +1,80 @@
+{
+  "testedSourceRevision": "ea8086eb4c993e208a5ca25c694ea081a4a809f6",
+  "principal": {
+    "id": "2582ac47-d979-4d61-8a58-cc79b944de80",
+    "email": "smoke-authz-3039@example.com",
+    "type": "client",
+    "rbac": [
+      {
+        "role_name": "Admin",
+        "resource": "ticket",
+        "action": "read"
+      },
+      {
+        "role_name": "Admin",
+        "resource": "ticket",
+        "action": "update"
+      }
+    ]
+  },
+  "ticket": "aa569323-8532-4812-8423-fb0bfd9dd505",
+  "knownAssignmentId": "b7ebc014-9c5b-4de9-a9d4-667b24532ebb",
+  "results": [
+    {
+      "name": "getTicketResources",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot access ticket\"}\n"
+    },
+    {
+      "name": "addTicketResource",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot access ticket\"}\n"
+    },
+    {
+      "name": "removeTicketResource",
+      "status": 200,
+      "body": "0:{\"a\":\"$@1\",\"q\":\"\",\"i\":true,\"b\":\"development\"}\n1:D\"$2\"\n1:{\"permissionError\":\"Permission denied: Cannot access ticket\"}\n"
+    }
+  ],
+  "before": {
+    "ticket": [
+      {
+        "ticket_id": "aa569323-8532-4812-8423-fb0bfd9dd505",
+        "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+      }
+    ],
+    "staffing": [
+      {
+        "assignment_id": "b7ebc014-9c5b-4de9-a9d4-667b24532ebb",
+        "ticket_id": "aa569323-8532-4812-8423-fb0bfd9dd505",
+        "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "additional_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "role": "support",
+        "assigned_at": "2026-11-04T20:54:54.404Z"
+      }
+    ],
+    "audit": [],
+    "events": []
+  },
+  "after": {
+    "ticket": [
+      {
+        "ticket_id": "aa569323-8532-4812-8423-fb0bfd9dd505",
+        "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1"
+      }
+    ],
+    "staffing": [
+      {
+        "assignment_id": "b7ebc014-9c5b-4de9-a9d4-667b24532ebb",
+        "ticket_id": "aa569323-8532-4812-8423-fb0bfd9dd505",
+        "assigned_to": "6fb0c1d5-c732-45b2-96a1-96bbc6a639f1",
+        "additional_user_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+        "role": "support",
+        "assigned_at": "2026-11-04T20:54:54.404Z"
+      }
+    ],
+    "audit": [],
+    "events": []
+  },
+  "unchanged": true
+}
