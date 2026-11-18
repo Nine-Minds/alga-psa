@@ -216,6 +216,8 @@
   "resetFilters": "Resetuj",
   "filters": {
     "allStatuses": "Wszystkie statusy",
+    "allClients": "Wszyscy klienci",
+    "unknownClient": "Nieznany klient",
     "allOpen": "Wszystkie otwarte zgłoszenia",
     "allClosed": "Wszystkie zamknięte zgłoszenia",
     "allPriorities": "Wszystkie priorytety",
@@ -256,6 +258,8 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
+    "matchMode": "Dopasowanie",
+    "excludingLabel": "Bez {{label}}",
     "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
     "clearFilters": "Wyczyść filtry",
     "location": "Lokalizacja",

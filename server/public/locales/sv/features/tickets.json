@@ -182,6 +182,8 @@
   "resetFilters": "Återställ",
   "filters": {
     "allStatuses": "Alla statusar",
+    "allClients": "Alla kunder",
+    "unknownClient": "Okänd kund",
     "allOpen": "Alla öppna ärenden",
     "allClosed": "Alla stängda ärenden",
     "allPriorities": "Alla prioriteter",
@@ -222,6 +224,8 @@
     "clientTags": "Kundtaggar",
     "tagModeAny": "Någon av",
     "tagModeNone": "Ingen av",
+    "matchMode": "Matcha",
+    "excludingLabel": "Utom {{label}}",
     "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
     "clearFilters": "Rensa filter",
     "location": "Plats",

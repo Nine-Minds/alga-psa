@@ -214,6 +214,8 @@
   "resetFilters": "Reiniciar",
   "filters": {
     "allStatuses": "Todos os status",
+    "allClients": "Todos os clientes",
+    "unknownClient": "Cliente desconhecido",
     "allOpen": "Todos os tickets abertos",
     "allClosed": "Todos os tickets fechados",
     "allPriorities": "Todas as prioridades",
@@ -254,6 +256,8 @@
     "clientTags": "Tags do cliente",
     "tagModeAny": "Qualquer um de",
     "tagModeNone": "Nenhum de",
+    "matchMode": "Correspondência",
+    "excludingLabel": "Excluindo {{label}}",
     "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados.",
     "clearFilters": "Limpar filtros",
     "location": "Localização",

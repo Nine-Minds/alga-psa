@@ -13,6 +13,7 @@ import type { EntityAvatarProps } from './EntityAvatar';
 import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientNames } from '../hooks/useClientNames';
 import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import { useTranslation } from '../lib/i18n/client';
 import type { AutomationProps } from '../ui-reflection/types';
@@ -51,15 +52,13 @@ export type ClientPickerSearchFn = (
   params: ClientPickerSearchParams
 ) => Promise<{ clients: PickerClientOption[]; total: number }>;
 
-export interface AsyncClientPickerProps {
+interface AsyncClientPickerBaseProps {
   id?: string;
   /**
    * Server search (`searchClientsForPicker`). Optional: falls back to the searcher supplied by
    * `ClientPickerSearchProvider` (mounted in the MSP shells). An explicit prop wins.
    */
   searchClients?: ClientPickerSearchFn;
-  onSelect: (clientId: string | null) => void;
-  selectedClientId: string | null;
   filterState?: ClientPickerStatusFilter;
   onFilterStateChange?: (state: ClientPickerStatusFilter) => void;
   clientTypeFilter?: ClientPickerTypeFilter;
@@ -83,7 +82,30 @@ export interface AsyncClientPickerProps {
   disabled?: boolean;
   pageSize?: number;
   debounceMs?: number;
+  /** Rendered in the list footer, above "Add new client" (multi mode: once something is selected). */
+  footerContent?: React.ReactNode;
+  /** Rewrites the trigger text once something is selected, e.g. to mark an exclusion. */
+  formatSelectedLabel?: (label: string) => string;
 }
+
+/** One client; picking a row commits it and closes the list. */
+interface AsyncClientPickerSingleProps {
+  onSelect: (clientId: string | null) => void;
+  selectedClientId: string | null;
+  selectedClientIds?: undefined;
+  onSelectedClientIdsChange?: undefined;
+}
+
+/** Many clients; picking a row toggles it and the list stays open. */
+interface AsyncClientPickerMultiProps {
+  selectedClientIds: string[];
+  onSelectedClientIdsChange: (clientIds: string[]) => void;
+  onSelect?: undefined;
+  selectedClientId?: undefined;
+}
+
+export type AsyncClientPickerProps = AsyncClientPickerBaseProps &
+  (AsyncClientPickerSingleProps | AsyncClientPickerMultiProps);
 
 const DEFAULT_PAGE_SIZE = 25;
 
@@ -206,7 +228,9 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   id = 'client-picker',
   searchClients: searchClientsProp,
   onSelect,
-  selectedClientId,
+  selectedClientId = null,
+  selectedClientIds,
+  onSelectedClientIdsChange,
   filterState,
   onFilterStateChange,
   clientTypeFilter,
@@ -226,6 +250,8 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   disabled = false,
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs,
+  footerContent: extraFooter,
+  formatSelectedLabel,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
@@ -238,38 +264,16 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   const status = filterState ?? internalStatus;
   const clientType = clientTypeFilter ?? internalType;
 
-  // Every client we've seen (loaded pages + hydrated), for labels/avatars of the selection.
-  const [known, setKnown] = useState<Record<string, PickerClientOption>>({});
-  const hydratedRef = useRef<Set<string>>(new Set());
+  // Every client we've seen (loaded pages + hydrated), for labels/avatars of the selection. Names
+  // for selected ids that are off the loaded page come from one batched `ids` lookup.
+  const isMulti = selectedClientIds !== undefined;
+  const selectedIds = useMemo(
+    () => (selectedClientIds !== undefined ? selectedClientIds : selectedClientId ? [selectedClientId] : []),
+    [selectedClientIds, selectedClientId],
+  );
   const searchRef = useRef(searchClients);
   searchRef.current = searchClients;
-
-  const remember = useCallback((clients: PickerClientOption[]) => {
-    if (clients.length === 0) return;
-    setKnown((prev) => {
-      const next = { ...prev };
-      for (const c of clients) next[c.client_id] = c;
-      return next;
-    });
-  }, []);
-
-  // Hydrate the selected value once per id when it isn't known yet.
-  useEffect(() => {
-    if (!selectedClientId || known[selectedClientId] || hydratedRef.current.has(selectedClientId)) return;
-    hydratedRef.current.add(selectedClientId);
-    let cancelled = false;
-    searchRef
-      .current({ ids: [selectedClientId] })
-      .then((result) => {
-        if (!cancelled) remember(result.clients);
-      })
-      .catch((error) => {
-        console.error('[AsyncClientPicker] Failed to load selected client:', error);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedClientId, known, remember]);
+  const { clients: known, remember } = useClientNames(selectedIds, searchClients);
 
   // Disabled state is presentation only: read through refs and keyed by content, so a new-but-equal
   // Set (or a tooltip change) from a parent re-render never re-issues the server query.
@@ -324,6 +328,27 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   );
 
   const selected = selectedClientId ? known[selectedClientId] : undefined;
+  // Multi trigger: the one client's name, or a count. Wording is translated here, not by the select.
+  const multiLabel =
+    selectedIds.length === 0
+      ? undefined
+      : selectedIds.length === 1
+        ? known[selectedIds[0]]?.client_name
+        : t('pickers.clientsSelectedCount', { count: selectedIds.length, defaultValue: '{{count}} clients' });
+  const selectionProps = isMulti
+    ? {
+        values: selectedIds,
+        onValuesChange: (ids: string[]) => {
+          // Disabled rows are not selectable, but a selection already holding one may drop it.
+          onSelectedClientIdsChange!(ids.filter((cid) => !disabledClientIds?.has(cid) || selectedIds.includes(cid)));
+        },
+      }
+    : {
+        value: selectedClientId ?? '',
+        onChange: (value: string) => {
+          if (value !== selectedClientId && !disabledClientIds?.has(value)) onSelect!(value);
+        },
+      };
 
   const handleStatus = (state: ClientPickerStatusFilter) => {
     if (filterState === undefined) setInternalStatus(state);
@@ -338,18 +363,18 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
     <AsyncSearchableSelect
       id={id}
       triggerId={`${id}-trigger`}
-      value={selectedClientId ?? ''}
-      onChange={(value) => {
-        if (value !== selectedClientId && !disabledClientIds?.has(value)) onSelect(value);
-      }}
+      {...selectionProps}
       loadOptions={loadOptions}
       limit={pageSize}
       debounceMs={debounceMs}
       placeholder={placeholder}
-      selectedLabel={selected?.client_name}
-      selectedTrailing={<EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
+      selectedLabel={(() => {
+        const label = isMulti ? multiLabel : selected?.client_name;
+        return label && formatSelectedLabel ? formatSelectedLabel(label) : label;
+      })()}
+      selectedTrailing={isMulti ? undefined : <EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
       selectedIcon={
-        selected ? (
+        !isMulti && selected ? (
           <ClientAvatar
             clientId={selected.client_id}
             clientName={selected.client_name}
@@ -382,24 +407,29 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
         />
       }
       footerContent={
-        onAddNew
+        onAddNew || (extraFooter && (!isMulti || selectedIds.length > 0))
           ? ({ close }) => (
-              <Button
-                id="client-picker-add-new-btn"
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 rounded-none text-primary"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  close();
-                  onAddNew();
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
-              </Button>
+              <>
+                {(!isMulti || selectedIds.length > 0) && extraFooter}
+                {onAddNew && (
+                  <Button
+                    id="client-picker-add-new-btn"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 rounded-none text-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      close();
+                      onAddNew();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
+                  </Button>
+                )}
+              </>
             )
           : undefined
       }

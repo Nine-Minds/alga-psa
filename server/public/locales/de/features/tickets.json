@@ -182,6 +182,8 @@
   "resetFilters": "Zurücksetzen",
   "filters": {
     "allStatuses": "Alle Status",
+    "allClients": "Alle Kunden",
+    "unknownClient": "Unbekannter Kunde",
     "allOpen": "Alle offenen Tickets",
     "allClosed": "Alle geschlossenen Tickets",
     "allPriorities": "Alle Prioritäten",
@@ -222,6 +224,8 @@
     "clientTags": "Kunden-Tags",
     "tagModeAny": "Mindestens eines von",
     "tagModeNone": "Keines von",
+    "matchMode": "Treffer",
+    "excludingLabel": "Ohne {{label}}",
     "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert.",
     "clearFilters": "Filter löschen",
     "location": "Standort",
