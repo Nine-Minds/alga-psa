@@ -244,7 +244,7 @@ export function useCommentDraft(
         commentSendInFlightRef.current = false;
       }
     },
-    [api, client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, isTicket, operationalOnly, session, showToast, ticketId],
+    [api, client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, isTicket, operationalOnly, session, setComments, showToast, t, ticketId],
   );
 
   // Lean reply path: optimistic insert nested under the parent, POST with

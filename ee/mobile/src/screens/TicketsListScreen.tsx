@@ -222,7 +222,7 @@ export function TicketsListScreen({ navigation, route, onSelectTicket, selectedT
     }
   }, [searchInput, search]);
 
-  const apiFilters = useMemo(() => {
+  const computedApiFilters = useMemo(() => {
     if (!session) return undefined;
     const out: Record<string, unknown> = {};
     const statusIds = filters.statusNames.length > 0
@@ -259,6 +259,15 @@ export function TicketsListScreen({ navigation, route, onSelectTicket, selectedT
 
     return withContactFilter(withClientFilter(withTagsFilter(out, filters.tags), clientFilterId), contactFilterId);
   }, [clientFilterId, contactFilterId, filters, session, statusOptions]);
+
+  // Keep the filter object's identity stable while its content is unchanged
+  // (e.g. statusOptions arriving), so loadPage and the initial-load effect
+  // don't refetch the list and stats on mount.
+  const apiFiltersKey = computedApiFilters ? JSON.stringify(computedApiFilters) : undefined;
+  const apiFilters = useMemo<Record<string, unknown> | undefined>(
+    () => (apiFiltersKey ? JSON.parse(apiFiltersKey) : undefined),
+    [apiFiltersKey],
+  );
 
   const clearClientFilter = useCallback(() => {
     navigation.setParams({ clientId: undefined, clientName: undefined });

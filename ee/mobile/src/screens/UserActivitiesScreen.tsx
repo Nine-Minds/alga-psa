@@ -772,10 +772,11 @@ export function UserActivitiesScreen({ navigation }: Props) {
     </View>
   );
 
+  const hasContent = grouped ? groups.length > 0 : items.length > 0;
   let body: ReactNode;
-  if (initialLoading && items.length === 0 && groups.length === 0) {
+  if (initialLoading && !hasContent) {
     body = <LoadingState message={t("list.loading", { defaultValue: "Loading your activities…" })} />;
-  } else if (error && items.length === 0 && groups.length === 0) {
+  } else if (error && !hasContent) {
     body = (
       <ErrorState
         title={t("list.unableToLoad", { defaultValue: "Unable to load activities" })}
