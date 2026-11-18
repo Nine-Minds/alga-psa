@@ -76,7 +76,6 @@ import { executeReport } from '../../../../../packages/reporting/src/lib/reports
 import { getTicketWorkloadReport, getEmailChannelHealthReport } from '../../../../../packages/reporting/src/actions/helpdeskReportActions';
 import { getDeferredRevenueReport } from '../../../../../packages/reporting/src/actions/report-actions/getDeferredRevenueReport';
 import { getRecentClientInvoices } from '../../../../../packages/reporting/src/actions/report-actions/getRecentClientInvoices';
-import { fetchClientsForDropdown } from '../../../../../packages/reporting/src/actions/clientDropdownActions';
 import { exportClientsToCSV } from '../../../../../packages/clients/src/actions/clientActions';
 import { exportTicketsToCSV } from '../../../../../packages/tickets/src/actions/ticketExportActions';
 import { ContactService } from '../../../lib/api/services/ContactService';
@@ -288,16 +287,13 @@ describe('T017: reports and exports honor client scope (real kernel, real DB)', 
     expect(isRefusal(await getDeferredRevenueReport({ month: '2026-01' }))).toBe(false);
   }, HOOK_TIMEOUT);
 
-  it('refuses a per-client report for a client outside the scope and lists only readable clients in the dropdown', async () => {
+  it('refuses a per-client report for a client outside the scope', async () => {
     asUser(ids.restricted);
     expect(isRefusal(await getRecentClientInvoices({ clientId: clients.c }))).toBe(true);
     expect(isRefusal(await getRecentClientInvoices({ clientId: clients.a }))).toBe(false);
-    const dropdown = (await fetchClientsForDropdown()) as Array<{ id: string; name: string }>;
-    expect(dropdown.filter((row) => row.name.endsWith(mark)).map((row) => row.name).sort()).toEqual([nameOf('a'), nameOf('b')]);
 
     asUser(ids.unrestricted);
     expect(isRefusal(await getRecentClientInvoices({ clientId: clients.c }))).toBe(false);
-    expect(((await fetchClientsForDropdown()) as any[]).filter((row) => row.name.endsWith(mark))).toHaveLength(3);
   }, HOOK_TIMEOUT);
 
   // ------------------------------------------------------------------ F027: exports

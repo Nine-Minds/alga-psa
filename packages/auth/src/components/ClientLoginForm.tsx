@@ -9,6 +9,7 @@ import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-re
 import type { FormComponent, FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
 import { useTranslation } from '@alga-psa/ui/lib';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
+import type { SsoProviderId } from '../lib/sso/types';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
 import { appendPortalDomain } from '../lib/portalDomain';
@@ -20,9 +21,11 @@ interface ClientLoginFormProps {
   onTwoFactorRequired: () => void;
   tenantSlug?: string;
   portalDomain?: string;
+  /** SSO providers the tenant offers, from the server-rendered sign-in page. */
+  offeredProviders?: readonly SsoProviderId[];
 }
 
-export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug, portalDomain }: ClientLoginFormProps) {
+export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug, portalDomain, offeredProviders }: ClientLoginFormProps) {
   const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -275,6 +278,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           email={email}
           onError={onError}
           authSurface="client_portal"
+          offeredProviders={offeredProviders}
         />
       ) : null}
     </form>

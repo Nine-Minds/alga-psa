@@ -2,6 +2,23 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
+
+**Affected endpoint:** `POST /api/v1/tickets`
+
+Tickets created over REST used to ignore the board's default assignment and arrived unassigned, while the same board routed Quick Add and inbound-email tickets to its default user or team. Board-default routing now runs once in the shared ticket-creation path, so REST, Quick Add, and inbound email resolve assignment the same way.
+
+**Changes:**
+
+- New optional body field `assigned_team_id` (uuid or `null`). `assigned_to` now also accepts `null`.
+- An **omitted** field is filled from the board: omitted `assigned_to` takes the board's default user; the board's default team is applied only when **both** `assigned_to` and `assigned_team_id` are omitted. Applying the default team uses the normal team-assignment semantics: the team lead becomes the primary assignee when none was resolved, and team members are added as additional agents.
+- An **explicit** value always wins. A user id or team id is stored as sent. An explicit `null` keeps that field empty, and an explicit `assigned_to` (including `null`) also suppresses the board's default team, so a team lead never replaces the requested assignee.
+- Sending only `assigned_team_id` still lets the board's default user fill the omitted `assigned_to`.
+- Stale defaults soft-fail: a default user who is no longer a valid assignee, or a default team that no longer exists or has no lead, is skipped and the ticket is still created (`201`).
+- Assignment events published after creation carry the persisted assignee.
+
+**Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
+
 ## 2026-11-15 — Client billing profiles over REST (read-only)
 
 **New endpoints:** `GET /api/v1/clients/{id}/billing-profiles`, `GET /api/v1/clients/{id}/billing-profiles/{profileId}`
@@ -29,7 +46,7 @@ These routes checked the permissions `metadata`, `role` and `webhook`, but those
 - Every webhook operation is now scoped to the caller's tenant. A webhook ID from another tenant returns `404`. Deleting a webhook removes its deliveries and its signing secret. Before this change, delete did not filter by tenant.
 - `GET /webhooks/{id}/deliveries` returns `404` for an unknown webhook. Test sends are recorded as deliveries with `is_test`.
 - `PUT /webhooks/{id}` persists only fields that have a column. Event types are stored on the webhook's `event_types`.
-- Webhook templates are not implemented. `GET /webhooks/templates` returns `200` with an empty list, and `GET /webhooks/templates/{id}` returns `404`. `POST /webhooks/templates` and `POST /webhooks/templates/{id}/create` return `501 NOT_IMPLEMENTED`.
+- Webhook templates are not implemented. `GET /webhooks/templates` returns `200` with an empty list, and `GET /webhooks/templates/{id}` returns `404`. `POST /webhooks/templates`, `PUT` and `DELETE /webhooks/templates/{id}`, and `POST /webhooks/templates/{id}/create` return `501 NOT_IMPLEMENTED`.
 - Still `403` for every caller, including Admin: `/api/v1/rbac/permissions`, and endpoints that check the `category`, `country` or `search` permissions. These permissions are not declared yet.
 
 ## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin

@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Archive, Copy, MoreVertical, Plus, Sparkles, Undo2 } from 'lucide-react';
+import { Archive, Copy, MoreVertical, Plus, Sparkles, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -19,6 +19,10 @@ import {
   listServiceRequestTemplatesAction,
   unarchiveServiceRequestDefinitionAction,
 } from './actions';
+import {
+  DeleteServiceRequestDefinitionDialog,
+  type DeleteServiceRequestDefinitionTarget,
+} from './DeleteServiceRequestDefinitionDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +71,7 @@ export default function ServiceRequestsManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [definitionToDelete, setDefinitionToDelete] = useState<DeleteServiceRequestDefinitionTarget | null>(null);
 
   const hasTemplates = templates.length > 0;
   const archivedCount = useMemo(
@@ -219,6 +224,18 @@ export default function ServiceRequestsManagementPage() {
                   {t('management.actions.archive')}
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={() =>
+                  setDefinitionToDelete({
+                    definition_id: row.definition_id,
+                    name: row.name,
+                    lifecycle_state: row.lifecycle_state,
+                  })
+                }
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('management.actions.delete')}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ),
@@ -325,6 +342,12 @@ export default function ServiceRequestsManagementPage() {
         onPageChange={() => {}}
       />
       {loading && <div className="text-sm text-[rgb(var(--color-text-600))]">{t('management.loading')}</div>}
+      <DeleteServiceRequestDefinitionDialog
+        definition={definitionToDelete}
+        onClose={() => setDefinitionToDelete(null)}
+        onDeleted={reload}
+        onArchived={reload}
+      />
     </div>
   );
 }

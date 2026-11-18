@@ -38,6 +38,14 @@ describe('replaceTemplateVariables #each handling', () => {
     expect(rendered).toBe('<li>Kickoff — May 1</li>');
   });
 
+  it('drops {{#unless @first}} blocks, since the preview shows only the first item', () => {
+    const html = replaceTemplateVariables(
+      '{{#each ticket.changeItems}}<div style="margin:0;{{#unless @first}}margin-top:14px;{{/unless}}">{{this.label}}</div>{{/each}}',
+      { 'ticket.changeItems.label': 'Status' },
+    );
+    expect(html).toBe('<div style="margin:0;">Status</div>');
+  });
+
   it('leaves non-each content untouched', () => {
     const rendered = replaceTemplateVariables('Hello {{user.name}}!', { 'user.name': 'Dorothy' });
 

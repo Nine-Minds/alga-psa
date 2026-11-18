@@ -333,6 +333,16 @@
       "addLocation": "+ Dodaj lokalizację",
       "fromTemplate": "+ Z szablonu"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Usunąć tę lokalizację?",
+        "message": "Ta lokalizacja ma jeszcze {{count}} pozycji. Wybierz, co z nimi zrobić.",
+        "moveOption": "Przenieś te pozycje do {{location}}",
+        "ungroupOption": "Zachowaj te pozycje i zakończ grupowanie według lokalizacji",
+        "deleteOption": "Usuń te pozycje",
+        "confirm": "Usuń lokalizację"
+      }
+    },
     "clientFacing": {
       "title": "Tekst widoczny dla klienta",
       "subtitle": "Pojawia się na PDF, pod sumami.",
@@ -588,10 +598,13 @@
       "groupHeading": "Lokalizacja {{index}}",
       "pickerPlaceholder": "Wybierz lokalizację",
       "unassigned": "Pozycje bez lokalizacji są tu wymienione, dopóki nie zostanie wybrana.",
+      "quoteWide": "Cała oferta",
+      "quoteWideHint": "Rabaty obowiązują w całej ofercie, więc nie są powiązane z lokalizacją.",
       "removeGroup": "Usuń lokalizację",
       "subtotal": "Suma częściowa lokalizacji",
       "addLocationButton": "+ Dodaj lokalizację",
       "needMoreLocations": "Ten klient ma tylko jedną aktywną lokalizację. Dodaj drugą lokalizację w ustawieniach klienta, aby włączyć oferty wielolokalizacyjne.",
+      "allLocationsInUse": "Każda aktywna lokalizacja tego klienta ma już grupę w tej ofercie.",
       "emptyGroup": "Brak pozycji dla tej lokalizacji."
     }
   },

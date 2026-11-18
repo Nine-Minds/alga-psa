@@ -45,15 +45,6 @@ A send path names the person, not the template. Each send in `ticketEmailSubscri
 
 A client template and its internal template are separate emails. `lookupEmailTemplate()` in `server/src/lib/notifications/emailTemplateLookup.ts` resolves a template by its exact name: the tenant's own row, then the stock system row. Within each, it tries the recipient's language, then English, then a row with no language. It never falls back to the internal template for a client send. A tenant's edit to one template, a switched-off subtype, or a user's opt-out applies to that email only.
 
-### Splitting a shared ticket email into a client template
-
-Use this when an email that today goes to both audiences needs its own client version.
-
-1. Add the client template file under `server/migrations/utils/templates/email/tickets/` and its subtype (category `Tickets`, `(client-facing)` in the description) to `emailCategoriesAndSubtypes.cjs`. Then write a migration that upserts both, as `20261115120000_add_client_facing_ticket_comment_closed_templates.cjs` does.
-2. Add the pair to `TICKET_EMAIL_CLIENT_VARIANTS` with `copiedFromShared: true`. That flag feeds `TICKET_EMAIL_TEMPLATES_COPIED_FROM`, which lets email branding recognise copied rows it wrote itself.
-3. Write a one-time copy migration so tenants keep sending clients exactly what they sent before. `20261115121000_copy_shared_ticket_email_setup_to_client_templates.cjs` is the model. It uses the planners in `server/migrations/utils/templates/_shared/copySharedTemplateSetup.cjs` to copy every `tenant_email_templates` row (all languages), switched-off `tenant_notification_subtype_settings` rows, and `user_notification_preferences` opt-outs to the client names. It only adds rows that are missing, writes one tenant at a time, and checks before it commits that every copy is byte-identical to its source.
-4. Add the template to the variable registry seed and the inventory, as described in [Adding a variable to a ticket email](#adding-a-variable-to-a-ticket-email).
-
 ### Branching one template by audience
 
 Every ticket email carries `recipient.isInternal`. A template that goes to both audiences can branch on it:

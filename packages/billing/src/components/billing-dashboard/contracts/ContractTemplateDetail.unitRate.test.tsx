@@ -47,9 +47,7 @@ vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
   getDefaultBillingSettings: async () => ({ defaultCurrencyCode: 'EUR' }),
 }));
 
-vi.mock('@alga-psa/billing/actions/contractSimulationActions', () => ({
-  listContractSimulationClients: async () => [],
-}));
+vi.mock('@alga-psa/billing/actions/contractSimulationActions', () => ({}));
 
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],

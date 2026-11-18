@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Anfrage eingereicht",
-    "requestIdLabel": "Anfrage-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Anfrage kann nicht eingereicht werden",
     "formTitle": "Anfrageformular",
     "noFields": "Keine Felder konfiguriert.",
@@ -43,10 +41,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Zurück zu Meine Anfragen",
-    "requestIdLabel": "Anfrage-ID:",
     "statusSection": "Status",
     "submittedAt": "Eingereicht: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Eingereichte Antworten",
     "noResponse": "Keine Antwort",
     "attachmentsTitle": "Anhänge",
@@ -71,5 +67,12 @@
   },
   "myRequestsAll": {
     "title": "Ihre Anfragen"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, eingereicht am {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket anzeigen"
   }
 }

@@ -1711,6 +1711,36 @@
        "type": "string",
        "description": "Pre-rendered HTML fragment listing the field changes applied when closing (rendered raw via triple-stache in HTML, and as plain text in the text body)",
        "example": "<ul style=\"margin:0;padding:0;list-style:none;\">...</ul>",
+       "availability": "available-unused",
+       "notes": "Superseded in stock templates by {{#each project.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+      },
+      {
+       "path": "project.changeItems",
+       "type": "array",
+       "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+       "example": "[{ label: 'Status', oldValue: 'In Progress', newValue: 'Completed' }]",
+       "availability": "used",
+       "notes": "Iterated with {{#each project.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc."
+      },
+      {
+       "path": "project.changeItems.label",
+       "type": "string",
+       "description": "Display name of the changed field.",
+       "example": "Status",
+       "availability": "used"
+      },
+      {
+       "path": "project.changeItems.oldValue",
+       "type": "string",
+       "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+       "example": "In Progress",
+       "availability": "used"
+      },
+      {
+       "path": "project.changeItems.newValue",
+       "type": "string",
+       "description": "The field's new value, resolved to a display name.",
+       "example": "Completed",
        "availability": "used"
       },
       {
@@ -2061,6 +2091,36 @@
        "type": "string",
        "description": "Pre-rendered HTML fragment listing the field changes (old vs new values); rendered raw via triple-stache in HTML and as plain text in the text body",
        "example": "<ul style=\"margin:0;padding:0;list-style:none;\">...</ul>",
+       "availability": "available-unused",
+       "notes": "Superseded in stock templates by {{#each project.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+      },
+      {
+       "path": "project.changeItems",
+       "type": "array",
+       "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+       "example": "[{ label: 'Status', oldValue: 'Planning', newValue: 'In Progress' }]",
+       "availability": "used",
+       "notes": "Iterated with {{#each project.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc."
+      },
+      {
+       "path": "project.changeItems.label",
+       "type": "string",
+       "description": "Display name of the changed field.",
+       "example": "Status",
+       "availability": "used"
+      },
+      {
+       "path": "project.changeItems.oldValue",
+       "type": "string",
+       "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+       "example": "Planning",
+       "availability": "used"
+      },
+      {
+       "path": "project.changeItems.newValue",
+       "type": "string",
+       "description": "The field's new value, resolved to a display name.",
+       "example": "In Progress",
        "availability": "used"
       },
       {
@@ -4691,6 +4751,50 @@
        "type": "string",
        "description": "Rendered HTML list of field changes (old\u2192new, grouped by updater/timestamp) shown in the 'Changes Made' box (rendered via {{{ }}}).",
        "example": "<ul><li>Priority: Medium \u2192 High</li></ul>",
+       "availability": "available-unused",
+       "notes": "Superseded in stock templates by {{#each ticket.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+      },
+      {
+       "path": "ticket.changeItems",
+       "type": "array",
+       "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+       "example": "[{ label: 'Priority', oldValue: 'Medium', newValue: 'High', updatedBy: '', updatedAt: '' }]",
+       "availability": "used",
+       "notes": "Iterated with {{#each ticket.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc. Bundled updates are flattened into one list: the first item of each update carries updatedBy/updatedAt."
+      },
+      {
+       "path": "ticket.changeItems.label",
+       "type": "string",
+       "description": "Display name of the changed field.",
+       "example": "Priority",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.oldValue",
+       "type": "string",
+       "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+       "example": "Medium",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.newValue",
+       "type": "string",
+       "description": "The field's new value, resolved to a display name.",
+       "example": "High",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.updatedBy",
+       "type": "string",
+       "description": "Bundled updates only: who made this update, set on the first item of each update and empty on the rest. Wrap a heading in {{#if this.updatedBy}}.",
+       "example": "Dana Whitfield",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.updatedAt",
+       "type": "string",
+       "description": "Bundled updates only: when that update was made, in the tenant's time zone and locale; set on the same item as updatedBy.",
+       "example": "Nov 17, 2026, 03:04 PM EST",
        "availability": "used"
       },
       {
@@ -4824,6 +4928,50 @@
        "type": "string",
        "description": "Rendered HTML list of field changes shown in the 'What Changed' box (rendered via {{{ }}}).",
        "example": "<ul><li>Status: New \u2192 In Progress</li></ul>",
+       "availability": "available-unused",
+       "notes": "Superseded in stock templates by {{#each ticket.changeItems}}; still assembled for templates customized before that, with fixed neutral colors."
+      },
+      {
+       "path": "ticket.changeItems",
+       "type": "array",
+       "description": "The field changes in this email, one item per field, laid out by the template's 'Changes Made' box. The template owns all colors, so email branding restyles it.",
+       "example": "[{ label: 'Status', oldValue: 'New', newValue: 'In Progress', updatedBy: '', updatedAt: '' }]",
+       "availability": "used",
+       "notes": "Iterated with {{#each ticket.changeItems}} in both HTML and text; refer to fields as {{this.label}} etc. Bundled updates are flattened into one list: the first item of each update carries updatedBy/updatedAt."
+      },
+      {
+       "path": "ticket.changeItems.label",
+       "type": "string",
+       "description": "Display name of the changed field.",
+       "example": "Status",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.oldValue",
+       "type": "string",
+       "description": "The field's previous value, resolved to a display name. Empty when the change has no previous value; wrap it in {{#if this.oldValue}}.",
+       "example": "New",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.newValue",
+       "type": "string",
+       "description": "The field's new value, resolved to a display name.",
+       "example": "In Progress",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.updatedBy",
+       "type": "string",
+       "description": "Bundled updates only: who made this update, set on the first item of each update and empty on the rest. Wrap a heading in {{#if this.updatedBy}}.",
+       "example": "Dana Whitfield",
+       "availability": "used"
+      },
+      {
+       "path": "ticket.changeItems.updatedAt",
+       "type": "string",
+       "description": "Bundled updates only: when that update was made, in the tenant's time zone and locale; set on the same item as updatedBy.",
+       "example": "Nov 17, 2026, 03:04 PM EST",
        "availability": "used"
       },
       {

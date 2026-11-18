@@ -1442,6 +1442,8 @@
       "client": "Contexto del cliente",
       "hypothetical": "Perfil de cliente hipotético",
       "open": "Simular",
+      "pickClient": "Seleccione un cliente",
+      "specificClient": "Un cliente concreto",
       "title": "Simulación de plantilla"
     },
     "pricing": {

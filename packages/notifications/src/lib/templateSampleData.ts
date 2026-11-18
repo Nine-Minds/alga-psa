@@ -53,3 +53,23 @@ export function getSampleDataForPreview(
   );
   return { ...extracted, ...getTemplateSampleData(templateName) };
 }
+
+/**
+ * Expand {{#each path}}...{{/each}} blocks once for previews and test emails,
+ * qualifying {{this.*}} references (including {{#if this.*}}) against the
+ * block's path so the registry's per-item examples (e.g. credits.items.creditId)
+ * resolve. One level only: sample data holds a single example item.
+ */
+export function expandEachBlocksForPreview(content: string): string {
+  // The single example item is the first, so {{#unless @first}} blocks drop out.
+  const withoutFirstGuards = content.replace(/\{\{#unless\s+@first\s*\}\}[\s\S]*?\{\{\/unless\}\}/g, '');
+  return withoutFirstGuards.replace(
+    /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
+    (_match, path: string, blockContent: string) =>
+      blockContent.replace(
+        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
+        (_inner, open: string, ifTag: string | undefined, key: string, close: string) =>
+          `${open}${ifTag ?? ''}${path}.${key}${close}`,
+      ),
+  );
+}

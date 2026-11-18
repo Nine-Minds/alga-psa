@@ -1225,11 +1225,23 @@
           "viewDetails": "Details bekijken"
         },
         "details": {
+          "contactsFailed_one": "{{count}} contactpersoon mislukt",
+          "contactsFailed_other": "{{count}} contactpersonen mislukt",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "en {{count}} meer",
           "noResults": "Geen tenantresultaten geregistreerd.",
+          "noticeHeading": "Opmerkingen",
+          "stages": {
+            "create": "aanmaken",
+            "link": "koppelen",
+            "match": "koppelen op e-mail"
+          },
           "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
+          "summaryFailed": "Mislukte contactpersonen: {{count}}",
           "summarySkipped": "Overgeslagen inrichtingsresultaten: {{count}}",
           "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "onbekend"
+          "unknownTenant": "onbekend",
+          "userUnknown": "onbekende gebruiker"
         },
         "empty": "Nog geen synchronisatieruns gevonden.",
         "errors": {
