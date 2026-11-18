@@ -88,7 +88,7 @@ export const submitVendorSupportRequest = withAuth(async (
     pageUrl: request.pageUrl,
   });
 
-  if (intake.ok) {
+  if (intake.ok === true) {
     lastSubmissionByUser.set(user.user_id, now);
     return intake.ticketNumber ? { success: true, ticketNumber: intake.ticketNumber } : { success: true };
   }
