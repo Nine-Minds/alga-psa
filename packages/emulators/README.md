@@ -985,7 +985,10 @@ An invoice created without `InvoiceNumber` takes the next number from the
 organisation's sequence (`INV-0001` by default). `set-invoice-number-sequence
 { next, prefix?, padding? }` continues that sequence elsewhere, as a Xero user
 would under Invoice settings, and `rename-invoice { invoiceId, invoiceNumber }`
-changes a number the way a person editing the invoice in Xero would. An update
+changes a number the way a person editing the invoice in Xero would.
+`clear-invoices { xeroTenantId? }` empties stored invoices without touching
+applications, consent or tokens, so a demo can restart without reconnecting
+Alga. An update
 by `InvoiceID` without a number keeps the stored one.
 
 `GET /Invoices?where=...` and `GET /Contacts?where=...` share one filter

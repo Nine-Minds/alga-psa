@@ -89,6 +89,13 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
   });
 
   reg.action({
+    name: 'clear-invoices',
+    description: 'Remove stored invoices (one organisation, or all) while keeping applications, consent and tokens',
+    params: z.object({ xeroTenantId: z.string().optional() }),
+    run: ({ xeroTenantId }) => core.clearInvoices(xeroTenantId),
+  });
+
+  reg.action({
     name: 'rename-invoice',
     description: 'Change an invoice\'s number inside Xero, as a Xero user would',
     params: z.object({ invoiceId: z.string().min(1), invoiceNumber: z.string().min(1) }),

@@ -79,6 +79,17 @@ describe('xero emulator: organisation-assigned invoice numbers', () => {
     expect(core.getInvoice(tenantId, String(created.InvoiceID)).InvoiceNumber).toBe('INV-0500');
   });
 
+  it('clear-invoices empties one organisation and keeps consent', () => {
+    const core = newCore();
+    core.registerApplication({ type: 'confidential', clientId: 'app', clientSecret: 's', redirectUris: ['http://x/cb'] });
+    core.setConnections('app', [core.defaultTenantId]);
+    invoice(core);
+    invoice(core);
+    expect(core.clearInvoices(core.defaultTenantId)).toEqual({ cleared: 2 });
+    expect(core.queryInvoices(core.defaultTenantId)).toEqual([]);
+    expect(core.connections('app')).toHaveLength(1);
+  });
+
   it('snapshot/restore round-trips invoices, consent, tokens and the sequence', () => {
     const core = newCore();
     core.registerApplication({ type: 'confidential', clientId: 'app', clientSecret: 's', redirectUris: ['http://x/cb'] });

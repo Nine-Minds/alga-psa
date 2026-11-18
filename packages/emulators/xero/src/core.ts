@@ -487,6 +487,21 @@ export class XeroEmulatorCore implements EmulatorCore {
     return { nextInvoiceNumber: `${this.invoiceNumberPrefix}${String(params.next).padStart(this.invoiceNumberPadding, '0')}` };
   }
 
+  /**
+   * Control-surface reset of one organisation's invoices (all organisations when
+   * omitted), keeping applications, consent and tokens so a connected Alga stays
+   * connected. Not a vendor operation: Xero never deletes numbered invoices.
+   */
+  clearInvoices(xeroTenantId?: string): { cleared: number } {
+    let cleared = 0;
+    for (const [tenantId, data] of this.orgData) {
+      if (xeroTenantId && tenantId !== xeroTenantId) continue;
+      cleared += data.invoices.size;
+      data.invoices.clear();
+    }
+    return { cleared };
+  }
+
   /** A person editing an invoice's number inside Xero. */
   renameInvoice(xeroTenantId: string, invoiceId: string, invoiceNumber: string): Record<string, unknown> {
     const invoice = this.getInvoice(xeroTenantId, invoiceId);
