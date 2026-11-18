@@ -57,6 +57,20 @@ describe('readResponseBody', () => {
     expect(cancelled).toBe(true);
   });
 
+  it('returns for a binary body whose cancel never settles (a tee branch, as Next.js patched fetch hands out)', async () => {
+    // Cancelling one branch of a tee settles only once the other branch is cancelled too; the other branch is
+    // never touched here, so awaiting the cancel would hang the tool call forever.
+    const [branch] = new ReadableStream({
+      start(c) {
+        c.enqueue(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
+      },
+    }).tee();
+    const r = new Response(branch, { headers: { 'content-type': 'application/pdf' } });
+    const timeout = new Promise<'timed out'>((resolve) => setTimeout(() => resolve('timed out'), 1000));
+    const outcome = await Promise.race([readResponseBody(r), timeout]);
+    expect(outcome).toEqual({ kind: 'binary', contentType: 'application/pdf', byteLength: null, fileName: null });
+  });
+
   it('reads an RFC 5987 filename and unknown length', async () => {
     const body = await readResponseBody(
       res(new Uint8Array([1, 2]), { 'content-type': 'application/pdf', 'content-disposition': "attachment; filename*=UTF-8''r%C3%A9sum%C3%A9.pdf" }),

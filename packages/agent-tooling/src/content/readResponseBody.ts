@@ -34,9 +34,14 @@ function fileNameFromDisposition(disposition: string | null): string | null {
   return (plain[2] ?? plain[1]).trim() || null;
 }
 
-async function cancelBody(res: Response): Promise<void> {
+/**
+ * Releases a body we will not read. Best-effort and deliberately not awaited: the cancel promise of a
+ * teed stream settles only once every branch is cancelled, and Next.js' patched server fetch hands
+ * out such a branch, so awaiting it hung the hosted server's binary call_api_endpoint forever.
+ */
+function releaseBody(res: Response): void {
   try {
-    await res.body?.cancel();
+    res.body?.cancel().catch(() => undefined);
   } catch {
     /* nothing to release */
   }
@@ -69,7 +74,7 @@ export async function readResponseBody(res: Response): Promise<UpstreamBody> {
     return { kind: 'text', value: text };
   }
 
-  await cancelBody(res);
+  releaseBody(res);
   const length = res.headers?.get?.('content-length');
   const parsed = length !== null && length !== undefined && length !== '' ? Number(length) : NaN;
   return {
