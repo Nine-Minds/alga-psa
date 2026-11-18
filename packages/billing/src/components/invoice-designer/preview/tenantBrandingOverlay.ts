@@ -1,4 +1,4 @@
-import type { QuoteViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
+import type { LabelTenantClient, QuoteViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
 import type { TenantParty } from '../../../lib/adapters/tenantPartyAdapter';
 
 /**
@@ -38,6 +38,30 @@ export function overlayInvoiceSampleTenant(
       name: party.name,
       address: party.address ?? null,
       logoUrl: party.logo_url ?? null,
+    },
+  };
+}
+
+/**
+ * The label (work-tag) sample carries `tenantClient` in the camelCase `LabelTenantClient` shape, not
+ * the snake_case party block the document samples use, so it needs its own overlay. `brandText` follows
+ * the renderer's rule (the name shows as text only when there is no logo); `buildLabelModel` re-derives
+ * it afterwards anyway, but the overlay keeps the sample self-consistent.
+ */
+export function overlayLabelSampleTenant<T extends { tenantClient?: LabelTenantClient | null }>(
+  model: T,
+  party: TenantParty | null,
+): T {
+  if (!party) {
+    return model;
+  }
+  const logoUrl = party.logo_url ?? null;
+  return {
+    ...model,
+    tenantClient: {
+      name: party.name,
+      logoUrl,
+      brandText: logoUrl ? null : party.name,
     },
   };
 }

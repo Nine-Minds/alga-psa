@@ -3,6 +3,7 @@ import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
+import type { RichTextRenderOptions } from '@alga-psa/formatting/blocknoteUtils';
 import { localizeTemplateAstForLocale } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
 import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
@@ -121,26 +122,8 @@ export async function inlineDocumentImageUrls(
   await Promise.all(
     Array.from(fileIds).map(async (fileId) => {
       try {
-        // LEVERAGE: friction file-store-ambient-tenant — FileStoreModel.findById scopes by ambient
-        // tenant context (AsyncLocalStorage), not by the connection/caller's tenant, so untrusted-viewer
-        // paths must bypass it and query tenantDb(knex, tenant) directly. A tenant-explicit variant belongs in the model.
-        const file = tenant
-          ? await tenantDb(knex, tenant)
-              .table<FileStore>('external_files')
-              .where({ file_id: fileId, is_deleted: false })
-              .first()
-          : await FileStoreModel.findById(knex, fileId);
-        if (!file?.storage_path) return;
-        if (tenant && file.tenant !== tenant) return;
-
-        const mime = (file.mime_type || '').toLowerCase();
-        if (!mime.startsWith('image/')) return;
-        if (Number(file.file_size) > MAX_INLINED_IMAGE_BYTES) return;
-
-        const buffer = await provider.download(file.storage_path);
-        // file_size is metadata; re-check the bytes actually read.
-        if (buffer.length > MAX_INLINED_IMAGE_BYTES) return;
-        replacements.set(fileId, `data:${mime};base64,${buffer.toString('base64')}`);
+        const dataUrl = await readDocumentImageDataUrl(provider, knex, tenant, fileId);
+        if (dataUrl) replacements.set(fileId, dataUrl);
       } catch {
         // Skip files that can't be resolved — the image will remain a URL
         // and render as a broken image, which is the existing behaviour.
@@ -159,6 +142,58 @@ export async function inlineDocumentImageUrls(
 
 // A value that is, in its entirety, a document view URL (optionally `?t=...`).
 const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?$/i;
+
+type StorageProvider = Awaited<ReturnType<typeof StorageProviderFactory.createProvider>>;
+
+/**
+ * Reads one stored file as a `data:image/...` URI. Returns null when the file is not inlinable
+ * (missing, deleted, another tenant's, not an image, too large); storage and database errors throw.
+ */
+async function readDocumentImageDataUrl(
+  provider: StorageProvider,
+  knex: Knex | Knex.Transaction,
+  tenant: string | undefined,
+  fileId: string,
+): Promise<string | null> {
+  // LEVERAGE: friction file-store-ambient-tenant — FileStoreModel.findById scopes by ambient
+  // tenant context (AsyncLocalStorage), not by the connection/caller's tenant, so untrusted-viewer
+  // paths must bypass it and query tenantDb(knex, tenant) directly. A tenant-explicit variant belongs in the model.
+  const file = tenant
+    ? await tenantDb(knex, tenant)
+        .table<FileStore>('external_files')
+        .where({ file_id: fileId, is_deleted: false })
+        .first()
+    : await FileStoreModel.findById(knex, fileId);
+  if (!file?.storage_path) return null;
+  if (tenant && file.tenant !== tenant) return null;
+
+  const mime = (file.mime_type || '').toLowerCase();
+  if (!mime.startsWith('image/')) return null;
+  if (Number(file.file_size) > MAX_INLINED_IMAGE_BYTES) return null;
+
+  const buffer = await provider.download(file.storage_path);
+  // file_size is metadata; re-check the bytes actually read.
+  if (buffer.length > MAX_INLINED_IMAGE_BYTES) return null;
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+/**
+ * Resolves a value that is entirely a `/api/documents/view/{id}` URL to a `data:` URI for `tenant`.
+ * Returns null when the file is legitimately not inlinable (missing, another tenant's, not an image,
+ * too large) and throws when storage or the database fails, so callers can tell an outage apart
+ * from a missing file.
+ */
+export async function resolveDocumentImageDataUrl(
+  url: string,
+  options: { knex: Knex | Knex.Transaction; tenant: string },
+): Promise<string | null> {
+  if (!WHOLE_DOC_VIEW_URL_RE.test(url)) {
+    throw new Error(`Not a document view URL: ${url}`);
+  }
+  const fileId = /\/api\/documents\/view\/([a-f0-9-]+)/i.exec(url)![1];
+  const provider = await StorageProviderFactory.createProvider();
+  return readDocumentImageDataUrl(provider, options.knex, options.tenant, fileId);
+}
 
 /**
  * Inline a single image URL field. Only a value that is *entirely* a
@@ -233,7 +268,7 @@ export async function inlineTemplateImageSources<T>(
 export const renderTemplateAstFragment = async (
   ast: TemplateAst,
   evaluation: TemplateEvaluationResult,
-  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat'> = {}
+  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat'> & { richText?: RichTextRenderOptions } = {}
 ): Promise<{ html: string; css: string; locale: string | undefined }> => {
   const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
   // Barcode prepass: async + server-only (qrcode / bwip-js are dynamically imported, never bundled
@@ -245,6 +280,7 @@ export const renderTemplateAstFragment = async (
     locale,
     dateFormat: options.dateFormat,
     t,
+    richText: options.richText,
   });
   return { html, css, locale };
 };

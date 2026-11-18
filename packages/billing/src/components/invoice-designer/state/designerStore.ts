@@ -449,7 +449,7 @@ const getDocumentAndPageNodes = (nodes: DesignerNode[]): {
   return { documentNode, pageNode };
 };
 
-const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
+export const resolveCurrentWorkspacePrintSettings = (nodes: DesignerNode[]) => {
   const { documentNode, pageNode } = getDocumentAndPageNodes(nodes);
   const documentMetadata = getNodeMetadata(documentNode);
   const documentPropSize = getNodePropSize(documentNode);

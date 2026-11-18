@@ -1,7 +1,7 @@
 'use client';
 
 import { documentTypeLabel } from './documentTypeLabel';
-import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Editor } from '@monaco-editor/react';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -41,10 +41,10 @@ import {
 } from '../../../lib/document-templates/registry';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
-import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
+import { resolveCurrentWorkspacePrintSettings, useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
+import { isWorksheetLabelTemplate } from '../../../lib/label-batch/layout';
 import {
   exportWorkspaceToTemplateAst,
-  exportWorkspaceToTemplateAstJson,
   importTemplateAstToWorkspace,
 } from '../../invoice-designer/ast/workspaceAst';
 import {
@@ -95,11 +95,47 @@ const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
   detail: 'Detail / reason',
   secondaryIdentifier: 'Secondary identifier',
   serialSuffix: 'Serial suffix',
+  assetSerialNumber: 'Full asset serial number',
+  ticketDescription: 'Ticket description',
   custodyLocation: 'Custody location',
   nextAction: 'Next action',
   tenantLogo: 'Company logo',
   tenantName: 'Company name',
+  assetName: 'Asset name',
+  assetManufacturer: 'Asset manufacturer',
+  assetModel: 'Asset model',
+  assetOs: 'Operating system',
+  assetCpu: 'CPU',
+  assetRam: 'RAM',
+  assetStorage: 'Storage',
 };
+
+// Kebab-case DOM ids for checkbox fields whose names are camelCase multi-word (reflection-UI id rules).
+// Pre-existing single-word ids stay as-is so automation harnesses keep working.
+const LABEL_FIELD_DOM_IDS: Partial<Record<LabelHideableField, string>> = {
+  assetSerialNumber: 'asset-serial-number',
+  ticketDescription: 'ticket-description',
+  assetName: 'asset-name',
+  assetManufacturer: 'asset-manufacturer',
+  assetModel: 'asset-model',
+  assetOs: 'asset-os',
+  assetCpu: 'asset-cpu',
+  assetRam: 'asset-ram',
+  assetStorage: 'asset-storage',
+};
+
+// Spec lines only exist on the full-page worksheet, like the full serial and the ticket description.
+const WORKSHEET_ONLY_LABEL_FIELDS: readonly LabelHideableField[] = [
+  'assetSerialNumber',
+  'ticketDescription',
+  'assetName',
+  'assetManufacturer',
+  'assetModel',
+  'assetOs',
+  'assetCpu',
+  'assetRam',
+  'assetStorage',
+];
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
 const isDocumentTemplateActionError = (value: unknown) =>
@@ -143,7 +179,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [hiddenFields, setHiddenFields] = useState<LabelHideableField[]>(
     () => initialTemplate.templateAst?.metadata?.labelSettings?.hiddenFields ?? [],
   );
-  const withLabelMetadata = (ast: TemplateAst): TemplateAst =>
+  const withLabelMetadata = useCallback((ast: TemplateAst): TemplateAst =>
     !isLabelTemplate
       ? ast
       : {
@@ -151,9 +187,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
           metadata: {
             ...(ast.metadata ?? {}),
             labelClass,
-            labelSettings: { hiddenFields },
+            labelSettings: {
+              ...ast.metadata?.labelSettings,
+              hiddenFields,
+            },
           },
-        };
+        }, [isLabelTemplate, labelClass, hiddenFields]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editorTab, setEditorTab] = useState<EditorTab>('visual');
@@ -173,6 +212,19 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const designerTransforms = useInvoiceDesignerStore((state) => state.transforms);
   const [designerHydrated, setDesignerHydrated] = useState(false);
+
+  // A ticket-work-tag template is a full-page customer worksheet when its declared page is portrait
+  // and at least 210 mm wide. The page size is the only gate; worksheets print on their declared paper.
+  const isWorksheetPage = useMemo(() => {
+    if (!isLabelTemplate) return false;
+    const printSettings = resolveCurrentWorkspacePrintSettings(designerNodes);
+    return isWorksheetLabelTemplate(labelClass, {
+      printSettings: {
+        paperPreset: printSettings.paperPreset,
+        ...(printSettings.customPageSize ? { customPageSize: printSettings.customPageSize } : {}),
+      },
+    });
+  }, [isLabelTemplate, labelClass, designerNodes]);
 
   // Transforms workspace shares the quote editor's preview-session reducer for its source/sample
   // controls. The generic preview itself is driven by the server action, not these scenarios — the
@@ -218,7 +270,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
   const generatedCodeViewSource = useMemo(() => {
     try {
-      return exportWorkspaceToTemplateAstJson(designerExportWorkspace());
+      return JSON.stringify(withLabelMetadata(exportWorkspaceToTemplateAst(designerExportWorkspace())), null, 2);
     } catch {
       return null;
     }
@@ -231,6 +283,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     designerShowRulers,
     designerSnapToGrid,
     designerTransforms,
+    withLabelMetadata,
   ]);
 
   // Hydrate designer workspace from the draft AST (once).
@@ -320,6 +373,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     previewNonce,
     previewLocale,
     debouncedNodes,
+    withLabelMetadata,
     t,
   ]);
 
@@ -470,6 +524,14 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                   }))}
                 />
               </div>
+              {labelClass === 'ticket-work-tag' && (
+                <p className="text-xs text-muted-foreground md:col-span-2">
+                  {t('documentTemplates.editor.fields.worksheetPageHint', {
+                    defaultValue:
+                      'A ticket work tag with portrait paper at least 210 mm wide (A4, Letter, Legal or qualifying custom paper) prints as a full-page customer worksheet, adding the full asset serial and ticket description fields. Smaller pages print as tags.',
+                  })}
+                </p>
+              )}
               <fieldset className="flex flex-col gap-2 text-sm md:col-span-2">
                 <legend className="font-medium text-foreground">
                   {t('documentTemplates.editor.fields.labelFields', { defaultValue: 'Fields shown on the label' })}
@@ -479,13 +541,32 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                     defaultValue: 'The record link (QR code) and the identifier are always shown.',
                   })}
                 </p>
+                {labelClass === 'ticket-work-tag' && isWorksheetPage && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('documentTemplates.editor.fields.worksheetFieldsHint', {
+                      defaultValue: 'Hiding the serial suffix also hides the full serial; hiding detail also hides the ticket description.',
+                    })}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
-                  {LABEL_HIDEABLE_FIELDS.map((field) => (
+                  {LABEL_HIDEABLE_FIELDS.filter(
+                    (field) =>
+                      !WORKSHEET_ONLY_LABEL_FIELDS.includes(field) ||
+                      (labelClass === 'ticket-work-tag' && isWorksheetPage),
+                  ).map((field) => (
                     <label key={field} className="flex items-center gap-2">
                       <input
-                        id={`document-template-label-field-${field}`}
+                        id={`document-template-label-field-${LABEL_FIELD_DOM_IDS[field] ?? field}`}
                         type="checkbox"
-                        checked={!hiddenFields.includes(field)}
+                        checked={
+                          !hiddenFields.includes(field) &&
+                          !(field === 'assetSerialNumber' && hiddenFields.includes('serialSuffix')) &&
+                          !(field === 'ticketDescription' && hiddenFields.includes('detail'))
+                        }
+                        disabled={
+                          (field === 'assetSerialNumber' && hiddenFields.includes('serialSuffix')) ||
+                          (field === 'ticketDescription' && hiddenFields.includes('detail'))
+                        }
                         onChange={(event) =>
                           setHiddenFields((current) =>
                             event.target.checked ? current.filter((f) => f !== field) : [...current, field],
