@@ -1716,7 +1716,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/documents',
     summary: 'Upload a ticket document',
-    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.',
+    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field and, optionally, `is_client_visible` (`true` or `false`, default `false`: internal only). Client-visible needs document:update in addition to the ticket update permission, and the returned document shows `is_client_visible`. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam },
     responses: ticketStdResponses({ code: 201, description: 'Document uploaded.' }),
