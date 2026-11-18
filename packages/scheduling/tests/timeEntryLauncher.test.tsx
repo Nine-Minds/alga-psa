@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
+import { formatZonedTime } from '../src/lib/timeEntryPeriodSelection';
 
 // Launcher construction coverage: the work item handed to whichever stage opens
 // keeps ticket/project/interaction context, and existing entries route to their
@@ -176,5 +177,32 @@ describe('launchTimeEntryForWorkItem', () => {
     const props = openedProps(openDrawer);
     expect(props.existingEntry.entry_id).toBe('entry-1');
     expect(props.savedSheet.id).toBe('sheet-old');
+  });
+
+  it('opens the new-entry drawer with the tenant-default wall clock (Brisbane 08:00 at 22:00Z)', async () => {
+    // getTimeEntryUserTimeZone now returns the effective zone; here the tenant default is Brisbane.
+    getTimeEntryUserTimeZone.mockResolvedValue('Australia/Brisbane');
+    fetchTimePeriods.mockResolvedValue([
+      { period_id: 'period-oct', start_date: '2026-10-19', end_date: '2026-10-26', timeSheetStatus: 'DRAFT', timeSheetId: 'sheet-oct' },
+    ]);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-19T22:00:00Z'));
+    try {
+      const openDrawer = vi.fn();
+      await launchTimeEntryForWorkItem({
+        openDrawer,
+        closeDrawer: vi.fn(),
+        context: { workItemId: 'ticket-1', workItemType: 'ticket', workItemName: 'Ticket 1' },
+      });
+
+      const props = openedProps(openDrawer);
+      expect(props.userTimeZone).toBe('Australia/Brisbane');
+      // The start picker renders formatZonedTime(defaultStartTime, userTimeZone).
+      expect(formatZonedTime(props.defaults.defaultStartTime, props.userTimeZone)).toBe('08:00');
+      expect(props.defaults.defaultStartTime.toISOString()).toBe('2026-10-19T22:00:00.000Z');
+      expect(formatZonedTime(props.defaults.defaultEndTime, props.userTimeZone)).toBe('09:00');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

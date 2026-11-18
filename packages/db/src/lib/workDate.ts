@@ -73,22 +73,39 @@ export function truncateToMinute(value: string | Date): Date {
   return new Date(Math.floor(epochMs / 60000) * 60000);
 }
 
+/**
+ * Return the given zone if it is a valid IANA zone, otherwise null.
+ * Blank, whitespace-only and non-string values count as unset.
+ */
+function validZoneOrNull(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    Temporal.TimeZone.from(trimmed);
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The zone this user works in: profile zone -> tenant default zone -> UTC.
+ * Used for both the time-entry display zone and the stored work_date/work_timezone,
+ * so the two always agree. Delegates to resolveEffectiveTimeZone.
+ */
 export async function resolveUserTimeZone(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   userId: string
 ): Promise<string> {
-  const row = await tenantDb(knexOrTrx, tenant).table('users')
-    .where({ user_id: userId })
-    .select('timezone')
-    .first();
-  return normalizeIanaTimeZone(row?.timezone ?? null);
+  return resolveEffectiveTimeZone(knexOrTrx, tenant, userId);
 }
 
-// LEVERAGE: pattern effective-timezone-resolver — duplicated in server/src/lib/utils/workDate.ts; consolidate into one implementation
 /**
  * Resolve the effective timezone for a user within a tenant.
  * Resolution chain: user timezone -> tenant timezone -> UTC.
+ * A blank or invalid zone at either level falls through to the next level.
  */
 export async function resolveEffectiveTimeZone(
   knexOrTrx: Knex | Knex.Transaction,
@@ -100,20 +117,14 @@ export async function resolveEffectiveTimeZone(
       .where({ user_id: userId })
       .select('timezone')
       .first();
-    if (userRow?.timezone) {
-      return normalizeIanaTimeZone(userRow.timezone);
-    }
+    const userTz = validZoneOrNull(userRow?.timezone);
+    if (userTz) return userTz;
   }
 
   const settingsRow = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
     .select('settings')
     .first();
-  const tenantTz = settingsRow?.settings?.timezone;
-  if (tenantTz && typeof tenantTz === 'string') {
-    return normalizeIanaTimeZone(tenantTz);
-  }
-
-  return 'UTC';
+  return validZoneOrNull(settingsRow?.settings?.timezone) ?? 'UTC';
 }
 
 /**

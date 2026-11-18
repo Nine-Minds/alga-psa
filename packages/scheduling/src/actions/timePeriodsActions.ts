@@ -370,6 +370,11 @@ export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<T
   }
 });
 
+/**
+ * Returns the effective zone the user works in (profile zone -> tenant default zone -> UTC).
+ * This is the same resolver the write paths use for work_date/work_timezone, so the
+ * pickers and the stored values agree.
+ */
 export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<string>> => {
   try {
     const { knex } = await createTenantKnex();
