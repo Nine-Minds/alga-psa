@@ -41,7 +41,8 @@ export async function listMigrationJobs(): Promise<MigrationJobSummary[]> {
   const { knex } = await createTenantKnex(tenant);
   const db = tenantDb(knex, tenant);
 
-  const jobs = await db.table('migration_jobs').orderBy('created_at', 'desc').limit(100);
+  // Price book import jobs live in Billing settings → Price books, not in this workspace.
+  const jobs = await db.table('migration_jobs').whereRaw("configuration -> 'priceBook' IS NULL").orderBy('created_at', 'desc').limit(100);
   const entities = await db
     .table('migration_job_entities')
     .whereIn(
