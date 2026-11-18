@@ -1976,6 +1976,17 @@ export const createClientContact = withAuth(async (
     return contact;
   } catch (error) {
     console.error('Error creating client contact:', error);
+    // An owned email is an expected answer, not a failure: return it so the caller can show who
+    // owns the address. A thrown message never reaches the screen (callers toast a fixed fallback,
+    // and production builds redact thrown server-action messages anyway).
+    if (isEmailOwnershipError(error)) {
+      const conflictMessage = await contactEmailConflictMessageFrom(
+        error,
+        { tenant, user, ownClientId: clientId },
+        [email, ...(additionalEmailAddresses ?? []).map((row) => row.email_address)]
+      );
+      if (conflictMessage) return actionError(conflictMessage);
+    }
     throw error;
   }
 });

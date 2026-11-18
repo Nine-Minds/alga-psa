@@ -102,7 +102,7 @@ vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
 // Static import (vi.mock calls are hoisted above it): the module graph is loaded once at
 // collection time instead of inside a test body, where a cold import under CI load can
 // exceed the per-test timeout.
-import { addContact, updateContact } from './contactActions';
+import { addContact, createClientContact, updateContact } from './contactActions';
 import { EmailOwnershipError } from '@alga-psa/shared/models/contactEmailOwnership';
 
 function additionalEmailUniqueError() {
@@ -294,6 +294,26 @@ describe('contact action email conflict handling', () => {
         actionError: 'This email address already belongs to a contact at another client.',
       });
       expect(updateContactMock).not.toHaveBeenCalled();
+    });
+
+    // QuickAddClient toasts a fixed fallback for anything thrown, and production builds redact thrown
+    // server-action messages, so the named owner has to come back as a returned action error.
+    it('createClientContact (Create Client dialog): returns the named owner instead of throwing', async () => {
+      resolveOwnershipMock.mockResolvedValueOnce(owner({ isInactive: true }));
+
+      await expect(createClientContact({ clientId: 'client-new', fullName: 'Samuel Reyes', email: 'ben@muscle.ca' })).resolves.toEqual({
+        actionError: 'This email address already belongs to Benjamin Dixon at Muscle Corp, an inactive contact. Reactivate that contact instead.',
+      });
+      expect(createContactMock).not.toHaveBeenCalled();
+    });
+
+    it('createClientContact: a structured conflict from a create race is returned too, redacted out of scope', async () => {
+      createContactMock.mockRejectedValueOnce(new EmailOwnershipError(owner()));
+      permitsMock.mockImplementation(async (resource: string) => resource !== 'client');
+
+      await expect(createClientContact({ clientId: 'client-new', fullName: 'Alice Example', email: 'ben@muscle.ca' })).resolves.toEqual({
+        actionError: 'This email address already belongs to a contact at another client.',
+      });
     });
 
     it('updateContact: an email owned by the contact being edited is not a conflict', async () => {

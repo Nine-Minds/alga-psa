@@ -68,7 +68,7 @@ type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" 
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
-const isClientLocationActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & Pick<
@@ -489,7 +489,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           hasActualPhone || locationData.email?.trim()) {
         try {
           const locationResult = await createClientLocation(newClient.client_id, locationData);
-          if (isClientLocationActionError(locationResult)) {
+          if (isReturnedActionError(locationResult)) {
             handleError(locationResult, t('quickAddClient.clientCreatedLocationFailed', { defaultValue: 'Client created but failed to add location.' }));
           }
         } catch (locationError) {
@@ -501,7 +501,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       if (hasAnyContactData(contactData)) {
         try {
           const sanitizedContactEmails = compactContactEmailAddresses(contactData);
-          await createClientContact({
+          const contactResult = await createClientContact({
             clientId: newClient.client_id,
             fullName: contactData.full_name,
             email: sanitizedContactEmails.email ?? '',
@@ -511,6 +511,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             phoneNumbers: compactContactPhoneNumbers(contactData.phone_numbers),
             jobTitle: contactData.role ?? undefined,
           });
+          // A returned error is the specific, user-safe reason (e.g. the email already belongs to a
+          // named contact at another client); handleError shows it in place of the fallback.
+          if (isReturnedActionError(contactResult)) {
+            handleError(contactResult, t('quickAddClient.clientCreatedContactFailed', { defaultValue: 'Client created but failed to add contact.' }));
+          }
         } catch (contactError) {
           handleError(contactError, t('quickAddClient.clientCreatedContactFailed', { defaultValue: 'Client created but failed to add contact.' }));
         }
