@@ -853,7 +853,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Remote-Sitzung"
     },
     "remoteDesktop": "Remote-Desktop",
     "remoteShell": "Remote-Shell",
@@ -885,7 +887,7 @@
       "save": "Speichern",
       "label": "Schaltflächenbeschriftung",
       "template": "URL-Vorlage",
-      "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie den Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2 .ninjarmm.com.",
+      "ninjaExample": "Beispiel für das NinjaOne-Geräte-Dashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Ersetzen Sie app im Host durch Ihre NinjaOne-Region: app, eu, ca, oc oder us2.",
       "tokens": "Verwenden Sie {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} und {field.<key>} mit benutzerdefinierten Feldschlüsseln aus Einstellungen → Assets → Asset-Typen.",
       "errors": {
         "load": "Fernzugriffslinks konnten nicht geladen werden.",

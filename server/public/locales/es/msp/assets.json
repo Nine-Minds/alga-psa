@@ -853,7 +853,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Sesión remota"
     },
     "remoteDesktop": "Escritorio remoto",
     "remoteShell": "Shell remoto",
@@ -885,7 +887,7 @@
       "save": "Guardar",
       "label": "Etiqueta del botón",
       "template": "Plantilla de URL",
-      "ninjaExample": "Ejemplo del panel de dispositivo de NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Sustituya el host por su región de NinjaOne: app, eu, ca, oc o us2 .ninjarmm.com.",
+      "ninjaExample": "Ejemplo del panel de dispositivo de NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Sustituya app en el host por su región de NinjaOne: app, eu, ca, oc o us2.",
       "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} y {field.<key>} con claves de campos personalizados definidas en Configuración → Activos → Tipos de activo.",
       "errors": {
         "load": "No se pudieron cargar los enlaces de acceso remoto.",

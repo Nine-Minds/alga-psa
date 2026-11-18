@@ -853,7 +853,9 @@
     "connectionTypes": {
       "teamviewer": "TeamViewer",
       "vnc": "VNC",
-      "rdp": "RDP"
+      "rdp": "RDP",
+      "ninjaoneRemote": "NinjaOne Remote",
+      "generic": "Externe sessie"
     },
     "remoteDesktop": "Extern bureaublad",
     "remoteShell": "Externe shell",
@@ -885,7 +887,7 @@
       "save": "Opslaan",
       "label": "Knoptekst",
       "template": "URL-sjabloon",
-      "ninjaExample": "Voorbeeld van het NinjaOne-apparaatdashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Vervang de host door uw NinjaOne-regio: app, eu, ca, oc of us2 .ninjarmm.com.",
+      "ninjaExample": "Voorbeeld van het NinjaOne-apparaatdashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Vervang app in de host door uw NinjaOne-regio: app, eu, ca, oc of us2.",
       "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
       "errors": {
         "load": "Laden van koppelingen voor toegang op afstand is mislukt.",
