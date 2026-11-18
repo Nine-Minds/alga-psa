@@ -306,6 +306,10 @@ export const verifyClientPortalPayment = withAuth(async (
       return actionError('access_denied', 'Access denied');
     }
 
+    if (invoice.invoice_number_source === 'pending_external') {
+      return actionError('invoice_not_found', 'Invoice not found');
+    }
+
     // Check if invoice is already marked as paid
     if (invoice.status === 'paid') {
       return {

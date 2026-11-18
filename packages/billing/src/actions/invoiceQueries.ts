@@ -78,6 +78,8 @@ async function assertClientPortalInvoiceAccess(
   const invoice = await tenantDb(knex, tenant).table('invoices')
     .where({ invoice_id: invoiceId })
     .whereNot('status', 'draft')
+    // Waiting for its accounting-system number: not client-facing yet.
+    .whereNot('invoice_number_source', 'pending_external')
     .first('client_id');
   if (!invoice || invoice.client_id !== portalClientId) {
     return permissionError('Permission denied: invoice access denied', 'msp/invoicing:errors.permissions.invoiceAccess');
@@ -252,6 +254,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
   return {
     invoice_id: invoice.invoice_id,
     invoice_number: invoice.invoice_number,
+    invoice_number_source: invoice.invoice_number_source ?? 'alga',
     client_id: invoice.client_id,
     po_number: invoice.po_number ?? null,
     payment_method: invoice.payment_method ?? null,
@@ -494,6 +497,7 @@ export const fetchInvoicesPaginated = withAuth(async (
           'invoices.invoice_id',
           'invoices.client_id',
           'invoices.invoice_number',
+          'invoices.invoice_number_source',
           'invoices.po_number',
           'invoices.client_contract_id',
           'invoices.billing_profile_id',
@@ -636,15 +640,21 @@ export const fetchInvoicesByClient = withAuth(async (
         }
       );
 
-      return await query
+      const clientQuery = query
         .where({
           'invoices.client_id': clientId,
           'invoices.tenant': tenant
-        })
+        });
+      // Portal callers never see an invoice still waiting for its accounting-system number.
+      if (user.user_type === 'client') {
+        clientQuery.where('invoices.invoice_number_source', '<>', 'pending_external');
+      }
+      return await clientQuery
         .select(
           'invoices.invoice_id',
           'invoices.client_id',
           'invoices.invoice_number',
+          'invoices.invoice_number_source',
           'invoices.invoice_date',
           'invoices.due_date',
           'invoices.status',
@@ -749,15 +759,20 @@ export const fetchInvoicesByContract = withAuth(async (
       db.tenantJoin(query, 'client_contracts', 'invoices.client_contract_id', 'client_contracts.client_contract_id');
       db.tenantJoin(query, 'clients', 'invoices.client_id', 'clients.client_id');
 
-      return await query
+      const contractQuery = query
         .where({
           'invoices.client_contract_id': contractId,
           'invoices.tenant': tenant
-        })
+        });
+      if (user.user_type === 'client') {
+        contractQuery.where('invoices.invoice_number_source', '<>', 'pending_external');
+      }
+      return await contractQuery
         .select(
           'invoices.invoice_id',
           'invoices.client_id',
           'invoices.invoice_number',
+          'invoices.invoice_number_source',
           'invoices.po_number',
           'invoices.client_contract_id',
           'invoices.invoice_date',
