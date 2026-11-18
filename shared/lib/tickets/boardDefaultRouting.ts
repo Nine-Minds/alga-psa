@@ -18,7 +18,7 @@ export interface ResolvedBoardDefaults {
 export async function resolveBoardDefaultRouting(
   trx: Knex.Transaction,
   tenant: string,
-  input: Pick<CreateTicketInput, 'board_id' | 'assigned_to' | 'assigned_team_id'>,
+  input: Pick<CreateTicketInput, 'board_id' | 'client_id' | 'assigned_to' | 'assigned_team_id'>,
 ): Promise<ResolvedBoardDefaults> {
   if (!input.board_id) return {};
 
@@ -31,7 +31,11 @@ export async function resolveBoardDefaultRouting(
   const defaults: ResolvedBoardDefaults = {};
   if (input.assigned_to === undefined && board.default_assigned_to) {
     try {
-      await assertHumanWorkAssignee(trx, tenant, [board.default_assigned_to]);
+      await assertHumanWorkAssignee(trx, tenant, [board.default_assigned_to], {
+        kind: 'ticket_draft',
+        clientId: input.client_id,
+        boardId: input.board_id,
+      });
       defaults.assignedTo = board.default_assigned_to;
     } catch (error) {
       if (!(error instanceof HumanWorkAssigneeInvalidError)) throw error;
