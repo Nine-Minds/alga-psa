@@ -4633,7 +4633,6 @@
       "title": "Numeracja zasobów",
       "description": "Jedna sekwencja dla całej organizacji jest formatowana z prefiksem każdego klienta. Podgląd i drukowanie nie przydzielają numerów. Porzucone wydane numery pozostawiają luki i nigdy nie są ponownie używane.",
       "clientPrefixes": "Prefiksy klientów",
-      "noPrefix": "Brak prefiksu",
       "prefixSaved": "Zapisano prefiks klienta",
       "uniquenessEnabled": "Unikalność etykiet zasobów jest aktywna",
       "legacyAudit": "Audyt istniejących etykiet",
@@ -4647,7 +4646,25 @@
       "continuationReview": "Przegląd istniejących danych objął {{scanned}} zapisanych etykiet; {{numeric}} ma sufiksy numeryczne. Najwyższy sufiks to {{maximum}}; sprawdź wartość początkową {{next}}. To tylko sugestia. Wprowadź i zapisz powyżej zatwierdzoną wartość kontynuacji; ten przegląd nie zużywa żadnej wartości sekwencji.",
       "continuationExamples": "Przykłady: {{examples}}",
       "blankTag": "(pusta etykieta)",
-      "normalizedTag": "Znormalizowana: {{tag}}"
+      "normalizedTag": "Znormalizowana: {{tag}}",
+      "loadFailed": "Nie udało się wczytać ustawień numeracji zasobów",
+      "readOnly": "Możesz przeglądać numerację zasobów. Aby ją zmienić, potrzebujesz uprawnienia do aktualizacji ustawień systemowych.",
+      "columns": {
+        "client": "Klient",
+        "prefix": "Prefiks"
+      },
+      "addPrefix": "Dodaj prefiks",
+      "addPrefixTitle": "Dodaj prefiks klienta",
+      "editPrefixTitle": "Edytuj prefiks klienta",
+      "prefixHelp": "Do 10 liter, cyfr lub łączników.",
+      "edit": "Edytuj",
+      "remove": "Usuń",
+      "removeTitle": "Usunąć prefiks?",
+      "removeMessage": "Usunąć prefiks dla {{client}}? Nowe numery zasobów tego klienta nie będą miały prefiksu. Istniejące etykiety nie zostaną zmienione.",
+      "prefixRemoved": "Usunięto prefiks klienta",
+      "noPrefixes": "Brak prefiksów klientów.",
+      "openMenu": "Otwórz menu",
+      "inactive": "Nieaktywny"
     }
   }
 }

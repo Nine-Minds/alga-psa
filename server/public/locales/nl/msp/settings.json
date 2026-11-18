@@ -4625,7 +4625,6 @@
       "title": "Assetnummering",
       "description": "Eén tenantbrede reeks wordt opgemaakt met het voorvoegsel van elke klant. Voorbeelden en afdrukken wijzen geen nummers toe. Uitgegeven nummers die worden verlaten, laten gaten achter en worden nooit hergebruikt.",
       "clientPrefixes": "Klantvoorvoegsels",
-      "noPrefix": "Geen voorvoegsel",
       "prefixSaved": "Klantvoorvoegsel opgeslagen",
       "uniquenessEnabled": "Unieke assetlabels zijn geactiveerd",
       "legacyAudit": "Controle van bestaande labels",
@@ -4639,7 +4638,25 @@
       "continuationReview": "De controle van bestaande gegevens heeft {{scanned}} opgeslagen labels onderzocht; {{numeric}} hebben numerieke achtervoegsels. Het hoogste achtervoegsel is {{maximum}}; controleer een beginwaarde van {{next}}. Dit is alleen een advies. Voer hierboven de goedgekeurde vervolgwaarde in en sla deze op; deze controle verbruikt geen waarde uit de reeks.",
       "continuationExamples": "Voorbeelden: {{examples}}",
       "blankTag": "(leeg label)",
-      "normalizedTag": "Genormaliseerd: {{tag}}"
+      "normalizedTag": "Genormaliseerd: {{tag}}",
+      "loadFailed": "Instellingen voor assetnummering konden niet worden geladen",
+      "readOnly": "U kunt de assetnummering bekijken. Om deze te wijzigen hebt u toestemming nodig om systeeminstellingen bij te werken.",
+      "columns": {
+        "client": "Klant",
+        "prefix": "Prefix"
+      },
+      "addPrefix": "Prefix toevoegen",
+      "addPrefixTitle": "Klantprefix toevoegen",
+      "editPrefixTitle": "Klantprefix bewerken",
+      "prefixHelp": "Maximaal 10 letters, cijfers of koppeltekens.",
+      "edit": "Bewerken",
+      "remove": "Verwijderen",
+      "removeTitle": "Prefix verwijderen?",
+      "removeMessage": "Prefix voor {{client}} verwijderen? Nieuwe assetnummers voor deze klant krijgen geen prefix. Bestaande labels worden niet gewijzigd.",
+      "prefixRemoved": "Klantprefix verwijderd",
+      "noPrefixes": "Nog geen klantprefixen.",
+      "openMenu": "Menu openen",
+      "inactive": "Inactief"
     }
   }
 }

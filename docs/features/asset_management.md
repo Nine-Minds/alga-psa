@@ -20,7 +20,11 @@ schemas, and the Hudu import mapping.
 - Location management (free-text `location` field and structured `location_id` FK to `client_locations`)
 - Warranty tracking
 - Client association
-- Status management
+- Tenant-managed status registry (`asset_statuses`): each status has a slug, a label, a kind (`deployable`, `pending`, `undeployable`, or `archived`), a display order, and an active flag. Five built-ins are seeded (`active`, `in_stock`, `maintenance`, `inactive`, `retired`) and can be renamed and reordered; a status still in use cannot be archived. RMM sync sets a status only on create (and `retired` on device deletion), so manual statuses are not overwritten
+- Procurement tracking: `manufacturer`, `model`, `vendor_id`, `purchase_cost` (integer minor units) with `purchase_cost_currency`, and `order_number`; existing RMM assets were backfilled from their hardware data
+- Contact assignment with history (`asset_assignments`): every assign and unassign is kept, with the acting users, a `source`, and an optional note
+- RMM signed-in-user matching to client contacts (explicit mapping, then email, then username, then full name), controlled per RMM organization by `rmm_organization_mappings.contact_assignment_mode` (`off`, `suggest` — the default — or `auto`)
+- Asset groups (`asset_groups`) per client, of kind `bundle` or `shared_workspace`; members in `asset_group_members` (an asset belongs to at most one group) and owner/user contacts in `asset_group_contacts`
 
 ### Asset Tags and Numbering
 
@@ -96,17 +100,100 @@ CREATE TABLE assets (
     asset_tag TEXT NOT NULL,      -- Physical label; normalized copy in asset_tag_normalized
     serial_number TEXT,
     name TEXT NOT NULL,
-    status TEXT NOT NULL,
+    status TEXT NOT NULL,         -- Slug of a row in asset_statuses
     location TEXT,
     location_id UUID,            -- Optional FK to client_locations; validated against the asset's client
     purchase_date DATE,
     warranty_end_date DATE,
+    manufacturer TEXT,
+    model TEXT,
+    vendor_id UUID,
+    purchase_cost BIGINT,         -- Minor units
+    purchase_cost_currency TEXT,
+    order_number TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (tenant, asset_id),
     FOREIGN KEY (tenant, type_id) REFERENCES asset_types(tenant, type_id),
     FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id),
-    FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id)
+    FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id),
+    FOREIGN KEY (tenant, vendor_id) REFERENCES vendors(tenant, vendor_id)
+);
+```
+
+### Asset Statuses
+```sql
+CREATE TABLE asset_statuses (
+    tenant UUID NOT NULL REFERENCES tenants,
+    status_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    slug TEXT NOT NULL,
+    label TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'deployable'
+        CHECK (kind IN ('deployable', 'pending', 'undeployable', 'archived')),
+    is_builtin BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, status_id),
+    UNIQUE (tenant, slug)
+);
+```
+
+### Asset Assignments
+```sql
+CREATE TABLE asset_assignments (
+    tenant UUID NOT NULL REFERENCES tenants,
+    assignment_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    asset_id UUID NOT NULL,
+    contact_name_id UUID NOT NULL,
+    assigned_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    assigned_by_user_id UUID,
+    unassigned_at TIMESTAMP WITH TIME ZONE,   -- NULL while the assignment is open
+    unassigned_by_user_id UUID,
+    source TEXT NOT NULL DEFAULT 'manual'
+        CHECK (source IN ('manual', 'api', 'rmm', 'bundle', 'import', 'merge', 'system')),
+    note TEXT,
+    PRIMARY KEY (tenant, assignment_id)
+);
+```
+
+### Asset Groups
+```sql
+CREATE TABLE asset_groups (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID DEFAULT gen_random_uuid() NOT NULL,
+    client_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'bundle' CHECK (kind IN ('bundle', 'shared_workspace')),
+    location_id UUID,
+    description TEXT,
+    created_by UUID,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, group_id),
+    FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id)
+);
+
+CREATE TABLE asset_group_members (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID NOT NULL,
+    asset_id UUID NOT NULL,
+    added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    added_by UUID,
+    PRIMARY KEY (tenant, group_id, asset_id),
+    UNIQUE (tenant, asset_id),                -- An asset is in at most one group
+    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE
+);
+
+CREATE TABLE asset_group_contacts (
+    tenant UUID NOT NULL REFERENCES tenants,
+    group_id UUID NOT NULL,
+    contact_name_id UUID NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('owner', 'user')),
+    added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant, group_id, contact_name_id),
+    FOREIGN KEY (tenant, group_id) REFERENCES asset_groups(tenant, group_id) ON DELETE CASCADE
 );
 ```
 
@@ -251,6 +338,11 @@ CREATE TABLE asset_history (
   - Set status ✓
   - Set location ✓
   - Delete ✓
+- Tenant-managed asset statuses ✓
+- Procurement fields ✓
+- Contact assignment history ✓
+- RMM signed-in-user matching (off / suggest / auto per organization) ✓
+- Asset groups (bundles and shared workspaces) ✓
 - Advanced reporting
   - Custom report builder
   - Dashboard integration

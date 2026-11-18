@@ -4625,7 +4625,6 @@
       "title": "Numeración de activos",
       "description": "Una única secuencia para todo el inquilino se formatea con el prefijo de cada cliente. La vista previa y la impresión no asignan números. Los números emitidos que se abandonan dejan huecos y nunca se reutilizan.",
       "clientPrefixes": "Prefijos de clientes",
-      "noPrefix": "Sin prefijo",
       "prefixSaved": "Prefijo de cliente guardado",
       "uniquenessEnabled": "La unicidad de las etiquetas de activos está activa",
       "legacyAudit": "Auditoría de etiquetas existentes",
@@ -4639,7 +4638,25 @@
       "continuationReview": "La revisión de datos existentes examinó {{scanned}} etiquetas guardadas; {{numeric}} tienen sufijos numéricos. El sufijo más alto es {{maximum}}; revise un valor inicial de {{next}}. Esto es solo una recomendación. Introduzca y guarde arriba el valor de continuación aprobado; esta revisión no consume ningún valor de la secuencia.",
       "continuationExamples": "Ejemplos: {{examples}}",
       "blankTag": "(etiqueta vacía)",
-      "normalizedTag": "Normalizada: {{tag}}"
+      "normalizedTag": "Normalizada: {{tag}}",
+      "loadFailed": "No se pudo cargar la configuración de numeración de activos",
+      "readOnly": "Puede ver la numeración de activos. Para cambiarla necesita permiso para actualizar la configuración del sistema.",
+      "columns": {
+        "client": "Cliente",
+        "prefix": "Prefijo"
+      },
+      "addPrefix": "Añadir prefijo",
+      "addPrefixTitle": "Añadir prefijo de cliente",
+      "editPrefixTitle": "Editar prefijo de cliente",
+      "prefixHelp": "Hasta 10 letras, dígitos o guiones.",
+      "edit": "Editar",
+      "remove": "Quitar",
+      "removeTitle": "¿Quitar el prefijo?",
+      "removeMessage": "¿Quitar el prefijo de {{client}}? Los nuevos números de activo de este cliente no tendrán prefijo. Las etiquetas existentes no cambian.",
+      "prefixRemoved": "Prefijo de cliente quitado",
+      "noPrefixes": "Todavía no hay prefijos de cliente.",
+      "openMenu": "Abrir menú",
+      "inactive": "Inactivo"
     }
   }
 }

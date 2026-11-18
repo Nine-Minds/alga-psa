@@ -605,7 +605,8 @@
       "unfinalizeSelected": "Desfinalizar selecionado",
       "downloadPdf": "Baixar PDF",
       "sendEmail": "Enviar e-mail",
-      "unfinalize": "Desfinalizar"
+      "unfinalize": "Desfinalizar",
+      "recordPayment": "Registrar pagamento"
     },
     "status": {
       "finalized": "Finalizado"
@@ -2911,6 +2912,17 @@
       "missingField": "Falta um campo obrigatório do modelo de fatura.",
       "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}.",
       "evaluationFailed": "Falha na vinculação de dados do modelo: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Permissão negada: registrar pagamentos de faturas exige a permissão de pagamento de faturas.",
+      "invoiceNotFound": "Fatura não encontrada. Ela pode ter sido atualizada ou excluída. Atualize a página e tente novamente.",
+      "amountPositive": "Informe um valor de pagamento maior que zero.",
+      "methodRequired": "Escolha uma forma de pagamento.",
+      "invalidDate": "Informe uma data de pagamento válida.",
+      "noBalanceDue": "Esta fatura não tem saldo devedor.",
+      "statusNotPayable": "Não é possível registrar um pagamento para uma fatura com status: {{status}}.",
+      "overpaymentNotConfirmed": "Este pagamento é maior que o saldo devedor. Confirme o pagamento em excesso para registrá-lo.",
+      "recordFailed": "Falha ao registrar o pagamento. Tente novamente."
     }
   },
   "periodTotal": {
@@ -2933,6 +2945,43 @@
     "blocked": {
       "exported": "Esta fatura está sincronizada com um sistema de contabilidade. Anule-a ou emita um crédito separado em vez de editar os seus itens.",
       "exporting": "Está a ser preparada uma exportação contabilística para esta fatura. Aguarde que termine antes de a alterar."
+    }
+  },
+  "recordPayment": {
+    "title": "Registrar pagamento",
+    "titleForInvoice": "Registrar pagamento — {{invoiceNumber}}",
+    "loading": "Carregando o saldo da fatura...",
+    "summary": {
+      "balanceDue": "Saldo devedor",
+      "alreadyPaid": "Já pago"
+    },
+    "fields": {
+      "amount": "Valor",
+      "paymentDate": "Data do pagamento",
+      "method": "Forma de pagamento",
+      "reference": "Referência",
+      "notes": "Observações"
+    },
+    "placeholders": {
+      "reference": "Número do cheque ou da transação"
+    },
+    "methods": {
+      "manual": "Manual",
+      "check": "Cheque",
+      "bank_transfer": "Transferência bancária",
+      "cash": "Dinheiro",
+      "other": "Outro"
+    },
+    "overpayment": {
+      "warning": "Este pagamento excede em {{excess}} o saldo devedor de {{balanceDue}}.",
+      "confirm": "Registrar este pagamento em excesso mesmo assim"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "record": "Registrar pagamento"
+    },
+    "toasts": {
+      "recorded": "Pagamento registrado"
     }
   }
 }

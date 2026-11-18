@@ -701,6 +701,13 @@
     "checkoutUnavailable": "Ingebedde checkout is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
     "pendingCapacity_one": "Een aankoop van {{count}} plaats is in behandeling.",
     "pendingCapacity_other": "Een aankoop van {{count}} plaatsen is in behandeling.",
+    "buySeats": "Co-managed plekken kopen",
+    "awaitingVerification_one": "Uw aankoop van {{count}} plek wacht op betalingsverificatie. De plek verschijnt hier zodra de betaling is bevestigd.",
+    "awaitingVerification_other": "Uw aankoop van {{count}} plekken wacht op betalingsverificatie. De plekken verschijnen hier zodra de betaling is bevestigd.",
+    "refreshStatus": "Status vernieuwen",
+    "purchaseOnly": {
+      "intro": "Koop hier een pool co-managed plekken. Wijs na de aankoop plekken toe aan klanten via het klantdossier."
+    },
     "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
     "purchaseNeedsAdmin": "Een accountbeheerder moet co-managed capaciteit toevoegen.",
     "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",

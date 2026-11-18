@@ -10,14 +10,25 @@ import { useTheme } from "../../../ui/ThemeContext";
 import { useTimer, useTimerElapsedMs } from "../TimerContext";
 import { formatElapsedClock } from "../timerLogic";
 
+/**
+ * Whether the chip has anything to show. Native-stack headers must leave
+ * `headerRight` unset otherwise: iOS 26+ draws a glass bubble around any bar
+ * item, even one that renders null.
+ */
+export function useHeaderTimerChipVisible(): boolean {
+  const { status, session } = useTimer();
+  return (status === "running" || status === "paused") && session !== null;
+}
+
 export function HeaderTimerChip() {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("timeEntries");
   const { status, session, openStopModal, pause, resume, mutating } = useTimer();
   const elapsedMs = useTimerElapsedMs();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const visible = useHeaderTimerChipVisible();
 
-  if ((status !== "running" && status !== "paused") || !session || elapsedMs === null) return null;
+  if (!visible || !session || elapsedMs === null) return null;
 
   const paused = status === "paused";
 

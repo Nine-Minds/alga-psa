@@ -27,7 +27,10 @@ import {
   buildPaymentRecordedPayload,
   buildPaymentRefundedPayload,
 } from '../../../../lib/api/services/paymentWorkflowEvents';
-import { buildExternalPaymentRecordedPayload } from '../../../../../../packages/billing/src/lib/paymentRecordedEvent';
+import {
+  buildExternalPaymentAppliedPayload,
+  buildExternalPaymentRecordedPayload,
+} from '../../../../../../packages/billing/src/lib/paymentRecordedEvent';
 import type { EmitterContracts } from '../registryTypes';
 import { NO_EMITTER_UMBRELLA_TICKET } from '../registryTypes';
 import { IDS, NOW, EARLIER } from '../fixtures';
@@ -44,6 +47,7 @@ import { IDS, NOW, EARLIER } from '../fixtures';
 const INVOICE_SERVICE = 'server/src/lib/api/services/InvoiceService.ts';
 const PAYMENT_SERVICE = 'ee/server/src/lib/payments/PaymentService.ts';
 const RECORD_EXTERNAL_PAYMENT = 'packages/billing/src/services/accountingSync/recordExternalPayment.ts';
+const INVOICE_PAYMENT_ACTIONS = 'packages/billing/src/actions/invoicePaymentActions.ts';
 const AUTOPAY = 'ee/server/src/lib/payments/AutopayService.ts';
 const BILLING = 'packages/billing/src/actions';
 const CLIENT_CONTRACTS = 'packages/clients/src/actions/clientContractActions.ts';
@@ -313,6 +317,17 @@ export const billingContracts = {
           buildPaymentAppliedPayload({
             paymentId: IDS.payment,
             appliedAt: NOW,
+            applications: [{ invoiceId, amountApplied: 500 }],
+          }),
+      },
+      {
+        site: `${INVOICE_PAYMENT_ACTIONS}#publishPaymentApplied`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildExternalPaymentAppliedPayload({
+            paymentId: IDS.payment,
+            appliedAt: NOW,
+            appliedByUserId: IDS.user,
             applications: [{ invoiceId, amountApplied: 500 }],
           }),
       },

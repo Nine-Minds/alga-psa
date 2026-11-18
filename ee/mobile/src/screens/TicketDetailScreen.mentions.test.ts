@@ -4,7 +4,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
 import type { MentionSuggestionItem } from "../features/ticketRichText/MentionSuggestionList";
 
-vi.mock("../capabilities/CapabilitiesContext", () => ({
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useOperationalOnly: () => false,
   useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
   useDontNotifyCustomerDefault: () => false,
 }));
