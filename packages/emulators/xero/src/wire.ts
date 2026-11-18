@@ -101,6 +101,13 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   api.post('/Invoices', upsertInvoices);
   api.put('/Invoices', upsertInvoices);
 
+  // List/filter, e.g. where=Type=="ACCREC" AND (Reference=="INV-00012"), which
+  // the Alga client sends to find an earlier attempt before an unnumbered create.
+  api.get('/Invoices', (req, res) => {
+    const where = req.query.where === undefined ? undefined : String(req.query.where);
+    res.json({ Invoices: core.queryInvoices(String(res.locals.xeroTenantId), where) });
+  });
+
   api.get('/Invoices/:invoiceId', (req, res) => {
     res.json({ Invoices: [core.getInvoice(String(res.locals.xeroTenantId), String(req.params.invoiceId))] });
   });

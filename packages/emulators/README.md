@@ -979,6 +979,28 @@ contact name through HTTP. OAuth error objects keep their separate shape.
 This checks representative rejection payloads; it does not claim live sandbox
 verification, full batch-error semantics or complete Xero API coverage.
 
+### Xero-assigned invoice numbers
+
+An invoice created without `InvoiceNumber` takes the next number from the
+organisation's sequence (`INV-0001` by default). `set-invoice-number-sequence
+{ next, prefix?, padding? }` continues that sequence elsewhere, as a Xero user
+would under Invoice settings, and `rename-invoice { invoiceId, invoiceNumber }`
+changes a number the way a person editing the invoice in Xero would. An update
+by `InvoiceID` without a number keeps the stored one.
+
+`GET /Invoices?where=...` and `GET /Contacts?where=...` share one filter
+parser (`xero/src/whereClause.ts`): `Field=="value"` and `Field!="value"`
+(dotted paths allowed), combined with `AND`, `OR` and parentheses, with `\"`
+escapes. That covers the `Type=="ACCREC" AND (Reference=="..." OR ...)` lookup
+Alga makes before an unnumbered create. Anything outside the subset is
+answered with 400 `QueryParseException` rather than matching everything. The
+`invoice` seeder accepts `reference` and `status`, so an earlier attempt whose
+response was lost can be staged.
+
+`--state-file` persists Xero state (applications, consent, tokens,
+organisations, invoices, contacts and the sequence), so a restarted simulator
+keeps a connected Alga working.
+
 ### Xero refresh-token recovery and expiry
 
 The token endpoint retains a rotated refresh token for a fixed 30-minute retry

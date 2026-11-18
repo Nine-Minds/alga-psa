@@ -56,13 +56,17 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
       contactId: z.string(),
       amountCents: z.number().int(),
       invoiceNumber: z.string().optional(),
+      reference: z.string().optional(),
+      status: z.enum(['DRAFT', 'SUBMITTED', 'AUTHORISED', 'PAID', 'VOIDED', 'DELETED']).optional(),
       xeroTenantId: z.string().optional(),
     }),
-    run: ({ contactId, amountCents, invoiceNumber, xeroTenantId }) => {
+    run: ({ contactId, amountCents, invoiceNumber, reference, status, xeroTenantId }) => {
       const amount = Math.round(amountCents) / 100;
       return core.upsertInvoice(xeroTenantId ?? core.defaultTenantId, {
         Type: 'ACCREC',
         InvoiceNumber: invoiceNumber,
+        ...(reference !== undefined ? { Reference: reference } : {}),
+        ...(status !== undefined ? { Status: status } : {}),
         Contact: { ContactID: contactId },
         LineAmountTypes: 'Exclusive',
         LineItems: [{ Description: 'Seeded line', Quantity: 1, UnitAmount: amount, LineAmount: amount }],
@@ -71,6 +75,25 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
         Total: amount,
       });
     },
+  });
+
+  reg.action({
+    name: 'set-invoice-number-sequence',
+    description: 'Set where the organisation\'s invoice sequence continues: the next unnumbered create gets <prefix><next padded to padding digits>',
+    params: z.object({
+      next: z.number().int().min(1),
+      prefix: z.string().optional(),
+      padding: z.number().int().min(0).max(12).optional(),
+    }),
+    run: (params) => core.setInvoiceNumberSequence(params),
+  });
+
+  reg.action({
+    name: 'rename-invoice',
+    description: 'Change an invoice\'s number inside Xero, as a Xero user would',
+    params: z.object({ invoiceId: z.string().min(1), invoiceNumber: z.string().min(1) }),
+    run: ({ invoiceId, invoiceNumber }) =>
+      core.renameInvoice(core.organisationOfInvoice(invoiceId), invoiceId, invoiceNumber),
   });
 
   reg.action({

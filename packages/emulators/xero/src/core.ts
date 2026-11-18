@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
+import { parseWhere } from './whereClause';
 
 /** Xero-shaped error the wire shell serializes. */
 export class XeroWireError extends Error {
@@ -26,6 +27,21 @@ export interface XeroOrganisation {
   tenantId: string;
   tenantName: string;
   tenantType: 'ORGANISATION';
+}
+
+/** JSON projection persisted by --state-file. */
+interface XeroSnapshot {
+  applications: XeroApplication[];
+  clientConnections: Array<[string, string[]]>;
+  accessTokenTtlSeconds: number;
+  accessTokens: Array<[string, { expiresAt: number; scope: string; clientId: string }]>;
+  refreshTokens: Array<[string, { clientId: string; scope: string; expiresAt: number }]>;
+  organisations: XeroOrganisation[];
+  orgData: Array<[string, { invoices: Array<[string, Record<string, unknown>]>; contacts: Array<[string, Record<string, unknown>]> }]>;
+  invoiceNumberCounter: number;
+  invoiceNumberPrefix?: string;
+  invoiceNumberPadding?: number;
+  idCounter: number;
 }
 
 interface OrgData {
@@ -61,6 +77,9 @@ export class XeroEmulatorCore implements EmulatorCore {
   private organisations: XeroOrganisation[] = [];
   private orgData = new Map<string, OrgData>();
   private invoiceNumberCounter = 0;
+  /** Format of the organisation's own invoice sequence (Xero's default is INV-0001). */
+  private invoiceNumberPrefix = 'INV-';
+  private invoiceNumberPadding = 4;
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
@@ -77,6 +96,8 @@ export class XeroEmulatorCore implements EmulatorCore {
     this.organisations = [];
     this.orgData.clear();
     this.invoiceNumberCounter = 0;
+    this.invoiceNumberPrefix = 'INV-';
+    this.invoiceNumberPadding = 4;
     this.accessTokenTtlSeconds = 1800;
     // Seed an organisation; fixtures must explicitly grant application consent.
     this.seedOrganisation({ tenantName: 'Alga Emulated Org' });
@@ -357,7 +378,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     let invoiceNumber: unknown = sentNumber ?? existing?.InvoiceNumber;
     if (invoiceNumber === undefined) {
       this.invoiceNumberCounter += 1;
-      invoiceNumber = `INV-${String(this.invoiceNumberCounter).padStart(4, '0')}`;
+      invoiceNumber = `${this.invoiceNumberPrefix}${String(this.invoiceNumberCounter).padStart(this.invoiceNumberPadding, '0')}`;
     }
     const invoice: Record<string, unknown> = {
       ...existing,
@@ -445,6 +466,43 @@ export class XeroEmulatorCore implements EmulatorCore {
     return invoice;
   }
 
+  /** GET /Invoices: every invoice of the organisation, optionally filtered by `where` (e.g. Reference=="..."). */
+  queryInvoices(xeroTenantId: string, where?: string): Array<Record<string, unknown>> {
+    const all = [...this.org(xeroTenantId).invoices.values()];
+    return where ? all.filter(parseWhere(where)) : all;
+  }
+
+  /**
+   * Set where the organisation's own invoice sequence continues, as a Xero user
+   * would under Invoice settings. `next` is the number the next unnumbered
+   * create receives.
+   */
+  setInvoiceNumberSequence(params: { next: number; prefix?: string; padding?: number }): { nextInvoiceNumber: string } {
+    if (!Number.isInteger(params.next) || params.next < 1) {
+      throw new XeroWireError(400, { Type: 'ValidationException', Title: 'Invalid sequence', Status: 400, Detail: 'next must be a positive integer' });
+    }
+    this.invoiceNumberCounter = params.next - 1;
+    if (params.prefix !== undefined) this.invoiceNumberPrefix = params.prefix;
+    if (params.padding !== undefined) this.invoiceNumberPadding = params.padding;
+    return { nextInvoiceNumber: `${this.invoiceNumberPrefix}${String(params.next).padStart(this.invoiceNumberPadding, '0')}` };
+  }
+
+  /** A person editing an invoice's number inside Xero. */
+  renameInvoice(xeroTenantId: string, invoiceId: string, invoiceNumber: string): Record<string, unknown> {
+    const invoice = this.getInvoice(xeroTenantId, invoiceId);
+    const renamed = { ...invoice, InvoiceNumber: invoiceNumber, UpdatedDateUTC: this.env.clock.now().toISOString() };
+    this.org(xeroTenantId).invoices.set(invoiceId, renamed);
+    return renamed;
+  }
+
+  /** Find the organisation that holds an invoice (control-surface convenience). */
+  organisationOfInvoice(invoiceId: string): string {
+    for (const [tenantId, data] of this.orgData) {
+      if (data.invoices.has(invoiceId)) return tenantId;
+    }
+    throw new XeroWireError(404, { Type: null, Title: 'Not Found', Status: 404, Detail: `Invoice ${invoiceId} not found` });
+  }
+
   invoices(): Array<Record<string, unknown>> {
     return [...this.orgData.entries()].flatMap(([tenantId, data]) =>
       [...data.invoices.values()].map((invoice) => ({ xeroTenantId: tenantId, ...invoice })),
@@ -472,28 +530,55 @@ export class XeroEmulatorCore implements EmulatorCore {
     return contact;
   }
 
-  /** `where` supports the one shape the client sends: Name=="..." (escaped quotes included). */
+  /** `where` uses the modelled filter subset (see whereClause.ts), e.g. Name=="...". */
   queryContacts(xeroTenantId: string, where?: string): Array<Record<string, unknown>> {
     const all = [...this.org(xeroTenantId).contacts.values()];
-    if (!where) {
-      return all;
-    }
-    const match = where.match(/^Name=="(.*)"$/s);
-    if (!match) {
-      throw new XeroWireError(400, {
-        Type: 'QueryParseException',
-        Title: 'Unsupported where clause',
-        Status: 400,
-        Detail: `Xero emulator does not model where clause "${where}" — extend queryContacts deliberately`,
-      });
-    }
-    const name = match[1].replace(/\\"/g, '"');
-    return all.filter((contact) => contact.Name === name);
+    return where ? all.filter(parseWhere(where)) : all;
   }
 
   contacts(): Array<Record<string, unknown>> {
     return [...this.orgData.entries()].flatMap(([tenantId, data]) =>
       [...data.contacts.values()].map((contact) => ({ xeroTenantId: tenantId, ...contact })),
     );
+  }
+
+  // --- --state-file persistence ---
+
+  /** Everything a running Alga connection depends on: apps, consent, tokens, organisations and their data. */
+  snapshot(): XeroSnapshot {
+    return {
+      applications: [...this.applications.values()],
+      clientConnections: [...this.clientConnections.entries()].map(([clientId, ids]): [string, string[]] => [clientId, [...ids]]),
+      accessTokenTtlSeconds: this.accessTokenTtlSeconds,
+      accessTokens: [...this.accessTokens.entries()],
+      refreshTokens: [...this.refreshTokens.entries()],
+      organisations: this.organisations,
+      orgData: [...this.orgData.entries()].map(([tenantId, data]): XeroSnapshot['orgData'][number] => [
+        tenantId,
+        { invoices: [...data.invoices.entries()], contacts: [...data.contacts.entries()] },
+      ]),
+      invoiceNumberCounter: this.invoiceNumberCounter,
+      invoiceNumberPrefix: this.invoiceNumberPrefix,
+      invoiceNumberPadding: this.invoiceNumberPadding,
+      idCounter: this.idCounter,
+    };
+  }
+
+  restore(state: unknown): void {
+    const s = state as XeroSnapshot;
+    if (!s || typeof s !== 'object') return;
+    this.applications = new Map(s.applications.map((app) => [app.clientId, app]));
+    this.clientConnections = new Map(s.clientConnections.map(([clientId, ids]) => [clientId, new Set(ids)]));
+    this.accessTokenTtlSeconds = s.accessTokenTtlSeconds;
+    this.accessTokens = new Map(s.accessTokens);
+    this.refreshTokens = new Map(s.refreshTokens);
+    this.organisations = s.organisations;
+    this.orgData = new Map(
+      s.orgData.map(([tenantId, data]) => [tenantId, { invoices: new Map(data.invoices), contacts: new Map(data.contacts) }]),
+    );
+    this.invoiceNumberCounter = s.invoiceNumberCounter;
+    this.invoiceNumberPrefix = s.invoiceNumberPrefix ?? 'INV-';
+    this.invoiceNumberPadding = s.invoiceNumberPadding ?? 4;
+    this.idCounter = s.idCounter;
   }
 }
