@@ -1,8 +1,9 @@
 # Ticket-closed detail variables 
 
-The existing `ticket-closed` notification exposes plain-data arrays for custom
-templates. Stock templates, notification routing and existing translations are
-unchanged. These variables are not added to other ticket notifications.
+The `ticket-closed` and `ticket-closed-client` notifications expose plain-data
+arrays for custom templates. Material rows and totals are available only in the
+internal template; asset and work-history details are also available to clients.
+Stock templates and existing translations are unchanged.
 
 | Variable | Contents |
 |---|---|
@@ -16,21 +17,21 @@ unchanged. These variables are not added to other ticket notifications.
 
 Empty arrays are `[]`; missing asset fields are empty strings. Material quantities
 are numbers and `billed` is a boolean. Material rates and amounts use each row's
-currency. Durations use the existing hours/minutes formatter. Time-entry dates
-use `MM/DD/YYYY` in the email's existing effective timezone; rows are ordered by
-work timestamp, technician and entry ID. Multiple entries for the same technician
-remain separate. No translation lookup or HTML rendering is performed.
+currency. Money, durations and time-entry dates use the recipient's resolved
+email locale, and dates use the email's existing effective timezone. Rows are
+ordered by work timestamp, technician and entry ID. Multiple entries for the
+same technician remain separate. Templates own their labels and HTML.
 
 Each empty state is independent of the others:
 
 - No materials: `ticket.materials` is `[]` and `ticket.materialsTotal` is an
   empty string.
 - No time entries: `ticket.timeEntries` is `[]` and both
-  `ticket.totalTimeWorked` and `ticket.totalTimeBillable` are `0 hrs`. A ticket
-  with materials but no time still reports `0 hrs`; a ticket with time but no
-  materials still reports its worked and billable time.
+  `ticket.totalTimeWorked` and `ticket.totalTimeBillable` show a localized zero
+  duration. A ticket with materials but no time still reports zero; a ticket
+  with time but no materials still reports its worked and billable time.
 - No client, or no available prepaid hour block: `ticket.remainingBlockHours`
-  is `0 hrs`.
+  shows a localized zero duration.
 
 If a ticket's detail data cannot be built (for example a database error or an
 unsupported material currency), the email is still sent with every detail

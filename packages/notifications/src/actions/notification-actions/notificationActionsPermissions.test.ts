@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getTemplateSampleData } from '../../lib/templateSampleData';
 
 const SESSION_TENANT = 'session-tenant';
 const OTHER_TENANT = 'victim-tenant';
@@ -8,6 +9,8 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const tenantDbMock = vi.fn();
 const deleteMock = vi.fn(async () => 1);
+const sendEmailMock = vi.fn(async (_params: any) => ({ success: true }));
+let firstRows: Record<string, unknown> = {};
 
 const service = {
   getSettings: vi.fn(async () => ({ is_enabled: true })),
@@ -21,13 +24,13 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
-/** A query builder that chains like knex and resolves to no rows. */
-function queryStub(): any {
+/** A query builder that chains like knex and resolves to no rows unless a test seeds `firstRows`. */
+function queryStub(table: string): any {
   const stub: any = {
     select: () => stub,
     where: () => stub,
     orderBy: async () => [],
-    first: async () => undefined,
+    first: async () => firstRows[table],
     del: deleteMock,
   };
   return stub;
@@ -39,7 +42,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (...args: any[]) => {
     tenantDbMock(...args);
     return {
-      table: () => queryStub(),
+      table: (table: string) => queryStub(table),
       tenantJoin: (query: any) => query,
     };
   },
@@ -51,11 +54,26 @@ vi.mock('../../notifications/email', () => ({
   getEmailNotificationService: () => service,
 }));
 
+vi.mock('@alga-psa/email', () => ({
+  TenantEmailService: {
+    validateEmailSettings: async () => ({ valid: true }),
+    getInstance: () => ({ sendEmail: sendEmailMock }),
+  },
+  StaticTemplateProcessor: class {
+    constructor(
+      readonly subject: string,
+      readonly html: string,
+      readonly text: string,
+    ) {}
+  },
+}));
+
 const tenantsTouched = () => tenantDbMock.mock.calls.map((call) => call[1]);
 
 describe('notification settings and template actions require settings permissions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    firstRows = {};
   });
 
   it('refuses every mutation without settings:update, before any write', async () => {
@@ -161,5 +179,33 @@ describe('notification settings and template actions require settings permission
     });
     expect(new Set(tenantsTouched())).toEqual(new Set([SESSION_TENANT]));
     expect(service.createTenantTemplate).not.toHaveBeenCalled();
+  });
+
+  it('sends unsaved edits rendered with registry examples to the signed-in user in the session tenant', async () => {
+    firstRows = {
+      users: { email: 'agent@example.com' },
+      tenant_email_templates: { name: 'ticket-closed', subject: 'Saved', html_content: '', text_content: '' },
+    };
+    const actions = await import('./notificationActions');
+    const sample = getTemplateSampleData('ticket-closed');
+
+    const result = await actions.sendTestEmailAction(1, 'tenant', {
+      subject: 'Ticket {{ticket.title}}',
+      html_content: '{{#if ticket.timeEntries}}<table>{{#each ticket.timeEntries}}<tr><td>{{date}}</td><td>{{this.worked}}</td></tr>{{/each}}</table>{{/if}}',
+      text_content: '{{#each ticket.timeEntries}}{{this.date}} {{worked}} {{ticket.title}}{{/each}}; {{specialMessage}}',
+    });
+
+    expect(result).toEqual({ success: true, sentTo: 'agent@example.com' });
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    const sent = sendEmailMock.mock.calls[0][0];
+    expect(sent).toMatchObject({ tenantId: SESSION_TENANT, to: 'agent@example.com' });
+    expect(sent.templateProcessor.subject).toBe(`[TEST] Ticket ${sample['ticket.title']}`);
+    expect(sent.templateProcessor.html).toBe(
+      `<table><tr><td>${sample['ticket.timeEntries[].date']}</td><td>${sample['ticket.timeEntries[].worked']}</td></tr></table>`,
+    );
+    expect(sent.templateProcessor.text).toBe(
+      `${sample['ticket.timeEntries[].date']} ${sample['ticket.timeEntries[].worked']} ${sample['ticket.title']}; Special Message`,
+    );
+    expect(new Set(tenantsTouched())).toEqual(new Set([SESSION_TENANT]));
   });
 });

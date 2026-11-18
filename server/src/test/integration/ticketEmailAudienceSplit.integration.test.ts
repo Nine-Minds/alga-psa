@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
-import { ticketVariableAudience } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+import { TICKET_EMAIL_VARIABLE_AUDIENCE } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -42,6 +42,29 @@ const STAFF_WATCHER_EMAIL = 'sam.watcher@msp.example.com';
 const OUTSIDE_WATCHER_EMAIL = 'vendor@elsewhere.example.com';
 
 const note = (text: string) => JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }]);
+
+function expectNoTicketVariableLost(
+  staff: Record<string, unknown>,
+  ...clients: Record<string, unknown>[]
+): void {
+  const expected = Object.keys(staff)
+    .filter((key) => TICKET_EMAIL_VARIABLE_AUDIENCE[`ticket.${key}`] !== 'msp')
+    .sort();
+  for (const client of clients) expect(Object.keys(client).sort()).toEqual(expected);
+}
+
+describe('ticket variable preservation guard', () => {
+  it('excludes only explicitly MSP-only keys and catches unclassified drops or leaks', () => {
+    const staff = { title: 'Printer', materials: [], somethingNew: 'unclassified' };
+    expect(() => expectNoTicketVariableLost(staff, { title: 'Printer' })).toThrow();
+    expect(() => expectNoTicketVariableLost(staff, {
+      title: 'Printer', somethingNew: 'unclassified', materials: [],
+    })).toThrow();
+    expect(() => expectNoTicketVariableLost(staff, {
+      title: 'Printer', somethingNew: 'unclassified',
+    })).not.toThrow();
+  });
+});
 
 describe('ticket email audience split (integration)', () => {
   let handlers: {
@@ -117,17 +140,14 @@ describe('ticket email audience split (integration)', () => {
     return mails[0];
   };
   /**
-   * The client rendering is built from client-safe variables only. Every client-audience
-   * variable the handlers send must appear in a client copy exactly as it does in a staff
-   * copy: one missing here was dropped by the classification and now renders empty.
-   * MSP-audience variables (material rates and billed state) may be absent by design.
+   * Everything not explicitly marked MSP-only must survive the client projection.
+   * This also catches unclassified fields, which are otherwise dropped by default.
    */
-  const expectNoTicketVariableLost = () => {
-    const clientSafe = (keys: string[]) => keys.filter((key) => ticketVariableAudience(`ticket.${key}`) === 'client').sort();
-    const staff = clientSafe(Object.keys(mailTo(ASSIGNEE_EMAIL).context.ticket));
-    expect(clientSafe(Object.keys(mailTo(CONTACT_EMAIL).context.ticket))).toEqual(staff);
-    expect(clientSafe(Object.keys(mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket))).toEqual(staff);
-  };
+  const expectTicketVariablesPreserved = () => expectNoTicketVariableLost(
+    mailTo(ASSIGNEE_EMAIL).context.ticket,
+    mailTo(CONTACT_EMAIL).context.ticket,
+    mailTo(OUTSIDE_WATCHER_EMAIL).context.ticket,
+  );
   const audienceOf = () => Object.fromEntries(sent.map((mail) => [mail.to.toLowerCase(), {
     template: mail.template, isInternal: mail.context.recipient?.isInternal,
   }]));
@@ -144,7 +164,7 @@ describe('ticket email audience split (integration)', () => {
     });
     expect(mailTo(CONTACT_EMAIL).context.ticket.url).toContain('/client-portal/tickets/');
     expect(mailTo(ASSIGNEE_EMAIL).context.ticket.url).toContain('/msp/tickets/');
-    expectNoTicketVariableLost();
+    expectTicketVariablesPreserved();
   });
 
   it('ticket updated: the same split, decided once', async () => {
@@ -159,7 +179,7 @@ describe('ticket email audience split (integration)', () => {
       [ASSIGNEE_EMAIL]: { template: 'ticket-updated', isInternal: true },
       [STAFF_WATCHER_EMAIL]: { template: 'ticket-updated', isInternal: true },
     });
-    expectNoTicketVariableLost();
+    expectTicketVariablesPreserved();
   });
 
   it('a client-facing subtype switched off silences the client side only', async () => {
@@ -227,7 +247,7 @@ describe('ticket email audience split (integration)', () => {
     const assignee = mailTo(ASSIGNEE_EMAIL);
     expect(assignee.context.recipient).toEqual({ isInternal: true });
     expect(assignee.context.comment.authorType).toBe('internal');
-    expectNoTicketVariableLost();
+    expectTicketVariablesPreserved();
     // The one comment variable clients lose is the unclassified one.
     expect(Object.keys(assignee.context.comment).filter((key) => !(key in contact.context.comment))).toEqual(['authorType']);
     expect(assignee.context.ticket.url).toContain('/msp/tickets/');
@@ -284,6 +304,6 @@ describe('ticket email audience split (integration)', () => {
       [STAFF_WATCHER_EMAIL]: { template: 'ticket-closed', isInternal: true },
     });
     expect(mailTo(CONTACT_EMAIL).context.ticket.closedBy).not.toBe('');
-    expectNoTicketVariableLost();
+    expectTicketVariablesPreserved();
   });
 });

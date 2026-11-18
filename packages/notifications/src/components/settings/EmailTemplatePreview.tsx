@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "@alga-psa/ui/components/Label";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { resolveBrandLogoForPreview, type BrandLogoPreviewUrls } from "@alga-psa/email/branding";
-import { expandEachBlocksForPreview, getSampleDataForPreview } from "../../lib/templateSampleData";
+import { getSampleDataForPreview, replaceTemplateSampleVariables } from "../../lib/templateSampleData";
 import {
   annotateHtmlSource,
   parseSourceRange,
@@ -27,27 +27,7 @@ export function replaceTemplateVariables(
   content: string,
   data: Record<string, string>
 ): string {
-  // Expand {{#each path}}...{{/each}} blocks first (one example item per list).
-  let result = expandEachBlocksForPreview(content);
-
-  // Then, process {{#if condition}}...{{/if}} blocks.
-  // For preview, show the block content (with variables replaced) since sample data is available.
-  // An {{else}} branch is dropped so templates can offer readable Yes/No text
-  // (e.g. {{#if billed}}Yes{{else}}No{{/if}}) without leaking both branches.
-  result = result.replace(
-    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent: string) =>
-      blockContent.replace(/\{\{else(?:\s+if[^}]*)?\}\}[\s\S]*$/, '')
-  );
-
-  // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
-  // In the iframe preview we render HTML either way, so we treat both forms the same.
-  result = result.replace(/\{{2,3}([^{}]+)\}{2,3}/g, (match, key) => {
-    const trimmedKey = key.trim();
-    return trimmedKey in data ? data[trimmedKey] : match;
-  });
-
-  return result;
+  return replaceTemplateSampleVariables(content, data);
 }
 
 /**

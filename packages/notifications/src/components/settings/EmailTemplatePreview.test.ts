@@ -7,7 +7,7 @@ import Handlebars from 'handlebars';
 import { replaceTemplateVariables } from './EmailTemplatePreview';
 import { getTemplateVariableToken } from './TemplateVariableReference';
 import { annotateHtmlSource } from './emailTemplateSourceMap';
-import { getSampleDataForPreview } from '../../lib/templateSampleData';
+import { expandEachBlocksForPreview, expandIfBlocksForPreview, getSampleDataForPreview, replaceTemplateSampleVariables } from '../../lib/templateSampleData';
 import { getNestedTemplateExampleData, templateVariableRegistry } from '../../lib/templateVariables';
 
 const require = createRequire(import.meta.url);
@@ -92,7 +92,7 @@ describe('replaceTemplateVariables #each handling', () => {
       data,
     );
     expect(rendered).not.toContain('{{');
-    for (const value of ['06/10/2025', 'Jane Smith', '1 hr 30 min', '1 hr']) {
+    for (const value of ['06/10/2025', 'Jane Smith', '1 hr, 30 min', '1 hr']) {
       expect(rendered).toContain(`<td>${value}</td>`);
     }
   });
@@ -118,6 +118,14 @@ describe('replaceTemplateVariables #each handling', () => {
     expect(rendered).toBe('<li>Kickoff — May 1</li>');
   });
 
+  it('preserves qualified item paths containing hyphens and bracketed names', () => {
+    const rendered = replaceTemplateVariables(
+      '{{#each items}}{{this.customer-id }} {{this.[display-name]}}{{/each}}',
+      { 'items.customer-id': 'A-1', 'items.[display-name]': 'Printer' },
+    );
+    expect(rendered).toBe('A-1 Printer');
+  });
+
   it('drops {{#unless @first}} blocks, since the preview shows only the first item', () => {
     const html = replaceTemplateVariables(
       '{{#each ticket.changeItems}}<div style="margin:0;{{#unless @first}}margin-top:14px;{{/unless}}">{{this.label}}</div>{{/each}}',
@@ -139,5 +147,33 @@ describe('replaceTemplateVariables #each handling', () => {
     );
 
     expect(rendered).toBe('<td>Yes</td>');
+  });
+
+  it('shares array qualification and nested conditional expansion with test emails', () => {
+    const data = {
+      'ticket.title': 'Printer',
+      'ticket.materials[].name': 'Toner',
+      'ticket.materials[].billed': 'true',
+    };
+    const source = '{{#if ticket.materials}}<ul>{{#each ticket.materials}}<li>{{name}} {{this.name}} {{ticket.title}} {{#if billed}}Yes{{else}}No{{/if}}</li>{{/each}}</ul>{{/if}}';
+    const expanded = expandEachBlocksForPreview(source, data);
+    expect(expanded).toContain('{{ticket.materials[].name}}');
+    expect(expanded).toContain('{{ticket.title}}');
+    expect(expandIfBlocksForPreview(expanded, () => true))
+      .toBe('<ul><li>{{ticket.materials[].name}} {{ticket.materials[].name}} {{ticket.title}} Yes</li></ul>');
+    expect(expandIfBlocksForPreview('{{#if missing}}Yes{{else}}No{{/if}}', () => false)).toBe('No');
+  });
+
+  it('renders the same array values and conditional branches for HTML and text test mail', () => {
+    const data = {
+      'ticket.materials': 'one row',
+      'ticket.materials[].name': 'Toner',
+      'ticket.materials[].billed': 'true',
+      'ticket.title': 'Printer',
+    };
+    const hasSampleData = (condition: string) => Object.hasOwn(data, condition);
+    const source = '{{#if ticket.materials}}{{#each ticket.materials}}{{#unless @first}}, {{/unless}}{{name}} {{{this.name}}} {{ticket.title}} {{#if missing}}No{{else if billed}}Yes{{else}}Unknown{{/if}}{{/each}}{{/if}}';
+    expect(replaceTemplateSampleVariables(source, data, hasSampleData)).toBe('Toner Toner Printer Yes');
+    expect(replaceTemplateSampleVariables('{{#if missing}}A{{else if absent}}B{{else}}C{{/if}}', data, hasSampleData)).toBe('C');
   });
 });

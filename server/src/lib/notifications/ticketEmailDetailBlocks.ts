@@ -2,12 +2,11 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import {
   formatCurrencyFromMinorUnits,
-  formatMinutesAsHoursAndMinutes,
   isSupportedCurrency,
   workedMinutes,
 } from '@alga-psa/core';
 import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
-import { LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
+import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/core/i18n/config';
 
 export interface TicketEmailAsset {
   assetTag: string;
@@ -49,15 +48,16 @@ export interface TicketEmailDetailBlocks {
 }
 
 /** Fallback blocks when detail building fails; templates render empty sections. */
-export function emptyTicketEmailDetailBlocks(): TicketEmailDetailBlocks {
+export function emptyTicketEmailDetailBlocks(locale: SupportedLocale = LOCALE_CONFIG.defaultLocale): TicketEmailDetailBlocks {
+  const duration = durationFormatter(locale);
   return {
     assets: [],
     materials: [],
     materialsTotal: '',
     timeEntries: [],
-    totalTimeWorked: formatMinutesAsHoursAndMinutes(0),
-    totalTimeBillable: formatMinutesAsHoursAndMinutes(0),
-    remainingBlockHours: formatMinutesAsHoursAndMinutes(0),
+    totalTimeWorked: duration(0),
+    totalTimeBillable: duration(0),
+    remainingBlockHours: duration(0),
   };
 }
 
@@ -105,11 +105,25 @@ function number(value: number | string, field: string): number {
   return parsed;
 }
 
-function money(amount: number, currencyCode: string): string {
+function money(amount: number, currencyCode: string, locale: string): string {
   if (!isSupportedCurrency(currencyCode)) {
     throw new Error(`Ticket email details: unsupported material currency "${currencyCode}"`);
   }
-  return formatCurrencyFromMinorUnits(amount, LOCALE_CONFIG.defaultLocale, currencyCode);
+  return formatCurrencyFromMinorUnits(amount, locale, currencyCode);
+}
+
+function durationFormatter(locale: string): (minutes: number) => string {
+  const hours = new Intl.NumberFormat(locale, { style: 'unit', unit: 'hour', unitDisplay: 'short' });
+  const minutes = new Intl.NumberFormat(locale, { style: 'unit', unit: 'minute', unitDisplay: 'short' });
+  const list = new Intl.ListFormat(locale, { style: 'short', type: 'unit' });
+  return (value) => {
+    const roundedMinutes = Math.round(value);
+    const wholeHours = Math.floor(roundedMinutes / 60);
+    const remainingMinutes = roundedMinutes % 60;
+    const parts = [hours.format(wholeHours)];
+    if (remainingMinutes !== 0) parts.push(minutes.format(remainingMinutes));
+    return list.format(parts);
+  };
 }
 
 function timestamp(value: Date | string | null): number {
@@ -211,7 +225,7 @@ export async function fetchTicketEmailDetailRows(
   }]));
 }
 
-function buildMaterialsSection(rows: MaterialRow[]) {
+function buildMaterialsSection(rows: MaterialRow[], locale: string) {
   const totalsByCurrency = new Map<string, number>();
   const materials = rows.map((row) => {
     const quantity = number(row.quantity, 'material quantity');
@@ -223,19 +237,23 @@ function buildMaterialsSection(rows: MaterialRow[]) {
       name: text(row.item_name) || text(row.description),
       description: text(row.description),
       quantity,
-      rate: money(rate, currencyCode),
-      amount: money(amount, currencyCode),
+      rate: money(rate, currencyCode, locale),
+      amount: money(amount, currencyCode, locale),
       currencyCode,
       billed: row.is_billed,
     };
   });
   return {
     materials,
-    materialsTotal: [...totalsByCurrency].map(([currency, amount]) => money(amount, currency)).join(' + '),
+    materialsTotal: [...totalsByCurrency].map(([currency, amount]) => money(amount, currency, locale)).join(' + '),
   };
 }
 
-function buildTimeSection(rows: TimeEntryRow[], dateFormatter: Intl.DateTimeFormat) {
+function buildTimeSection(
+  rows: TimeEntryRow[],
+  dateFormatter: Intl.DateTimeFormat,
+  duration: (minutes: number) => string,
+) {
   let totalWorked = 0;
   let totalBillable = 0;
   const timeEntries = sortTimeEntriesChronologically(rows).map((row) => {
@@ -246,14 +264,14 @@ function buildTimeSection(rows: TimeEntryRow[], dateFormatter: Intl.DateTimeForm
     return {
       date: row.start_time === null ? '' : dateFormatter.format(new Date(row.start_time)),
       technician: text(row.technician_name),
-      worked: formatMinutesAsHoursAndMinutes(worked),
-      billable: formatMinutesAsHoursAndMinutes(billable),
+      worked: duration(worked),
+      billable: duration(billable),
     };
   });
   return {
     timeEntries,
-    totalTimeWorked: formatMinutesAsHoursAndMinutes(totalWorked),
-    totalTimeBillable: formatMinutesAsHoursAndMinutes(totalBillable),
+    totalTimeWorked: duration(totalWorked),
+    totalTimeBillable: duration(totalBillable),
   };
 }
 
@@ -268,15 +286,17 @@ export async function buildTicketEmailDetailBlocksFromRows(
   clientId: string | null | undefined,
   rowsByTicket: Map<string, TicketDetailRows>,
   timeZone: string,
+  locale: SupportedLocale,
   resolveHourBlockMinutes: HourBlockMinutesResolver,
 ): Promise<TicketEmailDetailBlocks> {
   const rows = rowsByTicket.get(ticketId);
   if (!rows) {
     throw new Error(`Ticket email details: no detail rows were fetched for ticket ${ticketId}`);
   }
-  const dateFormatter = new Intl.DateTimeFormat(LOCALE_CONFIG.defaultLocale, {
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
   });
+  const duration = durationFormatter(locale);
   const remainingMinutes = clientId ? await resolveHourBlockMinutes(clientId) : 0;
   return {
     assets: rows.assets.map((row) => ({
@@ -290,9 +310,9 @@ export async function buildTicketEmailDetailBlocksFromRows(
       location: text(row.location),
       relationship: text(row.relationship_type),
     })),
-    ...buildMaterialsSection(rows.materials),
-    ...buildTimeSection(rows.timeEntries, dateFormatter),
-    remainingBlockHours: formatMinutesAsHoursAndMinutes(remainingMinutes),
+    ...buildMaterialsSection(rows.materials, locale),
+    ...buildTimeSection(rows.timeEntries, dateFormatter, duration),
+    remainingBlockHours: duration(remainingMinutes),
   };
 }
 
@@ -302,11 +322,12 @@ export async function buildTicketEmailDetailBlocks(
   ticketId: string,
   clientId: string | null | undefined,
   timeZone = 'UTC',
+  locale: SupportedLocale = LOCALE_CONFIG.defaultLocale,
   resolveHourBlockMinutes: HourBlockMinutesResolver = (id) =>
     getAvailableHourBlockMinutes(knex, tenant, id),
 ): Promise<TicketEmailDetailBlocks> {
   const rowsByTicket = await fetchTicketEmailDetailRows(knex, tenant, [ticketId]);
   return buildTicketEmailDetailBlocksFromRows(
-    ticketId, clientId, rowsByTicket, timeZone, resolveHourBlockMinutes,
+    ticketId, clientId, rowsByTicket, timeZone, locale, resolveHourBlockMinutes,
   );
 }

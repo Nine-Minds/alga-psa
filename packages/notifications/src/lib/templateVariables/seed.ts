@@ -3079,7 +3079,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.materials",
             "type": "array",
             "description": "Material rows with quantity, currency-formatted rate and amount, and billed state.",
-            "example": "[{ name: 'Toner cartridge', description: 'Replacement toner', quantity: 2, rate: '$45.00', amount: '$90.00', currencyCode: 'USD', billed: true }]",
+            "example": "[{ name: 'Toner cartridge', description: 'Replacement toner', quantity: 2, rate: '45.00', amount: '90.00', currencyCode: 'XXX', billed: true }]",
             "availability": "available-unused"
           },
           {
@@ -3107,21 +3107,21 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.materials[].rate",
             "type": "string",
             "description": "Material rate.",
-            "example": "$45.00",
+            "example": "45.00",
             "availability": "available-unused"
           },
           {
             "path": "ticket.materials[].amount",
             "type": "string",
             "description": "Material amount.",
-            "example": "$90.00",
+            "example": "90.00",
             "availability": "available-unused"
           },
           {
             "path": "ticket.materials[].currencyCode",
             "type": "string",
             "description": "Material currencyCode.",
-            "example": "USD",
+            "example": "XXX",
             "availability": "available-unused"
           },
           {
@@ -3135,14 +3135,14 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.materialsTotal",
             "type": "string",
             "description": "Material totals, kept separate by currency when necessary.",
-            "example": "$90.00",
+            "example": "90.00",
             "availability": "available-unused"
           },
           {
             "path": "ticket.timeEntries",
             "type": "array",
             "description": "Individual time entries, oldest first. Date, technician, worked and billable can be laid out as an editable table.",
-            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr 30 min', billable: '1 hr' }]",
+            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr, 30 min', billable: '1 hr' }]",
             "availability": "available-unused"
           },
           {
@@ -3163,7 +3163,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.timeEntries[].worked",
             "type": "string",
             "description": "Time entry worked.",
-            "example": "1 hr 30 min",
+            "example": "1 hr, 30 min",
             "availability": "available-unused"
           },
           {
@@ -3177,21 +3177,21 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.totalTimeWorked",
             "type": "string",
             "description": "Total recorded worked duration, including non-billable time.",
-            "example": "3 hrs 30 min",
+            "example": "3 hr, 30 min",
             "availability": "available-unused"
           },
           {
             "path": "ticket.totalTimeBillable",
             "type": "string",
             "description": "Total recorded billable duration, whether invoiced or not.",
-            "example": "2 hrs 15 min",
+            "example": "2 hr, 15 min",
             "availability": "available-unused"
           },
           {
             "path": "ticket.remainingBlockHours",
             "type": "string",
             "description": "Live available prepaid hour-block balance for the client at send time.",
-            "example": "12 hrs 45 min",
+            "example": "12 hr, 45 min",
             "availability": "available-unused"
           }
         ]
@@ -5337,7 +5337,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.timeEntries",
             "type": "array",
             "description": "Individual time entries, oldest first. Date, technician, worked and billable can be laid out as an editable table.",
-            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr 30 min', billable: '1 hr' }]",
+            "example": "[{ date: '06/10/2025', technician: 'Jane Smith', worked: '1 hr, 30 min', billable: '1 hr' }]",
             "availability": "available-unused"
           },
           {
@@ -5358,7 +5358,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.timeEntries[].worked",
             "type": "string",
             "description": "Time entry worked.",
-            "example": "1 hr 30 min",
+            "example": "1 hr, 30 min",
             "availability": "available-unused"
           },
           {
@@ -5372,21 +5372,21 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.totalTimeWorked",
             "type": "string",
             "description": "Total recorded worked duration, including non-billable time.",
-            "example": "3 hrs 30 min",
+            "example": "3 hr, 30 min",
             "availability": "available-unused"
           },
           {
             "path": "ticket.totalTimeBillable",
             "type": "string",
             "description": "Total recorded billable duration, whether invoiced or not.",
-            "example": "2 hrs 15 min",
+            "example": "2 hr, 15 min",
             "availability": "available-unused"
           },
           {
             "path": "ticket.remainingBlockHours",
             "type": "string",
             "description": "Live available prepaid hour-block balance for the client at send time.",
-            "example": "12 hrs 45 min",
+            "example": "12 hr, 45 min",
             "availability": "available-unused"
           }
         ]

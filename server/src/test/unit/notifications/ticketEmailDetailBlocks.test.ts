@@ -3,6 +3,7 @@ import path from 'node:path';
 import Handlebars from 'handlebars';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 const state = vi.hoisted(() => ({
   assets: [] as Record<string, unknown>[],
@@ -47,6 +48,7 @@ vi.mock('@alga-psa/db', () => ({
 import {
   buildTicketEmailDetailBlocks,
   buildTicketEmailDetailBlocksFromRows,
+  emptyTicketEmailDetailBlocks,
   fetchTicketEmailDetailRows,
   sortTimeEntriesChronologically,
 } from '../../../lib/notifications/ticketEmailDetailBlocks';
@@ -54,7 +56,8 @@ import {
 const knex = { raw: vi.fn() } as Pick<Knex, 'raw'> as Knex;
 const root = path.resolve(__dirname, '../../../../..');
 // Pinned to UTC so date expectations do not depend on the host timezone.
-const build = () => buildTicketEmailDetailBlocks(knex, 'tenant-1', 'ticket-1', 'client-1', 'UTC');
+const build = (locale: SupportedLocale = 'en', timeZone = 'UTC') =>
+  buildTicketEmailDetailBlocks(knex, 'tenant-1', 'ticket-1', 'client-1', timeZone, locale);
 
 describe('closed-ticket email detail data', () => {
   beforeEach(() => {
@@ -69,7 +72,7 @@ describe('closed-ticket email detail data', () => {
     const data = await build();
     expect(data).toEqual({
       assets: [], materials: [], materialsTotal: '', timeEntries: [],
-      totalTimeWorked: '0 hrs', totalTimeBillable: '0 hrs', remainingBlockHours: '12 hrs 45 min',
+      totalTimeWorked: '0 hr', totalTimeBillable: '0 hr', remainingBlockHours: '12 hr, 45 min',
     });
     expect(Object.keys(data).some(key => /Html/.test(key))).toBe(false);
     expect(state.hours).toHaveBeenCalledWith(knex, 'tenant-1', 'client-1');
@@ -100,6 +103,38 @@ describe('closed-ticket email detail data', () => {
     expect(data.materialsTotal).toBe('$90.00 + €10.00');
   });
 
+  it('formats currency, dates, durations and empty blocks in the requested locale', async () => {
+    state.materials = [
+      { item_name: 'Toner', description: '', quantity: 1, rate: 123450, currency_code: 'EUR', is_billed: true },
+      { item_name: 'Cable', description: '', quantity: 1, rate: 4500, currency_code: 'USD', is_billed: false },
+    ];
+    state.time = [{
+      entry_id: '1', start_time: '2025-06-10T09:00:00Z', end_time: '2025-06-10T10:30:00Z',
+      billable_duration: 60, technician_name: 'Jane Smith',
+    }];
+    const data = await build('de');
+    const spaces = (value: string) => value.replace(/\s/g, ' ');
+    expect(spaces(data.materials[0].rate)).toBe('1.234,50 €');
+    expect(spaces(data.materials[1].amount)).toBe('45,00 $');
+    expect(spaces(data.materialsTotal)).toBe('1.234,50 € + 45,00 $');
+    expect(data.timeEntries[0]).toEqual({
+      date: '10.06.2025', technician: 'Jane Smith', worked: '1 Std., 30 Min.', billable: '1 Std.',
+    });
+    expect(data.totalTimeWorked).toBe('1 Std., 30 Min.');
+    expect(data.remainingBlockHours).toBe('12 Std., 45 Min.');
+    expect(emptyTicketEmailDetailBlocks('de')).toMatchObject({
+      totalTimeWorked: '0 Std.', totalTimeBillable: '0 Std.', remainingBlockHours: '0 Std.',
+    });
+  });
+
+  it('formats the work date in the configured time zone', async () => {
+    state.time = [{
+      entry_id: '1', start_time: '2025-06-10T00:30:00Z', end_time: '2025-06-10T01:30:00Z',
+      billable_duration: 60, technician_name: 'Jane Smith',
+    }];
+    expect((await build('de', 'America/Los_Angeles')).timeEntries[0].date).toBe('09.06.2025');
+  });
+
   it('rejects invalid material currency and propagates lookup failures', async () => {
     state.materials = [{ item_name: 'Toner', quantity: 1, rate: 1000, currency_code: 'BAD' }];
     await expect(build()).rejects.toThrow('unsupported material currency');
@@ -116,12 +151,12 @@ describe('closed-ticket email detail data', () => {
     ];
     const data = await build();
     expect(data.timeEntries).toEqual([
-      { date: '06/09/2025', technician: 'Jane Smith', worked: '1 hr 30 min', billable: '1 hr 30 min' },
-      { date: '06/10/2025', technician: '<Alex>', worked: '1 hr', billable: '0 hrs 45 min' },
-      { date: '06/11/2025', technician: 'Jane Smith', worked: '0 hrs 30 min', billable: '0 hrs' },
+      { date: '06/09/2025', technician: 'Jane Smith', worked: '1 hr, 30 min', billable: '1 hr, 30 min' },
+      { date: '06/10/2025', technician: '<Alex>', worked: '1 hr', billable: '0 hr, 45 min' },
+      { date: '06/11/2025', technician: 'Jane Smith', worked: '0 hr, 30 min', billable: '0 hr' },
     ]);
-    expect(data.totalTimeWorked).toBe('3 hrs');
-    expect(data.totalTimeBillable).toBe('2 hrs 15 min');
+    expect(data.totalTimeWorked).toBe('3 hr');
+    expect(data.totalTimeBillable).toBe('2 hr, 15 min');
     const guide = readFileSync(path.join(root, 'docs/email/editing-ticket-email-html.md'), 'utf8');
     const example = guide.match(/```html\r?\n([\s\S]*?)```/)?.[1];
     expect(example).toBeDefined();
@@ -140,9 +175,9 @@ describe('closed-ticket email detail data', () => {
   it('uses the existing effective timezone for the work date', async () => {
     state.time = [{ entry_id: '1', start_time: '2025-06-10T01:00:00Z', end_time: '2025-06-10T02:00:00Z', billable_duration: null, technician_name: null }];
     const data = await buildTicketEmailDetailBlocks(knex, 'tenant-1', 'ticket-1', null, 'America/New_York');
-    expect(data.timeEntries[0]).toEqual({ date: '06/09/2025', technician: '', worked: '1 hr', billable: '0 hrs' });
-    expect(data.totalTimeBillable).toBe('0 hrs');
-    expect(data.remainingBlockHours).toBe('0 hrs');
+    expect(data.timeEntries[0]).toEqual({ date: '06/09/2025', technician: '', worked: '1 hr', billable: '0 hr' });
+    expect(data.totalTimeBillable).toBe('0 hr');
+    expect(data.remainingBlockHours).toBe('0 hr');
     expect(state.hours).not.toHaveBeenCalled();
   });
 
@@ -176,12 +211,12 @@ describe('closed-ticket email detail data', () => {
     expect(state.tenant).toHaveBeenCalledTimes(3);
     expect(state.whereIn).toHaveBeenCalledWith('tm.ticket_id', ['ticket-1', 'ticket-2']);
     const fromRows = (ticketId: string, clientId: string | null) =>
-      buildTicketEmailDetailBlocksFromRows(ticketId, clientId, rows, 'UTC', (id) => state.hours(knex, 'tenant-1', id));
-    expect(await fromRows('ticket-1', 'client-1')).toMatchObject({ materialsTotal: '$45.00', timeEntries: [], remainingBlockHours: '12 hrs 45 min' });
+      buildTicketEmailDetailBlocksFromRows(ticketId, clientId, rows, 'UTC', 'en', (id) => state.hours(knex, 'tenant-1', id));
+    expect(await fromRows('ticket-1', 'client-1')).toMatchObject({ materialsTotal: '$45.00', timeEntries: [], remainingBlockHours: '12 hr, 45 min' });
     expect(await fromRows('ticket-2', null)).toMatchObject({
       materialsTotal: '$20.00',
-      timeEntries: [{ date: '06/10/2025', technician: 'Kim', worked: '0 hrs 30 min', billable: '0 hrs 30 min' }],
-      remainingBlockHours: '0 hrs',
+      timeEntries: [{ date: '06/10/2025', technician: 'Kim', worked: '0 hr, 30 min', billable: '0 hr, 30 min' }],
+      remainingBlockHours: '0 hr',
     });
   });
 });

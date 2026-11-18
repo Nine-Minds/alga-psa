@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import inventory from "../../../../../docs/plans/2026-07-17-email-template-variables-inventory.json";
 import { getNestedTemplateExampleData } from "./exampleData";
 import { templateVariableRegistry } from "./registry";
+import { sharedBlockSeed, templateVariableSeed } from "./seed";
 
 type TemplateModule = {
   getTemplate: () => {
@@ -50,7 +51,18 @@ describe("email template variable registry", () => {
       "{{#each ticket.timeEntries}}{{date}} | {{technician}} | {{worked}} | {{billable}}{{/each}}",
       { strict: true },
     )(data);
-    expect(html).toBe("06/10/2025 | Jane Smith | 1 hr 30 min | 1 hr");
+    expect(html).toBe("06/10/2025 | Jane Smith | 1 hr, 30 min | 1 hr");
+  });
+
+  it("keeps the generated seed in sync with the inventory", () => {
+    expect(templateVariableSeed).toEqual(inventory.categories.map((category) => ({
+      category: category.category,
+      templates: category.templates.map((template) => ({
+        templateName: template.templateName,
+        variables: template.variables,
+      })),
+    })));
+    expect(sharedBlockSeed).toEqual(inventory.synthesis.sharedBlocks);
   });
 
   it("records the corrected contracts and inferred templates", () => {

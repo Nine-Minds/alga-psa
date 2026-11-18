@@ -132,14 +132,14 @@ describe('ticket detail variable insertion', () => {
       path: 'ticket.materials',
       field: 'Text Content',
       replace: true,
-      example: 'Toner cartridge: 2 \u00d7 $45.00 = $90.00',
+      example: 'Toner cartridge: 2 \u00d7 45.00 = 90.00',
       token: '{{#each ticket.materials}}{{name}}: {{quantity}} \u00d7 {{rate}} = {{amount}}{{/each}}',
     },
     {
       path: 'ticket.timeEntries',
       field: 'Subject',
       replace: false,
-      example: '06/10/2025 | Jane Smith | 1 hr 30 min | 1 hr',
+      example: '06/10/2025 | Jane Smith | 1 hr, 30 min | 1 hr',
       token: '{{#each ticket.timeEntries}}{{date}} | {{technician}} | {{worked}} | {{billable}}{{/each}}',
     },
   ])('inserts $path at the cursor and previews its sample row', async ({ path, field, replace, example, token }) => {
