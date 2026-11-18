@@ -34,6 +34,16 @@ const ALLOWLIST: Record<string, string> = {
     'Bulk client list endpoint (JSON); not a picker.',
 };
 
+/**
+ * Second rule: a `clients=` prop on a client picker opts into the in-memory path and the full list that
+ * feeds it. Files here pass a bounded per-record list (not the tenant's clients); each needs a reason.
+ */
+const CLIENTS_PROP_ALLOWLIST: Record<string, string> = {
+  // (filled in when the rule's current hits are known)
+};
+
+const PICKER_WITH_CLIENTS_PROP = /<\s*(?:Async)?ClientPicker\b[^>]*?\bclients\s*=/;
+
 const SKIP_DIRS = new Set(['node_modules', 'dist', '.next', '__tests__', 'coverage']);
 
 function isTestFile(file: string): boolean {
@@ -57,6 +67,12 @@ function sourceRoots(): string[] {
   for (const pkg of fs.readdirSync(packagesDir, { withFileTypes: true })) {
     if (pkg.isDirectory()) roots.push(path.join(packagesDir, pkg.name, 'src'));
   }
+  const eePackagesDir = path.join(REPO_ROOT, 'ee/packages');
+  if (fs.existsSync(eePackagesDir)) {
+    for (const pkg of fs.readdirSync(eePackagesDir, { withFileTypes: true })) {
+      if (pkg.isDirectory()) roots.push(path.join(eePackagesDir, pkg.name, 'src'));
+    }
+  }
   roots.push(path.join(REPO_ROOT, 'server/src'), path.join(REPO_ROOT, 'ee/server/src'));
   return roots;
 }
@@ -74,6 +90,16 @@ function offenders(files: string[], read: (file: string) => string, allow: Recor
     const source = stripComments(read(file));
     const call = FULL_LIST_CALLS.find((name) => source.includes(name));
     if (call && PICKER_RENDER.test(source)) hits.push(`${rel} (calls ${call}) and renders a client picker`);
+  }
+  return hits;
+}
+
+function clientsPropOffenders(files: string[], read: (file: string) => string, allow: Record<string, string>): string[] {
+  const hits: string[] = [];
+  for (const file of files) {
+    const rel = path.relative(REPO_ROOT, file).split(path.sep).join('/');
+    if (rel in allow) continue;
+    if (PICKER_WITH_CLIENTS_PROP.test(stripComments(read(file)))) hits.push(`${rel} passes clients= to a client picker`);
   }
   return hits;
 }
@@ -103,6 +129,24 @@ describe('client pickers never load the whole tenant client list', () => {
         `${rel} is allowlisted but no longer calls a full-list client action; remove it`,
       ).toBe(true);
     }
+  });
+
+  it('has no client picker given a clients= list', () => {
+    expect(clientsPropOffenders(files, read, CLIENTS_PROP_ALLOWLIST)).toEqual([]);
+  });
+
+  it('allowlists clients= files only while they still pass the prop', () => {
+    for (const rel of Object.keys(CLIENTS_PROP_ALLOWLIST)) {
+      const file = path.join(REPO_ROOT, rel);
+      expect(fs.existsSync(file), `${rel} is allowlisted but missing`).toBe(true);
+      expect(PICKER_WITH_CLIENTS_PROP.test(stripComments(read(file))), `${rel} no longer passes clients=; remove it`).toBe(true);
+    }
+  });
+
+  it('flags a picker with clients= (the second rule can fail)', () => {
+    const fake = path.join(REPO_ROOT, 'packages/example/src/Bad.tsx');
+    expect(clientsPropOffenders([fake], () => '<ClientPicker\n id="x"\n clients={rows}\n />', {})).toHaveLength(1);
+    expect(clientsPropOffenders([fake], () => '<ClientPicker id="x" selectedClientId={a} />', {})).toEqual([]);
   });
 
   it('flags a file that fetches every client for a picker (the check can fail)', () => {
