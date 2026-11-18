@@ -32,7 +32,7 @@ const forbiddenKnex = new Proxy((() => undefined) as (...args: unknown[]) => unk
 function setup() {
   const upgradePayment = vi.fn(async () => true);
   const handlers = createCoManagedPaymentHandlers({
-    priceId: () => undefined, sync: vi.fn(), finalizeCheckout: vi.fn(), upgradePayment,
+    recognizedPrices: () => undefined, refreshRecognition: async () => false, sync: vi.fn(), finalizeCheckout: vi.fn(), upgradePayment,
   });
   return { upgradePayment, handlers };
 }

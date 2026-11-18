@@ -65,7 +65,7 @@ describeDb('pool purchase review and resume from the seat setup (T045)', { shuff
   let migrationsDir: string;
   const previous: Record<string, string | undefined> = {};
   const envKeys = ['STRIPE_API_BASE_URL', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    'STRIPE_CO_MANAGED_USER_PRICE_ID', 'STRIPE_PRO_PRICE_ID', 'MASTER_BILLING_TENANT_ID', 'NEXT_PUBLIC_APP_URL', 'FORCE_CAPABILITIES'];
+    'STRIPE_CO_MANAGED_USER_PRICE_ID', 'STRIPE_ACCOUNT_ID', 'STRIPE_PRO_PRICE_ID', 'MASTER_BILLING_TENANT_ID', 'NEXT_PUBLIC_APP_URL', 'FORCE_CAPABILITIES'];
 
   const control = async (path: string, body: unknown): Promise<any> => {
     const response = await fetch(`${controlUrl}/control/stripe/${path}`, {
@@ -88,7 +88,8 @@ describeDb('pool purchase review and resume from the seat setup (T045)', { shuff
     process.env.STRIPE_SECRET_KEY = 'sk_test_algasim';
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_algasim';
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_algasim';
-    process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID;
+    process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID; // legacy binding: the offer is unmanaged here
+    process.env.STRIPE_ACCOUNT_ID = 'acct_algasim'; // catalog scope; the emulator has no accounts endpoint
     process.env.STRIPE_PRO_PRICE_ID = PRO_PRICE_ID;
     process.env.MASTER_BILLING_TENANT_ID = randomUUID();
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';

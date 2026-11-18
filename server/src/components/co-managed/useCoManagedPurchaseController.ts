@@ -11,6 +11,8 @@ export interface CoManagedPurchaseQuote {
   monthlyTotal: number;
   amountDue: number;
   currency: string;
+  /** The offer version the purchaser reviewed; sent back so a rotation forces a fresh review. */
+  offerRef?: string;
 }
 
 /**
@@ -48,7 +50,7 @@ export function useCoManagedPurchaseController(options: {
     setBusy(true); setError(null);
     try {
       const quote = await previewCoManagedSeatsAction(nextQuantity);
-      setPreview({ quantity: nextQuantity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency });
+      setPreview({ quantity: nextQuantity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency, offerRef: quote.offerRef });
       return true;
     } catch {
       setError('preview');
@@ -62,7 +64,21 @@ export function useCoManagedPurchaseController(options: {
     options.onOperation?.({ operationId: operation.current, quantity: quantityToBuy });
     setBusy(true); setError(null);
     try {
-      const result = await purchaseCoManagedSeatsAction({ quantity: quantityToBuy, operationId: operation.current });
+      const result = await purchaseCoManagedSeatsAction({ quantity: quantityToBuy, operationId: operation.current,
+        ...(preview?.offerRef ? { offerRef: preview.offerRef } : {}) });
+      if (result.kind === 'review_required') {
+        // The price changed after review. Nothing was charged; show the new terms for fresh consent.
+        operation.current = null;
+        setCheckout(null);
+        await review(quantityToBuy);
+        setError('termsChanged');
+        return 'review-required' as const;
+      }
+      if (result.kind === 'unavailable') {
+        setPreview(null); setCheckout(null);
+        setError('offerUnavailable');
+        return 'unavailable' as const;
+      }
       if (result.kind === 'checkout') {
         if (!result.publishableKey) {
           // A session without a usable publishable key cannot render checkout;
@@ -88,7 +104,7 @@ export function useCoManagedPurchaseController(options: {
       await reload().catch(() => undefined);
       return 'ambiguous' as const;
     } finally { setBusy(false); }
-  }, [preview, quantity, reload, options.onOperation]);
+  }, [preview, quantity, reload, review, options.onOperation]);
 
   /** Replays an operation this browser already started. The server answers from the operation, so it cannot charge twice. */
   const replay = useCallback((operationId: string, replayQuantity: number) => {

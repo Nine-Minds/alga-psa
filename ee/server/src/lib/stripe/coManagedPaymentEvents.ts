@@ -15,13 +15,18 @@ import { admits, forcedValue, serves } from '@alga-psa/core/capability';
 import logger from '@alga-psa/core/logger';
 import { recordCoManagedPaymentFailure } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
-import { CO_MANAGED_SUBSCRIPTION_KIND } from './coManagedSubscription';
+import { CO_MANAGED_SUBSCRIPTION_KIND, recognizesPrice, type RecognizedPrices } from './coManagedSubscription';
 import type { PaymentEventHandler } from './paymentEventRegistry';
 import { INDEPENDENT_UPGRADE_SOURCE } from './coManagedUpgradeSource';
 
 export interface CoManagedPaymentDeps {
-  /** Configured SKU; absent means the whole co-managed purchase path is inert. */
-  priceId(): string | undefined;
+  /** RECOGNITION set from the catalog (every price ever bound, retired included), as last loaded.
+   * Synchronous because `claims` is pure; refreshed by `refreshRecognition` before admission. The
+   * `subscription_kind` metadata marker is the primary claim, the price set is defence in depth. */
+  recognizedPrices(): RecognizedPrices | undefined;
+  /** Reload the recognition set and report whether any co-managed offer is configured at all.
+   * Absent configuration means the whole co-managed purchase path is inert. */
+  refreshRecognition(): Promise<boolean>;
   sync(tenantId: string, subscriptionId: string, db: Knex): Promise<void>;
   finalizeCheckout(session: Stripe.Checkout.Session, tenantId: string, db: Knex): Promise<void>;
   /** Independent-upgrade (L8b) reconciliation; resolved lazily so no Stripe client exists until needed.
@@ -51,11 +56,11 @@ function invoiceSubscriptionId(invoice: any): string | undefined {
 }
 
 /** Pure payload test: is this event about the dedicated co-managed seat pool? */
-export function isCoManagedPaymentEvent(event: Stripe.Event, priceId?: string): boolean {
+export function isCoManagedPaymentEvent(event: Stripe.Event, prices?: RecognizedPrices): boolean {
   const object = event.data.object as any;
   if (SUBSCRIPTION_EVENTS.has(event.type)) {
     return object.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND ||
-      Boolean(priceId && object.items?.data?.some((item: any) => item.price?.id === priceId));
+      Boolean(prices && object.items?.data?.some((item: any) => recognizesPrice(prices, item.price?.id)));
   }
   if (event.type === 'checkout.session.completed') {
     return object.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND;
@@ -63,8 +68,8 @@ export function isCoManagedPaymentEvent(event: Stripe.Event, priceId?: string): 
   if (INVOICE_EVENTS.has(event.type)) {
     const details = object.subscription_details ?? object.parent?.subscription_details;
     return details?.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND ||
-      Boolean(priceId && object.lines?.data?.some((line: any) => line.price?.id === priceId ||
-        line.pricing?.price_details?.price === priceId));
+      Boolean(prices && object.lines?.data?.some((line: any) => recognizesPrice(prices, line.price?.id) ||
+        recognizesPrice(prices, line.pricing?.price_details?.price)));
   }
   return false;
 }
@@ -86,10 +91,10 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
   return [
     {
       name: 'co-managed-subscription',
-      claims: (event) => isCoManagedPaymentEvent(event, deps.priceId()),
+      claims: (event) => isCoManagedPaymentEvent(event, deps.recognizedPrices()),
       // Configuration and kill switch only: the event itself proves the tenant participates, and
       // an existing pool keeps being reconciled even if the release flag is later turned off.
-      admits: async () => Boolean(deps.priceId()) && killSwitchOpen(),
+      admits: async () => killSwitchOpen() && await deps.refreshRecognition(),
       // Never let a co-managed event fall through to the MSP's own seat handlers.
       consumeWhenClosed: true,
       async handle({ event, tenantId, knex }) {
@@ -113,7 +118,7 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
       // capability admits; the MSP's own handler still processes the event afterwards.
       name: 'co-managed-sponsor-base',
       claims: (event) => SPONSOR_SYNC_EVENTS.has(event.type),
-      admits: async ({ tenantId }) => Boolean(deps.priceId()) && (await admits('co-managed', tenantId)).admitted,
+      admits: async ({ tenantId }) => await deps.refreshRecognition() && (await admits('co-managed', tenantId)).admitted,
       consumeWhenClosed: false,
       async handle({ tenantId, knex }) {
         try {

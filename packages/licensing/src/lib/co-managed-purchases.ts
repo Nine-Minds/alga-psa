@@ -8,6 +8,9 @@ export interface CoManagedPurchaseOperation {
   quantity: number;
   state: 'preparing' | 'checkout' | 'completed' | 'expired' | 'payment_failed';
   provider_reference: string | null;
+  /** Catalog terms pinned when the purchase was first confirmed; null for pre-catalog operations. */
+  offer_version_id?: string | null;
+  price_id?: string | null;
 }
 
 export type CoManagedPurchaseResult =
@@ -55,6 +58,9 @@ export async function runCoManagedPurchase(db: Knex, input: {
   sponsorTenant: string;
   operationId: string;
   quantity: number;
+  /** Reviewed terms to record with a NEW operation. Resume and retry read them back from the row;
+   * they are never re-resolved, so a price rotation cannot reprice a confirmed purchase. */
+  pinned?: { offerVersionId: string | null; priceId: string };
 }, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>): Promise<CoManagedPurchaseResult> {
   if (!Number.isInteger(input.quantity) || input.quantity < 0 || input.quantity > 100000 ||
       !UUID.test(input.operationId) || !UUID.test(input.sponsorTenant)) {
@@ -85,7 +91,8 @@ export async function runCoManagedPurchase(db: Knex, input: {
       }
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
-        operation_id: input.operationId, quantity: input.quantity, state: 'preparing' });
+        operation_id: input.operationId, quantity: input.quantity, state: 'preparing',
+        ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId } : {}) });
     });
   } catch (error) {
     // The partial unique index is the backstop for two concurrent first writers.

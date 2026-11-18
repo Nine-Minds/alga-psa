@@ -12,6 +12,8 @@ import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoMa
   getCoManagedClientOverview as readCoManagedClientOverview } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
+// Registers the catalog-backed offer probe in EE; an empty module in CE, so the surface stays inert there.
+import '@enterprise/lib/stripe/offerCatalog/surfaceProbe';
 
 // Enabling and management actions gate on `admits` (flag AND entitlement) before
 // touching the database. The two overview reads (seat capacity and the client

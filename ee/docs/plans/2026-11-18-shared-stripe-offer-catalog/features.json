@@ -1,0 +1,77 @@
+[
+  {
+    "id": "F001",
+    "description": "Persist stable offer and interval bindings with account and mode isolation and reverse lookup for every historical price.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Seed verified legacy and historical bindings idempotently and identify unmapped existing operations or subscriptions before switching.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Validate operator authority and Stripe product, recurrence and pricing compatibility before publication.",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Publish or restore one active binding atomically with concurrency and retry protection.",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Resolve new sales for both hosted purchase entry points and the licensing portal through one authenticated catalog service.",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Display Stripe-derived terms and require a new review when terms change before confirmation.",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Pin confirmed operations to purchaser, entitlement or tenant, quantity and price through checkout and resume.",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Preview and change existing quantities at their contracted historical price.",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Classify webhook, synchronization and recovery by actual historical price, owner and paid period.",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Bind central portal checkout to an eligible connected appliance owner and its separate co-managed seat pool.",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Issue and refresh a signed co_managed_seats count only from verified billing, preserving base seats and other claims.",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Handle duplicate, late, failed and retried fulfillment without double charging or stale capacity increases.",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Propagate renewal, expiry and reductions through existing signed-license consumption and refresh.",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Cut over and roll back safely across all readers, preserving historical reconciliation during a checkout outage.",
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Keep catalog authority on the platform and keep CE and appliance installations outside the operator and billing write paths.",
+    "implemented": false
+  }
+]
