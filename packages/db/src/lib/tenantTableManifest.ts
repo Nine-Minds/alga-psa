@@ -792,6 +792,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'service_catalog_mode_defaults', deletion: 'ordered' },
   { table: 'service_rate_tiers', deletion: 'ordered' },
   { table: 'service_prices', deletion: 'ordered' },
+  { table: 'catalog_price_books', deletion: 'ordered' },
   { table: 'contract_line_discounts', deletion: 'ordered', clientKeyed: { by: 'column', column: 'client_id', enforced: false } },
   { table: 'contract_discount_assignments', deletion: 'ordered' },
   { table: 'discounts', deletion: 'ordered' },

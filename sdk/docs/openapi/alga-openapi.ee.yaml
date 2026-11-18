@@ -81624,6 +81624,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -81651,6 +81653,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -81959,6 +81963,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -81986,6 +81992,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -82525,6 +82533,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -82552,6 +82562,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -82929,6 +82941,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
@@ -82956,6 +82970,8 @@ paths:
                       created_at: {}
                       updated_at: {}
                       display_order: {}
+                      price_book_id: {}
+                      created_by: {}
                     required:
                       - currency_code
                       - rate
