@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -23,7 +23,11 @@ const PAGE_SIZE = 20;
  * authorized, searchable table of its customer workspaces. Setup and recovery
  * are client-scoped, so rows link to the client record's co-managed tab.
  */
-export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
+export default function CoManagedOverview({ initialClientId, purchasePool }: {
+  initialClientId?: string;
+  /** The pool purchase panel for a commercially eligible actor (EE composes it); replaces the capacity line. */
+  purchasePool?: React.ReactNode;
+}) {
   const { t } = useTranslation('msp/licensing');
   // Served shows what exists; the client record's co-managed tab (setup, seats)
   // only exists for an admitted sponsor, so links into it are admit-only.
@@ -41,7 +45,7 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
   const [error, setError] = useState(false);
   const generation = useRef(0);
 
-  useEffect(() => { if (!seatOpen) void getCoManagedBillingState().then(setCapacity, () => setCapacity(null)); }, [seatOpen]);
+  useEffect(() => { if (!seatOpen && !purchasePool) void getCoManagedBillingState().then(setCapacity, () => setCapacity(null)); }, [seatOpen, purchasePool]);
 
   useEffect(() => {
     if (seatOpen) return;
@@ -92,7 +96,8 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
     {!admitted && <p id="co-managed-overview-readonly" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
       {t('coManaged.overview.readOnly', { defaultValue: 'Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.' })}
     </p>}
-    {!seatOpen && capacity && <p id="co-managed-overview-capacity" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
+    {purchasePool}
+    {!seatOpen && !purchasePool && capacity && <p id="co-managed-overview-capacity" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
       {t('coManaged.overview.capacity', { allocated: capacity.allocated, count: capacity.capacity,
         defaultValue: '{{allocated}} of {{count}} co-managed seats allocated.' })}
     </p>}

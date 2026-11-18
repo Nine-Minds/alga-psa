@@ -701,6 +701,13 @@
     "checkoutUnavailable": "Inbäddad betalning är inte tillgänglig. Försök igen när betalningsinställningen är reparerad.",
     "pendingCapacity_one": "Ett köp av {{count}} plats väntar.",
     "pendingCapacity_other": "Ett köp av {{count}} platser väntar.",
+    "buySeats": "Köp samhanterade platser",
+    "awaitingVerification_one": "Ditt köp av {{count}} plats väntar på betalningsverifiering. Platsen visas här när betalningen har bekräftats.",
+    "awaitingVerification_other": "Ditt köp av {{count}} platser väntar på betalningsverifiering. Platserna visas här när betalningen har bekräftats.",
+    "refreshStatus": "Uppdatera status",
+    "purchaseOnly": {
+      "intro": "Köp en pool med samhanterade platser här. Efter köpet tilldelar du platser till kunder från varje kundpost."
+    },
     "previewError": "Det gick inte att prissätta ändringen. Uppdatera och försök igen.",
     "purchaseNeedsAdmin": "En kontoadministratör måste lägga till samförvaltad kapacitet.",
     "purchaseProviderUnconfigured": "Betalningsleverantören är inte konfigurerad.",
