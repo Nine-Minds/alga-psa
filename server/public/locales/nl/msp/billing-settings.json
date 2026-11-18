@@ -1899,11 +1899,13 @@
         },
         "save": "Voorbeeld bijwerken",
         "serviceType": "Servicetype voor nieuwe items",
-        "serviceTypePlaceholder": "Selecteer een servicetype"
+        "serviceTypePlaceholder": "Selecteer een servicetype",
+        "required": "Sommige rijen maken nieuwe items aan. Kies hieronder een servicetype (en een factureringsmethode voor nieuwe services) en selecteer daarna Voorbeeld bijwerken."
       },
       "errors": {
         "slow": "De import is nog bezig. Controleer de prijslijsten zo meteen opnieuw.",
-        "unreadable": "Dat bestand kon niet worden gelezen. Controleer of het een CSV- of XLSX-bestand met een koprij is."
+        "unreadable": "Dat bestand kon niet worden gelezen. Controleer of het een CSV- of XLSX-bestand met een koprij is.",
+        "applyFailed": "De prijslijst kon niet worden toegepast. Er is niets opgeslagen. Probeer het opnieuw of neem contact op met je beheerder als het blijft mislukken."
       },
       "impact": {
         "columns": {

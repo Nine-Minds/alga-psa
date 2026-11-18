@@ -1899,11 +1899,13 @@
         },
         "save": "Vorschau aktualisieren",
         "serviceType": "Servicetyp für neue Positionen",
-        "serviceTypePlaceholder": "Servicetyp auswählen"
+        "serviceTypePlaceholder": "Servicetyp auswählen",
+        "required": "Einige Zeilen legen neue Positionen an. Wählen Sie unten einen Servicetyp (und für neue Services eine Abrechnungsmethode) und klicken Sie dann auf „Vorschau aktualisieren“."
       },
       "errors": {
         "slow": "Der Import läuft noch. Prüfen Sie die Preislistenübersicht gleich noch einmal.",
-        "unreadable": "Die Datei konnte nicht gelesen werden. Prüfen Sie, ob es eine CSV- oder XLSX-Datei mit Kopfzeile ist."
+        "unreadable": "Die Datei konnte nicht gelesen werden. Prüfen Sie, ob es eine CSV- oder XLSX-Datei mit Kopfzeile ist.",
+        "applyFailed": "Die Preisliste konnte nicht angewendet werden. Es wurde nichts gespeichert. Versuchen Sie es erneut oder wenden Sie sich an Ihren Administrator, wenn der Fehler bestehen bleibt."
       },
       "impact": {
         "columns": {

@@ -92,16 +92,17 @@ export default function PriceBooksTab(): React.JSX.Element {
   };
 
   const columns: ColumnDefinition<PriceBookSummary>[] = [
-    { title: t('priceBooks.columns.name', { defaultValue: 'Name' }), dataIndex: 'name' },
-    { title: t('priceBooks.columns.effectiveDate', { defaultValue: 'Effective date' }), dataIndex: 'effective_date', render: (value: string) => formatDate(value) },
+    // Explicit widths so every column, the applied date included, fits beside the name.
+    { title: t('priceBooks.columns.name', { defaultValue: 'Name' }), dataIndex: 'name', width: '280px', minWidth: '180px' },
+    { title: t('priceBooks.columns.effectiveDate', { defaultValue: 'Effective date' }), dataIndex: 'effective_date', width: '130px', minWidth: '110px', render: (value: string) => formatDate(value) },
     {
-      title: t('priceBooks.columns.status', { defaultValue: 'Status' }), dataIndex: 'displayStatus',
+      title: t('priceBooks.columns.status', { defaultValue: 'Status' }), dataIndex: 'displayStatus', width: '130px', minWidth: '110px',
       render: (value: PriceBookDisplayStatus) => <Badge variant={STATUS_VARIANT[value]}>{t(`priceBooks.status.${value}`, { defaultValue: value })}</Badge>,
     },
-    { title: t('priceBooks.columns.items', { defaultValue: 'Items' }), dataIndex: 'itemCount' },
-    { title: t('priceBooks.columns.currencies', { defaultValue: 'Currencies' }), dataIndex: 'currencyCount' },
-    { title: t('priceBooks.columns.appliedBy', { defaultValue: 'Applied by' }), dataIndex: 'appliedByName', render: (value: string | null) => value ?? '—' },
-    { title: t('priceBooks.columns.appliedAt', { defaultValue: 'Applied' }), dataIndex: 'applied_at', render: (value: string | null) => value ? formatDate(value) : '—' },
+    { title: t('priceBooks.columns.items', { defaultValue: 'Items' }), dataIndex: 'itemCount', width: '90px', minWidth: '72px' },
+    { title: t('priceBooks.columns.currencies', { defaultValue: 'Currencies' }), dataIndex: 'currencyCount', width: '110px', minWidth: '90px' },
+    { title: t('priceBooks.columns.appliedBy', { defaultValue: 'Applied by' }), dataIndex: 'appliedByName', width: '150px', minWidth: '110px', render: (value: string | null) => value ?? '—' },
+    { title: t('priceBooks.columns.appliedAt', { defaultValue: 'Applied' }), dataIndex: 'applied_at', width: '130px', minWidth: '110px', render: (value: string | null) => value ? formatDate(value) : '—' },
     {
       title: '', dataIndex: 'price_book_id', id: 'actions', sortable: false, width: '3rem',
       render: (_: string, book: PriceBookSummary) => (

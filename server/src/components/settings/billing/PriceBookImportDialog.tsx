@@ -149,6 +149,7 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
   };
 
   const needsServiceConfig = Boolean(preview?.issues.some((issue) => issue.code.startsWith('CONFIG_SERVICE_') || issue.code === 'CONFIG_PRODUCT_SERVICE_TYPE_REQUIRED'));
+  // LEVERAGE: pattern migration-config-issue — the dialog re-derives which preflight codes are "service config"; the planner could tag them.
   React.useEffect(() => {
     if (step !== 'preview' || !jobId || !needsServiceConfig || serviceTypes.length > 0) return;
     void getMigrationConfigurationOptions(jobId).then((options) => setServiceTypes(options.serviceTypes));
@@ -166,18 +167,24 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
   const apply = async () => {
     if (!jobId) return;
     setBusy(true); setError(null); setStep('applying');
-    const queued = await applyPriceBookImport(jobId);
-    if ('error' in queued) { setError(queued.error); setStep('preview'); setBusy(false); return; }
-    // The run is asynchronous; poll the report until every row has an outcome.
-    for (let attempt = 0; attempt < 120; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const current = await getPriceBookImportReport(jobId);
-      if ('error' in current) continue;
-      if (current.rows.length > 0 && current.rows.every((row) => row.result !== 'pending')) {
-        setReport(current); setStep('result'); setBusy(false); onApplied(); return;
+    try {
+      const queued = await applyPriceBookImport(jobId);
+      if ('error' in queued) { setError(queued.error); setStep('preview'); return; }
+      // The run is asynchronous; poll the report until every row has an outcome.
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const current = await getPriceBookImportReport(jobId);
+        if ('error' in current) continue;
+        if (current.rows.length > 0 && current.rows.every((row) => row.result !== 'pending')) {
+          setReport(current); setStep('result'); onApplied(); return;
+        }
       }
-    }
-    setBusy(false); setError(t('priceBooks.import.errors.slow', { defaultValue: 'The import is still running. Check the price book list in a moment.' })); setStep('preview');
+      setError(t('priceBooks.import.errors.slow', { defaultValue: 'The import is still running. Check the price book list in a moment.' })); setStep('preview');
+    } catch {
+      // A thrown server action (e.g. the job runner is unavailable) must not leave the dialog on "Applying…".
+      setError(t('priceBooks.import.errors.applyFailed', { defaultValue: 'The price book could not be applied. Nothing was written. Try again, or contact your administrator if it keeps failing.' }));
+      setStep('preview');
+    } finally { setBusy(false); }
   };
 
   const downloadReport = async () => {
@@ -199,14 +206,16 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
   const hasKeyColumn = ['item_ref', 'sku', 'name'].some((value) => mappedTargets.has(value));
 
   const rowColumns: ColumnDefinition<PriceBookPreviewRow>[] = [
-    { title: t('priceBooks.import.preview.columns.row', { defaultValue: 'Row' }), dataIndex: 'sourceRow', width: '4rem' },
-    { title: t('priceBooks.import.preview.columns.item', { defaultValue: 'Item' }), dataIndex: 'itemName', render: (value: string | null) => value ?? '—' },
-    { title: t('priceBooks.import.preview.columns.kind', { defaultValue: 'Kind' }), dataIndex: 'itemKind', render: (value: string | null) => value ? t(`priceBooks.import.kind.${value}`, { defaultValue: value }) : '—' },
-    { title: t('priceBooks.import.preview.columns.currency', { defaultValue: 'Currency' }), dataIndex: 'currency', render: (value: string | null) => value ?? '—' },
-    { title: t('priceBooks.import.preview.columns.current', { defaultValue: 'Current price' }), dataIndex: 'currentRateMinor', id: 'current', render: (_: number | null, row: PriceBookPreviewRow) => money(row.currentRateMinor, row.currency) },
-    { title: t('priceBooks.import.preview.columns.new', { defaultValue: 'New price' }), dataIndex: 'newRateMinor', id: 'new', render: (_: number | null, row: PriceBookPreviewRow) => money(row.newRateMinor, row.currency) },
+    // Explicit widths (with minWidth on the wide columns) so every column, Outcome included,
+    // fits the dialog instead of the last ones hiding behind "Show all".
+    { title: t('priceBooks.import.preview.columns.row', { defaultValue: 'Row' }), dataIndex: 'sourceRow', width: '64px', minWidth: '56px' },
+    { title: t('priceBooks.import.preview.columns.item', { defaultValue: 'Item' }), dataIndex: 'itemName', width: '220px', minWidth: '140px', render: (value: string | null) => value ?? '—' },
+    { title: t('priceBooks.import.preview.columns.kind', { defaultValue: 'Kind' }), dataIndex: 'itemKind', width: '96px', minWidth: '72px', render: (value: string | null) => value ? t(`priceBooks.import.kind.${value}`, { defaultValue: value }) : '—' },
+    { title: t('priceBooks.import.preview.columns.currency', { defaultValue: 'Currency' }), dataIndex: 'currency', width: '96px', minWidth: '72px', render: (value: string | null) => value ?? '—' },
+    { title: t('priceBooks.import.preview.columns.current', { defaultValue: 'Current price' }), dataIndex: 'currentRateMinor', id: 'current', width: '120px', minWidth: '96px', render: (_: number | null, row: PriceBookPreviewRow) => money(row.currentRateMinor, row.currency) },
+    { title: t('priceBooks.import.preview.columns.new', { defaultValue: 'New price' }), dataIndex: 'newRateMinor', id: 'new', width: '120px', minWidth: '96px', render: (_: number | null, row: PriceBookPreviewRow) => money(row.newRateMinor, row.currency) },
     {
-      title: t('priceBooks.import.preview.columns.change', { defaultValue: 'Change' }), dataIndex: 'newRateMinor', id: 'change', sortable: false,
+      title: t('priceBooks.import.preview.columns.change', { defaultValue: 'Change' }), dataIndex: 'newRateMinor', id: 'change', sortable: false, width: '150px', minWidth: '110px',
       render: (_: number | null, row: PriceBookPreviewRow) => {
         if (row.currentRateMinor === null || row.newRateMinor === null || !row.currency) return '—';
         const delta = row.newRateMinor - row.currentRateMinor;
@@ -215,7 +224,7 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
       },
     },
     {
-      title: t('priceBooks.import.preview.columns.outcome', { defaultValue: 'Outcome' }), dataIndex: 'outcome', id: 'outcome',
+      title: t('priceBooks.import.preview.columns.outcome', { defaultValue: 'Outcome' }), dataIndex: 'outcome', id: 'outcome', width: '220px', minWidth: '140px',
       render: (_: string, row: PriceBookPreviewRow) => (
         <div className="space-y-1">
           <Badge variant={OUTCOME_VARIANT[row.outcome]}>{t(`priceBooks.import.outcome.${row.outcome}`, { defaultValue: row.outcome })}</Badge>
@@ -236,7 +245,15 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
   ];
 
   const visibleRows = (preview?.rows ?? []).filter((row) => outcomeFilter === 'all' || row.outcome === outcomeFilter);
+  const isServiceConfigIssue = (code: string) => code.startsWith('CONFIG_SERVICE_') || code === 'CONFIG_PRODUCT_SERVICE_TYPE_REQUIRED';
   const jobBlockers = (preview?.issues ?? []).filter((issue) => issue.severity === 'blocking');
+  // The planner's own text for these points at the Migrations "Configure" screen; here the pickers sit just below.
+  const blockerMessages = [
+    ...(jobBlockers.some((issue) => isServiceConfigIssue(issue.code))
+      ? [t('priceBooks.import.config.required', { defaultValue: 'Some rows create new items. Choose a service type (and a billing method for new services) below, then select Update preview.' })]
+      : []),
+    ...jobBlockers.filter((issue) => !isServiceConfigIssue(issue.code)).map((issue) => issue.message),
+  ];
 
   const impactSections: Array<{ key: 'willChange' | 'custom' | 'unreviewed' | 'excluded'; label: string }> = [
     { key: 'willChange', label: t('priceBooks.import.impact.willChange', { defaultValue: 'Will change' }) },
@@ -309,7 +326,7 @@ export default function PriceBookImportDialog({ isOpen, onClose, onApplied }: Pr
               ))}
             </div>
             {jobBlockers.length > 0 && (
-              <Alert id="price-book-job-blockers" variant="destructive"><AlertDescription><ul className="list-disc pl-4">{jobBlockers.map((issue) => <li key={issue.code}>{issue.message}</li>)}</ul></AlertDescription></Alert>
+              <Alert id="price-book-job-blockers" variant="destructive"><AlertDescription><ul className="list-disc pl-4">{blockerMessages.map((message) => <li key={message}>{message}</li>)}</ul></AlertDescription></Alert>
             )}
             {needsServiceConfig && (
               <div className="grid grid-cols-3 items-end gap-4">

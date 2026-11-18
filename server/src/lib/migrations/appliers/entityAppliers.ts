@@ -842,7 +842,8 @@ export class CatalogPriceMigrationApplier implements EntityApplier {
     if (priceError.error || record.rate_minor === null || record.rate_minor === undefined) {
       throw new Error(`The price "${priceError.text ?? ''}" could not be read (${priceError.error ?? 'missing'}).`);
     }
-    const currency = record.currency || config.currency || (await resolveConfiguredTenantCurrency(trx, context.tenant));
+    const jobCurrency = config.currency || (await resolveConfiguredTenantCurrency(trx, context.tenant));
+    const currency = record.currency || jobCurrency;
     if (!currency || !isSupportedCurrency(currency)) throw new Error('The price has no usable currency.');
     const rate = record.rate_minor;
 
@@ -911,7 +912,8 @@ export class CatalogPriceMigrationApplier implements EntityApplier {
     }
 
     const written = await writeServiceCatalogPricing(trx, context.tenant, serviceId, {
-      appendAt: { effectiveDate: effective, priceBookId: book.price_book_id, prices: [{ currency_code: currency, rate }] },
+      // Prices arrive one currency at a time, so an item this book creates takes the job currency as its primary price.
+      appendAt: { effectiveDate: effective, priceBookId: book.price_book_id, prices: [{ currency_code: currency, rate }], primaryCurrency: jobCurrency },
       actorUserId: context.actorUserId,
       today,
     });

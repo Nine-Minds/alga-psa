@@ -317,6 +317,29 @@ describe('pricebook catalog pricing: the single writer', () => {
       expect(ok.servicePatch.default_rate).toBe(205);
     });
 
+    it('primaryCurrency: a new item written one currency at a time takes the job currency as primary and default_rate', async () => {
+      const serviceId = await createTestService(context, { service_name: 'New in book', billing_method: 'fixed', default_rate: 0, seedServicePrice: false });
+      const book = await makeBook('Created today', TODAY, 'draft');
+      // The CAD record happens to be applied first; USD is the job currency.
+      const first = await trxWrite(serviceId, { appendAt: { effectiveDate: TODAY, priceBookId: book, prices: [{ currency_code: 'CAD', rate: 25900 }], primaryCurrency: 'USD' } });
+      expect(first.servicePatch.default_rate).toBe(25900);
+      const second = await trxWrite(serviceId, { appendAt: { effectiveDate: TODAY, priceBookId: book, prices: [{ currency_code: 'USD', rate: 18900 }], primaryCurrency: 'USD' } });
+      expect(second.servicePatch.default_rate).toBe(18900);
+      const rows = await tenantRows(serviceId);
+      expect(rows.map((r: any) => [r.currency_code, r.display_order]).sort()).toEqual([['CAD', 1], ['USD', 0]]);
+    });
+
+    it('primaryCurrency never reorders an item that already has earlier prices', async () => {
+      const serviceId = await createTestService(context, { service_name: 'Priced in CAD', billing_method: 'fixed', default_rate: 500, currency_code: 'CAD' });
+      const book = await makeBook('Adds USD', FUTURE, 'draft');
+      await trxWrite(serviceId, { appendAt: { effectiveDate: FUTURE, priceBookId: book, prices: [{ currency_code: 'USD', rate: 400 }], primaryCurrency: 'USD' } });
+      const rows = await tenantRows(serviceId);
+      const usd = rows.find((r: any) => r.currency_code === 'USD');
+      const cad = rows.find((r: any) => r.currency_code === 'CAD');
+      expect(cad.display_order).toBe(0);
+      expect(usd.display_order).toBe(1);
+    });
+
     it('scheduledAt (rollout dialog) still merges its own previous scheduled row, and refuses a pricebook row', async () => {
       const serviceId = await createTestService(context, { service_name: 'Rollout', billing_method: 'fixed', default_rate: 100 });
       await trxWrite(serviceId, { scheduledAt: { effectiveDate: FUTURE, prices: [{ currency_code: 'USD', rate: 200 }] } });

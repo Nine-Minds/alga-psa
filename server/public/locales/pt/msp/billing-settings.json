@@ -1899,11 +1899,13 @@
         },
         "save": "Atualizar pré-visualização",
         "serviceType": "Tipo de serviço dos novos itens",
-        "serviceTypePlaceholder": "Selecione um tipo de serviço"
+        "serviceTypePlaceholder": "Selecione um tipo de serviço",
+        "required": "Algumas linhas criam itens novos. Escolha abaixo um tipo de serviço (e um método de faturação para os serviços novos) e selecione Atualizar pré-visualização."
       },
       "errors": {
         "slow": "A importação ainda está em curso. Verifique a lista de preços dentro de momentos.",
-        "unreadable": "Não foi possível ler esse ficheiro. Verifique se é um ficheiro CSV ou XLSX com linha de cabeçalho."
+        "unreadable": "Não foi possível ler esse ficheiro. Verifique se é um ficheiro CSV ou XLSX com linha de cabeçalho.",
+        "applyFailed": "Não foi possível aplicar a lista de preços. Nada foi gravado. Tente novamente ou contacte o seu administrador se o problema persistir."
       },
       "impact": {
         "columns": {

@@ -1899,11 +1899,13 @@
         },
         "save": "Aggiorna anteprima",
         "serviceType": "Tipo di servizio per i nuovi articoli",
-        "serviceTypePlaceholder": "Seleziona un tipo di servizio"
+        "serviceTypePlaceholder": "Seleziona un tipo di servizio",
+        "required": "Alcune righe creano nuovi articoli. Scegli qui sotto un tipo di servizio (e un metodo di fatturazione per i nuovi servizi), quindi seleziona Aggiorna anteprima."
       },
       "errors": {
         "slow": "L'importazione è ancora in corso. Controlla l'elenco dei listini tra poco.",
-        "unreadable": "Impossibile leggere il file. Verifica che sia un file CSV o XLSX con riga di intestazione."
+        "unreadable": "Impossibile leggere il file. Verifica che sia un file CSV o XLSX con riga di intestazione.",
+        "applyFailed": "Impossibile applicare il listino. Non è stato salvato nulla. Riprova o contatta l'amministratore se il problema persiste."
       },
       "impact": {
         "columns": {

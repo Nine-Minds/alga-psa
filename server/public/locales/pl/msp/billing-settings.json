@@ -1901,11 +1901,13 @@
         },
         "save": "Odśwież podgląd",
         "serviceType": "Typ usługi dla nowych pozycji",
-        "serviceTypePlaceholder": "Wybierz typ usługi"
+        "serviceTypePlaceholder": "Wybierz typ usługi",
+        "required": "Niektóre wiersze tworzą nowe pozycje. Wybierz poniżej typ usługi (oraz metodę rozliczania dla nowych usług), a następnie kliknij Odśwież podgląd."
       },
       "errors": {
         "slow": "Import nadal trwa. Sprawdź listę cenników za chwilę.",
-        "unreadable": "Nie udało się odczytać tego pliku. Sprawdź, czy to plik CSV lub XLSX z wierszem nagłówka."
+        "unreadable": "Nie udało się odczytać tego pliku. Sprawdź, czy to plik CSV lub XLSX z wierszem nagłówka.",
+        "applyFailed": "Nie udało się zastosować cennika. Nic nie zostało zapisane. Spróbuj ponownie lub skontaktuj się z administratorem, jeśli błąd się powtarza."
       },
       "impact": {
         "columns": {

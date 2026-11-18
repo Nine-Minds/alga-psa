@@ -1899,11 +1899,13 @@
         },
         "save": "Uppdatera förhandsgranskning",
         "serviceType": "Tjänstetyp för nya artiklar",
-        "serviceTypePlaceholder": "Välj en tjänstetyp"
+        "serviceTypePlaceholder": "Välj en tjänstetyp",
+        "required": "Några rader skapar nya artiklar. Välj en tjänstetyp nedan (och en faktureringsmetod för nya tjänster) och välj sedan Uppdatera förhandsgranskning."
       },
       "errors": {
         "slow": "Importen pågår fortfarande. Kontrollera prislistan om en stund.",
-        "unreadable": "Filen kunde inte läsas. Kontrollera att det är en CSV- eller XLSX-fil med rubrikrad."
+        "unreadable": "Filen kunde inte läsas. Kontrollera att det är en CSV- eller XLSX-fil med rubrikrad.",
+        "applyFailed": "Prislistan kunde inte tillämpas. Inget sparades. Försök igen eller kontakta din administratör om felet kvarstår."
       },
       "impact": {
         "columns": {

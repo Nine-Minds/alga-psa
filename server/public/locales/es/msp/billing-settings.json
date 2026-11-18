@@ -1899,11 +1899,13 @@
         },
         "save": "Actualizar vista previa",
         "serviceType": "Tipo de servicio para los nuevos artículos",
-        "serviceTypePlaceholder": "Seleccione un tipo de servicio"
+        "serviceTypePlaceholder": "Seleccione un tipo de servicio",
+        "required": "Algunas filas crean artículos nuevos. Elija abajo un tipo de servicio (y un método de facturación para los servicios nuevos) y seleccione Actualizar vista previa."
       },
       "errors": {
         "slow": "La importación sigue en curso. Compruebe la lista de precios en unos instantes.",
-        "unreadable": "No se pudo leer el archivo. Compruebe que sea un archivo CSV o XLSX con fila de encabezado."
+        "unreadable": "No se pudo leer el archivo. Compruebe que sea un archivo CSV o XLSX con fila de encabezado.",
+        "applyFailed": "No se pudo aplicar la lista de precios. No se ha guardado nada. Vuelva a intentarlo o contacte con su administrador si el error persiste."
       },
       "impact": {
         "columns": {

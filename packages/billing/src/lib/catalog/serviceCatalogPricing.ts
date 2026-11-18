@@ -183,6 +183,14 @@ export interface AppendServicePricesInput {
   /** The price book the rows belong to; null for an unaffiliated dated insert. */
   priceBookId: string | null;
   prices: ServicePriceInput[];
+  /**
+   * The currency that is primary (`display_order` 0, mirrored to `default_rate`)
+   * for an item with no price before `effectiveDate`, e.g. the job currency of an
+   * import that creates the item one currency at a time. Without it the first
+   * currency written becomes primary. Ignored for an item that already has
+   * earlier prices: its existing order is kept.
+   */
+  primaryCurrency?: string | null;
 }
 
 export interface WriteServiceCatalogPricingInput {
@@ -277,6 +285,7 @@ export async function writeServiceCatalogPricing(
         effectiveDate: input.appendAt.effectiveDate,
         priceBookId: input.appendAt.priceBookId,
         prices: parseOrThrow(servicePricesInputSchema, input.appendAt.prices, 'prices'),
+        primaryCurrency: input.appendAt.primaryCurrency ?? null,
       };
   if (appendAt) {
     if (!CALENDAR_DATE.test(appendAt.effectiveDate) || Number.isNaN(Date.parse(`${appendAt.effectiveDate}T00:00:00Z`))) {
@@ -474,6 +483,7 @@ export async function writeServiceCatalogPricing(
     priceBookId: string | null,
     prices: ServicePriceInput[],
     order: 'submitted' | 'catalog',
+    primaryCurrency: string | null = null,
   ): Promise<void> => {
     if (prices.length === 0) return;
     const existing = await db.table<PriceRow>('service_prices')
@@ -514,6 +524,25 @@ export async function writeServiceCatalogPricing(
         created_by: actor,
       });
     }
+    // An item with no price before this date takes `primaryCurrency` as its primary
+    // price, whatever order its currencies arrive in; rows already at this date move
+    // down one place to make room.
+    const primaryRow = primaryCurrency ? toInsert.find((row) => row.currency_code === primaryCurrency) : undefined;
+    const primaryOrder = primaryRow ? Number(primaryRow.display_order) : 0;
+    if (primaryRow && primaryOrder !== 0 && !existing.some((row) => dateOf(row.effective_date) < effectiveDate)) {
+      const shifted = existing.filter((row) => dateOf(row.effective_date) === effectiveDate && (row.display_order ?? 0) < primaryOrder);
+      if (shifted.length > 0) {
+        await db.table<PriceRow>('service_prices')
+          .whereIn('price_id', shifted.map((row) => row.price_id))
+          .update({ display_order: trx.raw('display_order + 1'), updated_at: trx.fn.now() });
+      }
+      for (const row of shifted) orderOf.set(row.currency_code, (row.display_order ?? 0) + 1);
+      for (const row of toInsert) {
+        if (row !== primaryRow && Number(row.display_order) < primaryOrder) row.display_order = Number(row.display_order) + 1;
+      }
+      primaryRow.display_order = 0;
+      orderOf.set(String(primaryCurrency), 0);
+    }
     if (toInsert.length > 0) {
       written.push(...(await db.table<PriceRow>('service_prices').insert(toInsert).returning('*')));
     }
@@ -549,7 +578,7 @@ export async function writeServiceCatalogPricing(
   }
 
   if (appendAt) {
-    await appendRows(appendAt.effectiveDate, appendAt.priceBookId, appendAt.prices, 'catalog');
+    await appendRows(appendAt.effectiveDate, appendAt.priceBookId, appendAt.prices, 'catalog', appendAt.primaryCurrency);
   }
 
   return { prices: [...written, ...unchanged], unchangedPrices: unchanged, servicePatch };

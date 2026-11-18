@@ -1899,11 +1899,13 @@
         },
         "save": "Update preview",
         "serviceType": "Service type for new items",
-        "serviceTypePlaceholder": "Select a service type"
+        "serviceTypePlaceholder": "Select a service type",
+        "required": "Some rows create new items. Choose a service type (and a billing method for new services) below, then select Update preview."
       },
       "errors": {
         "slow": "The import is still running. Check the price book list in a moment.",
-        "unreadable": "That file could not be read. Check that it is a CSV or XLSX file with a header row."
+        "unreadable": "That file could not be read. Check that it is a CSV or XLSX file with a header row.",
+        "applyFailed": "The price book could not be applied. Nothing was written. Try again, or contact your administrator if it keeps failing."
       },
       "impact": {
         "columns": {

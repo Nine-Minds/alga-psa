@@ -1899,11 +1899,13 @@
         },
         "save": "Actualiser l'aperçu",
         "serviceType": "Type de service pour les nouveaux articles",
-        "serviceTypePlaceholder": "Sélectionnez un type de service"
+        "serviceTypePlaceholder": "Sélectionnez un type de service",
+        "required": "Certaines lignes créent de nouveaux articles. Choisissez ci-dessous un type de service (et un mode de facturation pour les nouveaux services), puis sélectionnez Actualiser l'aperçu."
       },
       "errors": {
         "slow": "L'importation est toujours en cours. Consultez la liste de prix dans un instant.",
-        "unreadable": "Impossible de lire ce fichier. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX avec une ligne d'en-tête."
+        "unreadable": "Impossible de lire ce fichier. Vérifiez qu'il s'agit d'un fichier CSV ou XLSX avec une ligne d'en-tête.",
+        "applyFailed": "La liste de prix n'a pas pu être appliquée. Rien n'a été enregistré. Réessayez ou contactez votre administrateur si le problème persiste."
       },
       "impact": {
         "columns": {
