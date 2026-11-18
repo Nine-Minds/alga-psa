@@ -274,9 +274,39 @@ const KNOWN_QUOTE_MARKER_TOKENS = ['gmail_quote', 'yahoo_quoted', 'protonmail_qu
 /** How much visible text before a blockquote to inspect for a provider reply header. */
 const REPLY_HEADER_LOOKBEHIND_CHARS = 300;
 
+/** Attribute marking the hidden inbox-preview excerpt Alga puts at the top of notification HTML. */
+export const HTML_PREHEADER_ATTRIBUTE = 'data-alga-preheader';
+
+/**
+ * Remove every element carrying the preheader marker, content included. The excerpt
+ * repeats text from the notification body, so it must never reach a parsed reply or
+ * the visible-text view of one. Handles nested divs inside the marked element.
+ */
+export function stripPreheaderElements(html: string): string {
+  const marker = new RegExp(`<([a-z][a-z0-9]*)\\b[^>]*\\b${HTML_PREHEADER_ATTRIBUTE}\\b[^>]*>`, 'i');
+  let result = html;
+  for (let match = marker.exec(result); match; match = marker.exec(result)) {
+    const tag = match[1];
+    const start = match.index;
+    const tagRegex = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi');
+    tagRegex.lastIndex = start;
+    let depth = 0;
+    let end = result.length;
+    for (let t = tagRegex.exec(result); t; t = tagRegex.exec(result)) {
+      depth += t[1] ? -1 : 1;
+      if (depth === 0) {
+        end = t.index + t[0].length;
+        break;
+      }
+    }
+    result = result.slice(0, start) + result.slice(end);
+  }
+  return result;
+}
+
 /** Convert an HTML fragment to visible text, preserving block-level line breaks. */
 export function htmlToVisibleText(html: string): string {
-  const withBreaks = html
+  const withBreaks = stripPreheaderElements(html)
     .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, '\n')
@@ -667,7 +697,7 @@ export function parseEmailReply(input: ReplyParserInput, config: Partial<ReplyPa
   const appliedHeuristics: string[] = [];
 
   const originalText = input.text || '';
-  const originalHtml = input.html;
+  const originalHtml = input.html ? stripPreheaderElements(input.html) : input.html;
 
   const htmlTokens = originalHtml ? extractTokensFromHtml(originalHtml) : null;
   const textTokens = extractTokensFromText(originalText, mergedConfig);

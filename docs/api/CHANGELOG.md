@@ -2,6 +2,23 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
+
+**Affected endpoint:** `POST /api/v1/tickets`
+
+Tickets created over REST used to ignore the board's default assignment and arrived unassigned, while the same board routed Quick Add and inbound-email tickets to its default user or team. Board-default routing now runs once in the shared ticket-creation path, so REST, Quick Add, and inbound email resolve assignment the same way.
+
+**Changes:**
+
+- New optional body field `assigned_team_id` (uuid or `null`). `assigned_to` now also accepts `null`.
+- An **omitted** field is filled from the board: omitted `assigned_to` takes the board's default user; the board's default team is applied only when **both** `assigned_to` and `assigned_team_id` are omitted. Applying the default team uses the normal team-assignment semantics: the team lead becomes the primary assignee when none was resolved, and team members are added as additional agents.
+- An **explicit** value always wins. A user id or team id is stored as sent. An explicit `null` keeps that field empty, and an explicit `assigned_to` (including `null`) also suppresses the board's default team, so a team lead never replaces the requested assignee.
+- Sending only `assigned_team_id` still lets the board's default user fill the omitted `assigned_to`.
+- Stale defaults soft-fail: a default user who is no longer a valid assignee, or a default team that no longer exists or has no lead, is skipped and the ticket is still created (`201`).
+- Assignment events published after creation carry the persisted assignee.
+
+**Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
+
 ## 2026-11-14 — Recurring ticket definitions over REST (and MCP)
 
 **New endpoints:** `GET|POST /api/v1/tickets/recurring`, `POST /api/v1/tickets/recurring/preview`, `GET|PUT|DELETE /api/v1/tickets/recurring/{definitionId}`, `POST /api/v1/tickets/recurring/{definitionId}/pause`, `POST /api/v1/tickets/recurring/{definitionId}/resume`, `GET /api/v1/tickets/recurring/{definitionId}/upcoming`, `GET /api/v1/tickets/recurring/{definitionId}/occurrences`, `POST /api/v1/tickets/recurring/{definitionId}/clients`, `PUT|DELETE /api/v1/tickets/recurring/{definitionId}/clients/{clientId}`, `POST /api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause|resume`
@@ -14,7 +31,7 @@ Recurring ticket schedules ("definitions") were UI-only. They can now be created
 - `DELETE /tickets/recurring/{definitionId}` **archives** the definition (`204`); there is no unarchive. Writes to an archived definition return `409`.
 - `GET /tickets/recurring` lists definitions, filtered by `status` (`active`, `paused`, `archived`, `all`; default `all`) and `search` (name substring), with `page`/`limit` paging.
 - `POST /tickets/recurring/{definitionId}/pause` and `/resume` stop and restart generation for the whole schedule; the per-client variants under `/clients/{clientId}/pause|resume` do the same for one client.
-- `GET /tickets/recurring/{definitionId}/upcoming` returns the next five due dates plus `definition_status`, so callers can tell that a paused schedule's dates will not actually fire. `POST /tickets/recurring/preview` computes dates for an unsaved draft. Both search at most 1500 days ahead, so a yearly rule returns four dates rather than five.
+- `GET /tickets/recurring/{definitionId}/upcoming` returns the next five due dates plus `definition_status`, so callers can tell that a paused schedule's dates will not actually fire. `POST /tickets/recurring/preview` computes dates for an unsaved draft. Both return five dates, even for a yearly rule, unless the rule ends sooner.
 - `GET /tickets/recurring/{definitionId}/occurrences` is the run history: one row per generation attempt, filtered by `status` (`created`, `skipped`, `missed`, `failed`) and `client_id`. An unknown definition returns `404` rather than an empty page.
 - Clients: `POST .../clients` adds clients with a `{ "client_ids": [...] }` body (up to 100); `PUT .../clients/{clientId}` sets that client's `overrides`, `contact_id`, `location_id` and `asset_ids`; `DELETE .../clients/{clientId}` removes the client from the schedule but keeps its occurrence history. `{clientId}` is the client's `client_id`; a client that is not on this definition returns `404`, while an unknown client named in the add-clients body returns `400`.
 - Permissions: the `recurring_ticket` resource (`read`, `create`, `update`, `delete`; client management uses `update`). Because a definition decides the board, status and assignment of tickets it will create, any write that sets those fields or adds clients is also authorized as `ticket:create` for each affected client before anything is written; a refusal is `403`.
@@ -44,6 +61,21 @@ Previously these endpoints checked whether a record could be read but then retur
 - A single-record read that the caller's policy denies or suppresses for that specific record now returns **`404 Not Found`**, so the response no longer confirms that the record exists. A caller that lacks the RBAC permission altogether still gets `403`. Integrations that treated `403` as "exists but hidden" should handle `404` instead.
 - Fields hidden by the policy are left out of the record. Display values derived from a hidden field (for example a name resolved from a hidden ID) are returned as `null`, and nested records are projected with their own rules.
 - Lists, search, export and stats apply the projection to each row before paging and aggregation: suppressed rows are not returned and not counted in totals, filters and searches on a hidden field match nothing, and stats omit aggregates computed from hidden fields.
+
+## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin
+
+**Affected endpoints:** `POST /api/v1/users`, `PUT /api/v1/users/{id}` (deactivation), `DELETE /api/v1/users/{id}`, and `POST|PUT|DELETE /api/v1/users/{id}/roles`
+
+A tenant could previously lock itself out by removing roles, deactivating or deleting users until no active MSP Admin was left, or leave a user with zero roles. Two invariants are now enforced on every write path (UI server actions, the shared user and role services, the `User` model and the REST API), checked inside the caller's transaction under a per-tenant advisory lock so concurrent requests cannot race past them:
+
+- **Every interactive user keeps at least one role.** A change that would leave an internal or client user with no roles is refused with `400` (`A user must keep at least one role. …`). This includes a role replacement with an empty `role_ids`.
+- **The tenant keeps at least one active internal user with the built-in MSP Admin role.** Removing that role from, deactivating, or deleting the last such user is refused with `409` (`A tenant must keep at least one active MSP Admin user.`). Bulk deactivation counts the other users in the same request as already gone, so deactivating every admin at once is also refused.
+
+**Changes:**
+
+- `role_ids` is now **required** on `POST /api/v1/users` and must contain at least one role id; omitting it or sending `[]` returns `400`. Integrations that created a user and assigned roles in a second call must send the roles on create.
+- To change a user's only role, assign the new role first and then remove the old one, or replace the set in one `PUT /users/{id}/roles` call with a non-empty `role_ids`.
+- To hand MSP Admin to someone else, grant it to the new admin before removing it from, deactivating, or deleting the old one.
 
 ## 2026-11-03 — Ticket templates over REST (and MCP)
 

@@ -191,7 +191,6 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                                 handleSelectChange('billing_email')('');
                                 setIsQuickAddContactOpen(false);
                             }}
-                            clients={[]}
                             selectedClientId={clientId}
                         />
                     </div>

@@ -15,6 +15,13 @@ export interface PickerClient {
   client_type: 'company' | 'individual' | null;
   is_inactive: boolean;
   logoUrl: string | null;
+  /**
+   * Plain (non-billing) attributes a screen reads for the one client it picked, through an `ids`
+   * lookup: the sales-order dialog takes its currency from the client, the new-opportunity dialog
+   * its default type from the lifecycle. They saved a per-package by-id action each.
+   */
+  lifecycle_status: string | null;
+  default_currency_code: string | null;
 }
 
 export interface SearchClientsForPickerParams {
@@ -123,7 +130,7 @@ export async function searchClientsForPicker(
 
     let rowsQuery = query
       .clone()
-      .select('c.client_id', 'c.client_name', 'c.client_type', 'c.is_inactive')
+      .select('c.client_id', 'c.client_name', 'c.client_type', 'c.is_inactive', 'c.lifecycle_status', 'c.default_currency_code')
       .orderByRaw('LOWER(c.client_name) asc')
       .orderBy('c.client_id', 'asc');
     if (!isLookup) {
@@ -144,6 +151,8 @@ export async function searchClientsForPicker(
     client_type: r.client_type ?? null,
     is_inactive: Boolean(r.is_inactive),
     logoUrl: logoMap.get(r.client_id) ?? null,
+    lifecycle_status: r.lifecycle_status ?? null,
+    default_currency_code: r.default_currency_code ?? null,
   }));
 
   return { clients, total };

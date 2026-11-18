@@ -15,22 +15,42 @@ export type WhereTagMode = 'in' | 'not_in';
  */
 export type WhereFilterOptionsSource =
   | { tags: 'contact' | 'client' }
-  | { locations: 'ticket' | 'contact' };
+  | { locations: 'ticket' | 'contact' }
+  /** Clients, found by server-side search (never a loaded list) and named by an id lookup. */
+  | { clients: 'search' };
+
+/** Where in the toolbar the control sits: the primary row (after Board) or the secondary row. */
+export type WhereFilterPlacement = 'primary' | 'secondary';
 
 export interface WhereFilterDescriptor {
   /** Path in the ticket query schema. */
-  path: 'contact.tags' | 'client.tags' | 'location_id' | 'contact.locations';
+  path: 'contact.tags' | 'client.tags' | 'location_id' | 'contact.locations' | 'client.id';
   options: WhereFilterOptionsSource;
   labelKey: string;
   defaultLabel: string;
+  placement: WhereFilterPlacement;
+  /** Chip text for a selected id whose name does not resolve. Rows without one fall back to the id. */
+  unknownValue?: { labelKey: string; defaultLabel: string };
 }
 
 export const WHERE_FILTERS: readonly WhereFilterDescriptor[] = [
-  { path: 'contact.tags', options: { tags: 'contact' }, labelKey: 'filters.requesterTags', defaultLabel: 'Requester tags' },
-  { path: 'client.tags', options: { tags: 'client' }, labelKey: 'filters.clientTags', defaultLabel: 'Client tags' },
-  { path: 'location_id', options: { locations: 'ticket' }, labelKey: 'filters.location', defaultLabel: 'Location' },
-  { path: 'contact.locations', options: { locations: 'contact' }, labelKey: 'filters.requesterLocation', defaultLabel: 'Requester location' },
+  { path: 'contact.tags', options: { tags: 'contact' }, labelKey: 'filters.requesterTags', defaultLabel: 'Requester tags', placement: 'secondary' },
+  { path: 'client.tags', options: { tags: 'client' }, labelKey: 'filters.clientTags', defaultLabel: 'Client tags', placement: 'secondary' },
+  { path: 'location_id', options: { locations: 'ticket' }, labelKey: 'filters.location', defaultLabel: 'Location', placement: 'secondary' },
+  { path: 'contact.locations', options: { locations: 'contact' }, labelKey: 'filters.requesterLocation', defaultLabel: 'Requester location', placement: 'secondary' },
+  {
+    path: 'client.id',
+    options: { clients: 'search' },
+    labelKey: 'fields.client',
+    defaultLabel: 'Client',
+    placement: 'primary',
+    unknownValue: { labelKey: 'filters.unknownClient', defaultLabel: 'Unknown client' },
+  },
 ];
+
+/** The rows for one toolbar row, in table order. */
+export const whereFiltersFor = (placement: WhereFilterPlacement): readonly WhereFilterDescriptor[] =>
+  WHERE_FILTERS.filter((descriptor) => descriptor.placement === placement);
 
 /** The tag rows, with the `taggedType` the tag control reads. Unchanged in content and order. */
 export type WhereTagFilterDescriptor = WhereFilterDescriptor & {
@@ -53,6 +73,9 @@ export const WHERE_LOCATION_FILTERS: readonly WhereLocationFilterDescriptor[] = 
   .filter((descriptor): descriptor is WhereFilterDescriptor & { options: { locations: 'ticket' | 'contact' } } =>
     'locations' in descriptor.options)
   .map((descriptor) => ({ ...descriptor, locationOf: descriptor.options.locations } as WhereLocationFilterDescriptor));
+
+/** The client row (path `client.id`), with the options source the toolbar control reads. */
+export const WHERE_CLIENT_FILTER = WHERE_FILTERS.find((descriptor) => descriptor.path === 'client.id')!;
 
 export interface WhereLocationOption {
   location_id: string;
@@ -103,6 +126,20 @@ export function setWhereTagSelection(
   return next.length > 0 ? { join: 'and', clauses: next } : undefined;
 }
 
+/**
+ * The one client a row narrows the list to: "Any of" exactly one client. Contact and location
+ * options are scoped to that client; any other selection leaves them tenant-wide.
+ */
+export function getSingleClientScope(where: PredicateGroup | undefined): string | null {
+  const selection = getWhereTagSelection(where, 'client.id');
+  return selection && selection.mode === 'in' && selection.ids.length === 1 ? selection.ids[0] : null;
+}
+
+/** Flips Any of / None of and keeps the ids. */
+export function flipWhereMode(selection: WhereTagSelection): WhereTagSelection {
+  return { mode: selection.mode === 'in' ? 'not_in' : 'in', ids: selection.ids };
+}
+
 export interface WhereFilterChip {
   key: string;
   path: string;
@@ -115,14 +152,17 @@ export interface WhereFilterChip {
 
 /**
  * One chip per selected value for each descriptor in the table. `valueLabel` resolves an id to its
- * text (a tag's text, a location's name); an unknown id falls back to the id itself so the chip can
- * still be cleared.
+ * text (a tag's text, a location's name); an unresolved id shows the descriptor's `unknownValue`
+ * label (a client row never shows its id) or, for rows without one, the id itself, so the chip can
+ * still be cleared. `unknownLabel` translates the descriptor's fallback.
  */
 export function whereFilterChips(
   where: PredicateGroup | undefined,
   valueLabel: (descriptor: WhereFilterDescriptor, valueId: string) => string | undefined,
   labelFor: (descriptor: WhereFilterDescriptor) => string,
   descriptors: readonly WhereFilterDescriptor[] = WHERE_FILTERS,
+  unknownLabel: (descriptor: WhereFilterDescriptor) => string | undefined = (descriptor) =>
+    descriptor.unknownValue?.defaultLabel,
 ): WhereFilterChip[] {
   const chips: WhereFilterChip[] = [];
   for (const descriptor of descriptors) {
@@ -130,7 +170,7 @@ export function whereFilterChips(
     if (!selection) continue;
     const label = labelFor(descriptor);
     for (const tagId of selection.ids) {
-      const text = valueLabel(descriptor, tagId) ?? tagId;
+      const text = valueLabel(descriptor, tagId) ?? unknownLabel(descriptor) ?? tagId;
       chips.push({
         key: `where:${descriptor.path}:${selection.mode}:${tagId}`,
         path: descriptor.path,

@@ -216,12 +216,15 @@
   "resetFilters": "Resetuj",
   "filters": {
     "allStatuses": "Wszystkie statusy",
+    "allClients": "Wszyscy klienci",
+    "unknownClient": "Nieznany klient",
     "allOpen": "Wszystkie otwarte zgłoszenia",
     "allClosed": "Wszystkie zamknięte zgłoszenia",
     "allPriorities": "Wszystkie priorytety",
     "search": "Szukaj zgłoszeń i komentarzy...",
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
+    "me": "Ja",
     "category": "Filtruj według kategorii",
     "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",
@@ -255,6 +258,8 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
+    "matchMode": "Dopasowanie",
+    "excludingLabel": "Bez {{label}}",
     "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
     "clearFilters": "Wyczyść filtry",
     "location": "Lokalizacja",
@@ -2521,6 +2526,7 @@
       "addHelp": "Wybierz klienta, aby go dodać. Okno pozostaje otwarte, aby można było dodać kolejnych.",
       "alreadyAdded": "Już dodano",
       "pickerPlaceholder": "Wybierz klienta do dodania",
+      "unnamedClient": "Klient",
       "addedHeading": "Dodani w tym oknie",
       "columns": {
         "client": "Klient",
@@ -3094,6 +3100,24 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "live": {
+    "updatedOne": "Zaktualizowano 1 zgłoszenie",
+    "updatedMany": "Zaktualizowano {{count}} zgłoszeń",
+    "newOne": "1 nowe zgłoszenie",
+    "newMany": "{{count}} nowych zgłoszeń",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nowe zgłoszenie i 1 zaktualizowane zgłoszenie",
+        "manyUpdated": "1 nowe zgłoszenie i {{updatedCount}} zaktualizowanych zgłoszeń"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nowych zgłoszeń i 1 zaktualizowane zgłoszenie",
+        "manyUpdated": "{{newCount}} nowych zgłoszeń i {{updatedCount}} zaktualizowanych zgłoszeń"
+      }
+    },
+    "updatedBadge": "Zaktualizowano",
+    "boardActivity": "Nowa aktywność na tej tablicy"
   },
   "batchDuplicate": {
     "title": "Duplikuj #{{number}} dla kontaktów",
