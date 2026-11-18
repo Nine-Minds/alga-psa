@@ -63,11 +63,15 @@ Persona: an MSP dispatcher or technician working the ticket list.
 ## UX / UI Notes
 
 - The control replaces the single `ClientPicker` in the primary filter row, in the same position
-  (after Board, before Contact). It is the async client picker in multi-select mode plus the same
-  "Any of" / "None of" mode button the tag and location `where` controls already use
-  (`filters.tagModeAny` / `filters.tagModeNone`). The mode button appears only when something is selected.
+  (after Board, before Contact). It is the async client picker in multi-select mode. Progressive
+  disclosure (captain's review, 2026-11-17): on the toolbar it is one plain picker, as before. The
+  "Any of" / "None of" switch lives in the picker's footer and appears only once something is
+  selected, so excluding clients is one step in and invisible to people who never need it. The
+  same switch moves into the popover footer of the tag and location `where` filters, so the toolbar
+  carries no standalone mode buttons.
 - Picker trigger: placeholder "All Clients" when empty; the client's name for one selection; a
-  translated "{{count}} clients" summary for more than one. The popover stays open while ticking,
+  translated "{{count}} clients" summary for more than one; prefixed "Excluding …" in "None of" mode
+  (same for tag and location triggers). The popover stays open while ticking,
   shows a check on selected rows, keeps the existing status/type/tag filter header, and has a
   "Clear" footer action.
 - Toggling the mode keeps the same clients and flips the operator (the `where` family's convention;

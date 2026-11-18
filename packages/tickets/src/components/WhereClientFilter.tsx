@@ -9,7 +9,7 @@ import type {
 } from '@alga-psa/ui/components/AsyncClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { WhereTagSelection } from '../lib/ticketWhereFilters';
-import { WhereModeButton } from './WhereModeButton';
+import { WhereModeSwitch, useWhereSelectionLabel } from './WhereModeSwitch';
 
 interface WhereClientFilterProps {
   id: string;
@@ -24,9 +24,11 @@ interface WhereClientFilterProps {
 }
 
 /**
- * Toolbar control for the `client.id` `where` row: pick clients in the server-searched picker, then
- * choose "Any of" or "None of". The row stores client ids; names are looked up by the picker, so the
- * full client list is never loaded.
+ * Toolbar control for the `client.id` `where` row. On the toolbar it is one plain "All Clients"
+ * picker: tick one client or several. "Any of" / "None of" sits in the picker's footer, so excluding
+ * clients is there when needed and out of the way when not; the trigger reads "Excluding …" then.
+ * The row stores client ids; names are looked up by the picker, so the full client list is never
+ * loaded.
  */
 export function WhereClientFilter({
   id,
@@ -39,9 +41,10 @@ export function WhereClientFilter({
   onClientTypeFilterChange,
 }: WhereClientFilterProps) {
   const { t } = useTranslation('features/tickets');
+  const selectionLabel = useWhereSelectionLabel();
 
   return (
-    <div id={id} className="inline-flex items-center gap-1">
+    <div id={id} className="inline-flex items-center">
       <AsyncClientPicker
         id="client-picker"
         data-automation-id={`${id}-picker`}
@@ -55,8 +58,11 @@ export function WhereClientFilter({
         onFilterStateChange={onFilterStateChange}
         clientTypeFilter={clientTypeFilter}
         onClientTypeFilterChange={onClientTypeFilterChange}
+        formatSelectedLabel={(label) => selectionLabel(selection, label)}
+        footerContent={
+          <WhereModeSwitch id={id} selection={selection} onChange={onChange} className="px-2 py-1.5" />
+        }
       />
-      <WhereModeButton id={id} selection={selection} onChange={onChange} />
     </div>
   );
 }

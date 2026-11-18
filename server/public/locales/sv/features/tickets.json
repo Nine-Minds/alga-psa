@@ -223,6 +223,8 @@
     "clientTags": "Kundtaggar",
     "tagModeAny": "Någon av",
     "tagModeNone": "Ingen av",
+    "matchMode": "Matcha",
+    "excludingLabel": "Utom {{label}}",
     "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
     "clearFilters": "Rensa filter",
     "location": "Plats",

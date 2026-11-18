@@ -3,7 +3,7 @@
 import React from 'react';
 import type { ITag } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
-import { WhereModeButton } from './WhereModeButton';
+import { WhereModeSwitch, useWhereSelectionLabel } from './WhereModeSwitch';
 import {
   locationFilterLabel,
   type WhereLocationOption,
@@ -32,6 +32,7 @@ interface WhereLocationFilterProps {
  */
 export function WhereLocationFilter({ id, label, options, selection, onChange }: WhereLocationFilterProps) {
   const mode: WhereTagMode = selection?.mode ?? 'in';
+  const selectionLabel = useWhereSelectionLabel();
 
   // TagFilter is a checkbox popover keyed on display text, so the mapping lives here and nowhere else.
   const selectedIds = selection?.ids ?? [];
@@ -57,19 +58,19 @@ export function WhereLocationFilter({ id, label, options, selection, onChange }:
   };
 
   return (
-    <div id={id} className="inline-flex items-center gap-1">
+    <div id={id} className="inline-flex items-center">
       <TagFilter
         id={`${id}-locations`}
         tags={asTags}
         selectedTags={selectedTexts}
         triggerLabel={label}
-        selectedLabel={`${label}: ${selectedTexts.length}`}
+        selectedLabel={selectionLabel(selection, `${label}: ${selectedTexts.length}`)}
         onToggleTag={(text: string) =>
           emit(mode, selectedTexts.includes(text) ? selectedTexts.filter((x) => x !== text) : [...selectedTexts, text])
         }
         onClearTags={() => onChange(null)}
+        footerContent={<WhereModeSwitch id={id} selection={selection} onChange={onChange} />}
       />
-      <WhereModeButton id={id} selection={selection} onChange={onChange} />
     </div>
   );
 }

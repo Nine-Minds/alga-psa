@@ -255,6 +255,8 @@
     "clientTags": "Étiquettes du client",
     "tagModeAny": "Au moins une parmi",
     "tagModeNone": "Aucune parmi",
+    "matchMode": "Correspondance",
+    "excludingLabel": "Hors {{label}}",
     "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés.",
     "clearFilters": "Effacer les filtres",
     "location": "Site",

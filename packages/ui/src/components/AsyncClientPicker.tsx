@@ -70,6 +70,10 @@ interface AsyncClientPickerBaseProps {
   disabled?: boolean;
   pageSize?: number;
   debounceMs?: number;
+  /** Rendered in the list footer, above "Add new client" (multi mode: once something is selected). */
+  footerContent?: React.ReactNode;
+  /** Rewrites the trigger text once something is selected, e.g. to mark an exclusion. */
+  formatSelectedLabel?: (label: string) => string;
 }
 
 /** One client; picking a row commits it and closes the list. */
@@ -216,6 +220,8 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   disabled = false,
   pageSize = DEFAULT_PAGE_SIZE,
   debounceMs,
+  footerContent: extraFooter,
+  formatSelectedLabel,
 }) => {
   const { t } = useTranslation('common');
   const contextSearch = useClientPickerSearch();
@@ -331,7 +337,10 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       limit={pageSize}
       debounceMs={debounceMs}
       placeholder={placeholder}
-      selectedLabel={isMulti ? multiLabel : selected?.client_name}
+      selectedLabel={(() => {
+        const label = isMulti ? multiLabel : selected?.client_name;
+        return label && formatSelectedLabel ? formatSelectedLabel(label) : label;
+      })()}
       selectedTrailing={isMulti ? undefined : <EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
       selectedIcon={
         !isMulti && selected ? (
@@ -360,24 +369,29 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
         />
       }
       footerContent={
-        onAddNew
+        onAddNew || (extraFooter && (!isMulti || selectedIds.length > 0))
           ? ({ close }) => (
-              <Button
-                id="client-picker-add-new-btn"
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 rounded-none text-primary"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  close();
-                  onAddNew();
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
-              </Button>
+              <>
+                {(!isMulti || selectedIds.length > 0) && extraFooter}
+                {onAddNew && (
+                  <Button
+                    id="client-picker-add-new-btn"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 rounded-none text-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      close();
+                      onAddNew();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('pickers.addNewClient', { defaultValue: 'Add new client' })}
+                  </Button>
+                )}
+              </>
             )
           : undefined
       }

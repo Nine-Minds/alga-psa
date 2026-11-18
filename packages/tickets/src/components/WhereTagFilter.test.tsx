@@ -8,7 +8,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({ t: (_k: string, d: any) => (typeof d === 'string' ? d : d?.defaultValue ?? _k) }),
+  useTranslation: () => ({
+    t: (_k: string, d: any) =>
+      typeof d === 'string'
+        ? d
+        : String(d?.defaultValue ?? _k).replace(/\{\{(\w+)\}\}/g, (_m: string, name: string) => String(d?.[name] ?? '')),
+  }),
 }));
 
 import { WhereTagFilter } from './WhereTagFilter';
@@ -32,7 +37,15 @@ describe('WhereTagFilter', () => {
     expect(where).toEqual({ join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: ['def-vip'] }] });
   });
 
-  it('toggles to none-of and keeps the selected ids', () => {
+  it('keeps the toolbar to one button: the match switch is inside the popover', () => {
+    render(
+      <WhereTagFilter id="f" label="Requester tags" definitions={defs} selection={{ mode: 'in', ids: ['def-vip'] }} onChange={() => {}} />,
+    );
+    expect(screen.queryByText('None of')).toBeNull();
+    expect(screen.getByText('Requester tags: 1')).toBeTruthy();
+  });
+
+  it('switches to none-of inside the popover and keeps the selected ids', () => {
     const onChange = vi.fn();
     render(
       <WhereTagFilter
@@ -43,15 +56,16 @@ describe('WhereTagFilter', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByText('Any of'));
+    fireEvent.click(screen.getByText('Requester tags: 1'));
+    fireEvent.click(screen.getByText('None of'));
     expect(onChange).toHaveBeenCalledWith({ mode: 'not_in', ids: ['def-vip'] });
   });
 
-  it('shows the none-of mode label for a not_in selection', () => {
+  it('marks a not_in selection on the trigger', () => {
     render(
       <WhereTagFilter id="f" label="Client tags" definitions={defs} selection={{ mode: 'not_in', ids: ['def-poc'] }} onChange={() => {}} />,
     );
-    expect(screen.getByText('None of')).toBeTruthy();
+    expect(screen.getByText('Excluding Client tags: 1')).toBeTruthy();
   });
 });
 
@@ -86,7 +100,8 @@ describe('WhereLocationFilter', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByText('Any of'));
+    fireEvent.click(screen.getByText('Requester location: 1'));
+    fireEvent.click(screen.getByText('None of'));
     expect(onChange).toHaveBeenCalledWith({ mode: 'not_in', ids: [WAREHOUSE] });
   });
 

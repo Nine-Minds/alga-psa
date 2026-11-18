@@ -255,6 +255,8 @@
     "clientTags": "Client tags",
     "tagModeAny": "Any of",
     "tagModeNone": "None of",
+    "matchMode": "Match",
+    "excludingLabel": "Excluding {{label}}",
     "droppedFromLink": "Some filters in this link are not valid and were ignored.",
     "clearFilters": "Clear filters",
     "location": "Location",

@@ -223,6 +223,8 @@
     "clientTags": "Kunden-Tags",
     "tagModeAny": "Mindestens eines von",
     "tagModeNone": "Keines von",
+    "matchMode": "Treffer",
+    "excludingLabel": "Ohne {{label}}",
     "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert.",
     "clearFilters": "Filter löschen",
     "location": "Standort",

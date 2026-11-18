@@ -257,6 +257,8 @@
     "clientTags": "Tagi klienta",
     "tagModeAny": "Dowolny z",
     "tagModeNone": "Żaden z",
+    "matchMode": "Dopasowanie",
+    "excludingLabel": "Bez {{label}}",
     "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane.",
     "clearFilters": "Wyczyść filtry",
     "location": "Lokalizacja",

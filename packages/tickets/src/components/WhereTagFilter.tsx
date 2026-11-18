@@ -3,7 +3,7 @@
 import React from 'react';
 import type { ITag } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
-import { WhereModeButton } from './WhereModeButton';
+import { WhereModeSwitch, useWhereSelectionLabel } from './WhereModeSwitch';
 import type { WhereTagMode, WhereTagSelection } from '../lib/ticketWhereFilters';
 
 interface WhereTagFilterProps {
@@ -22,6 +22,7 @@ interface WhereTagFilterProps {
  */
 export function WhereTagFilter({ id, label, definitions, selection, onChange }: WhereTagFilterProps) {
   const mode: WhereTagMode = selection?.mode ?? 'in';
+  const selectionLabel = useWhereSelectionLabel();
   const idByText = new Map(definitions.map((d) => [d.tag_text, d.tag_id as string]));
   const textById = new Map(definitions.map((d) => [d.tag_id as string, d.tag_text]));
   const selectedTexts = (selection?.ids ?? []).map((tagId) => textById.get(tagId)).filter((x): x is string => Boolean(x));
@@ -32,19 +33,19 @@ export function WhereTagFilter({ id, label, definitions, selection, onChange }: 
   };
 
   return (
-    <div id={id} className="inline-flex items-center gap-1">
+    <div id={id} className="inline-flex items-center">
       <TagFilter
         id={`${id}-tags`}
         tags={definitions}
         selectedTags={selectedTexts}
         triggerLabel={label}
-        selectedLabel={`${label}: ${selectedTexts.length}`}
+        selectedLabel={selectionLabel(selection, `${label}: ${selectedTexts.length}`)}
         onToggleTag={(text: string) =>
           emit(mode, selectedTexts.includes(text) ? selectedTexts.filter((x) => x !== text) : [...selectedTexts, text])
         }
         onClearTags={() => onChange(null)}
+        footerContent={<WhereModeSwitch id={id} selection={selection} onChange={onChange} />}
       />
-      <WhereModeButton id={id} selection={selection} onChange={onChange} />
     </div>
   );
 }
