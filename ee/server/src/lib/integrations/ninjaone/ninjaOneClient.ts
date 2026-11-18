@@ -868,7 +868,7 @@ export class NinjaOneClient {
    */
   async getDeviceLink(
     deviceId: number,
-    linkType: 'SPLASHTOP' | 'TEAMVIEWER' | 'VNC' | 'RDP' | 'SHELL' = 'SPLASHTOP'
+    linkType: string = 'SPLASHTOP'
   ): Promise<NinjaOneDeviceLink> {
     const response = await this.axiosInstance.get<NinjaOneDeviceLink>(
       `/device/${deviceId}/link`,
