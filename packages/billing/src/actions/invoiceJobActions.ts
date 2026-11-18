@@ -287,6 +287,12 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         errors.push({ invoiceId, error: `Invoice not found` });
         continue;
       }
+      // Report it before the user presses Send: sendInvoiceEmailAction refuses it
+      // anyway, and the dialog would otherwise list it as ready to send.
+      if (isNumberPendingExternal(invoice)) {
+        errors.push({ invoiceId, error: INVOICE_NUMBER_PENDING_SEND_MESSAGE, messageKey: INVOICE_NUMBER_PENDING_SEND_KEY });
+        continue;
+      }
 
       const client = await getClientById(knex, tenant, invoice.client_id);
       if (!client) {

@@ -70,7 +70,7 @@ vi.mock('./invoiceEmailLinkContext', () => ({
   getInvoiceEmailLinkContext: vi.fn(async () => ({ paymentUrl: null, portalUrl: null })),
 }));
 
-import { scheduleInvoiceEmailAction, sendInvoiceEmailAction } from './invoiceJobActions';
+import { getInvoiceEmailRecipientAction, scheduleInvoiceEmailAction, sendInvoiceEmailAction } from './invoiceJobActions';
 
 describe('sendInvoiceEmailAction sender plumbing', () => {
   beforeEach(() => {
@@ -118,6 +118,23 @@ describe('pending Xero invoice number gate (alga-2026-0002746)', () => {
 
     expect(result).toMatchObject({ actionError: MESSAGE, messageKey: 'msp/invoicing:errors.jobs.invoiceNumberPending' });
     expect((result as any).jobId).toBeUndefined();
+  });
+
+  it('the send dialog lists a pending_external invoice as not ready, with the actionable message, instead of offering to send it', async () => {
+    const result = await getInvoiceEmailRecipientAction(['invoice-1']);
+
+    expect(result).toMatchObject({
+      recipients: [],
+      errors: [{ invoiceId: 'invoice-1', error: MESSAGE, messageKey: 'msp/invoicing:errors.jobs.invoiceNumberPending' }],
+    });
+  });
+
+  it('an external invoice (number already written back) is offered and sent normally', async () => {
+    mocks.invoiceNumberSource = 'external';
+    expect(await getInvoiceEmailRecipientAction(['invoice-1'])).toMatchObject({
+      recipients: [expect.objectContaining({ invoiceId: 'invoice-1', invoiceNumber: 'INV-1' })],
+      errors: [],
+    });
   });
 
   it('an external invoice (number already written back) is sent normally', async () => {
