@@ -417,7 +417,7 @@ const MultiUserAndTeamPicker = ({
         const option = selectedPinned[0];
         return (
           <div className="flex items-center gap-2">
-            {option.icon && <span className="flex items-center text-gray-500">{option.icon}</span>}
+            {option.icon && <span className="flex items-center text-[rgb(var(--color-text-500))]">{option.icon}</span>}
             <span className="truncate max-w-[120px]">{option.label}</span>
           </div>
         );
@@ -477,7 +477,7 @@ const MultiUserAndTeamPicker = ({
       return (
         <div className="flex items-center gap-2">
           {firstPinned ? (
-            firstPinned.icon ? <span className="flex items-center text-gray-500">{firstPinned.icon}</span> : null
+            firstPinned.icon ? <span className="flex items-center text-[rgb(var(--color-text-500))]">{firstPinned.icon}</span> : null
           ) : firstUser ? (
             <UserAvatar
               userId={firstUser.user_id}
@@ -517,7 +517,7 @@ const MultiUserAndTeamPicker = ({
             key={`pinned-${option.value}`}
             className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-2 pr-2 py-1"
           >
-            {option.icon && <span className="flex items-center text-gray-500 [&>svg]:w-3 [&>svg]:h-3">{option.icon}</span>}
+            {option.icon && <span className="flex items-center text-[rgb(var(--color-text-500))] [&>svg]:w-3 [&>svg]:h-3">{option.icon}</span>}
             <span className="text-sm">{option.label}</span>
             <div
               role="button"
@@ -713,7 +713,7 @@ const MultiUserAndTeamPicker = ({
                   onChange={() => handleUserToggle(option.value)}
                 />
               </div>
-              {option.icon && <span className="flex items-center text-gray-400 [&>svg]:w-4 [&>svg]:h-4">{option.icon}</span>}
+              {option.icon && <span className="flex items-center text-[rgb(var(--color-text-400))] [&>svg]:w-4 [&>svg]:h-4">{option.icon}</span>}
               <span className="text-sm">{option.label}</span>
             </div>
           );
