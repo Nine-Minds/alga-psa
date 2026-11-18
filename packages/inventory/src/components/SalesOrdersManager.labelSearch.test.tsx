@@ -13,7 +13,6 @@ vi.mock('../actions', () => ({
   confirmSalesOrder: vi.fn(),
   createSalesOrder: (input: any) => createSalesOrder(input),
   listSalesOrders: vi.fn(async () => []),
-  getInventoryClientCurrency: vi.fn(async () => 'USD'),
 }));
 
 vi.mock('next/navigation', () => ({

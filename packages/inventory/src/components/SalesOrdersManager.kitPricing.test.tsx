@@ -3,6 +3,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ClientPickerSearchProvider } from '@alga-psa/ui/context';
 import { SalesOrdersManager } from './SalesOrdersManager';
 
 const createSalesOrder = vi.fn(async (_input: any) => ({ so_id: 'so-1', lines: [] }));
@@ -13,7 +14,6 @@ vi.mock('../actions', () => ({
   confirmSalesOrder: vi.fn(),
   createSalesOrder: (input: any) => createSalesOrder(input),
   listSalesOrders: vi.fn(async () => []),
-  getInventoryClientCurrency: vi.fn(async () => 'USD'),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -164,5 +164,26 @@ describe('SalesOrdersManager kit price override', () => {
     const submitted = createSalesOrder.mock.calls[0][0] as any;
     expect(submitted.lines[0].unit_price).toBeUndefined();
     expect(submitted.lines[0].kit_unit_price_override).toBe(45000);
+  });
+
+  it("takes the order currency from the picked client, read by id through the shell's searcher", async () => {
+    const searchClients = vi.fn(async () => ({
+      clients: [{ client_id: 'client-1', client_name: 'Acme', default_currency_code: 'EUR' }],
+      total: 1,
+    }));
+    render(
+      <ClientPickerSearchProvider value={{ searchClients }}>
+        <SalesOrdersManager {...props} services={[{ ...props.services[0], kit_currency: 'EUR' }]} defaultCurrencyCode="USD" />
+      </ClientPickerSearchProvider>,
+    );
+    fireEvent.click(document.querySelector('#sales-orders-add-button')!);
+    fireEvent.change(document.querySelector('#sales-order-client')!, { target: { value: 'client-1' } });
+    fireEvent.change(document.querySelector('#sales-order-line-service-0')!, { target: { value: 'kit-1' } });
+
+    await waitFor(() => expect(searchClients).toHaveBeenCalledWith({ ids: ['client-1'], status: 'all' }));
+    fireEvent.click(document.querySelector('#sales-order-save')!);
+
+    await waitFor(() => expect(createSalesOrder).toHaveBeenCalledTimes(1));
+    expect((createSalesOrder.mock.calls[0][0] as any).currency_code).toBe('EUR');
   });
 });

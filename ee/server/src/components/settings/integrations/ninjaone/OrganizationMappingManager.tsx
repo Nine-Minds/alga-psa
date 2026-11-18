@@ -124,6 +124,9 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
 
   // FR-G4: re-pointing an organization moves its devices, so confirm first.
   const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
 
   const handleCompanyChangeConfirmed = async (mappingId: string, companyId: string | null) => {
     setSavingMappingId(mappingId);
@@ -288,10 +291,6 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     }
     void handleCompanyChangeConfirmed(mappingId, companyId);
   };
-
-  const pendingClientId = pendingClientChange?.clientId ?? null;
-  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
-  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {

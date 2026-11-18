@@ -31,6 +31,9 @@ export interface PickerClientOption {
   client_type?: string | null;
   is_inactive?: boolean;
   logoUrl?: string | null;
+  /** Read by id for the picked client (see `PickerClient` in the shared model). */
+  lifecycle_status?: string | null;
+  default_currency_code?: string | null;
   /** Chip tags for the viewer, already filtered by the display rules. */
   displayTags?: IDisplayTag[];
 }

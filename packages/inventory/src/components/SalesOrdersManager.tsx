@@ -13,7 +13,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { useQuickAddClient } from '@alga-psa/ui/context';
+import { useClientPickerSearch, useQuickAddClient } from '@alga-psa/ui/context';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
@@ -50,7 +50,6 @@ import {
   createSalesOrder,
   confirmSalesOrder,
   cancelSalesOrder,
-  getInventoryClientCurrency,
 } from '../actions';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import {
@@ -327,7 +326,8 @@ export function SalesOrdersManager({
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
   // client and render it read-only (falling back to the tenant default when the client has none).
   // The picker searches on the server and never holds the client list, so the picked client's currency
-  // is read by id; a created client already carries it.
+  // is read by id through the shell's searcher; a created client already carries it.
+  const { searchClients } = useClientPickerSearch();
   const latestPickedClientRef = useRef<string | null>(null);
   const onClientSelect = (clientId: string | null, createdClient?: IClient) => {
     latestPickedClientRef.current = clientId;
@@ -337,9 +337,10 @@ export function SalesOrdersManager({
     }
     // Until the lookup answers the order sits on the tenant currency, the same fallback as a client with none.
     applyClientCurrency(clientId, defaultCurrencyCode);
-    getInventoryClientCurrency(clientId)
-      .then((currency) => {
+    searchClients?.({ ids: [clientId], status: 'all' })
+      .then(({ clients }) => {
         if (latestPickedClientRef.current !== clientId) return;
+        const currency = clients.find((client) => client.client_id === clientId)?.default_currency_code;
         applyClientCurrency(clientId, currency || defaultCurrencyCode);
       })
       .catch(() => undefined);

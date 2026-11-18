@@ -15,7 +15,7 @@ describe('sales orders client creation wiring contract', () => {
     // The picker searches on the server: no client list is held, and the picked client's currency is read by id.
     expect(source).not.toContain('setClientOptions');
     expect(source).not.toContain('clients={clientOptions}');
-    expect(source).toContain('getInventoryClientCurrency(clientId)');
+    expect(source).toContain("searchClients?.({ ids: [clientId], status: 'all' })");
     expect(source).toContain('onAddNew={() => setIsQuickAddClientOpen(true)}');
     expect(source).toContain('open: isQuickAddClientOpen,');
     expect(source).toContain('onOpenChange: setIsQuickAddClientOpen,');
