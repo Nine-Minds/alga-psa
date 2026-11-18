@@ -363,7 +363,7 @@ jobs:
         run: |
           # The manifest bytes the registry serves under the reported digest, not
           # the builder's own copy: the record proves the push landed.
-          docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
+          node scripts/inspect-published-image.mjs "$BUILD_REGISTRY_REFERENCE" "$BUILD_REPORTED_DIGEST" "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
 
       # A second tag on the recorded manifest, after the record is written so

@@ -4,6 +4,7 @@ import { ApiKeyService } from '@alga-psa/auth';
 import { getUserRoles } from '@alga-psa/auth/actions';
 import { IRole } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import { isApiCredentialsRefusedError } from '@alga-psa/authorization/subject/principalKind';
 import {
   actionError,
   permissionError,
@@ -42,6 +43,7 @@ interface AdminApiKeyListView extends ApiKeyListView {
   username: string;
   first_name: string | null;
   last_name: string | null;
+  user_type: string | null;
 }
 
 /**
@@ -89,12 +91,21 @@ export const createApiKey = withAuth(async (
     return actionError('Choose a valid expiration date for this API key.', 'msp/profile:errors.apiKeys.invalidExpiration');
   }
 
-  const apiKey = await ApiKeyService.createApiKey(
-    user.user_id,
-    description,
-    expiresOn,
-    { tenantId: tenant }
-  );
+  let apiKey;
+  try {
+    apiKey = await ApiKeyService.createApiKey(
+      user.user_id,
+      description,
+      expiresOn,
+      { tenantId: tenant }
+    );
+  } catch (error) {
+    // The issuance boundary refuses a principal kind that holds no API credentials (a seat technician).
+    if (isApiCredentialsRefusedError(error)) {
+      return actionError('API keys are not available for this account.', 'msp/profile:errors.apiKeys.notAvailableForAccount');
+    }
+    throw error;
+  }
 
   // Only return the full API key value upon creation
   return {
@@ -190,6 +201,7 @@ export const adminListApiKeys = withAuth(async (
     username: key.username,
     first_name: key.first_name,
     last_name: key.last_name,
+    user_type: key.user_type,
     created_at: key.created_at,
     last_used_at: key.last_used_at,
     expires_at: key.expires_at,

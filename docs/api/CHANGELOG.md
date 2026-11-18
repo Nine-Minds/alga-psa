@@ -2,18 +2,49 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-18 — `POST /api/v1/tickets` applies board default user and team
+
+**Affected endpoint:** `POST /api/v1/tickets`
+
+Tickets created over REST used to ignore the board's default assignment and arrived unassigned, while the same board routed Quick Add and inbound-email tickets to its default user or team. Board-default routing now runs once in the shared ticket-creation path, so REST, Quick Add, and inbound email resolve assignment the same way.
+
+**Changes:**
+
+- New optional body field `assigned_team_id` (uuid or `null`). `assigned_to` now also accepts `null`.
+- An **omitted** field is filled from the board: omitted `assigned_to` takes the board's default user; the board's default team is applied only when **both** `assigned_to` and `assigned_team_id` are omitted. Applying the default team uses the normal team-assignment semantics: the team lead becomes the primary assignee when none was resolved, and team members are added as additional agents.
+- An **explicit** value always wins. A user id or team id is stored as sent. An explicit `null` keeps that field empty, and an explicit `assigned_to` (including `null`) also suppresses the board's default team, so a team lead never replaces the requested assignee.
+- Sending only `assigned_team_id` still lets the board's default user fill the omitted `assigned_to`.
+- Stale defaults soft-fail: a default user who is no longer a valid assignee, or a default team that no longer exists or has no lead, is skipped and the ticket is still created (`201`).
+- Assignment events published after creation carry the persisted assignee.
+
+**Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
+
+## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin
+
+**Affected endpoints:** `POST /api/v1/users`, `PUT /api/v1/users/{id}` (deactivation), `DELETE /api/v1/users/{id}`, and `POST|PUT|DELETE /api/v1/users/{id}/roles`
+
+A tenant could previously lock itself out by removing roles, deactivating or deleting users until no active MSP Admin was left, or leave a user with zero roles. Two invariants are now enforced on every write path (UI server actions, the shared user and role services, the `User` model and the REST API), checked inside the caller's transaction under a per-tenant advisory lock so concurrent requests cannot race past them:
+
+- **Every interactive user keeps at least one role.** A change that would leave an internal or client user with no roles is refused with `400` (`A user must keep at least one role. …`). This includes a role replacement with an empty `role_ids`.
+- **The tenant keeps at least one active internal user with the built-in MSP Admin role.** Removing that role from, deactivating, or deleting the last such user is refused with `409` (`A tenant must keep at least one active MSP Admin user.`). Bulk deactivation counts the other users in the same request as already gone, so deactivating every admin at once is also refused.
+
+**Changes:**
+
+- `role_ids` is now **required** on `POST /api/v1/users` and must contain at least one role id; omitting it or sending `[]` returns `400`. Integrations that created a user and assigned roles in a second call must send the roles on create.
+- To change a user's only role, assign the new role first and then remove the old one, or replace the set in one `PUT /users/{id}/roles` call with a non-empty `role_ids`.
+- To hand MSP Admin to someone else, grant it to the new admin before removing it from, deactivating, or deleting the old one.
+
 ## 2026-11-08 — Time-sheet write endpoints fixed; submission and approval notes become a history
 
-**Affected endpoints:** `POST /api/v1/time-sheets`, `PUT /api/v1/time-sheets/{id}`, `POST /api/v1/time-sheets/{id}/submit`, `/approve`, `/request-changes`, `/reverse-approval`, `GET /api/v1/time-sheets/{id}`, `/search`, `/export`, `POST|GET /api/v1/time-sheets/{id}/comments`
+**Affected endpoints:** `POST /api/v1/time-sheets`, `PUT /api/v1/time-sheets/{id}`, `POST /api/v1/time-sheets/{id}/submit`, `/approve`, `/request-changes`, `/reverse-approval`, `GET /api/v1/time-sheets/{id}`, `/search`, `/export`
 
-The time-sheet write endpoints referenced columns that do not exist on `time_sheets` (`created_at`, `updated_at`, `submission_notes`, `approval_notes`), so creating, submitting, approving and reviewing a time sheet over REST failed with `500`. All of them now persist correctly. Notes written along the way are kept as a per-sheet history instead of a single overwritten field.
+The time-sheet submit, approve, request-changes and reverse-approval endpoints wrote `submission_notes` and `approval_notes` columns that do not exist on `time_sheets`, so those steps failed over REST with `500`. (`POST` and `PUT` were already fixed on 2026-10-27.) All of them now persist correctly. Notes written along the way are kept as a per-sheet history instead of a single overwritten field.
 
 **Changes:**
 
 - **Notes history.** `submission_notes` on `/submit`, `approval_notes` on `/approve`, `change_reason` and `detailed_feedback` on `/request-changes`, and `reversal_reason` on `/reverse-approval` are each stored as a separate history entry. `GET /time-sheets/{id}` returns them as a `notes` array. Each entry has `note_id`, `kind` (`submission`, `approval`, `request_changes`, `reverse_approval` or `legacy`), `note`, `detail`, `created_by`, `user_name` and `created_at`. Approval notes, change requests and reversals are also posted as approver comments.
-- **Removed fields.** `notes` is no longer accepted on `POST` or `PUT /time-sheets` and is no longer returned on a time sheet; `created_at` and `updated_at` are no longer returned either, because the table has no such columns. Existing `time_sheets.notes` values are migrated into the history as `kind: "legacy"`.
-- **Guarded status changes.** `/submit` and `PUT` with `approval_status` go through the same lifecycle rules as the UI. Users can submit only their own sheets, only from `DRAFT` or `CHANGES_REQUESTED`, and only when the sheet has time entries. Approving or requesting changes requires the `time_sheet` `approve` permission and a `SUBMITTED` sheet. A wrong starting status returns `409`. `PUT` with `approval_status: "CHANGES_REQUESTED"` requires a `change_reason`, and setting `DRAFT` directly is refused.
-- **Comments.** The request field for `POST /time-sheets/{id}/comments` is `comment` (previously `comment_text`). Responses carry `comment`, `is_approver` and `time_sheet_id`; `user_role` is gone.
+- **Removed fields.** `notes` sent on `POST` or `PUT /time-sheets` is ignored and is no longer returned on a time sheet; `created_at` and `updated_at` are no longer returned either, because the table has no such columns. Existing `time_sheets.notes` values are migrated into the history as `kind: "legacy"`.
+- **Guarded status changes.** `/submit` and `PUT` with `approval_status` follow the same lifecycle rules as the UI; see the 2026-11-09 entry for the details.
 - **Search** now matches the `query` against the owner name and note history text (`fields=user_name,note`).
 - **Export** returns every matching time sheet instead of stopping at 25 rows. Its array filters (`approval_statuses`, `user_ids`, `period_ids`, `fields`) accept repeated keys or comma-separated values, like search.
 
@@ -21,7 +52,7 @@ The time-sheet write endpoints referenced columns that do not exist on `time_she
 
 ## 2026-11-08 — Ticket API: historical `entered_at` and comment `created_at` for imports
 
-**Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `POST /api/v1/tickets/{id}/comments`
+**Affected endpoints:** `POST /api/v1/tickets`, `PUT /api/v1/tickets/{id}`, `PUT /api/v1/tickets/{id}/status`, `POST /api/v1/tickets/{id}/comments`
 
 Migrating ticket history from another PSA used to stamp every imported ticket and comment with the time of the import, and fire the same SLA timers, notifications, webhooks and workflows as live work. The ticket API now accepts the original timestamps and records the data silently as history.
 
@@ -31,7 +62,7 @@ Migrating ticket history from another PSA used to stamp every imported ticket an
 - A historical ticket can be imported already closed with `closed_at` and optional `closed_by` (defaults to the API user). Both require `entered_at`. `closed_at` is required for a closed status, rejected for an open one, and must satisfy `entered_at <= closed_at <= now`. The ticket is stored closed without firing `TICKET_CLOSED`.
 - `POST /tickets/{id}/comments` accepts a historical `created_at` (same format rules, not before the ticket's `entered_at`, and for a reply not before its parent comment). The comment keeps that timestamp and publishes nothing: no `TICKET_COMMENT_ADDED`, notifications, webhooks, workflows, SLA first response or response-state change. It cannot be combined with `scheduled_publish_at`, `scheduled_publish_tz`, `cc` or `bcc` (`400`).
 - `PUT /tickets/{id}` accepts `entered_at` to correct an existing ticket's open date. The value must not be in the future or later than the ticket's closure or earliest comment. A correction that changes only `entered_at` does not publish `TICKET_UPDATED` or change SLA state; the original creation audit timestamp is kept.
-- `closed_at` on `PUT /tickets/{id}` is honored when that update closes the ticket and must not be in the future or before `entered_at`. Unlike a historical create, this still fires `TICKET_CLOSED`; use the notification suppression flags to silence it.
+- `closed_at` on `PUT /tickets/{id}/status` is honored when that status change closes the ticket and must not be in the future or before `entered_at`. Unlike a historical create, this still fires `TICKET_CLOSED`; use the notification suppression flags to silence it.
 - Historical writes require an internal MSP user with `ticket:create` (tickets) or `ticket:update` (comments and corrections). Client-portal callers get `403`.
 - The ticket CSV import uses the same path, so imported tickets get their historical dates at insert time rather than being rewritten afterwards.
 

@@ -5,6 +5,7 @@ import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
 import { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from './audience';
 import { listBuiltinIssuers } from './idpBuiltins';
+import { assertSafeIdpUrl } from './idpNetwork';
 import {
   archiveOrDeleteServicePrincipal,
   assertServicePrincipalTier,
@@ -227,6 +228,9 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
     subjectClaim: input.subjectClaim,
     discoveryBaseUrl: input.discoveryBaseUrl,
   });
+  // Validate persisted values too: preset discovery is remote input, and custom
+  // rows may have been created before this boundary existed.
+  await Promise.all([assertSafeIdpUrl(resolved.issuer), assertSafeIdpUrl(resolved.jwksUri)]);
   return runWithTenant(input.tenant, async () => {
     const { knex } = await createTenantKnex(input.tenant);
     const db = tenantDb(knex, input.tenant);
@@ -352,6 +356,11 @@ export async function mintAgentSessionKey(params: {
 }): Promise<string> {
   const { tenant, agentId, backingUserId: userId } = params;
   const ttl = params.ttlSeconds ?? 300;
+  // R6.0a: an agent may only obtain a dispatch key while the tenant is entitled to
+  // service principals. Every request mints its own short-lived key, so a downgrade
+  // cuts already-connected MCP clients off at their next call — the previously minted
+  // key is never renewed and no new one is issued.
+  await assertServicePrincipalTier(tenant);
   const token = crypto.randomBytes(32).toString('hex');
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   await runWithTenant(tenant, async () => {

@@ -37,6 +37,11 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+vi.mock('server/src/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async () => true),
+}));
+
 // T043 (F056): TimeSheetService.approveTimeSheet end to end against the real schema.
 describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   let db: Knex;

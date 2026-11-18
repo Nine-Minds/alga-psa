@@ -22,6 +22,8 @@ interface TagInputProps {
   className?: string;
   placeholder?: string;
   size?: TagSize;
+  /** False for a caller who may apply existing tags only: typed text that names no existing tag is not offered as a new one. */
+  allowCreate?: boolean;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -31,7 +33,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   onAddTag,
   className = '',
   placeholder,
-  size = 'md'
+  size = 'md',
+  allowCreate = true
 }) => {
   const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
@@ -115,8 +118,13 @@ export const TagInput: React.FC<TagInputProps> = ({
     };
   }, [isEditing]);
 
+  const namesExistingTag = (text: string) =>
+    existingTags.some((tag) => tag.tag_text.toLowerCase() === text.trim().toLowerCase());
+  const canSubmit = allowCreate || namesExistingTag(inputValue);
+
   const handleSave = async (tagText: string = inputValue.trim()) => {
     console.log('TagInput handleSave called with:', tagText);
+    if (!allowCreate && !namesExistingTag(tagText)) return;
     if (tagText && !isSaving) {
       setIsSaving(true);
       try {
@@ -198,7 +206,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyPress}
                 className={`rounded-l-md focus:ring-offset-0 focus:z-10 border-0 ${sizeConfig.inputClass}`}
-                placeholder={placeholder ?? t('tags.fields.newTag.placeholder')}
+                placeholder={placeholder ?? t(allowCreate ? 'tags.fields.newTag.placeholder' : 'tags.fields.existingTag.placeholder')}
                 autoFocus
                 autoComplete="off"
                 containerClassName="m-0"
@@ -207,9 +215,9 @@ export const TagInput: React.FC<TagInputProps> = ({
                 id="tag-save-button"
                 type="button"
                 onClick={() => handleSave()}
-                disabled={isSaving || !inputValue.trim()}
+                disabled={isSaving || !inputValue.trim() || !canSubmit}
                 className={`rounded-r-md font-medium border-0 whitespace-nowrap ${sizeConfig.saveClass}`}
-                variant={isSaving || !inputValue.trim() ? "outline" : "default"}
+                variant={isSaving || !inputValue.trim() || !canSubmit ? "outline" : "default"}
                 size={size === 'sm' ? "xs" : "sm"}
               >
                 {isSaving ? t('tags.actions.saving') : t('actions.save')}

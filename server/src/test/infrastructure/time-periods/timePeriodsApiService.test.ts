@@ -146,10 +146,11 @@ describe('TimeSheetService time periods (API)', () => {
       expect(without.end_date).toBe('2026-11-09');
       expect(without.is_current).toBe(expected);
 
-      const row = await dbRow(period.period_id);
-      expect(row).not.toHaveProperty('is_current');
-      expect(formatDbDate(row.start_date)).toBe('2026-11-02');
-    });
+        const row = await dbRow(period.period_id);
+        expect(row).not.toHaveProperty('is_current');
+        expect(formatDbDate(row.start_date)).toBe('2026-11-02');
+      },
+    );
 
     it('treats a body with only is_current as a no-op returning 200 data', async () => {
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });

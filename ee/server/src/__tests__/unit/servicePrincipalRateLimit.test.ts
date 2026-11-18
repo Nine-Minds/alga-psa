@@ -18,6 +18,9 @@ vi.mock('server/src/lib/api/rateLimit/apiRateLimitConfigGetter', () => ({
 }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
+  assertTenantTierAccess: vi.fn(async () => undefined),
+}));
 import { resolvePrincipalRateLimit } from '../../lib/service-principals/boundary';
 import { updateServicePrincipal } from '../../lib/service-principals/service';
 import { enforceApiRateLimit } from '../../../../../server/src/lib/api/rateLimit/enforce';

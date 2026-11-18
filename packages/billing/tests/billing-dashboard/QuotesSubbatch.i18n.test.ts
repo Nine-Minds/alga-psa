@@ -56,6 +56,7 @@ describe('Quotes i18n wiring contract', () => {
       'templateEditor',
       'templatesPage',
       'errors',
+      'quoteDecision',
     ]);
   });
 
@@ -518,7 +519,7 @@ describe('Quotes i18n wiring contract', () => {
 
     expectNamedImport(source, '@alga-psa/ui/lib/i18n/client', ['useFormatters', 'useTranslation']);
     expect(source).toContain("const { t } = useTranslation('msp/quotes');");
-    expect(source).toContain('const { formatCurrency, formatDate } = useFormatters();');
+    // Date/currency output is exercised by QuoteApprovalDashboard.dates.test.tsx.
 
     const keyChecks = [
       'quoteApproval.title',

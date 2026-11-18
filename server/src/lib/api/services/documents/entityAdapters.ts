@@ -15,11 +15,13 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import type { IDocument } from 'server/src/interfaces/document.interface';
 import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
+import { hasPermission } from '../../../auth/rbac';
 import { hasApiContextPermission } from '../../middleware/apiContextPermission';
-import { authorizeApiResourceRead } from '../../controllers/authorizationKernel';
+import { projectApiResourceRead } from '../../controllers/authorizationKernel';
 import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
 import { AssetService } from '../AssetService';
-import { buildProjectRecordContext, buildTicketRecordContext } from '../../controllers/recordContexts';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { subjectFromServiceContext } from '../serviceContextSubject';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import {
@@ -132,6 +134,8 @@ function simpleAdapter(
   table: string,
   idColumn: string,
   label: string,
+  /** Client-owned entities: the caller's client scope also decides whether the target exists for them. */
+  scopeResource?: 'client' | 'contact',
 ): EntityAdapter {
   return {
     entityType,
@@ -140,6 +144,13 @@ function simpleAdapter(
     async assertCanAttach(apiRequest, entityId, knex) {
       await assertRbacUpdate(apiRequest, rbacResource, knex);
       await assertRowExists(knex, apiRequest.context.tenant, table, idColumn, entityId, label);
+      if (scopeResource) {
+        // Same predicate as ClientService/ContactService; an out-of-scope target is indistinguishable from a missing one.
+        const scope = await createClientScopeContext(knex, apiRequest.context.tenant, subjectFromServiceContext(apiRequest.context as any));
+        if (!(await scope.permits(scopeResource, entityId))) {
+          throw new NotFoundError(`${label} not found`);
+        }
+      }
     },
     resolveFolder: (knex, tenant, entityId) => firstEntityFolder(knex, tenant, entityType, entityId),
   };
@@ -158,16 +169,17 @@ const ticketAdapter: EntityAdapter = {
     if (!ticket) {
       throw new NotFoundError('Ticket not found');
     }
-    const allowed = await authorizeApiResourceRead({
+    // Gate only (nothing from the ticket is serialized). Denied or suppressed => 404, not 403, so the id is not confirmed.
+    const projection = await projectApiResourceRead({
       knex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'ticket',
-      recordContext: buildTicketRecordContext(ticket as Record<string, any>),
+      kind: 'ticket',
+      record: ticket as Record<string, any>,
     });
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read ticket');
+    if (projection === null) {
+      throw new NotFoundError('Ticket not found');
     }
   },
   async resolveFolder(knex, tenant, ticketId) {
@@ -224,16 +236,17 @@ const projectTaskAdapter: EntityAdapter = {
       throw new NotFoundError('Task not found');
     }
     // The task is readable iff its parent project is (same rule as the project controller).
-    const allowed = await authorizeApiResourceRead({
+    // Gate only (the parent project is not serialized). Denied or suppressed => 404 for the task.
+    const projection = await projectApiResourceRead({
       knex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'project',
-      recordContext: buildProjectRecordContext(row),
+      kind: 'project',
+      record: row,
     });
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read project');
+    if (projection === null) {
+      throw new NotFoundError('Task not found');
     }
   },
   resolveFolder: (knex, tenant, taskId) => firstEntityFolder(knex, tenant, 'project_task', taskId),
@@ -256,8 +269,8 @@ const assetAdapter: EntityAdapter = {
 export const ENTITY_ADAPTERS: Record<AttachableEntityType, EntityAdapter> = {
   ticket: ticketAdapter,
   project_task: projectTaskAdapter,
-  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client'),
-  contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact'),
+  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client', 'client'),
+  contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact', 'contact'),
   asset: assetAdapter,
 };
 

@@ -5,6 +5,7 @@ import type { RmmProvider } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
+import { prepareAssetIdentity } from '@alga-psa/shared/services/assetNumbering';
 
 // LEVERAGE: pattern rmm-provider-registration — hand-maintained provider list (see rmmProviderDisplay.ts, ticketCreator.ts PROVIDER_LABELS, providerRegistry.ts)
 const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
@@ -132,10 +133,6 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         location: mappedValues.location ?? '',
         updated_at: now,
       };
-      if (mappedValues.asset_tag !== undefined) {
-        payload.asset_tag = mappedValues.asset_tag;
-      }
-
       if (lookup) {
         const [updated] = await tenantDb(trx, ctx.tenant).table('assets')
           .where({ asset_id: lookup.algaEntityId })
@@ -144,10 +141,14 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         return updated;
       }
 
+      const identity = await prepareAssetIdentity(trx, {
+        tenant: ctx.tenant, clientId: resolvedClientId, assetTag: mappedValues.asset_tag,
+      });
       const [created] = await tenantDb(trx, ctx.tenant).table('assets')
         .insert({
           tenant: ctx.tenant,
           ...payload,
+          ...identity,
           created_at: now,
         })
         .returning<{ asset_id: string; name: string }[]>(['asset_id', 'name']);

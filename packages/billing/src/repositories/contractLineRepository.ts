@@ -1434,6 +1434,9 @@ export async function updateContractLineRate(
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
       .first(['billing_timing', 'cadence_owner', 'line_type']);
+    if (!existingTemplateLine) {
+      throw new Error('Template contract line not found for the selected contract.');
+    }
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
       lineType: existingTemplateLine?.line_type ?? null,
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
@@ -1457,6 +1460,9 @@ export async function updateContractLineRate(
   const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
     .first(['billing_timing', 'cadence_owner', 'contract_line_type']);
+  if (!existingLine) {
+    throw new Error('Base contract line not found for the selected contract.');
+  }
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     lineType: existingLine?.contract_line_type ?? null,
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,

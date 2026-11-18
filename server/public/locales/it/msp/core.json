@@ -113,7 +113,8 @@
     "signOut": "Esci",
     "coManaged": "IT in co-gestione",
     "coManagedArchive": "Archivio IT in co-gestione",
-    "coManagedAdministration": "Accesso e amministrazione"
+    "coManagedAdministration": "Accesso e amministrazione",
+    "assetsAudits": "Audit delle sedi"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

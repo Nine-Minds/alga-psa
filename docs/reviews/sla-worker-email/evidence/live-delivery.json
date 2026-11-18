@@ -1,0 +1,37 @@
+{
+  "revision": "d7a067bb76493aabc6f09f2ac903179b7851c0d6",
+  "checkedAt": "2026-11-08T17:05:12.013Z",
+  "mailboxCount": 21,
+  "tickets": [
+    {
+      "ticketId": "3d5269d8-0000-4000-8000-00000000020a",
+      "ticketNumber": "SLA-REVIEW-A",
+      "boardId": "3d5269d8-0000-4000-8000-00000000000a",
+      "auditLogId": "d420b8a1-27c0-457e-ae38-22bd72a2a291",
+      "auditEmail": "sent",
+      "inApp": true,
+      "messageId": "<17062377-50e4-3c1a-bf1a-9bf5241a73ca@emeraldcity.oz>",
+      "smtpReceipt": {
+        "uid": "34",
+        "messageId": "<17062377-50e4-3c1a-bf1a-9bf5241a73ca@emeraldcity.oz>",
+        "subject": "Ticket Escalated: #SLA-REVIEW-A - Level 1",
+        "from": "SLA Board A <sla-smoke-a@emeraldcity.oz>"
+      }
+    },
+    {
+      "ticketId": "3d5269d8-0000-4000-8000-00000000020b",
+      "ticketNumber": "SLA-REVIEW-B",
+      "boardId": "3d5269d8-0000-4000-8000-00000000000b",
+      "auditLogId": "9e95e03c-ea07-401a-b9e9-547e8a37edc8",
+      "auditEmail": "sent",
+      "inApp": true,
+      "messageId": "<3e45bf18-0a68-b499-8f27-fb2e80b98fe7@emeraldcity.oz>",
+      "smtpReceipt": {
+        "uid": "33",
+        "messageId": "<3e45bf18-0a68-b499-8f27-fb2e80b98fe7@emeraldcity.oz>",
+        "subject": "Ticket Escalated: #SLA-REVIEW-B - Level 1",
+        "from": "SLA Board B <sla-smoke-b@emeraldcity.oz>"
+      }
+    }
+  ]
+}

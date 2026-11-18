@@ -1,0 +1,181 @@
+[
+  {
+    "id": "F001",
+    "description": "submissionAudit.ts declares a catalog object mapping every submission audit operation to an audience ('client' | 'internal'); the operation type is derived from its keys, so a new operation cannot be added without declaring its audience",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS (and its type) is derived from the catalog: created, execution_succeeded, execution_failed are client; the three mapping_* operations are internal",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "listServiceRequestSubmissionAuditEvents accepts an optional operations filter applied in SQL (whereIn); omitting it keeps the current all-events behavior used by the admin detail",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "getClientServiceRequestSubmissionDetail loads history filtered to the client allow-list; mapping, legacy and unknown operations are excluded (fail closed)",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "New ServiceRequestClientSubmissionHistoryEvent type carries only audit_id, operation (client-visible type), actor_name, timestamp; client events no longer expose user_id or details",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "ServiceRequestClientSubmissionDetail and its select drop workflow_execution_id, execution_error_summary, definition_id, definition_version_id, definition_version_number (version join kept for form_schema_snapshot)",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "New ServiceRequestClientSubmissionAttachment type (submission_attachment_id, field_key, file_name, mime_type); client attachment query stops selecting file_id, file_size, created_at; submissionFieldPresentation keys attachments by submission_attachment_id",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Shared submission status presentation helper (status -> Badge tone + myRequests.statuses label key) used by MyRequestsTable's status column, replacing its inline ternaries",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Submission detail page renders status as a Badge via the shared helper; the 'Execution status: <enum>' line is removed",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Submission detail page no longer renders 'Version N' or 'Workflow: <id>'",
+    "implemented": true,
+    "prdRefs": [
+      "FR8",
+      "FR9"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "When the form snapshot has no fields, display fields are synthesized from payload keys and rendered through the same <dl> rows and getSubmissionFieldDisplay path; the <pre> JSON fallback is removed",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Attachments in Submitted Answers and in the Attachments section show file_name, or the translated 'Attachment' label when unnamed; the '(file_id)' suffix and the 'File ID:' line are removed",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "History labels resolve from submissionDetail.historyOperations.<operation> without the raw-operation defaultValue fallback",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Request form page removes the 'Initial Values' section and the header 'Version N'; initialValues is still passed to RequestServiceForm unchanged for prefill and visibility parity",
+    "implemented": true,
+    "prdRefs": [
+      "FR13",
+      "FR14",
+      "FR15"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Pure mapper toPortalFormView(detail) in portalDetail.ts returns ServiceRequestPortalFormView {title, description, icon, formSchema, initialValues, visibilityRules}; visibilityRules parsed only for the 'advanced' provider, else []",
+    "implemented": true,
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "getRequestServiceDefinitionDetailAction returns the portal projection; the form page reads visibilityRules from it instead of formBehaviorProvider/formBehaviorConfig; the submit path keeps using the full lib detail",
+    "implemented": true,
+    "prdRefs": [
+      "FR16"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Dashboard recent-activity query no longer selects execution_error_summary; RecentServiceRequestActivityRow drops it; service_request activity description is ''",
+    "implemented": true,
+    "prdRefs": [
+      "FR17"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "ClientDashboard falls back to t('dashboard.activity.descriptions.<type>.<status>', { defaultValue: '' }) when the server description is empty; adds dashboard.activity.descriptions.service_request.failed",
+    "implemented": true,
+    "prdRefs": [
+      "FR18"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Remove detail.version, detail.initialValuesTitle, detail.noInitialValues, submissionDetail.executionStatus, submissionDetail.versionLabel, submissionDetail.workflowLabel, submissionDetail.fileIdLabel from every locale's client-portal/service-requests.json",
+    "implemented": true,
+    "prdRefs": [
+      "FR19"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add submissionDetail.unnamedAttachment and dashboard.activity.descriptions.service_request.failed in en with de/es/fr/it/nl/pl/pt/sv translations; regenerate xx/yy pseudo-locales; validate-translations passes",
+    "implemented": true,
+    "prdRefs": [
+      "FR20"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "New client DTO types are re-exported from server/src/lib/service-requests/index.ts",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Existing unit/integration tests that asserted removed output or fields are updated (i18n noInitialValues, 'Version 1', client workflow_execution_id / definition_version_* / event user_id / attachment file_id, page fixture shapes); admin-side assertions kept",
+    "implemented": true,
+    "prdRefs": [
+      "FR21"
+    ]
+  }
+]

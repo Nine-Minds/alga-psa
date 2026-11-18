@@ -34,16 +34,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!body.name) return NextResponse.json({ error: '"name" is required' }, { status: 400 });
 
   return withServiceErrorMapping(async () => {
-    const agent = await createAgent({
-      tenant: admin.tenant,
-      name: body.name!,
-      description: body.description,
-      idpIssuer: body.idpIssuer,
-      idpSubject: body.idpSubject,
-      roleIds: body.roleIds,
-      createdBy: admin.userId ?? undefined,
-    });
-    return NextResponse.json({ data: agent }, { status: 201 });
+    try {
+      const agent = await createAgent({
+        tenant: admin.tenant,
+        name: body.name!,
+        description: body.description,
+        idpIssuer: body.idpIssuer,
+        idpSubject: body.idpSubject,
+        roleIds: body.roleIds,
+        createdBy: admin.userId ?? undefined,
+      });
+      return NextResponse.json({ data: agent }, { status: 201 });
+    } catch (e) {
+      // Duplicate (issuer, subject) binding -> 409 with the friendly message.
+      if (e instanceof Error && e.name === 'AgentBindingConflictError') {
+        return NextResponse.json({ error: e.message }, { status: 409 });
+      }
+      // Agents are principals on the shared service layer: its limit / tier / validation errors carry a
+      // 4xx statusCode and a machine code, so surface them as-is instead of a generic 500.
+      const status = (e as { statusCode?: unknown } | null)?.statusCode;
+      if (e instanceof Error && typeof status === 'number' && status >= 400 && status < 500) {
+        return NextResponse.json({ error: e.message, code: (e as { code?: string }).code }, { status });
+      }
+      throw e;
+    }
   });
 }
 

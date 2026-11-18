@@ -65,7 +65,7 @@ import { useTemplateMoney } from "./useTemplateMoney";
 import { TemplatePricingSection } from "./TemplatePricingSection";
 import { updateContractTemplateCurrency } from "@alga-psa/billing/actions/contractTemplatePriceSetActions";
 import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
-import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
+import { ClientPicker } from "@alga-psa/ui/components/ClientPicker";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { BillingTimingField } from "./BillingTimingField";
@@ -307,20 +307,13 @@ const ContractTemplateDetail: React.FC = () => {
 
   const [showServicesEditor, setShowServicesEditor] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
-  const [simulatorClientId, setSimulatorClientId] = useState("profile");
-  const [simulationClients, setSimulationClients] = useState<
-    Array<{ client_id: string; client_name: string }>
-  >([]);
+  // The simulator runs against a hypothetical profile or one real client, picked by server search.
+  const [simulatorMode, setSimulatorMode] = useState<"profile" | "client">("profile");
+  const [simulatorClientId, setSimulatorClientId] = useState<string | null>(null);
+  const [simulatorClientFilter, setSimulatorClientFilter] = useState<"all" | "active" | "inactive">("active");
+  const [simulatorClientType, setSimulatorClientType] = useState<"all" | "company" | "individual">("all");
+  const simulatedClientId = simulatorMode === "client" ? simulatorClientId : null;
   const lastContractIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!showSimulator || simulationClients.length > 0) return;
-    void listContractSimulationClients().then((clients) => {
-      if (Array.isArray(clients)) {
-        setSimulationClients(clients);
-      }
-    });
-  }, [showSimulator, simulationClients.length]);
 
   const templateMetadata = useMemo<TemplateMetadata>(() => {
     if (!contract?.template_metadata) {
@@ -981,8 +974,8 @@ const ContractTemplateDetail: React.FC = () => {
                 </Label>
                 <CustomSelect
                   id="template-simulation-client"
-                  value={simulatorClientId}
-                  onValueChange={setSimulatorClientId}
+                  value={simulatorMode}
+                  onValueChange={(value) => setSimulatorMode(value === "client" ? "client" : "profile")}
                   options={[
                     {
                       value: "profile",
@@ -990,21 +983,36 @@ const ContractTemplateDetail: React.FC = () => {
                         defaultValue: "Hypothetical client profile",
                       }),
                     },
-                    ...simulationClients.map((client) => ({
-                      value: client.client_id,
-                      label: client.client_name,
-                    })),
+                    {
+                      value: "client",
+                      label: t("templateDetail.simulation.specificClient", {
+                        defaultValue: "A specific client",
+                      }),
+                    },
                   ]}
                 />
+                {simulatorMode === "client" && (
+                  <ClientPicker
+                    id="template-simulation-client-picker"
+                    selectedClientId={simulatorClientId}
+                    onSelect={setSimulatorClientId}
+                    filterState={simulatorClientFilter}
+                    onFilterStateChange={setSimulatorClientFilter}
+                    clientTypeFilter={simulatorClientType}
+                    onClientTypeFilterChange={setSimulatorClientType}
+                    placeholder={t("templateDetail.simulation.pickClient", {
+                      defaultValue: "Select a client",
+                    })}
+                    className="w-full"
+                  />
+                )}
               </div>
               <ContractSimulator
-                key={`${contract.contract_id}:${simulatorClientId}`}
+                key={`${contract.contract_id}:${simulatedClientId ?? "profile"}`}
                 contractId={contract.contract_id}
                 clientContractId={null}
-                clientId={
-                  simulatorClientId === "profile" ? null : simulatorClientId
-                }
-                forceProfile={simulatorClientId === "profile"}
+                clientId={simulatedClientId}
+                forceProfile={simulatedClientId === null}
               />
             </CardContent>
           </Card>

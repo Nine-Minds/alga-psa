@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BriefcaseBusiness,
@@ -103,23 +103,27 @@ function formatDate(value?: string | Date | null): string {
   return date.toLocaleDateString();
 }
 
-function relativeDays(value?: string | null): string | null {
+/** The slice of i18next's `t` the module-level formatters below need. */
+type BentoT = (key: string, options: Record<string, unknown> & { defaultValue: string }) => string;
+
+function relativeDays(value: string | null | undefined, t: BentoT): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
-  if (days <= 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 60) return `${days}d ago`;
+  if (days <= 0) return t('contactBento.relative.today', { defaultValue: 'today' });
+  if (days === 1) return t('contactBento.relative.yesterday', { defaultValue: 'yesterday' });
+  if (days < 60) return t('contactBento.relative.daysAgo', { defaultValue: '{{count}}d ago', count: days });
   return null;
 }
 
-function emailType(contact: IContact): string {
-  return contact.primary_email_type || contact.primary_email_custom_type || contact.primary_email_canonical_type || 'Primary';
+function emailType(contact: IContact, t: BentoT): string {
+  return contact.primary_email_type || contact.primary_email_custom_type || contact.primary_email_canonical_type
+    || t('contactBento.emailType.primary', { defaultValue: 'Primary' });
 }
 
-function phoneType(phone: IContact['phone_numbers'][number]): string {
-  return phone.custom_type || phone.canonical_type || 'Other';
+function phoneType(phone: IContact['phone_numbers'][number], t: BentoT): string {
+  return phone.custom_type || phone.canonical_type || t('contactBento.phoneType.other', { defaultValue: 'Other' });
 }
 
 function centsToMoney(value: string | number | null, currencyCode?: string | null): string {
@@ -137,17 +141,17 @@ function statusChipClass(isPositive: boolean) {
 
 const URGENT_LEVELS = new Set(['critical', 'high', 'urgent']);
 
-function ticketPill(row: NonNullable<ContactTicketsSummary>['rows'][number]): { label: string; className: string } {
+function ticketPill(row: NonNullable<ContactTicketsSummary>['rows'][number], t: BentoT): { label: string; className: string } {
   if (row.is_closed) {
-    return { label: row.status_name || 'Closed', className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))]' };
+    return { label: row.status_name || t('contactBento.ticketPill.closed', { defaultValue: 'Closed' }), className: 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))]' };
   }
   if (URGENT_LEVELS.has((row.urgency ?? '').toLowerCase()) || (row.itil_urgency != null && row.itil_urgency <= 2)) {
-    return { label: 'Urgent', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' };
+    return { label: t('contactBento.ticketPill.urgent', { defaultValue: 'Urgent' }), className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' };
   }
   if ((row.status_name ?? '').toLowerCase().includes('wait')) {
     return { label: row.status_name as string, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
   }
-  return { label: row.status_name || 'Open', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
+  return { label: row.status_name || t('contactBento.ticketPill.open', { defaultValue: 'Open' }), className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' };
 }
 
 function documentBadge(document: IDocument): string {
@@ -241,6 +245,10 @@ export function ContactBentoLayout({
   onDocumentCreated,
 }: ContactBentoLayoutProps) {
   const { t } = useTranslation('msp/contacts');
+  // The loader reads the latest translator through a ref so a new `t` (namespace load,
+  // language switch) never re-triggers the fetch.
+  const tRef = useRef(t);
+  tRef.current = t;
   const { toast } = useToast();
   const { renderDocuments } = useDocumentsCrossFeature();
   const { openDrawer, closeDrawer } = useDrawer();
@@ -273,7 +281,7 @@ export function ContactBentoLayout({
       setInteractions(rows);
     } catch (error) {
       console.error('Failed to refresh contact interactions:', error);
-      setInteractionsErrorMessage('Interactions could not be loaded. Please try again.');
+      setInteractionsErrorMessage(tRef.current('contactBento.interactions.loadError', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
       // Keep the current rows; the drawer/dialog that changed data already surfaced its own errors.
     }
   }, [contact.contact_name_id]);
@@ -338,13 +346,15 @@ export function ContactBentoLayout({
   const portalChip = (() => {
     if (!portalSummary) return null;
     if (portalSummary.hasAccount) {
-      if (portalSummary.accountInactive) return 'Portal · deactivated';
-      const rel = relativeDays(portalSummary.lastSignIn);
-      if (rel) return `Portal · signed in ${rel}`;
-      return portalSummary.lastSignIn ? `Portal · signed in ${formatDate(portalSummary.lastSignIn)}` : 'Portal · never signed in';
+      if (portalSummary.accountInactive) return t('contactBento.portalChip.deactivated', { defaultValue: 'Portal · deactivated' });
+      const rel = relativeDays(portalSummary.lastSignIn, t);
+      if (rel) return t('contactBento.portalChip.signedIn', { defaultValue: 'Portal · signed in {{when}}', when: rel });
+      return portalSummary.lastSignIn
+        ? t('contactBento.portalChip.signedIn', { defaultValue: 'Portal · signed in {{when}}', when: formatDate(portalSummary.lastSignIn) })
+        : t('contactBento.portalChip.neverSignedIn', { defaultValue: 'Portal · never signed in' });
     }
-    if (portalSummary.invitedAt) return 'Portal · invited';
-    return 'No portal access';
+    if (portalSummary.invitedAt) return t('contactBento.portalChip.invited', { defaultValue: 'Portal · invited' });
+    return t('contactBento.portalChip.noAccess', { defaultValue: 'No portal access' });
   })();
 
   const saveField = async (field: keyof IContact, value: string | boolean | null) => {
@@ -440,7 +450,9 @@ export function ContactBentoLayout({
               <h1 className="truncate text-lg font-bold text-[rgb(var(--color-text-900))]">{contact.full_name}</h1>
               {contact.contact_kind === 'shared_mailbox' && <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>}
               <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusChipClass(!contact.is_inactive)}`}>
-                {contact.is_inactive ? 'Inactive' : 'Active'}
+                {contact.is_inactive
+                  ? t('contactBento.status.inactive', { defaultValue: 'Inactive' })
+                  : t('contactBento.status.active', { defaultValue: 'Active' })}
               </span>
               {portalChip ? (
                 <span className="rounded-full border border-[rgb(var(--color-border-200))] px-2 py-0.5 text-xs font-medium text-[rgb(var(--color-text-600))]">
@@ -464,7 +476,7 @@ export function ContactBentoLayout({
                     }
                   }}
                   disabled={isSavingField === 'role'}
-                  placeholder="Add role"
+                  placeholder={t('contactBento.role.add', { defaultValue: 'Add role' })}
                   className="w-40 rounded-sm border border-[rgb(var(--color-border-200))] bg-transparent px-1 py-0 text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-400))]"
                 />
               ) : (
@@ -472,15 +484,15 @@ export function ContactBentoLayout({
                   id={`${id}-role-edit`}
                   type="button"
                   onClick={() => setIsEditingRole(true)}
-                  title="Click to edit role"
+                  title={t('contactBento.role.editTitle', { defaultValue: 'Click to edit role' })}
                   className={`cursor-text border-b border-dashed border-[rgb(var(--color-border-300))] ${contact.role ? 'font-medium text-[rgb(var(--color-text-700))]' : 'text-[rgb(var(--color-text-400))]'}`}
                 >
-                  {contact.role || 'Add role'}
+                  {contact.role || t('contactBento.role.add', { defaultValue: 'Add role' })}
                 </button>
               )}
               {contact.client_id && clientName ? (
                 <span>
-                  at{' '}
+                  {t('contactBento.atClient', { defaultValue: 'at' })}{' '}
                   <Link
                     id={`${id}-client-link`}
                     href={`/msp/clients/${contact.client_id}`}
@@ -490,9 +502,9 @@ export function ContactBentoLayout({
                   </Link>
                 </span>
               ) : (
-                <span className="text-[rgb(var(--color-text-400))]">No client</span>
+                <span className="text-[rgb(var(--color-text-400))]">{t('contactBento.noClient', { defaultValue: 'No client' })}</span>
               )}
-              <span className="truncate">{contact.email || 'No primary email'}</span>
+              <span className="truncate">{contact.email || t('contactBento.noPrimaryEmail', { defaultValue: 'No primary email' })}</span>
               <span className="truncate">
                 {primaryPhone ? (
                   <>
@@ -501,9 +513,9 @@ export function ContactBentoLayout({
                       phoneNumber={primaryPhone}
                       extension={primaryPhoneEntry?.extension}
                     />
-                    {primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry).toLowerCase()}` : ''}
+                    {primaryPhoneEntry ? ` · ${phoneType(primaryPhoneEntry, t).toLowerCase()}` : ''}
                   </>
-                ) : 'No phone number'}
+                ) : t('contactBento.noPhoneNumber', { defaultValue: 'No phone number' })}
               </span>
             </div>
             {contact.contact_name_id ? (
@@ -520,15 +532,15 @@ export function ContactBentoLayout({
           </div>
         </div>
         <div className="flex shrink-0 flex-col gap-1 text-xs text-[rgb(var(--color-text-500))] lg:items-end">
-          <span>Contact since {formatDate(contact.created_at)}</span>
+          <span>{t('contactBento.contactSince', { defaultValue: 'Contact since {{date}}', date: formatDate(contact.created_at) })}</span>
           <span>
-            Last touch{' '}
+            {t('contactBento.lastTouch', { defaultValue: 'Last touch' })}{' '}
             {stats?.lastInteraction?.date
               ? `${formatDate(stats.lastInteraction.date)}${stats.lastInteraction.type ? ` · ${stats.lastInteraction.type.toLowerCase()}` : ''}`
               : '—'}
           </span>
           <Button id={`${id}-edit-contact`} size="sm" variant="outline" onClick={openEditDrawer} className="mt-1">
-            <Pencil className="mr-1 h-3.5 w-3.5" /> Edit contact
+            <Pencil className="mr-1 h-3.5 w-3.5" /> {t('contactBento.editContact', { defaultValue: 'Edit contact' })}
           </Button>
         </div>
       </div>
@@ -538,16 +550,16 @@ export function ContactBentoLayout({
   const reachTile = (
     <BentoTile
       id={`${id}-reach-tile`}
-      title="Reach"
+      title={t('contactBento.reach.title', { defaultValue: 'Reach' })}
       icon={<Mail className="h-4 w-4" />}
-      action={<BentoTileAddButton id={`${id}-reach-add`} label="Add email or phone" onClick={openEditDrawer} />}
+      action={<BentoTileAddButton id={`${id}-reach-add`} label={t('contactBento.reach.add', { defaultValue: 'Add email or phone' })} onClick={openEditDrawer} />}
     >
-      <Eyebrow first>Email</Eyebrow>
+      <Eyebrow first>{t('contactBento.reach.email', { defaultValue: 'Email' })}</Eyebrow>
       <TileRows>
         {contact.email ? (
           <TileRow
             primary={contact.email}
-            meta={`${emailType(contact).toLowerCase()} · primary`}
+            meta={`${emailType(contact, t).toLowerCase()} · ${t('contactBento.reach.primaryMeta', { defaultValue: 'primary' })}`}
             emphasize={false}
           />
         ) : null}
@@ -555,18 +567,18 @@ export function ContactBentoLayout({
           <TileRow
             key={email.contact_additional_email_address_id ?? email.email_address}
             primary={email.email_address}
-            meta={(email.custom_type || email.canonical_type || 'other').toLowerCase()}
+            meta={(email.custom_type || email.canonical_type || t('contactBento.emailType.other', { defaultValue: 'other' })).toLowerCase()}
             emphasize={false}
           />
         ))}
       </TileRows>
       {!contact.email && !(contact.additional_email_addresses ?? []).length ? (
         <div>
-          <BentoTileEmpty id={`${id}-email-empty`}>No email addresses</BentoTileEmpty>
-          <BentoTileEmptyAction id={`${id}-email-add`} onClick={openEditDrawer}>Add an email</BentoTileEmptyAction>
+          <BentoTileEmpty id={`${id}-email-empty`}>{t('contactBento.reach.noEmails', { defaultValue: 'No email addresses' })}</BentoTileEmpty>
+          <BentoTileEmptyAction id={`${id}-email-add`} onClick={openEditDrawer}>{t('contactBento.reach.addEmail', { defaultValue: 'Add an email' })}</BentoTileEmptyAction>
         </div>
       ) : null}
-      <Eyebrow>Phone</Eyebrow>
+      <Eyebrow>{t('contactBento.reach.phone', { defaultValue: 'Phone' })}</Eyebrow>
       {contact.phone_numbers?.length ? (
         <TileRows>
           {contact.phone_numbers.slice(0, 4).map((phone) => (
@@ -579,56 +591,58 @@ export function ContactBentoLayout({
                   extension={phone.extension}
                 />
               )}
-              meta={[phoneType(phone).toLowerCase(), phone.is_default ? 'primary' : null].filter(Boolean).join(' · ')}
+              meta={[phoneType(phone, t).toLowerCase(), phone.is_default ? t('contactBento.reach.primaryMeta', { defaultValue: 'primary' }) : null].filter(Boolean).join(' · ')}
               emphasize={false}
             />
           ))}
         </TileRows>
       ) : (
         <div>
-          <BentoTileEmpty id={`${id}-phone-empty`}>No phone numbers</BentoTileEmpty>
-          <BentoTileEmptyAction id={`${id}-phone-add`} onClick={openEditDrawer}>Add a phone number</BentoTileEmptyAction>
+          <BentoTileEmpty id={`${id}-phone-empty`}>{t('contactBento.reach.noPhones', { defaultValue: 'No phone numbers' })}</BentoTileEmpty>
+          <BentoTileEmptyAction id={`${id}-phone-add`} onClick={openEditDrawer}>{t('contactBento.reach.addPhone', { defaultValue: 'Add a phone number' })}</BentoTileEmptyAction>
         </div>
       )}
     </BentoTile>
   );
 
   const portalStatus = (() => {
-    if (!contact.client_id) return { label: 'No client assigned', positive: false };
+    if (!contact.client_id) return { label: t('contactBento.portal.noClientAssigned', { defaultValue: 'No client assigned' }), positive: false };
     if (!portalSummary) return { label: '—', positive: false };
     if (portalSummary.hasAccount) {
       return portalSummary.accountInactive
-        ? { label: 'Deactivated', positive: false }
-        : { label: 'Active account', positive: true };
+        ? { label: t('contactBento.portal.deactivated', { defaultValue: 'Deactivated' }), positive: false }
+        : { label: t('contactBento.portal.activeAccount', { defaultValue: 'Active account' }), positive: true };
     }
-    if (portalSummary.invitedAt) return { label: 'Invitation sent', positive: false };
-    return { label: 'No access', positive: false };
+    if (portalSummary.invitedAt) return { label: t('contactBento.portal.invitationSent', { defaultValue: 'Invitation sent' }), positive: false };
+    return { label: t('contactBento.portal.noAccess', { defaultValue: 'No access' }), positive: false };
   })();
 
   const portalTile = userPermissions.canRead ? (
     <BentoTile
       id={`${id}-portal-tile`}
-      title="Portal access"
+      title={t('contactBento.portal.title', { defaultValue: 'Portal access' })}
       icon={<ShieldCheck className="h-4 w-4" />}
-      action={<Button id={`${id}-portal-manage`} size="sm" variant="ghost" onClick={() => setIsPortalOpen(true)}>Manage</Button>}
+      action={<Button id={`${id}-portal-manage`} size="sm" variant="ghost" onClick={() => setIsPortalOpen(true)}>{t('contactBento.portal.manage', { defaultValue: 'Manage' })}</Button>}
     >
       <dl className="text-sm">
         <div className="flex justify-between gap-3 py-0.5">
-          <dt className="text-[rgb(var(--color-text-500))]">Status</dt>
+          <dt className="text-[rgb(var(--color-text-500))]">{t('contactBento.portal.status', { defaultValue: 'Status' })}</dt>
           <dd className={`font-medium ${portalStatus.positive ? 'text-[rgb(var(--badge-success-text))]' : 'text-[rgb(var(--color-text-800))]'}`}>
             {portalStatus.label}
           </dd>
         </div>
         <div className="flex justify-between gap-3 py-0.5">
-          <dt className="text-[rgb(var(--color-text-500))]">Role</dt>
-          <dd className="font-medium text-[rgb(var(--color-text-800))]">{contact.is_client_admin ? 'Client admin' : 'Standard'}</dd>
+          <dt className="text-[rgb(var(--color-text-500))]">{t('contactBento.portal.role', { defaultValue: 'Role' })}</dt>
+          <dd className="font-medium text-[rgb(var(--color-text-800))]">{contact.is_client_admin
+            ? t('contactBento.portal.clientAdmin', { defaultValue: 'Client admin' })
+            : t('contactBento.portal.standard', { defaultValue: 'Standard' })}</dd>
         </div>
         <div className="flex justify-between gap-3 py-0.5">
-          <dt className="text-[rgb(var(--color-text-500))]">Last sign-in</dt>
+          <dt className="text-[rgb(var(--color-text-500))]">{t('contactBento.portal.lastSignIn', { defaultValue: 'Last sign-in' })}</dt>
           <dd className="font-medium text-[rgb(var(--color-text-800))]">{portalSummary?.lastSignIn ? formatDate(portalSummary.lastSignIn) : '—'}</dd>
         </div>
         <div className="flex justify-between gap-3 py-0.5">
-          <dt className="text-[rgb(var(--color-text-500))]">Invited</dt>
+          <dt className="text-[rgb(var(--color-text-500))]">{t('contactBento.portal.invited', { defaultValue: 'Invited' })}</dt>
           <dd className="font-medium text-[rgb(var(--color-text-800))]">{portalSummary?.invitedAt ? formatDate(portalSummary.invitedAt) : '—'}</dd>
         </div>
       </dl>
@@ -642,7 +656,7 @@ export function ContactBentoLayout({
         {reachTile}
         {portalTile}
         <Button id={`${id}-open-full-page`} asChild className="w-full">
-          <Link href={`/msp/contacts/${contact.contact_name_id}`}>Open full page</Link>
+          <Link href={`/msp/contacts/${contact.contact_name_id}`}>{t('contactBento.openFullPage', { defaultValue: 'Open full page' })}</Link>
         </Button>
         <PortalDialog />
       </div>
@@ -652,19 +666,19 @@ export function ContactBentoLayout({
   const ticketsTile = (
       <BentoTile
         id={`${id}-tickets-tile`}
-        title="Tickets"
+        title={t('contactBento.tickets.title', { defaultValue: 'Tickets' })}
         icon={<Ticket className="h-4 w-4" />}
         action={
           <div className="flex items-center gap-1">
-            <Button id={`${id}-tickets-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/tickets?contactId=${contact.contact_name_id}`}>View all {ticketsSummary?.totalCount ?? 0}</Link></Button>
-            {newTicketHref ? <BentoTileAddButton id={`${id}-tickets-add`} label="Create ticket" href={newTicketHref} /> : null}
+            <Button id={`${id}-tickets-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/tickets?contactId=${contact.contact_name_id}`}>{t('contactBento.viewAllCount', { defaultValue: 'View all {{count}}', count: ticketsSummary?.totalCount ?? 0 })}</Link></Button>
+            {newTicketHref ? <BentoTileAddButton id={`${id}-tickets-add`} label={t('contactBento.tickets.create', { defaultValue: 'Create ticket' })} href={newTicketHref} /> : null}
           </div>
         }
       >
         {ticketsSummary?.rows.length ? (
           <TileRows>
             {ticketsSummary.rows.map((ticket) => {
-              const pill = ticketPill(ticket);
+              const pill = ticketPill(ticket, t);
               return (
                 <TileRow
                   key={ticket.ticket_id}
@@ -672,7 +686,7 @@ export function ContactBentoLayout({
                     ? { onClick: () => void openTicketDetails(ticket.ticket_id) }
                     : { href: `/msp/tickets/${ticket.ticket_id}` })}
                   leading={<span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pill.className}`}>{pill.label}</span>}
-                  primary={ticket.title || `Ticket ${ticket.ticket_number ?? ''}`}
+                  primary={ticket.title || t('contactBento.tickets.fallbackTitle', { defaultValue: 'Ticket {{number}}', number: ticket.ticket_number ?? '' })}
                   meta={`#${ticket.ticket_number ?? '—'} · ${formatDate(ticket.entered_at)}`}
                 />
               );
@@ -680,9 +694,9 @@ export function ContactBentoLayout({
           </TileRows>
         ) : (
           <div>
-            <BentoTileEmpty id={`${id}-tickets-empty`}>No tickets yet</BentoTileEmpty>
+            <BentoTileEmpty id={`${id}-tickets-empty`}>{t('contactBento.tickets.empty', { defaultValue: 'No tickets yet' })}</BentoTileEmpty>
             {newTicketHref ? (
-              <BentoTileEmptyAction id={`${id}-tickets-create`} href={newTicketHref}>Create a ticket</BentoTileEmptyAction>
+              <BentoTileEmptyAction id={`${id}-tickets-create`} href={newTicketHref}>{t('contactBento.tickets.createFirst', { defaultValue: 'Create a ticket' })}</BentoTileEmptyAction>
             ) : null}
           </div>
         )}
@@ -692,12 +706,12 @@ export function ContactBentoLayout({
   const interactionsTile = (
       <BentoTile
         id={`${id}-interactions-tile`}
-        title="Interactions"
+        title={t('contactBento.interactions.title', { defaultValue: 'Interactions' })}
         icon={<MessageSquarePlus className="h-4 w-4" />}
         action={
           <div className="flex items-center gap-1">
-            <Button id={`${id}-interactions-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/contacts/${contact.contact_name_id}/activity`}>View all</Link></Button>
-            <BentoTileAddButton id={`${id}-interactions-log`} label="Log interaction" onClick={() => setIsInteractionOpen(true)} />
+            <Button id={`${id}-interactions-view-all`} size="sm" variant="ghost" asChild><Link href={`/msp/contacts/${contact.contact_name_id}/activity`}>{t('contactBento.viewAll', { defaultValue: 'View all' })}</Link></Button>
+            <BentoTileAddButton id={`${id}-interactions-log`} label={t('contactBento.interactions.log', { defaultValue: 'Log interaction' })} onClick={() => setIsInteractionOpen(true)} />
           </div>
         }
       >
@@ -710,7 +724,7 @@ export function ContactBentoLayout({
                 key={interaction.interaction_id}
                 onClick={() => openInteractionDetails(interaction)}
                 leading={<InteractionIcon icon={interaction.icon} typeName={interaction.type_name} size="sm" className="shrink-0" />}
-                primary={interaction.title || interaction.type_name || 'Interaction'}
+                primary={interaction.title || interaction.type_name || t('contactBento.interactions.fallbackTitle', { defaultValue: 'Interaction' })}
                 meta={[
                   formatDate(interaction.interaction_date),
                   interaction.duration ? `${interaction.duration}m` : null,
@@ -721,8 +735,8 @@ export function ContactBentoLayout({
           </TileRows>
         ) : (
           <div>
-            <BentoTileEmpty id={`${id}-interactions-empty`}>No interactions logged</BentoTileEmpty>
-            <BentoTileEmptyAction id={`${id}-interactions-log-first`} onClick={() => setIsInteractionOpen(true)}>Log an interaction</BentoTileEmptyAction>
+            <BentoTileEmpty id={`${id}-interactions-empty`}>{t('contactBento.interactions.empty', { defaultValue: 'No interactions logged' })}</BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-interactions-log-first`} onClick={() => setIsInteractionOpen(true)}>{t('contactBento.interactions.logFirst', { defaultValue: 'Log an interaction' })}</BentoTileEmptyAction>
           </div>
         )}
       </BentoTile>
@@ -731,12 +745,12 @@ export function ContactBentoLayout({
   const documentsTile = (
       <BentoTile
         id={`${id}-documents-tile`}
-        title="Documents"
+        title={t('contactBento.documents.title', { defaultValue: 'Documents' })}
         icon={<FileText className="h-4 w-4" />}
         action={
           <div className="flex items-center gap-1">
-            <Button id={`${id}-documents-view-all`} size="sm" variant="ghost" onClick={() => setIsDocumentsOpen(true)}>View all {documents.length}</Button>
-            <BentoTileAddButton id={`${id}-documents-add`} label="Add document" onClick={() => setIsDocumentsOpen(true)} />
+            <Button id={`${id}-documents-view-all`} size="sm" variant="ghost" onClick={() => setIsDocumentsOpen(true)}>{t('contactBento.viewAllCount', { defaultValue: 'View all {{count}}', count: documents.length })}</Button>
+            <BentoTileAddButton id={`${id}-documents-add`} label={t('contactBento.documents.add', { defaultValue: 'Add document' })} onClick={() => setIsDocumentsOpen(true)} />
           </div>
         }
       >
@@ -750,7 +764,7 @@ export function ContactBentoLayout({
                     {documentBadge(document)}
                   </span>
                 }
-                primary={document.document_name || (document as any).file_name || 'Document'}
+                primary={document.document_name || (document as any).file_name || t('contactBento.documents.fallbackTitle', { defaultValue: 'Document' })}
                 meta={formatDate((document as any).updated_at || (document as any).created_at)}
                 emphasize={false}
               />
@@ -758,48 +772,48 @@ export function ContactBentoLayout({
           </TileRows>
         ) : (
           <div>
-            <BentoTileEmpty id={`${id}-documents-empty`}>No documents yet</BentoTileEmpty>
-            <BentoTileEmptyAction id={`${id}-documents-add-first`} onClick={() => setIsDocumentsOpen(true)}>Add a document</BentoTileEmptyAction>
+            <BentoTileEmpty id={`${id}-documents-empty`}>{t('contactBento.documents.empty', { defaultValue: 'No documents yet' })}</BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-documents-add-first`} onClick={() => setIsDocumentsOpen(true)}>{t('contactBento.documents.addFirst', { defaultValue: 'Add a document' })}</BentoTileEmptyAction>
           </div>
         )}
       </BentoTile>
   );
 
   const relatedWorkTile = (
-      <BentoTile id={`${id}-related-work-tile`} title="Related work" icon={<BriefcaseBusiness className="h-4 w-4" />}>
+      <BentoTile id={`${id}-related-work-tile`} title={t('contactBento.relatedWork.title', { defaultValue: 'Related work' })} icon={<BriefcaseBusiness className="h-4 w-4" />}>
         {relatedWork?.projects.length || relatedWork?.quotes.length ? (
           <div>
-            <Eyebrow first>Projects</Eyebrow>
+            <Eyebrow first>{t('contactBento.relatedWork.projects', { defaultValue: 'Projects' })}</Eyebrow>
             {relatedWork.projects.length ? (
               <TileRows>
                 {relatedWork.projects.map((project) => (
                   <TileRow
                     key={project.project_id}
                     href={`/msp/projects/${project.project_id}`}
-                    primary={project.project_name || `Project ${project.project_number ?? ''}`}
-                    meta={(project.status_name ?? 'No status').toLowerCase()}
+                    primary={project.project_name || t('contactBento.relatedWork.projectFallback', { defaultValue: 'Project {{number}}', number: project.project_number ?? '' })}
+                    meta={(project.status_name ?? t('contactBento.relatedWork.noStatus', { defaultValue: 'No status' })).toLowerCase()}
                     emphasize={false}
                   />
                 ))}
               </TileRows>
-            ) : <BentoTileEmpty id={`${id}-projects-empty`}>No projects</BentoTileEmpty>}
-            <Eyebrow>Quotes</Eyebrow>
+            ) : <BentoTileEmpty id={`${id}-projects-empty`}>{t('contactBento.relatedWork.noProjects', { defaultValue: 'No projects' })}</BentoTileEmpty>}
+            <Eyebrow>{t('contactBento.relatedWork.quotes', { defaultValue: 'Quotes' })}</Eyebrow>
             {relatedWork.quotes.length ? (
               <TileRows>
                 {relatedWork.quotes.map((quote) => (
                   <TileRow
                     key={quote.quote_id}
                     href={`/msp/billing?tab=quotes&quoteId=${quote.quote_id}`}
-                    primary={quote.title || quote.quote_number || 'Quote'}
-                    meta={`${(quote.status ?? 'no status').toLowerCase()} · ${centsToMoney(quote.total_amount, quote.currency_code)}`}
+                    primary={quote.title || quote.quote_number || t('contactBento.relatedWork.quoteFallback', { defaultValue: 'Quote' })}
+                    meta={`${(quote.status ?? t('contactBento.relatedWork.noStatusLower', { defaultValue: 'no status' })).toLowerCase()} · ${centsToMoney(quote.total_amount, quote.currency_code)}`}
                     emphasize={false}
                   />
                 ))}
               </TileRows>
-            ) : <BentoTileEmpty id={`${id}-quotes-empty`}>No quotes</BentoTileEmpty>}
+            ) : <BentoTileEmpty id={`${id}-quotes-empty`}>{t('contactBento.relatedWork.noQuotes', { defaultValue: 'No quotes' })}</BentoTileEmpty>}
           </div>
         ) : (
-          <BentoTileEmpty id={`${id}-related-empty`}>No related projects or quotes</BentoTileEmpty>
+          <BentoTileEmpty id={`${id}-related-empty`}>{t('contactBento.relatedWork.empty', { defaultValue: 'No related projects or quotes' })}</BentoTileEmpty>
         )}
       </BentoTile>
   );
@@ -870,7 +884,7 @@ export function ContactBentoLayout({
   const notesTile = (
       <BentoTile
         id={`${id}-notes-tile`}
-        title="Notes"
+        title={t('contactBento.notes.title', { defaultValue: 'Notes' })}
         icon={<NotebookPen className="h-4 w-4" />}
         action={
           !contact.notes_document_id && !isEditingNotes && contact.notes ? (
@@ -883,14 +897,14 @@ export function ContactBentoLayout({
                 setIsEditingNotes(true);
               }}
             >
-              Edit
+              {t('contactBento.notes.edit', { defaultValue: 'Edit' })}
             </Button>
           ) : undefined
         }
       >
         {contact.notes_document_id ? (
           <Link className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))]" href={`/msp/documents/${contact.notes_document_id}`}>
-            Open note document <ExternalLink className="h-3 w-3" />
+            {t('contactBento.notes.openDocument', { defaultValue: 'Open note document' })} <ExternalLink className="h-3 w-3" />
           </Link>
         ) : isEditingNotes ? (
           <div className="space-y-2">
@@ -899,7 +913,7 @@ export function ContactBentoLayout({
               value={notesDraft}
               onChange={(event) => setNotesDraft(event.target.value)}
               rows={5}
-              placeholder="No notes yet"
+              placeholder={t('contactBento.notes.empty', { defaultValue: 'No notes yet' })}
             />
             <div className="flex items-center gap-2">
               <Button
@@ -911,7 +925,7 @@ export function ContactBentoLayout({
                   setIsEditingNotes(false);
                 }}
               >
-                Save notes
+                {t('contactBento.notes.save', { defaultValue: 'Save notes' })}
               </Button>
               <Button
                 id={`${id}-notes-cancel`}
@@ -922,7 +936,7 @@ export function ContactBentoLayout({
                   setIsEditingNotes(false);
                 }}
               >
-                Cancel
+                {t('contactBento.notes.cancel', { defaultValue: 'Cancel' })}
               </Button>
             </div>
           </div>
@@ -930,7 +944,7 @@ export function ContactBentoLayout({
           <p className="whitespace-pre-wrap text-sm text-[rgb(var(--color-text-700))]">{contact.notes}</p>
         ) : (
           <div>
-            <BentoTileEmpty id={`${id}-notes-empty`}>No notes yet</BentoTileEmpty>
+            <BentoTileEmpty id={`${id}-notes-empty`}>{t('contactBento.notes.empty', { defaultValue: 'No notes yet' })}</BentoTileEmpty>
             <BentoTileEmptyAction
               id={`${id}-notes-add`}
               onClick={() => {
@@ -938,7 +952,7 @@ export function ContactBentoLayout({
                 setIsEditingNotes(true);
               }}
             >
-              Add notes
+              {t('contactBento.notes.add', { defaultValue: 'Add notes' })}
             </BentoTileEmptyAction>
           </div>
         )}
@@ -977,7 +991,7 @@ export function ContactBentoLayout({
       <Dialog
         isOpen={isDocumentsOpen}
         onClose={() => setIsDocumentsOpen(false)}
-        title="Contact documents"
+        title={t('contactBento.documents.dialogTitle', { defaultValue: 'Contact documents' })}
         className="max-w-4xl"
       >
         <DialogContent>
@@ -1010,7 +1024,7 @@ export function ContactBentoLayout({
       <Dialog
         isOpen={isPortalOpen}
         onClose={() => setIsPortalOpen(false)}
-        title="Portal access"
+        title={t('contactBento.portal.title', { defaultValue: 'Portal access' })}
         className="max-w-3xl"
       >
         <DialogContent>

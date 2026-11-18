@@ -3,6 +3,7 @@ export { processRmmAlertEvent } from './processRmmAlertEvent';
 export { evaluateAlertRules } from './ruleEvaluator';
 export { findMatchingWindow, isInstantInWindow } from './windowMatcher';
 export { computeDedupKey } from './dedupKey';
+export { persistRmmAlertMetadata, readPersistedRmmAlertDetails } from './metadata';
 export { createTicketForAlert, addAlertInternalNote, providerLabel } from './ticketCreator';
 export { createTicketForAlertId } from './createTicketForAlertId';
 export { resolveRmmTicketContactId } from './resolveContact';

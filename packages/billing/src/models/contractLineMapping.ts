@@ -250,22 +250,17 @@ const ContractLineMapping = {
    * After migration 20251028090000, this updates contract_lines/contract_template_lines directly.
    */
   updateContractLineAssociation: async (
+    db: Knex.Transaction,
+    tenant: string,
     contractId: string,
     contractLineId: string,
     updateData: Partial<IContractLineMapping>
   ): Promise<IContractLineMapping> => {
-    const { knex: db, tenant } = await createTenantKnex();
-
     if (!tenant) {
       throw new Error('Tenant context is required for updating contract line association');
     }
 
     try {
-      const isLinked = await ContractLineMapping.isContractLineAttached(contractId, contractLineId);
-      if (!isLinked) {
-        throw new Error(`Contract line ${contractLineId} is not linked to contract ${contractId}`);
-      }
-
       const {
         tenant: _,
         contract_id,

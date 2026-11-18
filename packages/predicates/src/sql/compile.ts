@@ -130,11 +130,16 @@ class Compiler {
         return { sql: `COALESCE(${ref} ${symbol} ${mark.sql}, FALSE)`, bindings: [colBinding, ...mark.bindings] };
       }
       case 'contains':
+      case 'not_contains':
+      case 'contains_ci':
+      case 'not_contains_ci':
       case 'starts_with':
       case 'ends_with': {
         const text = escapeLike(String(one ?? ''));
-        const pattern = operator === 'contains' ? `%${text}%` : operator === 'starts_with' ? `${text}%` : `%${text}`;
-        return { sql: `COALESCE(${ref} LIKE ? ESCAPE '\\', FALSE)`, bindings: [colBinding, pattern] };
+        const pattern = ['contains', 'not_contains', 'contains_ci', 'not_contains_ci'].includes(operator) ? `%${text}%` : operator === 'starts_with' ? `${text}%` : `%${text}`;
+        const like = operator.endsWith('_ci') ? 'ILIKE' : 'LIKE';
+        const negative = operator === 'not_contains' || operator === 'not_contains_ci';
+        return { sql: `COALESCE(${ref} ${negative ? 'NOT ' : ''}${like} ? ESCAPE '\\', FALSE)`, bindings: [colBinding, pattern] };
       }
       default:
         throw new PredicateSchemaError(`Operator ${operator} is not compilable on a column`, 'operator_not_allowed', clause.path);

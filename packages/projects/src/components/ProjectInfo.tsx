@@ -5,6 +5,7 @@ import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
+import { projectScreenOffers } from '../lib/projectSurface';
 import { Download, Edit2, Mail, Package, Printer, Save, Settings2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -76,6 +77,10 @@ export default function ProjectInfo({
   const billingIntegration = useProjectBillingIntegration();
   const projectSource = useProjectDataSource();
   const sharedMode = projectSource.kind !== 'native';
+  // Project management (edit, template, export, status update, materials, staging) is closed to a viewer who works
+  // tasks but does not run the project (a seat technician); a screen that closes nothing offers all of it, as before.
+  const manageOffered = !sharedMode && projectScreenOffers(projectSource.screen, 'project_manage');
+  const materialsOffered = projectScreenOffers(projectSource.screen, 'project_materials');
   const projectFrozen = freezeProjectEdit || projectSource.screen.freezeProjectEdit;
   const backHref = projectSource.screen.backHref;
   const { openDrawer, closeDrawer } = useDrawer();
@@ -98,6 +103,8 @@ export default function ProjectInfo({
   useEffect(() => {
     if (sharedMode) return;
     let stale = false;
+    // The billed summary is project billing: not fetched where the screen closes it (the action refuses it anyway).
+    const billingOffered = projectScreenOffers(projectSource.screen, 'project_billing');
     // Fetch project metrics and the ambient billing summary concurrently so the
     // billed bar (F135) extends the existing metadata load rather than adding a
     // second waterfall. The overview action enforces billing:read and throws for
@@ -105,7 +112,7 @@ export default function ProjectInfo({
     const fetchProjectMetrics = async () => {
       const [metricsResult, billingResult] = await Promise.allSettled([
         calculateProjectCompletion(project.project_id),
-        billingIntegration
+        billingIntegration && billingOffered
           ? billingIntegration.fetchOverview(project.project_id)
           : Promise.resolve(null),
       ]);
@@ -113,9 +120,10 @@ export default function ProjectInfo({
 
       if (metricsResult.status === 'fulfilled') {
         const metrics = metricsResult.value;
-        setProjectMetrics({
+        // The budget section renders only with a budget: a seat technician's metrics carry none (the keys are absent).
+        setProjectMetrics(metrics.budgetedHours === undefined ? null : {
           taskCompletionPercentage: metrics.taskCompletionPercentage,
-          hoursCompletionPercentage: metrics.hoursCompletionPercentage,
+          hoursCompletionPercentage: metrics.hoursCompletionPercentage || 0,
           budgetedHours: metrics.budgetedHours || 0,
           spentHours: metrics.spentHours || 0,
           remainingHours: metrics.remainingHours || 0
@@ -221,7 +229,7 @@ export default function ProjectInfo({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!sharedMode && (<>
+          {manageOffered && (<>
           <Button
             id="save-as-template-button"
             variant="outline"
@@ -252,14 +260,14 @@ export default function ProjectInfo({
             {t('statusUpdate.button', 'Send status update')}
           </Button>
           <ProjectTasksShareMenu />
-          <Button
+          {materialsOffered && <Button
             id="project-materials-button"
             variant="outline"
             size="sm"
             onClick={handleMaterialsClick}
           >
             {t('projectInfo.materials', 'Materials')}
-          </Button>
+          </Button>}
           <Button
             id="project-staging-button"
             variant="outline"

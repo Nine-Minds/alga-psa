@@ -28,9 +28,16 @@ vi.mock('@ee/lib/actions/integrations/uniFiActions', () => ({
   runUniFiAlertCheckNow: m.runUniFiAlertCheckNow,
   testUniFiConnection: m.testUniFiConnection,
   updateUniFiSiteMapping: vi.fn(),
+  addUniFiCredential: vi.fn(),
+  replaceUniFiCredentialKey: vi.fn(),
+  updateUniFiCredential: vi.fn(),
+  removeUniFiCredential: vi.fn(),
 }));
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn(async () => ({ clients: [], total: 0 })),
+}));
+
 vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: vi.fn().mockResolvedValue([]),
   getAllContacts: vi.fn().mockResolvedValue([]),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {

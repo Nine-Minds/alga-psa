@@ -37,6 +37,7 @@
  *    void guard keeps working after reversal removes the allocation rows.
  */
 import type { Knex } from 'knex';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import type { IHourBlock, ContractLineCoverageLine, ServiceContractLineCoverage } from '@alga-psa/types';
@@ -936,6 +937,7 @@ async function selectClientEligibleEntries(
     })
     .whereNotNull('te.service_id')
     .where('te.invoiced', false)
+    .whereRaw(commercialTimeEntrySql('te'))
     .where('te.billable_duration', '>', 0)
     .where(function (this: Knex.QueryBuilder) {
       this.where('tk.client_id', clientId)
@@ -1098,6 +1100,7 @@ export async function reconcileLineAllocations(
     .where({ 'te.contract_line_id': contractLineId, 'te.invoiced': false })
     .whereNotNull('te.service_id')
     .where('te.billable_duration', '>', 0)
+    .whereRaw(commercialTimeEntrySql('te'))
     .select(
       'te.entry_id',
       'te.service_id',
@@ -1123,6 +1126,7 @@ export async function reconcileLineAllocations(
         .where('te.invoiced', false)
         .whereIn('te.service_id', lineServiceIds)
         .where('te.billable_duration', '>', 0)
+        .whereRaw(commercialTimeEntrySql('te'))
         .select(
           'te.entry_id',
           'te.service_id',

@@ -228,7 +228,8 @@ export const createAssetSchema = z.object({
   // enforced in the action layer (typed 'invalid_asset_type' error).
   asset_type: z.string().min(1),
   client_id: z.string().guid(),
-  asset_tag: z.string(),
+  asset_tag: z.string().optional(),
+  asset_number_reservation_id: z.string().guid().optional(),
   name: z.string(),
   status: z.string(),
   ownership: z.enum(['client', 'msp']).optional(),
@@ -332,6 +333,8 @@ export const assetQuerySchema = z.object({
   search: z.string().optional(),
   agent_status: z.string().optional(),
   rmm_managed: z.boolean().optional(),
+  last_audit_result: z.enum(['present', 'missing', 'never']).optional(),
+  not_audited_days: z.number().int().positive().max(3650).optional(),
   sort_by: z.string().optional(),
   sort_direction: z.enum(['asc', 'desc']).optional(),
   include_extension_data: z.boolean().optional()

@@ -203,6 +203,7 @@
       "exclude": "Uitsluiten",
       "excluded": "Niet inbegrepen",
       "fallbackTitle": "Offerte {{id}}",
+      "unnumberedTitle": "Offerte",
       "include": "Opnemen",
       "included": "Inbegrepen",
       "lineItems": "Regels",
@@ -230,6 +231,79 @@
       "termsAndConditions": "Algemene voorwaarden",
       "total": "Totaal",
       "validUntil": "Geldig tot"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Offerte geaccepteerd",
+        "body": "Dank u. Uw acceptatie is vastgelegd en wij zijn op de hoogte gesteld."
+      },
+      "rejected": {
+        "title": "Offerte afgewezen",
+        "body": "Uw reactie is vastgelegd en wij zijn op de hoogte gesteld."
+      },
+      "already": {
+        "title": "Deze offerte is al beantwoord",
+        "accepted": "Deze offerte is geaccepteerd op {{date}}.",
+        "rejected": "Deze offerte is afgewezen op {{date}}."
+      },
+      "changed": {
+        "title": "Deze offerte is gewijzigd",
+        "body": "Deze offerte is gewijzigd sinds u hem opende. Neem contact met ons op."
+      },
+      "optionalItems": "Optionele items",
+      "optionalHint": "Kies de optionele items die u wilt. Uw keuze wordt verzonden wanneer u accepteert.",
+      "subtotal": "Subtotaal",
+      "tax": "Belasting",
+      "total": "Totaal",
+      "fullName": "Volledige naam",
+      "titleOptional": "Functie (optioneel)",
+      "agreementVersion": "Versie van de overeenkomst {{version}}",
+      "accept": "Offerte accepteren",
+      "reject": "Offerte afwijzen",
+      "submitting": "Bezig met verzenden...",
+      "rejectTitle": "Offerte afwijzen",
+      "rejectHint": "Laat ons weten wat er moet veranderen. Mogelijk herzien we de offerte en sturen we die opnieuw.",
+      "rejectConfirm": "Afwijzen",
+      "cancel": "Annuleren",
+      "errors": {
+        "generic": "Er is iets misgegaan. Probeer het opnieuw.",
+        "nameRequired": "Typ uw volledige naam.",
+        "agreementRequired": "Bevestig de overeenkomst om deze offerte te accepteren.",
+        "agreementOutdated": "De tekst van de overeenkomst is bijgewerkt. Laad de pagina opnieuw en probeer het nogmaals.",
+        "commentRequired": "Voeg een korte opmerking toe voordat u deze offerte afwijst.",
+        "tooLong": "Een van uw invoeren is te lang.",
+        "reload": "Laad deze pagina opnieuw en probeer het nog eens."
+      }
+    },
+    "public": {
+      "metaTitle": "Offerte bekijken",
+      "notice": {
+        "accepted": "Deze offerte is geaccepteerd. Ze wordt hier ter informatie getoond.",
+        "declined": "Deze offerte is afgewezen. Ze wordt hier ter informatie getoond.",
+        "converted": "Deze offerte is geaccepteerd en wordt uitgevoerd. Ze wordt hier ter informatie getoond.",
+        "readOnly": "Dit is een alleen-lezenweergave van uw offerte."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Deze link is niet beschikbaar",
+          "body": "De link is mogelijk verkeerd getypt of niet langer actief."
+        },
+        "expired": {
+          "title": "Deze link is verlopen",
+          "body": "Om veiligheidsredenen werken offertelinks maar beperkte tijd."
+        },
+        "superseded": {
+          "title": "Deze offerte is vervangen",
+          "body": "Er is een nieuwere versie verzonden. Gebruik de link in de nieuwste e-mail."
+        },
+        "decided": {
+          "title": "Over deze offerte is al beslist",
+          "body": "Er is al een reactie vastgelegd, dus ze kan niet meer via deze link worden geopend."
+        },
+        "help": "Hulp nodig? Beantwoord de e-mail waarin u deze link hebt ontvangen.",
+        "signIn": "Inloggen op het klantenportaal",
+        "signInHint": "Hebt u al een account voor het klantenportaal?"
+      }
     }
   },
   "enums": {

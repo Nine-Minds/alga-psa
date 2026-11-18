@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Client-scope narrowing and the create gate are covered by the S18 integration test; this suite has no subject to resolve.
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({ createClientScopeContext: async () => ({ narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }), permits: async () => true }) }));
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', async (importOriginal) => ({ ...(await importOriginal<any>()), assertRecordCreateAllowed: async () => undefined }));
+
 /**
  * T067 / T068 at the service seam: `locations` omitted leaves the links alone, `[]` removes them,
  * a set replaces them — and every contact-returning response carries the links back, unlinked

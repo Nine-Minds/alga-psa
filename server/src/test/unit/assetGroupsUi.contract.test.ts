@@ -38,7 +38,9 @@ describe('asset group surfaces', () => {
   it('T107: an ungrouped asset gets Add to group in the Related assets tile', () => {
     const text = source('packages/assets/src/components/AssetBentoLayout.tsx');
 
-    expect(text).toMatch(/\{!asset\.group \?[\s\S]{0,300}id="asset-bento-add-to-group"/);
+    // Grouping is a write: a read-only surface (a seat technician's device) does not offer it.
+    expect(text).toMatch(/\{!asset\.group && canUpdate \?[\s\S]{0,300}id="asset-bento-add-to-group"/);
+    expect(text).toContain('const { canUpdate, readOnly } = useAssetSurfaceControls();');
     expect(text).toContain("t('assetGroups.actions.addToGroup'");
   });
 
@@ -97,14 +99,13 @@ describe('asset group surfaces', () => {
   it('T113: listAssets populates the group the column reads', () => {
     const text = source('packages/assets/src/actions/assetActions.ts');
 
-    expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
+    expect(text).toMatch(/getAuthorizedAssetGroupSummariesForAssets\(\s*trx,\s*tenant,\s*user as AssetAuthUser,\s*pageAssets\.map\(\(asset\) => asset\.asset_id\)\s*\)/);
     expect(text).toContain('group: groupSummaries.get(asset.asset_id) ?? null,');
     // And the filter the column pairs with, now in the shared list-filter builder.
     expect(text).toContain("applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });");
     expect(text).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
     expect(source('packages/assets/src/lib/assetListFilters.ts')).toMatch(/if \(params\.group_id\)/);
   });
-
   it('T114: a shared-workspace member shows the workspace line instead of Assign', () => {
     const text = source('packages/assets/src/components/AssetAssigneeRow.tsx');
 

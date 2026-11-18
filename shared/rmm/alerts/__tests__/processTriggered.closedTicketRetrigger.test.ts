@@ -121,9 +121,12 @@ describe('processTriggered with an existing live-status row', () => {
       h.state.linkedTicket = { is_closed: true };
       const result = await processRmmAlertEvent({ knex: {} as any }, { ...event, raw });
       expect(result).toMatchObject({ outcome: 'ticket_created', ticketId: 'ticket-new' });
-      expect(h.state.updates).toContainEqual({
-        table: 'rmm_alerts',
-        patch: expect.objectContaining({ metadata: JSON.stringify(raw), status: 'active' }),
+      const reopen = h.state.updates.find((update) => update.table === 'rmm_alerts' && update.patch.status === 'active');
+      expect(reopen).toBeDefined();
+      expect(reopen?.patch.metadata).toBeDefined();
+      expect(JSON.parse(String(reopen?.patch.metadata))).toMatchObject({
+        ...raw,
+        _algaNormalized: { details: null },
       });
     }
   );
