@@ -1084,6 +1084,7 @@
       "noClient": "Ingen kund matchade",
       "outcome": {
         "assignClient": "Ärendet har tilldelats kunden ”{{client}}”",
+        "matchedClient": "den matchade kunden",
         "fallback": "Ingen kund matchade – ärendet har styrts till reservdestinationen",
         "none": "Regeln gav inget resultat – normal behandling fortsätter",
         "setDestination": "Ärendet har styrts till den valda destinationen",

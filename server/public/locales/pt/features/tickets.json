@@ -2518,6 +2518,7 @@
       "addHelp": "Escolha um cliente para adicioná-lo. A caixa de diálogo permanece aberta para você adicionar mais.",
       "alreadyAdded": "Já adicionado",
       "pickerPlaceholder": "Selecione um cliente para adicionar",
+      "unnamedClient": "Cliente",
       "addedHeading": "Adicionados nesta caixa de diálogo",
       "columns": {
         "client": "Cliente",

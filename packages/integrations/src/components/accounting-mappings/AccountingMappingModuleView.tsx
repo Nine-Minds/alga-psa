@@ -409,7 +409,7 @@ export function AccountingMappingModuleView({
       </div>
 
       {bulkMode && algaSearch && bulkLoadError ? (
-        <div className="text-red-600">{bulkLoadError}</div>
+        <div className="text-destructive">{bulkLoadError}</div>
       ) : bulkMode && algaSearch && !bulkAlgaOptions ? (
         <div>{t('integrations.accounting.moduleView.loading', { defaultValue: 'Loading mappings…' })}</div>
       ) : bulkMode ? (

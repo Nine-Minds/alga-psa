@@ -66,7 +66,8 @@ describe('authorization bundle action tenant-scoped query contract', () => {
     expect(seedSection).toContain("tenantScopedTable(trx, tenant, 'authorization_bundles')");
     expect(draftEditorSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundles')");
     expect(draftEditorSection).toContain("tenantScopedTable(knex, tenant, 'authorization_bundle_revisions')");
-    expect(draftEditorSection).toContain("tenantScopedTable(knex, tenant, 'clients')");
+    // The editor names client scopes by id through the client picker; it no longer reads every client.
+    expect(draftEditorSection).not.toContain("tenantScopedTable(knex, tenant, 'clients')");
     expect(draftEditorSection).toContain("tenantScopedTable(knex, tenant, 'boards')");
 
     expect(seedSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);

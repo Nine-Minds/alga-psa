@@ -2372,6 +2372,7 @@
       "addHelp": "Wählen Sie einen Kunden aus, um ihn hinzuzufügen. Der Dialog bleibt geöffnet, sodass Sie weitere hinzufügen können.",
       "alreadyAdded": "Bereits hinzugefügt",
       "pickerPlaceholder": "Kunden zum Hinzufügen auswählen",
+      "unnamedClient": "Kunde",
       "addedHeading": "In diesem Dialog hinzugefügt",
       "columns": {
         "client": "Kunde",

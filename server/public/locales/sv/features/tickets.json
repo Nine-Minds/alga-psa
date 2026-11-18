@@ -2372,6 +2372,7 @@
       "addHelp": "Välj en kund för att lägga till den. Dialogrutan förblir öppen så att du kan lägga till fler.",
       "alreadyAdded": "Redan tillagd",
       "pickerPlaceholder": "Välj en kund att lägga till",
+      "unnamedClient": "Kund",
       "addedHeading": "Tillagda i den här dialogrutan",
       "columns": {
         "client": "Kund",

@@ -1084,6 +1084,7 @@
       "noClient": "Geen klant gematcht",
       "outcome": {
         "assignClient": "Ticket toegewezen aan klant \"{{client}}\"",
+        "matchedClient": "de gekoppelde klant",
         "fallback": "Geen klant gematcht — ticket gerouteerd naar de terugvalbestemming",
         "none": "Regel gaf geen resultaat — normale verwerking gaat door",
         "setDestination": "Ticket gerouteerd naar de geselecteerde bestemming",

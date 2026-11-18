@@ -2059,6 +2059,12 @@ export const searchDocumentAssociationEntities = withAuth(async (
     return { options: [], total: 0 };
   }
 
+  // The picker this replaced listed clients only for viewers who can read them. Checked before the
+  // transaction so the permission lookup does not take a second pooled connection.
+  if (entityType === 'client' && !await hasPermission(user, 'client', 'read')) {
+    return { options: [], total: 0 };
+  }
+
   const { knex } = await createTenantKnex();
   const safePage = Math.max(1, Number.isFinite(page) ? page : 1);
   const safeLimit = Math.min(50, Math.max(1, Number.isFinite(limit) ? limit : 10));
@@ -2087,10 +2093,6 @@ export const searchDocumentAssociationEntities = withAuth(async (
     const db = tenantDb(trx, tenant);
 
     if (entityType === 'client') {
-      // The picker this replaced listed clients only for viewers who can read them.
-      if (!await hasPermission(user, 'client', 'read')) {
-        return { options: [], total: 0 };
-      }
       let query = tenantScopedTable(trx, 'clients', tenant)
         .select('client_id as value', 'client_name as label')
         .orderBy('client_name', 'asc');

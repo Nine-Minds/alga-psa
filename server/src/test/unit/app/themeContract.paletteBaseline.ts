@@ -801,7 +801,7 @@ export const PALETTE_BASELINE = new Map<string, number>([
   ['server/src/components/settings/security/AdminSessionManagement.tsx', 1],
   ['server/src/components/settings/security/AdminWebhooksSetup.tsx', 179],
   ['server/src/components/settings/security/UserRoleAssignment.tsx', 3],
-  ['server/src/components/settings/security/inbound/InboundWebhookMappingFieldRow.tsx', 7],
+  ['server/src/components/settings/security/inbound/InboundWebhookMappingFieldRow.tsx', 6],
   ['server/src/context/DrawerContext.tsx', 1],
   ['server/src/lib/workflow/forms/customFieldTemplate.tsx', 13],
 ]);

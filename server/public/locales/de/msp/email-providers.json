@@ -1084,6 +1084,7 @@
       "noClient": "Kein Kunde zugeordnet",
       "outcome": {
         "assignClient": "Ticket dem Kunden \"{{client}}\" zugewiesen",
+        "matchedClient": "der zugeordnete Kunde",
         "fallback": "Kein Kunde zugeordnet — Ticket wurde an das Fallback-Ziel weitergeleitet",
         "none": "Regel hat keine Zuordnung ergeben — die normale Verarbeitung wird fortgesetzt",
         "setDestination": "Ticket an das ausgewählte Ziel weitergeleitet",

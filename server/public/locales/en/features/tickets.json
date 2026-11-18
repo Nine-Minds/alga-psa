@@ -2518,6 +2518,7 @@
       "addHelp": "Pick a client to add it. The dialog stays open so you can add more.",
       "alreadyAdded": "Already added",
       "pickerPlaceholder": "Select a client to add",
+      "unnamedClient": "Client",
       "addedHeading": "Added in this dialog",
       "columns": {
         "client": "Client",

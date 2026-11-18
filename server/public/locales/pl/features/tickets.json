@@ -2526,6 +2526,7 @@
       "addHelp": "Wybierz klienta, aby go dodać. Okno pozostaje otwarte, aby można było dodać kolejnych.",
       "alreadyAdded": "Już dodano",
       "pickerPlaceholder": "Wybierz klienta do dodania",
+      "unnamedClient": "Klient",
       "addedHeading": "Dodani w tym oknie",
       "columns": {
         "client": "Klient",
