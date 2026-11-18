@@ -77,6 +77,14 @@ describe('submitVendorSupportIntake', () => {
     delete process.env.VENDOR_SUPPORT_INTAKE_URL;
   });
 
+  it('caps pageUrl at the 500 characters nm-store accepts', async () => {
+    const longUrl = `/msp/tickets?${'q=x&'.repeat(300)}`;
+
+    await submitVendorSupportIntake({ ...payload, pageUrl: longUrl });
+
+    expect(JSON.parse(lastRequest().body).pageUrl).toBe(longUrl.slice(0, 500));
+  });
+
   it('POSTs the contract body to the default endpoint and returns the ticket number', async () => {
     expect(await submitVendorSupportIntake(payload)).toEqual({
       ok: true,

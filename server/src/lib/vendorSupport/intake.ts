@@ -10,6 +10,8 @@ const DEFAULT_INTAKE_URL = 'https://www.nineminds.com/api/support/intake';
 const INTAKE_SECRET_NAME = 'VENDOR_SUPPORT_INTAKE_SECRET';
 const INTAKE_TIMEOUT_MS = 8_000;
 const MAX_REASON_DETAIL = 200;
+// nm-store's intake schema caps pageUrl at 500; longer would be a 400 and an email fallback.
+const MAX_PAGE_URL = 500;
 
 export interface VendorSupportIntakePayload {
   tenantId: string;
@@ -86,7 +88,7 @@ export async function submitVendorSupportIntake(
     edition: payload.edition,
     onPrem: payload.onPrem,
     appVersion: payload.appVersion,
-    pageUrl: payload.pageUrl,
+    pageUrl: payload.pageUrl.slice(0, MAX_PAGE_URL),
   });
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
