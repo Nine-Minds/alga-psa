@@ -10,6 +10,7 @@ const handleEligibleClientPortalProvisioningMock = vi.fn();
 const handleIneligibleClientPortalLifecycleMock = vi.fn();
 const publishWorkflowManagedPortalProvisioningEventMock = vi.fn();
 const previewLinkedContactChangeMock = vi.fn();
+const previewEmailOwnerPolicyMock = vi.fn(async (..._args: unknown[]) => ({ policy: 'free' as 'free' | 'link' | 'conflict' }));
 const markDisabledEntraUsersInactiveMock = vi.fn();
 const markExcludedEntraUsersInactiveMock = vi.fn();
 const selectLinkedEntraIdentitiesMock = vi.fn();
@@ -43,6 +44,7 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
   linkExistingMatchedContact: linkExistingMatchedContactMock,
   createContactForEntraUser: createContactForEntraUserMock,
   previewLinkedContactChange: previewLinkedContactChangeMock,
+  previewEmailOwnerPolicy: previewEmailOwnerPolicyMock,
   reactivateExcludedEntraContact: reactivateExcludedEntraContactMock,
   reactivateDisabledSharedMailboxContact: reactivateDisabledSharedMailboxContactMock,
 }));
@@ -136,6 +138,7 @@ describe('executeEntraSync dry-run behavior', () => {
       linked: 1,
       updated: 0,
       ambiguous: 1,
+      conflict: 0,
       inactivated: 0,
       skipped: 0,
     });
@@ -224,6 +227,87 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(queueAmbiguousContactMatchMock).toHaveBeenCalledTimes(1);
     expect(evaluateClientPortalProvisioningEligibilityMock).not.toHaveBeenCalled();
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('a conflicting user is counted and skipped, and the sync carries on with the remaining users', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    resetPortalProvisioningMocks();
+
+    findContactMatchesByEmailMock.mockResolvedValue([]);
+    createContactForEntraUserMock
+      .mockResolvedValueOnce({
+        action: 'conflict',
+        queueItemId: 'queue-1',
+        owner: { email: 'conflicting@example.com', contactNameId: 'owner-1', clientId: 'other', clientName: 'Other Co', fullName: 'Owner', kind: 'primary', isInactive: false },
+      })
+      .mockResolvedValueOnce({ action: 'created', contactNameId: 'contact-normal' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-c',
+      clientId: 'client-c',
+      managedTenantId: 'managed-c',
+      dryRun: false,
+      users: [buildUser('conflicting'), buildUser('normal')],
+    });
+
+    // Both users reached the reconciler, in order: the conflict did not end the loop.
+    expect(createContactForEntraUserMock).toHaveBeenCalledTimes(2);
+    expect(createContactForEntraUserMock.mock.calls[0][2].entraObjectId).toBe('entra-object-conflicting');
+    expect(createContactForEntraUserMock.mock.calls[1][2].entraObjectId).toBe('entra-object-normal');
+    expect(createContactForEntraUserMock.mock.calls[1][3]).toBe('managed-c');
+    expect(result.counters).toMatchObject({ conflict: 1, created: 1, linked: 0 });
+  });
+
+  it('a conflicting user gets no portal provisioning', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    resetPortalProvisioningMocks();
+    findContactMatchesByEmailMock.mockResolvedValue([]);
+    createContactForEntraUserMock.mockResolvedValue({
+      action: 'conflict',
+      queueItemId: 'queue-1',
+      owner: { email: 'conflicting@example.com', contactNameId: 'owner-1', clientId: null, clientName: null, fullName: 'Owner', kind: 'primary', isInactive: false },
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-c',
+      clientId: 'client-c',
+      managedTenantId: 'managed-c',
+      dryRun: false,
+      users: [buildUser('conflicting')],
+      portalEntitlement: { provisioningMode: 'built_in', groupId: 'g', membershipMode: 'transitive' },
+    });
+
+    expect(evaluateClientPortalProvisioningEligibilityMock).not.toHaveBeenCalled();
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('dry run lists the conflicting user under conflicts and writes nothing', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    resetPortalProvisioningMocks();
+    findContactMatchesByEmailMock.mockResolvedValue([]);
+    previewEmailOwnerPolicyMock
+      .mockResolvedValueOnce({ policy: 'conflict' })
+      .mockResolvedValueOnce({ policy: 'link' })
+      .mockResolvedValueOnce({ policy: 'free' });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-c',
+      clientId: 'client-c',
+      managedTenantId: 'managed-c',
+      dryRun: true,
+      users: [buildUser('a'), buildUser('b'), buildUser('c')],
+    });
+
+    expect(createContactForEntraUserMock).not.toHaveBeenCalled();
+    expect(result.counters).toMatchObject({ conflict: 1, linked: 1, created: 1 });
+    expect(result.preview?.map((identity) => identity.bucket)).toEqual(['conflict', 'link', 'create']);
   });
 
   it('T116: skips provisioning when mode is disabled after successful reconciliation', async () => {
@@ -713,6 +797,7 @@ describe('executeEntraSync updated counter', () => {
       linked: 1,
       updated: 1,
       ambiguous: 0,
+      conflict: 0,
       inactivated: 0,
       skipped: 0,
     });

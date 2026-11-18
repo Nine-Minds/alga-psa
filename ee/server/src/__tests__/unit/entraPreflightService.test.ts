@@ -116,7 +116,7 @@ describe('runEntraPreflight', () => {
     });
     executeEntraSyncMock.mockResolvedValue({
       dryRun: true,
-      counters: { created: 1, linked: 0, updated: 0, ambiguous: 0, inactivated: 1 },
+      counters: { created: 1, linked: 0, updated: 0, ambiguous: 0, conflict: 1, inactivated: 1 },
       preview: [
         { bucket: 'create', entraObjectId: 'o1', displayName: 'New User', email: null, userPrincipalName: null },
         { bucket: 'mark_inactive', entraObjectId: 'o2', displayName: 'Disabled User', email: null, userPrincipalName: null },
@@ -160,12 +160,16 @@ describe('runEntraPreflight', () => {
 
     expect(result.totalIdentities).toBe(2);
     expect(result.counters.inactivated).toBe(1);
+    // The preview's summary shape carries the conflict counter through to the audit row too.
+    expect(result.counters.conflict).toBe(1);
+    expect(JSON.parse(String((runRow.summary as { args: unknown[] }).args[0]))).toMatchObject({ conflict: 1 });
     const createBucket = result.buckets.find((bucket) => bucket.bucket === 'create');
     expect(createBucket?.count).toBe(1);
     expect(result.buckets.map((bucket) => bucket.bucket)).toEqual([
       'create',
       'link',
       'needs_decision',
+      'conflict',
       'no_change',
       'mark_inactive',
     ]);

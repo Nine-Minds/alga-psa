@@ -71,6 +71,8 @@ export interface DecideEntraRunNotificationsInput {
     linked: number;
     updated: number;
     ambiguous: number;
+    /** Identities skipped because their email belongs to a contact at another client. */
+    conflict?: number;
     inactivated: number;
   };
   /** Statuses of previous real runs, newest first. */
@@ -105,13 +107,25 @@ export function decideEntraRunNotifications(
     }
   }
 
-  if (input.config.reviewQueueArrivals && input.summary.ambiguous > 0) {
+  const conflicts = input.summary.conflict ?? 0;
+  if (input.config.reviewQueueArrivals && (input.summary.ambiguous > 0 || conflicts > 0)) {
+    const lines: string[] = [];
+    if (input.summary.ambiguous > 0) {
+      lines.push(
+        `${input.summary.ambiguous} identities matched more than one contact, so the sync did not `
+        + 'guess. They are waiting in the review queue.'
+      );
+    }
+    if (conflicts > 0) {
+      lines.push(
+        `${conflicts} identities are already a contact at another client; review them. `
+        + 'The sync skipped them and did not link across clients.'
+      );
+    }
     notifications.push({
       kind: 'review-queue',
       title: 'Microsoft Entra needs a decision',
-      message:
-        `${input.summary.ambiguous} identities matched more than one contact, so the sync did not `
-        + 'guess. They are waiting in the review queue.',
+      message: lines.join(' '),
       link: ENTRA_REVIEW_QUEUE_LINK,
     });
   }

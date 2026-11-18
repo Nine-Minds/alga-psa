@@ -543,6 +543,7 @@
     "errors": {
       "validationPrefix": "Åtgärda följande:",
       "emailExists": "E-postadressen finns redan: En kontakt med den här e-postadressen finns redan i systemet",
+      "emailExistsPrefix": "E-postadressen finns redan:",
       "invalidReferencePrefix": "Ogiltig referens:",
       "systemPrefix": "Systemfel:",
       "saveFailed": "Ett fel uppstod när uppgifterna skulle sparas. Försök igen.",
@@ -847,6 +848,15 @@
       "otherClient": "Åtkomst nekad: Det går inte att hantera kontakter för en annan kund",
       "notAssociatedWithClient": "Kontakten är inte kopplad till en kund",
       "emailExists": "En kontakt med den här e-postadressen finns redan i systemet",
+      "emailConflict": {
+        "named": "Den här e-postadressen tillhör redan {{name}} hos {{client}}.",
+        "namedNoClient": "Den här e-postadressen tillhör redan {{name}}, en kontakt utan kund.",
+        "anotherClient": "Den här e-postadressen tillhör redan en kontakt hos en annan kund.",
+        "inactive": "Den här e-postadressen tillhör redan {{name}}, en inaktiv kontakt. Återaktivera den kontakten i stället.",
+        "inactiveAtClient": "Den här e-postadressen tillhör redan {{name}} hos {{client}}, en inaktiv kontakt. Återaktivera den kontakten i stället.",
+        "additional": "Den här e-postadressen är redan en extra e-postadress för {{name}}.",
+        "additionalAtClient": "Den här e-postadressen är redan en extra e-postadress för {{name}} hos {{client}}."
+      },
       "fieldRequired": "Fältet {{field}} är obligatoriskt",
       "clientInvalid": "Den valda kunden är inte längre giltig",
       "duplicate": "En kontakt med de här uppgifterna finns redan.",

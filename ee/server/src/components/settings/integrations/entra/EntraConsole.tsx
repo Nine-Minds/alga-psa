@@ -221,6 +221,7 @@ export function EntraConsole({
    * attention item and in the tab badge, and an operator planned around it.
    */
   const [reviewQueueAtLimit, setReviewQueueAtLimit] = React.useState(false);
+  const [reviewQueueConflictCount, setReviewQueueConflictCount] = React.useState(0);
   const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>(
     normalizeEntraFieldSyncConfig(null)
   );
@@ -303,8 +304,12 @@ export function EntraConsole({
       if ('error' in queueResult) {
         failures.push(queueResult.error);
       } else {
-        const queued = (queueResult.data?.items || []).length;
+        const queuedItems = queueResult.data?.items || [];
+        const queued = queuedItems.length;
         setReviewQueueCount(queued);
+        setReviewQueueConflictCount(
+          queuedItems.filter((item) => item.reason === 'email_owned_by_other_client').length
+        );
         setReviewQueueAtLimit(queued >= REVIEW_QUEUE_PAGE_SIZE);
       }
 
@@ -366,6 +371,7 @@ export function EntraConsole({
     mappings,
     reviewQueueCount,
     reviewQueueAtLimit,
+    reviewQueueConflictCount,
     schedule,
   });
   const lastRun = findLastRealRun(runs);

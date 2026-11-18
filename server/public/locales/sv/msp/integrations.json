@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identiteter väntar på ett beslut.",
           "reviewQueueAtLeast": "Minst {{count}} identiteter väntar på ett beslut.",
           "reviewQueueDetail": "Minst två kontakter delar en Microsoft-e-postadress. Inget händer med dem förrän du har gjort ett val.",
+          "reviewQueueDetailConflict": "Deras e-postadress tillhör redan en kontakt hos en annan kund, så de hoppades över. Länka eller avfärda var och en.",
+          "reviewQueueDetailMixed": "Vissa delar en Microsoft-e-postadress med flera kontakter. Andra använder en adress som redan tillhör en kontakt hos en annan kund. Inget händer med dem förrän du väljer.",
           "reviewQueueOne": "{{count}} identitet väntar på ett beslut.",
           "scheduleNotApplied": "Automatisk synkronisering är aktiverad, men schemat har aldrig tillämpats.",
           "scheduleNotAppliedDetail": "Inget körs automatiskt förrän det har tillämpats. Spara schemat igen för att försöka på nytt.",
@@ -793,6 +795,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "E-postadressen tillhör redan en kontakt hos en annan kund (eller utan kund), så synkroniseringen länkar den inte. Dessa hamnar i granskningskön.",
+            "label": "E-post tillhör en annan kund"
+          },
           "create": {
             "description": "Ingen kontakt hos kunden matchar e-postadressen, så en ny kontakt skulle skapas.",
             "label": "Nya kontakter"
@@ -827,6 +833,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Avfärda",
+          "linkAnyway": "Länka ändå",
           "refresh": "Uppdatera",
           "resolveExisting": "Koppla till befintlig kontakt",
           "resolveNew": "Skapa ny kontakt"
@@ -845,12 +852,28 @@
           "loadQueue": "Det gick inte att läsa in avstämningskön.",
           "resolveFailed": "Det gick inte att hantera köposten."
         },
+        "linkAnyway": {
+          "message": "{{identity}} länkas till {{name}} hos {{client}}, trots att kontakten tillhör en annan kund än den som synkroniseras. Detta registreras som ditt beslut.",
+          "noClient": "ingen kund",
+          "title": "Länka mellan kunder?"
+        },
         "loading": "Läser in kö…",
         "noEmailIdentity": "Ingen e-postidentitet",
+        "owner": {
+          "additionalNote": "Adressen är en extra e-postadress för den kontakten.",
+          "at": "Tillhör {{name}} hos {{client}}",
+          "inactiveNote": "Den kontakten är inaktiv.",
+          "noClient": "Tillhör {{name}} (ingen kund)"
+        },
         "queuedAt": "{{identity}} · köad {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-post tillhör en annan kund",
+          "multipleEmailMatches": "Flera kontakter matchar"
+        },
         "scopedToMappedClient": "Valbara befintliga kontakter är begränsade till den här mappade kunden.",
         "success": {
           "dismissed": "{{identity}} har avfärdats och återkommer inte vid nästa synkronisering.",
+          "linkedAnyway": "{{identity}} länkades till {{name}}.",
           "resolvedExisting": "Köposten {{queueItemId}} har kopplats till den befintliga kontakten {{contactNameId}}.",
           "resolvedNew": "Köposten {{queueItemId}} har hanterats genom att kontakten {{contactNameId}} skapades."
         },

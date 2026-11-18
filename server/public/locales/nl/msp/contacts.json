@@ -539,6 +539,7 @@
     "errors": {
       "validationPrefix": "Corrigeer het volgende:",
       "emailExists": "E-mail bestaat al: er bestaat al een contactpersoon met dit e-mailadres in het systeem",
+      "emailExistsPrefix": "E-mail bestaat al:",
       "invalidReferencePrefix": "Ongeldige verwijzing:",
       "systemPrefix": "Systeemfout:",
       "saveFailed": "Er is een fout opgetreden bij het opslaan. Probeer het opnieuw.",
@@ -843,6 +844,15 @@
       "otherClient": "Toestemming geweigerd: contactpersonen van een andere klant kunnen niet worden beheerd",
       "notAssociatedWithClient": "De contactpersoon is niet aan een klant gekoppeld",
       "emailExists": "Er bestaat al een contactpersoon met dit e-mailadres in het systeem",
+      "emailConflict": {
+        "named": "Dit e-mailadres is al van {{name}} bij {{client}}.",
+        "namedNoClient": "Dit e-mailadres is al van {{name}}, een contactpersoon zonder klant.",
+        "anotherClient": "Dit e-mailadres is al van een contactpersoon bij een andere klant.",
+        "inactive": "Dit e-mailadres is al van {{name}}, een inactieve contactpersoon. Heractiveer die contactpersoon in plaats daarvan.",
+        "inactiveAtClient": "Dit e-mailadres is al van {{name}} bij {{client}}, een inactieve contactpersoon. Heractiveer die contactpersoon in plaats daarvan.",
+        "additional": "Dit e-mailadres is al een extra e-mailadres van {{name}}.",
+        "additionalAtClient": "Dit e-mailadres is al een extra e-mailadres van {{name}} bij {{client}}."
+      },
       "fieldRequired": "{{field}} is verplicht",
       "clientInvalid": "De geselecteerde klant is niet langer geldig",
       "duplicate": "Er bestaat al een contactpersoon met deze gegevens.",

@@ -8,6 +8,8 @@ import { withAuth } from '@alga-psa/auth';
 import { projectClientForSubject, projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { Knex } from 'knex';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { describeOwnedEmail } from '../lib/contactEmailConflict';
 import {
   getClientLogoUrl,
   getClientLogoUrlsBatch,
@@ -625,17 +627,15 @@ export const createOrFindContactByEmail = withAuth(async (
 
       if (existingContactInTenant) {
         if (existingContactInTenant.client_id !== clientId) {
-          if (isClientPortal) {
-            throw new Error('EMAIL_EXISTS: This email address is already in use');
-          }
-          if (!existingContactInTenant.client_id) {
-            throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
-          }
-          const existingClient = await tenantScopedTable(trx, 'clients', tenant)
-            .select('client_name')
-            .where({ client_id: existingContactInTenant.client_id })
-            .first<{ client_name: string }>();
-          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClient?.client_name || 'another client'}`);
+          // One resolver + one formatter; the caller decides once what it may name.
+          const { t } = await getServerTranslation(undefined, 'msp/contacts');
+          const owned = await describeOwnedEmail(
+            trx,
+            { tenant, user, ownClientId: isClientPortal ? clientId : null },
+            normalizedEmail,
+            t
+          );
+          throw new Error(`EMAIL_EXISTS: ${owned?.message ?? t('errors.contact.emailConflict.anotherClient')}`);
         }
         const contactWithClientName = {
           ...existingContactInTenant,

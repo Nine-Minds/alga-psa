@@ -87,6 +87,7 @@ export {
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
   dismissEntraQueueItem,
+  linkEntraQueueItemAnyway,
   connectEntraIntegration,
   validateEntraDirectConnection,
   validateEntraCippConnection,

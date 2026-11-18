@@ -543,6 +543,7 @@
     "errors": {
       "validationPrefix": "Correggi quanto segue:",
       "emailExists": "Email già esistente: esiste già nel sistema un contatto con questo indirizzo email",
+      "emailExistsPrefix": "Email già esistente:",
       "invalidReferencePrefix": "Riferimento non valido:",
       "systemPrefix": "Errore di sistema:",
       "saveFailed": "Si è verificato un errore durante il salvataggio. Riprova.",
@@ -847,6 +848,15 @@
       "otherClient": "Autorizzazione negata: impossibile gestire i contatti di un altro cliente",
       "notAssociatedWithClient": "Il contatto non è associato a un cliente",
       "emailExists": "Un contatto con questo indirizzo e-mail esiste già nel sistema",
+      "emailConflict": {
+        "named": "Questo indirizzo e-mail appartiene già a {{name}} presso {{client}}.",
+        "namedNoClient": "Questo indirizzo e-mail appartiene già a {{name}}, un contatto senza cliente.",
+        "anotherClient": "Questo indirizzo e-mail appartiene già a un contatto di un altro cliente.",
+        "inactive": "Questo indirizzo e-mail appartiene già a {{name}}, un contatto inattivo. Riattiva invece quel contatto.",
+        "inactiveAtClient": "Questo indirizzo e-mail appartiene già a {{name}} presso {{client}}, un contatto inattivo. Riattiva invece quel contatto.",
+        "additional": "Questo indirizzo e-mail è già un indirizzo aggiuntivo di {{name}}.",
+        "additionalAtClient": "Questo indirizzo e-mail è già un indirizzo aggiuntivo di {{name}} presso {{client}}."
+      },
       "fieldRequired": "{{field}} è obbligatorio",
       "clientInvalid": "Il cliente selezionato non è più valido",
       "duplicate": "Esiste già un contatto con questi dati.",

@@ -155,3 +155,42 @@ describe('QuickAddClient location creation failures', () => {
     expect(mocks.handleError).not.toHaveBeenCalled();
   });
 });
+
+async function submitWithContact() {
+  const onClientAdded = vi.fn();
+  const { container } = render(
+    <QuickAddClient open onOpenChange={vi.fn()} onClientAdded={onClientAdded} />
+  );
+
+  await waitFor(() => expect(mocks.getAllCountries).toHaveBeenCalled());
+
+  fireEvent.change(container.querySelector('#client-name')!, { target: { value: 'Acme Inc' } });
+  fireEvent.click(container.querySelector('#toggle-contact-section')!);
+  fireEvent.change(container.querySelector('#contact-name')!, { target: { value: 'Samuel Reyes' } });
+  fireEvent.click(container.querySelector('#create-client-btn')!);
+
+  await waitFor(() => expect(mocks.createClientContact).toHaveBeenCalled());
+  await waitFor(() => expect(onClientAdded).toHaveBeenCalled());
+  return { onClientAdded };
+}
+
+describe('QuickAddClient contact creation failures', () => {
+  it('shows the returned reason when the contact email already belongs to someone else', async () => {
+    // createClientContact returns (not throws) the named owner, so the toast can say who holds the address.
+    const conflict = { actionError: 'This email address already belongs to Samuel Reyes at Harbourfront Physio, an inactive contact. Reactivate that contact instead.' };
+    mocks.createClientContact.mockResolvedValue(conflict);
+
+    const { onClientAdded } = await submitWithContact();
+
+    expect(mocks.handleError).toHaveBeenCalledWith(conflict, 'Client created but failed to add contact.');
+    expect(onClientAdded).toHaveBeenCalledWith(expect.objectContaining({ client_id: 'client-1' }));
+  });
+
+  it('stays quiet when the contact is created', async () => {
+    mocks.createClientContact.mockResolvedValue({ contact_name_id: 'contact-1' });
+
+    await submitWithContact();
+
+    expect(mocks.handleError).not.toHaveBeenCalled();
+  });
+});

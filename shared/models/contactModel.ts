@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { withSavepoint } from '@alga-psa/db';
+import { EmailOwnershipError, resolveContactEmailOwnership } from './contactEmailOwnership';
 import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
 import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
@@ -264,6 +266,8 @@ export type {
   UpdateContactInput,
 } from '../interfaces/contact.interfaces';
 export type { ValidationResult } from '../interfaces/validation.interfaces';
+export { EmailOwnershipError, resolveContactEmailOwnership } from './contactEmailOwnership';
+export type { ContactEmailOwner } from './contactEmailOwnership';
 
 type ContactRecord = {
   contact_name_id: string;
@@ -469,6 +473,33 @@ function contactEmailConflictMessage(error: unknown): string | null {
   }
 
   return null;
+}
+
+/**
+ * Turn a unique-constraint race into the same structured error the pre-check
+ * throws. The owner is looked up now, for whichever of the candidate addresses
+ * is owned by a *different* contact, so a race cannot degrade the message.
+ * Falls back to the plain message when no owner can be found.
+ */
+async function toEmailConflictError(
+  error: unknown,
+  tenant: string,
+  candidateEmails: string[],
+  trx: Knex.Transaction,
+  excludeContactId?: string
+): Promise<Error | null> {
+  const message = contactEmailConflictMessage(error);
+  if (!message) {
+    return null;
+  }
+  for (const email of candidateEmails) {
+    if (!email) continue;
+    const owner = await resolveContactEmailOwnership(tenant, email, trx);
+    if (owner && owner.contactNameId !== excludeContactId) {
+      return new EmailOwnershipError(owner, message);
+    }
+  }
+  return new Error(message);
 }
 
 function toPreparedEmailAddressInput(row: ContactEmailRow): PreparedEmailAddressInput {
@@ -858,12 +889,9 @@ export class ContactModel {
       throw new Error('VALIDATION_ERROR: Please enter a valid email address');
     }
 
-    const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
-      .where('email', normalizedEmail)
-      .first();
-
-    if (existingContact) {
-      throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+    const emailOwner = await resolveContactEmailOwnership(tenant, normalizedEmail, trx);
+    if (emailOwner) {
+      throw new EmailOwnershipError(emailOwner);
     }
 
     if (input.client_id) {
@@ -909,22 +937,27 @@ export class ContactModel {
     };
 
     try {
-      await tenantScopedTable(trx, 'contacts', tenant).insert(insertData);
-      await this.replacePhoneNumbers(contactId, tenant, validatedInput.phone_numbers, trx, now);
-      await this.replaceAdditionalEmailAddresses(contactId, tenant, validatedInput.additional_email_addresses, trx, now);
+      // The insert runs in a savepoint: a unique-constraint race aborts the
+      // enclosing Postgres transaction, and the owner lookup below needs it usable.
+      const hydratedContact = await withSavepoint(trx, async (sp) => {
+        await tenantScopedTable(sp, 'contacts', tenant).insert(insertData);
+        await this.replacePhoneNumbers(contactId, tenant, validatedInput.phone_numbers, sp, now);
+        await this.replaceAdditionalEmailAddresses(contactId, tenant, validatedInput.additional_email_addresses, sp, now);
 
-      const hydratedContact = await this.getContactById(contactId, tenant, trx);
-      if (!hydratedContact) {
-        throw new Error('SYSTEM_ERROR: Failed to load contact after creation');
-      }
+        const loaded = await this.getContactById(contactId, tenant, sp);
+        if (!loaded) {
+          throw new Error('SYSTEM_ERROR: Failed to load contact after creation');
+        }
+        return loaded;
+      });
 
       return hydratedContact;
     } catch (err) {
       console.error('Error creating contact:', err);
 
-      const emailConflict = contactEmailConflictMessage(err);
+      const emailConflict = await toEmailConflictError(err, tenant, [normalizedEmail, ...((validatedInput.additional_email_addresses ?? []) as unknown as PreparedEmailAddressInput[]).map((row) => row.normalized_email_address)], trx);
       if (emailConflict) {
-        throw new Error(emailConflict);
+        throw emailConflict;
       }
 
       if (err instanceof Error) {
@@ -1035,9 +1068,12 @@ export class ContactModel {
           throw new Error('VALIDATION_ERROR: Changing primary email requires promote an additional email first');
         }
       }
-      const emailExists = await this.checkEmailExists(normalizedEmail, tenant, trx, contactId);
-      if (emailExists) {
-        throw new Error(`EMAIL_EXISTS: A contact with email ${normalizedEmail} already exists`);
+      const emailOwner = await resolveContactEmailOwnership(tenant, normalizedEmail, trx);
+      if (emailOwner && emailOwner.contactNameId !== contactId) {
+        throw new EmailOwnershipError(
+          emailOwner,
+          `EMAIL_EXISTS: A contact with email ${normalizedEmail} already exists`
+        );
       }
       updateData.email = normalizedEmail;
       if (promotedEmailRow) {
@@ -1162,20 +1198,32 @@ export class ContactModel {
     }
 
     try {
-      await tenantScopedTable(trx, 'contacts', tenant)
-        .where('contact_name_id', contactId)
-        .update(dbData);
+      // Savepoint so a unique-constraint race leaves the transaction usable for the owner lookup.
+      await withSavepoint(trx, async (sp) => {
+        await tenantScopedTable(sp, 'contacts', tenant)
+          .where('contact_name_id', contactId)
+          .update(dbData);
 
-      if (updateData.phone_numbers !== undefined) {
-        await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, trx, now);
-      }
-      if (updateData.additional_email_addresses !== undefined) {
-        await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, trx, now);
-      }
+        if (updateData.phone_numbers !== undefined) {
+          await this.replacePhoneNumbers(contactId, tenant, updateData.phone_numbers, sp, now);
+        }
+        if (updateData.additional_email_addresses !== undefined) {
+          await this.replaceAdditionalEmailAddresses(contactId, tenant, updateData.additional_email_addresses, sp, now);
+        }
+      });
     } catch (err) {
-      const emailConflict = contactEmailConflictMessage(err);
+      const emailConflict = await toEmailConflictError(
+        err,
+        tenant,
+        [
+          updateData.email ?? '',
+          ...(updateData.additional_email_addresses ?? []).map((row) => row.normalized_email_address),
+        ],
+        trx,
+        contactId
+      );
       if (emailConflict) {
-        throw new Error(emailConflict);
+        throw emailConflict;
       }
       throw err;
     }

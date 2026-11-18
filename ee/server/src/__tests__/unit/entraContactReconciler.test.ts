@@ -7,6 +7,8 @@ const runWithTenantMock = vi.fn();
 const findContactMatchesByEmailMock = vi.fn();
 const upsertEntraContactLinkActiveMock = vi.fn();
 const queueAmbiguousEntraMatchMock = vi.fn();
+const queueEntraEmailConflictMock = vi.fn();
+const resolveContactEmailOwnershipMock = vi.fn();
 const createContactMock = vi.fn();
 const updateContactMock = vi.fn();
 
@@ -30,6 +32,13 @@ vi.mock('@ee/lib/integrations/entra/sync/contactLinkRepository', () => ({
 
 vi.mock('@ee/lib/integrations/entra/reconciliationQueueService', () => ({
   queueAmbiguousEntraMatch: queueAmbiguousEntraMatchMock,
+  queueEntraEmailConflict: queueEntraEmailConflictMock,
+}));
+
+// Ownership is a shared read-only resolver with its own suite; here it is the input that decides the branch.
+vi.mock('@alga-psa/shared/models/contactEmailOwnership', async (importOriginal) => ({
+  ...((await importOriginal()) as object),
+  resolveContactEmailOwnership: resolveContactEmailOwnershipMock,
 }));
 
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
@@ -143,6 +152,10 @@ describe('reconcileEntraUserToContact', () => {
     findContactMatchesByEmailMock.mockReset();
     upsertEntraContactLinkActiveMock.mockReset();
     queueAmbiguousEntraMatchMock.mockReset();
+    queueEntraEmailConflictMock.mockReset();
+    resolveContactEmailOwnershipMock.mockReset();
+    resolveContactEmailOwnershipMock.mockResolvedValue(null);
+    queueEntraEmailConflictMock.mockResolvedValue({ queueItemId: 'queue-conflict' });
     createContactMock.mockReset();
     updateContactMock.mockReset();
 
@@ -528,5 +541,127 @@ describe('reconcileEntraUserToContact', () => {
       contactNameId: 'contact-114',
     });
     expect(contactsUpdateMock).toHaveBeenCalled();
+  });
+
+  it('an inactive contact matched by email at the same client is linked and reactivated', async () => {
+    const harness = setupReconcilerKnexHarness();
+    findContactMatchesByEmailMock.mockResolvedValue([
+      {
+        contactNameId: 'contact-inactive',
+        clientId: 'client-1',
+        email: 'user@example.com',
+        fullName: 'Inactive User',
+        isInactive: true,
+      },
+    ]);
+
+    const { reconcileEntraUserToContact } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+    const result = await reconcileEntraUserToContact({
+      tenantId: 'tenant-1',
+      clientId: 'client-1',
+      managedTenantId: 'managed-1',
+      user: buildUser(),
+    });
+
+    expect(result).toMatchObject({ action: 'linked', contactNameId: 'contact-inactive', recovered: true });
+    expect(harness.contactsUpdateMock).toHaveBeenCalledWith(expect.objectContaining({ is_inactive: false }));
+    expect(createContactMock).not.toHaveBeenCalled();
+    expect(queueEntraEmailConflictMock).not.toHaveBeenCalled();
+  });
+
+  describe('email ownership (createContactForEntraUser)', () => {
+    const owner = (overrides: Record<string, unknown> = {}) => ({
+      kind: 'primary',
+      email: 'ben@muscle.ca',
+      contactNameId: 'owner-contact',
+      clientId: 'other-client',
+      fullName: 'Benjamin Dixon',
+      clientName: 'Muscle Corp',
+      isInactive: false,
+      ...overrides,
+    });
+
+    it('an owner at another client queues a review item and returns conflict without creating or linking', async () => {
+      const harness = setupReconcilerKnexHarness();
+      resolveContactEmailOwnershipMock.mockResolvedValue(owner());
+
+      const { createContactForEntraUser } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+      const user = buildUser({ email: 'ben@muscle.ca', userPrincipalName: 'ben@muscle.ca' });
+      const result = await createContactForEntraUser('tenant-1', 'client-1', user, 'managed-1');
+
+      expect(result).toEqual({
+        action: 'conflict',
+        queueItemId: 'queue-conflict',
+        owner: expect.objectContaining({
+          contactNameId: 'owner-contact',
+          fullName: 'Benjamin Dixon',
+          clientId: 'other-client',
+          clientName: 'Muscle Corp',
+          email: 'ben@muscle.ca',
+        }),
+      });
+      expect(queueEntraEmailConflictMock).toHaveBeenCalledWith({
+        tenantId: 'tenant-1',
+        managedTenantId: 'managed-1',
+        clientId: 'client-1',
+        user,
+        owner: expect.objectContaining({ contactNameId: 'owner-contact' }),
+      });
+      expect(createContactMock).not.toHaveBeenCalled();
+      expect(upsertEntraContactLinkActiveMock).not.toHaveBeenCalled();
+      expect(harness.contactsUpdateMock).not.toHaveBeenCalled();
+    });
+
+    it('an owner with no client is also a conflict, never auto-linked', async () => {
+      setupReconcilerKnexHarness();
+      resolveContactEmailOwnershipMock.mockResolvedValue(owner({ clientId: null, clientName: null }));
+
+      const { createContactForEntraUser } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+      const result = await createContactForEntraUser('tenant-1', 'client-1', buildUser());
+
+      expect(result.action).toBe('conflict');
+      expect(queueEntraEmailConflictMock).toHaveBeenCalledTimes(1);
+      expect(upsertEntraContactLinkActiveMock).not.toHaveBeenCalled();
+    });
+
+    it('an additional email on a contact at the same client links that contact', async () => {
+      setupReconcilerKnexHarness();
+      resolveContactEmailOwnershipMock.mockResolvedValue(owner({ kind: 'additional', clientId: 'client-1' }));
+
+      const { createContactForEntraUser } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+      const result = await createContactForEntraUser('tenant-1', 'client-1', buildUser());
+
+      expect(result).toMatchObject({ action: 'linked', contactNameId: 'owner-contact' });
+      expect(createContactMock).not.toHaveBeenCalled();
+      expect(queueEntraEmailConflictMock).not.toHaveBeenCalled();
+      expect(upsertEntraContactLinkActiveMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ contactNameId: 'owner-contact', clientId: 'client-1' })
+      );
+    });
+
+    it('an inactive contact at the same client is linked and reactivated', async () => {
+      const harness = setupReconcilerKnexHarness();
+      resolveContactEmailOwnershipMock.mockResolvedValue(owner({ clientId: 'client-1', isInactive: true }));
+
+      const { createContactForEntraUser } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+      const result = await createContactForEntraUser('tenant-1', 'client-1', buildUser());
+
+      expect(result).toMatchObject({ action: 'linked', contactNameId: 'owner-contact', recovered: true });
+      expect(harness.contactsUpdateMock).toHaveBeenCalledWith(expect.objectContaining({ is_inactive: false }));
+      expect(queueEntraEmailConflictMock).not.toHaveBeenCalled();
+    });
+
+    it('a race that hands the address to another client after the check still returns conflict, never EMAIL_EXISTS', async () => {
+      setupReconcilerKnexHarness();
+      const { EmailOwnershipError } = await import('@alga-psa/shared/models/contactEmailOwnership');
+      createContactMock.mockRejectedValueOnce(new EmailOwnershipError(owner() as any));
+
+      const { createContactForEntraUser } = await import('@ee/lib/integrations/entra/sync/contactReconciler');
+      const result = await createContactForEntraUser('tenant-1', 'client-1', buildUser());
+
+      expect(result.action).toBe('conflict');
+      expect(queueEntraEmailConflictMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

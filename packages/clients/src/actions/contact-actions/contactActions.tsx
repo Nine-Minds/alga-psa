@@ -56,6 +56,17 @@ import {
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import {
+  EmailOwnershipError,
+  describeContactEmailConflict,
+  isEmailOwnershipError,
+  resolveContactEmailOwnership,
+} from '@alga-psa/shared/models/contactEmailOwnership';
+import {
+  describeOwnedEmail,
+  isConflictClientVisible,
+  type ContactEmailConflictCaller,
+} from '../../lib/contactEmailConflict';
 import { attachContactLocations } from '../../lib/contactLocations';
 import {
   getContactLocationCount as readContactLocationCount,
@@ -194,8 +205,30 @@ function stripExpectedContactErrorPrefix(message: string): string {
   return message.replace(/^(VALIDATION_ERROR|EMAIL_EXISTS|FOREIGN_KEY_ERROR):\s*/, '');
 }
 
-async function contactEmailConflictMessageFrom(error: unknown): Promise<string | null> {
+/**
+ * The message for an email-ownership failure, in the caller's terms. A thin wrapper: the
+ * resolver finds the owner (the model already did, or we ask now for a raw constraint race)
+ * and the shared formatter words it, redacting a client the caller cannot read.
+ */
+async function contactEmailConflictMessageFrom(
+  error: unknown,
+  caller?: ContactEmailConflictCaller,
+  emails: string[] = []
+): Promise<string | null> {
   const dbError = error as { code?: string; constraint?: string };
+  const isConstraintRace = dbError?.code === '23505' || (error instanceof Error && error.message.includes('duplicate key'));
+  let conflict = isEmailOwnershipError(error) ? error.conflict : null;
+  if (!conflict && caller && isConstraintRace) {
+    for (const email of emails) {
+      conflict = await resolveContactEmailOwnership(caller.tenant, email);
+      if (conflict) break;
+    }
+  }
+  if (conflict) {
+    const { t } = await getServerTranslation(undefined, 'msp/contacts');
+    return describeContactEmailConflict(conflict, await isConflictClientVisible(caller, conflict), t);
+  }
+
   if (
     dbError?.code === '23505' &&
     (
@@ -232,7 +265,16 @@ async function contactEmailConflictMessageFrom(error: unknown): Promise<string |
   return null;
 }
 
-async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpdateActionError | null> {
+async function contactUpdateActionErrorFrom(
+  error: unknown,
+  caller?: ContactEmailConflictCaller,
+  emails: string[] = []
+): Promise<ContactUpdateActionError | null> {
+  // Before the localized-key branch: an ownership error carries the owner, which beats the generic key.
+  if (isEmailOwnershipError(error)) {
+    const ownershipMessage = await contactEmailConflictMessageFrom(error, caller, emails);
+    if (ownershipMessage) return actionError(ownershipMessage);
+  }
   const localized = localizedContactActionError(error);
   if (localized) return localized;
   if (isContactLocationClientMismatch(error)) {
@@ -272,7 +314,7 @@ async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpda
     }
   }
 
-  const emailConflict = await contactEmailConflictMessageFrom(error);
+  const emailConflict = await contactEmailConflictMessageFrom(error, caller, emails);
   if (emailConflict) {
     return actionError(emailConflict);
   }
@@ -302,8 +344,8 @@ async function contactUpdateActionErrorFrom(error: unknown): Promise<ContactUpda
 
 // Reported as a bare string rather than returned as a payload, so withAuth's
 // boundary never sees the messageKey. Localize before flattening.
-async function contactActionResultErrorFrom(error: unknown, fallback: string): Promise<string> {
-  const expected = await contactUpdateActionErrorFrom(error);
+async function contactActionResultErrorFrom(error: unknown, fallback: string, caller?: ContactEmailConflictCaller): Promise<string> {
+  const expected = await contactUpdateActionErrorFrom(error, caller);
   if (expected) {
     const candidate = (await localizeActionError(expected)) as unknown as {
       actionError?: unknown;
@@ -332,14 +374,19 @@ async function assertContactCreateInScope(
   }, 'contact');
 }
 
-async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
+async function prefixedContactActionErrorFrom(
+  error: unknown,
+  fallback: string,
+  caller?: ContactEmailConflictCaller,
+  emails: string[] = []
+): Promise<string> {
   // Create and CSV import go through here, so the cross-client location refusal has to be named
   // on this path too — otherwise it reaches the caller as the generic "failed to create" fallback.
   if (isContactLocationClientMismatch(error)) {
     return `VALIDATION_ERROR: ${await contactText('errors.contact.locationClientMismatch')}`;
   }
 
-  const emailConflict = await contactEmailConflictMessageFrom(error);
+  const emailConflict = await contactEmailConflictMessageFrom(error, caller, emails);
   if (emailConflict) {
     return `EMAIL_EXISTS: ${emailConflict}`;
   }
@@ -372,11 +419,12 @@ async function prefixedContactActionErrorFrom(error: unknown, fallback: string):
   return fallback;
 }
 
-async function contactImportRowMessageFrom(error: unknown): Promise<string> {
+async function contactImportRowMessageFrom(error: unknown, caller?: ContactEmailConflictCaller): Promise<string> {
   return stripExpectedContactErrorPrefix(
     await prefixedContactActionErrorFrom(
       error,
       await contactText('errors.contact.importRowFailed'),
+      caller,
     ),
   );
 }
@@ -807,6 +855,8 @@ export const addContact = withAuth(async (
       error: await prefixedContactActionErrorFrom(
         err,
         `SYSTEM_ERROR: ${await contactText('errors.contact.createFailed')}`,
+        { tenant, user },
+        [contactData.email ?? '', ...(contactData.additional_email_addresses ?? []).map((row) => row.email_address)],
       ),
     };
   }
@@ -904,15 +954,16 @@ export const updateContact = withAuth(async (
     await assertMspPermission(user, 'contact', 'update', `Permission denied: ${await contactText('errors.contact.permissions.updateContacts')}`, db);
 
     if (contactData.email) {
-      const existingContact = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'contacts', tenant)
-          .where({ email: contactData.email!.trim().toLowerCase() })
-          .whereNot({ contact_name_id: contactData.contact_name_id })
-          .first();
-      });
+      const emailOwner = await withTransaction(db, async (trx: Knex.Transaction) =>
+        resolveContactEmailOwnership(tenant, contactData.email!, trx)
+      );
 
-      if (existingContact) {
-        throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
+      // Primary or additional address of ANOTHER contact; the catch below names the owner.
+      if (emailOwner && emailOwner.contactNameId !== contactData.contact_name_id) {
+        throw new EmailOwnershipError(
+          emailOwner,
+          `EMAIL_EXISTS: ${await contactText('errors.contact.emailExists')}`
+        );
       }
     }
 
@@ -1072,7 +1123,11 @@ export const updateContact = withAuth(async (
   } catch (err) {
     console.error('Error updating contact:', err);
 
-    const expected = await contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(
+      err,
+      { tenant, user },
+      [contactData.email ?? '', ...(contactData.additional_email_addresses ?? []).map((row) => row.email_address)]
+    );
     if (expected) return expected;
 
     throw err;
@@ -1658,7 +1713,7 @@ export const importContactsFromCSV = withAuth(async (
 
           results.push({
             success: false,
-            message: await contactImportRowMessageFrom(err),
+            message: await contactImportRowMessageFrom(err, { tenant, user }),
             originalData: contactData
           });
         }
@@ -1669,11 +1724,11 @@ export const importContactsFromCSV = withAuth(async (
   } catch (err) {
     console.error('Error importing contacts:', err);
 
-    const expected = await contactUpdateActionErrorFrom(err);
+    const expected = await contactUpdateActionErrorFrom(err, { tenant, user });
     if (expected) {
       return contactImportFailureResults(
         contactsData,
-        await contactActionResultErrorFrom(err, await contactText('errors.contact.importFileFailed')),
+        await contactActionResultErrorFrom(err, await contactText('errors.contact.importFileFailed'), { tenant, user }),
       );
     }
 
@@ -1893,14 +1948,13 @@ export const createClientContact = withAuth(async (
       throw new Error(phoneRowError);
     }
 
-    const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantScopedTable(trx, 'contacts', tenant)
-        .where({ email: normalizedEmail })
-        .first();
-    });
+    const { t: contactT } = await getServerTranslation(undefined, 'msp/contacts');
+    const emailConflict = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      describeOwnedEmail(trx, { tenant, user, ownClientId: clientId }, normalizedEmail, contactT)
+    );
 
-    if (existingContact) {
-      throw await contactError('errors.contact.emailExists', 'EMAIL_EXISTS: ');
+    if (emailConflict) {
+      throw new EmailOwnershipError(emailConflict.conflict, `EMAIL_EXISTS: ${emailConflict.message}`);
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1922,6 +1976,17 @@ export const createClientContact = withAuth(async (
     return contact;
   } catch (error) {
     console.error('Error creating client contact:', error);
+    // An owned email is an expected answer, not a failure: return it so the caller can show who
+    // owns the address. A thrown message never reaches the screen (callers toast a fixed fallback,
+    // and production builds redact thrown server-action messages anyway).
+    if (isEmailOwnershipError(error)) {
+      const conflictMessage = await contactEmailConflictMessageFrom(
+        error,
+        { tenant, user, ownClientId: clientId },
+        [email, ...(additionalEmailAddresses ?? []).map((row) => row.email_address)]
+      );
+      if (conflictMessage) return actionError(conflictMessage);
+    }
     throw error;
   }
 });

@@ -230,6 +230,7 @@ export {
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
   dismissEntraQueueItem,
+  linkEntraQueueItemAnyway,
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,

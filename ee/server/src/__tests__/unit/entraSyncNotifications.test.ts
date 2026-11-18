@@ -13,6 +13,7 @@ const summary = (overrides: Partial<Parameters<typeof decideEntraRunNotification
   linked: 3,
   updated: 1,
   ambiguous: 0,
+  conflict: 0,
   inactivated: 0,
   ...overrides,
 });
@@ -99,6 +100,46 @@ describe('decideEntraRunNotifications', () => {
     expect(notifications[0].kind).toBe('review-queue');
     expect(notifications[0].link).toContain('tab=review-queue');
     expect(notifications[0].message).toContain('3 identities');
+  });
+
+  it('names the count of identities skipped because their email belongs to another client', () => {
+    const notifications = decideEntraRunNotifications({
+      status: 'completed',
+      summary: summary({ conflict: 2 }),
+      previousRunStatuses: [],
+      config,
+    });
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].kind).toBe('review-queue');
+    expect(notifications[0].link).toContain('tab=review-queue');
+    expect(notifications[0].message).toContain('2 identities are already a contact at another client; review them');
+    expect(notifications[0].message).not.toContain('matched more than one contact');
+  });
+
+  it('puts both lines in one review-queue notification when a run has ambiguous and conflicting identities', () => {
+    const notifications = decideEntraRunNotifications({
+      status: 'completed',
+      summary: summary({ ambiguous: 3, conflict: 1 }),
+      previousRunStatuses: [],
+      config,
+    });
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].message).toContain('3 identities matched more than one contact');
+    expect(notifications[0].message).toContain('1 identities are already a contact at another client');
+  });
+
+  it('stays silent about conflicts when review-queue arrivals are switched off, and for a summary that predates the counter', () => {
+    expect(decideEntraRunNotifications({
+      status: 'completed',
+      summary: summary({ conflict: 4 }),
+      previousRunStatuses: [],
+      config: { ...config, reviewQueueArrivals: false },
+    })).toHaveLength(0);
+
+    const { conflict: _omitted, ...legacy } = summary();
+    expect(decideEntraRunNotifications({ status: 'completed', summary: legacy, previousRunStatuses: [], config })).toHaveLength(0);
   });
 
   it('sends the digest only when asked, and only for a run that worked', () => {

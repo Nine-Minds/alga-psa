@@ -11,6 +11,7 @@ import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
 import { queueClientLocationCreated, queueClientLocationUpdated } from '@alga-psa/clients/lib/clientLocationEvents';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
+import { isActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
@@ -724,6 +725,10 @@ export const addClientContact = withAuth(async (
       email: data.contactEmail,
       jobTitle: data.contactRole
     });
+    // The email already belongs to a contact elsewhere: the action returns who, not throws.
+    if (isActionMessageError(result)) {
+      return { success: false, error: result.actionError };
+    }
 
     await saveTenantOnboardingProgress({
       contactName: data.contactName,

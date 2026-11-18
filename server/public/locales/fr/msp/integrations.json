@@ -569,6 +569,8 @@
           "reviewQueue": "{{count}} identités attendent une décision.",
           "reviewQueueAtLeast": "Au moins {{count}} identités attendent une décision.",
           "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
+          "reviewQueueDetailConflict": "Leur adresse e-mail appartient déjà à un contact chez un autre client : elles ont donc été ignorées. Liez ou ignorez chacune d'elles.",
+          "reviewQueueDetailMixed": "Certaines partagent une même adresse Microsoft avec plusieurs contacts. D'autres utilisent une adresse qui appartient déjà à un contact chez un autre client. Rien ne leur arrive tant que vous n'avez pas choisi.",
           "reviewQueueOne": "{{count}} identité attend une décision.",
           "scheduleNotApplied": "La synchronisation automatique est activée, mais la planification n'a jamais été appliquée.",
           "scheduleNotAppliedDetail": "D'ici là, rien ne s'exécutera tout seul. Enregistrez à nouveau la planification pour réessayer.",
@@ -793,6 +795,10 @@
       },
       "preflight": {
         "buckets": {
+          "conflict": {
+            "description": "L’adresse e-mail appartient déjà à un contact d’un autre client (ou sans client) ; la synchronisation ne la liera donc pas. Ces identités arrivent dans la file de révision.",
+            "label": "E-mail appartenant à un autre client"
+          },
           "create": {
             "description": "Aucun contact de ce client ne correspond à l'e-mail ; un contact serait créé.",
             "label": "Nouveaux contacts"
@@ -827,6 +833,7 @@
       "reconciliation": {
         "actions": {
           "dismiss": "Ignorer",
+          "linkAnyway": "Lier quand même",
           "refresh": "Actualiser",
           "resolveExisting": "Résoudre vers existant",
           "resolveNew": "Résoudre vers nouveau"
@@ -845,12 +852,28 @@
           "loadQueue": "Échec du chargement de la file de réconciliation.",
           "resolveFailed": "Échec de la résolution de l'élément de file."
         },
+        "linkAnyway": {
+          "message": "{{identity}} sera lié à {{name}} chez {{client}}, même si ce contact appartient à un autre client que celui synchronisé. Cette décision est enregistrée à votre nom.",
+          "noClient": "sans client",
+          "title": "Lier entre clients ?"
+        },
         "loading": "Chargement de la file…",
         "noEmailIdentity": "Aucune identité e-mail",
+        "owner": {
+          "additionalNote": "L’adresse est une adresse e-mail supplémentaire de ce contact.",
+          "at": "Appartient à {{name}} chez {{client}}",
+          "inactiveNote": "Ce contact est inactif.",
+          "noClient": "Appartient à {{name}} (sans client)"
+        },
         "queuedAt": "{{identity}} · mis en file {{time}}",
+        "reason": {
+          "emailOwnedByOtherClient": "E-mail appartenant à un autre client",
+          "multipleEmailMatches": "Plusieurs contacts correspondent"
+        },
         "scopedToMappedClient": "Les options de contact existant sont limitées à ce client mappé.",
         "success": {
           "dismissed": "{{identity}} ignoré. Il ne reviendra pas à la prochaine synchronisation.",
+          "linkedAnyway": "{{identity}} a été lié à {{name}}.",
           "resolvedExisting": "Élément de file {{queueItemId}} résolu vers le contact existant {{contactNameId}}.",
           "resolvedNew": "Élément de file {{queueItemId}} résolu en créant le contact {{contactNameId}}."
         },

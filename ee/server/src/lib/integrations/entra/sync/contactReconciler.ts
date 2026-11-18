@@ -4,10 +4,12 @@ import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { queueContactCreated, trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import type { Knex } from 'knex';
-import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
+import { queueAmbiguousEntraMatch, queueEntraEmailConflict } from '../reconciliationQueueService';
+import { isEmailOwnershipError, resolveContactEmailOwnership, type ContactEmailOwner } from '@alga-psa/shared/models/contactEmailOwnership';
 import { findContactMatchesByEmail } from './contactMatcher';
 import { upsertEntraContactLinkActive } from './contactLinkRepository';
 import type { EntraSyncUser } from './types';
+import { shouldReactivateInactiveMatch } from './inactiveMatchPolicy';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 import { buildContactFieldSyncPatch, buildEntraContactPhoneNumbers } from './contactFieldSync';
 
@@ -40,10 +42,21 @@ export interface EntraAmbiguousContactResult {
   queueItemId: string;
 }
 
+/**
+ * The identity's email already belongs to a contact at another client (or at none).
+ * It was queued for an operator and skipped; nothing was linked or created.
+ */
+export interface EntraConflictContactResult {
+  action: 'conflict';
+  queueItemId: string;
+  owner: ContactEmailOwner;
+}
+
 export type EntraReconcileContactResult =
   | EntraLinkedContactResult
   | EntraCreatedContactResult
-  | EntraAmbiguousContactResult;
+  | EntraAmbiguousContactResult
+  | EntraConflictContactResult;
 
 export interface ReconcileEntraUserInput {
   tenantId: string;
@@ -198,23 +211,6 @@ async function findExistingLinkedContactId(
   return existing?.contact_name_id ? String(existing.contact_name_id) : null;
 }
 
-async function findExistingClientContactByEmail(
-  trx: Knex.Transaction,
-  tenantId: string,
-  clientId: string,
-  email: string
-): Promise<string | null> {
-  const existing = await tenantDb(trx, tenantId).table('contacts')
-    .where({
-      client_id: clientId,
-    })
-    .andWhereRaw('lower(email) = ?', [email.trim().toLowerCase()])
-    .orderBy('updated_at', 'desc')
-    .first(['contact_name_id']);
-
-  return existing?.contact_name_id ? String(existing.contact_name_id) : null;
-}
-
 /**
  * What linking this match would change, computed without writing anything.
  *
@@ -273,9 +269,15 @@ export async function linkExistingMatchedContact(
         [matchedContact.contactNameId],
         entraContactEventKeys(user, fieldSyncConfig),
         async () => {
-          const recovered = user.mailboxKind === 'shared'
+          const recoveredShared = user.mailboxKind === 'shared'
             ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, matchedContact.contactNameId)
             : false;
+          // Same rule as an ownership match in createContactForEntraUser: an inactive
+          // contact at the synced client is that person, so it is linked and reactivated.
+          const recoveredInactive = shouldReactivateInactiveMatch(matchedContact.isInactive, user)
+            ? await reactivateInactiveContactInTransaction(trx, tenantId, matchedContact.contactNameId)
+            : false;
+          const recovered = recoveredShared || recoveredInactive;
           const changed = await upsertContactLink(
             trx,
             tenantId,
@@ -375,11 +377,42 @@ async function reactivateDisabledSharedMailboxContactInTransaction(
   return Number(changed) > 0;
 }
 
+/**
+ * Where the sync stands on an email address, decided from who owns it:
+ * the same client's contact (primary or additional address) is linked; anyone else's is a conflict.
+ * Read-only, so the preflight can answer with exactly the rule the real run applies.
+ */
+export async function previewEmailOwnerPolicy(
+  tenantId: string,
+  clientId: string,
+  email: string
+): Promise<{ policy: 'free' } | { policy: 'link'; owner: ContactEmailOwner } | { policy: 'conflict'; owner: ContactEmailOwner }> {
+  return runWithTenant(tenantId, async () => {
+    const owner = await resolveContactEmailOwnership(tenantId, email);
+    if (!owner) return { policy: 'free' as const };
+    return owner.clientId === clientId
+      ? { policy: 'link' as const, owner }
+      : { policy: 'conflict' as const, owner };
+  });
+}
+
+async function reactivateInactiveContactInTransaction(
+  trx: Knex.Transaction,
+  tenantId: string,
+  contactNameId: string
+): Promise<boolean> {
+  const changed = await tenantDb(trx, tenantId).table('contacts')
+    .where({ contact_name_id: contactNameId, is_inactive: true })
+    .update({ is_inactive: false, updated_at: trx.fn.now() });
+  return Number(changed) > 0;
+}
+
 export async function createContactForEntraUser(
   tenantId: string,
   clientId: string,
-  user: EntraSyncUser
-): Promise<EntraCreatedContactResult> {
+  user: EntraSyncUser,
+  managedTenantId: string | null = null
+): Promise<EntraCreatedContactResult | EntraConflictContactResult> {
   const email = user.email || user.userPrincipalName;
   if (!email) {
     throw new Error('Cannot create contact for Entra user without email/UPN.');
@@ -402,37 +435,57 @@ export async function createContactForEntraUser(
         return { contactNameId: linkedContactId, action: 'linked' as const, recovered };
       }
 
-      const existingClientContactId = await findExistingClientContactByEmail(
-        trx,
-        tenantId,
-        clientId,
-        normalizedEmail
-      );
-      if (existingClientContactId) {
-        const recovered = await trackContactUpdates(trx, tenantId, [existingClientContactId], entraContactEventKeys(user), async () => {
-          const reactivated = user.mailboxKind === 'shared'
-            ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, existingClientContactId)
+      // Same client: a primary or an additional address both mean "this is that person".
+      const linkToSameClientOwner = async (owner: ContactEmailOwner) => {
+        const ownerContactId = owner.contactNameId;
+        const recovered = await trackContactUpdates(trx, tenantId, [ownerContactId], entraContactEventKeys(user), async () => {
+          const reactivatedShared = user.mailboxKind === 'shared'
+            ? await reactivateDisabledSharedMailboxContactInTransaction(trx, tenantId, ownerContactId)
             : false;
-          await upsertContactLink(trx, tenantId, clientId, existingClientContactId, user, {});
-          return reactivated;
+          const reactivatedInactive = shouldReactivateInactiveMatch(owner.isInactive, user)
+            ? await reactivateInactiveContactInTransaction(trx, tenantId, ownerContactId)
+            : false;
+          await upsertContactLink(trx, tenantId, clientId, ownerContactId, user, {});
+          return reactivatedShared || reactivatedInactive;
         });
-        return { contactNameId: existingClientContactId, action: 'linked' as const, recovered };
+        return { contactNameId: ownerContactId, action: 'linked' as const, recovered };
+      };
+
+      // One question decides everything below: who owns this address in the tenant?
+      const owner = await resolveContactEmailOwnership(tenantId, normalizedEmail, trx);
+      if (owner && owner.clientId !== clientId) {
+        // Another client's contact, or one with no client. Never link across that boundary
+        // automatically: the operator decides. The caller queues it and carries on.
+        return { action: 'conflict' as const, owner };
+      }
+      if (owner) {
+        return linkToSameClientOwner(owner);
       }
 
       let createdContactNameId: string | null = null;
-      const created = await ContactModel.createContact(
-        {
-          full_name: fallbackDisplayName(user),
-          email: normalizedEmail,
-          client_id: clientId,
-          phone_numbers: buildEntraContactPhoneNumbers(user),
-          role: user.jobTitle || undefined,
-          is_inactive: false,
-          ...(user.mailboxKind === 'shared' ? { contact_kind: 'shared_mailbox' } : {}),
-        },
-        tenantId,
-        trx
-      );
+      let created: Awaited<ReturnType<typeof ContactModel.createContact>>;
+      try {
+        created = await ContactModel.createContact(
+          {
+            full_name: fallbackDisplayName(user),
+            email: normalizedEmail,
+            client_id: clientId,
+            phone_numbers: buildEntraContactPhoneNumbers(user),
+            role: user.jobTitle || undefined,
+            is_inactive: false,
+            ...(user.mailboxKind === 'shared' ? { contact_kind: 'shared_mailbox' } : {}),
+          },
+          tenantId,
+          trx
+        );
+      } catch (error) {
+        // Someone took the address between the check above and the insert. The sync never
+        // surfaces EMAIL_EXISTS: decide on the new owner exactly as above.
+        if (!isEmailOwnershipError(error)) throw error;
+        return error.conflict.clientId === clientId
+          ? linkToSameClientOwner(error.conflict)
+          : { action: 'conflict' as const, owner: error.conflict };
+      }
       createdContactNameId = String(created.contact_name_id);
 
       await upsertContactLink(trx, tenantId, clientId, createdContactNameId, user, {});
@@ -442,6 +495,18 @@ export async function createContactForEntraUser(
       return { contactNameId: createdContactNameId, action: 'created' as const };
     });
   });
+
+  if (createdContact.action === 'conflict') {
+    // Outside the transaction: the queue write must survive, and nothing above wrote anything.
+    const queued = await queueEntraEmailConflict({
+      tenantId,
+      managedTenantId,
+      clientId,
+      user,
+      owner: createdContact.owner,
+    });
+    return { action: 'conflict', queueItemId: queued.queueItemId, owner: createdContact.owner };
+  }
 
   return {
     action: createdContact.action,
@@ -503,5 +568,5 @@ export async function reconcileEntraUserToContact(
     );
   }
 
-  return createContactForEntraUser(input.tenantId, input.clientId, input.user);
+  return createContactForEntraUser(input.tenantId, input.clientId, input.user, input.managedTenantId);
 }
