@@ -68,7 +68,9 @@ export {
   getXeroIntegrationStatus,
   saveXeroCredentials,
   disconnectXero,
-  forceFinalizeXeroDisconnect
+  forceFinalizeXeroDisconnect,
+  getXeroInvoiceNumberingMode,
+  setXeroInvoiceNumberingMode
 } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export { getQuickBooksDesktopSettings, updateQuickBooksDesktopSettings } from './quickBooksDesktopActions';

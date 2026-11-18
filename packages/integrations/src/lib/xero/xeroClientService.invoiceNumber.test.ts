@@ -102,3 +102,49 @@ describe('mapInvoicePayload InvoiceNumber', () => {
     expect(sent.Reference).toBe('INV-000123 | PO 4567');
   });
 });
+
+describe('Xero-assigned invoice numbers (alga-2026-0002746)', () => {
+  it('leaves out InvoiceNumber on create when the number is null', async () => {
+    const sent = await sentInvoice({ invoiceNumber: null, reference: 'INV-PROV-1 | PO 9' });
+    expect('InvoiceNumber' in sent).toBe(false);
+    expect(sent.Reference).toBe('INV-PROV-1 | PO 9');
+  });
+
+  it("returns the response's InvoiceNumber in XeroInvoiceCreateSuccess.invoiceNumber", async () => {
+    vi.spyOn(axios, 'request').mockImplementation(async (config: any) => ({
+      data: {
+        Invoices: (config.data.Invoices as any[]).map((inv) => ({
+          ...inv,
+          InvoiceID: 'xero-1',
+          InvoiceNumber: 'INV-0042'
+        }))
+      }
+    }) as any);
+    const client = await XeroClientService.create(TENANT, 'conn-a');
+    const [result] = await client.createInvoices([payload({ invoiceNumber: null })]);
+    expect(result.invoiceNumber).toBe('INV-0042');
+    expect(result.invoiceId).toBe('xero-1');
+  });
+
+  it('sends the Idempotency-Key header only when a key is given', async () => {
+    const requestMock = vi.spyOn(axios, 'request').mockImplementation(async (config: any) => ({
+      data: { Invoices: (config.data.Invoices as any[]).map((inv) => ({ ...inv, InvoiceID: 'xero-1' })) }
+    }) as any);
+    const client = await XeroClientService.create(TENANT, 'conn-a');
+
+    await client.createInvoices([payload({})]);
+    expect((requestMock.mock.calls[0][0] as any).headers?.['Idempotency-Key']).toBeUndefined();
+
+    await client.createInvoices([payload({})], { idempotencyKey: 'key-123' });
+    expect((requestMock.mock.calls[1][0] as any).headers['Idempotency-Key']).toBe('key-123');
+  });
+
+  it.each(['pending_external', 'external'])(
+    'never sends InvoiceNumber on an update by InvoiceID for a %s invoice',
+    async () => {
+      const sent = await sentInvoice({ externalInvoiceId: 'xero-1', invoiceNumber: null, reference: 'INV-PROV-1' });
+      expect(sent.InvoiceID).toBe('xero-1');
+      expect('InvoiceNumber' in sent).toBe(false);
+    }
+  );
+});

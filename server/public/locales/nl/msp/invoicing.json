@@ -1264,7 +1264,8 @@
       "viewInQuickBooks": "Bekijken in QuickBooks",
       "viewInXero": "Bekijken in Xero",
       "xeroNumberPrefix": "Xero-nr. "
-    }
+    },
+    "numberPending": "Nummer van Xero in afwachting"
   },
   "templateManager": {
     "title": "Factuursjabloonbeheerder",
@@ -2897,6 +2898,7 @@
       "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u facturen verstuurt.",
       "schedulePdfFailed": "Het genereren van factuur-pdf’s kon niet worden gestart. Probeer het opnieuw.",
       "scheduleEmailFailed": "Het e-mailen van facturen kon niet worden gestart. Probeer het opnieuw.",
+      "invoiceNumberPending": "Deze factuur wacht op haar factuurnummer van Xero. Exporteer de factuur naar Xero, of wacht op de volgende synchronisatie, voordat u hem verzendt.",
       "recipientFailed": "De ontvangergegevens voor deze factuur konden niet worden geladen.",
       "sendFailed": "De factuur kon niet per e-mail worden verzonden. Probeer het opnieuw."
     },

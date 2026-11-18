@@ -4362,7 +4362,15 @@
           "dangerTitle": "Odłącz Xero"
         },
         "connectNeedsAttention": "Autoryzacja Xero została zakończona, ale połączenie nadal wymaga uwagi. Synchronizacja pozostaje wstrzymana.",
-        "credentialsStoredDescription": "Identyfikator i sekret klienta są bezpiecznie przechowywane."
+        "credentialsStoredDescription": "Identyfikator i sekret klienta są bezpiecznie przechowywane.",
+        "invoiceNumbering": {
+          "label": "Pozwól Xero nadawać numery faktur",
+          "hint": "Nowe faktury otrzymują kolejny numer z tej organizacji Xero. Do czasu wyeksportowania faktura ma numer tymczasowy i nie można jej wysłać klientowi. Faktury, które są już w Xero, zachowują swoje numery.",
+          "prefixHint": "Numery tymczasowe pochodzą z Ustawienia rozliczeń → Numeracja. Użyj prefiksu, którego Xero nigdy nie używa, aby numer tymczasowy nie kolidował z numerem nadanym przez Xero.",
+          "enabledMessage": "Faktury sfinalizowane od teraz otrzymają numer z Xero.",
+          "disabledMessage": "Faktury sfinalizowane od teraz zachowają numer nadany przez Algę.",
+          "error": "Nie udało się zaktualizować trybu numeracji faktur."
+        }
       }
     },
     "stripe": {

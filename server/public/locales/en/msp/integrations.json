@@ -4379,7 +4379,15 @@
           "targetPending": "pending",
           "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
         },
-        "credentialsStoredDescription": "The Client ID and Client Secret are stored securely."
+        "credentialsStoredDescription": "The Client ID and Client Secret are stored securely.",
+        "invoiceNumbering": {
+          "label": "Let Xero assign invoice numbers",
+          "hint": "New invoices take the next number from this Xero organisation. Until an invoice has been exported it shows a provisional number and can't be sent to the client. Invoices already in Xero keep their numbers.",
+          "prefixHint": "Provisional numbers come from Billing Settings → Numbering. Use a prefix that Xero never uses, so a provisional number can't clash with a number Xero assigns.",
+          "enabledMessage": "Invoices finalized from now on will take their number from Xero.",
+          "disabledMessage": "Invoices finalized from now on will keep the number Alga assigns.",
+          "error": "Failed to update invoice numbering mode."
+        }
       }
     },
     "stripe": {

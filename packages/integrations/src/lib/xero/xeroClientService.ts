@@ -530,7 +530,10 @@ export class XeroClientService {
     return service;
   }
 
-  async createInvoices(payloads: XeroInvoicePayload[]): Promise<XeroInvoiceCreateSuccess[]> {
+  async createInvoices(
+    payloads: XeroInvoicePayload[],
+    options: { idempotencyKey?: string | null } = {}
+  ): Promise<XeroInvoiceCreateSuccess[]> {
     if (payloads.length === 0) {
       return [];
     }
@@ -558,7 +561,10 @@ export class XeroClientService {
       const response = await this.request<{ Invoices: Array<Record<string, any>> }>({
         method: 'POST',
         url: '/Invoices',
-        data: requestBody
+        data: requestBody,
+        // Optional second layer for retries of Xero-numbered creates. Correctness
+        // never depends on it: the adapter's Reference lookup covers every retry.
+        ...(options.idempotencyKey ? { headers: { 'Idempotency-Key': options.idempotencyKey } } : {})
       });
 
       const invoices = Array.isArray(response?.Invoices) ? response.Invoices : [];
@@ -746,6 +752,40 @@ export class XeroClientService {
       }
       throw normalized;
     }
+  }
+
+  /**
+   * Find sales invoices (ACCREC) whose Reference exactly equals one of `references`.
+   *
+   * Used to recover a Xero-numbered create whose response or mapping was lost:
+   * without an InvoiceNumber there is nothing else for Xero to match a retry on.
+   * Clauses are OR'd and split into chunks so the `where` query string stays
+   * within URL length limits.
+   */
+  async findInvoicesByReference(references: string[]): Promise<XeroInvoiceDetails[]> {
+    const unique = [...new Set(references.filter((ref) => typeof ref === 'string' && ref.length > 0))];
+    if (unique.length === 0) {
+      return [];
+    }
+
+    const found = new Map<string, XeroInvoiceDetails>();
+    for (const where of buildReferenceWhereClauses(unique)) {
+      try {
+        const response = await this.request<{ Invoices?: Array<Record<string, any>> }>({
+          method: 'GET',
+          url: '/Invoices',
+          params: { where }
+        });
+        for (const invoice of Array.isArray(response?.Invoices) ? response.Invoices : []) {
+          if (invoice?.InvoiceID) {
+            found.set(invoice.InvoiceID, this.mapInvoiceDetails(invoice));
+          }
+        }
+      } catch (error) {
+        throw this.normalizeError(error);
+      }
+    }
+    return [...found.values()];
   }
 
   private mapInvoiceDetails(invoice: Record<string, any>): XeroInvoiceDetails {
@@ -1371,6 +1411,41 @@ async function getAppSecrets(tenantId: string, secretProvider?: ISecretProvider)
     clientId: resolved.clientId,
     clientSecret: resolved.clientSecret
   };
+}
+
+/** Max OR'd Reference clauses and max `where` length (chars) per request. */
+export const XERO_REFERENCE_LOOKUP_MAX_CLAUSES = 25;
+export const XERO_REFERENCE_LOOKUP_MAX_WHERE_LENGTH = 1500;
+
+export function escapeXeroWhereString(value: string): string {
+  // Same escaping as findContactByName.
+  return value.replace(/"/g, '\\"');
+}
+
+export function buildReferenceWhereClauses(references: string[]): string[] {
+  const prefix = 'Type=="ACCREC" AND (';
+  const suffix = ')';
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let length = prefix.length + suffix.length;
+  for (const reference of references) {
+    const clause = `Reference=="${escapeXeroWhereString(reference)}"`;
+    const added = clause.length + (current.length > 0 ? ' OR '.length : 0);
+    if (
+      current.length > 0 &&
+      (current.length >= XERO_REFERENCE_LOOKUP_MAX_CLAUSES || length + added > XERO_REFERENCE_LOOKUP_MAX_WHERE_LENGTH)
+    ) {
+      chunks.push(current);
+      current = [];
+      length = prefix.length + suffix.length;
+    }
+    length += clause.length + (current.length > 0 ? ' OR '.length : 0);
+    current.push(clause);
+  }
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  return chunks.map((clauses) => `${prefix}${clauses.join(' OR ')}${suffix}`);
 }
 
 function mapInvoicePayload(payload: XeroInvoicePayload): Record<string, unknown> {

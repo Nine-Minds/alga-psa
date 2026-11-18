@@ -104,6 +104,15 @@ export const invoiceWrittenOffEventPayloadSchema = BaseDomainEventPayloadSchema.
 
 export type InvoiceWrittenOffEventPayload = z.infer<typeof invoiceWrittenOffEventPayloadSchema>;
 
+export const invoiceNumberAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  invoiceId: invoiceIdSchema,
+  previousNumber: z.string().min(1).describe('Provisional Alga invoice number the invoice carried until now'),
+  invoiceNumber: z.string().min(1).describe('Number assigned by the accounting system and written onto the invoice'),
+  source: z.enum(['xero']).describe('Accounting system that assigned the number'),
+}).describe('Payload for INVOICE_NUMBER_ASSIGNED');
+
+export type InvoiceNumberAssignedEventPayload = z.infer<typeof invoiceNumberAssignedEventPayloadSchema>;
+
 /**
  * Where a recorded payment came from. Consumers that act on payments (e.g. the
  * confirmation email) allow-list on this value; a missing or unknown value must

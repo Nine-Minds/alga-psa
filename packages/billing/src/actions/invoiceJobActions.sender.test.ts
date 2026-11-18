@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   sendEmail: vi.fn(async () => ({ success: true, queued: false })),
+  invoiceNumberSource: 'alga' as string,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -59,6 +60,7 @@ vi.mock('./invoiceQueries', () => ({
     finalized_at: '2026-01-01T00:00:00Z', invoice_type: 'standard', total_amount: 10000,
     credit_applied: 0, currencyCode: 'USD', invoice_date: new Date(2026, 0, 1),
     due_date: new Date(2026, 0, 31), payment_method: null,
+    invoice_number_source: mocks.invoiceNumberSource,
   })),
 }));
 vi.mock('../services/ensureInvoiceEmailLinks', () => ({
@@ -68,10 +70,13 @@ vi.mock('./invoiceEmailLinkContext', () => ({
   getInvoiceEmailLinkContext: vi.fn(async () => ({ paymentUrl: null, portalUrl: null })),
 }));
 
-import { sendInvoiceEmailAction } from './invoiceJobActions';
+import { scheduleInvoiceEmailAction, sendInvoiceEmailAction } from './invoiceJobActions';
 
 describe('sendInvoiceEmailAction sender plumbing', () => {
-  beforeEach(() => mocks.sendEmail.mockClear());
+  beforeEach(() => {
+    mocks.sendEmail.mockClear();
+    mocks.invoiceNumberSource = 'alga';
+  });
 
   it('sends the billing class and selected sender with only the PDF attachment', async () => {
     const senderId = 'sender-invoices';
@@ -88,5 +93,36 @@ describe('sendInvoiceEmailAction sender plumbing', () => {
         contentType: 'application/pdf',
       })],
     }));
+  });
+});
+
+describe('pending Xero invoice number gate (alga-2026-0002746)', () => {
+  const MESSAGE =
+    'This invoice is waiting for its invoice number from Xero. Export it to Xero, or wait for the next sync, before sending it.';
+
+  beforeEach(() => {
+    mocks.sendEmail.mockClear();
+    mocks.invoiceNumberSource = 'pending_external';
+  });
+
+  it('sendInvoiceEmailAction refuses a pending_external invoice with the actionable message and sends nothing', async () => {
+    const result = await sendInvoiceEmailAction(['invoice-1']);
+
+    expect(result).toMatchObject({ successCount: 0, failureCount: 1 });
+    expect((result as any).results[0].error).toBe(MESSAGE);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('scheduleInvoiceEmailAction refuses a pending_external invoice before scheduling a job', async () => {
+    const result = await scheduleInvoiceEmailAction(['invoice-1']);
+
+    expect(result).toMatchObject({ actionError: MESSAGE, messageKey: 'msp/invoicing:errors.jobs.invoiceNumberPending' });
+    expect((result as any).jobId).toBeUndefined();
+  });
+
+  it('an external invoice (number already written back) is sent normally', async () => {
+    mocks.invoiceNumberSource = 'external';
+    const result = await sendInvoiceEmailAction(['invoice-1']);
+    expect(result).toMatchObject({ successCount: 1, failureCount: 0 });
   });
 });

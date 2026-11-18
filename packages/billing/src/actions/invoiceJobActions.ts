@@ -4,6 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
+import { isNumberPendingExternal } from '../services/accountingSync/invoiceNumberSource';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
@@ -118,6 +119,11 @@ export const scheduleInvoiceZipAction = withAuth(async (
   }
 });
 
+/** Shown when a client-facing send is attempted before Xero has numbered the invoice. */
+const INVOICE_NUMBER_PENDING_SEND_MESSAGE =
+  'This invoice is waiting for its invoice number from Xero. Export it to Xero, or wait for the next sync, before sending it.';
+const INVOICE_NUMBER_PENDING_SEND_KEY = 'msp/invoicing:errors.jobs.invoiceNumberPending';
+
 export const scheduleInvoiceEmailAction = withAuth(async (
   user,
   { tenant },
@@ -141,6 +147,9 @@ export const scheduleInvoiceEmailAction = withAuth(async (
     }
     if (!invoice) {
       return actionError(`Invoice ${invoiceId} was not found.`, 'msp/invoicing:errors.invoice.notFoundNumbered', { invoiceId });
+    }
+    if (isNumberPendingExternal(invoice)) {
+      return actionError(INVOICE_NUMBER_PENDING_SEND_MESSAGE, INVOICE_NUMBER_PENDING_SEND_KEY);
     }
     const client = await getClientById(knex, tenant, invoice.client_id);
     if (!client) {
@@ -483,6 +492,18 @@ export const sendInvoiceEmailAction = withAuth(async (
           invoiceNumber: invoiceId,
           recipientEmail: '',
           error: `Invoice ${invoiceId} not found`,
+        });
+        continue;
+      }
+
+      // A provisional number must never reach the client: the PDF issued with it
+      // would be frozen with the wrong number.
+      if (isNumberPendingExternal(invoice)) {
+        results.push({
+          success: false,
+          invoiceNumber: invoice.invoice_number,
+          recipientEmail: '',
+          error: INVOICE_NUMBER_PENDING_SEND_MESSAGE,
         });
         continue;
       }

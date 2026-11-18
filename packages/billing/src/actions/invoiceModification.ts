@@ -45,6 +45,7 @@ import {
 
 export type { InvoiceAdjustmentCapability } from '../services/invoiceAdjustmentEditability';
 import { startInvoiceAutopay } from '../services/autopayBridge';
+import { resolveInitialInvoiceNumberSource, type InvoiceNumberSource } from '../services/accountingSync/invoiceNumberSource';
 import {
   activateHourBlocksForFinalizedInvoice as activateHourBlocksForFinalizedInvoiceCore,
   classifyInvoiceCreditHandling,
@@ -1155,6 +1156,7 @@ export async function finalizeInvoiceWithKnex(
   } | null = null;
   let deferPrepaidActivation = options.deferPrepaidActivation === true;
   let prepaidBlockActivatesAtFinalize = false;
+  let invoiceNumberSource: InvoiceNumberSource = 'alga';
 
   // Validate tax source before finalization
   const taxValidation = userId === null || options.internalValidation === true
@@ -1239,12 +1241,22 @@ export async function finalizeInvoiceWithKnex(
     const previousFinalizedAt = invoice.finalized_at ?? null;
     const finalizedAtValue = options.finalizedAt || toISODate(Temporal.Now.plainDateISO());
 
+    // Numbering mode is recorded per invoice here, so later changes to the
+    // "Let Xero assign invoice numbers" setting never affect this invoice.
+    invoiceNumberSource = await resolveInitialInvoiceNumberSource(
+      trx,
+      tenant,
+      { ...invoice, ...identityUpdates },
+      handlingKind
+    );
+
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .update({
         status: 'sent',
         finalized_at: finalizedAtValue,
         updated_at: toISODate(Temporal.Now.plainDateISO()),
+        ...(invoiceNumberSource === 'pending_external' ? { invoice_number_source: invoiceNumberSource } : {}),
         ...identityUpdates
       });
 
@@ -1571,9 +1583,14 @@ export async function finalizeInvoiceWithKnex(
 
   // startInvoiceAutopay swallows its own errors; the wrapper only guards a
   // misbehaving bridge. Temporal availability must never fail finalize.
-  await runPostCommitStep(warnings, 'autopay', invoiceId, tenant, async () => {
-    await startInvoiceAutopay(knex, tenant, invoiceId);
-  });
+  // A pending-number invoice starts autopay once Xero's number is written back
+  // (xeroAdapter settle step): receipts and payment records must not quote the
+  // provisional number.
+  if (invoiceNumberSource !== 'pending_external') {
+    await runPostCommitStep(warnings, 'autopay', invoiceId, tenant, async () => {
+      await startInvoiceAutopay(knex, tenant, invoiceId);
+    });
+  }
 
   return { warnings };
 }
@@ -1688,6 +1705,12 @@ export const unfinalizeInvoice = withAuth(async (
 
     if (normalizedStatus && normalizedStatus !== 'draft') {
       updatedFields.status = 'draft';
+    }
+
+    // A draft isn't client-facing and re-finalizing decides the numbering mode
+    // afresh. An `external` invoice stays `external`: Xero's number is permanent.
+    if (invoice.invoice_number_source === 'pending_external') {
+      updatedFields.invoice_number_source = 'alga';
     }
 
     await tenantScopedTable(trx, tenant, 'invoices')

@@ -31,6 +31,11 @@ import {
   type ProviderDisconnectStatusInfo,
   type DisconnectServiceResult,
 } from '../../lib/providerDisconnect';
+import {
+  getXeroAssignedNumberingRealms,
+  isXeroAssignedNumberingEnabled,
+  setXeroAssignedNumbering
+} from '../../lib/xero/xeroInvoiceNumberingSettings';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 type XeroCatalogActionError = ActionMessageError | ActionPermissionError;
@@ -732,5 +737,86 @@ export const getXeroTrackingCategories = withAuth(async (
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero tracking categories', { tenantId: tenant, connectionId, error });
     return xeroCatalogFetchError('trackingCategories', error);
+  }
+});
+
+/**
+ * Reads whether "Let Xero assign invoice numbers" is on for a Xero organisation.
+ */
+export const getXeroInvoiceNumberingMode = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId?: string | null } = {}
+): Promise<{ enabled: boolean } | XeroCatalogActionError> => {
+  const accessError = await getXeroCatalogAccessError(user);
+  if (accessError) return accessError;
+
+  const { knex } = await createTenantKnex();
+  const enabled = await isXeroAssignedNumberingEnabled(knex, tenant, options?.realmId ?? null);
+  return { enabled };
+});
+
+/**
+ * Turns "Let Xero assign invoice numbers" on or off for a Xero organisation.
+ * Only invoices finalized afterwards are affected; the mode is recorded per
+ * invoice at finalize, so toggling renumbers nothing.
+ */
+export const setXeroInvoiceNumberingMode = withAuth(async (
+  user,
+  { tenant },
+  options: { realmId: string; enabled: boolean }
+): Promise<{ success: boolean; enabled?: boolean; error?: string }> => {
+  try {
+    const accessError = await getXeroUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
+    }
+
+    if (!options?.realmId) {
+      return { success: false, error: 'A connected Xero organisation is required to change invoice numbering.' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const disconnect = await getProviderDisconnectStatusInfo(knex, tenant, PROVIDER_XERO).catch(() => null);
+    if (disconnect && disconnect.status !== 'finalized') {
+      return {
+        success: false,
+        error: 'Xero is being disconnected. Wait for the disconnect to finish before changing invoice numbering.'
+      };
+    }
+
+    const previous = await getXeroAssignedNumberingRealms(knex, tenant);
+    const realms = await setXeroAssignedNumbering(knex, tenant, options.realmId, Boolean(options.enabled));
+    const enabled = realms.includes(options.realmId);
+
+    logger.info('[xeroActions] Xero invoice numbering mode updated', {
+      tenantId: tenant,
+      realmId: options.realmId,
+      enabled
+    });
+
+    await writeAccountingAudit(knex, tenant, 'accounting_numbering_mode_changed', {
+      userId: user.user_id,
+      provider: 'xero',
+      recordId: options.realmId,
+      details: {
+        realmId: options.realmId,
+        xeroAssigned: enabled,
+        previouslyXeroAssigned: previous.includes(options.realmId),
+      },
+    }).catch((error) => {
+      logger.warn('[xeroActions] Failed to write Xero numbering mode audit entry', { tenantId: tenant, error });
+    });
+
+    revalidatePath('/msp/settings');
+    return { success: true, enabled };
+  } catch (error) {
+    logger.error('[xeroActions] Failed to update Xero invoice numbering mode', {
+      tenantId: tenant,
+      realmId: options?.realmId,
+      error
+    });
+    return { success: false, error: 'Failed to update invoice numbering mode. Please try again.' };
   }
 });

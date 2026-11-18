@@ -112,12 +112,17 @@ const INVOICE = 'invoice-1';
 const CHARGE = 'charge-1';
 const NOW = '2026-01-01T00:00:00.000Z';
 
-function seed(invoiceNumber: string | null, poNumber: string | null): Array<Partial<AccountingExportLine>> {
+function seed(
+  invoiceNumber: string | null,
+  poNumber: string | null,
+  numberSource?: string
+): Array<Partial<AccountingExportLine>> {
   harness.rows.invoices = [{
     invoice_id: INVOICE, invoice_number: invoiceNumber, po_number: poNumber,
     invoice_date: '2026-01-05', due_date: '2026-02-04', total_amount: 1000,
     client_id: CLIENT, currency_code: 'USD', exchange_rate_basis_points: null,
-    invoice_type: 'standard', billing_profile_id: null, tax_source: 'internal'
+    invoice_type: 'standard', billing_profile_id: null, tax_source: 'internal',
+    ...(numberSource ? { invoice_number_source: numberSource } : {})
   }];
   harness.rows.invoice_charges = [{
     item_id: CHARGE, invoice_id: INVOICE, service_id: 'svc-1', description: 'Consulting',
@@ -147,11 +152,15 @@ function context(lines: Array<Partial<AccountingExportLine>>): AccountingExportA
   };
 }
 
-async function invoicePayload(invoiceNumber: string | null, poNumber: string | null) {
+async function transformPayload(invoiceNumber: string | null, poNumber: string | null, numberSource?: string) {
   const { XeroAdapter } = await import('./xeroAdapter');
   const adapter = new XeroAdapter();
-  const result = await adapter.transform(context(seed(invoiceNumber, poNumber)));
-  return (result.documents[0].payload as any).invoice;
+  const result = await adapter.transform(context(seed(invoiceNumber, poNumber, numberSource)));
+  return result.documents[0].payload as any;
+}
+
+async function invoicePayload(invoiceNumber: string | null, poNumber: string | null, numberSource?: string) {
+  return (await transformPayload(invoiceNumber, poNumber, numberSource)).invoice;
 }
 
 beforeEach(() => {
@@ -177,4 +186,54 @@ describe('XeroAdapter invoice payload number vs reference', () => {
     expect(invoice.invoiceNumber).toBeNull();
     expect(invoice.invoiceNumber).not.toBe(INVOICE);
   });
+});
+
+describe('XeroAdapter Xero-assigned invoice numbers (alga-2026-0002746)', () => {
+  it('sends invoiceNumber null for pending_external and keeps the Reference (with PO suffix)', async () => {
+    const payload = await transformPayload('PROV-000007', '4567', 'pending_external');
+    expect(payload.invoice.invoiceNumber).toBeNull();
+    expect(payload.invoice.reference).toBe('PROV-000007 | PO 4567');
+    expect(payload.numberSource).toBe('pending_external');
+    expect(payload.provisionalInvoiceNumber).toBe('PROV-000007');
+  });
+
+  it('keeps the plain Reference for pending_external without a PO', async () => {
+    const invoice = await invoicePayload('PROV-000007', null, 'pending_external');
+    expect(invoice.invoiceNumber).toBeNull();
+    expect(invoice.reference).toBe('PROV-000007');
+  });
+
+  it('sends the plain number for alga (today\'s behaviour), also when the column is absent', async () => {
+    expect((await invoicePayload('INV-000123', '4567', 'alga')).invoiceNumber).toBe('INV-000123');
+    const payload = await transformPayload('INV-000123', null);
+    expect(payload.invoice.invoiceNumber).toBe('INV-000123');
+    expect(payload.numberSource).toBe('alga');
+  });
+
+  it('sends the (Xero-assigned) number for an external invoice', async () => {
+    const payload = await transformPayload('INV-0042', null, 'external');
+    expect(payload.invoice.invoiceNumber).toBe('INV-0042');
+    expect(payload.numberSource).toBe('external');
+  });
+
+  it.each(['pending_external', 'external', 'alga'])(
+    'an existing mapping always yields externalInvoiceId (%s); the client strips the number on update',
+    async (source) => {
+      const lines = seed('PROV-000007', null, source);
+      harness.rows.tenant_external_entity_mappings = [
+        {
+          id: 'map-inv', integration_type: 'xero', alga_entity_type: 'invoice', alga_entity_id: INVOICE,
+          external_entity_id: 'xero-inv-9', external_realm_id: REALM, metadata: null, deleted_at: null
+        },
+        ...harness.rows.tenant_external_entity_mappings
+      ];
+      const { XeroAdapter } = await import('./xeroAdapter');
+      const result = await new XeroAdapter().transform(context(lines));
+      const invoice = (result.documents[0].payload as any).invoice;
+      expect(invoice.externalInvoiceId).toBe('xero-inv-9');
+      // mapInvoicePayload never emits InvoiceNumber when externalInvoiceId is set
+      // (pinned in xeroClientService.invoiceNumber.test.ts).
+      if (source === 'pending_external') expect(invoice.invoiceNumber).toBeNull();
+    }
+  );
 });

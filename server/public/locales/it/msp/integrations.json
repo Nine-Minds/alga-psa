@@ -4356,7 +4356,15 @@
           "dangerTitle": "Disconnetti Xero"
         },
         "connectNeedsAttention": "L’autorizzazione Xero è completata, ma la connessione richiede ancora attenzione. La sincronizzazione rimane sospesa.",
-        "credentialsStoredDescription": "L’ID client e il segreto client sono archiviati in modo sicuro."
+        "credentialsStoredDescription": "L’ID client e il segreto client sono archiviati in modo sicuro.",
+        "invoiceNumbering": {
+          "label": "Lascia che Xero assegni i numeri di fattura",
+          "hint": "Le nuove fatture ricevono il numero successivo di questa organizzazione Xero. Finché una fattura non è stata esportata, mostra un numero provvisorio e non può essere inviata al cliente. Le fatture già presenti in Xero mantengono il proprio numero.",
+          "prefixHint": "I numeri provvisori provengono da Impostazioni di fatturazione → Numerazione. Usa un prefisso che Xero non utilizza mai, così un numero provvisorio non entra in conflitto con un numero assegnato da Xero.",
+          "enabledMessage": "Le fatture finalizzate da ora in poi riceveranno il numero da Xero.",
+          "disabledMessage": "Le fatture finalizzate da ora in poi manterranno il numero assegnato da Alga.",
+          "error": "Impossibile aggiornare la modalità di numerazione delle fatture."
+        }
       }
     },
     "stripe": {

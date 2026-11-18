@@ -8,6 +8,7 @@ import {
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
+  AccountingExportDeliveryDocumentFailure,
   AccountingExportTransformResult,
   AccountingExportDocument,
   AccountingExternalChange,
@@ -21,6 +22,7 @@ import {
 import {
   XeroClientService,
   XeroInvoicePayload,
+  XeroInvoiceDetails,
   XeroInvoiceLinePayload,
   XeroTrackingCategoryOption,
   XeroTaxComponentPayload
@@ -29,7 +31,10 @@ import {
   readXeroServiceTargetKind,
   XeroServiceTargetKind
 } from '@alga-psa/integrations/lib/xero/xeroServiceMappingTarget';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createHash } from 'node:crypto';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { startInvoiceAutopay } from '../../services/autopayBridge';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { discountTaxDonorItemId } from '../../lib/billing/invoiceDiscountPools';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -80,6 +85,9 @@ type DbInvoice = {
   due_date?: string | Date | null;
   client_id?: string | null;
   currency_code?: string | null;
+  /** alga | pending_external | external (alga-2026-0002746). Absent on legacy fixtures = alga. */
+  invoice_number_source?: string | null;
+  updated_at?: string | Date | null;
 };
 
 type DbCharge = {
@@ -136,6 +144,15 @@ interface XeroDocumentPayload {
   chargeIds: string[];
   /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
   chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
+  /**
+   * Who owns the invoice number. `pending_external` invoices are sent without an
+   * InvoiceNumber and settled (Xero's number written back) on every delivery.
+   */
+  numberSource?: 'alga' | 'pending_external' | 'external';
+  /** The Alga number the invoice carried when exported (provisional while pending). */
+  provisionalInvoiceNumber?: string | null;
+  /** invoices.updated_at at transform time; feeds the idempotency key. */
+  invoiceUpdatedAt?: string | null;
   mapping: {
     clientId: string;
     source?: string;
@@ -719,7 +736,10 @@ export class XeroAdapter implements AccountingExportAdapter {
         externalInvoiceId: existingMapping?.externalInvoiceId ?? null,
         contactId: clientMapping.external_entity_id,
         currency: invoice.currency_code ?? exportLines[0]?.currency_code ?? null,
-        invoiceNumber: invoice.invoice_number ?? null,
+        // Pending invoices go to Xero without a number so Xero assigns its own;
+        // Reference (below) still carries the provisional Alga number and is the
+        // recovery key if the create response is lost.
+        invoiceNumber: invoice.invoice_number_source === 'pending_external' ? null : invoice.invoice_number ?? null,
         reference,
         invoiceDate: formatDate(invoice.invoice_date),
         dueDate: formatDate(invoice.due_date),
@@ -739,6 +759,11 @@ export class XeroAdapter implements AccountingExportAdapter {
         invoice: invoicePayload,
         chargeIds, // Alga charge IDs in same order as invoice.lines[]
         chargeLineage,
+        numberSource: invoice.invoice_number_source === 'pending_external'
+          ? 'pending_external'
+          : invoice.invoice_number_source === 'external' ? 'external' : 'alga',
+        provisionalInvoiceNumber: invoice.invoice_number ?? null,
+        invoiceUpdatedAt: invoice.updated_at ? new Date(invoice.updated_at).toISOString() : null,
         mapping: {
           clientId,
           source: extractMappingSource(clientMapping.metadata)
@@ -787,11 +812,6 @@ export class XeroAdapter implements AccountingExportAdapter {
       invoiceCount: documents.length
     });
 
-    const payloads: XeroInvoicePayload[] = documents.map((document) => {
-      const payload = document.payload as unknown as XeroDocumentPayload;
-      return payload.invoice;
-    });
-
     // Serialize against invoice void on the shared invoice row lock
     // (invoiceExternalSyncLock.ts). Xero delivers the whole batch in one remote
     // call, so every invoice row is locked FOR UPDATE and confirmed not
@@ -805,10 +825,24 @@ export class XeroAdapter implements AccountingExportAdapter {
         await lockInvoiceForExternalSync(trx, tenantId, invoiceId);
       }
 
-      const deliveryResults = await client.createInvoices(payloads);
-      if (deliveryResults.length !== documents.length) {
+      const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
+
+      // Xero-numbered creates have no InvoiceNumber for Xero to match a retry on,
+      // so look for an earlier attempt by Reference before creating anything.
+      // Runs under the invoice locks, so two executions cannot both pass it.
+      const skipped = await this.recoverPendingCreates(client, documents, failedDocuments);
+      const postDocuments = documents.filter((document) => !skipped.has(document.documentId));
+      const payloads: XeroInvoicePayload[] = postDocuments.map(
+        (document) => (document.payload as unknown as XeroDocumentPayload).invoice
+      );
+
+      const idempotencyKey = this.buildIdempotencyKey(tenantId, targetRealm, postDocuments);
+      const deliveryResults = payloads.length > 0
+        ? await client.createInvoices(payloads, { idempotencyKey })
+        : [];
+      if (deliveryResults.length !== postDocuments.length) {
         throw new AppError('XERO_DELIVERY_MISMATCH', 'Xero returned unexpected number of invoices', {
-          expected: documents.length,
+          expected: postDocuments.length,
           actual: deliveryResults.length
         });
       }
@@ -816,9 +850,10 @@ export class XeroAdapter implements AccountingExportAdapter {
       const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
 
       const deliveredLines: { lineId: string; externalDocumentRef: string }[] = [];
+      const settledAlgaNumbers: Array<{ invoiceId: string; previousNumber: string; invoiceNumber: string }> = [];
 
-      for (let i = 0; i < documents.length; i++) {
-        const document = documents[i];
+      for (let i = 0; i < postDocuments.length; i++) {
+        const document = postDocuments[i];
         const result = deliveryResults[i];
         const payload = document.payload as unknown as XeroDocumentPayload;
         const externalRef = result.invoiceId ?? result.documentId;
@@ -847,6 +882,9 @@ export class XeroAdapter implements AccountingExportAdapter {
           }
         }
 
+        const isPending = payload.numberSource === 'pending_external';
+        const xeroNumber: string | null = result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null;
+
         // Store invoice mapping with the authoritative delivery snapshot the
         // drift detector compares against, plus the charge line mappings used
         // for tax import. Older mappings that lack a snapshot are handled
@@ -856,19 +894,23 @@ export class XeroAdapter implements AccountingExportAdapter {
         const exportedTotal = Number.isFinite(rawTotal)
           ? rawTotal
           : fromMinorUnits(payload.invoice.amountCents, 'en-US', payload.invoice.currency ?? 'USD');
-        const metadata = {
+        const metadata: Record<string, unknown> = {
           last_exported_at: new Date().toISOString(),
-          invoiceNumber: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          invoiceNumber: xeroNumber,
           // Plain Alga number; invoiceNumber/doc_number hold what Xero actually stores
           // (legacy exports keep their PO-suffixed number, auto-numbered ones keep AUTO-xxxx).
-          algaInvoiceNumber: payload.invoice.invoiceNumber ?? null,
-          doc_number: result.invoiceNumber ?? rawInvoice?.InvoiceNumber ?? null,
+          // A pending invoice has no Xero-bound Alga number: until settled, Alga's
+          // number is the provisional one it still carries.
+          algaInvoiceNumber: isPending ? payload.provisionalInvoiceNumber ?? null : payload.invoice.invoiceNumber ?? null,
+          doc_number: xeroNumber,
           sync_token: rawInvoice?.UpdatedDateUTC != null ? String(rawInvoice.UpdatedDateUTC) : null,
           exported_total: exportedTotal,
           external_entity_type: 'Invoice',
           chargeLineMappings // Store mapping for tax import
         };
 
+        // The mapping is what stops a second Xero invoice being created, so it
+        // is written first and survives whatever the settle step does next.
         await invoiceMappingRepository.upsertInvoiceMapping({
           tenantId,
           adapterType: this.type,
@@ -878,6 +920,60 @@ export class XeroAdapter implements AccountingExportAdapter {
           metadata
         });
 
+        if (isPending) {
+          const outcome = await this.settleXeroAssignedNumber(trx, {
+            tenantId,
+            invoiceId: document.documentId,
+            provisionalNumber: payload.provisionalInvoiceNumber ?? null,
+            xeroNumber
+          });
+
+          if (outcome.status === 'not_returned') {
+            failedDocuments.push({
+              documentId: document.documentId,
+              lineIds: document.lineIds,
+              code: 'XERO_NUMBER_NOT_RETURNED',
+              message:
+                'Xero created the invoice but did not return an invoice number. The invoice stays waiting for its number; export it again to fetch the number from Xero.',
+              metadata: { remoteDocumentCreated: true, externalInvoiceId: externalRef }
+            });
+            continue;
+          }
+          if (outcome.status === 'conflict') {
+            failedDocuments.push({
+              documentId: document.documentId,
+              lineIds: document.lineIds,
+              code: 'XERO_NUMBER_CONFLICT',
+              message:
+                `Xero numbered this invoice ${xeroNumber}, but Alga invoice ${outcome.otherInvoiceLabel} already uses ${xeroNumber}. ` +
+                'Rename one of them, then retry the export.',
+              metadata: { remoteDocumentCreated: true, externalInvoiceId: externalRef, xeroNumber }
+            });
+            continue;
+          }
+
+          if (outcome.status === 'settled') {
+            // Step 5: audit trail. algaInvoiceNumber again means "the number Alga shows".
+            await invoiceMappingRepository.upsertInvoiceMapping({
+              tenantId,
+              adapterType: this.type,
+              invoiceId: document.documentId,
+              externalInvoiceId: externalRef,
+              targetRealm,
+              metadata: {
+                ...metadata,
+                algaInvoiceNumber: xeroNumber,
+                provisionalAlgaInvoiceNumber: outcome.previousNumber
+              }
+            });
+            settledAlgaNumbers.push({
+              invoiceId: document.documentId,
+              previousNumber: outcome.previousNumber,
+              invoiceNumber: xeroNumber as string
+            });
+          }
+        }
+
         deliveredLines.push(
           ...document.lineIds.map((lineId) => ({
             lineId,
@@ -886,14 +982,267 @@ export class XeroAdapter implements AccountingExportAdapter {
         );
       }
 
+      // Step 6: events and the deferred autopay run only once the transaction
+      // that holds the new numbers has committed.
+      for (const settled of settledAlgaNumbers) {
+        registerAfterCommit(
+          trx,
+          async () => {
+            await publishEvent({
+              eventType: 'INVOICE_NUMBER_ASSIGNED',
+              payload: {
+                tenantId,
+                occurredAt: new Date().toISOString(),
+                invoiceId: settled.invoiceId,
+                previousNumber: settled.previousNumber,
+                invoiceNumber: settled.invoiceNumber,
+                source: 'xero'
+              }
+            });
+            // Finalize skipped autopay for this invoice (it would have quoted the
+            // provisional number); start it now that the number is Xero's.
+            await startInvoiceAutopay(knex, tenantId, settled.invoiceId);
+          },
+          `INVOICE_NUMBER_ASSIGNED invoice=${settled.invoiceId}`
+        );
+      }
+
       return {
         deliveredLines,
+        failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
         metadata: {
           adapter: this.type,
-          deliveredInvoices: documents.length
+          deliveredInvoices: documents.length - failedDocuments.length,
+          ...(failedDocuments.length > 0 ? { failedInvoices: failedDocuments.length } : {})
         }
       };
     });
+  }
+
+  /**
+   * Before creating a Xero-numbered invoice, look for one a previous attempt
+   * already created (a lost response, or an Alga rollback after Xero committed).
+   * The Reference carries the provisional Alga number, unique per tenant.
+   *
+   * One GET per batch that contains pending creates; none otherwise.
+   * - exactly one live match with the same contact: adopt it (the create becomes
+   *   an update by InvoiceID, carrying the existing line ids);
+   * - none: create as normal;
+   * - several (or one under another contact): fail that document and never create
+   *   another. Returns the ids of documents that must not be posted.
+   */
+  private async recoverPendingCreates(
+    client: XeroClientService,
+    documents: AccountingExportDocument[],
+    failedDocuments: AccountingExportDeliveryDocumentFailure[]
+  ): Promise<Set<string>> {
+    const skipped = new Set<string>();
+    const pendingCreates = documents.filter((document) => {
+      const payload = document.payload as unknown as XeroDocumentPayload;
+      return payload.numberSource === 'pending_external' && !payload.invoice.externalInvoiceId;
+    });
+    if (pendingCreates.length === 0) {
+      return skipped;
+    }
+
+    const references = pendingCreates
+      .map((document) => (document.payload as unknown as XeroDocumentPayload).invoice.reference)
+      .filter((reference): reference is string => typeof reference === 'string' && reference.length > 0);
+
+    const startedAt = Date.now();
+    const found = await client.findInvoicesByReference(references);
+    logger.info('[XeroAdapter] Xero reference lookup for pending-number creates', {
+      references: references.length,
+      matches: found.length,
+      durationMs: Date.now() - startedAt
+    });
+
+    for (const document of pendingCreates) {
+      const payload = document.payload as unknown as XeroDocumentPayload;
+      const matches = found.filter(
+        (candidate) =>
+          candidate.reference === payload.invoice.reference &&
+          !['DELETED', 'VOIDED'].includes(String(candidate.status ?? '').toUpperCase())
+      );
+
+      if (matches.length === 0) {
+        continue;
+      }
+
+      const matchContact = (matches[0].raw as Record<string, any> | undefined)?.Contact?.ContactID;
+      if (matches.length === 1 && matchContact === payload.invoice.contactId) {
+        this.adoptExistingXeroInvoice(payload, matches[0]);
+        continue;
+      }
+
+      skipped.add(document.documentId);
+      failedDocuments.push({
+        documentId: document.documentId,
+        lineIds: document.lineIds,
+        code: 'XERO_DUPLICATE_REFERENCE',
+        message:
+          matches.length > 1
+            ? `Xero already has ${matches.length} invoices with the reference "${payload.invoice.reference}" (${matches
+                .map((match) => match.invoiceNumber ?? match.invoiceId)
+                .join(', ')}). Nothing was created. Remove the duplicates in Xero, then retry the export.`
+            : `Xero already has an invoice with the reference "${payload.invoice.reference}" under a different contact (${
+                matches[0].invoiceNumber ?? matches[0].invoiceId
+              }). Nothing was created. Resolve it in Xero, then retry the export.`,
+        metadata: { xeroInvoiceIds: matches.map((match) => match.invoiceId) }
+      });
+    }
+
+    return skipped;
+  }
+
+  private adoptExistingXeroInvoice(payload: XeroDocumentPayload, existing: XeroInvoiceDetails): void {
+    payload.invoice.externalInvoiceId = existing.invoiceId;
+    // Thread the existing line ids (positionally, as the delivery mapping does) so
+    // the update replaces lines instead of appending duplicates.
+    if (existing.lineItems.length === payload.invoice.lines.length) {
+      payload.invoice.lines.forEach((line, index) => {
+        if (!line.externalLineItemId && existing.lineItems[index]?.lineItemId) {
+          line.externalLineItemId = existing.lineItems[index].lineItemId;
+        }
+      });
+    }
+    logger.info('[XeroAdapter] adopted existing Xero invoice for pending-number create', {
+      invoiceId: payload.invoice.invoiceId,
+      externalInvoiceId: existing.invoiceId
+    });
+  }
+
+  /**
+   * Optional Idempotency-Key for the create POST. Derived from the tenant, the
+   * organisation, the pending creates and their updated_at (so the key changes
+   * when an invoice is edited between attempts) plus a digest of the exact
+   * payloads (so one key never meets two different bodies). Correctness does not
+   * depend on it: the Reference lookup covers every retry.
+   */
+  private buildIdempotencyKey(
+    tenantId: string,
+    targetRealm: string,
+    documents: AccountingExportDocument[]
+  ): string | undefined {
+    const pending = documents
+      .map((document) => ({ document, payload: document.payload as unknown as XeroDocumentPayload }))
+      .filter(({ payload }) => payload.numberSource === 'pending_external' && !payload.invoice.externalInvoiceId);
+    if (pending.length === 0) {
+      return undefined;
+    }
+    const identity = pending
+      .map(({ document, payload }) => `${document.documentId}@${payload.invoiceUpdatedAt ?? ''}`)
+      .sort()
+      .join(',');
+    const bodies = createHash('sha256')
+      .update(JSON.stringify(documents.map((document) => (document.payload as unknown as XeroDocumentPayload).invoice)))
+      .digest('hex');
+    // 64 hex chars: inside Xero's 128-character key limit.
+    return createHash('sha256').update(`${tenantId}|${targetRealm}|${identity}|${bodies}`).digest('hex');
+  }
+
+  /**
+   * The settle step for a `pending_external` invoice, run on every delivery
+   * (create or update) so retries converge. Inside a savepoint, writes Xero's
+   * number onto the invoice and renames the unissued working PDF. A unique
+   * violation rolls back only the savepoint: the mapping written before it, and
+   * the rest of the batch, survive.
+   */
+  private async settleXeroAssignedNumber(
+    trx: Knex.Transaction,
+    params: { tenantId: string; invoiceId: string; provisionalNumber: string | null; xeroNumber: string | null }
+  ): Promise<
+    | { status: 'settled'; previousNumber: string }
+    | { status: 'already_settled' }
+    | { status: 'not_returned' }
+    | { status: 'conflict'; otherInvoiceLabel: string }
+  > {
+    const { tenantId, invoiceId, xeroNumber } = params;
+    if (!xeroNumber || !xeroNumber.trim()) {
+      return { status: 'not_returned' };
+    }
+
+    try {
+      return await trx.transaction(async (savepoint) => {
+        const current = await tenantDb(savepoint, tenantId).table<DbInvoice>('invoices')
+          .where({ invoice_id: invoiceId })
+          .select('invoice_number', 'invoice_number_source')
+          .first();
+        const previousNumber = current?.invoice_number ?? params.provisionalNumber ?? '';
+
+        const updated = await tenantDb(savepoint, tenantId).table('invoices')
+          .where({ invoice_id: invoiceId, invoice_number_source: 'pending_external' })
+          .update({
+            invoice_number: xeroNumber,
+            invoice_number_source: 'external',
+            updated_at: savepoint.fn.now()
+          });
+        if (!updated) {
+          // Settled by an earlier delivery (or no longer pending): nothing to do.
+          return { status: 'already_settled' as const };
+        }
+
+        await this.renameWorkingInvoicePdf(savepoint, tenantId, invoiceId, previousNumber, xeroNumber);
+        return { status: 'settled' as const, previousNumber };
+      });
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        const other = await tenantDb(trx, tenantId).table<DbInvoice & { client_name?: string | null }>('invoices')
+          .where({ invoice_number: xeroNumber })
+          .whereNot({ invoice_id: invoiceId })
+          .select('invoice_id', 'client_id')
+          .first();
+        const client = other?.client_id
+          ? await tenantDb(trx, tenantId).table<{ client_id: string; client_name?: string | null }>('clients')
+              .where({ client_id: other.client_id })
+              .select('client_name')
+              .first()
+          : null;
+        logger.warn('[XeroAdapter] Xero-assigned invoice number collides with an Alga invoice', {
+          tenantId,
+          invoiceId,
+          xeroNumber
+        });
+        return {
+          status: 'conflict',
+          otherInvoiceLabel: client?.client_name ? `${xeroNumber} (${client.client_name})` : String(xeroNumber)
+        };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Rename the unissued working PDF (Invoice_<provisional>.pdf ->
+   * Invoice_<xeroNumber>.pdf), found like pdfGenerationService.findStoredPdf with
+   * clientVisible=false. Without it the next render would file a second document
+   * under the new name. No issued copy can exist: client issuance is blocked
+   * while the number is pending.
+   */
+  private async renameWorkingInvoicePdf(
+    savepoint: Knex.Transaction,
+    tenantId: string,
+    invoiceId: string,
+    previousNumber: string,
+    newNumber: string
+  ): Promise<void> {
+    if (!previousNumber || previousNumber === newNumber) {
+      return;
+    }
+    const db = tenantDb(savepoint, tenantId);
+    const query = db.table('document_associations as da')
+      .where({ 'da.entity_id': invoiceId, 'da.entity_type': 'invoice' })
+      .andWhere('d.document_name', `Invoice_${previousNumber}.pdf`)
+      .andWhere('d.is_client_visible', false)
+      .select('d.document_id');
+    db.tenantJoin(query, 'documents as d', 'da.document_id', 'd.document_id');
+    const documentIds = (await query).map((row: { document_id: string }) => row.document_id);
+    if (documentIds.length === 0) {
+      return;
+    }
+    await db.table('documents')
+      .whereIn('document_id', documentIds)
+      .update({ document_name: `Invoice_${newNumber}.pdf`, updated_at: savepoint.fn.now() });
   }
 
   private async loadInvoices(
@@ -914,7 +1263,9 @@ export class XeroAdapter implements AccountingExportAdapter {
         'invoice_date',
         'due_date',
         'client_id',
-        'currency_code'
+        'currency_code',
+        'invoice_number_source',
+        'updated_at'
       )
       .whereIn('invoice_id', invoiceIds);
 

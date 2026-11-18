@@ -55,6 +55,11 @@ export interface IInvoice extends TenantEntity {
   currency_code: string;
   status: InvoiceStatus;
   invoice_number: string;
+  /**
+   * Who owns the invoice number: `alga` (default), `pending_external` (provisional,
+   * waiting for the accounting system's number) or `external` (number came back).
+   */
+  invoice_number_source?: 'alga' | 'pending_external' | 'external';
   finalized_at?: DateValue;
   credit_applied: number;
   billing_cycle_id?: string;
@@ -749,6 +754,8 @@ export interface InvoiceBundleRowsLayout {
 
 export interface InvoiceViewModel {
   invoice_number: string;
+  /** See IInvoice.invoice_number_source. */
+  invoice_number_source?: 'alga' | 'pending_external' | 'external';
   client_id: string;
   po_number?: string | null;
   /** Payment-method snapshot key; see IInvoice.payment_method. */

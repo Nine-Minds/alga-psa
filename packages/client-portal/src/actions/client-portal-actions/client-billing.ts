@@ -193,6 +193,9 @@ async function validateClientInvoiceAccess(
       client_id: clientId,
     })
     .whereNot('status', 'draft')
+    // Waiting for its number from the accounting system: treated like a draft,
+    // so the by-id, line-item, preview and PDF actions all refuse it too.
+    .whereNot('invoice_number_source', 'pending_external')
     .first();
 
   if (!invoiceCheck) {
@@ -295,7 +298,10 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Clie
     }
     // Filter out draft invoices - only finalized invoices should be visible in client portal
     // An invoice is finalized when finalized_at is set (not null)
-    return invoices.filter(invoice => invoice.finalized_at != null);
+    // An invoice still waiting for its Xero-assigned number is not client-facing yet.
+    return invoices.filter(
+      invoice => invoice.finalized_at != null && (invoice as { invoice_number_source?: string }).invoice_number_source !== 'pending_external'
+    );
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

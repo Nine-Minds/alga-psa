@@ -1264,7 +1264,8 @@
       "viewInQuickBooks": "Visa i QuickBooks",
       "viewInXero": "Visa i Xero",
       "xeroNumberPrefix": "Xero-nr"
-    }
+    },
+    "numberPending": "Nummer väntar från Xero"
   },
   "templateManager": {
     "title": "Hantering av fakturamallar",
@@ -2897,6 +2898,7 @@
       "emailNotConfigured": "E-post är inte konfigurerad. Konfigurera e-post under Inställningar innan du skickar fakturor.",
       "schedulePdfFailed": "Det gick inte att starta skapandet av fakturor i PDF-format. Försök igen.",
       "scheduleEmailFailed": "Det gick inte att starta utskicket av fakturor via e-post. Försök igen.",
+      "invoiceNumberPending": "Den här fakturan väntar på sitt fakturanummer från Xero. Exportera den till Xero, eller vänta på nästa synkronisering, innan du skickar den.",
       "recipientFailed": "Det gick inte att läsa in mottagaruppgifter för den här fakturan.",
       "sendFailed": "Det gick inte att skicka fakturan via e-post. Försök igen."
     },

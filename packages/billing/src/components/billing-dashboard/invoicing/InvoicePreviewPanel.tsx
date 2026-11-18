@@ -29,6 +29,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { getEffectiveTaxSourceForClient, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
+import { InvoiceNumberPendingBadge } from '../../invoices/InvoiceNumberPendingBadge';
 import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
@@ -116,6 +117,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [taxSource, setTaxSource] = useState<TaxSource>('internal');
+  const [invoiceNumberSource, setInvoiceNumberSource] = useState<string | null>(null);
   const [sourceQuote, setSourceQuote] = useState<IQuote | null>(null);
   const [invoiceAnnotations, setInvoiceAnnotations] = useState<IInvoiceAnnotation[]>([]);
   const [previewRefreshCounter, setPreviewRefreshCounter] = useState(0);
@@ -287,6 +289,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
 
         // Extract tax source from the enriched view model (mapped as taxSource).
         setTaxSource(((viewModel as unknown as { taxSource?: TaxSource }).taxSource) || 'internal');
+        setInvoiceNumberSource((viewModel as unknown as { invoice_number_source?: string }).invoice_number_source ?? null);
 
         setPoSummary(summary);
         setResolvedTemplateId(templateId);
@@ -558,6 +561,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             </h3>
             <div className="flex items-center gap-2">
               <InvoiceTaxSourceBadge taxSource={taxSource} />
+              <InvoiceNumberPendingBadge
+                invoiceNumberSource={invoiceNumberSource ?? invoiceSummary?.invoice_number_source ?? null}
+              />
               {!syncHidden && syncStatus && (
                 <InvoiceSyncBadge status={syncStatus} environment={syncStatus.environment} />
               )}

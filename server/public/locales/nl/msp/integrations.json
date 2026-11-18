@@ -4356,7 +4356,15 @@
           "dangerTitle": "Xero ontkoppelen"
         },
         "connectNeedsAttention": "De Xero-autorisatie is voltooid, maar de verbinding vereist nog aandacht. Synchronisatie blijft gepauzeerd.",
-        "credentialsStoredDescription": "De client-ID en het clientgeheim worden veilig opgeslagen."
+        "credentialsStoredDescription": "De client-ID en het clientgeheim worden veilig opgeslagen.",
+        "invoiceNumbering": {
+          "label": "Laat Xero factuurnummers toewijzen",
+          "hint": "Nieuwe facturen krijgen het volgende nummer van deze Xero-organisatie. Zolang een factuur niet is geëxporteerd, toont deze een voorlopig nummer en kan deze niet naar de klant worden verzonden. Facturen die al in Xero staan, behouden hun nummer.",
+          "prefixHint": "Voorlopige nummers komen uit Factureringsinstellingen → Nummering. Gebruik een voorvoegsel dat Xero nooit gebruikt, zodat een voorlopig nummer niet botst met een door Xero toegewezen nummer.",
+          "enabledMessage": "Facturen die vanaf nu worden afgerond, krijgen hun nummer van Xero.",
+          "disabledMessage": "Facturen die vanaf nu worden afgerond, behouden het nummer dat Alga toewijst.",
+          "error": "Het bijwerken van de factuurnummering is mislukt."
+        }
       }
     },
     "stripe": {
