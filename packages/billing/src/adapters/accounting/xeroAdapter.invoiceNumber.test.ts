@@ -237,3 +237,17 @@ describe('XeroAdapter Xero-assigned invoice numbers (alga-2026-0002746)', () => 
     }
   );
 });
+
+describe('XeroAdapter line description on a retried batch (alga-2026-0002746 review)', () => {
+  it('describes the line from the charge, never from the failure note a previous delivery left on the export line', async () => {
+    const { XeroAdapter } = await import('./xeroAdapter');
+    const lines = seed('PROV-000007', null, 'pending_external').map((line) => ({
+      ...line,
+      status: 'failed',
+      notes: 'Xero numbered this invoice INV-1046, but Alga invoice INV-1046 already uses INV-1046. Rename one of them, then retry the export.'
+    })) as Array<Partial<AccountingExportLine>>;
+    const result = await new XeroAdapter().transform(context(lines));
+    const payload = result.documents[0].payload as any;
+    expect(payload.invoice.lines.map((line: any) => line.description)).toEqual(['Consulting']);
+  });
+});

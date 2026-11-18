@@ -586,8 +586,10 @@ export class XeroAdapter implements AccountingExportAdapter {
           detectedLineAmountType = lineAmountTypeHint;
         }
 
+        // Not line.notes: the export service writes delivery-failure text there
+        // (e.g. XERO_NUMBER_CONFLICT), so a retried batch would send the error
+        // message to Xero as the line description.
         const description =
-          line.notes ??
           charge.description ??
           `Invoice ${invoice.invoice_number ?? invoice.invoice_id} line`;
 
