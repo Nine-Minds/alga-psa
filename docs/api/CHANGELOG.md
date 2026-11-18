@@ -19,6 +19,49 @@ Tickets created over REST used to ignore the board's default assignment and arri
 
 **Migration note:** Integrations that relied on REST-created tickets landing unassigned on a board with a default assignment must now send `"assigned_to": null` (and, if needed, `"assigned_team_id": null`).
 
+## 2026-11-14 — Recurring ticket definitions over REST (and MCP)
+
+**New endpoints:** `GET|POST /api/v1/tickets/recurring`, `POST /api/v1/tickets/recurring/preview`, `GET|PUT|DELETE /api/v1/tickets/recurring/{definitionId}`, `POST /api/v1/tickets/recurring/{definitionId}/pause`, `POST /api/v1/tickets/recurring/{definitionId}/resume`, `GET /api/v1/tickets/recurring/{definitionId}/upcoming`, `GET /api/v1/tickets/recurring/{definitionId}/occurrences`, `POST /api/v1/tickets/recurring/{definitionId}/clients`, `PUT|DELETE /api/v1/tickets/recurring/{definitionId}/clients/{clientId}`, `POST /api/v1/tickets/recurring/{definitionId}/clients/{clientId}/pause|resume`
+
+Recurring ticket schedules ("definitions") were UI-only. They can now be created, maintained and monitored over REST, and the same 15 operations are registered for the MCP integration, so an automation can set up "renew the APNs certificate every year for these clients" without opening the UI. A definition pairs a ticket template (which supplies the ticket content) with a recurrence rule, timing and a list of clients; one ticket is generated per client per occurrence.
+
+**Changes:**
+
+- `POST /tickets/recurring` creates a definition; `PUT /tickets/recurring/{definitionId}` is a **full replace** (omitted fields return to their defaults). The body is the same contract the UI uses: `name`, `ticket_template_id`, `overrides`, `status_id`, `assigned_to`, `assigned_team_id`, `additional_agent_ids`, `recurrence`, `start_date`, `create_time`, `due_time`, `lead_days`, `non_business_day_policy`, `open_previous_policy`, `notify_client_on_create` and `is_active`.
+- `DELETE /tickets/recurring/{definitionId}` **archives** the definition (`204`); there is no unarchive. Writes to an archived definition return `409`.
+- `GET /tickets/recurring` lists definitions, filtered by `status` (`active`, `paused`, `archived`, `all`; default `all`) and `search` (name substring), with `page`/`limit` paging.
+- `POST /tickets/recurring/{definitionId}/pause` and `/resume` stop and restart generation for the whole schedule; the per-client variants under `/clients/{clientId}/pause|resume` do the same for one client.
+- `GET /tickets/recurring/{definitionId}/upcoming` returns the next five due dates plus `definition_status`, so callers can tell that a paused schedule's dates will not actually fire. `POST /tickets/recurring/preview` computes dates for an unsaved draft. Both return five dates, even for a yearly rule, unless the rule ends sooner.
+- `GET /tickets/recurring/{definitionId}/occurrences` is the run history: one row per generation attempt, filtered by `status` (`created`, `skipped`, `missed`, `failed`) and `client_id`. An unknown definition returns `404` rather than an empty page.
+- Clients: `POST .../clients` adds clients with a `{ "client_ids": [...] }` body (up to 100); `PUT .../clients/{clientId}` sets that client's `overrides`, `contact_id`, `location_id` and `asset_ids`; `DELETE .../clients/{clientId}` removes the client from the schedule but keeps its occurrence history. `{clientId}` is the client's `client_id`; a client that is not on this definition returns `404`, while an unknown client named in the add-clients body returns `400`.
+- Permissions: the `recurring_ticket` resource (`read`, `create`, `update`, `delete`; client management uses `update`). Because a definition decides the board, status and assignment of tickets it will create, any write that sets those fields or adds clients is also authorized as `ticket:create` for each affected client before anything is written; a refusal is `403`.
+
+## 2026-11-14 — Documentation links on ticket templates
+
+**Affected endpoints:** `POST /api/v1/tickets/templates`, `GET|PUT /api/v1/tickets/templates/{templateId}`, `POST /api/v1/tickets/templates/{templateId}/instantiate`
+
+Ticket templates can now carry documentation links (for example Hudu articles or runbooks in another system), and every ticket created from the template gets a copy of those links. This applies to tickets from `instantiate`, from recurring schedules, and from the UI.
+
+**Changes:**
+
+- Template bodies accept an optional `links` array (up to 50). Each entry has `system` (a built-in key such as `hudu`, or a custom system key), `external_id`, and optional `realm`, `url` (http/https), `title` and `metadata`. There is no `relationship` field: template links are always copied onto tickets as **reference** links, hidden from the client portal by default. `PUT` replaces the stored list.
+- Duplicate links (same `system` and `external_id`) in one template are rejected with `400`.
+- Copied links appear in `GET /tickets/{id}/external-links` like any other reference link, and emit `TICKET_EXTERNAL_LINK_ADDED`. Editing the template later does not change links already copied onto existing tickets.
+- `hudu` is a new built-in external system. It has no URL template, because each tenant runs its own Hudu host, so a `url` must be supplied.
+- Reference links are now unique per ticket rather than per tenant: several tickets (for example every ticket from one recurring schedule) can cite the same external record. Origin and mirror links remain unique per external record across the tenant.
+
+## 2026-11-14 — Row-level denials return 404 and redacted fields are omitted
+
+**Affected endpoints:** project, ticket, quote and asset reads under `/api/v1/projects`, `/api/v1/tickets`, `/api/v1/quotes` and `/api/v1/assets`, including their sub-resources (ticket documents, comments, materials and agents; asset custody, notes, software, RMM data and summary; project links; inventory lookup), list, search, export and stats endpoints, and the records returned by writes.
+
+Previously these endpoints checked whether a record could be read but then returned it whole, ignoring field-level redaction decided by the caller's authorization policy. Responses are now projected through the same authorization decision the UI uses.
+
+**Changes:**
+
+- A single-record read that the caller's policy denies or suppresses for that specific record now returns **`404 Not Found`**, so the response no longer confirms that the record exists. A caller that lacks the RBAC permission altogether still gets `403`. Integrations that treated `403` as "exists but hidden" should handle `404` instead.
+- Fields hidden by the policy are left out of the record. Display values derived from a hidden field (for example a name resolved from a hidden ID) are returned as `null`, and nested records are projected with their own rules.
+- Lists, search, export and stats apply the projection to each row before paging and aggregation: suppressed rows are not returned and not counted in totals, filters and searches on a hidden field match nothing, and stats omit aggregates computed from hidden fields.
+
 ## 2026-11-13 — Role floors: every user keeps a role, every tenant keeps an MSP Admin
 
 **Affected endpoints:** `POST /api/v1/users`, `PUT /api/v1/users/{id}` (deactivation), `DELETE /api/v1/users/{id}`, and `POST|PUT|DELETE /api/v1/users/{id}/roles`
