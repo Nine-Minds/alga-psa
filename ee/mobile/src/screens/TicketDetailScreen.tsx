@@ -1,12 +1,13 @@
 import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type ScrollViewInstance } from "react-native";
 import { DisplayTagBadges, type DisplayTag } from "../ui/components/DisplayTagBadges";
 import { mergePartyDisplayTags } from "./ticketRowTags";
 import { buildMapsUrl } from "../urls/mapsUrl";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
+import { DETAIL_TWO_COLUMN_MIN_WIDTH, detailSideColumnWidth, useWindowLayout } from "../ui/layout";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
@@ -114,6 +115,7 @@ export function TicketDetailScreen({ route, navigation }: Props) {
 export function TicketDetailBody({
   ticketId,
   qaScenario,
+  initialWidth,
   config,
   session,
   refreshSession,
@@ -121,6 +123,8 @@ export function TicketDetailBody({
 }: {
   ticketId: string;
   qaScenario?: TicketRichTextQaScenario;
+  /** Expected container width before the first layout pass (a split pane is narrower than the window). */
+  initialWidth?: number;
   config: ReturnType<typeof getAppConfig>;
   session: ReturnType<typeof useAuth>["session"];
   refreshSession: ReturnType<typeof useAuth>["refreshSession"];
@@ -141,15 +145,42 @@ export function TicketDetailBody({
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
   const { features } = useCapabilities();
+  // A co-managed seat technician: no user directory, client notes, tags, interactions or materials.
+  const operationalOnly = features.operationalOnly;
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [createdContact, setCreatedContact] = useState<{ id: string; name: string; email?: string | null } | null>(null);
-  const placeCall = usePlaceCall();
+  const placeCallAndPrompt = usePlaceCall();
+  // The "log this call?" prompt writes an interaction, which an operational-only session cannot.
+  const placeCall = useCallback(
+    (call: Parameters<typeof placeCallAndPrompt>[0]) => {
+      if (operationalOnly) void Linking.openURL(`tel:${call.phone}`).catch(() => undefined);
+      else placeCallAndPrompt(call);
+    },
+    [operationalOnly, placeCallAndPrompt],
+  );
   const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const sectionsYRef = useRef(0);
   const checklistYRef = useRef(0);
+  const columnsYRef = useRef(0);
+  // Wide containers (iPad, opened foldable) put the conversation on the left and
+  // the record's details, tags, documents and time on the right. Measured from
+  // the scroll view itself, so a split pane and a full screen both decide by
+  // the room they actually have.
+  const { width: windowWidth } = useWindowLayout();
+  const [containerWidth, setContainerWidth] = useState(initialWidth ?? windowWidth);
+  const twoColumn = containerWidth >= DETAIL_TWO_COLUMN_MIN_WIDTH;
+  const sideColumnWidth = detailSideColumnWidth(containerWidth);
+  // Explicit, not flex: 1. After a rotation into two columns, a flexed column
+  // kept the width its expanded comment WebViews measured at and pushed the
+  // side column off screen.
+  const mainColumnWidth = containerWidth - spacing.xl * 3 - sideColumnWidth;
+  const sideYRef = useRef(0);
+  // Sections start collapsed whenever the record renders as one column, so the
+  // page stays short; only the two-column layout opens every tile.
+  const sectionsStartCollapsed = !twoColumn;
 
   const imageAuth = useMemo(() => {
     if (!config.ok || !session) return undefined;
@@ -168,6 +199,7 @@ export function TicketDetailBody({
     // Fetch all internal users on first empty query, then filter client-side
     // for subsequent typed queries. This avoids issues where the server search
     // endpoint may not match partial names the same way.
+    if (operationalOnly) return results;
     if (!query) {
       const res = await listUsers(client, { apiKey: session.accessToken, limit: 50, signal });
       if (res.ok) {
@@ -205,7 +237,7 @@ export function TicketDetailBody({
       }
     }
     return results;
-  }, [client, session]);
+  }, [client, operationalOnly, session]);
 
   const deps = { client, session, ticketId, showToast, t };
 
@@ -245,10 +277,10 @@ export function TicketDetailBody({
     boardId,
     onChecklistBlocked: () => {
       void checklistHook.fetchChecklist();
-      scrollRef.current?.scrollTo({ y: Math.max(0, sectionsYRef.current + checklistYRef.current - spacing.md), animated: true });
+      scrollRef.current?.scrollTo({ y: Math.max(0, columnsYRef.current + (twoColumn ? sideYRef.current : sectionsYRef.current) + checklistYRef.current - spacing.md), animated: true });
     },
   });
-  const priorityHook = useTicketPriority({ ...deps, fetchTicket });
+  const priorityHook = useTicketPriority({ ...deps, fetchTicket, currentPriorityId: ticket?.priority_id ?? null });
   const categoryHook = useTicketCategory({ ...deps, fetchTicket, boardId });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
@@ -360,13 +392,31 @@ export function TicketDetailBody({
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
 
+  const checklistBlock = (
+    <View onLayout={(event) => { checklistYRef.current = event.nativeEvent.layout.y; }}>
+      <ChecklistSection
+        items={checklistHook.items}
+        loading={checklistHook.loading}
+        hidden={checklistHook.hidden}
+        error={checklistHook.error}
+        actionError={checklistHook.actionError}
+        adding={checklistHook.adding}
+        updatingIds={checklistHook.updatingIds}
+        onAdd={checklistHook.addItem}
+        onToggle={(item) => { void checklistHook.toggleItem(item); }}
+        initiallyCollapsed={sectionsStartCollapsed}
+      />
+    </View>
+  );
+
   // --- Render ---
   return (
     <>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ padding: spacing.lg }}
+        contentContainerStyle={{ padding: twoColumn ? spacing.xl : spacing.lg }}
+        onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}
         refreshControl={<RefreshControl
           refreshing={refreshing}
           onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist(), bundleHook.fetchBundle()]); }}
@@ -521,7 +571,7 @@ export function TicketDetailBody({
             priorityName={ticket.priority_name ?? null}
             assignedToName={ticket.assigned_to_name ?? null}
             dueDateIso={getDueDateIso(ticket)}
-            assigneeDisabled={assignmentHook.assignmentUpdating || bundleLocked}
+            assigneeDisabled={operationalOnly || assignmentHook.assignmentUpdating || bundleLocked}
             statusDisabled={bundleLocked}
             priorityDisabled={bundleLocked}
             onStatusPress={bundleLocked ? notifyBundleLocked : () => { void statusHook.openStatusPicker(); }}
@@ -534,336 +584,356 @@ export function TicketDetailBody({
           />
         </View>
 
-        <View style={{ marginTop: spacing.md }}>
-          <DescriptionSection
-            ticket={ticket}
-            isEditing={descEditor.descriptionEditing}
-            draftContent={descEditor.descriptionDraft}
-            draftPlainText={descEditor.descriptionPlainText}
-            saving={descEditor.descriptionSaving}
-            error={descEditor.descriptionError}
-            editorRef={descEditor.descriptionEditorRef}
-            onLinkPress={qaHook.handleRichTextLinkPress}
-            qaAutoPressFirstLink={qaHook.qaAutoPressLink}
-            imageAuth={imageAuth}
-            onStartEditing={descEditor.startDescriptionEditing}
-            onCancelEditing={descEditor.cancelDescriptionEditing}
-            onSave={(notificationSuppression) => descEditor.saveDescription(notificationSuppression)}
-            onMentionSearch={handleMentionSearch}
-            mentionBaseUrl={config.ok ? config.baseUrl : null}
-            mentionAuthToken={session?.accessToken}
-            onDraftChange={(nextContent, nextPlainText) => {
-              descEditor.setDescriptionDraft(nextContent);
-              descEditor.setDescriptionPlainText(nextPlainText);
-            }}
-          />
-        </View>
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md, gap: spacing.sm }}>
-          <TicketTimerChip ticketId={ticketId} />
-          <ActionChip
-            label={t("detail.addTime")}
-            onPress={() => { timeEntryHook.openTimeEntryModal(); }}
-          />
-          <ActionChip
-            label={t("detail.more", { defaultValue: "More" })}
-            onPress={() => setMoreActionsOpen(true)}
-          />
-        </View>
-
-        {watchHook.watchError ? (
-          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
-            {watchHook.watchError}
-          </Text>
-        ) : null}
-
-        {assignmentHook.assignmentError ? (
-          <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
-            {assignmentHook.assignmentError}
-          </Text>
-        ) : null}
-
         <View
-          style={{ marginTop: spacing.lg }}
-          onLayout={(event) => { sectionsYRef.current = event.nativeEvent.layout.y; }}
+          style={twoColumn ? { flexDirection: "row", alignItems: "flex-start", gap: spacing.xl } : undefined}
+          onLayout={(event) => { columnsYRef.current = event.nativeEvent.layout.y; }}
         >
-          <View onLayout={(event) => { checklistYRef.current = event.nativeEvent.layout.y; }}>
-            <ChecklistSection
-              items={checklistHook.items}
-              loading={checklistHook.loading}
-              hidden={checklistHook.hidden}
-              error={checklistHook.error}
-              actionError={checklistHook.actionError}
-              adding={checklistHook.adding}
-              updatingIds={checklistHook.updatingIds}
-              onAdd={checklistHook.addItem}
-              onToggle={(item) => { void checklistHook.toggleItem(item); }}
-              initiallyCollapsed
+          <View style={twoColumn ? { width: mainColumnWidth } : undefined}>
+            <View style={{ marginTop: spacing.md }}>
+              <DescriptionSection
+                ticket={ticket}
+                isEditing={descEditor.descriptionEditing}
+                draftContent={descEditor.descriptionDraft}
+                draftPlainText={descEditor.descriptionPlainText}
+                saving={descEditor.descriptionSaving}
+                error={descEditor.descriptionError}
+                editorRef={descEditor.descriptionEditorRef}
+                onLinkPress={qaHook.handleRichTextLinkPress}
+                qaAutoPressFirstLink={qaHook.qaAutoPressLink}
+                imageAuth={imageAuth}
+                onStartEditing={descEditor.startDescriptionEditing}
+                onCancelEditing={descEditor.cancelDescriptionEditing}
+                onSave={(notificationSuppression) => descEditor.saveDescription(notificationSuppression)}
+                onMentionSearch={handleMentionSearch}
+                mentionBaseUrl={config.ok ? config.baseUrl : null}
+                mentionAuthToken={session?.accessToken}
+                onDraftChange={(nextContent, nextPlainText) => {
+                  descEditor.setDescriptionDraft(nextContent);
+                  descEditor.setDescriptionPlainText(nextPlainText);
+                }}
+              />
+            </View>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md, gap: spacing.sm }}>
+              {operationalOnly ? null : (
+                <>
+                  <TicketTimerChip ticketId={ticketId} />
+                  <ActionChip
+                    label={t("detail.addTime")}
+                    onPress={() => { timeEntryHook.openTimeEntryModal(); }}
+                  />
+                </>
+              )}
+              <ActionChip
+                label={t("detail.more", { defaultValue: "More" })}
+                onPress={() => setMoreActionsOpen(true)}
+              />
+            </View>
+
+            {watchHook.watchError ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {watchHook.watchError}
+              </Text>
+            ) : null}
+
+            {assignmentHook.assignmentError ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {assignmentHook.assignmentError}
+              </Text>
+            ) : null}
+
+            <View
+              style={{ marginTop: spacing.lg }}
+              onLayout={(event) => { sectionsYRef.current = event.nativeEvent.layout.y; }}
+            >
+              {twoColumn ? null : (
+                <>
+                  {checklistBlock}
+                  <View style={{ height: spacing.sm }} />
+                </>
+              )}
+              <CommentsSection
+                comments={comments}
+                visibleCount={commentDraftHook.commentsVisibleCount}
+                onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
+                error={commentsError}
+                onLinkPress={qaHook.handleRichTextLinkPress}
+                imageAuth={imageAuth}
+                baseUrl={config.ok ? config.baseUrl : null}
+                ticketId={ticketId}
+                onCommentUpdated={() => void fetchComments()}
+                onSubmitReply={commentDraftHook.submitReply}
+                initiallyCollapsed={sectionsStartCollapsed}
+              />
+              <View style={{ height: spacing.sm }} />
+              <CommentComposer
+                draftContent={commentDraftHook.commentDraft}
+                draftPlainText={commentDraftHook.commentDraftPlainText}
+                isInternal={commentDraftHook.commentIsInternal}
+                onChangeIsInternal={commentDraftHook.setCommentIsInternal}
+                isResolution={commentDraftHook.commentIsResolution}
+                onChangeIsResolution={(value) => {
+                  commentDraftHook.setCommentIsResolution(value);
+                  if (!value) {
+                    commentDraftHook.setCommentCloseStatusId(null);
+                  } else if (statusHook.statusOptions.length === 0) {
+                    void statusHook.openStatusPicker();
+                    statusHook.setStatusPickerOpen(false);
+                  }
+                }}
+                closedStatuses={bundleLocked ? [] : statusHook.statusOptions.filter((s) => s.is_closed)}
+                closeStatusId={commentDraftHook.commentCloseStatusId}
+                scheduleAt={commentDraftHook.commentScheduleAt}
+                onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
+                cc={commentDraftHook.commentCc}
+                bcc={commentDraftHook.commentBcc}
+                onChangeCc={commentDraftHook.setCommentCc}
+                onChangeBcc={commentDraftHook.setCommentBcc}
+                onSearchRecipients={handleRecipientSearch}
+                onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
+                onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
+                sending={commentDraftHook.commentSending}
+                offline={isOffline}
+                error={commentDraftHook.commentSendError}
+                editorRef={commentDraftHook.commentEditorRef}
+                onDraftChange={(nextContent, nextPlainText) => {
+                  commentDraftHook.setCommentDraft(nextContent);
+                  commentDraftHook.setCommentDraftPlainText(nextPlainText);
+                }}
+                collapsed={composerCollapsed}
+                onToggleCollapse={() => setComposerCollapsed((v) => !v)}
+                onMentionSearch={handleMentionSearch}
+                mentionBaseUrl={config.ok ? config.baseUrl : null}
+                mentionAuthToken={session?.accessToken}
+              />
+            </View>
+
+          </View>
+          <View
+            style={twoColumn ? { width: sideColumnWidth, marginTop: spacing.md } : { marginTop: spacing.lg }}
+            onLayout={(event) => { sideYRef.current = event.nativeEvent.layout.y; }}
+          >
+            {twoColumn ? (
+              <>
+                {checklistBlock}
+                <View style={{ height: spacing.sm }} />
+              </>
+            ) : null}
+            <TicketDetailsSection initiallyCollapsed={sectionsStartCollapsed}>
+            <KeyValue
+              label={t("detail.contact")}
+              value={renderEntityValue(
+                ticket.contact_name,
+                typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
+                t("detail.contact"),
+                ticket.contact_tags,
+              )}
+            >
+              {contactPhone ? (
+                <Pressable
+                  testID="ticket-detail-call-contact"
+                  onPress={() => placeCall({
+                    origin: { kind: "ticket", id: ticketId },
+                    phone: formatPhoneForDisplay(contactPhone).e164 || contactPhone,
+                    name: ticket.contact_name ?? null,
+                    contactId: ticketContactId ?? null,
+                    clientId: ticketClientId ?? null,
+                    ticketId,
+                  })}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("detail.callContact", { name: ticket.contact_name ?? "" })}
+                  style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.primary }}>
+                    {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.contact_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {ticket.contact_email ? (
+                <Pressable
+                  onPress={() => void Linking.openURL(`mailto:${ticket.contact_email}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("detail.emailContact", { name: ticket.contact_name ?? "" })}
+                  style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.primary }}>
+                    {t("detail.contactEmail")}: {ticket.contact_email}
+                  </Text>
+                </Pressable>
+              ) : null}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+                <ActionChip
+                  label={t("detail.changeContact")}
+                  disabled={contactHook.contactUpdating}
+                  onPress={contactHook.openContactPicker}
+                />
+              </View>
+              {contactHook.contactError ? (
+                <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                  {contactHook.contactError}
+                </Text>
+              ) : null}
+            </KeyValue>
+            <View style={{ height: spacing.sm }} />
+            <KeyValue
+              label={t("detail.client")}
+              value={renderEntityValue(
+                ticket.client_name,
+                typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
+                t("detail.client"),
+                ticket.client_tags,
+              )}
+            >
+              {clientPhone ? (
+                <Pressable
+                  testID="ticket-detail-call-client"
+                  onPress={() => placeCall({
+                    origin: { kind: "ticket", id: ticketId },
+                    phone: formatPhoneForDisplay(clientPhone).e164 || clientPhone,
+                    name: ticket.client_name ?? null,
+                    contactId: null,
+                    clientId: ticketClientId ?? null,
+                    ticketId,
+                  })}
+                  accessibilityRole="button"
+                  style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.primary }}>
+                    {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.client_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {ticket.client_email ? (
+                <Pressable
+                  onPress={() => void Linking.openURL(`mailto:${ticket.client_email}`)}
+                  accessibilityRole="button"
+                  style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.primary }}>
+                    {t("detail.contactEmail")}: {ticket.client_email}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {ticket.location_name ? (
+                <Pressable
+                  onPress={() => void Linking.openURL(buildMapsUrl(ticket.location_address || ticket.location_name || ""))}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("detail.openInMaps")}
+                  style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("detail.location")}</Text>
+                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
+                  {ticket.location_address ? (
+                    <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_address}</Text>
+                  ) : null}
+                </Pressable>
+              ) : null}
+              {ticketClientId && !operationalOnly ? (
+                <ClientNotesSection
+                  variant="inline"
+                  client={client}
+                  apiKey={session.accessToken}
+                  clientId={ticketClientId}
+                  titleKey="notes.ticketTitle"
+                />
+              ) : null}
+            </KeyValue>
+            <View style={{ height: spacing.sm }} />
+            <KeyValue
+              label={t("detail.category")}
+              value={stringOrDash(ticketCategoryLabel(ticket))}
+            >
+              <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
+                <ActionChip
+                  label={t("detail.changeCategory")}
+                  disabled={categoryHook.categoryUpdating}
+                  onPress={() => void categoryHook.openCategoryPicker()}
+                />
+              </View>
+              {categoryHook.categoryUpdateError && !categoryHook.categoryPickerOpen ? (
+                <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                  {categoryHook.categoryUpdateError}
+                </Text>
+              ) : null}
+            </KeyValue>
+            <View style={{ height: spacing.sm }} />
+            <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
+            <View style={{ height: spacing.sm }} />
+            <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
+            <View style={{ height: spacing.sm }} />
+            <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
+            <View style={{ height: spacing.sm }} />
+            <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
+            </TicketDetailsSection>
+            <View style={{ height: spacing.sm }} />
+            {operationalOnly ? null : (
+              <>
+                <TagsSection
+                  tags={tagsHook.tags}
+                  loading={tagsHook.tagsLoading}
+                  hidden={tagsHook.tagsHidden}
+                  error={tagsHook.tagsError}
+                  actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
+                  updating={tagsHook.tagUpdating}
+                  onAddPress={tagsHook.openTagPicker}
+                  initiallyCollapsed={sectionsStartCollapsed}
+                />
+                <View style={{ height: spacing.sm }} />
+                <CallsEmailsSection
+                  client={client}
+                  apiKey={session.accessToken}
+                  userId={meUserId ?? session.user?.id ?? null}
+                  ticketId={ticketId}
+                  clientId={ticketClientId}
+                  contactNameId={ticketContactId}
+                  reloadKey={callsReloadKey}
+                  onLogged={() => {
+                    // A logged interaction may have booked a calendar entry: arm its
+                    // local reminder now instead of waiting for the next launch/resume.
+                    void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
+                  }}
+                  initiallyCollapsed={sectionsStartCollapsed}
+                />
+                <View style={{ height: spacing.sm }} />
+              </>
+            )}
+            <DocumentsSection
+              client={client}
+              apiKey={session.accessToken}
+              ticketId={ticketId}
+              baseUrl={config.ok ? config.baseUrl : null}
+              initiallyCollapsed={sectionsStartCollapsed}
+              canDelete={!operationalOnly}
+            />
+            <View style={{ height: spacing.sm }} />
+            {operationalOnly ? null : (
+              <>
+                <MaterialsSection
+                  client={client}
+                  apiKey={session.accessToken}
+                  ticketId={ticketId}
+                  initiallyCollapsed={sectionsStartCollapsed}
+                />
+                <View style={{ height: spacing.sm }} />
+              </>
+            )}
+            <AssetsSection
+              client={client}
+              apiKey={session.accessToken}
+              ticketId={ticketId}
+              initiallyCollapsed={sectionsStartCollapsed}
+            />
+            <View style={{ height: spacing.sm }} />
+            <TimeEntriesSection
+              client={client}
+              apiKey={session.accessToken}
+              ticketId={ticketId}
+              refreshKey={timeEntriesRefreshKey}
+              meUserId={meUserId}
+              onAddPress={operationalOnly ? undefined : () => { timeEntryHook.openTimeEntryModal(); }}
+              initiallyCollapsed={sectionsStartCollapsed}
             />
           </View>
-          <View style={{ height: spacing.sm }} />
-          <CommentsSection
-            comments={comments}
-            visibleCount={commentDraftHook.commentsVisibleCount}
-            onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
-            error={commentsError}
-            onLinkPress={qaHook.handleRichTextLinkPress}
-            imageAuth={imageAuth}
-            baseUrl={config.ok ? config.baseUrl : null}
-            ticketId={ticketId}
-            onCommentUpdated={() => void fetchComments()}
-            onSubmitReply={commentDraftHook.submitReply}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <CommentComposer
-            draftContent={commentDraftHook.commentDraft}
-            draftPlainText={commentDraftHook.commentDraftPlainText}
-            isInternal={commentDraftHook.commentIsInternal}
-            onChangeIsInternal={commentDraftHook.setCommentIsInternal}
-            isResolution={commentDraftHook.commentIsResolution}
-            onChangeIsResolution={(value) => {
-              commentDraftHook.setCommentIsResolution(value);
-              if (!value) {
-                commentDraftHook.setCommentCloseStatusId(null);
-              } else if (statusHook.statusOptions.length === 0) {
-                void statusHook.openStatusPicker();
-                statusHook.setStatusPickerOpen(false);
-              }
-            }}
-            closedStatuses={bundleLocked ? [] : statusHook.statusOptions.filter((s) => s.is_closed)}
-            closeStatusId={commentDraftHook.commentCloseStatusId}
-            scheduleAt={commentDraftHook.commentScheduleAt}
-            onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
-            cc={commentDraftHook.commentCc}
-            bcc={commentDraftHook.commentBcc}
-            onChangeCc={commentDraftHook.setCommentCc}
-            onChangeBcc={commentDraftHook.setCommentBcc}
-            onSearchRecipients={handleRecipientSearch}
-            onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
-            onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
-            sending={commentDraftHook.commentSending}
-            offline={isOffline}
-            error={commentDraftHook.commentSendError}
-            editorRef={commentDraftHook.commentEditorRef}
-            onDraftChange={(nextContent, nextPlainText) => {
-              commentDraftHook.setCommentDraft(nextContent);
-              commentDraftHook.setCommentDraftPlainText(nextPlainText);
-            }}
-            collapsed={composerCollapsed}
-            onToggleCollapse={() => setComposerCollapsed((v) => !v)}
-            onMentionSearch={handleMentionSearch}
-            mentionBaseUrl={config.ok ? config.baseUrl : null}
-            mentionAuthToken={session?.accessToken}
-          />
-        </View>
-
-        <View style={{ marginTop: spacing.lg }}>
-          <TicketDetailsSection initiallyCollapsed>
-          <KeyValue
-            label={t("detail.contact")}
-            value={renderEntityValue(
-              ticket.contact_name,
-              typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
-              t("detail.contact"),
-              ticket.contact_tags,
-            )}
-          >
-            {contactPhone ? (
-              <Pressable
-                testID="ticket-detail-call-contact"
-                onPress={() => placeCall({
-                  origin: { kind: "ticket", id: ticketId },
-                  phone: formatPhoneForDisplay(contactPhone).e164 || contactPhone,
-                  name: ticket.contact_name ?? null,
-                  contactId: ticketContactId ?? null,
-                  clientId: ticketClientId ?? null,
-                  ticketId,
-                })}
-                accessibilityRole="button"
-                accessibilityLabel={t("detail.callContact", { name: ticket.contact_name ?? "" })}
-                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
-              >
-                <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.contact_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
-                </Text>
-              </Pressable>
-            ) : null}
-            {ticket.contact_email ? (
-              <Pressable
-                onPress={() => void Linking.openURL(`mailto:${ticket.contact_email}`)}
-                accessibilityRole="button"
-                accessibilityLabel={t("detail.emailContact", { name: ticket.contact_name ?? "" })}
-                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
-              >
-                <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactEmail")}: {ticket.contact_email}
-                </Text>
-              </Pressable>
-            ) : null}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-              <ActionChip
-                label={t("detail.changeContact")}
-                disabled={contactHook.contactUpdating}
-                onPress={contactHook.openContactPicker}
-              />
-            </View>
-            {contactHook.contactError ? (
-              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
-                {contactHook.contactError}
-              </Text>
-            ) : null}
-          </KeyValue>
-          <View style={{ height: spacing.sm }} />
-          <KeyValue
-            label={t("detail.client")}
-            value={renderEntityValue(
-              ticket.client_name,
-              typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
-              t("detail.client"),
-              ticket.client_tags,
-            )}
-          >
-            {clientPhone ? (
-              <Pressable
-                testID="ticket-detail-call-client"
-                onPress={() => placeCall({
-                  origin: { kind: "ticket", id: ticketId },
-                  phone: formatPhoneForDisplay(clientPhone).e164 || clientPhone,
-                  name: ticket.client_name ?? null,
-                  contactId: null,
-                  clientId: ticketClientId ?? null,
-                  ticketId,
-                })}
-                accessibilityRole="button"
-                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
-              >
-                <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.client_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
-                </Text>
-              </Pressable>
-            ) : null}
-            {ticket.client_email ? (
-              <Pressable
-                onPress={() => void Linking.openURL(`mailto:${ticket.client_email}`)}
-                accessibilityRole="button"
-                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
-              >
-                <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactEmail")}: {ticket.client_email}
-                </Text>
-              </Pressable>
-            ) : null}
-            {ticket.location_name ? (
-              <Pressable
-                onPress={() => void Linking.openURL(buildMapsUrl(ticket.location_address || ticket.location_name || ""))}
-                accessibilityRole="button"
-                accessibilityLabel={t("detail.openInMaps")}
-                style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
-              >
-                <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("detail.location")}</Text>
-                <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
-                {ticket.location_address ? (
-                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_address}</Text>
-                ) : null}
-              </Pressable>
-            ) : null}
-            {ticketClientId ? (
-              <ClientNotesSection
-                variant="inline"
-                client={client}
-                apiKey={session.accessToken}
-                clientId={ticketClientId}
-                titleKey="notes.ticketTitle"
-              />
-            ) : null}
-          </KeyValue>
-          <View style={{ height: spacing.sm }} />
-          <KeyValue
-            label={t("detail.category")}
-            value={stringOrDash(ticketCategoryLabel(ticket))}
-          >
-            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-              <ActionChip
-                label={t("detail.changeCategory")}
-                disabled={categoryHook.categoryUpdating}
-                onPress={() => void categoryHook.openCategoryPicker()}
-              />
-            </View>
-            {categoryHook.categoryUpdateError && !categoryHook.categoryPickerOpen ? (
-              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
-                {categoryHook.categoryUpdateError}
-              </Text>
-            ) : null}
-          </KeyValue>
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
-          </TicketDetailsSection>
-          <View style={{ height: spacing.sm }} />
-          <TagsSection
-            tags={tagsHook.tags}
-            loading={tagsHook.tagsLoading}
-            hidden={tagsHook.tagsHidden}
-            error={tagsHook.tagsError}
-            actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
-            updating={tagsHook.tagUpdating}
-            onAddPress={tagsHook.openTagPicker}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <CallsEmailsSection
-            client={client}
-            apiKey={session.accessToken}
-            userId={meUserId ?? session.user?.id ?? null}
-            ticketId={ticketId}
-            clientId={ticketClientId}
-            contactNameId={ticketContactId}
-            reloadKey={callsReloadKey}
-            onLogged={() => {
-              // A logged interaction may have booked a calendar entry: arm its
-              // local reminder now instead of waiting for the next launch/resume.
-              void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
-            }}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <DocumentsSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-            baseUrl={config.ok ? config.baseUrl : null}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <MaterialsSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <AssetsSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-            initiallyCollapsed
-          />
-          <View style={{ height: spacing.sm }} />
-          <TimeEntriesSection
-            client={client}
-            apiKey={session.accessToken}
-            ticketId={ticketId}
-            refreshKey={timeEntriesRefreshKey}
-            meUserId={meUserId}
-            onAddPress={() => { timeEntryHook.openTimeEntryModal(); }}
-            initiallyCollapsed
-          />
         </View>
       </ScrollView>
 
