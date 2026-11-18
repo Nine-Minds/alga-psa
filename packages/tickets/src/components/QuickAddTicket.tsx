@@ -274,6 +274,7 @@ export function QuickAddTicket({
   );
   const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
+  const [assignedToWasEdited, setAssignedToWasEdited] = useState(Boolean(prefilledAssignedTo));
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
   const [tempAdditionalAgents, setTempAdditionalAgents] = useState<
     { user_id: string; first_name: string; last_name: string; temp_id: string }[]
@@ -475,6 +476,7 @@ export function QuickAddTicket({
         }
         if (prefilledAssignedTo) {
           setAssignedTo(prefilledAssignedTo);
+          setAssignedToWasEdited(true);
         }
         if (prefilledDueDate) {
           setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -781,24 +783,6 @@ export function QuickAddTicket({
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
-    // Pre-fill assigned agent and team from board's defaults if not already set
-    if (!assignedTo && newBoardId) {
-      if (selectedBoard?.default_assigned_team_id) {
-        // Resolve current team lead dynamically
-        const defaultTeam = teams.find(t => t.team_id === selectedBoard.default_assigned_team_id);
-        if (defaultTeam?.manager_id) {
-          setAssignedTo(defaultTeam.manager_id);
-        } else if (selectedBoard.default_assigned_to) {
-          setAssignedTo(selectedBoard.default_assigned_to);
-        }
-      } else if (selectedBoard?.default_assigned_to) {
-        setAssignedTo(selectedBoard.default_assigned_to);
-      }
-    }
-    if (!assignedTeamId && selectedBoard?.default_assigned_team_id) {
-      setAssignedTeamId(selectedBoard.default_assigned_team_id);
-    }
-
     const priorityType = selectedBoard?.priority_type || 'custom';
     const defaultPriorityId = getBoardDefaultPriorityId(selectedBoard, priorities);
 
@@ -865,6 +849,7 @@ export function QuickAddTicket({
     // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
     applyLocation(source.location_id ?? null, source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
+    setAssignedToWasEdited(source.assigned_to != null);
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
       source.additional_agents.map((agent) => ({
@@ -1039,6 +1024,7 @@ export function QuickAddTicket({
     setDescriptionContent(parseTicketRichTextContent(prefilledDescription || ''));
     setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
+    setAssignedToWasEdited(Boolean(prefilledAssignedTo));
     setAssignedTeamId(null);
     setTempAdditionalAgents(
       prefilledAdditionalAgents?.length
@@ -1310,7 +1296,12 @@ export function QuickAddTicket({
         : descriptionContent;
 
       formData.append('description', serializeTicketRichTextContent(descriptionForCreate));
-      formData.append('assigned_to', assignedTo);
+      // An untouched empty picker means the caller omitted assignment, so the
+      // shared create path can apply board defaults. A deliberate clear keeps
+      // the empty value to preserve explicit-unassigned intent.
+      if (assignedTo || assignedToWasEdited) {
+        formData.append('assigned_to', assignedTo);
+      }
       formData.append('board_id', boardId);
       formData.append('status_id', statusId);
 
@@ -1836,13 +1827,16 @@ export function QuickAddTicket({
                         value={assignedTo}
                         onValueChange={(value) => {
                           setAssignedTo(value);
+                          setAssignedToWasEdited(true);
                           setAssignedTeamId(null);
                           clearErrorIfSubmitted();
                         }}
                         onTeamSelect={(teamId) => {
+                          setAssignedToWasEdited(true);
                           const team = teams.find(t => t.team_id === teamId);
                           if (team?.manager_id) {
                             setAssignedTo(team.manager_id);
+                            setAssignedToWasEdited(true);
                           }
                           setAssignedTeamId(teamId);
                           // Expand team members into additional agents
@@ -1901,6 +1895,7 @@ export function QuickAddTicket({
                             const team = teams.find(t => t.team_id === teamId);
                             if (team?.manager_id) {
                               setAssignedTo(team.manager_id);
+                              setAssignedToWasEdited(true);
                             }
                             setAssignedTeamId(teamId);
                             const members = team?.members || [];
