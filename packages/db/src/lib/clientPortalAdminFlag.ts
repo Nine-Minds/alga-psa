@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { isClientUserType } from '@alga-psa/types';
 import { tenantDb } from './tenantDb';
 
 /**
@@ -56,7 +57,7 @@ export async function syncContactClientAdminFlag(
     .where({ user_id: userId })
     .first('user_id', 'user_type', 'contact_id');
 
-  if (!user || user.user_type !== 'client' || !user.contact_id) {
+  if (!user || !isClientUserType(user.user_type) || !user.contact_id) {
     return;
   }
 
