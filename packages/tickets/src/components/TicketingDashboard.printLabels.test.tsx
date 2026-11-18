@@ -92,7 +92,8 @@ vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
 }));
 vi.mock('@alga-psa/ui/hooks', async () => {
   const actual = await vi.importActual<any>('@alga-psa/ui/hooks/useRangeSelection');
-  return { useRangeSelection: actual.useRangeSelection };
+  // The list reads the seat capability to hold its seat column and views shut; this suite is the closed case.
+  return { useRangeSelection: actual.useRangeSelection, useCapability: () => ({ enabled: false, admitted: false, resolved: true }) };
 });
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -206,6 +207,9 @@ function renderDashboard(count: number, workspaceReadOnly = false) {
     <TicketsRouteProvider>
     <TicketingDashboard
       initialTickets={tickets}
+      loadedAt={Date.now()}
+      loadedFilters={{}}
+      onRefreshListForChanges={async () => true}
       initialBoards={[]}
       initialStatuses={[]}
       initialPriorities={[]}

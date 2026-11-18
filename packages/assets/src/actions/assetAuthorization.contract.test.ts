@@ -17,12 +17,14 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
     expect(source).toContain('buildAuthorizationAwarePage<AssetListScanRow>({');
     expect(source).toContain('const listQuery = requiresRecordAuthorization');
+    // A registered built-in rule resolver restricts the list like a bundle does.
+    expect(source).toMatch(/requiresRecordAuthorization = [^;]*builtinResolversRestrict\(\{ subject: context\.subject, resource: \{ type: 'asset', action: 'read' \} \}\)/);
     expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter);');
     expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
-    expect(source).toContain('filterReadableAssets(trx, tenant, context, rows, {');
+    // List authorization, batching, pagination and redaction are exercised against the real kernel
+    // and database in server/src/test/integration/assetTypeCounts.integration.test.ts.
     expect(source).toContain('resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,');
-    expect(source).toContain('authorizeRecord: async ({ asset, readable }) => {');
     expect(source).toContain('const sourceTotal = Number(countRow.count);');
     expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
@@ -93,6 +95,21 @@ describe('asset authorization kernel contracts', () => {
       expect(source.slice(start, end === -1 ? undefined : end), action)
         .toContain('createAuthorizedAssetUpdateContextForUser');
     }
+  });
+
+  it('returns read denials as permission errors instead of letting them escape the action catch', () => {
+    // An unawaited `return withTransaction(...)` inside `try` lets the rejection skip the
+    // catch that maps it to a permissionError; the asset page then showed its generic
+    // "An error occurred" instead of the denial.
+    const actionStarts = [...source.matchAll(/^export const (\w+) = withAuth\(/gm)];
+    expect(actionStarts.length).toBeGreaterThan(0);
+    const offenders = actionStarts.flatMap((match, index) => {
+      const body = source.slice(match.index, actionStarts[index + 1]?.index ?? source.length);
+      const mapsCaughtErrors = /try \{/.test(body) && body.includes('expectedAssetActionError(error)');
+      return mapsCaughtErrors && /^\s*return withTransaction\(/m.test(body) ? [match[1]] : [];
+    });
+    expect(offenders).toEqual([]);
+    expect(source).toContain('return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetDetailBundle> => {');
   });
 
   it('T018: enforces linked-child intersection semantics in asset detail bundles for linked ticket/document payloads', () => {

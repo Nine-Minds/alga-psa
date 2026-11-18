@@ -308,6 +308,36 @@
       "expiresPrefix": "Scade:",
       "revoke": "Revoca",
       "revoking": "Revoca in corso..."
+    },
+    "seatTechnicians": {
+      "title": "Tecnici di postazione",
+      "description": "Persone che lavorano nel tuo PSA tramite la postazione cogestita di un cliente. Non vengono conteggiate tra i tuoi utenti con licenza.",
+      "clientUnavailable": "Cliente non disponibile",
+      "effectiveAccess": "Accesso effettivo",
+      "columns": {
+        "name": "Nome",
+        "email": "Email",
+        "client": "Cliente",
+        "status": "Stato",
+        "actions": "Azioni"
+      },
+      "state": {
+        "active": "Attivo",
+        "invited": "Invito in sospeso"
+      },
+      "dialog": {
+        "title": "Accesso effettivo di {{name}}",
+        "help": "Scegli un ticket per vedere se questo tecnico di postazione può leggerlo e perché.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Seleziona un ticket...",
+        "checking": "Verifica dell'accesso in corso...",
+        "allowed": "{{name}} può leggere questo ticket.",
+        "denied": "{{name}} non può leggere questo ticket.",
+        "noReasons": "Non sono stati segnalati ulteriori dettagli.",
+        "error": "Impossibile verificare l'accesso. Riprova.",
+        "close": "Chiudi",
+        "unavailable": "L'accesso effettivo non può essere verificato per questo ticket in questa edizione o configurazione."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Riferimento delle variabili dei modelli email",
       "panelTitle": "Variabili del modello",
+      "mspOnly": "Solo MSP",
+      "clientSafeHelp": "Inviato ai clienti. Le variabili riservate all'MSP non sono disponibili.",
       "inferredContract": "Attualmente non inviato. Questo contratto è dedotto dal modello.",
       "empty": "Nessuna variabile corrispondente.",
       "example": "Esempio:",
@@ -3033,7 +3065,8 @@
         "preparingPreview": "Preparazione anteprima…",
         "linking": "Collegamento account…",
         "unlinking": "Scollegamento account…",
-        "bulkLabel": "Azioni SSO in blocco {{location}}"
+        "bulkLabel": "Azioni SSO in blocco {{location}}",
+        "disabledSelectUsers": "Selezioni prima almeno un utente."
       },
       "table": {
         "email": "Email",
@@ -4123,7 +4156,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
       "nameRequired": "Il nome del ruolo è obbligatorio.",
       "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
-      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale.",
+      "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
@@ -4550,7 +4585,7 @@
     "seatNote": "I service principal non consumano licenze utente.",
     "blockedAccess": "L’accesso API e MCP ai service principal viene bloccato immediatamente sotto Pro. I record esistenti restano disponibili per la pulizia."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Mostra sui chip",
     "subtitle": "Tag mostrati accanto a contatti e clienti negli elenchi dei ticket, nelle intestazioni dei ticket e nei selettori.",
     "loading": "Caricamento…",

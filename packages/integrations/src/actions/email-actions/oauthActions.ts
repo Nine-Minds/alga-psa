@@ -17,6 +17,7 @@ import {
 import { MICROSOFT_MULTI_TENANT_AUTHORITY, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { storeMicrosoftEmailOAuthNonce } from '../../utils/email/microsoftEmailOAuthStateStore';
 import { getMicrosoftEmailSetupMetadataInternal } from '../integrations/microsoftActions';
+import { resolveGoogleMailboxOAuthClient } from '@alga-psa/shared/services/email/providers/googleMailboxOAuthClient';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -67,7 +68,11 @@ export const initiateEmailOAuth = withAuth(async (
 
     if (provider === 'google') {
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
-      clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
+      try {
+        clientId = (await resolveGoogleMailboxOAuthClient({ tenant })).clientId;
+      } catch {
+        clientId = null;
+      }
     } else {
       // Explicit issuer selection is mandatory for Microsoft. The server
       // resolves and validates ownership + Email capability + readiness and

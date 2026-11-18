@@ -102,6 +102,8 @@ async function updateSoftwareCatalogEntryAuthorized(
   if (updates.is_security_relevant !== undefined) updateData.is_security_relevant = updates.is_security_relevant;
 
   if (Object.keys(updateData).length > 0) {
+    // No trigger stamps this where the table is Citus-distributed.
+    updateData.updated_at = new Date();
     await tenantScopedTable(knex, tenant, 'software_catalog')
       .where({ software_id: softwareId })
       .update(updateData);
@@ -216,6 +218,49 @@ export const getAssetSoftware = withAuth(async (
       return expected;
     }
     console.error('Error getting asset software:', error);
+    throw error;
+  }
+});
+
+/**
+ * Raw input for the REST asset gate. The route checks record access before calling this action and projects every
+ * returned row under that retained decision before filtering, counting, or serializing it.
+ */
+export const getAssetSoftwareForApi = withAuth(async (
+  user,
+  { tenant },
+  assetId: string,
+): Promise<AssetSoftwareDisplayItem[] | AssetActionError> => {
+  const { knex } = await createTenantKnex();
+  try {
+    if (!await hasPermission(user, 'asset', 'read')) {
+      throw new Error('Permission denied: Cannot read assets');
+    }
+    if (!await authorizeSoftwareAssetRead(knex, tenant, user, assetId)) return [];
+    const rows = await tenantScopedTable(knex, tenant, 'v_asset_software_details')
+      .where('asset_id', assetId)
+      .select(
+        'software_id', 'software_name as name', 'publisher', 'category', 'software_type', 'version',
+        'install_date', 'size_bytes', 'first_seen_at', 'is_current', 'is_managed', 'is_security_relevant',
+      )
+      .orderBy('software_name');
+    return rows.map((row: any) => ({
+      software_id: row.software_id,
+      name: row.name,
+      publisher: row.publisher,
+      category: row.category as SoftwareCategory,
+      software_type: row.software_type as SoftwareType,
+      version: row.version,
+      install_date: row.install_date,
+      size_bytes: row.size_bytes,
+      first_seen_at: row.first_seen_at,
+      is_current: row.is_current,
+      is_managed: row.is_managed,
+      is_security_relevant: row.is_security_relevant,
+    }));
+  } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });

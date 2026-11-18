@@ -160,6 +160,13 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
 
   const audienceCode = (error as { code?: unknown } | null)?.code;
   if (audienceCode === 'HUMAN_WORK_ASSIGNEE_INVALID') {
+    // A seat technician is an active internal user, so "choose active internal agents" would send
+    // the user looking for the wrong fault: say that the ticket is outside their client IT scope.
+    if ((error as { reason?: unknown }).reason === 'seat_out_of_scope') {
+      return actionError(
+        "This would leave a client IT technician on work outside their scope. Client IT technicians work only on their own client's tickets, on boards shared with them.",
+      );
+    }
     return actionError(
       'One or more selected agents cannot be assigned. Choose active internal agents and try again.',
     );

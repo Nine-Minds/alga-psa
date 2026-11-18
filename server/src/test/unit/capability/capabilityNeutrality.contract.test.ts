@@ -130,6 +130,15 @@ describe('capability neutrality on the real evaluator path', () => {
     expect(posthogNode.isFeatureEnabled).toHaveBeenCalledTimes(2);
   });
 
+  it('co-managed-seat is as free as co-managed: closed, zero SQL, zero PostHog calls', async () => {
+    const d = await evaluateCapability('co-managed-seat', 'kansas');
+    expect(d).toMatchObject({ admitted: false, served: false, forced: null });
+    expect(d.reasons).toEqual({ admitted: 'resolver-unregistered', served: 'resolver-unregistered' });
+    expect(await filterServed('co-managed-seat', ['a', 'b', 'c'])).toEqual([]);
+    expect(posthogNode.isFeatureEnabled).not.toHaveBeenCalled();
+    expect(sqlCalls()).toBe(0);
+  });
+
   it('admits, serves and filterServed are individually free', async () => {
     await admits('co-managed', 'kansas');
     await serves('co-managed', 'kansas');
@@ -144,6 +153,8 @@ describe('capability neutrality on the real evaluator path', () => {
       [FLAG]: false,
       [capabilityServedBootstrapKey('co-managed')]: false,
       [capabilityAdmitBootstrapKey('co-managed')]: false,
+      [capabilityServedBootstrapKey('co-managed-seat')]: false,
+      [capabilityAdmitBootstrapKey('co-managed-seat')]: false,
     });
     expect(posthogNode.isFeatureEnabled).toHaveBeenCalledTimes(1);
     expect(posthogNode.isFeatureEnabled.mock.calls[0][0]).toBe(FLAG);

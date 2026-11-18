@@ -157,6 +157,8 @@
         "ghost": "oregistrerad materialförbrukning",
         "rmaAging": "åldrande returärende",
         "rmaClient": "ersättningsenhet",
+        "rmaVendorReturnOverdue": "försenad retur till leverantör",
+        "rmaVendorReturnApproaching": "retur till leverantör snart förfallen",
         "priceCreep": "kostnadsökning",
         "billCreep": "fakturaökning",
         "billsOverdue": "förfallna leverantörsfakturor",
@@ -165,7 +167,8 @@
         "stockOut": "slut i lager",
         "poPartial": "dellevererad inköpsorder",
         "warranty": "garanti",
-        "deadStock": "stillaliggande lager"
+        "deadStock": "stillaliggande lager",
+        "rmaVendorReturn": "Försenad retur till leverantör"
       },
       "fact": {
         "unbilledSo": "skickat, ännu inte fakturerat",
@@ -177,6 +180,8 @@
         "ghostTech": "stängda hårdvaruärenden: {{count}}, inga delar fakturerade",
         "rmaVendor": "kreditering utestår – inget svar på {{days}} d",
         "rmaClient": "ersättningsenhet saknas fortfarande",
+        "rmaVendorReturnOverdue": "retur till leverantör förföll {{date}} — {{days}} dagar försenad",
+        "rmaVendorReturnApproaching": "retur till leverantör senast {{date}} — {{days}} dagar kvar",
         "priceCreepSo": "priset baseras fortfarande på tidigare kostnad",
         "priceCreepQuotes": "öppna offerter som nu ligger under aktuell kostnad: {{count}}",
         "priceCreepBill": "fakturan överstiger motsvarande inköpsorder",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} ligger under beställningspunkten",
         "poPartial": "delvis mottagen inköpsorder är fortfarande öppen",
         "warranty": "enheter vars garanti går ut inom 30 d: {{count}}",
-        "deadStock": "inga lagerrörelser på 90 dagar"
+        "deadStock": "inga lagerrörelser på 90 dagar",
+        "rmaVendorReturn": "Retur till leverantör senast {{date}} — {{days}} dagar försenad"
       },
       "meta": {
         "unbilledSo": "{{so}} · rader: {{lines}} · skickat för {{days}} d sedan",
@@ -207,7 +213,8 @@
         "stockLevel": "tillgängligt {{available}} · beställningspunkt {{reorder}}",
         "poPartial": "{{po}} · {{received}} av {{ordered}} mottagna · {{vendor}}",
         "warranty": "kunder: {{count}}",
-        "deadStock": "platser som binder rörelsekapital: {{locations}}"
+        "deadStock": "platser som binder rörelsekapital: {{locations}}",
+        "rmaVendorReturn": "{{ref}} · sista returdag till leverantören"
       },
       "metric": {
         "ageDays": "{{days}} d",
@@ -1378,6 +1385,7 @@
       "confirmShipDeadUnit": "Skicka tillbaka den defekta enheten till leverantören. Enheten i förvar registreras som hos leverantören.",
       "confirmVendorReceipt": "Bekräfta att leverantören har tagit emot den defekta enheten. Ärendet stängs som löst och förvaret som återlämnat till leverantören.",
       "deadUnitNotShipped": "Defekt enhet ännu inte skickad, förfallodag {{date}}",
+      "deadUnitApproaching": "Retur av defekt enhet snart förfallen: {{date}}",
       "deadUnitShippedLate": "Defekt enhet skickad för sent, förfallodag {{date}}",
       "returnByHint": "Datumet då leverantören vill ha den defekta enheten skickad, räknat från leverans av denna ersättning. Lämna som det är för att behålla datumet från godkännandet.",
       "actions": {
@@ -1393,7 +1401,8 @@
         "returnToClient": "Returnera till kund",
         "shipDeadUnitToVendor": "Skicka defekt enhet till leverantören",
         "confirmVendorReceipt": "Leverantören har tagit emot den defekta enheten",
-        "close": "Stäng RMA"
+        "close": "Stäng RMA",
+        "chargeVendorNonReturn": "Registrera avgift för utebliven retur till leverantören"
       },
       "events": {
         "opened": "Ärende öppnat",
@@ -1409,7 +1418,8 @@
         "deadUnitShipped": "Defekt enhet skickad till leverantören",
         "vendorReceiptConfirmed": "Leverantören har tagit emot den defekta enheten",
         "closed": "Stängt",
-        "note": "Anteckning"
+        "note": "Anteckning",
+        "vendorNonReturnCharge": "Avgift för utebliven retur till leverantören registrerad"
       },
       "outcome": {
         "covered": "Täckt",
@@ -1444,7 +1454,10 @@
         "inboundTracking": "Inkommande spårningsnummer",
         "counterparty": "Returnerad till",
         "closeReason": "Orsak till stängning",
-        "note": "Anteckning"
+        "note": "Anteckning",
+        "vendorChargeAmount": "Avgiftsbelopp",
+        "vendorChargeCurrency": "Valuta",
+        "selectCurrency": "Välj valuta"
       },
       "claim": {
         "title": "Nytt garantiärende",
@@ -1460,7 +1473,8 @@
         "track": "Spåra",
         "stockHint": "Enheter som sålts från lager kan inte anmälas här. Använd i stället Öppna RMA från lagerenheten.",
         "submit": "Öppna ärende"
-      }
+      },
+      "vendorChargeHint": "När avgiften registreras avslutas den försenade returskyldigheten gentemot leverantören. Den registrerar inte frakt eller mottagning."
     }
   },
   "salesOrders": {

@@ -6,23 +6,17 @@ import { TicketModel } from '@shared/models/ticketModel';
 import { ticketCreatedPublishedByCaller } from '@shared/lib/tickets/ticketLifecycleEvents';
 import type { Knex } from 'knex';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
+import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import {
+  normalizeTicketSubject,
+  renderServiceRequestTemplate,
+  type ServiceRequestTemplateFormat,
+} from '../../ticketTextTemplate';
 
 function getStringConfig(config: Record<string, unknown>, key: string): string | undefined {
   const value = config[key];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
-}
-
-function renderTemplate(
-  template: string,
-  payload: Record<string, unknown>
-): string {
-  return template.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_match, fieldKey: string) => {
-    const value = payload[fieldKey];
-    if (value === null || value === undefined) {
-      return '';
-    }
-    return String(value);
-  });
 }
 
 function getNumberConfig(config: Record<string, unknown>, key: string): number | undefined {
@@ -37,14 +31,22 @@ function getNumberConfig(config: Record<string, unknown>, key: string): number |
   return undefined;
 }
 
-function buildTicketTitle(
-  contextPayload: Record<string, unknown>,
+export interface TicketTextContext {
+  formSchema: Record<string, unknown> | undefined;
+  payload: Record<string, unknown>;
+  format: ServiceRequestTemplateFormat;
+}
+
+/** Subject chain: template, then legacy `titleFieldKey`, then the first non-empty answer, then `Service Request <id8>`. */
+export function buildTicketTitle(
+  text: TicketTextContext,
   definitionId: string,
   config: Record<string, unknown>
 ): string {
+  const { payload } = text;
   const configuredTemplate = getStringConfig(config, 'titleTemplate');
   if (configuredTemplate) {
-    const rendered = renderTemplate(configuredTemplate, contextPayload).trim();
+    const rendered = normalizeTicketSubject(renderServiceRequestTemplate(configuredTemplate, text));
     if (rendered.length > 0) {
       return rendered;
     }
@@ -52,37 +54,109 @@ function buildTicketTitle(
 
   const configuredFieldKey = getStringConfig(config, 'titleFieldKey');
   if (configuredFieldKey) {
-    const configuredValue = contextPayload[configuredFieldKey];
-    if (typeof configuredValue === 'string' && configuredValue.trim().length > 0) {
-      return configuredValue.trim();
+    const configuredValue = payload[configuredFieldKey];
+    if (typeof configuredValue === 'string') {
+      const normalized = normalizeTicketSubject(configuredValue);
+      if (normalized.length > 0) {
+        return normalized;
+      }
     }
   }
 
-  const firstStringValue = Object.values(contextPayload).find(
-    (value) => typeof value === 'string' && value.trim().length > 0
-  ) as string | undefined;
-
-  if (firstStringValue) {
-    return firstStringValue.trim();
+  for (const value of Object.values(payload)) {
+    if (typeof value === 'string') {
+      const normalized = normalizeTicketSubject(value);
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
   }
 
   return `Service Request ${definitionId.slice(0, 8)}`;
 }
 
-function buildTicketDescription(
-  payload: Record<string, unknown>,
+interface FormFieldSnapshot {
+  key?: unknown;
+  type?: unknown;
+  label?: unknown;
+  options?: Array<{ label?: unknown; value?: unknown }>;
+}
+
+const textCell = (text: string, bold = false) => [
+  { type: 'text', text, styles: bold ? { bold: true } : {} },
+];
+
+const paragraph = (text: string) => ({ type: 'paragraph', content: textCell(text) });
+
+// LEVERAGE: pattern service-request-answer-display — the portal submission page (submissionFieldPresentation.ts) resolves the same label/option/checkbox display values.
+function describeAnswer(
+  field: FormFieldSnapshot | undefined,
+  value: unknown,
+  format: ServiceRequestTemplateFormat
+): string {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (field?.type === 'checkbox') {
+    return value === true || value === 'true' || value === 'on' || value === '1' ? format.yes : format.no;
+  }
+  if (field?.type === 'select' && Array.isArray(field.options)) {
+    const selected = field.options.find((option) => option?.value === String(value));
+    if (typeof selected?.label === 'string' && selected.label.trim()) {
+      return selected.label;
+    }
+  }
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+
+/**
+ * The ticket description as serialized rich-text blocks: the configured prefix,
+ * then one row per answer with the field's label, in form order. Cells use the
+ * inline-array form, which the ticket editor and the notification email
+ * renderer both read.
+ */
+export function buildTicketDescription(
+  text: TicketTextContext,
   config: Record<string, unknown>
 ): string {
-  const descriptionPrefix = getStringConfig(config, 'descriptionPrefix');
+  const { payload, formSchema } = text;
+  const configuredPrefix = getStringConfig(config, 'descriptionPrefix');
+  // Line breaks are kept: only the subject is normalized.
+  const descriptionPrefix = configuredPrefix ? renderServiceRequestTemplate(configuredPrefix, text).trim() || undefined : undefined;
   const includeFormResponses = config.includeFormResponsesInDescription !== false;
-  const payloadLines = Object.entries(payload).map(([key, value]) => `${key}: ${String(value)}`);
-  const payloadSummary = payloadLines.length > 0 ? payloadLines.join('\n') : 'No structured payload captured.';
+  const emptySummary = 'No structured payload captured.';
+  const blocks: unknown[] = descriptionPrefix ? [paragraph(descriptionPrefix)] : [];
 
   if (!includeFormResponses) {
-    return descriptionPrefix ?? 'No structured payload captured.';
+    return JSON.stringify(blocks.length > 0 ? blocks : [paragraph(emptySummary)]);
   }
 
-  return descriptionPrefix ? `${descriptionPrefix}\n\n${payloadSummary}` : payloadSummary;
+  const fields: FormFieldSnapshot[] = Array.isArray(formSchema?.fields)
+    ? (formSchema.fields as FormFieldSnapshot[]).filter((field) => typeof field?.key === 'string')
+    : [];
+  const fieldByKey = new Map(fields.map((field) => [field.key as string, field]));
+  const orderedKeys = [
+    ...fields.map((field) => field.key as string).filter((key) => key in payload),
+    ...Object.keys(payload).filter((key) => !fieldByKey.has(key)),
+  ];
+
+  if (orderedKeys.length === 0) {
+    blocks.push(paragraph(emptySummary));
+    return JSON.stringify(blocks);
+  }
+
+  blocks.push({
+    type: 'table',
+    content: {
+      type: 'tableContent',
+      rows: orderedKeys.map((key) => {
+        const field = fieldByKey.get(key);
+        const label = typeof field?.label === 'string' && field.label.trim() ? field.label.trim() : key;
+        return { cells: [textCell(label, true), textCell(describeAnswer(field, payload[key], text.format))] };
+      }),
+    },
+  });
+  return JSON.stringify(blocks);
 }
 
 function validateTicketOnlyExecutionConfig(config: Record<string, unknown>) {
@@ -204,8 +278,17 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           } as const;
         }
 
-        const title = buildTicketTitle(context.payload, context.definitionId, context.config);
-        const description = buildTicketDescription(context.payload, context.config);
+        // Once per execution, on the provider's transaction (no second pool connection). The locale is
+        // the tenant's default, not the requester's: the subject is a shared record read by technicians.
+        const locale = await getTenantDefaultLocale(context.tenant, 'internal', trx);
+        const { t } = await getServerTranslation(locale, 'common');
+        const text: TicketTextContext = {
+          formSchema: context.formSchema,
+          payload: context.payload,
+          format: { locale, yes: t('yes', { defaultValue: 'Yes' }), no: t('no', { defaultValue: 'No' }) },
+        };
+        const title = buildTicketTitle(text, context.definitionId, context.config);
+        const description = buildTicketDescription(text, context.config);
 
         const ticket = await TicketModel.createTicketWithRetry(
           {

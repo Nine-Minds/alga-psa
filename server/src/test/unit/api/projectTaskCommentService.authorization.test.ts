@@ -42,7 +42,7 @@ vi.mock('../../../../../packages/projects/src/models/project', () => ({
   default: { getById: async (_t: unknown, _n: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../../../../../packages/projects/src/lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectActionDecider: async () => async (p: { project_id: string }) => ({ allowed: state.allowedProjects.has(p.project_id), redactedFields: [], governed: false }),
 }));
 vi.mock('../../../../../packages/projects/src/lib/taskComments/taskCommentService', () => svc);
 

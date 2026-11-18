@@ -1,4 +1,5 @@
 import { registerTicketEmailSubscriber, unregisterTicketEmailSubscriber } from './ticketEmailSubscriber';
+import { registerTicketListChangeSubscriber, unregisterTicketListChangeSubscriber } from './ticketListChangeSubscriber';
 import { registerProjectEmailSubscriber, unregisterProjectEmailSubscriber } from './projectEmailSubscriber';
 import { registerSurveySubscriber, unregisterSurveySubscriber } from './surveySubscriber';
 import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from './calendarSyncSubscriber';
@@ -28,10 +29,15 @@ import {
   unregisterInboundAuthPauseNotificationSubscriber,
 } from './inboundAuthPauseNotificationSubscriber';
 import {
+  registerInboundQuarantineNotificationSubscriber,
+  unregisterInboundQuarantineNotificationSubscriber,
+} from './inboundQuarantineNotificationSubscriber';
+import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
 import { registerCoManagedRoutingSubscriber, unregisterCoManagedRoutingSubscriber } from './coManagedRoutingSubscriber';
+import { registerCoManagedSeatHandoffNotifications, unregisterCoManagedSeatHandoffNotifications } from '../../notifications/coManagedSeatNotifications';
 import { ENTITY_WEBHOOK_SUBSCRIBERS } from './entityWebhookSubscribers';
 import { registerThreecxPhonebookSubscriber, unregisterThreecxPhonebookSubscriber } from './threecxPhonebookSubscriber';
 
@@ -42,6 +48,7 @@ type SubscriberRegistration = {
 
 const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'ticketEmail', register: registerTicketEmailSubscriber },
+  { name: 'ticketListChange', register: registerTicketListChangeSubscriber },
   { name: 'projectEmail', register: registerProjectEmailSubscriber },
   { name: 'survey', register: registerSurveySubscriber },
   { name: 'calendarSync', register: registerCalendarSyncSubscriber },
@@ -61,15 +68,19 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
   { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
   { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
+  { name: 'inboundQuarantineNotification', register: registerInboundQuarantineNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: registerThreecxPhonebookSubscriber },
   { name: 'coManagedRouting', register: registerCoManagedRoutingSubscriber },
+  // Not a bus subscription: listens for seat handoffs the command announces after commit.
+  { name: 'coManagedSeatHandoff', register: registerCoManagedSeatHandoffNotifications },
   // client / contact / client_location webhooks: one registry-driven subscriber per entity.
   ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.register() })),
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'ticketEmail', register: unregisterTicketEmailSubscriber },
+  { name: 'ticketListChange', register: unregisterTicketListChangeSubscriber },
   { name: 'projectEmail', register: unregisterProjectEmailSubscriber },
   { name: 'survey', register: unregisterSurveySubscriber },
   { name: 'calendarSync', register: unregisterCalendarSyncSubscriber },
@@ -83,6 +94,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
   { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
   { name: 'inboundAuthPauseNotification', register: unregisterInboundAuthPauseNotificationSubscriber },
+  { name: 'inboundQuarantineNotification', register: unregisterInboundQuarantineNotificationSubscriber },
   { name: 'webhook', register: unregisterWebhookSubscriber },
   { name: 'searchIndex', register: unregisterSearchIndexSubscriber },
   { name: 'inventoryNotification', register: unregisterInventoryNotificationSubscriber },
@@ -92,6 +104,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: unregisterThreecxPhonebookSubscriber },
   { name: 'coManagedRouting', register: unregisterCoManagedRoutingSubscriber },
+  { name: 'coManagedSeatHandoff', register: unregisterCoManagedSeatHandoffNotifications },
   ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.unregister() })),
 ];
 

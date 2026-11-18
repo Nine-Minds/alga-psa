@@ -594,6 +594,7 @@
       "requester": "Aanvrager",
       "sharedIt": "Gedeelde IT",
       "organizationPrivate": "Privé voor organisatie",
+      "private": "Privé",
       "placeholder": "Wie kan dit zien?",
       "required": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     },
@@ -786,6 +787,13 @@
     "boardTabs": {
       "all": "Alle tickets"
     },
+    "seatViews": {
+      "clientIt": "Klant-IT",
+      "msp": "Bij de MSP",
+      "unassigned": "Niet toegewezen",
+      "all": "Alle",
+      "empty": "Momenteel geen tickets in \"{{view}}\"."
+    },
     "boardHeader": {
       "open": "Openstaand",
       "overdue": "Te laat",
@@ -814,7 +822,12 @@
     "exportSelectedTooltip_few": "Exporteer {{count}} geselecteerde tickets naar CSV",
     "exportSelectedTooltip_many": "Exporteer {{count}} geselecteerde tickets naar CSV",
     "selectAllMatching_few": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
-    "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen"
+    "selectAllMatching_many": "Selecteer alle {{count}} tickets die aan uw filters voldoen",
+    "responsibility": {
+      "column": "Verantwoordelijk",
+      "all": "Alle verantwoordelijken",
+      "filter": "Verantwoordelijkheid"
+    }
   },
   "bulk": {
     "bundleTickets": "Tickets bundelen",
@@ -1083,7 +1096,20 @@
     "moveConfirm_few": "Verplaats {{count}} tickets",
     "moveConfirm_many": "Verplaats {{count}} tickets",
     "moveSuccess_few": "{{count}} tickets verplaatst",
-    "moveSuccess_many": "{{count}} tickets verplaatst"
+    "moveSuccess_many": "{{count}} tickets verplaatst",
+    "handoff": {
+      "unknownTicket": "Ticket",
+      "rowNotLoaded": "De huidige status van dit ticket is niet geladen. Open de lijstpagina waarop het staat en probeer het opnieuw.",
+      "partialFailure": "Sommige tickets konden niet worden overgedragen",
+      "failure": "Het overdragen van de geselecteerde tickets is mislukt",
+      "failedItemsHeading": "De volgende tickets konden niet worden overgedragen:",
+      "success_one": "{{count}} ticket overgedragen",
+      "success_other": "{{count}} tickets overgedragen",
+      "promptToClientIt_one": "De IT van de klant wordt verantwoordelijk voor dit ticket. De notitie wordt gedeeld met de technici van de klant. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToClientIt_other": "De IT van de klant wordt verantwoordelijk voor elk van deze {{count}} tickets. De notitie wordt gedeeld met de technici van de klant. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToMsp_one": "De MSP wordt verantwoordelijk voor dit ticket. De notitie wordt gedeeld met de MSP. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd.",
+      "promptToMsp_other": "De MSP wordt verantwoordelijk voor elk van deze {{count}} tickets. De notitie wordt gedeeld met de MSP. Een ticket dat niet kan worden overgedragen, blijft ongewijzigd."
+    }
   },
   "quickAdd": {
     "dialogTitle": "Ticket toevoegen",
@@ -1271,6 +1297,7 @@
     "keepEditing": "Doorgaan met bewerken",
     "statusRequiresSelection": "Selecteer een status voor het nieuwe bord voordat u opslaat.",
     "notAssigned": "Niet toegewezen",
+    "clientItGroup": "IT van de klant",
     "additionalAgentsTooltip": "Extra medewerkers:",
     "loading": "Laden...",
     "tagsCannotBeManaged": "Tags kunnen niet worden beheerd",
@@ -1913,6 +1940,23 @@
     },
     "comment": {
       "audienceRequired": "Kies wie deze opmerking kan zien voordat u deze plaatst."
+    },
+    "seatHandoff": {
+      "invalidHandoff": "Schrijf een gedeelde notitie voor de IT van de klant voordat u dit ticket overdraagt.",
+      "ticketNotFound": "Dit ticket is niet meer beschikbaar.",
+      "noArrangement": "De klant van dit ticket heeft geen co-managed seat-overeenkomst meer.",
+      "operationConflict": "Deze overdracht is met andere gegevens gestart. Probeer het opnieuw.",
+      "changed": "Dit ticket is overgedragen of opnieuw toegewezen. Vernieuw het ticket voordat u het opnieuw probeert.",
+      "alreadyResponsible": "De IT van de klant is al verantwoordelijk voor dit ticket. Vernieuw het ticket om de huidige status te zien.",
+      "actorNotAllowed": "U kunt dit ticket niet overdragen aan de IT van de klant.",
+      "boardOutOfScope": "Het bord van dit ticket wordt niet gedeeld met de IT van de klant, dus het kan niet worden overgedragen.",
+      "technicianNotAvailable": "De geselecteerde technicus is niet meer beschikbaar voor deze klant. Kies een andere of laat het ticket niet toegewezen.",
+      "unavailable": "Tickets overdragen aan de IT van de klant is niet beschikbaar.",
+      "invalidHandoffToMsp": "Schrijf een gedeelde notitie voor de MSP voordat u dit ticket overdraagt.",
+      "alreadyResponsibleMsp": "De MSP is al verantwoordelijk voor dit ticket. Vernieuw het ticket om de huidige status te zien.",
+      "actorNotAllowedMsp": "U kunt dit ticket niet aan de MSP overdragen.",
+      "unavailableMsp": "Tickets overdragen aan de MSP is niet beschikbaar.",
+      "unexpected": "Dit ticket kon niet worden overgedragen. Vernieuw de lijst om te zien hoe het ervoor staat en probeer het opnieuw."
     }
   },
   "ticketSection": {
@@ -2100,6 +2144,18 @@
   "integration": {
     "loadTicketFailed": "Kan ticket niet laden",
     "noUserSession": "Geen gebruikerssessie gevonden"
+  },
+  "seatEffort": {
+    "title": "Inspanning",
+    "clientIt": "IT van de klant",
+    "msp": "MSP",
+    "combined": "Gecombineerd",
+    "yours": "Uw tijd",
+    "columns": {
+      "date": "Datum",
+      "duration": "Duur",
+      "notes": "Notities"
+    }
   },
   "bento": {
     "hero": {
@@ -2388,7 +2444,9 @@
       "builtInGroup": "Ingebouwde systemen",
       "customGroup": "Aangepaste systemen",
       "urlPreview": "Opent:",
-      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken."
+      "urlPreviewIncomplete": "Vul de velden hierboven in om de link te bekijken.",
+      "title": "Titel",
+      "titlePlaceholder": "Optioneel, bijv. de naam van het artikel"
     },
     "errors": {
       "ticketNotFound": "Ticket niet gevonden",
@@ -2800,7 +2858,8 @@
       "details": "Sjabloon",
       "ticket": "Ticket",
       "checklist": "Controlelijst",
-      "customFields": "Aangepaste velden"
+      "customFields": "Aangepaste velden",
+      "links": "Documentatiekoppelingen"
     },
     "fields": {
       "name": "Sjabloonnaam",
@@ -2855,13 +2914,33 @@
       "invalidReferences": "{{problems}}",
       "notAvailable": "Ticketsjablonen zijn niet beschikbaar",
       "subcategoryNeedsCategory": "Een subcategorie vereist een categorie",
-      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze."
+      "inUseBySchedules": "In gebruik door {{count}} terugkerend(e) schema('s): {{schedules}}. Wijs ze eerst naar een andere sjabloon of archiveer ze.",
+      "duplicateLink": "Deze sjabloon heeft die documentatiekoppeling al."
     },
     "usage": {
       "schedules": "In gebruik door {{count}} schema's",
       "paused": "gepauzeerd",
       "tickets": "{{count}} tickets aangemaakt met deze sjabloon",
       "scheduleThis": "Deze sjabloon inplannen…"
+    },
+    "links": {
+      "help": "Worden als verwijzingen gekopieerd naar elk ticket dat uit deze sjabloon wordt gemaakt. Latere wijzigingen aan de sjabloon veranderen bestaande tickets niet.",
+      "empty": "Geen documentatiekoppelingen.",
+      "add": "Koppeling toevoegen",
+      "remove": "Koppeling verwijderen",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "dialogTitle": "Documentatiekoppeling toevoegen",
+      "pickFromHudu": "Kiezen uit Hudu",
+      "huduPickerTitle": "Een Hudu-artikel kiezen",
+      "huduSearch": "Hudu-artikelen zoeken...",
+      "huduLoading": "Hudu-artikelen laden...",
+      "huduDisconnected": "Hudu is niet verbonden. U kunt nog steeds een koppeling toevoegen door de gegevens in te voeren.",
+      "huduError": "Hudu is niet bereikbaar. Probeer het later opnieuw.",
+      "huduEmpty": "Geen Hudu-artikelen gevonden.",
+      "huduSelect": "Selecteren",
+      "huduPrev": "Vorige",
+      "huduNext": "Volgende"
     }
   },
   "enums": {
@@ -3008,6 +3087,24 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket bijgewerkt",
+    "updatedMany": "{{count}} tickets bijgewerkt",
+    "newOne": "1 nieuw ticket",
+    "newMany": "{{count}} nieuwe tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nieuw ticket en 1 bijgewerkt ticket",
+        "manyUpdated": "1 nieuw ticket en {{updatedCount}} bijgewerkte tickets"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nieuwe tickets en 1 bijgewerkt ticket",
+        "manyUpdated": "{{newCount}} nieuwe tickets en {{updatedCount}} bijgewerkte tickets"
+      }
+    },
+    "updatedBadge": "Bijgewerkt",
+    "boardActivity": "Nieuwe activiteit op dit bord"
   },
   "batchDuplicate": {
     "title": "#{{number}} dupliceren voor contacten",
@@ -3269,5 +3366,21 @@
   "statusChange": {
     "title": "Ticketstatus bijwerken",
     "message": "Weet u zeker dat u de status wilt wijzigen van \"{{from}}\" naar \"{{to}}\"?"
+  },
+  "seatResponsibility": {
+    "clientIt": "IT van de klant",
+    "msp": "MSP",
+    "label": "Verantwoordelijk",
+    "chipTitle": "Wie verantwoordelijk is voor dit ticket",
+    "handToClientIt": "Overdragen aan IT van de klant",
+    "handedToClientIt": "Overgedragen aan IT van de klant",
+    "handing": "Bezig met overdragen…",
+    "handPrompt": "De IT van de klant wordt verantwoordelijk voor dit ticket en uw SLA-timers worden gepauzeerd tot het terugkomt. De notitie wordt gedeeld met de technici van de klant.",
+    "noteLabel": "Gedeelde notitie voor IT van de klant",
+    "technicianLabel": "Technicus (optioneel)",
+    "technicianPlaceholder": "Elke technicus van deze klant",
+    "technicianNone": "Toegewezene ongewijzigd laten",
+    "handToMsp": "Overdragen aan MSP",
+    "noteLabelMsp": "Gedeelde notitie voor de MSP"
   }
 }

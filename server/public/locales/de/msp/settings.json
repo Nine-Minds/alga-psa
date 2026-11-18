@@ -308,6 +308,36 @@
       "expiresPrefix": "Läuft ab:",
       "revoke": "Widerrufen",
       "revoking": "Wird widerrufen..."
+    },
+    "seatTechnicians": {
+      "title": "Seat-Techniker",
+      "description": "Personen, die über den Co-Managed-Seat eines Kunden in Ihrer PSA arbeiten. Sie zählen nicht zu Ihren lizenzierten Benutzern.",
+      "clientUnavailable": "Kunde nicht verfügbar",
+      "effectiveAccess": "Effektiver Zugriff",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "client": "Kunde",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "state": {
+        "active": "Aktiv",
+        "invited": "Einladung ausstehend"
+      },
+      "dialog": {
+        "title": "Effektiver Zugriff für {{name}}",
+        "help": "Wählen Sie ein Ticket, um zu sehen, ob dieser Seat-Techniker es lesen kann und warum.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Ticket auswählen ...",
+        "checking": "Zugriff wird geprüft ...",
+        "allowed": "{{name}} kann dieses Ticket lesen.",
+        "denied": "{{name}} kann dieses Ticket nicht lesen.",
+        "noReasons": "Es wurden keine weiteren Details gemeldet.",
+        "error": "Der Zugriff konnte nicht geprüft werden. Versuchen Sie es erneut.",
+        "close": "Schließen",
+        "unavailable": "Der effektive Zugriff kann für dieses Ticket in dieser Edition oder Konfiguration nicht geprüft werden."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Variablenreferenz für E-Mail-Vorlagen",
       "panelTitle": "Vorlagenvariablen",
+      "mspOnly": "Nur MSP",
+      "clientSafeHelp": "Wird an Kunden gesendet. Variablen nur für MSP sind nicht verfügbar.",
       "inferredContract": "Wird derzeit nicht gesendet. Dieser Vertrag wird aus der Vorlage abgeleitet.",
       "empty": "Keine passenden Variablen.",
       "example": "Beispiel:",
@@ -3033,7 +3065,8 @@
         "preparingPreview": "Vorschau wird vorbereitet…",
         "linking": "Konten werden verknüpft…",
         "unlinking": "Verknüpfung der Konten wird aufgehoben…",
-        "bulkLabel": "SSO-Massenaktionen {{location}}"
+        "bulkLabel": "SSO-Massenaktionen {{location}}",
+        "disabledSelectUsers": "Wählen Sie zuerst mindestens einen Benutzer aus."
       },
       "table": {
         "email": "E-Mail",
@@ -4123,7 +4156,9 @@
       "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
       "nameRequired": "Rollenname ist erforderlich.",
       "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
-      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits.",
+      "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -4550,7 +4585,7 @@
     "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen.",
     "blockedAccess": "Der API- und MCP-Zugriff auf Dienstprinzipale wird unter Pro sofort gesperrt. Vorhandene Einträge bleiben zur Bereinigung verfügbar."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Auf Chips anzeigen",
     "subtitle": "Tags, die neben Kontakten und Kunden in Ticketlisten, Ticketköpfen und Auswahllisten angezeigt werden.",
     "loading": "Wird geladen…",

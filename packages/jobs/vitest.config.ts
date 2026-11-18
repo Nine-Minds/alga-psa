@@ -23,6 +23,7 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../event-bus/src/publishers/index.ts') },
       { find: /^@alga-psa\/event-bus\/workflow\/dateDomainEvents$/, replacement: path.resolve(__dirname, '../event-bus/src/workflow/dateDomainEvents.ts') },
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: path.resolve(__dirname, '../notifications/src/$1') },
+      { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../tickets/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },

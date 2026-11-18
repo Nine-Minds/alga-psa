@@ -12,7 +12,8 @@ import {
   submitPortalServiceRequest,
   resolveSubmissionVisibility,
   validateSubmissionAgainstPublishedSchema,
-  type ServiceRequestPortalDefinitionDetail,
+  toPortalFormView,
+  type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
@@ -82,7 +83,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   definitionId: string
-): Promise<ServiceRequestPortalDefinitionDetail | null> => {
+): Promise<ServiceRequestPortalFormView | null> => {
   if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
@@ -90,7 +91,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
     const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
-    return getVisiblePublishedServiceRequestDefinitionDetail(
+    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
       trx,
       {
         tenant,
@@ -100,6 +101,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
       },
       definitionId
     );
+    return detail ? toPortalFormView(detail) : null;
   });
 });
 

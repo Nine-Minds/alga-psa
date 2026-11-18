@@ -461,7 +461,7 @@ describe('portal and email client replies emit ticket.response_state_changed (37
       { 'webhook-out': async () => ({ maxTokens: 1000, refillRate: 1000 / 60 }) },
     );
     stub = await startStubServer();
-    const created = await new WebhookService(undefined as any, undefined as any, undefined as any).createWebhook(
+    const created = await new WebhookService().createWebhook(
       {
         name: 'CR state hook', url: stub.url, method: 'POST',
         event_types: ['ticket.response_state_changed'],

@@ -70,6 +70,22 @@ export async function initializeApp() {
       logger.error('Failed to register inbound auth-pause notifications:', error);
     }
 
+    // Admin notifications for quarantined inbound email. The quarantine row is
+    // persisted by the shared code regardless; this hook only notifies.
+    try {
+      const { registerInboundQuarantineNotifications } = await import(
+        '../services/email/inboundQuarantineNotificationService'
+      );
+      registerInboundQuarantineNotifications();
+      const { assertInboundQuarantineNotifierRegistered } = await import(
+        '@alga-psa/shared/services/email/inboundQuarantine'
+      );
+      assertInboundQuarantineNotifierRegistered('server/initializeApp');
+      logger.info('Inbound quarantine notifications registered');
+    } catch (error) {
+      logger.error('Failed to register inbound quarantine notifications:', error);
+    }
+
 
     // Validate secret uniqueness first (must succeed)
     try {
@@ -443,6 +459,7 @@ function logConfiguration() {
   logger.info('Storage Configuration:', {
     STORAGE_LOCAL_BASE_PATH: process.env.STORAGE_LOCAL_BASE_PATH,
     STORAGE_LOCAL_MAX_FILE_SIZE: process.env.STORAGE_LOCAL_MAX_FILE_SIZE,
+    STORAGE_S3_MAX_FILE_SIZE: process.env.STORAGE_S3_MAX_FILE_SIZE,
     STORAGE_LOCAL_ALLOWED_MIME_TYPES: process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES,
     STORAGE_LOCAL_RETENTION_DAYS: process.env.STORAGE_LOCAL_RETENTION_DAYS
   });
