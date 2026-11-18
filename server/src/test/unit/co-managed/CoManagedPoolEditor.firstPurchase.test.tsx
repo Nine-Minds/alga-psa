@@ -55,6 +55,19 @@ describe('pool editor: first co-managed purchase', () => {
     expect(actions.purchase).not.toHaveBeenCalled();
   });
 
+  it('dismissing the review starts nothing and leaves the zero pool editable', async () => {
+    render(<CoManagedPoolEditor showTotals />);
+    fireEvent.change(await screen.findByLabelText('coManaged.quantity'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    const due = await screen.findByText(/coManaged\.dueNow/);
+    fireEvent.keyDown(due, { key: 'Escape', code: 'Escape' });
+    await waitFor(() => expect(screen.queryByText(/coManaged\.dueNow/)).not.toBeInTheDocument());
+    expect(actions.purchase).not.toHaveBeenCalled();
+    expect(actions.announce).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId(/stat-/).map((node) => node.textContent)).toEqual(['0', '0', '0']);
+    expect(screen.getByLabelText('coManaged.quantity')).toBeEnabled();
+  });
+
   it('confirming starts the existing purchase operation with the reviewed total', async () => {
     actions.purchase.mockResolvedValue({ kind: 'checkout', sessionId: 's', clientSecret: 'c', publishableKey: 'pk' });
     render(<CoManagedPoolEditor showTotals />);

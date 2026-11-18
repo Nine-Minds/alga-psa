@@ -22,7 +22,7 @@ import CoManagedPurchaseOverview from '../../components/co-managed/CoManagedPurc
 import { useCoManagedPurchaseNavigation } from '../../components/co-managed/useCoManagedPurchaseNavigation';
 import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
 
-beforeEach(() => { mocks.refresh.mockReset(); mocks.discovery.mockReset().mockResolvedValue(true); mocks.editorProps = []; Object.values(mocks.readers).forEach((fn) => fn.mockReset()); });
+beforeEach(() => { mocks.refresh.mockReset(); mocks.discovery.mockReset().mockResolvedValue(true); mocks.editorProps = []; (Object.values(mocks.readers) as Array<ReturnType<typeof vi.fn>>).forEach((fn) => fn.mockReset()); });
 afterEach(cleanup);
 
 describe('purchase-only co-managed overview', () => {
