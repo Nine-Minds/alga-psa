@@ -27,6 +27,7 @@ import {
   toSafeMicrosoftOAuthFailure,
 } from '../microsoftOAuthErrors';
 import { mapInboundRecommendations } from '../microsoftGraphDiagnostics';
+import { repairUtf8Mojibake } from '../inboundEmailMimeHelpers';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
@@ -1021,7 +1022,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
           email: recipient.emailAddress?.address || '',
           name: recipient.emailAddress?.name,
         })),
-        subject: message.subject || '',
+        subject: repairUtf8Mojibake(message.subject || ''),
         body: {
           text: textBody,
           html: htmlBody,
