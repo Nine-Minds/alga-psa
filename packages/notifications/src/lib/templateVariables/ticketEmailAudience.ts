@@ -51,6 +51,8 @@ export const TICKET_EMAIL_VARIABLE_AUDIENCE: Readonly<
   "ticket.closedBy": "client",
   "ticket.scheduledCloseDate": "client",
   "ticket.changes": "client",
+  // The same changes as structured items; the stock templates iterate these.
+  "ticket.changeItems": "client",
   // The client rendering carries the latest client-visible resolution only.
   "ticket.resolution": "client",
 
