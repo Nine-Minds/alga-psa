@@ -4471,6 +4471,7 @@ components:
             - vnc
             - rdp
             - shell
+            - ninjaone_remote
           description: Remote-control protocol (default splashtop).
     AssetSoftwareQuery:
       type: object
@@ -40273,6 +40274,7 @@ paths:
               - vnc
               - rdp
               - shell
+              - ninjaone_remote
             description: Remote-control protocol (default splashtop).
           required: false
           description: Remote-control protocol (default splashtop).

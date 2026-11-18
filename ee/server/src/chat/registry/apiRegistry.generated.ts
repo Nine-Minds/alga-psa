@@ -9867,7 +9867,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "teamviewer",
             "vnc",
             "rdp",
-            "shell"
+            "shell",
+            "ninjaone_remote"
           ],
           "description": "Remote-control protocol (default splashtop)."
         }

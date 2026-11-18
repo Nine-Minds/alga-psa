@@ -1,4 +1,5 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { RMM_KNOWN_CONNECTION_TYPES } from '@alga-psa/integrations/lib/rmm/connectionTypes';
 import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
@@ -2500,7 +2501,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   );
   const AssetRemoteControlQuery = registry.registerSchema(
     'AssetRemoteControlQuery',
-    zOpenApi.object({ type: zOpenApi.enum(['splashtop', 'teamviewer', 'vnc', 'rdp', 'shell']).optional().describe('Remote-control protocol (default splashtop).') }),
+    zOpenApi.object({ type: zOpenApi.enum(RMM_KNOWN_CONNECTION_TYPES.map((t) => t.id) as [string, ...string[]]).optional().describe('Remote-control protocol (default splashtop).') }),
   );
   const AssetSoftwareQuery = registry.registerSchema(
     'AssetSoftwareQuery',

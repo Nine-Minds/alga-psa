@@ -6216,7 +6216,8 @@
               "teamviewer",
               "vnc",
               "rdp",
-              "shell"
+              "shell",
+              "ninjaone_remote"
             ],
             "description": "Remote-control protocol (default splashtop)."
           }
@@ -53403,7 +53404,8 @@
                 "teamviewer",
                 "vnc",
                 "rdp",
-                "shell"
+                "shell",
+                "ninjaone_remote"
               ],
               "description": "Remote-control protocol (default splashtop)."
             },
