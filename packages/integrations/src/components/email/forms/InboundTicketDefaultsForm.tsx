@@ -63,7 +63,6 @@ export function InboundTicketDefaultsForm({
     statuses: [],
     priorities: [],
     categories: [],
-    clients: [],
     users: [],
     locations: []
   });
