@@ -8,7 +8,6 @@ import {
   listRequestServiceCatalogGroupsAction,
   listMyRecentServiceRequestsAction,
 } from './actions';
-import { getMyServiceRequestSubmissionSummaryAction } from './my-requests/actions';
 import { ServiceRequestTicketLink } from './ServiceRequestTicketLink';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,14 +42,19 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
 
   // Fetching all submissions here keeps the page a single round-trip; the table
   // paginates client-side, which is fine for the small per-client volume.
-  // The banner is resolved server-side from the signed-in client's own
-  // submissions; nothing but the submission id is read from the URL.
-  const [groups, allSubmissions, { t }, submittedSummary] = await Promise.all([
+  const [groups, allSubmissions, { t }] = await Promise.all([
     listRequestServiceCatalogGroupsAction(),
     listMyRecentServiceRequestsAction(1000),
     getServerTranslation(undefined, 'client-portal/service-requests'),
-    submittedRequestId ? getMyServiceRequestSubmissionSummaryAction(submittedRequestId) : null,
   ]);
+
+  // The banner is resolved from the signed-in client's own submissions (newest
+  // first, so a just-submitted request is always present); nothing but the
+  // submission id is read from the URL, and an id that is not one of the
+  // caller's own submissions renders no banner.
+  const submittedSummary = submittedRequestId
+    ? allSubmissions.find((submission) => submission.submission_id === submittedRequestId) ?? null
+    : null;
 
   // Locale and date pattern (a DB lookup) are only needed to render the banner.
   const [locale, dateFormat] = submittedSummary

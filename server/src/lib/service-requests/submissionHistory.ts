@@ -1,6 +1,5 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { isValidUUID } from '@alga-psa/validation';
 import {
   CLIENT_VISIBLE_SUBMISSION_AUDIT_OPERATIONS,
   type ClientVisibleSubmissionAuditOperation,
@@ -328,21 +327,22 @@ export async function getServiceRequestSubmissionHistoryDetail(
   return (row as unknown as ServiceRequestSubmissionHistoryDetail | undefined) ?? null;
 }
 
-/**
- * The one client-scoped submission query shape: client filter, tenant-safe left
- * join to tickets, and the summary columns (including the ticket display number).
- */
-function clientSubmissionSummaryQuery(knex: Knex, tenant: string, clientId: string) {
+export async function listClientServiceRequestSubmissions(
+  knex: Knex,
+  tenant: string,
+  clientId: string
+): Promise<ServiceRequestClientSubmissionListRow[]> {
   const db = tenantDb(knex, tenant);
   const query = db.table('service_request_submissions as submission');
   db.tenantJoin(query, 'tickets as ticket', 'ticket.ticket_id', 'submission.created_ticket_id', {
     type: 'left',
     rootTenantColumn: 'submission.tenant',
   });
-  return query
+  const rows = await query
     .where({
       'submission.client_id': clientId,
     })
+    .orderBy('submission.created_at', 'desc')
     .select(
       'submission.submission_id',
       'submission.request_name',
@@ -351,38 +351,8 @@ function clientSubmissionSummaryQuery(knex: Knex, tenant: string, clientId: stri
       'submission.created_ticket_id',
       'ticket.ticket_number'
     );
-}
-
-export async function listClientServiceRequestSubmissions(
-  knex: Knex,
-  tenant: string,
-  clientId: string
-): Promise<ServiceRequestClientSubmissionListRow[]> {
-  const rows = await clientSubmissionSummaryQuery(knex, tenant, clientId).orderBy(
-    'submission.created_at',
-    'desc'
-  );
 
   return rows as unknown as ServiceRequestClientSubmissionListRow[];
-}
-
-export async function getClientServiceRequestSubmissionSummary(
-  knex: Knex,
-  tenant: string,
-  clientId: string,
-  submissionId: string
-): Promise<ServiceRequestClientSubmissionListRow | null> {
-  // submission_id is a uuid column: a malformed value (e.g. a hand-edited URL)
-  // would make Postgres throw instead of simply matching nothing.
-  if (!isValidUUID(submissionId)) {
-    return null;
-  }
-
-  const row = await clientSubmissionSummaryQuery(knex, tenant, clientId)
-    .where({ 'submission.submission_id': submissionId })
-    .first();
-
-  return (row as unknown as ServiceRequestClientSubmissionListRow | undefined) ?? null;
 }
 
 // LEVERAGE: friction portal-dto-by-spread — client portal queries build DTOs as `{ ...row }` over a select list shared in spirit with admin queries, so the portal relies on JSX discipline to hide internals; a per-entity portal projection layer is the candidate if tickets/projects show the same shape.

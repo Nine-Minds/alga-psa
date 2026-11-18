@@ -17,7 +17,6 @@ type TranslationOptions = {
 
 const listRequestServiceCatalogGroupsActionMock = vi.fn();
 const listMyRecentServiceRequestsActionMock = vi.fn();
-const getMyServiceRequestSubmissionSummaryActionMock = vi.fn();
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
   template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => String(values[key] ?? ''));
@@ -71,14 +70,6 @@ vi.mock('server/src/app/client-portal/request-services/actions', () => ({
   listMyRecentServiceRequestsAction: (...args: unknown[]) =>
     listMyRecentServiceRequestsActionMock(...args),
 }));
-
-vi.mock(
-  'server/src/app/client-portal/request-services/my-requests/actions',
-  () => ({
-    getMyServiceRequestSubmissionSummaryAction: (...args: unknown[]) =>
-      getMyServiceRequestSubmissionSummaryActionMock(...args),
-  })
-);
 
 vi.mock(
   'server/src/app/client-portal/request-services/my-requests/MyRequestsTable',
@@ -156,7 +147,7 @@ describe('/client-portal/request-services catalog', () => {
     });
 
     it('shows the request name and a linked ticket number without any GUID text', async () => {
-      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(summary);
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
 
       render(
         await ServiceRequestsPage({
@@ -164,7 +155,6 @@ describe('/client-portal/request-services catalog', () => {
         })
       );
 
-      expect(getMyServiceRequestSubmissionSummaryActionMock).toHaveBeenCalledWith('submission-guid-1');
       expect(screen.getByText(/Access Request, submitted/)).toBeInTheDocument();
       const link = screen.getByRole('link', { name: '#100150' });
       expect(link).toHaveAttribute('href', '/client-portal/tickets/ticket-guid-1');
@@ -174,9 +164,24 @@ describe('/client-portal/request-services catalog', () => {
       expect(document.querySelector('a[href*="forged-ticket-id"]')).toBeNull();
     });
 
-    it('renders no banner when the summary does not resolve', async () => {
-      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(null);
+    it('resolves the banner only from the caller\'s own submissions', async () => {
+      // The submitted id comes from the URL. It resolves only against the
+      // client-scoped list the page already loaded; nothing else is looked up.
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
 
+      render(
+        await ServiceRequestsPage({
+          searchParams: Promise.resolve({ submitted: 'another-clients-submission-id' }),
+        })
+      );
+
+      expect(listMyRecentServiceRequestsActionMock).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: '#100150' })).not.toBeInTheDocument();
+      expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
+    });
+
+    it('renders no banner when the submitted id matches nothing', async () => {
       render(
         await ServiceRequestsPage({
           searchParams: Promise.resolve({ submitted: 'unknown-id', ticketId: 'forged-ticket-id' }),
@@ -188,8 +193,7 @@ describe('/client-portal/request-services catalog', () => {
     });
 
     it('renders no banner for a malformed submitted value', async () => {
-      // The real action returns null for non-UUID ids; the page must not throw.
-      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue(null);
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
 
       render(
         await ServiceRequestsPage({ searchParams: Promise.resolve({ submitted: 'not-a-uuid' }) })
@@ -199,20 +203,19 @@ describe('/client-portal/request-services catalog', () => {
       expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
     });
 
-    it('does not look anything up when submitted is absent', async () => {
+    it('does not resolve a banner when submitted is absent', async () => {
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([summary]);
+
       render(await ServiceRequestsPage({}));
 
-      expect(getMyServiceRequestSubmissionSummaryActionMock).not.toHaveBeenCalled();
       expect(getDateFormatPreferenceMock).not.toHaveBeenCalled();
       expect(screen.queryByText(t('detail.submitted'))).not.toBeInTheDocument();
     });
 
     it('renders the banner without a ticket line for a store-only submission', async () => {
-      getMyServiceRequestSubmissionSummaryActionMock.mockResolvedValue({
-        ...summary,
-        created_ticket_id: null,
-        ticket_number: null,
-      });
+      listMyRecentServiceRequestsActionMock.mockResolvedValue([
+        { ...summary, created_ticket_id: null, ticket_number: null },
+      ]);
 
       render(
         await ServiceRequestsPage({ searchParams: Promise.resolve({ submitted: 'submission-guid-1' }) })

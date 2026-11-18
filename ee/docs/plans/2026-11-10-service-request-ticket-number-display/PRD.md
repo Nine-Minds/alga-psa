@@ -140,13 +140,13 @@ Persona: a client portal user (a client contact) who submits service requests.
 
 - FR8: `getClientServiceRequestSubmissionDetail` left-joins `tickets` (tenant-joined, the same
   as the list) and returns `ticket_number: string | null`.
-- FR9: Add `getClientServiceRequestSubmissionSummary(knex, tenant, clientId, submissionId)`.
-  It returns a `ServiceRequestClientSubmissionListRow` or `null`. It shares the list's query
-  builder: the client filter, the ticket join and the selected columns are defined once and
-  used by both.
-- FR10: Add the server action `getMyServiceRequestSubmissionSummaryAction(submissionId)`.
-  - Its guards match `getMyServiceRequestSubmissionDetailAction`: it returns `null` for
-    non-client users, and it resolves the client with `getAuthenticatedClientId`.
+- FR9: The banner needs no new query. `listClientServiceRequestSubmissions` already returns
+  `ticket_number` for every submission of the caller's client.
+- FR10: Add no new server action. The catalog page already loads the caller's own submissions
+  (newest first) through `listMyRecentServiceRequestsAction`, and it resolves the banner by
+  finding the `submitted` id in that list. An id that is not one of the caller's own
+  submissions renders no banner. A separate summary action would be a new portal action with
+  no permission check, and the permission-coverage contract does not allow new ones.
 - FR11: `MyRequestsTable`'s ticket column renders through `ServiceRequestTicketLink`. The
   table's output does not change.
 

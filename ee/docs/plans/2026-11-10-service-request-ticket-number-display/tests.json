@@ -1,13 +1,13 @@
 [
   {
     "id": "T001",
-    "description": "Integration (real DB, extend server/src/test/integration/serviceRequestPortalHistory.integration.test.ts): a ticket-linked submission returns its ticket_number from listClientServiceRequestSubmissions, getClientServiceRequestSubmissionSummary and getClientServiceRequestSubmissionDetail; a store-only submission returns created_ticket_id null and ticket_number null; the summary for another client's submission id returns null",
+    "description": "Integration (real DB, extend server/src/test/integration/serviceRequestPortalHistory.integration.test.ts): a ticket-linked submission returns its ticket_number from listClientServiceRequestSubmissions and getClientServiceRequestSubmissionDetail; a store-only submission returns created_ticket_id null and ticket_number null; another client's submission never appears in the list",
     "implemented": true,
     "featureIds": ["F002", "F003", "F004"]
   },
   {
     "id": "T002",
-    "description": "Unit (server/src/test/unit/app/client-portal/request-services/requestServicesCatalog.page.test.tsx): with submitted=<id> and a resolving summary (ticket_number '100150'), the banner shows the request name and a '#100150' link to /client-portal/tickets/<ticket_id>, and no submission or ticket id text appears; a 'ticketId' search param is never rendered; an unresolved summary (null) renders no banner; a store-only summary renders the banner with no ticket line",
+    "description": "Unit (server/src/test/unit/app/client-portal/request-services/requestServicesCatalog.page.test.tsx): with submitted=<id> matching a row of the caller's own submission list (ticket_number '100150'), the banner shows the request name and a '#100150' link to /client-portal/tickets/<ticket_id>, and no submission or ticket id text appears; a 'ticketId' search param is never rendered; an id not in the caller's own list renders no banner; a store-only summary renders the banner with no ticket line",
     "implemented": true,
     "featureIds": ["F005", "F006", "F008", "F009"]
   },

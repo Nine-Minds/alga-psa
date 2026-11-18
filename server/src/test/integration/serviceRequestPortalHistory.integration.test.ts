@@ -5,7 +5,6 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import {
   getClientServiceRequestSubmissionDetail,
-  getClientServiceRequestSubmissionSummary,
   getServiceRequestSubmissionDetailForDefinition,
   listClientServiceRequestSubmissions,
 } from '../../lib/service-requests/submissionHistory';
@@ -218,28 +217,13 @@ describe('service request portal history', () => {
       ticket_number: null,
     });
 
-    const summary = await getClientServiceRequestSubmissionSummary(db, tenant, clientA, ticketSubmission);
-    expect(summary).toMatchObject({
-      submission_id: ticketSubmission,
-      request_name: 'Account Access Request',
-      created_ticket_id: ticketId,
-      ticket_number: '100150',
-    });
-
-    const storeOnlySummary = await getClientServiceRequestSubmissionSummary(db, tenant, clientA, storeOnlySubmission);
-    expect(storeOnlySummary).toMatchObject({ created_ticket_id: null, ticket_number: null });
-
     const detail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, ticketSubmission);
     expect(detail).toMatchObject({ created_ticket_id: ticketId, ticket_number: '100150' });
     const storeOnlyDetail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, storeOnlySubmission);
     expect(storeOnlyDetail).toMatchObject({ created_ticket_id: null, ticket_number: null });
 
-    expect(await getClientServiceRequestSubmissionSummary(db, tenant, clientA, foreignSubmission)).toBeNull();
-    expect(await getClientServiceRequestSubmissionSummary(db, tenant, clientA, uuidv4())).toBeNull();
-    // A non-UUID id must resolve to null rather than a Postgres uuid syntax error.
-    await expect(
-      getClientServiceRequestSubmissionSummary(db, tenant, clientA, 'not-a-uuid')
-    ).resolves.toBeNull();
+    // Another client's submission never appears in client A's list.
+    expect(list.map((r) => r.submission_id)).not.toContain(foreignSubmission);
   });
 
   it('T025: submission detail includes attachment references when uploaded files were linked', async () => {

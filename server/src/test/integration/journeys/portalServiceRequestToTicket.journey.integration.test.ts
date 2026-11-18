@@ -122,7 +122,6 @@ let getRequestServiceDefinitionDetailAction: PortalDefinitionActions['getRequest
 let submitRequestServiceDefinitionAction: PortalDefinitionActions['submitRequestServiceDefinitionAction'];
 let listMyServiceRequestSubmissionsAction: PortalHistoryActions['listMyServiceRequestSubmissionsAction'];
 let getMyServiceRequestSubmissionDetailAction: PortalHistoryActions['getMyServiceRequestSubmissionDetailAction'];
-let getMyServiceRequestSubmissionSummaryAction: PortalHistoryActions['getMyServiceRequestSubmissionSummaryAction'];
 let listServiceRequestDefinitionSubmissionsAction: MspServiceRequestActions['listServiceRequestDefinitionSubmissionsAction'];
 let getServiceRequestDefinitionSubmissionDetailAction: MspServiceRequestActions['getServiceRequestDefinitionSubmissionDetailAction'];
 let updateTicket: TicketActions['updateTicket'];
@@ -162,7 +161,6 @@ describe('journey: client portal service request → MSP ticket triage → porta
     ({
       listMyServiceRequestSubmissionsAction,
       getMyServiceRequestSubmissionDetailAction,
-      getMyServiceRequestSubmissionSummaryAction,
     } = await import('../../../app/client-portal/request-services/my-requests/actions'));
     ({ listServiceRequestDefinitionSubmissionsAction, getServiceRequestDefinitionSubmissionDetailAction } =
       await import('../../../app/msp/service-requests/actions'));
@@ -419,9 +417,13 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(submissionId).toBeTruthy();
     expect(redirectParams.has('ticketId')).toBe(false);
 
-    // Seam: the banner summary (what the catalog page renders after the
-    // redirect) resolves the created ticket and its human-readable number.
-    const bannerSummary = await getMyServiceRequestSubmissionSummaryAction(submissionId!);
+    // Seam: the banner (what the catalog page renders after the redirect)
+    // resolves the created ticket and its human-readable number from the
+    // requester's own submission list.
+    const bannerSummary =
+      (await listMyServiceRequestSubmissionsAction()).find(
+        (row) => row.submission_id === submissionId
+      ) ?? null;
     expect(bannerSummary).not.toBeNull();
     expect(bannerSummary?.submission_id).toBe(submissionId);
     expect(bannerSummary?.execution_status).toBe('succeeded');
@@ -553,10 +555,8 @@ describe('journey: client portal service request → MSP ticket triage → porta
     expect(siblingRequests).toHaveLength(0);
     const siblingSubmissionDetail = await getMyServiceRequestSubmissionDetailAction(submissionId!);
     expect(siblingSubmissionDetail).toBeNull();
-    // The banner lookup is scoped the same way: a sibling client replaying
-    // client A's submission id in the URL learns nothing about its ticket.
-    const siblingBannerSummary = await getMyServiceRequestSubmissionSummaryAction(submissionId!);
-    expect(siblingBannerSummary).toBeNull();
+    // The banner resolves from that same (empty) list, so a sibling client
+    // replaying client A's submission id in the URL learns nothing about its ticket.
 
     const siblingTicketDetails = await getClientTicketDetails(ticketId!);
     expect(siblingTicketDetails).toMatchObject({

@@ -7,13 +7,13 @@
   },
   {
     "id": "F002",
-    "description": "submissionHistory.ts: extract one client-scoped submission summary query builder (client_id filter + left tenantJoin on tickets + summary columns incl. ticket.ticket_number) and rebuild listClientServiceRequestSubmissions on it with unchanged output",
+    "description": "submissionHistory.ts: listClientServiceRequestSubmissions keeps returning ticket.ticket_number via its tenant-joined left join (no separate summary query builder)",
     "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
     "id": "F003",
-    "description": "Add getClientServiceRequestSubmissionSummary(knex, tenant, clientId, submissionId) returning ServiceRequestClientSubmissionListRow | null via the shared builder",
+    "description": "No per-submission summary query: the banner row comes from the client-scoped list (superseded; see FR9)",
     "implemented": true,
     "prdRefs": ["FR9"]
   },
@@ -25,7 +25,7 @@
   },
   {
     "id": "F005",
-    "description": "Add getMyServiceRequestSubmissionSummaryAction(submissionId) server action: withAuth, null for non-client users, client resolved via getAuthenticatedClientId, delegates to getClientServiceRequestSubmissionSummary",
+    "description": "No new server action for the banner (a new unchecked portal action would grow the permission-coverage pinned list); superseded by F008",
     "implemented": true,
     "prdRefs": ["FR10"]
   },
@@ -43,7 +43,7 @@
   },
   {
     "id": "F008",
-    "description": "Catalog page (request-services/page.tsx) stops reading the ticketId search param and resolves submitted via getMyServiceRequestSubmissionSummaryAction (only when submitted is present)",
+    "description": "Catalog page (request-services/page.tsx) stops reading the ticketId search param and resolves submitted by finding it in the caller's own submissions already loaded via listMyRecentServiceRequestsAction (only when submitted is present)",
     "implemented": true,
     "prdRefs": ["FR2"]
   },
