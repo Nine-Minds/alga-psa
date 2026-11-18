@@ -110825,7 +110825,7 @@
     "/api/v1/webhooks/templates": {
       "get": {
         "summary": "List webhook templates",
-        "description": "Returns webhook templates visible to the tenant (own + system templates).",
+        "description": "Webhook templates are not persisted, so this always returns 200 with an empty list. There is no template storage to read from.",
         "tags": [
           "Webhooks"
         ],
@@ -110944,7 +110944,7 @@
       },
       "post": {
         "summary": "Create webhook template",
-        "description": "Creates a reusable webhook template. Requires system_settings RBAC.",
+        "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and body validation.",
         "tags": [
           "Webhooks"
         ],
@@ -111068,14 +111068,24 @@
                 }
               }
             }
+          },
+          "501": {
+            "description": "Webhook templates are not supported: there is no template storage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookApiErrorV1"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/webhooks/templates/{id}": {
       "get": {
-        "summary": "Get webhook template detail (webhook getById wiring)",
-        "description": "Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.",
+        "summary": "Get webhook template detail",
+        "description": "Webhook templates are not persisted, so a template id never resolves: returns 404 NOT_FOUND after the RBAC check and id validation.",
         "tags": [
           "Webhooks"
         ],
@@ -111090,8 +111100,7 @@
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
           "x-rbac-resource": "webhook",
           "x-rbac-action": "read",
-          "x-controller-method": "ApiWebhookController.getById()",
-          "x-route-to-controller-mismatch": true
+          "x-controller-method": "ApiWebhookController.getTemplate()"
         },
         "x-alga-products": [
           "psa"
@@ -111122,11 +111131,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Webhook detail returned.",
+            "description": "Template detail.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WebhookEnvelopeV1"
+                  "$ref": "#/components/schemas/WebhookTemplateEnvelopeV1"
                 }
               }
             }
@@ -111215,8 +111224,8 @@
         }
       },
       "put": {
-        "summary": "Update webhook template (webhook update wiring)",
-        "description": "Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.",
+        "summary": "Update webhook template",
+        "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check, id validation and body validation.",
         "tags": [
           "Webhooks"
         ],
@@ -111230,9 +111239,8 @@
           "x-auth-mechanism": "x-api-key validated in ApiWebhookController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
           "x-rbac-resource": "webhook",
-          "x-rbac-action": "update",
-          "x-controller-method": "ApiWebhookController.update()",
-          "x-route-to-controller-mismatch": true
+          "x-rbac-action": "system_settings",
+          "x-controller-method": "ApiWebhookController.updateTemplate()"
         },
         "x-alga-products": [
           "psa"
@@ -111269,269 +111277,32 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                   },
                   "description": {
                     "type": "string"
                   },
-                  "url": {
-                    "type": "string",
-                    "format": "uri"
+                  "category": {
+                    "type": "string"
                   },
-                  "method": {
-                    "type": "string",
-                    "enum": [
-                      "GET",
-                      "POST",
-                      "PUT",
-                      "PATCH",
-                      "DELETE"
-                    ]
+                  "default_config": {
+                    "type": "object",
+                    "additionalProperties": {}
                   },
-                  "event_types": {
+                  "required_fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "supported_events": {
                     "type": "array",
                     "items": {
                       "$ref": "#/components/schemas/WebhookEventTypeV1"
-                    },
-                    "minItems": 1
-                  },
-                  "security": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "payload_format": {
-                    "type": "string",
-                    "enum": [
-                      "json",
-                      "xml",
-                      "form_data",
-                      "custom"
-                    ]
-                  },
-                  "content_type": {
-                    "type": "string"
-                  },
-                  "custom_headers": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "string"
                     }
                   },
-                  "event_filter": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "payload_fields": {
-                    "type": [
-                      "object",
-                      "null"
-                    ],
-                    "properties": {
-                      "ticket": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "ticket_number",
-                            "title",
-                            "url",
-                            "status_id",
-                            "status_name",
-                            "is_closed",
-                            "response_state",
-                            "previous_status_id",
-                            "previous_status_name",
-                            "previous_response_state",
-                            "new_response_state",
-                            "priority_id",
-                            "priority_name",
-                            "client_id",
-                            "client_name",
-                            "contact_name_id",
-                            "contact_name",
-                            "contact_email",
-                            "assigned_to",
-                            "assigned_to_name",
-                            "assigned_team_id",
-                            "board_id",
-                            "board_name",
-                            "category_id",
-                            "subcategory_id",
-                            "entered_at",
-                            "updated_at",
-                            "closed_at",
-                            "due_date",
-                            "tags",
-                            "comment",
-                            "changes",
-                            "comments"
-                          ]
-                        }
-                      },
-                      "project": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "project_name",
-                            "wbs_code",
-                            "description",
-                            "status_id",
-                            "status_name",
-                            "is_closed",
-                            "previous_status_id",
-                            "previous_status_name",
-                            "client_id",
-                            "client_name",
-                            "contact_name_id",
-                            "contact_name",
-                            "contact_email",
-                            "assigned_to",
-                            "assigned_to_name",
-                            "start_date",
-                            "end_date",
-                            "budgeted_hours",
-                            "url",
-                            "changes",
-                            "phases",
-                            "task_counts",
-                            "task_id",
-                            "phase_id",
-                            "phase_name",
-                            "task_name",
-                            "estimated_hours",
-                            "actual_hours",
-                            "due_date",
-                            "priority_id",
-                            "priority_name",
-                            "tags"
-                          ]
-                        }
-                      },
-                      "client": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "changed_fields"
-                          ]
-                        }
-                      },
-                      "contact": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "client_id",
-                            "changed_fields"
-                          ]
-                        }
-                      },
-                      "client_location": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "client_id",
-                            "changed_fields"
-                          ]
-                        }
-                      },
-                      "quote": {
-                        "type": [
-                          "array",
-                          "null"
-                        ],
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "client_id",
-                            "quote_number",
-                            "version",
-                            "contact_id",
-                            "opportunity_id",
-                            "previous_status",
-                            "new_status",
-                            "currency_code",
-                            "total_amount",
-                            "performed_by_type",
-                            "performed_by_id",
-                            "sent_at",
-                            "viewed_at",
-                            "approved_at",
-                            "accepted_at",
-                            "rejected_at",
-                            "expired_at",
-                            "converted_at",
-                            "conversion_reverted_at",
-                            "superseded_at",
-                            "cancelled_at",
-                            "accepted_by_name",
-                            "accepted_on_behalf",
-                            "selected_optional_item_ids",
-                            "rejection_reason",
-                            "conversion_targets",
-                            "contract_id",
-                            "invoice_id",
-                            "sales_order_id",
-                            "released_invoice_id",
-                            "superseded_by_quote_id",
-                            "next_version"
-                          ]
-                        }
-                      }
-                    },
-                    "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
-                  },
-                  "payload_transformation": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "retry_config": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "is_active": {
+                  "is_system_template": {
                     "type": "boolean"
-                  },
-                  "is_test_mode": {
-                    "type": "boolean"
-                  },
-                  "verify_ssl": {
-                    "type": "boolean"
-                  },
-                  "secret_token": {
-                    "type": "string"
-                  },
-                  "rate_limit": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "metadata": {
-                    "type": "object",
-                    "additionalProperties": {}
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
                   }
                 }
               }
@@ -111540,11 +111311,11 @@
         },
         "responses": {
           "200": {
-            "description": "Webhook updated.",
+            "description": "Template updated.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WebhookEnvelopeV1"
+                  "$ref": "#/components/schemas/WebhookTemplateEnvelopeV1"
                 }
               }
             }
@@ -111571,16 +111342,6 @@
           },
           "403": {
             "description": "Webhook RBAC permission denied. ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebhookApiErrorV1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Webhook, delivery, template, or signing secret not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -111629,12 +111390,22 @@
                 }
               }
             }
+          },
+          "501": {
+            "description": "Webhook templates are not supported: there is no template storage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookApiErrorV1"
+                }
+              }
+            }
           }
         }
       },
       "delete": {
-        "summary": "Delete webhook template (webhook delete wiring)",
-        "description": "Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.",
+        "summary": "Delete webhook template",
+        "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the system_settings RBAC check and id validation.",
         "tags": [
           "Webhooks"
         ],
@@ -111648,9 +111419,8 @@
           "x-auth-mechanism": "x-api-key validated in ApiWebhookController.authenticate()",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
           "x-rbac-resource": "webhook",
-          "x-rbac-action": "delete",
-          "x-controller-method": "ApiWebhookController.delete()",
-          "x-route-to-controller-mismatch": true
+          "x-rbac-action": "system_settings",
+          "x-controller-method": "ApiWebhookController.deleteTemplate()"
         },
         "x-alga-products": [
           "psa"
@@ -111681,7 +111451,7 @@
         ],
         "responses": {
           "204": {
-            "description": "Webhook deleted."
+            "description": "Template deleted."
           },
           "400": {
             "description": "Invalid request payload, query, or webhook id format. ACT_AS_NOT_SUPPORTED: the act-as header was sent with a key that cannot act as another user.",
@@ -111705,16 +111475,6 @@
           },
           "403": {
             "description": "Webhook RBAC permission denied. ACT_AS_NOT_ALLOWED: the service principal is not allowed to act as users.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebhookApiErrorV1"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Webhook, delivery, template, or signing secret not found.",
             "content": {
               "application/json": {
                 "schema": {
@@ -111763,6 +111523,16 @@
                 }
               }
             }
+          },
+          "501": {
+            "description": "Webhook templates are not supported: there is no template storage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookApiErrorV1"
+                }
+              }
+            }
           }
         }
       }
@@ -111770,7 +111540,7 @@
     "/api/v1/webhooks/templates/{id}/create": {
       "post": {
         "summary": "Create webhook from template",
-        "description": "Instantiates a webhook configuration from a template, merging caller-supplied overrides.",
+        "description": "Not implemented: webhook templates have no storage. Returns 501 NOT_IMPLEMENTED after the RBAC check and body validation.",
         "tags": [
           "Webhooks"
         ],
@@ -111908,6 +111678,16 @@
           },
           "500": {
             "description": "Unexpected webhook operation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookApiErrorV1"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Webhook templates are not supported: there is no template storage.",
             "content": {
               "application/json": {
                 "schema": {

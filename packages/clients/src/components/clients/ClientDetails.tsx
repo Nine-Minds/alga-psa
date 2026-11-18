@@ -55,7 +55,7 @@ import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClients } from '../../actions/queryActions';
+import { searchClientsForPicker } from '../../actions/clientPickerActions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientLocations from './ClientLocations';
@@ -227,7 +227,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   // Options for the parent-client picker (Additional Info).
-  const [allClients, setAllClients] = useState<IClient[]>([]);
   const [parentFilterState, setParentFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [parentTypeFilter, setParentTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
@@ -742,14 +741,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     };
     fetchUser();
-  }, []);
-
-  // Options for the parent-client picker; an empty list just leaves the
-  // picker's dropdown empty, so a failed load is visible rather than silent.
-  useEffect(() => {
-    getAllClients(false)
-      .then(setAllClients)
-      .catch((error) => console.error('Error fetching clients for parent picker:', error));
   }, []);
 
   // Fetch MSP users once or when needed
@@ -1609,12 +1600,19 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               <div className="flex items-center gap-2">
                 <ClientPicker
                   id="parent-client-picker"
-                  clients={allClients}
+                  searchClients={searchClientsForPicker}
                   selectedClientId={editedClient.properties?.parent_client_id ?? null}
                   onSelect={(parentId) => {
-                    const parent = allClients.find((candidate) => candidate.client_id === parentId);
                     handleFieldChange('properties.parent_client_id', parentId ?? '');
-                    handleFieldChange('properties.parent_client_name', parent?.client_name ?? '');
+                    handleFieldChange('properties.parent_client_name', '');
+                    if (!parentId) return;
+                    // The picker hands back only the id; the name is read by id, not from a client list.
+                    searchClientsForPicker({ ids: [parentId] })
+                      .then(({ clients }) => {
+                        const name = clients.find((candidate) => candidate.client_id === parentId)?.client_name;
+                        if (name) handleFieldChange('properties.parent_client_name', name);
+                      })
+                      .catch((error) => console.error('Error resolving parent client name:', error));
                   }}
                   filterState={parentFilterState}
                   onFilterStateChange={setParentFilterState}
@@ -2027,7 +2025,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           isOpen={isMergeDialogOpen}
           onClose={() => setIsMergeDialogOpen(false)}
           targetClientId={client.client_id}
-          clients={allClients.length ? allClients : [client]}
           onMerged={() => setPulseRefreshNonce((nonce) => nonce + 1)}
         />
 
@@ -2038,7 +2035,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             setIsAddContactOpen(false);
             setPulseRefreshNonce((nonce) => nonce + 1);
           }}
-          clients={allClients.length ? allClients : [client]}
           selectedClientId={client.client_id}
         />
 

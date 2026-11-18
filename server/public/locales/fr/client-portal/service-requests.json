@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Demande soumise",
-    "requestIdLabel": "ID de la demande : ",
-    "ticketIdLabel": "ID du ticket : ",
     "unableToSubmit": "Impossible de soumettre la demande",
     "formTitle": "Formulaire de demande",
     "noFields": "Aucun champ configuré.",
@@ -43,10 +41,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Retour à Mes demandes",
-    "requestIdLabel": "ID de la demande :",
     "statusSection": "Statut",
     "submittedAt": "Soumise : {{date}}",
-    "ticketLabel": "Ticket :",
     "submittedAnswersTitle": "Réponses soumises",
     "noResponse": "Aucune réponse",
     "attachmentsTitle": "Pièces jointes",
@@ -71,5 +67,12 @@
   },
   "myRequestsAll": {
     "title": "Vos demandes"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, soumise le {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Voir le ticket"
   }
 }
