@@ -131,6 +131,12 @@ const buildPaginatedSheetCss = (geometry: DocumentPrintGeometry): string => {
 }`;
 };
 
+const withPreviewFramingCss = (html: string, css: string): string => {
+  const style = `<style data-alga-preview-framing>\n${css}\n</style>`;
+  const headEnd = html.lastIndexOf('</head>');
+  return headEnd === -1 ? `${style}${html}` : `${html.slice(0, headEnd)}${style}\n${html.slice(headEnd)}`;
+};
+
 /**
  * Turn a rendered print HTML document into the same document drawn as its printed pages.
  * Returns the original HTML unchanged if the headless pass fails — a single roll beats no preview.
@@ -239,9 +245,19 @@ export const paginateTemplatePreviewHtml = async (
         },
       );
 
-      // Last, so the framing wins the cascade over paged.js's own sheet rules.
-      await page.addStyleTag({ content: buildPaginatedSheetCss(geometry) });
-      return { html: await page.content(), pageCount };
+      await page.evaluate(() => {
+        // The chunker is injected as a script tag, so it is serialized with the result — and would
+        // run again in the author's browser, re-chunking the already-chunked pages and stripping the
+        // screen-media framing back out of the stylesheets. The preview is finished markup; it runs
+        // nothing.
+        document.querySelectorAll('script').forEach((script) => script.remove());
+      });
+      // The framing is spliced into the serialized document rather than added to the live one:
+      // paged.js owns the page's stylesheets and strips screen-media rules out of them, so a style
+      // element added in the browser never survives. Last in the head, so it wins the cascade over
+      // paged.js's own sheet rules.
+      const paginated = await page.content();
+      return { html: withPreviewFramingCss(paginated, buildPaginatedSheetCss(geometry)), pageCount };
     } finally {
       await page.close();
     }
