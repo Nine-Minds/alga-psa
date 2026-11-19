@@ -146,14 +146,36 @@ describe('template print behaviour', () => {
 
     // One caption for the Page Break block, one for the section that starts a
     // page — and none for the trailing break, which produces no page at all.
-    expect(preview.html.match(/ast-page-break-preview/g)).toHaveLength(2);
-    expect(preview.html).toMatch(/id="break-1"[^>]*>\s*<div class="ast-page-break-preview"[^>]*>Page break<\/div>/);
-    expect(preview.html).toMatch(/<div class="ast-page-break-preview"[^>]*>Page break<\/div><section id="signature-page"/);
+    expect(preview.html.match(/class="ast-page-break-preview"/g)).toHaveLength(2);
+    expect(preview.html).toMatch(/id="break-1"[^>]*>\s*<div class="ast-page-break-preview"[^>]*>.*?Page break/);
+    expect(preview.html).toMatch(/<div class="ast-page-break-preview"[^>]*>.*?Page break.*?<\/div><section id="signature-page"/);
     // Screen chrome: the printed sheet shows a break by turning.
     expect(preview.css).toMatch(/@media print \{[\s\S]*\.ast-page-break-preview \{ display: none; \}/);
 
     const printed = await renderEvaluatedTemplateAst(ast, evaluation, { locale: 'en-US' });
     expect(printed.html).not.toContain('ast-page-break-preview');
+  });
+
+  it('draws the boundary as the gutter between two sheets, not a hairline', async () => {
+    // A dashed rule in the flow read as decoration: the author asked whether
+    // that was all the feature did. The boundary now takes the shape of the
+    // gap between two sheets of paper, with the caption on it.
+    const ast = forcedBreakAst();
+    const preview = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}), {
+      locale: 'en-US',
+      pageBreakPreviewLabel: 'Page break',
+    });
+
+    // The screen rule, not the one-line `display: none` the print block carries.
+    const gutter = preview.css.match(/\n\.invoice-template-root \.ast-page-break-preview \{([^}]*)\}/)?.[1] ?? '';
+    // A filled band with an edge at each side: the sheet above ends, the next begins.
+    expect(gutter).toMatch(/background:/);
+    expect(gutter).toMatch(/border-top:/);
+    expect(gutter).toMatch(/border-bottom:/);
+    expect(gutter).toMatch(/min-height:/);
+    // The caption sits on the gutter rather than being the whole boundary.
+    expect(preview.css).toMatch(/\.invoice-template-root \.ast-page-break-preview-label \{/);
+    expect(preview.html).toMatch(/<span class="ast-page-break-preview-label">Page break<\/span>/);
   });
 
   it('omits a hideWhenZero totals row when its value is zero and keeps it otherwise', async () => {

@@ -84,6 +84,9 @@ export default defineConfig({
       // as the branding-seam suites above.
       'src/lib/adapters/tenantPartyAdapter.test.ts',
       'src/services/pdfGenerationService.tenantClientLogo.test.ts',
+      // The page boundaries the quote/invoice screen previews draw — listed for
+      // the same reason as the preview-seam suites above.
+      'src/services/pdfGenerationService.pageBreakPreview.test.ts',
       // Server PDFs must embed the bundled Inter / JetBrains Mono rather than
       // whatever the image's fontconfig falls through to.
       'src/services/pdfFontEmbedding.e2e.test.ts',

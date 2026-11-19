@@ -628,18 +628,32 @@ const buildAstCss = (ast: TemplateAst): string => {
   .invoice-template-root .ast-page-break-preview { display: none; }
 }
 
-/* The page boundary as the editor's preview draws it: the flow has no pages, so
-   the caption stands in for the turn of the sheet. Emitted by the preview only. */
+/* The page boundary as the preview draws it: the flow on screen has no pages,
+   so the boundary takes the shape of the gap between two sheets — the page
+   above ends at its edge, the next one starts below it, and the caption names
+   what happened. Emitted by the preview only. */
 .invoice-template-root .ast-page-break-preview {
-  margin: 20px 0;
-  border-top: 2px dashed #94a3b8;
-  padding-top: 6px;
-  color: #64748b;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  margin: 18px 0;
+  background: #e2e8f0;
+  border-top: 1px solid #94a3b8;
+  border-bottom: 1px solid #94a3b8;
+  box-shadow: inset 0 9px 10px -10px rgba(15, 23, 42, 0.55), inset 0 -9px 10px -10px rgba(15, 23, 42, 0.55);
+}
+.invoice-template-root .ast-page-break-preview-label {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 3px 12px;
+  color: #475569;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-align: center;
 }
 .invoice-template-root .ast-totals-value {
   text-align: right;
@@ -1229,7 +1243,7 @@ const renderNode = (
   }
   const marker = (suffix: string) => (
     <div key={`${node.id}-page-break-${suffix}`} className="ast-page-break-preview" aria-hidden="true">
-      {label}
+      <span className="ast-page-break-preview-label">{label}</span>
     </div>
   );
   return (

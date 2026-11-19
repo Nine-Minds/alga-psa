@@ -93,6 +93,37 @@ describe('renderTemplateOnServer AST integration', () => {
     expect(getAllTemplatesMock).not.toHaveBeenCalled();
   });
 
+  it('draws the page boundary a forced break opens, for the invoice preview panel', async () => {
+    // Same complaint as Billing -> Quotes: an author who tells the line items
+    // to start a new page must see that page appear in the preview.
+    const paginated = {
+      ...templateAst,
+      layout: {
+        ...templateAst.layout,
+        children: [
+          templateAst.layout.children[0],
+          {
+            ...templateAst.layout.children[1],
+            style: { inline: { breakBefore: 'page' } },
+          },
+        ],
+      },
+    };
+
+    const result = await (renderTemplateOnServer as any)(
+      { id: 'test-user', tenant: 'test-tenant' },
+      { tenant: 'test-tenant' },
+      null,
+      invoiceData,
+      { templateAst: paginated }
+    );
+
+    expect(result.html).toContain('ast-page-break-preview');
+    expect(result.html.indexOf('ast-page-break-preview')).toBeLessThan(
+      result.html.indexOf('id="field-total"'),
+    );
+  });
+
   it('renders template HTML/CSS from canonical AST payload', async () => {
     getAllTemplatesMock.mockResolvedValueOnce([
       {
