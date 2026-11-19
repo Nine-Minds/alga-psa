@@ -209,9 +209,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
           {sendResult.results.length > 0 && (
             <ul className="max-h-60 overflow-y-auto space-y-1 text-sm">
               {sendResult.results.map((item) => (
-                <li key={item.contactId} className="flex justify-between gap-3 border-b border-gray-100 py-1">
+                <li key={item.contactId} className="flex justify-between gap-3 border-b border-[rgb(var(--color-border-100))] py-1">
                   <span className="truncate">{item.email || nameOf(item.contactId)}</span>
-                  <span className={item.status === 'sent' ? 'text-green-700' : item.status === 'failed' ? 'text-red-700' : 'text-gray-500'}>
+                  <span className={item.status === 'sent' ? 'text-[rgb(var(--color-status-success))]' : item.status === 'failed' ? 'text-[rgb(var(--color-status-error))]' : 'text-[rgb(var(--color-text-500))]'}>
                     {item.status === 'sent'
                       ? t('bulkPortalInvitation.results.sent', { defaultValue: 'Sent' })
                       : item.message
@@ -237,7 +237,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 
     if (!preview) {
       return (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-600))]">
           {t('bulkPortalInvitation.loading', { defaultValue: 'Checking who can be invited...' })}
         </p>
       );
@@ -252,7 +252,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
           })}
         </p>
         {preview.skipped.length > 0 && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-[rgb(var(--color-text-600))]">
             <p>
               {t('bulkPortalInvitation.skipCount', {
                 defaultValue: '{{total}} will be skipped:',
@@ -268,7 +268,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
             </ul>
           </div>
         )}
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-600))]">
           {t('bulkPortalInvitation.visibilityNote', {
             defaultValue:
               'Each invitation grants the access the contact already has: {{grouped}} are scoped to a portal visibility group, {{full}} get full access to their client\'s portal data.',
