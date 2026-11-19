@@ -2,9 +2,9 @@ import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { phoneSearchDigits } from './contactSearchMatch';
+import { deriveSearchIdentifierMatch } from './searchIdentifier';
 
 const LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-export const LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 export const CONTACT_LIST_SEARCH_TYPES = ['contact', 'document', 'interaction'] as const;
 
 export function buildListSearchPrefixTsquery(raw: string): string | null {
@@ -88,7 +88,7 @@ export function applyClientListIndexedSearchFilter(
   }
 
   const prefixTsquery = buildListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const { exact: identifier, prefix: identifierPrefix, isFullNumber } = deriveSearchIdentifierMatch(rawSearch);
   const isInternalUser = !isClientUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
@@ -141,10 +141,12 @@ export function applyClientListIndexedSearchFilter(
         websearch_to_tsquery('english', ?) AS tsq,
         CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
         ?::text AS raw,
-        ?::text AS identifier
+        ?::text AS identifier,
+        ?::text AS identifier_prefix,
+            ?::boolean AS fuzzy_enabled
     ) q
   `;
-  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier];
+  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier, identifierPrefix, !isFullNumber];
 
   const siFilters = `
     AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
@@ -157,10 +159,10 @@ export function applyClientListIndexedSearchFilter(
       OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
       OR si.title ILIKE '%' || q.raw || '%'
       OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-      OR si.title % q.raw
-      OR coalesce(si.subtitle, '') % q.raw
+      OR (q.fuzzy_enabled AND si.title % q.raw)
+      OR (q.fuzzy_enabled AND coalesce(si.subtitle, '') % q.raw)
       OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
-      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+      OR (q.identifier_prefix IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier_prefix || '%')
     )
   `;
   const siFilterBindings: Knex.RawBinding[] = [
@@ -297,7 +299,7 @@ export function buildContactListSearchQuery(
   userId: string
 ): { sql: string; bindings: Knex.RawBinding[] } {
   const prefixTsquery = buildListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const { exact: identifier, prefix: identifierPrefix, isFullNumber } = deriveSearchIdentifierMatch(rawSearch);
   const searchDigits = phoneSearchDigits(rawSearch);
   const ilikePattern = `%${rawSearch}%`;
   const scopedDb = tenantDb(trx, tenant);
@@ -421,7 +423,9 @@ export function buildContactListSearchQuery(
             websearch_to_tsquery('english', ?) AS tsq,
             CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
             ?::text AS raw,
-            ?::text AS identifier
+            ?::text AS identifier,
+            ?::text AS identifier_prefix,
+            ?::boolean AS fuzzy_enabled
         ),
         matched AS (
           SELECT DISTINCT
@@ -445,15 +449,15 @@ export function buildContactListSearchQuery(
               OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
               OR si.title ILIKE '%' || q.raw || '%'
               OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
+              OR (q.fuzzy_enabled AND si.title % q.raw)
+              OR (q.fuzzy_enabled AND coalesce(si.subtitle, '') % q.raw)
               OR (
                 q.identifier IS NOT NULL
                 AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
               )
               OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+                q.identifier_prefix IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier_prefix || '%'
               )
             )
         )
@@ -473,6 +477,8 @@ export function buildContactListSearchQuery(
     prefixTsquery,
     rawSearch,
     identifier,
+    identifierPrefix,
+    !isFullNumber,
     ...searchIndex.bindings,
     ...interactionJoin.bindings,
     ...noteContactJoin.bindings,
