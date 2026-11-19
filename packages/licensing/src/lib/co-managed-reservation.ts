@@ -214,6 +214,10 @@ export async function reserveAndActivateCoManagedSeatAllocation(
   }
 
   const fingerprint = createHash('sha256').update(JSON.stringify([
+    'seat', input.sponsorTenant, input.clientId, input.seats, input.fundingSource ?? 'paid',
+  ])).digest('hex');
+  // Rows written before funding-source-aware reservation used the legacy paid fingerprint.
+  const legacyPaidFingerprint = createHash('sha256').update(JSON.stringify([
     'seat', input.sponsorTenant, input.clientId, input.seats,
   ])).digest('hex');
 
@@ -226,7 +230,10 @@ export async function reserveAndActivateCoManagedSeatAllocation(
     const existing = await sponsor.table('co_managed_allocations')
       .where('operation_id', input.operationId).first();
     if (existing) {
-      if (existing.allocation_kind !== 'seat' || existing.request_fingerprint !== fingerprint) {
+      const existingFunding = existing.funding_source ?? 'paid';
+      const replayMatches = existing.request_fingerprint === fingerprint ||
+        (existingFunding === 'paid' && (input.fundingSource ?? 'paid') === 'paid' && existing.request_fingerprint === legacyPaidFingerprint);
+      if (existing.allocation_kind !== 'seat' || existingFunding !== (input.fundingSource ?? 'paid') || !replayMatches) {
         throw new CoManagedReservationError('OPERATION_CONFLICT');
       }
       return seatAllocationResult(existing);

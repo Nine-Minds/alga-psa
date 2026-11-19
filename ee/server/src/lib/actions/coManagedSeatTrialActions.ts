@@ -46,9 +46,12 @@ export const prepareCoManagedSeatTrialAction = withAuth(async (user, { tenant },
 }) => {
   await requireCapabilityForAction(CAPABILITY, tenant, 'admits');
   const knex = await authorize(user, tenant, input.clientId);
-  const result = await prepareCoManagedSeatTrial(knex, { tenant, ...input, invitedBy: user.user_id });
+  const result = await prepareCoManagedSeatTrial(knex, {
+    tenant, clientId: input.clientId, contactId: input.contactId, operationId: input.operationId,
+    boards: input.boards, invitedBy: user.user_id,
+  });
   return { trialId: result.trialId, arrangementId: result.arrangementId, assignmentId: result.assignmentId,
-    ...(await deliver(user, tenant, result.invitation)) };
+    ...(result.invitation ? await deliver(user, tenant, result.invitation) : { delivered: true }) };
 });
 
 async function pilotClient(tenant: string, trialId: string) {
@@ -69,7 +72,9 @@ export const replaceCoManagedSeatTrialTechnicianAction = withAuth(async (user, {
   await requireCapabilityForAction(CAPABILITY, tenant, 'admits');
   const { clientId } = await pilotClient(tenant, input.trialId);
   const knex = await authorize(user, tenant, clientId);
-  const result = await replaceCoManagedSeatTrialTechnician(knex, { tenant, ...input, invitedBy: user.user_id });
+  const result = await replaceCoManagedSeatTrialTechnician(knex, {
+    tenant, trialId: input.trialId, contactId: input.contactId, invitedBy: user.user_id,
+  });
   return { replaced: true, ...(await deliver(user, tenant, result.invitation)) };
 });
 
