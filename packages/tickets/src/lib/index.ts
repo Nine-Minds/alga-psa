@@ -259,3 +259,9 @@ export {
   resetScheduledCommentAdmission,
 } from './scheduledCommentAdmission';
 export type { ScheduledCommentAdmissionChecker, ScheduledCommentAdmissionContext } from './scheduledCommentAdmission';
+export {
+  compactTicketReference,
+  parseTicketSearchQuery,
+  ticketNumberMatchesQuery,
+} from './ticketReferenceSearch';
+export type { TicketSearchQuery } from './ticketReferenceSearch';

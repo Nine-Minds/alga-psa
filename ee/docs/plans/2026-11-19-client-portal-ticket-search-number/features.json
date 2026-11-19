@@ -1,0 +1,4 @@
+[
+  {"id":"F001","description":"Shared pure helper that normalises a ticket-reference query: trim, strip leading 'Ticket' and '#', and a separator-insensitive comparison form","group":"Search","implemented":true,"prdRefs":["Requirements"]},
+  {"id":"F002","description":"Client portal TicketList search trims the query and matches ticket_number through the helper, ignoring hyphens and spaces; title/status/priority match the trimmed query","group":"Client portal","implemented":true,"prdRefs":["Requirements","Acceptance"]}
+]

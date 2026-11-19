@@ -1,0 +1,4 @@
+[
+  {"id":"T001","description":"Unit: helper turns ' #ALGA-2026-0002826 ', 'Ticket #ALGA-2026-0002826' and 'alga 2026 0002826' into forms that match ticket_number ALGA-2026-0002826; '2826' still matches; plain title text is only trimmed","group":"Unit","featureIds":["F001"],"implemented":true},
+  {"id":"T002","description":"Component/unit: the portal ticket filter returns the ticket for each acceptance query and still finds a ticket by part of its title with surrounding spaces","group":"Unit","featureIds":["F002"],"implemented":true}
+]
