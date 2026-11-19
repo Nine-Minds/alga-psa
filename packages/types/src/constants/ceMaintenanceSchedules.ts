@@ -38,6 +38,7 @@ export const CE_SHARED_MAINTENANCE_JOBS: ReadonlyArray<string> = [
   'process-renewal-queue',
   'cleanup-temporary-workflow-forms',
   'cleanup-webhook-deliveries',
+  'cleanup-inbound-email-quarantine',
   'create-client-contract-line-cycles',
   'create-next-time-periods',
 ];

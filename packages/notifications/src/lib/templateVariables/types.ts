@@ -21,6 +21,8 @@ export interface VariableDef {
   concept: string[];
   availability: VariableAvailability;
   notes?: string;
+  /** Ticket emails only: `client` is safe for both audiences, `msp` is staff only. */
+  audience?: "client" | "msp";
 }
 
 export interface TemplateVariableRegistryEntry {

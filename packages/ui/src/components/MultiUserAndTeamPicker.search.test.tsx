@@ -80,3 +80,66 @@ describe.each([
     expect(document.getElementById('few-search')).toBeNull();
   });
 });
+
+describe('MultiUserAndTeamPicker pinned options', () => {
+  const pinned = [{ value: 'me', label: 'Me', icon: <span data-testid="me-icon" /> }];
+
+  it('keeps a pinned value, shows its label, and toggles it from the pinned row', async () => {
+    const onValuesChange = vi.fn();
+    const { rerender } = render(
+      <MultiUserAndTeamPicker
+        id="assignee"
+        filterMode
+        compactDisplay
+        values={['me']}
+        onValuesChange={onValuesChange}
+        users={makeUsers(30)}
+        pinnedOptions={pinned}
+      />
+    );
+    // The stale-value cleaner must not strip the pseudo-value.
+    expect(onValuesChange).not.toHaveBeenCalled();
+    expect(screen.getByText('Me')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(document.getElementById('assignee') as HTMLElement);
+    });
+    // Search does not filter pinned rows.
+    const search = document.getElementById('assignee-search') as HTMLInputElement;
+    fireEvent.change(search, { target: { value: 'doro' } });
+    const row = screen.getAllByText('Me').find((el) => el.closest('.cursor-pointer'))!;
+    fireEvent.click(row);
+    expect(onValuesChange).toHaveBeenLastCalledWith([]);
+
+    rerender(
+      <MultiUserAndTeamPicker
+        id="assignee"
+        filterMode
+        compactDisplay
+        values={[]}
+        onValuesChange={onValuesChange}
+        users={makeUsers(30)}
+        pinnedOptions={pinned}
+      />
+    );
+    fireEvent.click(screen.getAllByText('Me').find((el) => el.closest('.cursor-pointer'))!);
+    expect(onValuesChange).toHaveBeenLastCalledWith(['me']);
+  });
+
+  it('still strips unknown ids but keeps the pinned value, and ranks it first with a count', () => {
+    const onValuesChange = vi.fn();
+    render(
+      <MultiUserAndTeamPicker
+        id="assignee2"
+        filterMode
+        compactDisplay
+        values={['gone', 'me', 'user-1']}
+        onValuesChange={onValuesChange}
+        users={makeUsers(3)}
+        pinnedOptions={pinned}
+      />
+    );
+    expect(onValuesChange).toHaveBeenCalledWith(['me', 'user-1']);
+    expect(screen.getByText('Me +1')).toBeTruthy();
+  });
+});

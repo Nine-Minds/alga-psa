@@ -24,6 +24,18 @@ type Props = NativeStackScreenProps<RootStackParamList, "CreateTicket">;
 
 type PickerField = "board" | "client" | "contact" | "location" | "status" | "priority" | "assignee" | "assets" | null;
 
+/**
+ * Whether a board accepts the priority: an ITIL board takes ITIL priorities only, any other board its custom ones,
+ * as ticket create enforces. An older server sends no ITIL flag, and then every priority is offered.
+ */
+export function priorityFitsBoard(
+  priority: { is_from_itil_standard?: boolean },
+  board: { priority_type?: string | null } | undefined,
+): boolean {
+  if (priority.is_from_itil_standard === undefined || !board) return true;
+  return priority.is_from_itil_standard === (board.priority_type === "itil");
+}
+
 export function CreateTicketScreen({ navigation, route }: Props) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -41,7 +53,17 @@ export function CreateTicketScreen({ navigation, route }: Props) {
   }, [config, refreshSession, session]);
 
   const apiKey = session?.accessToken ?? "";
-  const { features } = useCapabilities();
+  const { features, operationalScope } = useCapabilities();
+  // A co-managed seat technician opens tickets for their own client, on the boards their seat allows; the user,
+  // client and location lists are not available to them.
+  const operationalOnly = features.operationalOnly;
+  const ownClient = operationalOnly ? operationalScope?.client ?? null : null;
+  const creatableBoards = useCallback(
+    (boards: BoardListItem[]) => operationalOnly
+      ? boards.filter((b) => operationalScope?.creatableBoardIds.includes(b.board_id))
+      : boards,
+    [operationalOnly, operationalScope],
+  );
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
 
@@ -53,8 +75,8 @@ export function CreateTicketScreen({ navigation, route }: Props) {
   const [title, setTitle] = useState("");
   const [boardId, setBoardId] = useState<string | null>(null);
   const [boardName, setBoardName] = useState("");
-  const [clientId, setClientId] = useState<string | null>(preset.clientId ?? null);
-  const [clientName, setClientName] = useState(preset.clientName ?? "");
+  const [clientId, setClientId] = useState<string | null>(preset.clientId ?? ownClient?.clientId ?? null);
+  const [clientName, setClientName] = useState(preset.clientName ?? ownClient?.clientName ?? "");
   const [contactId, setContactId] = useState<string | null>(null);
   const [contactName, setContactName] = useState("");
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -63,6 +85,9 @@ export function CreateTicketScreen({ navigation, route }: Props) {
   const [statusName, setStatusName] = useState("");
   const [priorityId, setPriorityId] = useState<string | null>(null);
   const [priorityName, setPriorityName] = useState("");
+  // Read by the board-change effect without re-running it on every priority pick.
+  const priorityIdRef = useRef(priorityId);
+  priorityIdRef.current = priorityId;
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [assigneeName, setAssigneeName] = useState("");
   const [description, setDescription] = useState("");
@@ -101,11 +126,12 @@ export function CreateTicketScreen({ navigation, route }: Props) {
     try {
       const res = await listBoards(client, { apiKey });
       if (!res.ok) { setPickerError(t("create.errors.loadBoards")); return; }
-      boardsRef.current = res.data.data;
-      setPickerItems(res.data.data.map((b) => ({ id: b.board_id, label: b.board_name, subtitle: b.is_default ? t("create.defaultBoard") : null })));
+      const boards = creatableBoards(res.data.data);
+      boardsRef.current = boards;
+      setPickerItems(boards.map((b) => ({ id: b.board_id, label: b.board_name, subtitle: b.is_default ? t("create.defaultBoard") : null })));
     } catch { setPickerError(t("create.errors.loadBoards")); }
     finally { setPickerLoading(false); }
-  }, [client, apiKey, t]);
+  }, [client, apiKey, creatableBoards, t]);
 
   const fetchStatuses = useCallback(async (forBoardId: string) => {
     if (!client) return;
@@ -128,13 +154,19 @@ export function CreateTicketScreen({ navigation, route }: Props) {
       const res = await getTicketPriorities(client, { apiKey });
       if (!res.ok) { setPickerError(t("create.errors.loadPriorities")); return; }
       prioritiesRef.current = res.data.data;
-      setPickerItems(res.data.data.map((p) => ({ id: p.priority_id, label: p.priority_name })));
+      const board = boardsRef.current.find((b) => b.board_id === boardId);
+      const fitting = res.data.data.filter((p) => priorityFitsBoard(p, board));
+      setPickerItems(fitting.map((p) => ({ id: p.priority_id, label: p.priority_name })));
     } catch { setPickerError(t("create.errors.loadPriorities")); }
     finally { setPickerLoading(false); }
-  }, [client, apiKey, t]);
+  }, [client, apiKey, boardId, t]);
 
   const fetchClients = useCallback(async (query?: string) => {
     if (!client) return;
+    if (operationalOnly) {
+      setPickerItems(ownClient ? [{ id: ownClient.clientId, label: ownClient.clientName }] : []);
+      return;
+    }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -148,7 +180,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
       setPickerItems(res.data.data.map((c) => ({ id: c.client_id, label: c.client_name, subtitle: c.email, imageUri: c.logoUrl && base ? `${base}${c.logoUrl}` : null, tags: c.display_tags })));
     } catch { if (!controller.signal.aborted) setPickerError(t("create.errors.loadClients")); }
     finally { if (!controller.signal.aborted) setPickerLoading(false); }
-  }, [client, apiKey, t]);
+  }, [client, apiKey, operationalOnly, ownClient, t]);
 
   const fetchContacts = useCallback(async (query?: string) => {
     if (!client || !clientId) return;
@@ -257,15 +289,16 @@ export function CreateTicketScreen({ navigation, route }: Props) {
     void (async () => {
       const res = await listBoards(client, { apiKey });
       if (canceled || !res.ok) return;
-      boardsRef.current = res.data.data;
-      const defaultBoard = res.data.data.find((b) => b.is_default);
+      const boards = creatableBoards(res.data.data);
+      boardsRef.current = boards;
+      const defaultBoard = boards.find((b) => b.is_default) ?? (operationalOnly && boards.length === 1 ? boards[0] : undefined);
       if (defaultBoard) {
         setBoardId(defaultBoard.board_id);
         setBoardName(defaultBoard.board_name);
       }
     })();
     return () => { canceled = true; };
-  }, [client, apiKey, boardId]);
+  }, [client, apiKey, boardId, creatableBoards, operationalOnly]);
 
   // --- Auto-select defaults when board changes ---
   useEffect(() => {
@@ -273,9 +306,16 @@ export function CreateTicketScreen({ navigation, route }: Props) {
     // Reset status when board changes
     setStatusId(null);
     setStatusName("");
+    // A priority of the other kind (ITIL vs custom) is refused by the new board.
+    const nextBoard = boardsRef.current.find((b) => b.board_id === boardId);
+    const chosen = prioritiesRef.current.find((p) => p.priority_id === priorityIdRef.current);
+    if (chosen && !priorityFitsBoard(chosen, nextBoard)) {
+      setPriorityId(null);
+      setPriorityName("");
+    }
     // Auto-fill default assignee from board
     const selectedBoard = boardsRef.current.find((b) => b.board_id === boardId);
-    if (selectedBoard?.default_assigned_to) {
+    if (selectedBoard?.default_assigned_to && !operationalOnly) {
       const defaultUserId = selectedBoard.default_assigned_to;
       // Fetch users to resolve the assignee name
       void (async () => {
@@ -302,7 +342,14 @@ export function CreateTicketScreen({ navigation, route }: Props) {
         }
       }
     })();
-  }, [boardId, client, apiKey]);
+  }, [boardId, client, apiKey, operationalOnly]);
+
+  // The seat's client arrives with the capabilities; a screen opened before they loaded picks it up then.
+  useEffect(() => {
+    if (!ownClient || clientId) return;
+    setClientId(ownClient.clientId);
+    setClientName(ownClient.clientName);
+  }, [clientId, ownClient]);
 
   // Reset contact/location when client changes
   useEffect(() => {
@@ -506,7 +553,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
         ) : null}
 
         {/* Location (optional, requires client) */}
-        {clientId ? (
+        {clientId && !operationalOnly ? (
           <FieldSelector
             testID="create-ticket-location"
             label={t("create.location")}
@@ -596,17 +643,19 @@ export function CreateTicketScreen({ navigation, route }: Props) {
         />
 
         {/* Assignee (optional) */}
-        <FieldSelector
-          testID="create-ticket-assignee"
-          label={t("create.assignee")}
-          value={assigneeName}
-          placeholder={t("create.selectAssignee")}
-          onPress={() => openPicker("assignee")}
-          onClear={assigneeId ? () => { setAssigneeId(null); setAssigneeName(""); } : undefined}
-          colors={colors}
-          spacing={spacing}
-          typography={typography}
-        />
+        {operationalOnly ? null : (
+          <FieldSelector
+            testID="create-ticket-assignee"
+            label={t("create.assignee")}
+            value={assigneeName}
+            placeholder={t("create.selectAssignee")}
+            onPress={() => openPicker("assignee")}
+            onClear={assigneeId ? () => { setAssigneeId(null); setAssigneeName(""); } : undefined}
+            colors={colors}
+            spacing={spacing}
+            typography={typography}
+          />
+        )}
 
         {/* Description (optional) */}
         <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.lg }}>{t("create.description")}</Text>

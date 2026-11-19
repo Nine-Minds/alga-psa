@@ -755,7 +755,7 @@
       "Presentation"
     ],
     "caseInsensitive": [
-      "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"
+      "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "prefix", "router", "server", "status", "support", "team", "webhook"
     ],
     "patterns": [
       "^\\s*$",

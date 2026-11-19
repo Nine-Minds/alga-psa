@@ -18,4 +18,5 @@ export * from './accountingDiscountMapping';
 export * from './accountingMappingTargetPolicy';
 export * from './userResponseSanitizer';
 export * from './seatTechnician';
+export * from './principalApiKey';
 export * from './timeEntryBillingMode';

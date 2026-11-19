@@ -32,7 +32,7 @@ import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
-import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
+import { HeaderTimerChip, useHeaderTimerChipVisible } from "../features/timer/components/HeaderTimerChip";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -51,6 +51,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tAssets } = useTranslation("assets");
   const { t: tSearch } = useTranslation("search");
   const backLabel = tCommon("back", "Back");
+  const timerChipVisible = useHeaderTimerChipVisible();
 
   // Register push token and handle notification taps (no-op when feature flag is off)
   useNotifications();
@@ -68,7 +69,7 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
         contentStyle: {
           backgroundColor: theme.colors.background,
         },
-        headerRight: () => <HeaderTimerChip />,
+        headerRight: timerChipVisible ? () => <HeaderTimerChip /> : undefined,
       }}
     >
       {isSignedIn ? (

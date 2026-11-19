@@ -29,7 +29,7 @@ import {
   TICKETS_LAST_ACTIVE_BOARD_SETTING,
 } from '../lib/boardTabs';
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
-import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
+import { foldLegacyClientId, normalizeAssignedToIds } from '../lib/ticketFilterUtils';
 import { decodeTicketWhere, encodeTicketWhere } from '../lib/ticketWhereUrl';
 import {
   DEFAULT_TICKET_LIST_SORT_KEY,
@@ -112,7 +112,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
   const decodedWhere = decodeTicketWhere(params.get('where'));
 
-  const filters: Partial<ITicketListFilters> = {
+  const filters: Partial<ITicketListFilters> = foldLegacyClientId({
     boardId: params.get('boardId') || undefined,
     where: decodedWhere.where,
     listView: params.get('listView') || undefined,
@@ -144,7 +144,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     showOpenOnly: isTicketStatusOpenFilter(params.get('statusId') || TICKET_STATUS_FILTER_OPEN),
     sortBy,
     sortDirection,
-  };
+  });
 
   return {
     filters,
@@ -181,6 +181,7 @@ interface TicketingDashboardContainerProps {
     options: TicketFormOptions;
     tickets: ITicketListItem[];
     totalCount: number;
+    loadedAt?: number;
     metadata?: TicketListMetadata;
     /** Named views the caller's list offers, with their counts. Present only for a principal that has views. */
     views?: ITicketListViewSummary[];
@@ -254,6 +255,8 @@ export default function TicketingDashboardContainer({
   const emptyMetadata: TicketListMetadata = { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} };
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
+  const [loadedAt, setLoadedAt] = useState(() => consolidatedData.loadedAt ?? Date.now());
+  const [loadedFilters, setLoadedFilters] = useState<Partial<ITicketListFilters>>(initialFilters ?? {});
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
   const [namedViews, setNamedViews] = useState<ITicketListViewSummary[] | undefined>(consolidatedData.views);
   const [seatResponsibilityOffered, setSeatResponsibilityOffered] = useState<boolean>(consolidatedData.seatResponsibilityOffered === true);
@@ -274,7 +277,6 @@ export default function TicketingDashboardContainer({
       bundleView: initialFilters?.bundleView ?? 'bundled',
       boardId: undefined,
       categoryId: undefined,
-      clientId: undefined,
       assignedToIds: undefined,
       assignedTeamIds: undefined,
       includeUnassigned: false,
@@ -289,6 +291,7 @@ export default function TicketingDashboardContainer({
   useEffect(() => {
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
+    setLoadedAt(consolidatedData.loadedAt ?? Date.now());
     setNamedViews(consolidatedData.views);
     setSeatResponsibilityOffered(consolidatedData.seatResponsibilityOffered === true);
     setSeatHandoffDirection(consolidatedData.seatHandoffDirection);
@@ -390,7 +393,7 @@ export default function TicketingDashboardContainer({
     if (filters.excludeBoardIds && Array.isArray(filters.excludeBoardIds) && filters.excludeBoardIds.length > 0) {
       params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
     }
-    if (filters.clientId) params.set('clientId', filters.clientId);
+    // The client filter travels in `where` (client.id); a legacy `clientId` is folded on the way in.
     if (filters.contactId) params.set('contactId', filters.contactId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
@@ -475,12 +478,12 @@ export default function TicketingDashboardContainer({
     filters: Partial<ITicketListFilters>,
     page: number,
     pageSize: number,
-    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc' }
-  ) => {
+    overrides?: { sortBy?: string; sortDirection?: 'asc' | 'desc'; preserveOnError?: boolean }
+  ): Promise<boolean> => {
     console.log('[Container] fetchTickets called with:', { filters, page, pageSize });
     if (!currentUser) {
       toast.error(t('errors.performActionAuthRequired', 'You must be logged in to perform this action'));
-      return;
+      return false;
     }
     const requestId = ++latestFetchRequestIdRef.current;
     setIsLoading(true);
@@ -527,20 +530,21 @@ export default function TicketingDashboardContainer({
       );
 
       if (requestId !== latestFetchRequestIdRef.current) {
-        return;
+        return false;
       }
 
       if (isReturnedActionError(result)) {
         // Pass the payload through unflattened: handleError prefers a returned
         // user-safe actionError over the fallback, but only for that channel.
         handleError(result, t('errors.fetchTickets', 'Failed to fetch tickets'));
-        setTickets([]);
-        setTotalCount(0);
-        return;
+        if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+        return false;
       }
 
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
+      setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
+      setLoadedFilters(currentFiltersWithDefaults);
       setTotalCount(result.totalCount);
       setNamedViews(result.views);
       setSeatResponsibilityOffered(result.seatResponsibilityOffered === true);
@@ -548,17 +552,18 @@ export default function TicketingDashboardContainer({
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
+      return true;
       // Note: callers are responsible for setting activeFilters, sortBy, sortDirection
       // before calling fetchTickets. Setting them here would create new object references
       // that cascade through dependencies and cause re-render loops.
 
     } catch (error) {
       if (requestId !== latestFetchRequestIdRef.current) {
-        return;
+        return false;
       }
       handleError(error, t('errors.fetchTickets', 'Failed to fetch tickets'));
-      setTickets([]);
-      setTotalCount(0);
+      if (!overrides?.preserveOnError) { setTickets([]); setTotalCount(0); }
+      return false;
     } finally {
       // Clear loading only if this is still the latest request. A superseded
       // (older) fetch must not flip the spinner off while a newer one is in
@@ -575,6 +580,10 @@ export default function TicketingDashboardContainer({
   activeFiltersRef.current = activeFilters;
   const fetchTicketsRef = useRef(fetchTickets);
   fetchTicketsRef.current = fetchTickets;
+  const refreshListForChanges = useCallback(
+    () => fetchTickets(activeFiltersRef.current, currentPage, pageSize, { preserveOnError: true }),
+    [currentPage, fetchTickets, pageSize]
+  );
 
   // ── Board-level view configuration ──────────────────────────────────────────
   //
@@ -1156,6 +1165,9 @@ export default function TicketingDashboardContainer({
       <TicketingDashboard
       id="ticketing-dashboard"
       initialTickets={tickets}
+      loadedAt={loadedAt}
+      loadedFilters={loadedFilters}
+      onRefreshListForChanges={refreshListForChanges}
       initialBoards={initialBoardsForDashboard}
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}

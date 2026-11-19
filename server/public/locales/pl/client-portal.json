@@ -298,7 +298,7 @@
         "contactMissingEmail": "Kontakt nie ma adresu e-mail.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail.",
         "userExistsForContact": "Konto użytkownika już istnieje dla tego kontaktu.",
-        "portalUserAlreadyExists": "Użytkownik portalu już istnieje dla tego kontaktu.",
+        "portalUserAlreadyExists": "Konto dla tego adresu e-mail już istnieje. Zaloguj się lub zresetuj hasło na stronie logowania.",
         "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tej organizacji.",
         "noDefaultLocation": "Domyślny klient nie ma skonfigurowanej domyślnej lokalizacji.",
         "noLocationEmail": "Lokalizacja klienta nie ma skonfigurowanego kontaktowego adresu e-mail.",

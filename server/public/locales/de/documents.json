@@ -29,6 +29,7 @@
     "invoiceTitle": "RECHNUNG",
     "issueDate": "Rechnungsdatum",
     "locationSubtotal": "Zwischensumme Standort",
+    "unassignedLocation": "Gesamtes Angebot",
     "monthly": "Monatlich",
     "monthlyItems": "Monatliche Positionen",
     "monthlyTotal": "Monatlich gesamt",

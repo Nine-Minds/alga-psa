@@ -333,6 +333,16 @@
       "addLocation": "+ Standort hinzufügen",
       "fromTemplate": "+ Aus Vorlage"
     },
+    "locations": {
+      "removeGroup": {
+        "title": "Diesen Standort entfernen?",
+        "message": "Dieser Standort hat noch {{count}} Position(en). Wählen Sie aus, was damit geschehen soll.",
+        "moveOption": "Diese Positionen zu {{location}} verschieben",
+        "ungroupOption": "Diese Positionen behalten und nicht mehr nach Standort gruppieren",
+        "deleteOption": "Diese Positionen löschen",
+        "confirm": "Standort entfernen"
+      }
+    },
     "clientFacing": {
       "title": "Kundensichtbarer Text",
       "subtitle": "Erscheint im PDF unter den Summen.",
@@ -588,10 +598,13 @@
       "groupHeading": "Standort {{index}}",
       "pickerPlaceholder": "Standort auswählen",
       "unassigned": "Positionen ohne Standort werden hier aufgeführt, bis einer ausgewählt wird.",
+      "quoteWide": "Gesamtes Angebot",
+      "quoteWideHint": "Rabatte gelten für das gesamte Angebot und sind daher keinem Standort zugeordnet.",
       "removeGroup": "Standort entfernen",
       "subtotal": "Standort-Zwischensumme",
       "addLocationButton": "+ Standort hinzufügen",
       "needMoreLocations": "Dieser Kunde hat nur einen aktiven Standort. Fügen Sie in den Kundeneinstellungen einen zweiten Standort hinzu, um Multi-Site-Angebote zu aktivieren.",
+      "allLocationsInUse": "Jeder aktive Standort dieses Kunden hat auf diesem Angebot bereits eine Gruppe.",
       "emptyGroup": "Noch keine Positionen für diesen Standort."
     }
   },

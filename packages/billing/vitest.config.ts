@@ -105,8 +105,11 @@ export default defineConfig({
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
-      'src/lib/adapters/salesOrderAdapters.test.ts',
+      // The quote view model its by-location bands are built from — its sibling
+      // adapters were already listed, this one was only reached by the
+      // server-wide glob.
       'src/lib/adapters/quoteAdapters.test.ts',
+      'src/lib/adapters/salesOrderAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
@@ -121,6 +124,10 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
       'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
+      // Multi-location quote editing (alga-2026-0002902): client-change
+      // clearing, discount lines staying unsited, the remove-location
+      // move/delete choice, and the create-from-template item override.
+      'src/components/billing-dashboard/quotes/QuoteForm.locations.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDecisionLine.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.

@@ -1442,6 +1442,8 @@
       "client": "Contesto cliente",
       "hypothetical": "Profilo cliente ipotetico",
       "open": "Simula",
+      "pickClient": "Seleziona un cliente",
+      "specificClient": "Un cliente specifico",
       "title": "Simulazione del modello"
     },
     "pricing": {

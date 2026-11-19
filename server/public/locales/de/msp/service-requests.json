@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplizieren",
       "archive": "Archivieren",
-      "unarchive": "Wiederherstellen"
+      "unarchive": "Wiederherstellen",
+      "delete": "Löschen"
     },
     "lifecycleLabels": {
       "published": "Veröffentlicht",
@@ -440,7 +441,8 @@
         "applyFailed": "Antwortzuordnung konnte nicht angewendet werden",
         "applied": "Antwortzuordnung angewendet"
       }
-    }
+    },
+    "delete": "Löschen"
   },
   "icons": {
     "file-text": "Allgemeine Anfrage",
@@ -483,7 +485,8 @@
       "workflowConfigurationUpdated": "Workflow-Konfiguration aktualisiert",
       "formBehaviorConfigUpdated": "Formularverhalten-Konfiguration aktualisiert",
       "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert",
-      "audienceUpdated": "Zielgruppe aktualisiert"
+      "audienceUpdated": "Zielgruppe aktualisiert",
+      "definitionDeleted": "Service-Request-Formular gelöscht"
     },
     "error": {
       "loadFailed": "Serviceanfragen konnten nicht geladen werden",
@@ -507,7 +510,8 @@
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
       "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
       "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
-      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
+      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden",
+      "deleteFailed": "Service-Request-Formular konnte nicht gelöscht werden"
     }
   },
   "designer": {
@@ -841,5 +845,8 @@
         "description": "Ein leeres Formular, Frage für Frage aufgebaut."
       }
     }
+  },
+  "deleteDialog": {
+    "confirmation": "„{{name}}“ und alle Versionen werden dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden."
   }
 }

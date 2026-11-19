@@ -50,7 +50,6 @@ import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
 import Link from 'next/link';
 import LabelFirstAssetIntake from './LabelFirstAssetIntake';
-import { AssetTagScanLookup } from './AssetTagScanLookup';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -1549,12 +1548,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 {t('assetDashboardClient.actions.refreshData', { defaultValue: 'Refresh data' })}
               </Button>
               {canCreate && <QuickAddAsset onAssetAdded={() => { void handleAssetAdded(); }} />}
-              {canCreate && <Link href="/msp/assets/new" className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium">Full add</Link>}
+              {canCreate && (
+                <Button asChild id="full-add-asset-button" variant="outline">
+                  <Link href="/msp/assets/new">{t('assetDashboardClient.actions.fullAdd', { defaultValue: 'Full add' })}</Link>
+                </Button>
+              )}
               {canCreate && <LabelFirstAssetIntake />}
             </div>
           </div>
-
-          <AssetTagScanLookup />
 
           <Card className="p-4 space-y-4" {...withDataAutomationId({ id: 'asset-toolbar-card' })}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

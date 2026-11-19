@@ -23,6 +23,7 @@ import {
   type ParticipationResolver,
 } from '@alga-psa/core/capability';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
+import { whereEntitlementOperational } from '@alga-psa/licensing/entitlement-operational';
 
 export const CO_MANAGED_SEAT_CAPABILITY: CapabilityKey = 'co-managed-seat';
 
@@ -34,7 +35,7 @@ export async function isCoManagedSeatEligible(tenantId: string, db?: Knex): Prom
   const conn = db ?? await getAdminConnection();
   const scoped = tenantDb(conn, tenantId);
   const [entitlement, owner] = await Promise.all([
-    scoped.table('co_managed_entitlements').first('tenant'),
+    whereEntitlementOperational(scoped.table('co_managed_entitlements')).first('tenant'),
     scoped.table('tenants').first('product_code'),
   ]);
   return Boolean(entitlement) && owner?.product_code === 'psa';

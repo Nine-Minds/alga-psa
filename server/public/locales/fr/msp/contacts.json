@@ -457,6 +457,7 @@
         "contactMissingEmail": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
         "userExistsForContact": "Un compte utilisateur existe déjà pour ce contact. Utilisez la réinitialisation de mot de passe au lieu d'envoyer une invitation.",
+        "portalUserAlreadyExists": "Cette adresse e-mail appartient déjà à un autre compte utilisateur de cette organisation.",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",

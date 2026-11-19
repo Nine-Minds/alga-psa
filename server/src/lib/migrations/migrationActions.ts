@@ -78,7 +78,6 @@ export interface MigrationConfigurationOptions {
   statuses: Array<{ id: string; name: string }>;
   priorities: Array<{ id: string; name: string }>;
   assetTypes: Array<{ slug: string; name: string; isBuiltin: boolean; fields: AssetTypeField[] }>;
-  clients: Array<{ id: string; name: string }>;
   serviceTypes: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string }>;
   packageStatusNames: string[];
@@ -116,7 +115,8 @@ export async function loadMigrationConfigurationOptions(
     return rows.map((row: { value: string }) => row.value);
   };
 
-  const [boards, statuses, priorities, assetTypes, clients, serviceTypes, users, stagedTypes] = await Promise.all([
+  // Clients are picked by server search in the panel, so they are not listed here.
+  const [boards, statuses, priorities, assetTypes, serviceTypes, users, stagedTypes] = await Promise.all([
     db.table('boards').select('board_id', 'board_name').orderBy('board_name'),
     db
       .table('statuses')
@@ -125,7 +125,6 @@ export async function loadMigrationConfigurationOptions(
       .orderBy('order_number'),
     db.table('priorities').select('priority_id', 'priority_name').orderBy('order_number'),
     db.table('asset_type_registry').select('slug', 'name', 'is_builtin', 'fields_schema').orderBy('name'),
-    db.table('clients').where({ is_inactive: false }).select('client_id', 'client_name').orderBy('client_name'),
     db.table('service_types').where({ is_active: true }).select('id', 'name').orderBy('name'),
     db
       .table('users')
@@ -162,7 +161,6 @@ export async function loadMigrationConfigurationOptions(
       isBuiltin: Boolean(row.is_builtin),
       fields: (typeof row.fields_schema === 'string' ? JSON.parse(row.fields_schema) : row.fields_schema ?? []) as AssetTypeField[],
     })),
-    clients: clients.map((row) => ({ id: row.client_id, name: row.client_name })),
     serviceTypes: serviceTypes.map((row) => ({ id: row.id, name: row.name })),
     users: users.map((row) => ({
       id: row.user_id,

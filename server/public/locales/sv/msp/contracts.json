@@ -1442,6 +1442,8 @@
       "client": "Kundkontext",
       "hypothetical": "Hypotetisk kundprofil",
       "open": "Simulera",
+      "pickClient": "Välj en kund",
+      "specificClient": "En specifik kund",
       "title": "Mallsimulering"
     },
     "pricing": {

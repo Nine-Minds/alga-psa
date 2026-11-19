@@ -6,8 +6,7 @@ import { CustodyError } from './errors';
 import { writeCustodyHistory } from './history';
 import { associateAdvanceReturnWithCustody, lockUnlinkedAdvanceReturnsForIntake } from './advanceWarrantyAssociation';
 import {
-  CUSTODY_COLUMNS,
-  FOLLOW_UP_SELECT,
+  CUSTODY_RETURNING,
   loadHolder,
   loadLocation,
   mapCustodyRow,
@@ -119,7 +118,7 @@ export async function openCustody(
         created_at: now,
         updated_at: now,
       })
-      .returning([...CUSTODY_COLUMNS, trx.raw(FOLLOW_UP_SELECT)] as any);
+      .returning(CUSTODY_RETURNING as any);
   } catch (error: any) {
     // Two receivers racing: the partial unique index is the arbiter.
     if (error?.code === '23505' && String(error?.constraint ?? '').includes('asset_custody_one_open_per_asset')) {

@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
+import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb, runWithTenant } from '@alga-psa/db';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { subjectFromServiceContext } from './serviceContextSubject';
@@ -12,7 +12,9 @@ import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
 import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
-import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
+import { ContactModel, deleteContactCascade } from '@alga-psa/shared/models/contactModel';
+import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
 import {
   CONTACT_LOCATION_CLIENT_MISMATCH,
@@ -548,15 +550,43 @@ export class ContactService extends BaseService<IContact> {
       if (!before) {
         throw new NotFoundError('Contact not found');
       }
-
-      await clearContactLinksBeforeDelete(trx, context.tenant, id);
-
-      await tenantDb(trx, context.tenant).table('contacts')
-        .where('contact_name_id', id)
-        .delete();
-
       return before;
     });
+
+    // Same dependency gate the MSP action runs: a contact with a portal user (or
+    // tickets, interactions, …) must not be deleted out from under it, or the
+    // account is stranded — unable to sign in and unable to be invited again.
+    // deleteEntityTags (inside deleteContactCascade) resolves its tenant from the
+    // AsyncLocalStorage context rather than the trx/tenant args, which the UI
+    // actions get for free from withAuth's runWithTenant wrapper; this REST path
+    // has no such wrapper, so it establishes the context itself.
+    const result = await runWithTenant(context.tenant, () =>
+      deleteEntityWithValidation(
+        'contact',
+        id,
+        knex,
+        context.tenant,
+        async (trx, tenant) => {
+          const deleted = await deleteContactCascade(trx, tenant, id, {
+            deleteTags: (tagTrx, contactId) => deleteEntityTags(tagTrx, contactId, 'contact'),
+          });
+          if (!deleted) {
+            throw new NotFoundError('Contact not found');
+          }
+        }
+      )
+    );
+
+    if (!result.deleted) {
+      throw new ConflictError(
+        result.message || 'Contact cannot be deleted while dependent records exist',
+        {
+          code: result.code,
+          dependencies: result.dependencies,
+          alternatives: result.alternatives,
+        }
+      );
+    }
 
     const occurredAt = new Date().toISOString();
     const actor = maybeUserActorFromContext(context);

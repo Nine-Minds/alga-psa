@@ -18,7 +18,8 @@
     "actions": {
       "duplicate": "Duplicera",
       "archive": "Arkivera",
-      "unarchive": "Återställ från arkivet"
+      "unarchive": "Återställ från arkivet",
+      "delete": "Ta bort"
     },
     "lifecycleLabels": {
       "published": "Publicerad",
@@ -440,7 +441,8 @@
         "applyFailed": "Det gick inte att tillämpa svarsmappningen",
         "applied": "Svarsmappningen har tillämpats"
       }
-    }
+    },
+    "delete": "Ta bort"
   },
   "icons": {
     "file-text": "Allmän förfrågan",
@@ -483,7 +485,8 @@
       "workflowConfigurationUpdated": "Arbetsflödesinställningarna har uppdaterats",
       "formBehaviorConfigUpdated": "Inställningarna för formulärbeteende har uppdaterats",
       "visibilityConfigUpdated": "Synlighetsinställningarna har uppdaterats",
-      "audienceUpdated": "Målgrupp uppdaterad"
+      "audienceUpdated": "Målgrupp uppdaterad",
+      "definitionDeleted": "Tjänstebegäran-formuläret har tagits bort"
     },
     "error": {
       "loadFailed": "Det gick inte att läsa in tjänsteförfrågningar",
@@ -507,7 +510,8 @@
       "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
       "visibilityInvalid": "Ogiltig JSON för synlighet",
       "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
-      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
+      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen",
+      "deleteFailed": "Det gick inte att ta bort tjänstebegäran-formuläret"
     }
   },
   "designer": {
@@ -841,5 +845,8 @@
         "description": "Ett tomt formulär som byggs en fråga i taget."
       }
     }
+  },
+  "deleteDialog": {
+    "confirmation": "”{{name}}” och alla dess versioner tas bort permanent. Det går inte att ångra."
   }
 }

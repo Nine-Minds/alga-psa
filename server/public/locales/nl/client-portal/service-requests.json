@@ -10,8 +10,6 @@
   },
   "detail": {
     "submitted": "Aanvraag ingediend",
-    "requestIdLabel": "Aanvraag-ID: ",
-    "ticketIdLabel": "Ticket-ID: ",
     "unableToSubmit": "Aanvraag kan niet worden ingediend",
     "formTitle": "Aanvraagformulier",
     "noFields": "Geen velden geconfigureerd.",
@@ -55,10 +53,8 @@
   },
   "submissionDetail": {
     "backToMyRequests": "Terug naar Mijn aanvragen",
-    "requestIdLabel": "Aanvraag-ID:",
     "statusSection": "Status",
     "submittedAt": "Ingediend: {{date}}",
-    "ticketLabel": "Ticket:",
     "submittedAnswersTitle": "Ingediende antwoorden",
     "noResponse": "Geen antwoord",
     "attachmentsTitle": "Bijlagen",
@@ -83,5 +79,12 @@
   },
   "myRequestsAll": {
     "title": "Uw verzoeken"
+  },
+  "submittedBanner": {
+    "summary": "{{requestName}}, ingediend op {{date}}"
+  },
+  "ticketReference": {
+    "label": "Ticket",
+    "viewTicket": "Ticket bekijken"
   }
 }
