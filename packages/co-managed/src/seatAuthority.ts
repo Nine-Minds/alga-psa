@@ -301,9 +301,10 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
 export const coManagedSeatResolver: BuiltinRuleResolver = {
   id: CO_MANAGED_SEAT_RESOLVER_ID,
   baseline: 'closed',
-  // A seat technician sees the operational surface only and holds no API credential. The surface is data in
-  // the product surface registry under this key.
-  principalKind: { kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused' },
+  // A seat technician sees the operational surface only and holds no general API credential: only the mobile
+  // app's session key, which the edge holds to the seat's API surface. The surface is data in the product
+  // surface registry under this key.
+  principalKind: { kind: CO_MANAGED_SEAT_PRINCIPAL_KIND, apiCredentials: 'refused', credentialPurposes: ['mobile_session'] },
   facts: {
     tenantHasSubjects: (knex, tenant) => builtinResolverSubjectsQuery(knex, tenant, CO_MANAGED_SEAT_RESOLVER_ID),
     subjectFacts: seatFactsQuery,

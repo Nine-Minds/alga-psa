@@ -986,6 +986,15 @@ spec:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: ALGA_LICENSE_SERVICE_SECRET
           {{- end }}
+          # HMAC key for signing in-app support requests to nm-store's
+          # /api/support/intake (hosted only; read via getAppSecret).
+          {{- if and .Values.secrets .Values.secrets.VENDOR_SUPPORT_INTAKE_SECRET }}
+          - name: VENDOR_SUPPORT_INTAKE_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: VENDOR_SUPPORT_INTAKE_SECRET
+          {{- end }}
 
           # Non-sensitive Stripe configuration
           {{- if .Values.stripe }}

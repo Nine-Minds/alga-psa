@@ -147,7 +147,8 @@
       "viewDetails": "Ver detalles",
       "editAsset": "Editar activo",
       "createTicket": "Crear ticket",
-      "refreshData": "Actualizar datos"
+      "refreshData": "Actualizar datos",
+      "fullAdd": "Alta completa"
     },
     "table": {
       "name": "Nombre",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Escanear etiqueta de activo",
+    "help": "Escanee una etiqueta impresa con un lector de códigos de barras o introduzca la etiqueta exactamente como está impresa. Se abrirá el registro de recepción correspondiente.",
     "input": "Escanear o introducir una etiqueta",
     "loading": "Buscando…",
     "find": "Buscar activo",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Recepción con etiqueta previa",
-    "title": "Iniciar recepción con etiqueta previa",
     "help": "Cree un registro permanente del activo con los datos mínimos e imprima dos copias de su etiqueta. Escanee cualquiera de ellas más adelante para completar este mismo registro.",
     "client": "Cliente",
     "clientRequired": "Elija un cliente para continuar.",
     "createFailed": "No se pudo crear el registro de recepción.",
     "name": "Descripción breve (opcional)",
     "creating": "Creando…",
-    "createPrint": "Crear e imprimir el par"
+    "createPrint": "Crear e imprimir el par",
+    "modePrint": "Imprimir etiquetas nuevas",
+    "modeResume": "Continuar desde una etiqueta"
   }
 }

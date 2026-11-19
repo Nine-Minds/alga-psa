@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { CustodyCloseReason, IAssetCustody } from '@alga-psa/types';
 import { CustodyError } from './errors';
 import { writeCustodyHistory } from './history';
-import { CUSTODY_COLUMNS, FOLLOW_UP_SELECT, loadCustody, mapCustodyRow } from './shared';
+import { CUSTODY_RETURNING, loadCustody, mapCustodyRow } from './shared';
 
 /**
  * Close an open episode WITHOUT the device coming back to the client (C5 extension of C4).
@@ -45,7 +45,7 @@ export async function closeCustodyEpisode(
     .table('asset_custody')
     .where({ custody_id: custodyId })
     .update({ state: 'closed', closed_at: now, closed_by: actorUserId, close_reason: reason, updated_at: now })
-    .returning([...CUSTODY_COLUMNS, trx.raw(FOLLOW_UP_SELECT)] as any);
+    .returning(CUSTODY_RETURNING as any);
   await writeCustodyHistory(trx, tenant, {
     assetId: current.asset_id,
     actorUserId,

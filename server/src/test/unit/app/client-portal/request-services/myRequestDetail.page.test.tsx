@@ -79,6 +79,7 @@ function buildDetail(overrides: Record<string, unknown> = {}) {
     submitted_payload: { request_title: 'New Hire Onboarding' },
     execution_status: 'succeeded',
     created_ticket_id: null,
+    ticket_number: null,
     submitted_at: new Date('2026-09-02T12:00:00Z'),
     form_schema_snapshot: {
       fields: [

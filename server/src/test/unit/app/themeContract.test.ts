@@ -1,5 +1,5 @@
 /**
- * One suite for the whole theme contract, in six layers:
+ * One suite for the whole theme contract, in eight layers:
  *
  *   1. token blocks     — every pair declares the values it must, and the
  *                         shade-inversion / separation invariants hold.
@@ -11,10 +11,16 @@
  *   6. element contrast — what components actually paint: every className that
  *                         names a --color-* as both ink and fill, measured
  *                         across all nine pairs in both modes.
+ *   7. tab chrome ink   — the grey rungs tab strips name, measured against the
+ *                         ground they rest on, in shipped and generated pairs.
+ *   8. palette classes  — no file grows a new raw Tailwind palette class, which
+ *                         no layer above can see and no theme can reach.
  *
- * They live together because they fail together: all six exist to catch styling
- * that looks correct in light mode and breaks in dark. Layers 4 and 6 are the
- * pair: 4 checks tokens against each other, 6 checks the combinations shipped.
+ * They live together because they fail together: each one catches styling that
+ * looks correct as authored and breaks once the tenant's pair, mode or
+ * high-contrast setting moves. Layers 4 and 6 are the pair: 4 checks tokens
+ * against each other, 6 checks the combinations shipped. Layers 5, 7 and 8 are
+ * the escape hatches — colour that names no token, so no other layer sees it.
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'fs';
@@ -22,6 +28,7 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { THEME_PAIRS } from '@alga-psa/tenancy/lib/themePairs';
 import { CUSTOM_THEME_PRESETS, generateCustomThemeStyles } from '@alga-psa/tenancy/lib/customTheme';
+import { PALETTE_BASELINE } from './themeContract.paletteBaseline';
 
 const REPO = path.resolve(__dirname, '../../../../..');
 const GLOBALS = path.resolve(__dirname, '../../../app/globals.css');
@@ -912,5 +919,110 @@ describe('tab chrome ink', () => {
     });
 
     expect(failures, `tab chrome ink below WCAG AA:\n${failures.join('\n')}`).toEqual([]);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Layer 8 — raw palette classes.
+ *
+ * Every layer above reads either a --color-* token or a colour literal, so a
+ * Tailwind palette class — `bg-sky-50`, `text-sky-800` — is invisible to all of
+ * them: it names no token and spells no hex. That is how the ticket list's
+ * live-update chrome shipped in sky: a refresh banner, an "Updated" badge, a
+ * board dot and two field flashes, none of which any layer could see.
+ *
+ * The defect is not contrast — sky reads fine on white. It is that sky is a
+ * fixed hue: it ignores the tenant's theme pair, and it ignores high contrast,
+ * where every surface is supposed to collapse to black and white. A `dark:`
+ * variant does not redeem it; it adapts to the mode and to nothing else.
+ *
+ * Reach instead for the `.chip-*` utilities — soft fills drawn from the pair's
+ * own primary/secondary/accent ramp, with their own high-contrast rule — or the
+ * token rungs: `--color-primary-*` for a pair-hued accent, `--color-border-*`
+ * for surfaces and hairlines. Not `--badge-*`: that family is deliberately
+ * branding-independent, restated per mode and in both high-contrast blocks but
+ * never by a pair, so for seven of the nine it only trades a fixed sky for a
+ * fixed blue.
+ *
+ * Per-file ceilings live in ./themeContract.paletteBaseline.ts, which is the
+ * same mechanism as LITERAL_BASELINE and externalised only for its size. There
+ * is deliberately no themed-file gate here: layer 5 only judges a file that
+ * names three tokens, and two of the five sky sites would have slipped straight
+ * through that bar — BoardTabStrip named no token at all, TicketProperties
+ * exactly one.
+ * ------------------------------------------------------------------------- */
+
+/** The `.ts` files Tailwind's content list compiles; everything else is `.tsx`. */
+const PALETTE_TS_FILES = [
+  'packages/scheduling/src/components/technician-dispatch/utils.ts',
+  'packages/tickets/src/actions/optimizedTicketActions.ts',
+  'packages/core/src/lib/projectBillingStatus.ts',
+];
+
+describe('raw palette classes', () => {
+  const UTILITY = 'bg|text|border|ring|divide|from|via|to|fill|stroke|outline|decoration|shadow';
+  const HUE = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan'
+    + '|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
+  const RUNG = '50|100|200|300|400|500|600|700|800|900|950';
+  // Variant prefixes are counted, not excused: `dark:bg-sky-400` still fixes the
+  // hue against the pair and against high contrast.
+  const PALETTE = new RegExp(String.raw`\b(?:${UTILITY})-(?:${HUE})-(?:${RUNG})\b`, 'g');
+
+  const { counts, scanned } = (() => {
+    const find = (args: string[]) => {
+      try {
+        return execFileSync('grep', args, { cwd: REPO, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+      } catch (error) {
+        // grep exits 1 on no match, which is a clean result, not a failure.
+        if ((error as { status?: number }).status === 1) return '';
+        throw error;
+      }
+    };
+    const pattern = `(${UTILITY})-(${HUE})-(${RUNG})`;
+    const files = [
+      ...find(['-rlE', pattern, 'packages', 'server/src', 'ee/server/src', '--include=*.tsx']).split('\n'),
+      // `--include` filters named files too, so the `.ts` trio needs its own sweep.
+      ...find(['-lE', pattern, ...PALETTE_TS_FILES]).split('\n'),
+    ].filter(Boolean);
+
+    const tally = new Map<string, number>();
+    let total = 0;
+    files.forEach((file) => {
+      if (file.includes('/dist/') || file.includes('/node_modules/')) return;
+      if (file.includes('.test.') || file.includes('.stories.') || file.includes('themeContract')) return;
+      const n = (fs.readFileSync(path.join(REPO, file), 'utf8').match(PALETTE) ?? []).length;
+      if (n > 0) {
+        tally.set(file, n);
+        total += n;
+      }
+    });
+    return { counts: tally, scanned: total };
+  })();
+
+  it('sweeps a meaningful amount of source', () => {
+    // Guard the guard: a regex or path change that stopped matching would make
+    // both assertions below pass over an empty tally.
+    expect(counts.size).toBeGreaterThan(400);
+    expect(scanned).toBeGreaterThan(5000);
+  });
+
+  it('adds no new raw palette class', () => {
+    const offenders: string[] = [];
+    counts.forEach((n, file) => {
+      const allowed = PALETTE_BASELINE.get(file);
+      if (allowed === undefined) offenders.push(`${file} — ${n} palette class(es), file not in baseline`);
+      else if (n > allowed) offenders.push(`${file} — ${n} palette class(es), baseline allows ${allowed}`);
+    });
+    offenders.sort();
+    expect(offenders, `raw Tailwind palette classes:\n${offenders.join('\n')}`).toEqual([]);
+  });
+
+  it('keeps the palette baseline honest — a themed file must be struck or lowered', () => {
+    const stale: string[] = [];
+    PALETTE_BASELINE.forEach((allowed, file) => {
+      const now = counts.get(file) ?? 0;
+      if (now < allowed) stale.push(`${file} — now ${now}, baseline still says ${allowed}`);
+    });
+    expect(stale, `baseline is stale, lower it:\n${stale.join('\n')}`).toEqual([]);
   });
 });

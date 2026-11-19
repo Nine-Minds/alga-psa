@@ -16,3 +16,4 @@ export { Select } from "./Select";
 export type { SelectOption, SelectProps } from "./Select";
 export { Separator } from "./Separator";
 export { TextInput } from "./TextInput";
+export { FilterChip } from "./FilterChip";

@@ -60,7 +60,7 @@ export function HomeScreen({ navigation }: Props) {
   const theme = useTheme();
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();
-  const { features } = useCapabilities();
+  const { features, loaded: capabilitiesLoaded } = useCapabilities();
   const timer = useTimer();
   const elapsedMs = useTimerElapsedMs();
   const network = useNetworkStatus();
@@ -96,16 +96,17 @@ export function HomeScreen({ navigation }: Props) {
     if (!offline) return;
     const cached = getCachedHome(cacheKey);
     if (!cached) return;
-    if (cached.schedule) setSchedule(cached.schedule);
+    if (cached.schedule && !features.operationalOnly) setSchedule(cached.schedule);
     if (cached.tickets) {
       setTickets(cached.tickets.items);
       setTicketTotal(cached.tickets.total);
     }
-    if (cached.activities) setActivities(cached.activities);
-  }, [cacheKey, offline]);
+    if (cached.activities && !features.operationalOnly) setActivities(cached.activities);
+  }, [cacheKey, features.operationalOnly, offline]);
 
+  // A seat technician is neither scheduled by the MSP nor given its activity inbox: both cards stay empty, so hidden.
   const loadSchedule = useCallback(async () => {
-    if (!client || !apiKey || !userId || offline) return;
+    if (!client || !apiKey || !userId || offline || features.operationalOnly) return;
     setScheduleError(false);
     const { startDate, endDate } = localDayWindow();
     const result = await listScheduleEntries(client, { apiKey, startDate, endDate, userId });
@@ -120,7 +121,7 @@ export function HomeScreen({ navigation }: Props) {
     );
     setSchedule(entries);
     mergeCachedHome(cacheKey, { schedule: entries });
-  }, [apiKey, cacheKey, client, offline, userId]);
+  }, [apiKey, cacheKey, client, features.operationalOnly, offline, userId]);
 
   const loadTickets = useCallback(async () => {
     if (!client || !apiKey || !userId || offline) return;
@@ -148,7 +149,7 @@ export function HomeScreen({ navigation }: Props) {
   }, [apiKey, cacheKey, client, offline, userId]);
 
   const loadActivities = useCallback(async () => {
-    if (!client || !apiKey || offline) return;
+    if (!client || !apiKey || offline || features.operationalOnly) return;
     setActivitiesError(false);
     const { endDate } = localDayWindow();
     const result = await listActivities(client, {
@@ -168,7 +169,7 @@ export function HomeScreen({ navigation }: Props) {
     }
     setActivities(result.data.data);
     mergeCachedHome(cacheKey, { activities: result.data.data });
-  }, [apiKey, cacheKey, client, offline]);
+  }, [apiKey, cacheKey, client, features.operationalOnly, offline]);
 
   const loadAll = useCallback(async () => {
     // Independent loaders: one failing endpoint must not blank the screen.
@@ -178,9 +179,20 @@ export function HomeScreen({ navigation }: Props) {
   const { refreshing, refresh } = usePullToRefresh(loadAll, { haptics: true });
   useAppResume(() => void refresh());
 
+  // Wait for the capabilities: they say whether this session may load the schedule and activities at all.
   useEffect(() => {
+    if (!capabilitiesLoaded) return;
     void loadAll();
-  }, [loadAll]);
+  }, [capabilitiesLoaded, loadAll]);
+
+  // An operational-only session never shows the schedule or activity cards, whatever an earlier load left behind.
+  useEffect(() => {
+    if (!features.operationalOnly) return;
+    setSchedule(null);
+    setScheduleError(false);
+    setActivities(null);
+    setActivitiesError(false);
+  }, [features.operationalOnly]);
 
   if (!config.ok) {
     return <ErrorState title={t("unableToLoad", "Unable to load.")} description={config.error} />;
@@ -370,13 +382,15 @@ export function HomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate("Scan")}
               />
             ) : null}
-            <QuickAction
-              testID="home-action-log-interaction"
-              icon="phone-message-outline"
-              label={t("quickActions.logInteraction", "Log interaction")}
-              onPress={() => setInteractionOpen(true)}
-            />
-            {timerRunning ? null : (
+            {features.operationalOnly ? null : (
+              <QuickAction
+                testID="home-action-log-interaction"
+                icon="phone-message-outline"
+                label={t("quickActions.logInteraction", "Log interaction")}
+                onPress={() => setInteractionOpen(true)}
+              />
+            )}
+            {timerRunning || features.operationalOnly ? null : (
               <QuickAction
                 testID="home-action-start-timer"
                 icon="timer-outline"

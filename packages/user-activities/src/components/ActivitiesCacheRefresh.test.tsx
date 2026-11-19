@@ -40,7 +40,6 @@ vi.mock('./MyActivityGroupsProvider', () => ({ useMyActivityGroups: () => mocks.
 // Stable ctx: the section's mount effects depend on it, so a fresh object per render would
 // loop once the provider re-renders the section.
 const stableCrossFeature = {
-  getAllClients: async () => [],
   getProjectsWithPhases: async () => [],
 };
 vi.mock('@alga-psa/ui/context', () => ({

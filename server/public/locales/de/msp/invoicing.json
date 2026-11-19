@@ -609,7 +609,8 @@
       "unfinalizeSelected": "Auswahl aufheben",
       "downloadPdf": "PDF herunterladen",
       "sendEmail": "E-Mail senden",
-      "unfinalize": "Abschließen aufheben"
+      "unfinalize": "Abschließen aufheben",
+      "recordPayment": "Zahlung erfassen"
     },
     "status": {
       "finalized": "Finalisiert"
@@ -2915,6 +2916,17 @@
       "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}.",
       "evaluationFailed": "Datenbindung der Vorlage fehlgeschlagen: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Zugriff verweigert: Zum Erfassen von Rechnungszahlungen ist die Berechtigung für Rechnungszahlungen erforderlich.",
+      "invoiceNotFound": "Rechnung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "amountPositive": "Geben Sie einen Zahlungsbetrag größer als null ein.",
+      "methodRequired": "Wählen Sie eine Zahlungsart aus.",
+      "invalidDate": "Geben Sie ein gültiges Zahlungsdatum ein.",
+      "noBalanceDue": "Für diese Rechnung ist kein Betrag mehr offen.",
+      "statusNotPayable": "Für eine Rechnung mit dem Status {{status}} kann keine Zahlung erfasst werden.",
+      "overpaymentNotConfirmed": "Diese Zahlung ist höher als der offene Betrag. Bestätigen Sie die Überzahlung, um sie zu erfassen.",
+      "recordFailed": "Die Zahlung konnte nicht erfasst werden. Bitte versuchen Sie es erneut."
     }
   },
   "periodTotal": {
@@ -2937,6 +2949,43 @@
     "blocked": {
       "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",
       "exporting": "Ein Buchhaltungsexport für diese Rechnung wird vorbereitet. Warten Sie, bis er abgeschlossen ist, bevor Sie die Rechnung ändern."
+    }
+  },
+  "recordPayment": {
+    "title": "Zahlung erfassen",
+    "titleForInvoice": "Zahlung erfassen — {{invoiceNumber}}",
+    "loading": "Rechnungssaldo wird geladen...",
+    "summary": {
+      "balanceDue": "Offener Betrag",
+      "alreadyPaid": "Bereits bezahlt"
+    },
+    "fields": {
+      "amount": "Betrag",
+      "paymentDate": "Zahlungsdatum",
+      "method": "Zahlungsart",
+      "reference": "Referenz",
+      "notes": "Notizen"
+    },
+    "placeholders": {
+      "reference": "Scheck- oder Transaktionsnummer"
+    },
+    "methods": {
+      "manual": "Manuell",
+      "check": "Scheck",
+      "bank_transfer": "Banküberweisung",
+      "cash": "Bargeld",
+      "other": "Sonstiges"
+    },
+    "overpayment": {
+      "warning": "Diese Zahlung liegt {{excess}} über dem offenen Betrag von {{balanceDue}}.",
+      "confirm": "Überzahlung trotzdem erfassen"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "record": "Zahlung erfassen"
+    },
+    "toasts": {
+      "recorded": "Zahlung erfasst"
     }
   }
 }

@@ -12,15 +12,16 @@ const actions = vi.hoisted(() => ({
 
 vi.mock('../../actions', () => actions);
 vi.mock('@alga-psa/integrations/actions', () => actions);
-vi.mock('../../actions/clientLookupActions', () => ({
-  getIntegrationClients: vi.fn(async () => [{ client_id: 'client-1', client_name: 'Acme Corp' }])
-}));
+const getIntegrationClients = vi.hoisted(() => vi.fn(async () => [{ client_id: 'client-1', client_name: 'Acme Corp' }]));
+vi.mock('../../actions/clientLookupActions', () => ({ getIntegrationClients }));
 
 import {
   createQuickBooksDesktopMappingModule,
   createQuickBooksDesktopMappingModules
 } from './quickBooksDesktopMappingModule';
 import { createCsvMappingModules } from '../csv/csvMappingModules';
+import { createXeroCsvMappingModules } from '../csv/xeroCsvMappingModules';
+import { createClientAlgaSearch } from './clientAlgaSearch';
 
 describe('QuickBooks Desktop mapping modules', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -80,9 +81,41 @@ describe('QuickBooks Desktop mapping modules', () => {
     expect(actions.updateExternalEntityMapping).toHaveBeenLastCalledWith('map-1', { external_entity_id: 'Backup Income' });
   });
 
-  it('loads clients and payment terms as the Alga side of their tabs', async () => {
-    const clients = await createQuickBooksDesktopMappingModule('client').load({ realmId: null });
-    expect(clients.algaEntities).toEqual([{ id: 'client-1', name: 'Acme Corp' }]);
+  it('searches clients on the server instead of loading the tenant list', async () => {
+    const searchClients = vi.fn(async ({ ids }: { ids?: string[] }) => ({
+      clients: (ids ?? []).map((id) => ({ client_id: id, client_name: `Client ${id}` })),
+      total: ids?.length ?? 0,
+    }));
+    const source = createClientAlgaSearch(searchClients);
+    const clientModules = [
+      createQuickBooksDesktopMappingModule('client', undefined, source),
+      createCsvMappingModules(undefined, source)[0],
+      createXeroCsvMappingModules(undefined, source)[0],
+    ];
+    for (const module of clientModules) {
+      expect(module.algaEntityType).toBe('client');
+      expect(module.algaSearch).toBe(source);
+      expect((await module.load({ realmId: null })).algaEntities).toEqual([]);
+    }
+    expect(getIntegrationClients).not.toHaveBeenCalled();
+
+    // Mapped clients are named by id; the full list is read only for the bulk grid.
+    await expect(source.resolve(['c-1', 'c-2'])).resolves.toEqual([
+      { id: 'c-1', name: 'Client c-1' },
+      { id: 'c-2', name: 'Client c-2' },
+    ]);
+    expect(searchClients).toHaveBeenCalledWith({ ids: ['c-1', 'c-2'], status: 'all' });
+    expect(getIntegrationClients).not.toHaveBeenCalled();
+    await expect(source.loadAll({ realmId: null })).resolves.toEqual([{ id: 'client-1', name: 'Acme Corp' }]);
+    expect(getIntegrationClients).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails loudly when mapped clients cannot be named for want of a searcher', async () => {
+    await expect(createClientAlgaSearch(undefined).resolve(['c-1'])).rejects.toThrow('ClientPickerSearchProvider');
+    await expect(createClientAlgaSearch(undefined).resolve([])).resolves.toEqual([]);
+  });
+
+  it('loads payment terms as the Alga side of their tab', async () => {
     const terms = await createQuickBooksDesktopMappingModule('payment_term').load({ realmId: null });
     expect(terms.algaEntities.map((term) => term.id)).toEqual(['net_30', 'net_15', 'net_14', 'net_7', 'due_on_receipt']);
     expect(actions.getExternalEntityMappings).toHaveBeenCalledWith({

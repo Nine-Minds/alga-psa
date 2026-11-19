@@ -701,6 +701,15 @@
     "checkoutUnavailable": "Wbudowana płatność jest niedostępna. Spróbuj ponownie po naprawie konfiguracji płatności.",
     "pendingCapacity_one": "Zakup {{count}} stanowiska oczekuje na realizację.",
     "pendingCapacity_other": "Zakup {{count}} stanowisk oczekuje na realizację.",
+    "buySeats": "Kup miejsca współzarządzania",
+    "awaitingVerification_one": "Zakup {{count}} miejsca oczekuje na weryfikację płatności. Miejsce pojawi się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_other": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_few": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "awaitingVerification_many": "Zakup {{count}} miejsc oczekuje na weryfikację płatności. Miejsca pojawią się tutaj po potwierdzeniu płatności.",
+    "refreshStatus": "Odśwież status",
+    "purchaseOnly": {
+      "intro": "Kup tutaj pulę miejsc współzarządzania. Po zakupie przydziel miejsca klientom z karty każdego klienta."
+    },
     "previewError": "Nie udało się wycenić tej zmiany. Odśwież i spróbuj ponownie.",
     "purchaseNeedsAdmin": "Administrator konta musi dodać pojemność współzarządzania.",
     "purchaseProviderUnconfigured": "Dostawca płatności nie jest skonfigurowany.",

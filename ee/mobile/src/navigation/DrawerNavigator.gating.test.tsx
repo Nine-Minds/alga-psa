@@ -33,7 +33,7 @@ vi.mock("../screens/HomeScreen", () => ({ HomeScreen: () => null, HomeSearchButt
 vi.mock("./TicketsStackNavigator", () => ({ TicketsStackNavigator: () => null }));
 vi.mock("../features/timer/components/HeaderTimerChip", () => ({ HeaderTimerChip: () => null }));
 
-let features = { inventory: false, opportunities: false, projects: false, assets: false };
+let features: Record<string, boolean> = { inventory: false, opportunities: false, projects: false, assets: false };
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features, loaded: true, refresh: vi.fn() }),
 }));
@@ -99,5 +99,23 @@ describe("DrawerNavigator capability gating", () => {
     expect(registeredScreens).toContain("AssetsTab");
     expect(registeredScreens).not.toContain("ProjectsTab");
     expect(registeredScreens.indexOf("AssetsTab")).toBeGreaterThan(registeredScreens.indexOf("ContactsTab"));
+  });
+
+  it("keeps an operational-only (co-managed seat) session to tickets, projects, assets and time", () => {
+    features = { inventory: false, opportunities: false, projects: true, assets: true, operationalOnly: true };
+    renderDrawer();
+    for (const closed of ["HomeTab", "UserActivitiesTab", "ScheduleTab", "InteractionsTab", "ClientsTab", "ContactsTab", "InventoryTab", "OpportunitiesTab"]) {
+      expect(registeredScreens).not.toContain(closed);
+    }
+    for (const open of ["TicketsTab", "ProjectsTab", "TimeEntriesTab", "AssetsTab", "SettingsTab"]) {
+      expect(registeredScreens).toContain(open);
+    }
+  });
+
+  it("starts an operational-only session on Tickets", () => {
+    features = { inventory: false, opportunities: false, projects: true, assets: true, operationalOnly: true };
+    const tree = renderDrawer();
+    const navigator = tree.root.find((node) => String(node.type) === "Navigator");
+    expect(navigator.props.initialRouteName).toBe("TicketsTab");
   });
 });
