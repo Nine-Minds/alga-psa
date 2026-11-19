@@ -1,6 +1,5 @@
 'use server'
 
-import { projectClientsForSubject } from '@alga-psa/auth/lib/clientBillingProjection';
 import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments } from '../lib/documentPermissions';
 import { resolveDocumentTypeForMime } from '../lib/documentTypeLookup';
@@ -32,7 +31,6 @@ import {
     IFolderNode,
     IFolderStats,
     DeletionValidationResult,
-    IClient,
     IContact
 } from '@alga-psa/types';
 import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from '@alga-psa/types';
@@ -66,7 +64,7 @@ import {
   type DocumentReadScope,
 } from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
-import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
 async function loadSharp() {
@@ -150,34 +148,6 @@ function tenantScopedTable(
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
 }
-
-export const getDocumentAssociationClientsForPicker = withAuth(async (
-  user,
-  { tenant }
-): Promise<IClient[]> => {
-  if (!await hasPermission(user, 'document', 'read') || !await hasPermission(user, 'client', 'read')) {
-    return [];
-  }
-
-  const { knex } = await createTenantKnex();
-
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clients = await tenantScopedTable(trx, 'clients', tenant)
-      .select('*')
-      .orderBy('client_name', 'asc');
-
-    const logoUrls = await getClientLogoUrlsBatch(
-      clients.map((client: { client_id: string }) => client.client_id),
-      tenant
-    );
-
-    return projectClientsForSubject(user, clients.map((client: any) => ({
-      ...client,
-      properties: client.properties || {},
-      logoUrl: logoUrls.get(client.client_id) ?? null,
-    })) as IClient[]);
-  });
-});
 
 export const getDocumentAssociationContactsForPicker = withAuth(async (
   user,
@@ -2086,6 +2056,12 @@ export const searchDocumentAssociationEntities = withAuth(async (
   }
 
   if (!SEARCHABLE_ASSOCIATION_ENTITY_TYPES.has(entityType)) {
+    return { options: [], total: 0 };
+  }
+
+  // The picker this replaced listed clients only for viewers who can read them. Checked before the
+  // transaction so the permission lookup does not take a second pooled connection.
+  if (entityType === 'client' && !await hasPermission(user, 'client', 'read')) {
     return { options: [], total: 0 };
   }
 

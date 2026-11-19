@@ -694,6 +694,8 @@
     "proRequired": "Zum Sponsern von Kunden-Workspaces ist ein Pro-PSA-Abonnement erforderlich.",
     "loadError": "Die Kundenplatzkapazität konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "purchaseError": "Der Platzkauf konnte nicht abgeschlossen werden. Sie können ihn sicher fortsetzen.",
+    "termsChanged": "Der Preis hat sich seit Ihrer Prüfung geändert. Prüfen Sie die neuen Konditionen, bevor Sie den Kauf bestätigen.",
+    "offerUnavailable": "Neue Sitzplatzkäufe sind vorübergehend nicht verfügbar. Es wurde nichts berechnet.",
     "checkoutExpired": "Dieser Checkout ist abgelaufen. Starten Sie einen neuen Kauf, um fortzufahren.",
     "grace": "Erneuern Sie Ihre Lizenz oder beheben Sie den Kapazitätsengpass vor dem {{date}}, damit Kunden-Workspaces beschreibbar bleiben.",
     "readOnly": "Die Karenzzeit endete am {{date}}. Stellen Sie die lizenzierte Kapazität wieder her, um Änderungen an Kunden-Workspaces fortzusetzen.",
@@ -701,6 +703,13 @@
     "checkoutUnavailable": "Der eingebettete Checkout ist nicht verfügbar. Versuchen Sie es erneut, nachdem die Zahlungseinrichtung repariert wurde.",
     "pendingCapacity_one": "Ein Kauf von {{count}} Platz ist ausstehend.",
     "pendingCapacity_other": "Ein Kauf von {{count}} Plätzen ist ausstehend.",
+    "buySeats": "Co-Managed-Plätze kaufen",
+    "awaitingVerification_one": "Ihr Kauf von {{count}} Platz wartet auf die Zahlungsbestätigung. Der Platz erscheint hier, sobald die Zahlung bestätigt ist.",
+    "awaitingVerification_other": "Ihr Kauf von {{count}} Plätzen wartet auf die Zahlungsbestätigung. Die Plätze erscheinen hier, sobald die Zahlung bestätigt ist.",
+    "refreshStatus": "Status aktualisieren",
+    "purchaseOnly": {
+      "intro": "Kaufen Sie hier einen Pool von Co-Managed-Plätzen. Nach dem Kauf weisen Sie Plätze über den jeweiligen Kunden zu."
+    },
     "previewError": "Diese Änderung konnte nicht bepreist werden. Aktualisieren Sie und versuchen Sie es erneut.",
     "purchaseNeedsAdmin": "Ein Kontoadministrator muss Co-Managed-Kapazität hinzufügen.",
     "purchaseProviderUnconfigured": "Der Zahlungsanbieter ist nicht konfiguriert.",

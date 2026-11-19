@@ -694,6 +694,8 @@
     "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
     "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
     "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
+    "termsChanged": "Le prix a changé depuis votre vérification. Vérifiez les nouvelles conditions avant de confirmer.",
+    "offerUnavailable": "L’achat de nouvelles places est temporairement indisponible. Aucun montant n’a été débité.",
     "checkoutExpired": "Ce paiement a expiré. Lancez un nouvel achat pour continuer.",
     "grace": "Renouvelez votre licence ou résolvez le déficit de capacité avant le {{date}} pour que les espaces de travail clients restent modifiables.",
     "readOnly": "La période de grâce s'est terminée le {{date}}. Rétablissez la capacité sous licence pour reprendre les modifications des espaces de travail clients.",
@@ -701,6 +703,13 @@
     "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
     "pendingCapacity_one": "Un achat de {{count}} poste est en attente.",
     "pendingCapacity_other": "Un achat de {{count}} postes est en attente.",
+    "buySeats": "Acheter des places en cogestion",
+    "awaitingVerification_one": "Votre achat de {{count}} place est en attente de vérification du paiement. La place apparaîtra ici une fois le paiement confirmé.",
+    "awaitingVerification_other": "Votre achat de {{count}} places est en attente de vérification du paiement. Les places apparaîtront ici une fois le paiement confirmé.",
+    "refreshStatus": "Actualiser l'état",
+    "purchaseOnly": {
+      "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
+    },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
     "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
     "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",

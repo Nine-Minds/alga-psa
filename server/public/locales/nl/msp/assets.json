@@ -147,7 +147,8 @@
       "viewDetails": "Bekijk details",
       "editAsset": "Item bewerken",
       "createTicket": "Ticket aanmaken",
-      "refreshData": "Gegevens vernieuwen"
+      "refreshData": "Gegevens vernieuwen",
+      "fullAdd": "Volledig toevoegen"
     },
     "table": {
       "name": "Naam",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Assetlabel scannen",
+    "help": "Scan een afgedrukt label met een barcodescanner of voer het label exact zoals afgedrukt in. Het bijbehorende innamerecord wordt geopend.",
     "input": "Scan of voer een label in",
     "loading": "Bezig met zoeken…",
     "find": "Asset zoeken",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Inname met vooraf gedrukt label",
-    "title": "Inname met vooraf gedrukt label starten",
     "help": "Maak een blijvend assetrecord met de minimale gegevens en druk twee exemplaren van het label af. Scan later een van de exemplaren om hetzelfde record aan te vullen.",
     "client": "Klant",
     "clientRequired": "Kies een klant om door te gaan.",
     "createFailed": "Het innamerecord kon niet worden gemaakt.",
     "name": "Korte beschrijving (optioneel)",
     "creating": "Bezig met aanmaken…",
-    "createPrint": "Aanmaken en paar afdrukken"
+    "createPrint": "Aanmaken en paar afdrukken",
+    "modePrint": "Nieuwe labels afdrukken",
+    "modeResume": "Hervatten vanaf label"
   }
 }

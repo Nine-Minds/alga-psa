@@ -263,6 +263,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   email_processed_messages: { scope: 'tenant' },
   // Durable inbound email ledgers — tenant-distributed, colocated with tenants.
   inbound_email_ingress: { scope: 'tenant' },
+  inbound_email_quarantine: { scope: 'tenant' },
   inbound_email_inbox: { scope: 'tenant' },
   inbound_email_effects: { scope: 'tenant' },
   inbound_email_artifacts: { scope: 'tenant' },
@@ -566,6 +567,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   stripe_accounts: { scope: 'tenant' },
   stripe_customers: { scope: 'tenant' },
   stripe_customer_bindings: { scope: 'tenant' },
+  stripe_offer_publications: { scope: 'global' },
+  stripe_offer_versions: { scope: 'global' },
+  co_managed_fulfillments: { scope: 'global' },
+  co_managed_portal_purchases: { scope: 'global' },
   stripe_prices: { scope: 'tenant' },
   stripe_products: { scope: 'tenant' },
   stripe_subscriptions: { scope: 'tenant' },

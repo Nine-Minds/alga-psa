@@ -64,7 +64,7 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
     updateContact: (...args: any[]) => updateContactMock(...args),
     hydrateContactsWithPhoneNumbers: vi.fn(),
   },
-  clearContactLinksBeforeDelete: vi.fn(),
+  deleteContactCascade: vi.fn(),
 }));
 
 const row = (overrides: Record<string, unknown> = {}) => ({

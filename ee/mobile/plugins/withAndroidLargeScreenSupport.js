@@ -40,6 +40,25 @@ function withGmsScannerOrientationFix(config) {
   });
 }
 
+// Play implies these as required: screen.portrait from any portrait-locked library
+// activity, wifi from netinfo's ACCESS_WIFI_STATE. Declaring them optional keeps the
+// app available on large screens and devices without wifi.
+const OPTIONAL_FEATURES = ['android.hardware.screen.portrait', 'android.hardware.wifi'];
+
+function withOptionalHardwareFeatures(config) {
+  return withAndroidManifest(config, (cfg) => {
+    const manifest = cfg.modResults.manifest;
+    const features = (manifest['uses-feature'] || []).filter(
+      (item) => !OPTIONAL_FEATURES.includes(item.$?.['android:name'])
+    );
+    for (const name of OPTIONAL_FEATURES) {
+      features.push({ $: { 'android:name': name, 'android:required': 'false' } });
+    }
+    manifest['uses-feature'] = features;
+    return cfg;
+  });
+}
+
 function withCleanEdgeToEdgeStyles(config) {
   return withAndroidStyles(config, (cfg) => {
     const styles = cfg.modResults?.resources?.style ?? [];
@@ -62,6 +81,7 @@ function withCleanEdgeToEdgeStyles(config) {
 module.exports = function withAndroidLargeScreenSupport(config) {
   config = withMainActivityOrientation(config);
   config = withGmsScannerOrientationFix(config);
+  config = withOptionalHardwareFeatures(config);
   config = withCleanEdgeToEdgeStyles(config);
   return config;
 };

@@ -59,11 +59,8 @@ export class ApiWebhookController {
   private webhookService: WebhookService;
 
   constructor() {
-    this.webhookService = new WebhookService(
-      undefined as any, // DatabaseService - would be injected
-      undefined as any, // EventBusService - would be injected  
-      undefined as any  // AuditLogService - would be injected
-    );
+    // Persistence is webhookModel; the event bus and audit log are optional and not wired for the REST API.
+    this.webhookService = new WebhookService();
   }
 
   /**
@@ -120,6 +117,10 @@ export class ApiWebhookController {
   /**
    * Check permissions
    */
+  // LEVERAGE: friction webhook-controller-off-base — this class re-implements ApiBaseController's authenticate and
+  // checkPermission instead of extending it: it has no BaseService/CrudOptions, its authenticate builds a narrower
+  // context (no rate limit, ProductAccessError rather than the base product gate) and every handler is typed on
+  // ApiRequest. Folding it in changes auth behaviour, so the base needs a service-less/option-less mode first.
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
@@ -167,6 +168,20 @@ export class ApiWebhookController {
     }
     
     return id;
+  }
+
+  /**
+   * Extract the template id from /webhooks/templates/{id}. extractIdFromPath reads the segment after
+   * 'webhooks', which on these routes is the literal 'templates'.
+   */
+  private extractTemplateIdFromPath(req: ApiRequest): string {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const templateId = pathParts[pathParts.findIndex(part => part === 'templates') + 1] || '';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(templateId)) {
+      throw new ValidationError('Invalid webhook template ID format');
+    }
+    return templateId;
   }
 
   // ============================================================================
@@ -757,6 +772,87 @@ export class ApiWebhookController {
           );
           
           return createSuccessResponse(template.data, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Get webhook template detail. Templates are not persisted, so an id never resolves: 404.
+   */
+  getTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          const template = await this.webhookService.getWebhookTemplate(templateId, apiRequest.context!.tenant);
+
+          return createSuccessResponse(template.data);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Update webhook template. Not implemented (no template storage): 501 after the RBAC check.
+   */
+  updateTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'system_settings');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          const templateData = await this.validateData(apiRequest, webhookTemplateSchema.omit({
+            template_id: true,
+            created_at: true,
+            updated_at: true
+          }).partial());
+
+          const template = await this.webhookService.updateWebhookTemplate(
+            templateId,
+            templateData,
+            apiRequest.context!.tenant,
+            apiRequest.context!.userId
+          );
+
+          return createSuccessResponse(template.data);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete webhook template. Not implemented (no template storage): 501 after the RBAC check.
+   */
+  deleteTemplate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'system_settings');
+
+          const templateId = this.extractTemplateIdFromPath(apiRequest);
+          await this.webhookService.deleteWebhookTemplate(
+            templateId,
+            apiRequest.context!.tenant,
+            apiRequest.context!.userId
+          );
+
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);

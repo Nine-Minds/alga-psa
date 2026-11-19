@@ -43,7 +43,9 @@ export async function resolveInternalWatcherEmails(
 
   const addresses = rows.map((row: { email: string }) => normalizeRecipientEmail(row.email));
   const recipients = await resolveTicketNotificationRecipients(db, tenantId, ticket, addresses.map((email) => ({ email })));
-  return new Set<string>(addresses.filter((_, index) => recipientRendering(recipients[index]) === 'msp'));
+  // Every address here is an internal user, so each is addressed as staff; an out-of-scope seat
+  // technician still comes back `client` and is left out.
+  return new Set<string>(addresses.filter((_, index) => recipientRendering(recipients[index], 'msp') === 'msp'));
 }
 
 export function extractActiveWatcherEmails(attributes: unknown): string[] {

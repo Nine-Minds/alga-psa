@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const flag = vi.hoisted(() => ({ enabled: vi.fn() }));
 vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: flag.enabled }));
 
-import { isCoManagedPurchaseSurfaceOpen } from './co-managed-purchase-surface';
+import { isCoManagedPurchaseSurfaceOpen, registerCoManagedOfferAvailability } from './co-managed-purchase-surface';
 
 beforeEach(() => {
   flag.enabled.mockReset().mockResolvedValue(true);
   process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = 'price_co_managed';
   delete process.env.FORCE_CAPABILITIES;
 });
-afterEach(() => { delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID; delete process.env.FORCE_CAPABILITIES; });
+afterEach(() => { registerCoManagedOfferAvailability(undefined); delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID; delete process.env.FORCE_CAPABILITIES; });
 
 describe('co-managed purchase surface', () => {
   it('is open with the price configured and the release flag on', async () => {
@@ -32,5 +32,22 @@ describe('co-managed purchase surface', () => {
     expect(await isCoManagedPurchaseSurfaceOpen('t')).toBe(false);
     flag.enabled.mockRejectedValue(new Error('posthog down'));
     expect(await isCoManagedPurchaseSurfaceOpen('t')).toBe(false);
+  });
+
+  describe('catalog-backed offer availability (new-sale eligibility)', () => {
+    it('opens from a sellable managed offer even with the legacy env var unset', async () => {
+      delete process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+      registerCoManagedOfferAvailability(async () => true);
+      expect(await isCoManagedPurchaseSurfaceOpen('t')).toBe(true);
+    });
+    it('fails closed when the managed offer is paused, even with the legacy env var set', async () => {
+      registerCoManagedOfferAvailability(async () => false);
+      expect(await isCoManagedPurchaseSurfaceOpen('t')).toBe(false);
+      expect(flag.enabled).not.toHaveBeenCalled();
+    });
+    it('fails closed when the catalog probe throws', async () => {
+      registerCoManagedOfferAvailability(async () => { throw new Error('catalog down'); });
+      expect(await isCoManagedPurchaseSurfaceOpen('t')).toBe(false);
+    });
   });
 });

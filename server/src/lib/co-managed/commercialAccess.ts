@@ -1,0 +1,34 @@
+import { cache } from 'react';
+import { getCurrentUser } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { serves } from '@alga-psa/core/capability';
+import { resolveCoManagedPurchaseDiscovery } from '@enterprise/lib/co-managed/purchaseDiscovery';
+
+/**
+ * The two separate access facts for the Co-Managed IT overview root, resolved for the authenticated
+ * principal and tenant and shared by the root layout, the page and its metadata (and, through the same
+ * `resolveCoManagedPurchaseDiscovery`, the sidebar action), so a visible link always leads to a usable page.
+ *
+ *  - `commercial`: first-purchase eligibility (EE policy; always false in the community edition).
+ *    Grants access to the purchase pool only.
+ *  - `operational`: the capability serves AND the actor holds `co_management:read`: the existing
+ *    overview, client visibility and read-only rules.
+ *
+ * Memoised per request, keyed by tenant, so the layout, page and metadata cannot disagree.
+ */
+export interface CoManagedRootAccess {
+  commercial: boolean;
+  served: boolean;
+  operational: boolean;
+}
+
+export const resolveCoManagedRootAccess = cache(async (tenant: string): Promise<CoManagedRootAccess> => {
+  const [user, servedDecision] = await Promise.all([getCurrentUser(), serves('co-managed', tenant)]);
+  const served = servedDecision.served;
+  if (!user || (user.tenant && user.tenant !== tenant)) return { commercial: false, served, operational: false };
+  const [commercial, operational] = await Promise.all([
+    resolveCoManagedPurchaseDiscovery(user, tenant).then((decision) => decision.eligible),
+    served && user.user_type === 'internal' ? hasPermission(user, 'co_management', 'read') : Promise.resolve(false),
+  ]);
+  return { commercial, served, operational };
+});

@@ -1,0 +1,49 @@
+# EAS archives the whole git repo for ee/mobile builds and reads .easignore
+# only from the repo root. Upload just the mobile app and the shared sources
+# it imports by relative path (packages/validation, packages/tickets/src/lib).
+#
+# EAS copies the working tree with a filter that sees directories without a
+# trailing slash, so re-includes must not end in "/" or the directory is
+# skipped. With .easignore present, .gitignore files are not consulted, so
+# secrets and local build output must be excluded here explicitly.
+/*
+!/.npmrc
+!/package.json
+!/package-lock.json
+
+!/ee
+/ee/*
+!/ee/mobile
+
+!/packages
+/packages/*
+!/packages/validation
+/packages/validation/*
+!/packages/validation/src
+!/packages/tickets
+/packages/tickets/*
+!/packages/tickets/src
+/packages/tickets/src/*
+!/packages/tickets/src/lib
+
+# Never upload: secrets and local env
+.env
+.env.*
+google-service-account.json
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# Local build output and OS noise
+node_modules
+.DS_Store
+/ee/mobile/.expo
+/ee/mobile/ios
+/ee/mobile/android
+/ee/mobile/dist
+/ee/mobile/web-build
+/ee/mobile/.kotlin
+*.tsbuildinfo

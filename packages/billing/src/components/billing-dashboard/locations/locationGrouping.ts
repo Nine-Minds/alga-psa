@@ -91,6 +91,32 @@ export function buildLocationGroups<T extends LocationBearingItem>(
 }
 
 /**
+ * Re-point one location group at another location.
+ *
+ * Items sited at `fromLocationId` move to `toLocationId`. When the target is
+ * already another group's location the two bands swap (the target's items take
+ * `fromLocationId` in exchange) instead of merging, so picking a location in a
+ * group header always *moves that section* — it never silently folds two
+ * sections into one. Unsited items (`fromLocationId === null`) are only
+ * assigned; there is no band to swap them with.
+ */
+export function relocateLocationGroup<T extends LocationBearingItem>(
+  items: T[],
+  fromLocationId: string | null,
+  toLocationId: string,
+  swapWithTarget: boolean = fromLocationId !== null
+    && items.some((item) => item.location_id === toLocationId),
+): T[] {
+  if (!toLocationId || toLocationId === fromLocationId) return items;
+  return items.map((item) => {
+    const current = item.location_id ?? null;
+    if (current === fromLocationId) return { ...item, location_id: toLocationId };
+    if (swapWithTarget && current === toLocationId) return { ...item, location_id: fromLocationId };
+    return item;
+  });
+}
+
+/**
  * Pretty-print a location as a single line: "Name — address line 1, city, ST".
  * Used by pickers and headers. Intentionally concise; full address goes on the PDF.
  */

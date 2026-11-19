@@ -6,14 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { UserService, UserActivityFilter } from '@alga-psa/users';
-import { 
+import {
   createUserSchema,
   updateUserSchema,
   userListQuerySchema,
   userSearchSchema,
   userExportQuerySchema,
   changePasswordSchema,
-  userActivityFilterSchema
+  userActivityFilterSchema,
+  bulkCreateUsersSchema
 } from '../schemas/userSchemas';
 import { 
   ApiKeyServiceForApi 
@@ -54,6 +55,34 @@ export class ApiUserController extends ApiBaseController {
     });
     
     this.userService = userService;
+  }
+
+  /**
+   * Bulk create users.
+   *
+   * The route used to delegate to the single-user create(), so a bulk payload
+   * failed validation and the documented options were never read. This parses
+   * bulkCreateUsersSchema and returns the bulk summary, including the per-user
+   * errors of a partially successful batch.
+   */
+  bulkCreate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, 'create');
+          const data = await this.validateData(apiRequest, bulkCreateUsersSchema);
+          const result = await this.userService.bulkCreateUsers(
+            data.users,
+            apiRequest.context!,
+            data.options
+          );
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
   }
 
   /**

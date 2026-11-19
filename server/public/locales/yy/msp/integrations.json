@@ -1225,11 +1225,23 @@
           "viewDetails": "〖Ṽīḗẇ ḓḗŧȧīŀş ·····〗"
         },
         "details": {
+          "contactsFailed_one": "〖{{count}} ƈȯƞŧȧƈŧ ƒȧīŀḗḓ ··········〗",
+          "contactsFailed_other": "〖{{count}} ƈȯƞŧȧƈŧş ƒȧīŀḗḓ ··········〗",
+          "failureEntry": "〖{{user}} ({{stage}}): {{message}} ··············〗",
+          "moreFailures": "〖ȧƞḓ {{count}} ḿȯřḗ ········〗",
           "noResults": "〖Ƞȯ ŧḗƞȧƞŧ řḗşŭŀŧş řḗƈȯřḓḗḓ. ···········〗",
+          "noticeHeading": "〖Ƞȯŧḗş ··〗",
+          "stages": {
+            "create": "〖ƈřḗȧŧīƞɠ ····〗",
+            "link": "〖ŀīƞķīƞɠ ···〗",
+            "match": "〖ḿȧŧƈħīƞɠ ····〗"
+          },
           "stats": "〖ƈřḗȧŧḗḓ {{created}}, ŀīƞķḗḓ {{linked}}, ŭƥḓȧŧḗḓ {{updated}}, ȧḿƀīɠŭȯŭş {{ambiguous}}, īƞȧƈŧīṽȧŧḗḓ {{inactivated}} ··············································〗",
+          "summaryFailed": "〖Ƈȯƞŧȧƈŧş ŧħȧŧ ƒȧīŀḗḓ: {{count}} ·············〗",
           "summarySkipped": "〖Şķīƥƥḗḓ ƥřȯṽīşīȯƞīƞɠ ȯŭŧƈȯḿḗş: {{count}} ················〗",
           "tenantHeader": "〖Ŧḗƞȧƞŧ {{tenant}} · {{status}} ············〗",
-          "unknownTenant": "〖ŭƞķƞȯẇƞ ···〗"
+          "unknownTenant": "〖ŭƞķƞȯẇƞ ···〗",
+          "userUnknown": "〖ŭƞķƞȯẇƞ ŭşḗř ·····〗"
         },
         "empty": "〖Ƞȯ şẏƞƈ řŭƞş ƒȯŭƞḓ ẏḗŧ. ··········〗",
         "errors": {

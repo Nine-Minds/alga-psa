@@ -47,6 +47,7 @@ tags:
   - name: Mobile v1
   - name: Notifications
   - name: Opportunities v1
+  - name: Portal Invitations
   - name: Priorities
   - name: Products
   - name: Project Templates
@@ -1689,6 +1690,37 @@ components:
       required:
         - team_ids
         - updates
+    AccessBulkCreateUsersBodyV1:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessCreateUserBodyV1"
+          minItems: 1
+          maxItems: 100
+        options:
+          type: object
+          properties:
+            send_welcome_email:
+              type: boolean
+              description: Default true. Mails each created user a link to set their own
+                password.
+            force_password_reset:
+              type: boolean
+              description: Default false. Records the must_change_password preference on each
+                account, the same flag an admin-initiated password reset sets.
+                Nothing enforces it at sign-in yet, so pair it with
+                send_welcome_email to make the owner choose their own password.
+            skip_invalid:
+              type: boolean
+              description: Default true. Reports an invalid entry in errors[] instead of
+                failing the whole batch.
+            dry_run:
+              type: boolean
+              description: Default false. Validates every entry and creates nothing.
+      required:
+        - users
     AccessTeamBulkDeleteBodyV1:
       type: object
       properties:
@@ -7869,6 +7901,318 @@ components:
           required:
             - success
             - message
+      required:
+        - data
+    ClientBillingProfilesParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client UUID from clients.client_id.
+      required:
+        - id
+    ClientBillingProfileParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client UUID from clients.client_id.
+        profileId:
+          type: string
+          format: uuid
+          description: Billing profile UUID from
+            client_billing_profiles.billing_profile_id. Must belong to the
+            client in the path.
+      required:
+        - id
+        - profileId
+    ClientBillingProfileApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    ClientBillingProfile:
+      type: object
+      properties:
+        billing_profile_id:
+          type: string
+          format: uuid
+          description: The billing_profile_id used on invoices, contract lines, tickets
+            and assets.
+        client_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        is_default:
+          type: boolean
+        is_system_managed_default:
+          type: boolean
+        is_active:
+          type: boolean
+        bills_separately:
+          type: boolean
+        bill_to_name:
+          type:
+            - string
+            - "null"
+        bill_to_location_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        bill_to_location_name:
+          type:
+            - string
+            - "null"
+          description: Display name of bill_to_location_id; null when unset.
+        billing_contact_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        billing_contact_name:
+          type:
+            - string
+            - "null"
+          description: Full name of billing_contact_id; null when unset.
+        billing_email:
+          type:
+            - string
+            - "null"
+        is_tax_exempt:
+          type:
+            - boolean
+            - "null"
+          description: Null means inherit from the client. The same applies to other
+            nullable settings.
+        tax_exemption_certificate:
+          type:
+            - string
+            - "null"
+        tax_id_number:
+          type:
+            - string
+            - "null"
+        po_number:
+          type:
+            - string
+            - "null"
+        po_required:
+          type:
+            - boolean
+            - "null"
+        invoice_delivery_method:
+          type:
+            - string
+            - "null"
+        invoice_template_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        invoice_template_name:
+          type:
+            - string
+            - "null"
+          description: Name of the tenant invoice template in invoice_template_id; null
+            when unset.
+        billing_cycle:
+          type:
+            - string
+            - "null"
+        payment_terms:
+          type:
+            - string
+            - "null"
+        preferred_payment_method:
+          type:
+            - string
+            - "null"
+        created_at:
+          type:
+            - string
+            - "null"
+        updated_at:
+          type:
+            - string
+            - "null"
+      required:
+        - billing_profile_id
+        - client_id
+        - name
+        - is_default
+        - is_system_managed_default
+        - is_active
+        - bills_separately
+        - bill_to_name
+        - bill_to_location_id
+        - bill_to_location_name
+        - billing_contact_id
+        - billing_contact_name
+        - billing_email
+        - is_tax_exempt
+        - tax_exemption_certificate
+        - tax_id_number
+        - po_number
+        - po_required
+        - invoice_delivery_method
+        - invoice_template_id
+        - invoice_template_name
+        - billing_cycle
+        - payment_terms
+        - preferred_payment_method
+        - created_at
+        - updated_at
+    ClientBillingProfileListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientBillingProfile"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    ClientBillingProfileEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ClientBillingProfile"
+        meta:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+    PortalInvitationClientParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client UUID from clients.client_id.
+      required:
+        - id
+    PortalInvitationApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    ClientPortalInvitationRequest:
+      type: object
+      properties:
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 500
+          description: Contacts to invite. Ids that do not belong to the client in the
+            path come back as skipped, never invited.
+        all_eligible:
+          type: boolean
+          description: Invite every active contact of the client that has no client portal
+            user yet. Ignored when contact_ids is given.
+      description: Supply contact_ids, or all_eligible=true. One of the two is required.
+    BulkPortalInvitationRequest:
+      type: object
+      properties:
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 500
+          description: Contacts to invite, in any client. Each contact is authorized
+            against its own client.
+      required:
+        - contact_ids
+    PortalInvitationResult:
+      type: object
+      properties:
+        contact_id:
+          type: string
+          description: contacts.contact_name_id.
+        email:
+          type: string
+          description: Address the invitation went to, when the contact has one.
+        status:
+          type: string
+          enum:
+            - sent
+            - skipped
+            - failed
+          description: "sent: an invitation email went out. skipped: the contact is not
+            invitable as it stands (no email, invalid email, already a portal
+            user, shared mailbox, not in this client). failed: the invitation
+            could not be delivered."
+        invitation_id:
+          type: string
+          description: portal_invitations.invitation_id of the invitation created.
+        error_code:
+          type: string
+          description: Stable code for a skip or failure, e.g. USER_EXISTS_FOR_CONTACT.
+        message:
+          type: string
+      required:
+        - contact_id
+        - status
+    BulkPortalInvitationEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Contacts considered by this request.
+            sent:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+            results:
+              type: array
+              items:
+                $ref: "#/components/schemas/PortalInvitationResult"
+          required:
+            - total
+            - sent
+            - skipped
+            - failed
+            - results
+        meta:
+          type: object
+          additionalProperties: {}
       required:
         - data
     ContractLineIdParam:
@@ -28711,9 +29055,16 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
   /api/v1/users/bulk/create:
     post:
-      summary: Bulk create users (route currently mapped to single create)
-      description: Route currently delegates to ApiUserController.create(), so
-        behavior is single-user create schema rather than bulk payload handling.
+      summary: Bulk create users
+      description: Creates up to 100 users from one payload using
+        bulkCreateUsersSchema. Returns the bulk summary (total_processed,
+        successful, failed, per-index errors, created users); with skip_invalid
+        (default true) an invalid entry is reported rather than failing the
+        batch. options.force_password_reset records the must_change_password
+        preference on each account (not yet enforced at sign-in),
+        options.send_welcome_email (default true) mails each new user a link to
+        set their own password, and options.dry_run validates without creating
+        anything.
       tags:
         - Access Control & Users v1
       security:
@@ -28725,8 +29076,7 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
           equivalent controller-specific auth path
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-controller-handler: bulkCreateUsersRouteMismatch
-        x-route-controller-mismatch: true
+        x-controller-handler: bulkCreateUsers
       x-alga-products:
         - psa
         - algadesk
@@ -28735,7 +29085,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessCreateUserBodyV1"
+              $ref: "#/components/schemas/AccessBulkCreateUsersBodyV1"
       responses:
         "200":
           description: Operation succeeded.
@@ -37648,6 +37998,271 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/clients/{id}/billing-profiles:
+    get:
+      summary: List client billing profiles
+      description: 'Lists every billing profile of the client, including inactive
+        ones: default profile first, then by name. billing_profile_id is the
+        value used on invoices, contract lines, tickets and assets. Nullable
+        settings mean "inherit from the client".'
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Client UUID from clients.client_id.
+          required: true
+          description: Client UUID from clients.client_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Billing profiles returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileListEnvelope"
+        "400":
+          description: Invalid client or profile id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "403":
+          description: Permission denied for client read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "404":
+          description: Client not found, or not visible to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "500":
+          description: Unexpected billing profile failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+  /api/v1/clients/{id}/billing-profiles/{profileId}:
+    get:
+      summary: Get a client billing profile
+      description: Returns one billing profile of the client. billing_profile_id is
+        the value used on invoices, contract lines, tickets and assets. A
+        profile that belongs to another client returns 404, the same as an
+        unknown one.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Client UUID from clients.client_id.
+          required: true
+          description: Client UUID from clients.client_id.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Billing profile UUID from
+              client_billing_profiles.billing_profile_id. Must belong to the
+              client in the path.
+          required: true
+          description: Billing profile UUID from
+            client_billing_profiles.billing_profile_id. Must belong to the
+            client in the path.
+          name: profileId
+          in: path
+      responses:
+        "200":
+          description: Billing profile returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileEnvelope"
+        "400":
+          description: Invalid client or profile id format.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "403":
+          description: Permission denied for client read.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "404":
+          description: Billing profile not found for this client.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+        "500":
+          description: Unexpected billing profile failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBillingProfileApiError"
+  /api/v1/clients/{id}/portal-invitations:
+    post:
+      summary: Invite a client's contacts to the client portal
+      description: "Sends client portal invitations for one client: either every
+        eligible contact (all_eligible) or a named subset (contact_ids)
+        validated against the client in the path. Invitations go out one at a
+        time, so a contact that cannot be invited never costs the rest of the
+        batch theirs; the response reports each contact's outcome and the
+        request is a 200 even when some were skipped or failed."
+      tags:
+        - Portal Invitations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: user
+        x-rbac-action: invite
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Client UUID from clients.client_id.
+          required: true
+          description: Client UUID from clients.client_id.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientPortalInvitationRequest"
+      responses:
+        "200":
+          description: Per-contact invitation outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkPortalInvitationEnvelope"
+        "400":
+          description: Invalid payload, no targets selected, more than 500 contacts, or
+            the tenant is not configured to send invitations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "403":
+          description: Permission denied for user invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "500":
+          description: Unexpected invitation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+  /api/v1/portal-invitations/bulk:
+    post:
+      summary: Invite contacts to the client portal in bulk
+      description: Sends client portal invitations for the named contacts, which may
+        belong to different clients; each contact is authorized against its own
+        client before anything is sent. Same per-contact result envelope as the
+        client-scoped endpoint.
+      tags:
+        - Portal Invitations
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: user
+        x-rbac-action: invite
+        x-chat-approval-required: true
+      x-alga-products:
+        - psa
+        - algadesk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkPortalInvitationRequest"
+      responses:
+        "200":
+          description: Per-contact invitation outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkPortalInvitationEnvelope"
+        "400":
+          description: Invalid payload, no targets selected, more than 500 contacts, or
+            the tenant is not configured to send invitations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "403":
+          description: Permission denied for user invite.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
+        "500":
+          description: Unexpected invitation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalInvitationApiError"
   /api/v1/contract-lines:
     get:
       summary: List contract lines
@@ -61367,7 +61982,8 @@ paths:
   /api/v1/webhooks/templates:
     get:
       summary: List webhook templates
-      description: Returns webhook templates visible to the tenant (own + system templates).
+      description: Webhook templates are not persisted, so this always returns 200
+        with an empty list. There is no template storage to read from.
       tags:
         - Webhooks
       security:
@@ -61414,7 +62030,9 @@ paths:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
     post:
       summary: Create webhook template
-      description: Creates a reusable webhook template. Requires system_settings RBAC.
+      description: "Not implemented: webhook templates have no storage. Returns 501
+        NOT_IMPLEMENTED after the system_settings RBAC check and body
+        validation."
       tags:
         - Webhooks
       security:
@@ -61465,12 +62083,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
+        "501":
+          description: "Webhook templates are not supported: there is no template storage."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
   /api/v1/webhooks/templates/{id}:
     get:
-      summary: Get webhook template detail (webhook getById wiring)
-      description: Template detail route delegates to ApiWebhookController.getById()
-        and looks up rows from the webhooks table by the URL id, not
-        webhook_templates. Calling with a true template_id will return 404.
+      summary: Get webhook template detail
+      description: "Webhook templates are not persisted, so a template id never
+        resolves: returns 404 NOT_FOUND after the RBAC check and id validation."
       tags:
         - Webhooks
       security:
@@ -61481,8 +62104,7 @@ paths:
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: webhook
         x-rbac-action: read
-        x-controller-method: ApiWebhookController.getById()
-        x-route-to-controller-mismatch: true
+        x-controller-method: ApiWebhookController.getTemplate()
       x-alga-products:
         - psa
       parameters:
@@ -61496,11 +62118,11 @@ paths:
           in: path
       responses:
         "200":
-          description: Webhook detail returned.
+          description: Template detail.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WebhookEnvelopeV1"
+                $ref: "#/components/schemas/WebhookTemplateEnvelopeV1"
         "400":
           description: Invalid request payload, query, or webhook id format.
           content:
@@ -61532,9 +62154,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
     put:
-      summary: Update webhook template (webhook update wiring)
-      description: Template update route delegates to ApiWebhookController.update()
-        and operates on webhooks rows, not webhook_templates.
+      summary: Update webhook template
+      description: "Not implemented: webhook templates have no storage. Returns 501
+        NOT_IMPLEMENTED after the system_settings RBAC check, id validation and
+        body validation."
       tags:
         - Webhooks
       security:
@@ -61544,9 +62167,8 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: webhook
-        x-rbac-action: update
-        x-controller-method: ApiWebhookController.update()
-        x-route-to-controller-mismatch: true
+        x-rbac-action: system_settings
+        x-controller-method: ApiWebhookController.updateTemplate()
       x-alga-products:
         - psa
       parameters:
@@ -61567,257 +62189,30 @@ paths:
               properties:
                 name:
                   type: string
-                  minLength: 1
                 description:
                   type: string
-                url:
+                category:
                   type: string
-                  format: uri
-                method:
-                  type: string
-                  enum:
-                    - GET
-                    - POST
-                    - PUT
-                    - PATCH
-                    - DELETE
-                event_types:
+                default_config:
+                  type: object
+                  additionalProperties: {}
+                required_fields:
+                  type: array
+                  items:
+                    type: string
+                supported_events:
                   type: array
                   items:
                     $ref: "#/components/schemas/WebhookEventTypeV1"
-                  minItems: 1
-                security:
-                  type: object
-                  additionalProperties: {}
-                payload_format:
-                  type: string
-                  enum:
-                    - json
-                    - xml
-                    - form_data
-                    - custom
-                content_type:
-                  type: string
-                custom_headers:
-                  type: object
-                  additionalProperties:
-                    type: string
-                event_filter:
-                  type: object
-                  additionalProperties: {}
-                payload_fields:
-                  type:
-                    - object
-                    - "null"
-                  properties:
-                    ticket:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - ticket_number
-                          - title
-                          - url
-                          - status_id
-                          - status_name
-                          - is_closed
-                          - response_state
-                          - previous_status_id
-                          - previous_status_name
-                          - previous_response_state
-                          - new_response_state
-                          - priority_id
-                          - priority_name
-                          - client_id
-                          - client_name
-                          - contact_name_id
-                          - contact_name
-                          - contact_email
-                          - assigned_to
-                          - assigned_to_name
-                          - assigned_team_id
-                          - board_id
-                          - board_name
-                          - category_id
-                          - subcategory_id
-                          - entered_at
-                          - updated_at
-                          - closed_at
-                          - due_date
-                          - tags
-                          - comment
-                          - changes
-                          - comments
-                    project:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - project_name
-                          - wbs_code
-                          - description
-                          - status_id
-                          - status_name
-                          - is_closed
-                          - previous_status_id
-                          - previous_status_name
-                          - client_id
-                          - client_name
-                          - contact_name_id
-                          - contact_name
-                          - contact_email
-                          - assigned_to
-                          - assigned_to_name
-                          - start_date
-                          - end_date
-                          - budgeted_hours
-                          - url
-                          - changes
-                          - phases
-                          - task_counts
-                          - task_id
-                          - phase_id
-                          - phase_name
-                          - task_name
-                          - estimated_hours
-                          - actual_hours
-                          - due_date
-                          - priority_id
-                          - priority_name
-                          - tags
-                    client:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - changed_fields
-                    contact:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - client_id
-                          - changed_fields
-                    client_location:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - client_id
-                          - changed_fields
-                    quote:
-                      type:
-                        - array
-                        - "null"
-                      items:
-                        type: string
-                        enum:
-                          - client_id
-                          - quote_number
-                          - version
-                          - contact_id
-                          - opportunity_id
-                          - previous_status
-                          - new_status
-                          - currency_code
-                          - total_amount
-                          - performed_by_type
-                          - performed_by_id
-                          - sent_at
-                          - viewed_at
-                          - approved_at
-                          - accepted_at
-                          - rejected_at
-                          - expired_at
-                          - converted_at
-                          - conversion_reverted_at
-                          - superseded_at
-                          - cancelled_at
-                          - accepted_by_name
-                          - accepted_on_behalf
-                          - selected_optional_item_ids
-                          - rejection_reason
-                          - conversion_targets
-                          - contract_id
-                          - invoice_id
-                          - sales_order_id
-                          - released_invoice_id
-                          - superseded_by_quote_id
-                          - next_version
-                  description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
-                    ticket: null } = full ticket payload. { ticket: [] } =
-                    required-only. { ticket: [a,b] } = explicit allowlist plus
-                    required keys. Unknown entities and fields are rejected by
-                    WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in
-                    lib/webhooks/payloadFields. Supported fields: ticket:
-                    ticket_number, title, url, status_id, status_name,
-                    is_closed, response_state, previous_status_id,
-                    previous_status_name, previous_response_state,
-                    new_response_state, priority_id, priority_name, client_id,
-                    client_name, contact_name_id, contact_name, contact_email,
-                    assigned_to, assigned_to_name, assigned_team_id, board_id,
-                    board_name, category_id, subcategory_id, entered_at,
-                    updated_at, closed_at, due_date, tags, comment, changes,
-                    comments; project: project_name, wbs_code, description,
-                    status_id, status_name, is_closed, previous_status_id,
-                    previous_status_name, client_id, client_name,
-                    contact_name_id, contact_name, contact_email, assigned_to,
-                    assigned_to_name, start_date, end_date, budgeted_hours, url,
-                    changes, phases, task_counts, task_id, phase_id, phase_name,
-                    task_name, estimated_hours, actual_hours, due_date,
-                    priority_id, priority_name, tags; client: changed_fields;
-                    contact: client_id, changed_fields; client_location:
-                    client_id, changed_fields; quote: client_id, quote_number,
-                    version, contact_id, opportunity_id, previous_status,
-                    new_status, currency_code, total_amount, performed_by_type,
-                    performed_by_id, sent_at, viewed_at, approved_at,
-                    accepted_at, rejected_at, expired_at, converted_at,
-                    conversion_reverted_at, superseded_at, cancelled_at,
-                    accepted_by_name, accepted_on_behalf,
-                    selected_optional_item_ids, rejection_reason,
-                    conversion_targets, contract_id, invoice_id, sales_order_id,
-                    released_invoice_id, superseded_by_quote_id, next_version."
-                payload_transformation:
-                  type: object
-                  additionalProperties: {}
-                retry_config:
-                  type: object
-                  additionalProperties: {}
-                is_active:
+                is_system_template:
                   type: boolean
-                is_test_mode:
-                  type: boolean
-                verify_ssl:
-                  type: boolean
-                secret_token:
-                  type: string
-                rate_limit:
-                  type: object
-                  additionalProperties: {}
-                metadata:
-                  type: object
-                  additionalProperties: {}
-                tags:
-                  type: array
-                  items:
-                    type: string
       responses:
         "200":
-          description: Webhook updated.
+          description: Template updated.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WebhookEnvelopeV1"
+                $ref: "#/components/schemas/WebhookTemplateEnvelopeV1"
         "400":
           description: Invalid request payload, query, or webhook id format.
           content:
@@ -61836,22 +62231,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
-        "404":
-          description: Webhook, delivery, template, or signing secret not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WebhookApiErrorV1"
         "500":
           description: Unexpected webhook operation failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
+        "501":
+          description: "Webhook templates are not supported: there is no template storage."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
     delete:
-      summary: Delete webhook template (webhook delete wiring)
-      description: Template delete route delegates to ApiWebhookController.delete()
-        and removes a webhooks row, not a webhook_templates row.
+      summary: Delete webhook template
+      description: "Not implemented: webhook templates have no storage. Returns 501
+        NOT_IMPLEMENTED after the system_settings RBAC check and id validation."
       tags:
         - Webhooks
       security:
@@ -61861,9 +62256,8 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiWebhookController.authenticate()
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: webhook
-        x-rbac-action: delete
-        x-controller-method: ApiWebhookController.delete()
-        x-route-to-controller-mismatch: true
+        x-rbac-action: system_settings
+        x-controller-method: ApiWebhookController.deleteTemplate()
       x-alga-products:
         - psa
       parameters:
@@ -61877,7 +62271,7 @@ paths:
           in: path
       responses:
         "204":
-          description: Webhook deleted.
+          description: Template deleted.
         "400":
           description: Invalid request payload, query, or webhook id format.
           content:
@@ -61896,14 +62290,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
-        "404":
-          description: Webhook, delivery, template, or signing secret not found.
+        "500":
+          description: Unexpected webhook operation failure.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
-        "500":
-          description: Unexpected webhook operation failure.
+        "501":
+          description: "Webhook templates are not supported: there is no template storage."
           content:
             application/json:
               schema:
@@ -61911,8 +62305,8 @@ paths:
   /api/v1/webhooks/templates/{id}/create:
     post:
       summary: Create webhook from template
-      description: Instantiates a webhook configuration from a template, merging
-        caller-supplied overrides.
+      description: "Not implemented: webhook templates have no storage. Returns 501
+        NOT_IMPLEMENTED after the RBAC check and body validation."
       tags:
         - Webhooks
       security:
@@ -61974,6 +62368,12 @@ paths:
                 $ref: "#/components/schemas/WebhookApiErrorV1"
         "500":
           description: Unexpected webhook operation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookApiErrorV1"
+        "501":
+          description: "Webhook templates are not supported: there is no template storage."
           content:
             application/json:
               schema:
@@ -74805,7 +75205,9 @@ paths:
   /api/v1/tickets/priorities:
     get:
       summary: List ticket priorities
-      description: Returns the tenant ticket priorities (item_type=ticket), ordered by name.
+      description: Returns the tenant ticket priorities (item_type=ticket), ordered by
+        name, each with is_from_itil_standard. A board whose priority_type is
+        itil accepts only ITIL priorities; any other board only the custom ones.
       tags:
         - Work Management v1
       security:

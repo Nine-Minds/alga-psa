@@ -1225,11 +1225,23 @@
           "viewDetails": "Visa detaljer"
         },
         "details": {
+          "contactsFailed_one": "{{count}} kontakt misslyckades",
+          "contactsFailed_other": "{{count}} kontakter misslyckades",
+          "failureEntry": "{{user}} ({{stage}}): {{message}}",
+          "moreFailures": "och {{count}} till",
           "noResults": "Inga resultat för klientorganisationer har registrerats.",
+          "noticeHeading": "Anteckningar",
+          "stages": {
+            "create": "skapande",
+            "link": "länkning",
+            "match": "matchning"
+          },
           "stats": "skapade {{created}}, länkade {{linked}}, uppdaterade {{updated}}, tvetydiga {{ambiguous}}, inaktiverade {{inactivated}}",
+          "summaryFailed": "Kontakter som misslyckades: {{count}}",
           "summarySkipped": "Överhoppade etableringsresultat: {{count}}",
           "tenantHeader": "Klientorganisation {{tenant}} · {{status}}",
-          "unknownTenant": "okänd"
+          "unknownTenant": "okänd",
+          "userUnknown": "okänd användare"
         },
         "empty": "Inga synkroniseringskörningar hittades ännu.",
         "errors": {

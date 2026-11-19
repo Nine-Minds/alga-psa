@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { readCoManagedPoolCapacity } from './co-managed-capacity';
+import { readCoManagedFirstPurchasePhase } from './co-managed-first-purchase';
 
 export interface CoManagedPurchaseOperation {
   operation_id: string;
@@ -8,6 +9,9 @@ export interface CoManagedPurchaseOperation {
   quantity: number;
   state: 'preparing' | 'checkout' | 'completed' | 'expired' | 'payment_failed';
   provider_reference: string | null;
+  /** Catalog terms pinned when the purchase was first confirmed; null for pre-catalog operations. */
+  offer_version_id?: string | null;
+  price_id?: string | null;
 }
 
 export type CoManagedPurchaseResult =
@@ -17,11 +21,12 @@ export type CoManagedPurchaseResult =
 
 export class CoManagedPurchaseError extends Error {
   constructor(public readonly code: 'INVALID_PURCHASE' | 'SPONSOR_NOT_ELIGIBLE' | 'PURCHASE_IN_PROGRESS' |
-    'OPERATION_CONFLICT' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
+    'OPERATION_CONFLICT' | 'PURCHASE_AWAITING_VERIFICATION' | 'ALLOCATED_CAPACITY_REQUIRED' | 'OFFLINE_LICENSE_REQUIRED') {
     super({
       INVALID_PURCHASE: 'Enter a valid seat quantity and purchase reference.',
       SPONSOR_NOT_ELIGIBLE: 'Only Pro PSA workspaces can purchase co-managed seats.',
       PURCHASE_IN_PROGRESS: 'Complete or resume the pending purchase before starting another.',
+      PURCHASE_AWAITING_VERIFICATION: 'The first purchase is awaiting payment verification. Refresh shortly.',
       OPERATION_CONFLICT: 'This purchase was started with a different seat quantity.',
       ALLOCATED_CAPACITY_REQUIRED: 'Release allocated customer seats before reducing this pool.',
       OFFLINE_LICENSE_REQUIRED: 'Update the signed license to change self-hosted co-managed capacity.',
@@ -55,6 +60,9 @@ export async function runCoManagedPurchase(db: Knex, input: {
   sponsorTenant: string;
   operationId: string;
   quantity: number;
+  /** Reviewed terms to record with a NEW operation. Resume and retry read them back from the row;
+   * they are never re-resolved, so a price rotation cannot reprice a confirmed purchase. */
+  pinned?: { offerVersionId: string | null; priceId: string };
 }, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>): Promise<CoManagedPurchaseResult> {
   if (!Number.isInteger(input.quantity) || input.quantity < 0 || input.quantity > 100000 ||
       !UUID.test(input.operationId) || !UUID.test(input.sponsorTenant)) {
@@ -76,6 +84,12 @@ export async function runCoManagedPurchase(db: Knex, input: {
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {
         throw new CoManagedPurchaseError('PURCHASE_IN_PROGRESS');
       }
+      // A first purchase needs a positive pool and cannot start while another one awaits verification.
+      const first = await readCoManagedFirstPurchasePhase(trx, input.sponsorTenant);
+      if (first.phase !== 'established') {
+        if (input.quantity < 1) throw new CoManagedPurchaseError('INVALID_PURCHASE');
+        if (first.phase === 'awaiting_verification') throw new CoManagedPurchaseError('PURCHASE_AWAITING_VERIFICATION');
+      }
       const entitlement = await scoped.table('co_managed_entitlements').first('source');
       if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');
       // An operator grant is not a billing subscription; a purchase would be unreconcilable.
@@ -85,7 +99,8 @@ export async function runCoManagedPurchase(db: Knex, input: {
       }
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
-        operation_id: input.operationId, quantity: input.quantity, state: 'preparing' });
+        operation_id: input.operationId, quantity: input.quantity, state: 'preparing',
+        ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId } : {}) });
     });
   } catch (error) {
     // The partial unique index is the backstop for two concurrent first writers.

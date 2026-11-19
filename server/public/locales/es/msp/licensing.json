@@ -694,6 +694,8 @@
     "proRequired": "Se requiere una suscripción Pro de PSA para patrocinar espacios de trabajo de clientes.",
     "loadError": "No se pudo cargar la capacidad de puestos de clientes. Inténtelo de nuevo.",
     "purchaseError": "No se pudo completar la compra de puestos. Puede reanudarla con seguridad.",
+    "termsChanged": "El precio cambió después de que revisara la compra. Revise las condiciones actualizadas antes de confirmar.",
+    "offerUnavailable": "La compra de nuevas plazas no está disponible temporalmente. No se realizó ningún cargo.",
     "checkoutExpired": "Este pago caducó. Inicie una nueva compra para continuar.",
     "grace": "Renueve su licencia o resuelva el déficit de capacidad antes del {{date}} para mantener los espacios de trabajo de clientes editables.",
     "readOnly": "El período de gracia terminó el {{date}}. Restablezca la capacidad con licencia para reanudar los cambios en los espacios de trabajo de clientes.",
@@ -701,6 +703,13 @@
     "checkoutUnavailable": "El pago integrado no está disponible. Reintente después de reparar la configuración de pago.",
     "pendingCapacity_one": "Hay una compra de {{count}} puesto pendiente.",
     "pendingCapacity_other": "Hay una compra de {{count}} puestos pendiente.",
+    "buySeats": "Comprar puestos de cogestión",
+    "awaitingVerification_one": "Su compra de {{count}} puesto está pendiente de verificación del pago. El puesto aparecerá aquí cuando se confirme el pago.",
+    "awaitingVerification_other": "Su compra de {{count}} puestos está pendiente de verificación del pago. Los puestos aparecerán aquí cuando se confirme el pago.",
+    "refreshStatus": "Actualizar estado",
+    "purchaseOnly": {
+      "intro": "Compre aquí un conjunto de puestos de cogestión. Después de la compra, asigne puestos a los clientes desde cada ficha de cliente."
+    },
     "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
     "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad de cogestión.",
     "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",

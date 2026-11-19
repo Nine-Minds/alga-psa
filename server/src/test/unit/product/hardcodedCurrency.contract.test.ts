@@ -180,6 +180,7 @@ const SYMBOL_END = new RegExp(`(?:${SYMBOL_ALT})$`);
 const SYMBOL_END_LOOSE = new RegExp(`(?:${SYMBOL_ALT})\\s*$`);
 
 const REPO_ROOT = path.resolve(process.cwd(), "..");
+const normalizePath = (file: string): string => file.replace(/\\/g, "/");
 
 // LEVERAGE: pattern source-tree-walker — same recursive walker as routeEntryPointCoverage
 function collectSourceFiles(absDir: string, out: string[]): void {
@@ -262,7 +263,7 @@ function scanFile(absFile: string, out: Violation[]): void {
     true,
     scriptKind,
   );
-  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
+  const file = normalizePath(path.relative(REPO_ROOT, absFile));
 
   const record = (node: ts.Node, snippet: string) => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -346,6 +347,11 @@ function describeFile(file: string, list: Violation[]): string {
 
 describe("hardcoded currency (source)", () => {
   const byFile = collectViolations();
+
+  it("uses portable paths for known-list matching", () => {
+    expect(normalizePath("packages\\notifications\\seed.ts")).toBe("packages/notifications/seed.ts");
+    expect(normalizePath("packages/notifications/seed.ts")).toBe("packages/notifications/seed.ts");
+  });
 
   it('no user-visible hardcoded "$" outside the known list', () => {
     // The symbol set derives from the product currency list; if that import
@@ -509,7 +515,7 @@ function scanFileArgs(absFile: string, out: Violation[]): void {
     true,
     scriptKind,
   );
-  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
+  const file = normalizePath(path.relative(REPO_ROOT, absFile));
 
   const record = (node: ts.Node, snippet: string) => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -670,7 +676,7 @@ function collectLocaleViolations(): Map<string, Set<string>> {
     };
     collectJson(localeDir);
     for (const file of files) {
-      const nsPath = path.relative(localeDir, file).split(path.sep).join("/");
+      const nsPath = normalizePath(path.relative(localeDir, file));
       walkJson(
         JSON.parse(fs.readFileSync(file, "utf8")),
         "",
@@ -736,7 +742,7 @@ function scanLabelDefaults(absFile: string, out: Violation[]): void {
     true,
     /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
+  const file = normalizePath(path.relative(REPO_ROOT, absFile));
   const report = (node: ts.Node, snippet: string): void => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
       node.getStart(sourceFile),

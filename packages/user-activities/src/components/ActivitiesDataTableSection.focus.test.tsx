@@ -38,7 +38,6 @@ vi.mock('./MyActivityGroupsProvider', () => ({ useMyActivityGroups: () => mocks.
 vi.mock('./ActivityDrawerProvider', () => ({ useActivityDrawer: () => ({ openActivityDrawer: vi.fn() }) }));
 vi.mock('@alga-psa/ui/context', () => ({
   useActivityCrossFeature: () => ({
-    getAllClients: async () => [],
     getProjectsWithPhases: async () => [],
   }),
 }));

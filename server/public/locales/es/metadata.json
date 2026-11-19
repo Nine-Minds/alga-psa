@@ -239,6 +239,9 @@
       "title": "Solicitudes de servicio",
       "detail": {
         "fallbackTitle": "Solicitud de servicio"
+      },
+      "formBuilder": {
+        "title": "Editor de formularios"
       }
     },
     "surveys": {

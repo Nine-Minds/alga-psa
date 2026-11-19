@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
+import { OfferTermsChangedError, OfferUnavailableError } from '../../lib/stripe/offerCatalog/types';
 
 const mocks = vi.hoisted(() => ({ surface: vi.fn(), permission: vi.fn(), preview: vi.fn(), purchase: vi.fn(), key: vi.fn(),
   user: { user_id: 'actor', tenant: 'authenticated-sponsor', user_type: 'internal' } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) =>
   handler(mocks.user, { tenant: mocks.user.tenant }, ...args) }));
-vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface }));
+vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, registerCoManagedOfferAvailability: vi.fn() }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
   previewCoManagedSeats: mocks.preview, purchaseCoManagedSeats: mocks.purchase, getPublishableKey: mocks.key,
@@ -31,7 +32,7 @@ describe('co-managed billing authorization', () => {
   });
   it('uses the authenticated sponsor, ignoring a caller-supplied tenant', async () => {
     await purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation', tenant: 'other-sponsor' } as any);
-    expect(mocks.purchase).toHaveBeenCalledWith('authenticated-sponsor', 3, 'operation');
+    expect(mocks.purchase).toHaveBeenCalledWith('authenticated-sponsor', 3, 'operation', undefined);
     expect(mocks.key).not.toHaveBeenCalled();
   });
   it('returns the publishable key only when opening checkout', async () => {
@@ -47,5 +48,24 @@ describe('co-managed billing authorization', () => {
     await expect(purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation' })).rejects.toThrow('not available');
     expect(mocks.surface).toHaveBeenCalledWith('authenticated-sponsor');
     expect(mocks.preview).not.toHaveBeenCalled(); expect(mocks.purchase).not.toHaveBeenCalled();
+  });
+});
+
+describe('co-managed offer terms at confirmation', () => {
+  const current = { versionId: 'v2', priceId: 'price_new', terms: { unitAmount: 1300, currency: 'eur', interval: 'month', intervalCount: 1 } };
+  it('passes the reviewed offer reference to the service', async () => {
+    await purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation', offerRef: 'v1' });
+    expect(mocks.purchase).toHaveBeenCalledWith('authenticated-sponsor', 3, 'operation', 'v1');
+  });
+  it('turns a changed price into a fresh-review outcome (nothing charged), not an error', async () => {
+    mocks.purchase.mockRejectedValue(new OfferTermsChangedError('v1', current as never));
+    expect(await purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation', offerRef: 'v1' })).toEqual({
+      kind: 'review_required', offerRef: 'v2', unitAmount: 1300, currency: 'eur', interval: 'month', publishableKey: null });
+  });
+  it('reports a paused offer as unavailable and hides the cause from previews', async () => {
+    mocks.purchase.mockRejectedValue(new OfferUnavailableError('no_current_version', 'paused'));
+    expect(await purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation' })).toEqual({ kind: 'unavailable', reason: 'no_current_version', publishableKey: null });
+    mocks.preview.mockRejectedValue(new OfferUnavailableError('stripe_unavailable', 'down'));
+    await expect(previewCoManagedSeatsAction(3)).rejects.toThrow('temporarily unavailable');
   });
 });

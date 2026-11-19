@@ -694,6 +694,8 @@
     "proRequired": "Per sponsorizzare gli spazi di lavoro dei clienti è richiesto un abbonamento PSA Pro.",
     "loadError": "Impossibile caricare la capacità delle postazioni cliente. Riprova.",
     "purchaseError": "Impossibile completare l'acquisto delle postazioni. Puoi riprenderlo in sicurezza.",
+    "termsChanged": "Il prezzo è cambiato dopo la verifica. Controlla le condizioni aggiornate prima di confermare.",
+    "offerUnavailable": "L’acquisto di nuovi posti è temporaneamente non disponibile. Non è stato addebitato alcun importo.",
     "checkoutExpired": "Questo checkout è scaduto. Avvia un nuovo acquisto per continuare.",
     "grace": "Rinnova la licenza o risolvi la carenza di capacità entro il {{date}} per mantenere modificabili gli spazi di lavoro dei clienti.",
     "readOnly": "Il periodo di tolleranza è terminato il {{date}}. Ripristina la capacità in licenza per riprendere le modifiche agli spazi di lavoro dei clienti.",
@@ -701,6 +703,13 @@
     "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
     "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
     "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "buySeats": "Acquista posti in co-gestione",
+    "awaitingVerification_one": "Il tuo acquisto di {{count}} posto è in attesa della verifica del pagamento. Il posto comparirà qui dopo la conferma del pagamento.",
+    "awaitingVerification_other": "Il tuo acquisto di {{count}} posti è in attesa della verifica del pagamento. I posti compariranno qui dopo la conferma del pagamento.",
+    "refreshStatus": "Aggiorna stato",
+    "purchaseOnly": {
+      "intro": "Acquista qui un pool di posti in co-gestione. Dopo l'acquisto, assegna i posti ai clienti dalla scheda di ciascun cliente."
+    },
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",

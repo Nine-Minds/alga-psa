@@ -2,6 +2,7 @@ import { isInboundRetryLaterError } from './inboundRetryLaterError';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
+import { repairUtf8Mojibake } from './inboundEmailMimeHelpers';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type {
@@ -412,7 +413,7 @@ function mapParsedMimeToEmailMessageDetails(params: {
           name: item?.name || undefined,
         }))
       : undefined,
-    subject: params.parsed.subject || '',
+    subject: repairUtf8Mojibake(params.parsed.subject || ''),
     body: {
       text: params.parsed.text || '',
       html: params.parsed.html ? String(params.parsed.html) : undefined,
