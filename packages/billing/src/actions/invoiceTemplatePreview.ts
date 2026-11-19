@@ -10,7 +10,7 @@ import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/s
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, resolvePageBreakPreviewLabel, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -172,6 +172,9 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         locale: localized.locale,
         dateFormat,
         t: localized.t,
+        // The preview flows continuously, so a forced break leaves no trace in
+        // it; caption the boundary so the author can see the pages they made.
+        pageBreakPreviewLabel: resolvePageBreakPreviewLabel(localized.t),
       });
       const presentationLabels = timePresentationLabels(localized.t);
       // Reuse the document AST's display-only walk for canvas labels. Never

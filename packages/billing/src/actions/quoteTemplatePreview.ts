@@ -7,7 +7,7 @@ import type { QuoteViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
-import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, resolvePageBreakPreviewLabel } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -129,6 +129,9 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
         locale: localized.locale,
         dateFormat,
         t: localized.t,
+        // The preview flows continuously, so a forced break leaves no trace in
+        // it; caption the boundary so the author can see the pages they made.
+        pageBreakPreviewLabel: resolvePageBreakPreviewLabel(localized.t),
       });
       return {
         success: true,

@@ -75,6 +75,30 @@ const render = async (optionalTotal: number) => {
   return renderEvaluatedTemplateAst(ast, evaluation, { locale: 'en-US' });
 };
 
+/** What the designer's Page Break block and "Start on a new page" produce. */
+const forcedBreakAst = (): TemplateAst => ({
+  kind: 'invoice-template-ast',
+  version: TEMPLATE_AST_VERSION,
+  metadata: { templateName: 'Forced breaks' },
+  bindings: { values: {}, collections: {} },
+  layout: {
+    id: 'root',
+    type: 'document',
+    children: [
+      { id: 'cover', type: 'text', content: { type: 'literal', value: 'Cover' } },
+      { id: 'break-1', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+      { id: 'pricing', type: 'text', content: { type: 'literal', value: 'Pricing' } },
+      {
+        id: 'signature-page',
+        type: 'section',
+        style: { inline: { breakBefore: 'page' } },
+        children: [{ id: 'sign-here', type: 'text', content: { type: 'literal', value: 'Sign here' } }],
+      },
+      { id: 'trailing-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+    ],
+  },
+});
+
 describe('template print behaviour', () => {
   it('accepts fragmentation hints and the hideWhenZero totals flag in the schema', () => {
     expect(() => validateTemplateAst(buildAst(0))).not.toThrow();
@@ -90,29 +114,7 @@ describe('template print behaviour', () => {
   });
 
   it('emits forced page breaks and neutralizes one with nothing after it', async () => {
-    // What the designer's Page Break block and "Start on a new page" produce.
-    const ast: TemplateAst = {
-      kind: 'invoice-template-ast',
-      version: TEMPLATE_AST_VERSION,
-      metadata: { templateName: 'Forced breaks' },
-      bindings: { values: {}, collections: {} },
-      layout: {
-        id: 'root',
-        type: 'document',
-        children: [
-          { id: 'cover', type: 'text', content: { type: 'literal', value: 'Cover' } },
-          { id: 'break-1', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
-          { id: 'pricing', type: 'text', content: { type: 'literal', value: 'Pricing' } },
-          {
-            id: 'signature-page',
-            type: 'section',
-            style: { inline: { breakBefore: 'page' } },
-            children: [{ id: 'sign-here', type: 'text', content: { type: 'literal', value: 'Sign here' } }],
-          },
-          { id: 'trailing-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
-        ],
-      },
-    };
+    const ast = forcedBreakAst();
     expect(() => validateTemplateAst(ast)).not.toThrow();
 
     const { html } = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}), { locale: 'en-US' });
@@ -126,6 +128,32 @@ describe('template print behaviour', () => {
     // final page.
     expect(html).toMatch(/id="trailing-break"[^>]*style="[^"]*break-after:\s*auto/);
     expect(html).not.toMatch(/id="trailing-break"[^>]*style="[^"]*break-after:\s*page/);
+    // The printed document carries no preview chrome.
+    expect(html).not.toContain('ast-page-break-preview');
+  });
+
+  it('captions each page boundary for the on-screen preview, but never on paper', async () => {
+    // Reported from the designer: the preview is one continuous flow, so a
+    // forced break left no trace in it and the author could not tell the
+    // document had become several pages.
+    const ast = forcedBreakAst();
+    const evaluation = evaluateTemplateAst(ast, {});
+
+    const preview = await renderEvaluatedTemplateAst(ast, evaluation, {
+      locale: 'en-US',
+      pageBreakPreviewLabel: 'Page break',
+    });
+
+    // One caption for the Page Break block, one for the section that starts a
+    // page — and none for the trailing break, which produces no page at all.
+    expect(preview.html.match(/ast-page-break-preview/g)).toHaveLength(2);
+    expect(preview.html).toMatch(/id="break-1"[^>]*>\s*<div class="ast-page-break-preview"[^>]*>Page break<\/div>/);
+    expect(preview.html).toMatch(/<div class="ast-page-break-preview"[^>]*>Page break<\/div><section id="signature-page"/);
+    // Screen chrome: the printed sheet shows a break by turning.
+    expect(preview.css).toMatch(/@media print \{[\s\S]*\.ast-page-break-preview \{ display: none; \}/);
+
+    const printed = await renderEvaluatedTemplateAst(ast, evaluation, { locale: 'en-US' });
+    expect(printed.html).not.toContain('ast-page-break-preview');
   });
 
   it('omits a hideWhenZero totals row when its value is zero and keeps it otherwise', async () => {

@@ -17,6 +17,14 @@ export type TemplateLabelTranslator = (
   options: { defaultValue: string }
 ) => string;
 
+/**
+ * Caption for the page boundary the editor's preview draws at a forced break.
+ * Preview chrome, never part of a printed document — the flow on screen has no
+ * pages, so without it an author cannot see the breaks they authored.
+ */
+export const resolvePageBreakPreviewLabel = (t?: TemplateLabelTranslator): string =>
+  t?.('preview.pageBreak', { defaultValue: 'Page break' }) ?? 'Page break';
+
 export const isTemplateI18nRef = (value: unknown): value is TemplateI18nRef =>
   typeof value === 'object' &&
   value !== null &&

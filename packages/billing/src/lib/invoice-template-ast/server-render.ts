@@ -3,7 +3,7 @@ import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
-import { localizeTemplateAstForLocale } from './i18nLabels';
+import { localizeTemplateAstForLocale, resolvePageBreakPreviewLabel } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
 import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
 import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
@@ -49,6 +49,12 @@ export interface TemplateHtmlDocumentOptions {
    * Never set on a path that produces a PDF.
    */
   previewSheet?: TemplatePreviewSheet;
+  /**
+   * Screen preview only: caption each forced page break, which the continuous
+   * preview flow otherwise swallows — the author sees one long page and cannot
+   * tell their breaks took. Never set on a path that produces a PDF.
+   */
+  pageBreakPreview?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +239,7 @@ export async function inlineTemplateImageSources<T>(
 export const renderTemplateAstFragment = async (
   ast: TemplateAst,
   evaluation: TemplateEvaluationResult,
-  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat'> = {}
+  options: Pick<TemplateHtmlDocumentOptions, 'locale' | 'dateFormat' | 'pageBreakPreview'> = {}
 ): Promise<{ html: string; css: string; locale: string | undefined }> => {
   const { ast: localizedAst, locale, t } = await localizeTemplateAstForLocale(ast, options.locale);
   // Barcode prepass: async + server-only (qrcode / bwip-js are dynamically imported, never bundled
@@ -245,6 +251,7 @@ export const renderTemplateAstFragment = async (
     locale,
     dateFormat: options.dateFormat,
     t,
+    pageBreakPreviewLabel: options.pageBreakPreview ? resolvePageBreakPreviewLabel(t) : undefined,
   });
   return { html, css, locale };
 };

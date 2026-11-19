@@ -198,5 +198,8 @@
     "incompleteDetail": "Billed-time detail may be incomplete.",
     "detailPartial": "Only available billed-time entries are included in this detail.",
     "detailUnavailable": "Billed-time entry detail is unavailable for this invoice."
+  },
+  "preview": {
+    "pageBreak": "Page break"
   }
 }
