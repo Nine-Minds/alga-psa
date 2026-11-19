@@ -143,7 +143,7 @@ export function applyClientListIndexedSearchFilter(
         ?::text AS raw,
         ?::text AS identifier,
         ?::text AS identifier_prefix,
-            ?::boolean AS fuzzy_enabled
+        ?::boolean AS fuzzy_enabled
     ) q
   `;
   const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier, identifierPrefix, !isFullNumber];
@@ -425,7 +425,7 @@ export function buildContactListSearchQuery(
             ?::text AS raw,
             ?::text AS identifier,
             ?::text AS identifier_prefix,
-            ?::boolean AS fuzzy_enabled
+        ?::boolean AS fuzzy_enabled
         ),
         matched AS (
           SELECT DISTINCT
