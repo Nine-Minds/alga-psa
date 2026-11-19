@@ -225,7 +225,7 @@ export const PALETTE_BASELINE = new Map<string, number>([
   ['packages/billing/src/components/settings/billing/BillingSettings.tsx', 1],
   ['packages/billing/src/components/settings/billing/CostRatesSettings.tsx', 3],
   ['packages/billing/src/components/settings/billing/ProductsManager.tsx', 5],
-  ['packages/billing/src/components/settings/billing/QuickAddProduct.tsx', 4],
+  ['packages/billing/src/components/settings/billing/QuickAddProduct.tsx', 2],
   ['packages/billing/src/components/settings/billing/QuickAddService.tsx', 6],
   ['packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx', 2],
   ['packages/billing/src/components/settings/billing/ServiceCategoriesSettings.tsx', 1],
