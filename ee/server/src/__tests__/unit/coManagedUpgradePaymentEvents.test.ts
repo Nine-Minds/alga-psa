@@ -29,10 +29,10 @@ const forbiddenKnex = new Proxy((() => undefined) as (...args: unknown[]) => unk
   apply() { throw new Error('unexpected database access on the webhook path'); },
 }) as never;
 
-function setup() {
+function setup(refreshRecognition = async () => false) {
   const upgradePayment = vi.fn(async () => true);
   const handlers = createCoManagedPaymentHandlers({
-    recognizedPrices: () => undefined, refreshRecognition: async () => false, sync: vi.fn(), finalizeCheckout: vi.fn(), upgradePayment,
+    recognizedPrices: () => undefined, refreshRecognition, sync: vi.fn(), finalizeCheckout: vi.fn(), upgradePayment,
   });
   return { upgradePayment, handlers };
 }
@@ -94,6 +94,19 @@ describe('independent-upgrade payment handler', () => {
     }
     expect(upgradePayment).toHaveBeenCalledTimes(3);
     expect(gate.admits).not.toHaveBeenCalled();
+  });
+
+  it('reconciles an upgrade webhook even when hosted seat price recognition is unavailable', async () => {
+    participating.add('t');
+    const refreshRecognition = vi.fn(async () => { throw new Error('offer catalog unavailable'); });
+    const { handlers, upgradePayment } = setup(refreshRecognition);
+    const knex = {} as never;
+
+    const outcome = await dispatchPaymentEvent(handlers, { event: failedInvoice, tenantId: 't', knex });
+
+    expect(outcome).toMatchObject({ consumed: true, handledBy: ['co-managed-independent-upgrade'] });
+    expect(upgradePayment).toHaveBeenCalledExactlyOnceWith(failedInvoice, 't', knex);
+    expect(refreshRecognition).not.toHaveBeenCalled();
   });
 
   it('an event whose tenant_id differs from the webhook-resolved tenant is consumed without action', async () => {

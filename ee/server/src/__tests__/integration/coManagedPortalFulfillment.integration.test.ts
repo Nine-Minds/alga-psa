@@ -1,22 +1,20 @@
 /**
- * Platform half of appliance fulfillment against a real Postgres (T006 replay matrix, T004 old-price
- * renewal recognition). Set OFFER_CATALOG_TEST_DATABASE_URL; skipped otherwise.
+ * Platform half of appliance fulfillment against the migrated EE Postgres database
+ * (T006 replay matrix, T004 old-price renewal recognition).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import knexFactory, { type Knex } from 'knex';
-import { createRequire } from 'node:module';
-import path from 'node:path';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createOfferCatalog, CO_MANAGED_SEAT_OFFER_KEY as KEY, OfferTermsChangedError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
 import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, reconcilePortalPurchase, PortalFulfillmentRetryableError, PortalPurchaseOwnershipError } from '../../lib/stripe/coManagedFulfillment';
 
-const url = process.env.OFFER_CATALOG_TEST_DATABASE_URL;
 const MASTER = '00000000-0000-4000-8000-0000000000aa';
 const operator = { tenantId: MASTER, userId: 'op@nineminds.test' };
 const price = (id: string) => ({ id, active: true, livemode: false, type: 'recurring', billing_scheme: 'per_unit', currency: 'eur', unit_amount: 1100,
   product: 'prod_seat', transform_quantity: null, recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } });
 const PERIOD_1 = 1796000000, PERIOD_2 = 1798600000;
 
-describe.skipIf(!url)('co-managed portal fulfillment (postgres)', () => {
+describe('co-managed portal fulfillment (postgres)', () => {
   let db: Knex;
   let sub: any, session: any;
   let writes: string[];
@@ -31,9 +29,7 @@ describe.skipIf(!url)('co-managed portal fulfillment (postgres)', () => {
   let purchaseId: string;
 
   beforeAll(async () => {
-    db = knexFactory({ client: 'pg', connection: url });
-    const migration = createRequire(import.meta.url)(path.resolve(__dirname, '../../../migrations/20261118090000_create_stripe_offer_catalog.cjs'));
-    await migration.up(db);
+    db = await createTestDbConnection({ databaseName: 'co_managed_portal_fulfillment_test', runSeeds: false });
   });
   afterAll(async () => { await db?.destroy(); });
   beforeEach(async () => {

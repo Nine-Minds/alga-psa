@@ -1,15 +1,12 @@
-/**
- * Shared Stripe offer catalog against a real Postgres (T001, T002, T007-catalog half).
- * Set OFFER_CATALOG_TEST_DATABASE_URL to a scratch database; skipped otherwise.
- */
+/** Shared Stripe offer catalog against the migrated EE integration database (T001, T002, T007-catalog half). */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import knexFactory, { type Knex } from 'knex';
+import type { Knex } from 'knex';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { runCatalogCommand, formatTerms } from '../../lib/stripe/offerCatalog/cli';
 import { createOfferCatalog, seedFromLegacyEnv, OfferPublishError, OfferUnavailableError, CO_MANAGED_SEAT_OFFER_KEY, type CatalogScope } from '../../lib/stripe/offerCatalog';
 
-const url = process.env.OFFER_CATALOG_TEST_DATABASE_URL;
 const MASTER = '00000000-0000-4000-8000-0000000000aa';
 const operator = { tenantId: MASTER, userId: 'op@nineminds.test' };
 const tenantAdmin = { tenantId: '11111111-1111-4111-8111-111111111111', userId: 'admin@msp.test' };
@@ -20,7 +17,7 @@ const price = (id: string, over: Record<string, unknown> = {}) => ({
   id, active: true, livemode: false, type: 'recurring', billing_scheme: 'per_unit', currency: 'eur', unit_amount: 1100, product: 'prod_seat',
   transform_quantity: null, recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' }, ...over });
 
-describe.skipIf(!url)('stripe offer catalog (postgres)', () => {
+describe('stripe offer catalog (postgres)', () => {
   let db: Knex;
   let prices: Record<string, any>;
   const catalog = (scope: CatalogScope = TEST, env: Record<string, string | undefined> = {}, stripeFails = false) => createOfferCatalog({
@@ -29,9 +26,8 @@ describe.skipIf(!url)('stripe offer catalog (postgres)', () => {
   });
 
   beforeAll(async () => {
-    db = knexFactory({ client: 'pg', connection: url });
+    db = await createTestDbConnection({ databaseName: 'stripe_offer_catalog_test', runSeeds: false });
     const migration = createRequire(import.meta.url)(path.resolve(__dirname, '../../../migrations/20261118090000_create_stripe_offer_catalog.cjs'));
-    await migration.up(db);
     await migration.up(db); // re-running the migration changes nothing
   });
   afterAll(async () => { await db?.destroy(); });
