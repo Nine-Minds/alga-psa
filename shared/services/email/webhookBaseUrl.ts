@@ -5,7 +5,8 @@
  * internal APPLICATION_URL. Other deployments can use their application URL.
  */
 export function getEmailWebhookBaseUrl(): string {
-  const envApplicationUrl = process.env.NGROK_URL
+  const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+  const envApplicationUrl = (isDevelopment ? process.env.NGROK_URL : undefined)
     || process.env.PUBLIC_WEBHOOK_BASE_URL
     || process.env.APPLICATION_URL
     || process.env.NEXT_PUBLIC_BASE_URL

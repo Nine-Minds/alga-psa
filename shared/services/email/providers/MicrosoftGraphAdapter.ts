@@ -32,6 +32,7 @@ import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
+import { getEmailWebhookBaseUrl } from '../webhookBaseUrl';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
@@ -933,11 +934,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       const newExpiry = new Date(
         Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
       ).toISOString();
+      const webhookUrl = `${getEmailWebhookBaseUrl()}/api/email/webhooks/microsoft`;
       
       await this.httpClient.patch(`/subscriptions/${this.config.webhook_subscription_id}`, {
         expirationDateTime: newExpiry,
+        notificationUrl: webhookUrl,
       });
 
+      this.config.webhook_notification_url = webhookUrl;
       this.config.webhook_expires_at = newExpiry;
       this.config.last_subscription_renewal = new Date().toISOString();
 
@@ -950,6 +954,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
             webhook_expires_at: newExpiry,
             last_subscription_renewal: this.config.last_subscription_renewal,
             updated_at: new Date().toISOString()
+          });
+
+        await tenantDb(knex, this.config.tenant).table('email_providers')
+          .where('id', this.config.id)
+          .update({
+            webhook_notification_url: webhookUrl,
+            updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
         this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);

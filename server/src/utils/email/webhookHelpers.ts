@@ -11,21 +11,24 @@ import logger from '@alga-psa/core/logger';
 const NGROK_URL_FILE = '/app/ngrok/url';
 
 // Check if running in development mode
-const isDevelopment = process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
+const isDevelopment = () => process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development';
 
 /**
  * Get the webhook base URL dynamically.
  * Priority:
  *   1. Ngrok URL from file (development mode only, for local tunneling)
  *   2. Explicit tunnel or webhook origin, then application and browser URLs
- *   3. https://algapsa.com
+ *   3. Caller-supplied default (localhost by default)
  * 
  * This function provides the same dynamic URL resolution as ninjaone webhooks,
  * allowing ngrok URLs to be automatically detected in development environments.
  */
-export function getWebhookBaseUrl(fallbackEnvVars?: string[]): string {
+export function getWebhookBaseUrl(
+  fallbackEnvVars?: string[],
+  defaultBaseUrl = 'http://localhost:3000',
+): string {
   // In development mode, check for ngrok URL file first
-  if (isDevelopment) {
+  if (isDevelopment()) {
     try {
       if (fs.existsSync(NGROK_URL_FILE)) {
         const ngrokUrl = fs.readFileSync(NGROK_URL_FILE, 'utf-8').trim();
@@ -42,7 +45,7 @@ export function getWebhookBaseUrl(fallbackEnvVars?: string[]): string {
 
   // Fall back to environment variables
   const envVars = fallbackEnvVars || [
-    'NGROK_URL',
+    ...(isDevelopment() ? ['NGROK_URL'] : []),
     'PUBLIC_WEBHOOK_BASE_URL',
     // Match background email lifecycle/renewal when browser OAuth is served
     // from a different origin than the public application callback endpoint.
@@ -58,7 +61,7 @@ export function getWebhookBaseUrl(fallbackEnvVars?: string[]): string {
     }
   }
 
-  return 'https://algapsa.com';
+  return defaultBaseUrl;
 }
 
 /**

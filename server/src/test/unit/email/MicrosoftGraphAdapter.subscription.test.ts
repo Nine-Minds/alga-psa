@@ -75,6 +75,7 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it('keeps creation and renewal expirations within the Graph 4230-minute cap', async () => {
@@ -95,6 +96,33 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     expect(creationLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
     expect(renewalLifetimeMs).toBeLessThanOrEqual(graphMaximumLifetimeMs);
     expect(renewalLifetimeMs).toBe(creationLifetimeMs);
+  });
+
+  it('moves an existing subscription to the configured callback while renewing after a hostname change', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENV', 'production');
+    vi.stubEnv('NGROK_URL', 'https://stale-tunnel.ngrok.test');
+    vi.stubEnv('PUBLIC_WEBHOOK_BASE_URL', 'https://psa.new-customer.example');
+    vi.stubEnv('APPLICATION_URL', 'http://alga-core.msp.svc.cluster.local:3000');
+
+    const providerConfig = config();
+    providerConfig.webhook_notification_url = 'https://psa.old-customer.example/api/email/webhooks/microsoft';
+    const adapter = new MicrosoftGraphAdapter(providerConfig);
+
+    await adapter.renewWebhookSubscription();
+
+    expect(mocks.client.patch).toHaveBeenCalledWith(
+      '/subscriptions/old-subscription',
+      expect.objectContaining({
+        expirationDateTime: expect.any(String),
+        notificationUrl: 'https://psa.new-customer.example/api/email/webhooks/microsoft',
+      }),
+    );
+    expect(providerConfig.webhook_notification_url)
+      .toBe('https://psa.new-customer.example/api/email/webhooks/microsoft');
+    expect(mocks.dbUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      webhook_notification_url: 'https://psa.new-customer.example/api/email/webhooks/microsoft',
+    }));
   });
 
   it('best-effort deletes the previous subscription before creating its replacement', async () => {
