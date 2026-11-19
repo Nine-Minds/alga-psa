@@ -191,7 +191,7 @@ export async function writeTicketActivity(
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
-  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert({
+  const entry = {
     tenant: input.tenant,
     audit_id: auditId,
     ticket_id: input.ticketId,
@@ -209,7 +209,15 @@ export async function writeTicketActivity(
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),
     ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
-  });
+  };
 
+  const humanWork = actorType === TICKET_ACTIVITY_ACTOR.USER && Boolean(actor.userId) &&
+    !viaPrincipalUserId && input.source === TICKET_ACTIVITY_SOURCE.UI;
+  const record = async (db: Knex | Knex.Transaction) => {
+    await tenantScopedTable(db, 'ticket_audit_logs', input.tenant).insert(entry);
+    if (humanWork) await db.raw('SELECT record_co_managed_trial_ticket_work(?, ?)', [input.tenant, auditId]);
+  };
+  if (humanWork && !knex.isTransaction) await knex.transaction(record);
+  else await record(knex);
   return auditId;
 }

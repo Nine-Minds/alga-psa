@@ -1,7 +1,7 @@
 exports.up = async function (knex) {
-  await knex.schema.alterTable('co_managed_seat_trials', table => table.jsonb('conversion_quote'));
+  await knex.raw('ALTER TABLE co_managed_seat_trials ADD COLUMN IF NOT EXISTS conversion_quote jsonb');
   await knex.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS cancel_at timestamptz');
-  await knex.schema.alterTable('stripe_subscriptions', table => table.timestamp('trial_end', { useTz: true }));
+  await knex.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS trial_end timestamptz');
   // Match the canonical base license selection: a paid subscription takes precedence over a
   // remaining trial row. Legacy trial mirrors stored the trial cutoff in current_period_end.
   await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_sponsors AS

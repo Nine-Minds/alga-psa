@@ -61,6 +61,7 @@ const seatRoleIds = (trx: Knex.Transaction, sponsorTenant: string): Promise<stri
   tenantDb(trx, sponsorTenant).table('roles').where(CO_MANAGED_SEAT_ROLE).pluck('role_id');
 
 interface LockedAssignment {
+  trialFunded?: boolean;
   assignment_id: string;
   arrangement_id: string;
   user_id: string | null;
@@ -101,10 +102,11 @@ async function lockAssignment(
   await readCoManagedSeatAllocationState(trx, sponsorTenant, arrangement.allocation_id);
   // (4)
   await arrangements().forUpdate().first('state');
+  const funding = await sponsor.table('co_managed_allocations').where({ allocation_id: arrangement.allocation_id }).first('funding_source');
   const locked: LockedAssignment | undefined = await sponsor.table('co_managed_seat_assignments')
     .where('assignment_id', found.assignment_id).forUpdate()
     .first('assignment_id', 'arrangement_id', 'user_id', 'invitation_id', 'state');
-  return locked && locked.arrangement_id === found.arrangement_id ? locked : undefined;
+  return locked && locked.arrangement_id === found.arrangement_id ? { ...locked, trialFunded: funding?.funding_source === 'seat_trial' } : undefined;
 }
 
 /**
@@ -125,6 +127,10 @@ async function endAssignment(
   await sponsor.table('co_managed_seat_assignments').where('assignment_id', assignment.assignment_id)
     .update({ state: 'revoked', revoked_at: now, ended_reason: reason, updated_at: now });
 
+  if (assignment.trialFunded) {
+    await sponsor.table('co_managed_seat_trials').where({ assignment_id: assignment.assignment_id, state: 'active' })
+      .update({ state: 'ended', updated_at: now, revision: trx.raw('revision + 1') });
+  }
   if (assignment.invitation_id) {
     // Spent, so the setup token opens nothing and the address is promised to no one. Acceptance
     // already refuses a revoked assignment; this makes the invitation row say the same.

@@ -113,9 +113,14 @@ export async function releaseCoManagedSeatAllocation(db: Knex, sponsorTenant: st
       .where({ allocation_id: allocation.allocation_id, allocation_kind: 'seat' }).whereNull('released_at').whereNot('state', 'released')
       .update({ state: 'released', released_at: trx.fn.now(), updated_at: trx.fn.now() }).returning('seats');
     if (freed.length === 0) return { released: false, seats: 0 };
+    if (allocation.funding_source === 'seat_trial') {
+      await sponsor.table('co_managed_seat_trials').where({ allocation_id: allocation.allocation_id }).whereNot('state', 'paid')
+        .update({ state: 'ended', updated_at: trx.fn.now(), revision: trx.raw('revision + 1') });
+      return { released: true, seats: 0 };
+    }
     // The returned seats may end an over-allocation; record that now rather than at the next reading.
     await poolState(trx, sponsorTenant, entitlement);
-    return { released: true, seats: allocation.funding_source === 'seat_trial' ? 0 : Number(freed[0].seats) };
+    return { released: true, seats: Number(freed[0].seats) };
   });
 }
 

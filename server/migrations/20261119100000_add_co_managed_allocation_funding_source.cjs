@@ -8,7 +8,6 @@ exports.up = async function up(knex) {
   await knex.raw('ALTER TABLE co_managed_allocations DROP CONSTRAINT IF EXISTS co_managed_allocations_funding_source_check');
   await knex.raw(`ALTER TABLE co_managed_allocations ADD CONSTRAINT co_managed_allocations_funding_source_check
     CHECK (funding_source IN ('paid', 'seat_trial')) NOT VALID`);
-  await knex.raw('ALTER TABLE co_managed_allocations VALIDATE CONSTRAINT co_managed_allocations_funding_source_check');
 };
 exports.down = async function down(knex) {
   if (await knex('co_managed_allocations').where('funding_source', 'seat_trial').first()) {

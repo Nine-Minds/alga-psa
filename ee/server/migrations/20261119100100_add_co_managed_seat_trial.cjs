@@ -1,5 +1,9 @@
 /** Hosted EE co-managed Seat pilot ledger and allocation funding source. */
-const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+// Setup overlays EE onto the shared migrations. The standalone EE Knex runner reads this directory directly.
+const { resolve } = require('node:path');
+const { ensureTenantDistribution } = require(require.resolve('./utils/citusDistribution.cjs', {
+  paths: [__dirname, resolve(__dirname, '../../../server/migrations')],
+}));
 
 const TABLES = ['co_managed_seat_trials', 'co_managed_seat_trial_milestones'];
 

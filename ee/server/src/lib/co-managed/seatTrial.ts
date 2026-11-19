@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { createCoManagedSeatArrangement, inviteCoManagedSeatTechnician, refreshCoManagedSeatInvitation, revokeCoManagedSeatInvitation,
   revokeCoManagedSeatAssignment, setCoManagedSeatBoardScope } from '@alga-psa/co-managed';
-import { lockCoManagedSponsorPool } from '@alga-psa/licensing';
+import { lockCoManagedSponsorPool, releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
 
 export type SeatTrialStatus = 'pending' | 'active' | 'base_paused' | 'expired' | 'paid' | 'checkout_pending' | 'ended';
 
@@ -125,7 +125,7 @@ export async function cancelCoManagedSeatTrial(db: Knex, input: PilotBinding) {
     const sponsor = tenantDb(trx, input.tenant);
     await sponsor.table('co_managed_seat_arrangements').where({ arrangement_id: pilot.arrangement_id }).update({ state: 'ended', ended_at: trx.fn.now() });
     // Releasing the allocation also marks this pilot ended.
-    await sponsor.table('co_managed_allocations').where({ allocation_id: pilot.allocation_id }).update({ state: 'released', released_at: trx.fn.now() });
+    await releaseCoManagedSeatAllocation(trx, input.tenant, { allocationId: pilot.allocation_id });
     return { cancelled: true };
   });
 }
