@@ -70,7 +70,10 @@ vi.mock('server/src/app/client-portal/request-services/actions', () => ({
     listRequestServiceCatalogGroupsActionMock(...args),
   listMyRecentServiceRequestsAction: (...args: unknown[]) =>
     listMyRecentServiceRequestsActionMock(...args),
-  getMyServiceRequestSubmissionSuccessMessageAction: (...args: unknown[]) =>
+}));
+
+vi.mock('server/src/app/client-portal/request-services/submissionSuccessMessage', () => ({
+  getMyServiceRequestSubmissionSuccessMessage: (...args: unknown[]) =>
     getMyServiceRequestSubmissionSuccessMessageActionMock(...args),
 }));
 

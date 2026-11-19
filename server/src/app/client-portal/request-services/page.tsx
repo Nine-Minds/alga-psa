@@ -5,10 +5,10 @@ import { SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
 import { getDateFormatPreference } from '@alga-psa/clients/actions/countryActions';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import {
-  getMyServiceRequestSubmissionSuccessMessageAction,
   listRequestServiceCatalogGroupsAction,
   listMyRecentServiceRequestsAction,
 } from './actions';
+import { getMyServiceRequestSubmissionSuccessMessage } from './submissionSuccessMessage';
 import { ServiceRequestTicketLink } from './ServiceRequestTicketLink';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -49,7 +49,7 @@ export default async function ServiceRequestsPage(props: ServiceRequestsPageProp
     listMyRecentServiceRequestsAction(1000),
     getServerTranslation(undefined, 'client-portal/service-requests'),
     submittedRequestId
-      ? getMyServiceRequestSubmissionSuccessMessageAction(submittedRequestId)
+      ? getMyServiceRequestSubmissionSuccessMessage(submittedRequestId)
       : Promise.resolve(null),
   ]);
 
