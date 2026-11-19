@@ -165,6 +165,8 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
   // paths.
   it('renews a webhook whose expiry falls inside the look-ahead window', async () => {
     provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const renewedExpiry = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    mocks.adapter.getConfig.mockReturnValueOnce({ webhook_expires_at: renewedExpiry });
 
     const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
       tenantId: provider.tenant,
@@ -172,7 +174,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     });
 
     expect(mocks.adapter.renewWebhookSubscription).toHaveBeenCalled();
-    expect(results[0]).toMatchObject({ success: true, action: 'renewed' });
+    expect(results[0]).toMatchObject({ success: true, action: 'renewed', newExpiration: renewedExpiry });
 
     // The harness's default first() returns a row, so the health write takes
     // the existing-row update path.
