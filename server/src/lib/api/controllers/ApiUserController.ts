@@ -6,14 +6,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { UserService, UserActivityFilter } from '@alga-psa/users';
-import { 
+import {
   createUserSchema,
   updateUserSchema,
   userListQuerySchema,
   userSearchSchema,
   userExportQuerySchema,
   changePasswordSchema,
-  userActivityFilterSchema
+  userActivityFilterSchema,
+  bulkCreateUsersSchema,
+  bulkDeactivateUsersSchema
 } from '../schemas/userSchemas';
 import { 
   ApiKeyServiceForApi 
@@ -657,6 +659,67 @@ export class ApiUserController extends ApiBaseController {
             message: `Successfully replaced user roles`,
             roles: updatedRoles
           });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk create users
+   */
+  bulkCreate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'create');
+
+          // Validate the whole batch before any user is created
+          const data = await this.validateData(apiRequest, bulkCreateUsersSchema);
+
+          const result = await this.userService.bulkCreateUsers(
+            data.users,
+            apiRequest.context!,
+            data.options ?? {}
+          );
+
+          return createSuccessResponse(result, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk deactivate (or reactivate) users
+   */
+  bulkDeactivate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          const data = await this.validateData(apiRequest, bulkDeactivateUsersSchema);
+
+          const result = await this.userService.bulkDeactivateUsers(
+            data.user_ids,
+            data.deactivate,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);

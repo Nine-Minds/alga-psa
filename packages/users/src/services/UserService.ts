@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -1160,7 +1160,14 @@ export class UserService extends BaseService<IUser> {
       for (let i = 0; i < users.length; i++) {
         const userData = users[i];
         try {
-          const createdUser = await this.create(userData, context);
+          // Each user gets its own savepoint inside the batch transaction: a
+          // rejected user rolls back only its own rows and leaves the outer
+          // transaction usable for the users that follow (skip_invalid), while
+          // a rethrow below still rolls the whole batch back.
+          const createdUser = await withSavepoint(
+            trx,
+            async (userTrx) => (await this.createUsingTransaction(userData, context, userTrx)).user
+          );
           results.push(createdUser);
         } catch (error: any) {
           errors.push({
