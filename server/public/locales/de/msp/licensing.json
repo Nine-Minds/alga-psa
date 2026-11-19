@@ -694,6 +694,8 @@
     "proRequired": "Zum Sponsern von Kunden-Workspaces ist ein Pro-PSA-Abonnement erforderlich.",
     "loadError": "Die Kundenplatzkapazität konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "purchaseError": "Der Platzkauf konnte nicht abgeschlossen werden. Sie können ihn sicher fortsetzen.",
+    "termsChanged": "Der Preis hat sich seit Ihrer Prüfung geändert. Prüfen Sie die neuen Konditionen, bevor Sie den Kauf bestätigen.",
+    "offerUnavailable": "Neue Sitzplatzkäufe sind vorübergehend nicht verfügbar. Es wurde nichts berechnet.",
     "checkoutExpired": "Dieser Checkout ist abgelaufen. Starten Sie einen neuen Kauf, um fortzufahren.",
     "grace": "Erneuern Sie Ihre Lizenz oder beheben Sie den Kapazitätsengpass vor dem {{date}}, damit Kunden-Workspaces beschreibbar bleiben.",
     "readOnly": "Die Karenzzeit endete am {{date}}. Stellen Sie die lizenzierte Kapazität wieder her, um Änderungen an Kunden-Workspaces fortzusetzen.",
