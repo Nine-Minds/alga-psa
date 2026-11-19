@@ -5,6 +5,7 @@ import { getCoManagedLicenseCapacity } from './co-managed-license';
 import { admitCoManagedPermissions } from './co-managed-admission-permissions';
 import { readCoManagedPoolCapacity, type CoManagedAllocationKind } from './co-managed-capacity';
 import { materializeState } from './co-managed-entitlements';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export class CoManagedReservationError extends Error {
   /**
@@ -108,7 +109,7 @@ export async function reserveCoManagedWorkspace(
 
   return db.transaction(async (trx) => {
     const sponsor = tenantDb(trx, input.sponsorTenant);
-    const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
+    const entitlement = await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     if (!entitlement) throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
 
     const existing = await sponsor.table('co_managed_allocations')
@@ -187,6 +188,7 @@ interface SeatAllocationInput {
   clientId: string;
   operationId: string;
   seats: number;
+  fundingSource?: 'paid' | 'seat_trial';
 }
 
 /**
@@ -217,8 +219,9 @@ export async function reserveAndActivateCoManagedSeatAllocation(
 
   return db.transaction(async (trx) => {
     const sponsor = tenantDb(trx, input.sponsorTenant);
-    const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
-    if (!entitlement) throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
+    const entitlement = await lockCoManagedSponsorPool(trx, input.sponsorTenant);
+    const fundingSource = input.fundingSource ?? 'paid';
+    if (fundingSource === 'paid' && !entitlement) throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
 
     const existing = await sponsor.table('co_managed_allocations')
       .where('operation_id', input.operationId).first();
@@ -230,7 +233,7 @@ export async function reserveAndActivateCoManagedSeatAllocation(
     }
 
     // A suspended sponsor sponsors nothing new; say so rather than reporting its lapsed pool.
-    const tenant = await readEligibleSponsor(trx, input.sponsorTenant, entitlement);
+    const tenant = await readEligibleSponsor(trx, input.sponsorTenant, entitlement ?? { source: 'hosted' });
     if (!tenant || tenant.suspended_at) throw new CoManagedReservationError('SPONSOR_NOT_ELIGIBLE');
     const client = await sponsor.table('clients').where('client_id', input.clientId).first();
     if (!client) throw new CoManagedReservationError('CLIENT_NOT_FOUND');
@@ -239,9 +242,13 @@ export async function reserveAndActivateCoManagedSeatAllocation(
 
     // The entitlement's own reading of the pool, taken under the lock: it reads the clock after
     // the lock, so a waiter cannot take seats from a pool that lapsed while it was blocked.
-    const pool = await materializeState(trx, input.sponsorTenant, entitlement, new Date());
-    if (pool.isReadOnly || pool.graceEndsAt) throw new CoManagedReservationError('ENTITLEMENT_LAPSED');
-    if (input.seats > pool.available) throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
+    if (fundingSource === 'paid') {
+      const pool = await materializeState(trx, input.sponsorTenant, entitlement!, new Date());
+      if (pool.isReadOnly || pool.graceEndsAt) throw new CoManagedReservationError('ENTITLEMENT_LAPSED');
+      if (input.seats > pool.available) throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
+    } else if (fundingSource !== 'seat_trial' || input.seats !== 1 || (entitlement && entitlement.source !== 'hosted')) {
+      throw new CoManagedReservationError('INVALID_RESERVATION');
+    }
 
     // write-admission: exempt — seat reservation lifecycle owned by licensing; it decides admission rather than being subject to it
     const [allocation] = await sponsor.table('co_managed_allocations').insert({
@@ -250,6 +257,7 @@ export async function reserveAndActivateCoManagedSeatAllocation(
       operation_id: input.operationId,
       request_fingerprint: fingerprint,
       allocation_kind: 'seat',
+      funding_source: fundingSource,
       sponsor_client_id: input.clientId,
       seats: input.seats,
       state: 'active',

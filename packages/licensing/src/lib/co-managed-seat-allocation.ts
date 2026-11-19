@@ -16,13 +16,14 @@ import { materializeState, type CoManagedEntitlementState } from './co-managed-e
 import type { CoManagedOperationalState } from './co-managed-lifecycle-error';
 import { coManagedStateForLapse, resolveCoManagedLapse } from './co-managed-lifecycle';
 import type { CoManagedSeatAllocationRecord } from './co-managed-reservation';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const validSeats = (seats: number) => Number.isSafeInteger(seats) && seats >= 1 && seats <= 2147483647;
 
 /** A seat-kind row of `co_managed_allocations`, as the commands here read it. */
 export type CoManagedSeatAllocationSnapshot = Pick<CoManagedSeatAllocationRecord,
-  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'>;
+  'allocation_id' | 'sponsor_client_id' | 'seats' | 'state'> & { funding_source?: 'paid' | 'seat_trial' };
 
 /**
  * Counts the seats in use inside one seat allocation: active technicians plus pending
@@ -38,10 +39,10 @@ export type CountCoManagedSeatCommitments = (
 /** Locks the pool, then the live seat allocation. Entitlement first: the order every capacity writer uses. */
 async function lockSeatAllocation(trx: Knex.Transaction, sponsorTenant: string, allocationId: string) {
   const sponsor = tenantDb(trx, sponsorTenant);
-  const entitlement = await sponsor.table('co_managed_entitlements').forUpdate().first();
+  const entitlement = await lockCoManagedSponsorPool(trx, sponsorTenant);
   const allocation: CoManagedSeatAllocationSnapshot | undefined = await sponsor.table('co_managed_allocations')
     .where({ allocation_id: allocationId, allocation_kind: 'seat' }).forUpdate()
-    .first('allocation_id', 'sponsor_client_id', 'seats', 'state');
+    .first('allocation_id', 'sponsor_client_id', 'seats', 'state', 'funding_source');
   return { sponsor, entitlement, allocation };
 }
 
@@ -74,6 +75,7 @@ export async function resizeCoManagedSeatAllocation(db: Knex, sponsorTenant: str
       throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
     }
     if (input.seats === input.expectedSeats) return;
+    if (allocation.funding_source === 'seat_trial') throw new CoManagedAdmissionError('CO_MANAGED_ALLOCATION_CONFLICT');
     if (input.seats > input.expectedSeats) {
       const pool = await poolState(trx, sponsorTenant, entitlement);
       if (!pool || pool.graceEndsAt || pool.isReadOnly) throw new CoManagedAdmissionError('CO_MANAGED_LICENSE_LAPSED');

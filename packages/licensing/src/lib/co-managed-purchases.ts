@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { readCoManagedPoolCapacity } from './co-managed-capacity';
 import { readCoManagedFirstPurchasePhase } from './co-managed-first-purchase';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 export interface CoManagedPurchaseOperation {
   operation_id: string;
@@ -104,7 +105,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
   // 2. Call the provider while holding entitlement then tenant, so a reservation cannot race a reduction.
   return db.transaction(async (trx) => {
     const scoped = tenantDb(trx, input.sponsorTenant);
-    const entitlement = await scoped.table('co_managed_entitlements').forUpdate().first();
+    const entitlement = await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     const tenant = await scoped.table('tenants').forUpdate().first();
     if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
     if (entitlement?.source === 'self_host') throw new CoManagedPurchaseError('OFFLINE_LICENSE_REQUIRED');

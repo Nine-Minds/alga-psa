@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { materializeState, neverActivated, type CoManagedEntitlementState } from './co-managed-entitlements';
+import { lockCoManagedSponsorPool } from './co-managed-pool-lock';
 
 /** The Stripe adapter must validate customer, product, price, payment state and the sponsoring
  * PSA Pro subscription before returning this snapshot. */
@@ -31,12 +32,13 @@ export async function reconcileHostedCoManagedEntitlement(
   if (!subscriptionId) throw new Error('Co-managed subscription identity is required');
   return db.transaction(async (trx) => {
     const scoped = tenantDb(trx, sponsor);
+    const existing = await lockCoManagedSponsorPool(trx, sponsor);
     const initialNow = await databaseNow(trx);
     // write-admission: exempt — sponsor entitlement lifecycle owned by licensing
     await scoped.table('co_managed_entitlements').insert({ tenant: sponsor, source: 'hosted',
       source_reference: subscriptionId, capacity: 0, verified_at: initialNow, valid_until: initialNow,
     }).onConflict('tenant').ignore();
-    const row = await scoped.table('co_managed_entitlements').forUpdate().first();
+    const row = existing ?? await scoped.table('co_managed_entitlements').where('tenant', sponsor).forUpdate().first();
     if (row.source !== 'hosted' || row.source_reference !== subscriptionId) {
       throw new Error('Co-managed entitlement belongs to a different subscription');
     }

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { recordTicketAssigneeChange, tenantDb } from '@alga-psa/db';
-import { releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
+import { lockCoManagedSponsorPool, releaseCoManagedSeatAllocation } from '@alga-psa/licensing';
 import { CoManagedSeatArrangementError } from './seatArrangement';
 import { returnCoManagedSeatArrangementTicketsToMsp } from './seatTicketHandoff';
 
@@ -70,7 +70,7 @@ export async function endCoManagedSeatArrangement(
   return db.transaction(async (trx) => {
     const sponsor = tenantDb(trx, input.sponsorTenant);
     // The pool lock, before any other row.
-    await sponsor.table('co_managed_entitlements').forUpdate().first('tenant');
+    await lockCoManagedSponsorPool(trx, input.sponsorTenant);
     const arrangement = await sponsor.table('co_managed_seat_arrangements')
       .where('arrangement_id', input.arrangementId).first('allocation_id', 'client_id');
     if (!arrangement) throw new CoManagedSeatArrangementError('ARRANGEMENT_NOT_FOUND');
