@@ -17,7 +17,19 @@
     "datePlaceholder": "Välj datum",
     "optionLabel": "Alternativ {{index}}",
     "submit": "Skicka in förfrågan",
-    "requiredField": "Det här fältet är obligatoriskt."
+    "requiredField": "Det här fältet är obligatoriskt.",
+    "validation": {
+      "type": "Det här svaret har inte förväntad form.",
+      "pattern": "Det här svaret har inte förväntad form.",
+      "minLength": "Använd minst {{minLength}} tecken.",
+      "maxLength": "Använd högst {{maxLength}} tecken.",
+      "min": "Ange {{min}} eller mer.",
+      "max": "Ange {{max}} eller mindre.",
+      "minDate": "Välj {{minDate}} eller senare.",
+      "maxDate": "Välj {{maxDate}} eller tidigare.",
+      "minSelected": "Välj minst {{minSelected}}.",
+      "maxSelected": "Välj högst {{maxSelected}}."
+    }
   },
   "myRequests": {
     "title": "Mina förfrågningar",
