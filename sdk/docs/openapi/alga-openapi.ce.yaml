@@ -29004,6 +29004,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessApiErrorV1"
+        "409":
+          description: "Only with skip_invalid false: a user in the batch duplicates an
+            existing email, and the whole batch was rolled back."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
         "500":
           description: Unexpected controller/service failure.
           content:

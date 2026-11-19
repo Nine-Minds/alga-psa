@@ -16,12 +16,16 @@ const state = vi.hoisted(() => ({
   bulkDeactivateCalls: [] as Array<{ userIds: string[]; deactivate: boolean }>,
   singleCreateCalls: 0,
   singleUpdateCalls: 0,
+  bulkCreateError: null as Error | null,
 }));
 
 vi.mock('@alga-psa/users', () => ({
   UserService: class {
     async bulkCreateUsers(users: any[], _context: unknown, options: any) {
       state.bulkCreateCalls.push({ users, options });
+      if (state.bulkCreateError) {
+        throw state.bulkCreateError;
+      }
       return {
         total_processed: users.length,
         successful: users.length,
@@ -117,6 +121,7 @@ beforeEach(() => {
   state.bulkDeactivateCalls = [];
   state.singleCreateCalls = 0;
   state.singleUpdateCalls = 0;
+  state.bulkCreateError = null;
 });
 
 describe('POST /api/v1/users/bulk/create', () => {
@@ -164,6 +169,21 @@ describe('POST /api/v1/users/bulk/create', () => {
 
     expect(status).toBe(400);
     expect(state.bulkCreateCalls).toEqual([]);
+  });
+
+  it('409s a duplicate email when skip_invalid rolls the batch back', async () => {
+    // skip_invalid: false rethrows the rejected user's error after the rollback;
+    // the caller gets the same 409 the single-user create path returns, not an
+    // opaque 500 with the message masked.
+    state.bulkCreateError = new Error('A user with this email address already exists');
+
+    const { status, body } = await postBulkCreate({
+      users: [newUser('a')],
+      options: { skip_invalid: false },
+    });
+
+    expect(status).toBe(409);
+    expect(body.error.message).toContain('already exists');
   });
 });
 

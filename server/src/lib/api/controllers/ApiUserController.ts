@@ -683,13 +683,23 @@ export class ApiUserController extends ApiBaseController {
           // Validate the whole batch before any user is created
           const data = await this.validateData(apiRequest, bulkCreateUsersSchema);
 
-          const result = await this.userService.bulkCreateUsers(
-            data.users,
-            apiRequest.context!,
-            data.options ?? {}
-          );
+          try {
+            const result = await this.userService.bulkCreateUsers(
+              data.users,
+              apiRequest.context!,
+              data.options ?? {}
+            );
 
-          return createSuccessResponse(result, 201);
+            return createSuccessResponse(result, 201);
+          } catch (error: any) {
+            // skip_invalid: false rethrows the rejected user's error after rolling
+            // the batch back; keep the single-create translation so a duplicate
+            // email stays a 409 with its message instead of an opaque 500.
+            if (error?.message && error.message.includes('already exists')) {
+              throw new ConflictError(error.message);
+            }
+            throw error;
+          }
         });
       } catch (error) {
         return handleApiError(error);

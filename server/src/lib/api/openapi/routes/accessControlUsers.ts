@@ -613,6 +613,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
 
     if (def.handler === 'bulkCreateUsers') {
       responses[201] = { description: 'Batch processed; body reports total_processed, successful, failed, per-index errors and the created users.', schema: ApiSuccess };
+      responses[409] = { description: 'Only with skip_invalid false: a user in the batch duplicates an existing email, and the whole batch was rolled back.', schema: ApiError };
       return responses;
     }
 

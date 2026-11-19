@@ -42236,6 +42236,16 @@
               }
             }
           },
+          "409": {
+            "description": "Only with skip_invalid false: a user in the batch duplicates an existing email, and the whole batch was rolled back.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApiErrorV1"
+                }
+              }
+            }
+          },
           "422": {
             "description": "ACT_AS_REQUIRED: a service principal performed human work without the act-as header; ACT_AS_INVALID_TARGET: the act-as user is missing, inactive, client or service; HUMAN_WORK_ASSIGNEE_INVALID: a service user was given as assignee/resource.",
             "content": {
