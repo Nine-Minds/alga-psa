@@ -26,6 +26,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_trial_ticket_activity: { scope: 'tenant' },
   co_managed_trial_sponsors: { scope: 'tenant' },
   co_managed_trial_access: { scope: 'tenant' },
+  co_managed_trial_funding: { scope: 'tenant' },
+  co_managed_unavailable_trial_assignments: { scope: 'tenant' },
   co_managed_seat_trials: { scope: 'tenant' },
   co_managed_seat_trial_milestones: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
