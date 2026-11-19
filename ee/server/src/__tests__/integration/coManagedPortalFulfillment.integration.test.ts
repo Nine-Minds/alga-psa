@@ -58,6 +58,23 @@ describe.skipIf(!url)('co-managed portal fulfillment (postgres)', () => {
     await expect(bindPortalPurchase({ db, catalog }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_2', offerRef: current.current!.version_id })).rejects.toBeInstanceOf(OfferTermsChangedError);
   });
 
+  it('binds with a storefront-chosen purchase id, so the Checkout session can carry it from creation (Stripe ordering)', async () => {
+    // The storefront picks the id, creates the session with portal_purchase_id in metadata and
+    // subscription_data.metadata, then binds before the customer pays.
+    const chosen = '5d8f1a2e-7c3b-4e9a-9b1f-0a2b3c4d5e6f';
+    const row = await bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
+    expect(row.purchase_id).toBe(chosen);
+    const again = await bindPortalPurchase({ db, catalog }, { purchaseId: chosen.toUpperCase(), entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_chosen' });
+    expect(again.purchase_id).toBe(chosen);
+    // The same id cannot be re-bound to another checkout or another entitlement.
+    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: chosen, entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_other2' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    // Nor can an already-bound checkout be claimed under a new id.
+    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: '6e9a2b3f-8d4c-4fab-8c2a-1b3c4d5e6f70', entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
+    await expect(bindPortalPurchase({ db, catalog }, { purchaseId: 'not-a-uuid', entitlementId: 'ent_2', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 3, checkoutSessionId: 'cs_x' })).rejects.toThrow('purchaseId must be a UUID');
+    expect(await db('co_managed_portal_purchases').where({ entitlement_id: 'ent_2' })).toHaveLength(1);
+  });
+
   it('T006: paid payment queues one absolute count and delivers it; replays are duplicates', async () => {
     const first = await reconcilePortalPurchase(deps(), purchaseId);
     expect(first).toMatchObject({ kind: 'queued', delivery: 'delivered' });

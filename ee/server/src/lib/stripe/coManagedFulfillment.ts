@@ -43,27 +43,42 @@ export type DeliverFulfillment = (request: CoManagedFulfillmentRequest) => Promi
 
 export interface FulfillmentDeps { db: Knex; stripe: Pick<Stripe, 'subscriptions' | 'checkout'>; catalog: OfferCatalog; deliver: DeliverFulfillment }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Persist the association between a portal checkout and the appliance entitlement it is for. The
  * reviewed offer must still be current (else a fresh review: OfferTermsChangedError). Repeating the
- * same binding is idempotent; the same checkout for a different entitlement is refused.
+ * same binding is idempotent; the same checkout (or purchase id) for a different entitlement is refused.
+ *
+ * `purchaseId` is chosen by the storefront. Stripe fixes a Checkout session's subscription metadata when
+ * the session is created, and reconciliation requires both the session and the subscription to name the
+ * purchase (`portal_purchase_id`). So the storefront generates the id, creates the session carrying it,
+ * then binds here before the customer pays. Without it the id would only exist after the session.
  */
 export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'catalog'>, input: {
   entitlementId: string; licenseTenantId: string; offerKey: string; interval: BillingInterval; offerRef?: string;
-  quantity: number; checkoutSessionId: string;
+  quantity: number; checkoutSessionId: string; purchaseId?: string;
 }): Promise<PortalPurchaseRow> {
   if (!input.entitlementId || !input.licenseTenantId || !input.checkoutSessionId) throw new Error('entitlementId, licenseTenantId and checkoutSessionId are required');
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > MAX_CO_MANAGED_FULFILLMENT_SEATS) throw new Error('Invalid co-managed seat quantity');
+  if (input.purchaseId !== undefined && !UUID.test(input.purchaseId)) throw new Error('purchaseId must be a UUID');
   const offer = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
   const ref = offer.versionId ?? `price:${offer.priceId}`;
   if (input.offerRef && input.offerRef !== ref) throw new OfferTermsChangedError(input.offerRef, offer);
   if (!offer.versionId) throw new Error('Appliance purchases require a managed catalog offer');
-  const existing: PortalPurchaseRow | undefined = await deps.db(PURCHASES).where({ checkout_session_id: input.checkoutSessionId }).first();
+  const existing: PortalPurchaseRow | undefined = await deps.db(PURCHASES)
+    .where({ checkout_session_id: input.checkoutSessionId })
+    .modify((q: Knex.QueryBuilder) => { if (input.purchaseId) q.orWhere({ purchase_id: input.purchaseId }); })
+    .first();
   if (existing) {
     if (existing.entitlement_id !== input.entitlementId || existing.license_tenant_id !== input.licenseTenantId) throw new PortalPurchaseOwnershipError('checkout is bound to another entitlement');
+    if (existing.checkout_session_id !== input.checkoutSessionId || (input.purchaseId && existing.purchase_id !== input.purchaseId.toLowerCase())) {
+      throw new PortalPurchaseOwnershipError('purchase id and checkout session are bound to different purchases');
+    }
     return existing; // pinned terms stay as first recorded
   }
   const [row] = await deps.db(PURCHASES).insert({
+    ...(input.purchaseId ? { purchase_id: input.purchaseId.toLowerCase() } : {}),
     stripe_account: offer.scope.stripeAccount, livemode: offer.scope.livemode, entitlement_id: input.entitlementId,
     license_tenant_id: input.licenseTenantId, offer_key: input.offerKey, billing_interval: input.interval,
     offer_version_id: offer.versionId, price_id: offer.priceId, quantity: input.quantity, checkout_session_id: input.checkoutSessionId,
