@@ -24,8 +24,9 @@ async function main(): Promise<number> {
   const base = process.env.ALGA_PSA_URL;
   const apiKey = process.env.ALGA_OPERATOR_API_KEY;
   if (!base || !apiKey) throw new Error('Set ALGA_PSA_URL and ALGA_OPERATOR_API_KEY (a master-tenant API key).');
+  const locale = new Intl.NumberFormat().resolvedOptions().locale;
   const response = await fetch(new URL('/api/v1/billing-catalog/operator', base), {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': apiKey }, body: JSON.stringify({ command, args }),
+    method: 'POST', headers: { 'accept-language': locale, 'content-type': 'application/json', 'x-api-key': apiKey }, body: JSON.stringify({ command, args }),
   });
   const body = await response.json().catch(() => ({})) as { success?: boolean; data?: { code: number; lines: string[] }; error?: string; code?: string; problems?: string[] };
   if (!response.ok || !body.success || !body.data) {

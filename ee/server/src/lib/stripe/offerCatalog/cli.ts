@@ -5,6 +5,7 @@
  */
 import type Stripe from 'stripe';
 import type { Knex } from 'knex';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import type { OfferCatalog } from './catalog';
 import { seedFromLegacyEnv } from './seed';
 import { assertCatalogOperator } from './operatorAuth';
@@ -15,17 +16,18 @@ export interface CliDeps {
   db: Knex;
   stripe: Pick<Stripe, 'subscriptions'>;
   actor: CatalogOperator | null | undefined;
+  locale: string;
   out: (line: string) => void;
   env?: Record<string, string | undefined>;
   /** Re-deliver appliance fulfillments the licensing service has not accepted yet (outbox repair). */
   retryFulfillments?: () => Promise<{ delivered: number; failed: number; superseded: number }>;
 }
 
-/** Amount for review, formatted from Stripe's own minor units and currency. Never assumes either. */
-export function formatTerms(terms: OfferTerms): string {
-  const format = new Intl.NumberFormat('en', { style: 'currency', currency: terms.currency.toUpperCase() });
-  const digits = format.resolvedOptions().maximumFractionDigits ?? 2;
-  return `${format.format(terms.unitAmount / 10 ** digits)} (${terms.unitAmount} minor units, ${terms.currency.toUpperCase()}) per seat per ${terms.intervalCount === 1 ? '' : `${terms.intervalCount} `}${terms.interval}`;
+/** Amount for review, using Stripe's minor units and currency and the operator's locale. */
+export function formatTerms(terms: OfferTerms, locale: string): string {
+  const currency = terms.currency.toUpperCase();
+  const amount = formatCurrencyFromMinorUnits(terms.unitAmount, locale, currency);
+  return `${amount} (${terms.unitAmount} minor units, ${currency}) per seat per ${terms.intervalCount === 1 ? '' : `${terms.intervalCount} `}${terms.interval}`;
 }
 
 const flag = (args: string[], name: string) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -35,7 +37,7 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
   const actor = assertCatalogOperator(deps.actor, deps.env);
   const offerKey = flag(args, 'offer') ?? CO_MANAGED_SEAT_OFFER_KEY;
   const interval = (flag(args, 'interval') ?? 'month') as BillingInterval;
-  const { catalog, out } = deps;
+  const { catalog, locale, out } = deps;
 
   if (command === 'inspect') {
     const view = await catalog.inspect(offerKey, interval);
@@ -52,7 +54,7 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
     if (view.current) {
       try {
         const offer = await catalog.resolveCurrentOffer(offerKey, interval);
-        out(`Stripe terms now: ${formatTerms(offer.terms)}`);
+        out(`Stripe terms now: ${formatTerms(offer.terms, locale)}`);
       } catch (error) { out(`Current price is NOT sellable: ${(error as Error).message}`); }
     }
     return 0;
@@ -76,14 +78,14 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
     out(`Reviewing ${priceId} for ${offerKey}/${interval} in ${before.scope.livemode ? 'LIVE' : 'test'} mode`);
     if (dryRun || expected === undefined) {
       const probe = await catalog.reviewCandidateTerms(offerKey, interval, priceId, flag(args, 'product'));
-      out(`  Stripe says: ${formatTerms(probe.terms)}; product ${probe.productId}`);
+      out(`  Stripe says: ${formatTerms(probe.terms, locale)}; product ${probe.productId}`);
       out(`  Current version: ${before.current?.version_id ?? 'none'}`);
       out(dryRun ? 'Dry run. Re-run with --confirm --expect=<current version id|none> to publish.' : 'Refusing to publish without --expect=<current version id|none>.');
       return dryRun ? 0 : 2;
     }
     const result = await catalog.publishBinding({ actor, offerKey, interval, priceId, expectedCurrentVersionId: expected, productId: flag(args, 'product') });
     out(result.changed ? `${result.action === 'restore' ? 'Restored' : 'Published'} version ${result.version.version_number} (${priceId}). New purchases use it; existing subscriptions are unchanged.` : `Already current; nothing changed.`);
-    out(`  ${formatTerms(result.terms)}`);
+    out(`  ${formatTerms(result.terms, locale)}`);
     return 0;
   }
 

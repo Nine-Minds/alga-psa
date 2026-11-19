@@ -1670,12 +1670,12 @@ export class StripeService {
 
   /** Operator catalog command (inspect / inventory / seed / publish / restore / pause / retry-fulfillments) run with the platform's
    * own Stripe credential and the admin connection; the caller must already be a proven operator. */
-  async runCatalogOperatorCommand(command: string, args: string[], actor: CatalogOperator): Promise<{ code: number; lines: string[] }> {
+  async runCatalogOperatorCommand(command: string, args: string[], actor: CatalogOperator, locale: string): Promise<{ code: number; lines: string[] }> {
     const { runCatalogCommand } = await import('./offerCatalog/cli');
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const lines: string[] = [];
     const code = await runCatalogCommand(command, args, { catalog: await this.getOfferCatalog(), db: await getAdminConnection(),
-      stripe: this.stripe, actor, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
+      stripe: this.stripe, actor, locale, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
     return { code, lines };
   }
 

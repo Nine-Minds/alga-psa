@@ -13,7 +13,9 @@ vi.mock('@ee/lib/stripe/StripeService', () => ({ getStripeService: () => ({
 
 const offer = { source: 'catalog', offerKey: 'co_managed_technician_seat', interval: 'month', versionId: 'v2', versionNumber: 2, priceId: 'price_new', productId: 'prod',
   terms: { unitAmount: 1300, currency: 'eur', interval: 'month', intervalCount: 1 }, scope: { stripeAccount: 'acct_1', livemode: false } };
-const post = (body: unknown) => new NextRequest('http://localhost/api', { method: 'POST', body: JSON.stringify(body), headers: { 'x-api-key': 'k' } });
+const post = (body: unknown, headers?: Record<string, string>) => new NextRequest('http://localhost/api', {
+  method: 'POST', body: JSON.stringify(body), headers: { 'x-api-key': 'k', ...headers },
+});
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -87,9 +89,9 @@ describe('billing-catalog operator endpoint', () => {
   });
   it('runs an operator command as the proven operator and validates the command surface', async () => {
     const { POST } = await import('../../../app/api/v1/billing-catalog/operator/route');
-    const res = await POST(post({ command: 'inspect', args: ['--offer=co_managed_technician_seat'] }));
+    const res = await POST(post({ command: 'inspect', args: ['--offer=co_managed_technician_seat'] }, { 'accept-language': 'de-DE,en;q=0.8' }));
     expect(res.status).toBe(200);
-    expect(run).toHaveBeenCalledWith('inspect', ['--offer=co_managed_technician_seat'], { tenantId: MASTER, userId: 'svc' });
+    expect(run).toHaveBeenCalledWith('inspect', ['--offer=co_managed_technician_seat'], { tenantId: MASTER, userId: 'svc' }, 'de');
     expect((await POST(post({ command: 'drop-table', args: [] }))).status).toBe(400);
     expect((await POST(post({ command: 'inspect', args: ['not-a-flag'] }))).status).toBe(400);
   });

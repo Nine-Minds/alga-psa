@@ -8,6 +8,7 @@
  * Stripe or catalog access. Writes need `--confirm` and `--expect=<current version id|none>`.
  */
 import { NextRequest } from 'next/server';
+import { getBestMatchingLocale } from '@alga-psa/core/i18n/config';
 import { getStripeService } from '@ee/lib/stripe/StripeService';
 import { BadRequest, catalogRoute, readJson, str } from '@ee/lib/stripe/offerCatalog/http';
 
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
     if (!COMMANDS.includes(command)) throw new BadRequest(`command must be one of ${COMMANDS.join(', ')}`);
     const args = Array.isArray(body.args) ? body.args : [];
     if (args.length > 20 || args.some((arg) => typeof arg !== 'string' || arg.length > 300 || !arg.startsWith('--'))) throw new BadRequest('args must be --flag[=value] strings');
-    return getStripeService().runCatalogOperatorCommand(command, args as string[], operator);
+    const preferredLanguages = request.headers.get('accept-language')?.split(',') ?? [];
+    const locale = getBestMatchingLocale(preferredLanguages.map((language) => language.split(';')[0].trim()));
+    return getStripeService().runCatalogOperatorCommand(command, args as string[], operator, locale);
   });
 }

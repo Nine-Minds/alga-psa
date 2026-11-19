@@ -150,19 +150,19 @@ describe('stripe offer catalog (postgres)', () => {
   describe('operator CLI', () => {
     const run = async (command: string, args: string[], actor: any = operator, subs: any[] = [], env: Record<string, string> = {}) => {
       const lines: string[] = [];
-      const code = await runCatalogCommand(command, args, { catalog: catalog(TEST, env), db, actor, out: (l) => lines.push(l), env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
+      const code = await runCatalogCommand(command, args, { catalog: catalog(TEST, env), db, actor, locale: 'de', out: (l) => lines.push(l), env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
         stripe: { subscriptions: { list: async function* () { yield* subs; } } } as any });
       return { code, text: lines.join('\n') };
     };
 
     it('shows Stripe-derived amount, currency and interval for review and writes nothing on a dry run', async () => {
       const dry = await run('publish', ['--price=price_a', '--product=prod_seat']);
-      expect(dry.text).toContain('€11.00');
+      expect(dry.text).toContain('11,00\u00a0€');
       expect(dry.text).toContain('EUR');
       expect(dry.text).toContain('month');
       expect(dry.text).toContain('Dry run');
       expect(await db('stripe_offer_versions')).toHaveLength(0);
-      expect(formatTerms({ unitAmount: 1500, currency: 'jpy', interval: 'month', intervalCount: 1 })).toContain('¥1,500');
+      expect(formatTerms({ unitAmount: 1500, currency: 'jpy', interval: 'month', intervalCount: 1 }, 'en')).toContain('¥1,500');
     });
 
     it('publishes only with --confirm and an expected version, then restores', async () => {
