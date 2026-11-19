@@ -147,7 +147,8 @@
       "viewDetails": "View details",
       "editAsset": "Edit asset",
       "createTicket": "Create ticket",
-      "refreshData": "Refresh data"
+      "refreshData": "Refresh data",
+      "fullAdd": "Full add"
     },
     "table": {
       "name": "Name",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Scan asset tag",
+    "help": "Scan a printed label with a barcode scanner, or type the tag exactly as printed. The matching intake record opens.",
     "input": "Scan or enter a tag",
     "loading": "Looking up…",
     "find": "Find asset",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Label-first intake",
-    "title": "Start label-first intake",
     "help": "Create a minimal durable asset record, then print two copies of its tag. Scan either copy later to finish this same record.",
     "client": "Client",
     "clientRequired": "Choose a client to continue.",
     "createFailed": "Could not create the intake record.",
     "name": "Short description (optional)",
     "creating": "Creating…",
-    "createPrint": "Create and print pair"
+    "createPrint": "Create and print pair",
+    "modePrint": "Print new labels",
+    "modeResume": "Resume from label"
   }
 }

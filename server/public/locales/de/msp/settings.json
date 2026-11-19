@@ -4625,7 +4625,6 @@
       "title": "Asset-Nummerierung",
       "description": "Eine mandantenweite Nummernfolge wird mit dem Präfix des jeweiligen Kunden formatiert. Vorschau und Druck vergeben keine Nummern. Nicht verwendete vergebene Nummern hinterlassen Lücken und werden nie erneut verwendet.",
       "clientPrefixes": "Kundenpräfixe",
-      "noPrefix": "Kein Präfix",
       "prefixSaved": "Kundenpräfix gespeichert",
       "uniquenessEnabled": "Eindeutige Asset-Tags sind aktiviert",
       "legacyAudit": "Prüfung bestehender Tags",
@@ -4639,7 +4638,25 @@
       "continuationReview": "Die Bestandsprüfung hat {{scanned}} gespeicherte Tags geprüft; {{numeric}} haben numerische Suffixe. Das höchste Suffix ist {{maximum}}; prüfen Sie den Startwert {{next}}. Dies ist nur ein Hinweis. Geben Sie oben den genehmigten Fortsetzungswert ein und speichern Sie ihn. Diese Prüfung verbraucht keinen Wert der Nummernfolge.",
       "continuationExamples": "Beispiele: {{examples}}",
       "blankTag": "(leerer Tag)",
-      "normalizedTag": "Normalisiert: {{tag}}"
+      "normalizedTag": "Normalisiert: {{tag}}",
+      "loadFailed": "Einstellungen zur Asset-Nummerierung konnten nicht geladen werden",
+      "readOnly": "Sie können die Asset-Nummerierung ansehen. Für Änderungen ist die Berechtigung zum Aktualisieren der Systemeinstellungen erforderlich.",
+      "columns": {
+        "client": "Kunde",
+        "prefix": "Präfix"
+      },
+      "addPrefix": "Präfix hinzufügen",
+      "addPrefixTitle": "Kundenpräfix hinzufügen",
+      "editPrefixTitle": "Kundenpräfix bearbeiten",
+      "prefixHelp": "Bis zu 10 Buchstaben, Ziffern oder Bindestriche.",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "removeTitle": "Präfix entfernen?",
+      "removeMessage": "Präfix für {{client}} entfernen? Neue Asset-Nummern für diesen Kunden erhalten kein Präfix. Vorhandene Tags bleiben unverändert.",
+      "prefixRemoved": "Kundenpräfix entfernt",
+      "noPrefixes": "Noch keine Kundenpräfixe.",
+      "openMenu": "Menü öffnen",
+      "inactive": "Inaktiv"
     }
   }
 }

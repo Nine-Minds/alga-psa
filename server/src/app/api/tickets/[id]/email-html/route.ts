@@ -171,7 +171,6 @@ async function resolveForPortalUser(
         watchListColumn: 't.attributes',
         sharedWorkspaceTickets: {
           ticketIdColumn: 't.ticket_id',
-          tenantColumn: 't.tenant',
           closedColumn: 't.is_closed',
         },
       });

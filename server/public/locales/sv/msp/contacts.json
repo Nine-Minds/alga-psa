@@ -457,6 +457,7 @@
         "contactMissingEmail": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
         "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
+        "portalUserAlreadyExists": "Den här e-postadressen tillhör redan ett annat användarkonto i den här organisationen.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen. Ange en standardkund i Allmänna inställningar.",
         "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
         "noLocationEmail": "Standardkundens plats måste ha en konfigurerad kontakt-e-postadress.",

@@ -457,6 +457,7 @@
         "contactMissingEmail": "O contato não possui um endereço de e-mail. Adicione um endereço de e-mail ao contato antes de enviar um convite.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido. Atualize o contato com um endereço de e-mail válido antes de enviar um convite.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato. Use a redefinição de senha em vez de enviar um convite.",
+        "portalUserAlreadyExists": "Este endereço de e-mail já pertence a outra conta de usuário nesta organização.",
         "noDefaultClient": "Nenhum cliente padrão configurado para este locatário. Defina um cliente padrão nas Configurações Gerais.",
         "noDefaultLocation": "O cliente padrão deve ter um local padrão configurado para enviar convites do portal.",
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",

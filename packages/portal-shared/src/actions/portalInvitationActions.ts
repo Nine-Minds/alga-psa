@@ -11,6 +11,11 @@ import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { createClientScopeContext, type ClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { isValidEmail } from '@alga-psa/core';
 import { assertContactIsNotSharedMailbox, isSharedMailboxContact } from '@alga-psa/shared/models/contactModel';
+import {
+  classifyPortalEmailOwner,
+  portalEmailOwnerConflictMessage,
+  type PortalEmailOwnerRow,
+} from '../lib/portalEmailOwner';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type {
@@ -245,6 +250,49 @@ async function resolveClientUserTargetClientId(
   return targetUser.client_id ?? null;
 }
 
+/**
+ * Who already owns `email` in this tenant, with the contact row it points at
+ * (left join: a missing contact is what makes an account an orphan).
+ */
+async function findPortalEmailOwner(
+  db: DbConnection,
+  tenant: string,
+  email: string | null | undefined
+): Promise<PortalEmailOwnerRow | null> {
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const scopedDb = tenantDb(db, tenant);
+  const ownerQuery = scopedDb.table('users as u')
+    .whereRaw('lower(u.email) = ?', [normalizedEmail])
+    .select(
+      'u.user_id',
+      'u.user_type',
+      'u.contact_id',
+      'u.username',
+      'c.contact_name_id as linked_contact_id'
+    )
+    .first();
+  scopedDb.tenantJoin(ownerQuery, 'contacts as c', 'u.contact_id', 'c.contact_name_id', { type: 'left' });
+  const owner = await ownerQuery as PortalEmailOwnerRow | undefined;
+
+  return owner ?? null;
+}
+
+/** Points an orphaned portal account back at a live contact. */
+async function relinkOrphanedPortalUser(
+  db: DbConnection,
+  tenant: string,
+  userId: string,
+  contactId: string
+): Promise<void> {
+  await tenantDb(db, tenant).table('users')
+    .where({ user_id: userId })
+    .update({ contact_id: contactId, updated_at: db.raw('now()') });
+}
+
 export const createClientPortalUser = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
@@ -386,73 +434,114 @@ export const createClientPortalUser = withAuth(async (
         throw new Error('A user account already exists for this contact');
       }
 
-      // 3) Create user
+      // 3) Create user — unless the email still belongs to an account orphaned by
+      // a contact delete, which is relinked to this contact instead of refused.
       const nameParts = (contact.full_name || '').trim().split(' ');
       const firstName = nameParts[0] || contact.full_name || contact.email;
       const lastName = nameParts.slice(1).join(' ') || undefined;
 
-      // Enforce uniqueness across tenant (regardless of user_type)
-      const existingByEmailAnyType = await scopedDb.table('users')
-        .where('email', contact.email.toLowerCase())
-        .first();
-      if (existingByEmailAnyType) {
-        throw new Error('A user with this email already exists in this organization');
-      }
-      const existingByUsernameAnyType = await scopedDb.table('users')
-        .where('username', contact.email)
-        .first();
-      if (existingByUsernameAnyType) {
-        throw new Error('A user with this username already exists in this organization');
+      const emailOwner = await findPortalEmailOwner(trx, tenant, contact.email);
+      if (emailOwner) {
+        const ownerStatus = classifyPortalEmailOwner(emailOwner, contact.contact_name_id);
+        if (ownerStatus !== 'orphaned') {
+          throw new PortalInvitationError(
+            portalEmailOwnerConflictMessage(ownerStatus),
+            'PORTAL_USER_ALREADY_EXISTS'
+          );
+        }
       }
 
-      // 3a) Insert user within the same transaction to satisfy FK on (tenant, contact_id)
       const { hashPassword } = await import('@alga-psa/core/encryption');
       const hashedPassword = await hashPassword(params.password);
-      const [created] = await scopedDb.table('users')
-        .insert({
-          tenant,
-          user_id: trx.raw('gen_random_uuid()'),
-          username: contact.email.toLowerCase(),
-          email: contact.email.toLowerCase(),
-          first_name: firstName,
-          last_name: lastName,
-          phone: null,
-          timezone: null,
-          hashed_password: hashedPassword,
-          user_type: 'client',
-          contact_id: contact.contact_name_id,
-          is_inactive: false,
-          two_factor_enabled: false,
-          is_google_user: false,
-          created_at: trx.raw('now()'),
-          updated_at: trx.raw('now()')
-        })
-        .returning('*');
 
-      // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag)
-      let targetRoleId: string | undefined = undefined;
-      if (params.roleId) {
-        const uiRole = await scopedDb.table('roles')
-          .where({ role_id: params.roleId, client: true })
+      let created: any;
+      const relinked = !!emailOwner;
+
+      if (emailOwner) {
+        await relinkOrphanedPortalUser(trx, tenant, emailOwner.user_id, contact.contact_name_id);
+        [created] = await scopedDb.table('users')
+          .where({ user_id: emailOwner.user_id })
+          .update({
+            hashed_password: hashedPassword,
+            is_inactive: false,
+            updated_at: trx.raw('now()')
+          })
+          .returning('*');
+      } else {
+        // Enforce uniqueness across tenant (regardless of user_type)
+        const existingByEmailAnyType = await scopedDb.table('users')
+          .where('email', contact.email.toLowerCase())
           .first();
-        if (uiRole) {
-          targetRoleId = uiRole.role_id;
+        if (existingByEmailAnyType) {
+          throw new Error('A user with this email already exists in this organization');
         }
-      }
-      if (!targetRoleId) {
-        // Use actual role names from seeds: "Admin" or "User"
-        const roleName = contact?.is_client_admin ? 'Admin' : 'User';
-        const fallbackRole = await scopedDb.table('roles')
-          .where({ role_name: roleName, client: true })
+        const existingByUsernameAnyType = await scopedDb.table('users')
+          .where('username', contact.email)
           .first();
-        if (fallbackRole) {
-          targetRoleId = fallbackRole.role_id;
-        } else {
-          console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
+        if (existingByUsernameAnyType) {
+          throw new Error('A user with this username already exists in this organization');
         }
+
+        // 3a) Insert user within the same transaction to satisfy FK on (tenant, contact_id)
+        [created] = await scopedDb.table('users')
+          .insert({
+            tenant,
+            user_id: trx.raw('gen_random_uuid()'),
+            username: contact.email.toLowerCase(),
+            email: contact.email.toLowerCase(),
+            first_name: firstName,
+            last_name: lastName,
+            phone: null,
+            timezone: null,
+            hashed_password: hashedPassword,
+            user_type: 'client',
+            contact_id: contact.contact_name_id,
+            is_inactive: false,
+            two_factor_enabled: false,
+            is_google_user: false,
+            created_at: trx.raw('now()'),
+            updated_at: trx.raw('now()')
+          })
+          .returning('*');
       }
-      if (targetRoleId) {
-        await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+
+      // 4) Assign role (prefer UI-selected roleId; fallback to contact's admin flag).
+      // A relinked account keeps whatever client role it already held.
+      let hasClientRole = false;
+      if (relinked) {
+        const existingClientRoleQuery = scopedDb.table('user_roles as ur')
+          .where({ 'ur.user_id': created.user_id })
+          .andWhere('r.client', true)
+          .first('ur.role_id');
+        scopedDb.tenantJoin(existingClientRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id');
+        hasClientRole = !!(await existingClientRoleQuery);
+      }
+
+      if (!hasClientRole) {
+        let targetRoleId: string | undefined = undefined;
+        if (params.roleId) {
+          const uiRole = await scopedDb.table('roles')
+            .where({ role_id: params.roleId, client: true })
+            .first();
+          if (uiRole) {
+            targetRoleId = uiRole.role_id;
+          }
+        }
+        if (!targetRoleId) {
+          // Use actual role names from seeds: "Admin" or "User"
+          const roleName = contact?.is_client_admin ? 'Admin' : 'User';
+          const fallbackRole = await scopedDb.table('roles')
+            .where({ role_name: roleName, client: true })
+            .first();
+          if (fallbackRole) {
+            targetRoleId = fallbackRole.role_id;
+          } else {
+            console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
+          }
+        }
+        if (targetRoleId) {
+          await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+        }
       }
 
       // 5) Set password-related preferences
@@ -482,10 +571,16 @@ export const createClientPortalUser = withAuth(async (
         }
       } catch {}
 
-      return created as any;
+      return { user: created as any, relinked };
     });
 
-    return { success: true, userId: result.user_id, message: 'Client portal user created' };
+    return {
+      success: true,
+      userId: result.user.user_id,
+      message: result.relinked
+        ? 'Reconnected the existing portal account to this contact and set the new password'
+        : 'Client portal user created'
+    };
   } catch (error) {
     console.error('Error creating client portal user:', error);
     const normalized = normalizeCreateClientPortalUserError(error);
@@ -729,11 +824,50 @@ async function sendPortalInvitationForContact(
     };
   }
 
+  // The email may still be held by a user row. An account orphaned by a contact
+  // delete is relinked here so the invitation lands as a password-setup link;
+  // a live owner (another contact, or an MSP user) is a real conflict.
+  const emailOwner = await findPortalEmailOwner(knex, tenant, contact.email);
+  let orphanedUserIdToRelink: string | null = null;
+  if (emailOwner) {
+    const ownerStatus = classifyPortalEmailOwner(emailOwner, contactId);
+    if (ownerStatus === 'linked_this_contact') {
+      return {
+        outcome: 'skipped',
+        email: contact.email,
+        result: {
+          success: false,
+          error: 'A user account already exists for this contact. Use password reset instead of sending an invitation.',
+          errorCode: 'USER_EXISTS_FOR_CONTACT'
+        }
+      };
+    }
+    if (ownerStatus !== 'orphaned') {
+      return {
+        outcome: 'skipped',
+        email: contact.email,
+        result: {
+          success: false,
+          error: portalEmailOwnerConflictMessage(ownerStatus),
+          errorCode: 'PORTAL_USER_ALREADY_EXISTS'
+        }
+      };
+    }
+    orphanedUserIdToRelink = emailOwner.user_id;
+  }
+  const relinked = orphanedUserIdToRelink !== null;
+
   const { tenantDefaultClient, supportEmail, supportPhone, tenantSlug, portalBaseUrl } = batchContext;
 
   // Use a transaction to ensure atomicity
   const result: SendInvitationResult = await knex.transaction(async (trx) => {
     const scopedDb = tenantDb(trx, tenant);
+
+    // Adopt the orphaned account in the same transaction as the invitation, so a
+    // failed send never leaves a half-relinked user behind.
+    if (orphanedUserIdToRelink) {
+      await relinkOrphanedPortalUser(trx, tenant, orphanedUserIdToRelink, contactId);
+    }
 
     // Create invitation within transaction
     const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
@@ -786,7 +920,10 @@ async function sendPortalInvitationForContact(
     return {
       success: true,
       invitationId: invitationResult.invitationId,
-      message: `Portal invitation sent successfully to ${contact.email}`
+      relinked,
+      message: relinked
+        ? `Reconnected the existing portal account for ${contact.email} to this contact. The invitation link sets a new password.`
+        : `Portal invitation sent successfully to ${contact.email}`
     };
   }).catch((error) => {
     console.error('Transaction failed:', error);
@@ -1217,18 +1354,21 @@ export async function completePortalSetup(
         return user;
       };
 
-      // Check if user already exists
-      const existingUser = await scopedDb.table('users')
-        .where({ contact_id: contact.contact_name_id })
-        .first();
-
-      if (existingUser) {
-        // Treat as a password reset for existing client user when a password is supplied.
-        // For Entra pre-link invitations, password setup is optional.
+      // Treat as a password reset for an existing client user when a password is
+      // supplied. For Entra pre-link invitations, password setup is optional.
+      // `relinkContactId` re-points an account orphaned by a contact delete.
+      const completeSetupForExistingUser = async (
+        existingUser: { user_id: string; username?: string | null },
+        relinkContactId?: string
+      ): Promise<CompleteSetupResult> => {
         try {
           await knex.transaction(async (trx) => {
             await acquireMicrosoftOAuthLinkLock(trx);
             await assertMicrosoftOAuthLinkAvailable(existingUser.user_id, trx);
+
+            if (relinkContactId) {
+              await relinkOrphanedPortalUser(trx, tenant, existingUser.user_id, relinkContactId);
+            }
 
             if (normalizedPassword) {
               const { hashPassword } = await import('@alga-psa/core/encryption');
@@ -1267,7 +1407,7 @@ export async function completePortalSetup(
           return {
             success: true,
             userId: existingUser.user_id,
-            username: existingUser.username,
+            username: existingUser.username ?? undefined,
             message: normalizedPassword
               ? 'Password updated. You can now sign in.'
               : 'Portal account is ready. Continue with Microsoft sign in.'
@@ -1287,19 +1427,27 @@ export async function completePortalSetup(
             errorCode: 'RESET_PASSWORD_FAILED'
           } as CompleteSetupResult;
         }
+      };
+
+      // Check if user already exists
+      const existingUser = await scopedDb.table('users')
+        .where({ contact_id: contact.contact_name_id })
+        .first();
+
+      if (existingUser) {
+        return completeSetupForExistingUser(existingUser);
       }
 
-      const normalizedContactEmail = String(contact.email || '').trim().toLowerCase();
-      const existingEmailOwner = normalizedContactEmail
-        ? await knex('users')
-            .where({ tenant })
-            .andWhereRaw('lower(email) = ?', [normalizedContactEmail])
-            .first(['user_id'])
-        : null;
-      if (existingEmailOwner?.user_id) {
+      const existingEmailOwner = await findPortalEmailOwner(knex, tenant, contact.email);
+      if (existingEmailOwner) {
+        // An account orphaned by a contact delete still owns this email: relink it
+        // and let the invitation act as the password-setup link it promised to be.
+        if (classifyPortalEmailOwner(existingEmailOwner, contact.contact_name_id) === 'orphaned') {
+          return completeSetupForExistingUser(existingEmailOwner, contact.contact_name_id);
+        }
         return {
           success: false,
-          error: 'A portal user already exists for this contact or email address',
+          error: 'An account already exists for this email address. Sign in instead, or reset your password from the sign-in page.',
           errorCode: 'PORTAL_USER_ALREADY_EXISTS'
         } as CompleteSetupResult;
       }

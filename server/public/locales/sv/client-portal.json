@@ -298,7 +298,7 @@
         "contactMissingEmail": "Kontakten saknar e-postadress.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress.",
         "userExistsForContact": "Det finns redan ett användarkonto för den här kontakten.",
-        "portalUserAlreadyExists": "Det finns redan en portalanvändare för den här kontakten.",
+        "portalUserAlreadyExists": "Det finns redan ett konto för den här e-postadressen. Logga in eller återställ ditt lösenord på inloggningssidan.",
         "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen.",
         "noDefaultLocation": "Ingen standardplats har konfigurerats för standardkunden.",
         "noLocationEmail": "Ingen e-postadress för kontakt har konfigurerats för kundplatsen.",

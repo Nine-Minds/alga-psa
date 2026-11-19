@@ -85,17 +85,31 @@ function contactsBuilder() {
 
 function usersBuilder() {
   let contactId: string | undefined;
-  return {
+  let byContactId = false;
+  const builder: any = {
     where(filters: Record<string, unknown>) {
       contactId = filters.contact_id as string;
-      return this;
+      byContactId = true;
+      return builder;
+    },
+    // findPortalEmailOwner's email-ownership lookup; none of these fixtures
+    // have a pre-existing (orphaned or otherwise) owner for the email.
+    whereRaw() {
+      return builder;
+    },
+    select() {
+      return builder;
     },
     first() {
+      if (!byContactId) {
+        return Promise.resolve(undefined);
+      }
       return Promise.resolve(
         contactId && state.portalUserContactIds.has(contactId) ? { user_id: `user-${contactId}` } : undefined,
       );
     },
-  } as any;
+  };
+  return builder;
 }
 
 function tableBuilder(table: string) {

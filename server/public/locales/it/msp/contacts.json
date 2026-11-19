@@ -457,6 +457,7 @@
         "contactMissingEmail": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
         "userExistsForContact": "Esiste già un account utente per questo contatto. Usa il reimposta password invece di inviare un invito.",
+        "portalUserAlreadyExists": "Questo indirizzo e-mail appartiene già a un altro account utente di questa organizzazione.",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",

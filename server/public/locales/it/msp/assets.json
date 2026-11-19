@@ -147,7 +147,8 @@
       "viewDetails": "Visualizza i dettagli",
       "editAsset": "Modifica asset",
       "createTicket": "Crea ticket",
-      "refreshData": "Aggiorna i dati"
+      "refreshData": "Aggiorna i dati",
+      "fullAdd": "Aggiunta completa"
     },
     "table": {
       "name": "Nome",
@@ -2470,6 +2471,7 @@
   },
   "scanLookup": {
     "title": "Scansiona tag asset",
+    "help": "Scansiona un'etichetta stampata con un lettore di codici a barre oppure inserisci il tag esattamente come stampato. Si aprirà la scheda di acquisizione corrispondente.",
     "input": "Scansiona o inserisci un tag",
     "loading": "Ricerca in corso…",
     "find": "Trova asset",
@@ -2484,13 +2486,14 @@
   },
   "labelFirstIntake": {
     "start": "Acquisizione con etichetta preliminare",
-    "title": "Avvia acquisizione con etichetta preliminare",
     "help": "Crea una scheda asset permanente con i dati minimi, quindi stampa due copie della sua etichetta. Scansiona una delle copie in seguito per completare la stessa scheda.",
     "client": "Cliente",
     "clientRequired": "Scegli un cliente per continuare.",
     "createFailed": "Impossibile creare la scheda di acquisizione.",
     "name": "Breve descrizione (facoltativa)",
     "creating": "Creazione in corso…",
-    "createPrint": "Crea e stampa la coppia"
+    "createPrint": "Crea e stampa la coppia",
+    "modePrint": "Stampa nuove etichette",
+    "modeResume": "Riprendi da un'etichetta"
   }
 }

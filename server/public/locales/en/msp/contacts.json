@@ -457,6 +457,7 @@
         "contactMissingEmail": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
         "userExistsForContact": "A user account already exists for this contact. Use password reset instead of sending an invitation.",
+        "portalUserAlreadyExists": "This email address already belongs to another user account in this organization.",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",

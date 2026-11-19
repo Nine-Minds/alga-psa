@@ -4,7 +4,7 @@ import type { IAssetCustody } from '@alga-psa/types';
 import type { UpdateCustodyPatch } from '../schemas/assetCustody.schema';
 import { CustodyError } from './errors';
 import { writeCustodyHistory } from './history';
-import { CUSTODY_COLUMNS, FOLLOW_UP_SELECT, loadCustody, mapCustodyRow } from './shared';
+import { CUSTODY_RETURNING, loadCustody, mapCustodyRow } from './shared';
 
 /**
  * Non-physical edits (purpose, next-action party/note, follow-up date, condition, accessories). These are
@@ -54,7 +54,7 @@ export async function updateCustodyDetails(
     .table('asset_custody')
     .where({ custody_id: custodyId })
     .update({ ...update, updated_at: now })
-    .returning([...CUSTODY_COLUMNS, trx.raw(FOLLOW_UP_SELECT)] as any);
+    .returning(CUSTODY_RETURNING as any);
 
   await writeCustodyHistory(trx, tenant, {
     assetId: current.asset_id,
