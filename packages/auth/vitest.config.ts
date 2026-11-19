@@ -28,6 +28,7 @@ export default defineConfig({
       '@product/service-principals/entry': path.resolve(__dirname, '../product-service-principals/oss/entry.ts'),
       '@alga-psa/shared': path.resolve(__dirname, '../../shared'),
       '@shared': path.resolve(__dirname, '../../shared'),
+      '@enterprise': path.resolve(__dirname, '../ee/src'),
       '@ee': path.resolve(__dirname, '../ee/src'),
       '@': path.resolve(__dirname, '../../server/src'),
       'server/src': path.resolve(__dirname, '../../server/src'),

@@ -26,16 +26,20 @@ import { EmulatorHost } from '@alga-psa/emulator-host';
 import stripeEmulator from '@alga-psa/emulator-stripe';
 import { tenantDb } from '@alga-psa/db';
 import {
-  createCoManagedSeatArrangement, inviteCoManagedSeatTechnician, readCoManagedSeatArrangementPanel,
+  acceptCoManagedSeatInvitation, createCoManagedSeatArrangement, inviteCoManagedSeatTechnician, readCoManagedSeatArrangementPanel,
   readCoManagedSeatEnableState, setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
+import { admitSeatTrialSession } from '../../../../ee/server/src/lib/co-managed/seatTrialSession';
+import { createCloseRulesFixture, insertTicket } from './helpers/closeRulesFixture';
+import { writeTicketActivity } from '../../../../shared/lib/ticketActivity/writeTicketActivity';
+import { prepareCoManagedSeatTrial } from '../../../../ee/server/src/lib/co-managed/seatTrial';
 import { StripeService } from '@ee/lib/stripe/StripeService';
 import { decideCoManagedSeatResume, planCoManagedSeatPurchase } from '../../components/co-managed/seatPurchaseResume';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { buildMergedEeMigrationsDir } from '../../../test-utils/eeMigrations';
 import { describeWithDb } from '../../../test-utils/requireDb';
-import { createClient, createContact, createTenant } from '../../../test-utils/testDataFactory';
+import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const holder = vi.hoisted(() => ({ db: null as unknown as Knex }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
@@ -192,4 +196,105 @@ describeDb('pool purchase review and resume from the seat setup (T045)', { shuff
     expect(await sponsor.table('co_managed_seat_assignments').where({ arrangement_id: done.arrangement.arrangement_id }).whereNot('state', 'revoked')).toHaveLength(1);
     updates.mockRestore();
   }, HOOK_TIMEOUT);
+
+  async function activePilot() {
+    const tenant = await createTenant(db, 'Pilot checkout', { productCode: 'psa' });
+    const customerId = 'cus_' + tenant;
+    const sponsor = tenantDb(db, tenant);
+    await sponsor.table('tenants').update({ billing_source: 'stripe', licensed_user_count: 1 });
+    await control('seed/customer', { id: customerId, email: 'trial@example.test' });
+    const base = await control('seed/subscription', { customer: customerId, priceId: PRO_PRICE_ID, quantity: 1, status: 'active' });
+    const [customer] = await sponsor.table('stripe_customers').insert({ tenant, stripe_customer_external_id: customerId, email: 'trial@example.test' }).returning('*');
+    const [product] = await sponsor.table('stripe_products').insert({ tenant, stripe_product_external_id: 'prod_' + tenant, name: 'Pro', product_type: 'license' }).returning('*');
+    const [price] = await sponsor.table('stripe_prices').insert({ tenant, stripe_price_external_id: 'price_' + tenant, stripe_product_id: product.stripe_product_id, unit_amount: 2900 }).returning('*');
+    await sponsor.table('stripe_subscriptions').insert({ tenant, stripe_subscription_external_id: base.id,
+      stripe_customer_id: customer.stripe_customer_id, stripe_price_id: price.stripe_price_id, status: 'active',
+      current_period_end: new Date(Date.now() + 30 * DAY) });
+    const staff = await createUser(db, tenant);
+    const fixture = await createCloseRulesFixture(db, tenant, staff);
+    const prepared = await prepareCoManagedSeatTrial(db, { tenant, clientId: fixture.clientId, contactId: fixture.contactId,
+      operationId: randomUUID(), boards: [{ boardId: fixture.boardId, canCreate: true }] });
+    const accepted = await acceptCoManagedSeatInvitation(db, { token: prepared.invitation!.token, password: 'Correct-horse-9-battery' });
+    const sessionId = randomUUID();
+    await sponsor.table('sessions').insert({ tenant, session_id: sessionId, user_id: accepted.user_id, created_at: db.fn.now(),
+      expires_at: new Date(Date.now() + DAY), login_method: 'credentials' });
+    expect(await admitSeatTrialSession(tenant, accepted.user_id, sessionId, db)).toBe(true);
+    const ticketId = await insertTicket(db, fixture);
+    await writeTicketActivity(db, { tenant, ticketId, eventType: 'TICKET_UPDATED', entityType: 'ticket',
+      actor: { actorType: 'user', userId: accepted.user_id }, source: 'ui' });
+    const pilot = () => sponsor.table('co_managed_seat_trials').where({ trial_id: prepared.trialId });
+    const before = await pilot().first();
+    return { tenant, customerId, sponsor, prepared, accepted, ticketId, pilot, before };
+  }
+
+  it('adds one paid seat to an existing full subscription and hands it to the bound technician once', async () => {
+    const { tenant, customerId, sponsor, pilot, before } = await activePilot();
+    const paid = await control('seed/subscription', { customer: customerId, priceId: CO_MANAGED_PRICE_ID,
+      quantity: 1, status: 'active', metadata: { tenant_id: tenant, subscription_kind: 'co_managed' } });
+    await sponsor.table('co_managed_entitlements').insert({ tenant, source: 'hosted', source_reference: paid.id, capacity: 1,
+      verified_at: new Date(), valid_until: new Date(Date.now() + 30 * DAY) });
+    await createCoManagedSeatArrangement(db, { sponsorTenant: tenant, clientId: await createClient(db, tenant, 'Paid client'),
+      operationId: randomUUID(), seats: 1 });
+    const service = new StripeService();
+    const operationId = randomUUID();
+    const quote = { quantity: 2, ...await service.previewCoManagedSeats(tenant, 2) };
+    const intent = { trialId: before.trial_id, quote };
+    expect(quote).toMatchObject({ currency: 'eur', monthlyTotal: UNIT * 2, amountDue: UNIT });
+    await expect(service.purchaseCoManagedSeats(tenant, 2, operationId, intent)).resolves.toMatchObject({ kind: 'updated', subscriptionId: paid.id });
+    await new StripeService().purchaseCoManagedSeats(tenant, 2, operationId, intent);
+    expect(await pilot().first()).toMatchObject({ state: 'paid', conversion_state: 'paid', assignment_id: before.assignment_id,
+      allocation_id: before.allocation_id, conversion_operation_id: operationId });
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 2, allocated: 2, available: 0 });
+    expect((await view('checkout-sessions')).filter(session => session.metadata?.operation_id === operationId)).toHaveLength(0);
+    expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('hands verified checkout capacity to the expired pilot on webhook replay after restart', async () => {
+    const { tenant, sponsor, prepared, accepted, ticketId, pilot, before } = await activePilot();
+    const service = new StripeService();
+    await service.refreshSeatTrialBase(tenant);
+    const quote = { quantity: 1, ...await service.previewCoManagedSeats(tenant, 1) };
+    await expect(service.purchaseCoManagedSeats(tenant, 1, randomUUID(), { trialId: before.trial_id,
+      quote: { ...quote, amountDue: 0 } })).rejects.toThrow('quote changed');
+    const failedOperation = randomUUID();
+    const declined = await service.purchaseCoManagedSeats(tenant, 1, failedOperation, { trialId: before.trial_id, quote });
+    if (declined.kind !== 'checkout') throw new Error('Expected initial checkout');
+    await control('actions/fail-session', { sessionId: declined.sessionId });
+    expect((await view('events')).at(-1).type).toBe('payment_intent.payment_failed');
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0 });
+    await service.cancelSeatTrialPurchase(tenant, failedOperation);
+    expect(await pilot().first()).toMatchObject({ conversion_state: 'cancelled', state: 'active' });
+    expect((await view('checkout-sessions')).find(row => row.id === declined.sessionId).status).toBe('expired');
+    const terminalOperation = randomUUID();
+    const expiring = await service.purchaseCoManagedSeats(tenant, 1, terminalOperation, { trialId: before.trial_id, quote });
+    if (expiring.kind !== 'checkout') throw new Error('Expected retry checkout');
+    await control('actions/expire-session', { sessionId: expiring.sessionId });
+    await service.handleWebhookEvent((await view('events')).at(-1));
+    expect(await pilot().first()).toMatchObject({ conversion_state: 'failed', state: 'active' });
+    const operationId = randomUUID();
+    const started = await service.purchaseCoManagedSeats(tenant, 1, operationId, { trialId: before.trial_id, quote });
+    if (started.kind !== 'checkout') throw new Error('Expected a checkout session');
+    await pilot().update({ state: 'active', activated_at: db.raw("statement_timestamp() - interval '361 hours'"),
+      deadline_at: db.raw("statement_timestamp() - interval '1 hour'") });
+    const eventCount = (await view('events')).length;
+    await control('actions/complete-session', { sessionId: started.sessionId });
+    expect((await pilot().first()).state).toBe('active');
+    expect((await getCoManagedEntitlementState(db, tenant)).capacity).toBe(0);
+    const fresh = new StripeService();
+    process.env.FORCE_CAPABILITIES = 'co-managed:off,co-managed-seat:off';
+    const events = (await view('events')).slice(eventCount).reverse();
+    try {
+      for (const event of [...events, ...events]) await fresh.handleWebhookEvent(event);
+    } finally {
+      process.env.FORCE_CAPABILITIES = 'co-managed:on,co-managed-seat:on';
+    }
+    expect(await pilot().first()).toMatchObject({ state: 'paid', conversion_state: 'paid', conversion_operation_id: operationId,
+      allocation_id: before.allocation_id, assignment_id: prepared.assignmentId });
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 1, allocated: 1, available: 0 });
+    expect(await sponsor.table('ticket_audit_logs').where({ ticket_id: ticketId, actor_user_id: accepted.user_id })).toHaveLength(1);
+    expect(await sponsor.table('co_managed_seat_trial_milestones').where({ milestone: 'converted' })).toHaveLength(1);
+    expect((await sponsor.table('tenants').first()).licensed_user_count).toBe(1);
+    expect((await view('checkout-sessions')).filter(session => session.metadata?.operation_id === operationId)).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
 });

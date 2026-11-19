@@ -190,7 +190,7 @@ export async function inviteCoManagedSeatTechnician(
       throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
     }
     const trialBinding = input.allowTrialFunding === true && allocationFunding?.funding_source === 'seat_trial';
-    if (pool.state !== 'active' && !trialBinding) throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
+    if (allocationFunding?.funding_source === 'seat_trial' ? !trialBinding : pool.state !== 'active') throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
 
     // A contact who already holds a live seat or pending invitation. On this arrangement a pending
     // invitation is returned as it is (the command is declarative); anywhere else it is refused.
@@ -353,10 +353,11 @@ export async function acceptCoManagedSeatInvitation(
     if (!unlocked) throw new CoManagedSeatInvitationError('INVITATION_NOT_FOUND');
 
     // (2) and (3): the pool, then the allocation. (4): the arrangement.
+    await lockCoManagedSponsorPool(trx, sponsorTenant);
     const allocationFunding = await sponsor.table('co_managed_allocations').where({ allocation_id: unlocked.allocation_id })
       .first('funding_source');
     const pilot = allocationFunding?.funding_source === 'seat_trial'
-      ? await sponsor.table('co_managed_seat_trials').where({ allocation_id: unlocked.allocation_id }).first('state') : undefined;
+      ? await sponsor.table('co_managed_seat_trials').where({ allocation_id: unlocked.allocation_id, assignment_id: assignmentId }).first('state') : undefined;
     const pool = await readCoManagedSeatAllocationState(trx, sponsorTenant, unlocked.allocation_id);
     const arrangement = await arrangements().forUpdate().first('state', 'allocation_id');
     const assignment = await assignments().forUpdate().first('assignment_id', 'arrangement_id', 'state', 'user_id');
@@ -379,7 +380,7 @@ export async function acceptCoManagedSeatInvitation(
         pool.state === 'terminated') {
       throw new CoManagedSeatInvitationError('ARRANGEMENT_ENDED');
     }
-    if (pool.state !== 'active' && !(pilot && ['pending', 'active'].includes(pilot.state))) {
+    if (allocationFunding?.funding_source === 'seat_trial' ? pilot?.state !== 'pending' : pool.state !== 'active') {
       throw new CoManagedSeatInvitationError('ENTITLEMENT_LAPSED');
     }
     if (invitation.expired) throw new CoManagedSeatInvitationError('INVITATION_EXPIRED');

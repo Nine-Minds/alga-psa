@@ -14,7 +14,7 @@ function customerId(subscription: Stripe.Subscription): string {
   return typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 }
 
-function billingPeriodEnd(subscription: Stripe.Subscription): number {
+export function billingPeriodEnd(subscription: Stripe.Subscription): number {
   // The platform's pinned Stripe API exposes the subscription-level field;
   // newer SDK/API versions expose periods on each subscription item instead.
   const legacy = (subscription as Stripe.Subscription & { current_period_end?: number }).current_period_end;
@@ -40,11 +40,14 @@ export function assertCoManagedPrice(price: Stripe.Price, priceId: string): void
 
 export function currentProSubscriptionExpiry(subscriptions: Stripe.Subscription[], customer: string,
   proPriceIds: string[], coManagedPriceId: string, now = new Date()): Date | null {
+  const cutoff = (sub: Stripe.Subscription) => Math.min(billingPeriodEnd(sub),
+    sub.cancel_at ? sub.cancel_at * 1000 : Infinity,
+    sub.status === 'trialing' && sub.trial_end ? sub.trial_end * 1000 : Infinity);
   const base = subscriptions.filter((candidate) =>
     customerId(candidate) === customer && !isCoManagedSubscription(candidate, coManagedPriceId) && !candidate.metadata?.addon_key &&
     ['active', 'trialing'].includes(candidate.status) &&
-    candidate.items.data.some((item) => proPriceIds.includes(item.price.id)) && billingPeriodEnd(candidate) > now.getTime());
-  return base.length ? new Date(Math.max(...base.map(billingPeriodEnd))) : null;
+    candidate.items.data.some((item) => proPriceIds.includes(item.price.id)) && cutoff(candidate) > now.getTime());
+  return base.length ? new Date(Math.max(...base.map(cutoff))) : null;
 }
 
 /** Converts live Stripe data to capacity after validating its owner and SKU. The caller obtains
@@ -82,6 +85,8 @@ export function coManagedSnapshotFromStripe(input: {
   return {
     capacity: item.quantity!, active,
     validUntil: new Date(Math.min(periodEnd, baseExpiry?.getTime() ?? now.getTime())),
+    ...(subscription.metadata?.seat_trial_id ? { trialId: subscription.metadata.seat_trial_id,
+      terminalFailure: ['canceled', 'incomplete_expired'].includes(subscription.status) } : {}),
     ...(subscription.metadata?.operation_id ? { operationId: subscription.metadata.operation_id } : {}),
     ...(subscription.ended_at ? { lapseSince: new Date(subscription.ended_at * 1000) } : {}),
   };

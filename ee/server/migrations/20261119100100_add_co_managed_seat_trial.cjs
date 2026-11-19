@@ -1,5 +1,5 @@
 /** Hosted EE co-managed Seat pilot ledger and allocation funding source. */
-const { ensureTenantDistribution } = require('../../../server/migrations/utils/citusDistribution.cjs');
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
 
 const TABLES = ['co_managed_seat_trials', 'co_managed_seat_trial_milestones'];
 

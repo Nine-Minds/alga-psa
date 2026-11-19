@@ -172,7 +172,7 @@ export async function previewCoManagedSeatArrangementEnd(
   const live = () => sponsor.table('co_managed_seat_assignments').where('arrangement_id', input.arrangementId);
   const client = await sponsor.table('clients').where('client_id', arrangement.client_id).first('client_name');
   const allocation = await sponsor.table('co_managed_allocations')
-    .where({ allocation_id: arrangement.allocation_id, allocation_kind: 'seat' }).whereNot('state', 'released').first('seats');
+    .where({ allocation_id: arrangement.allocation_id, allocation_kind: 'seat', funding_source: 'paid' }).whereNot('state', 'released').first('seats');
   return {
     arrangementId: input.arrangementId,
     clientName: client?.client_name ?? null,

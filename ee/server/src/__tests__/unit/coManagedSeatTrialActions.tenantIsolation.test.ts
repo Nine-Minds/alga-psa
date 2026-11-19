@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  prepare: vi.fn(), replace: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
+  intake: vi.fn(), permission: vi.fn(), prepare: vi.fn(), replace: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
   createTenantKnex: vi.fn(), tenantDb: vi.fn(), permits: vi.fn(),
   user: { user_id: 'admin-good', user_type: 'internal', tenant: 'sponsor-good' },
 }));
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => mocks.createTenantKnex(...args),
   tenantDb: (...args: any[]) => mocks.tenantDb(...args),
@@ -18,6 +18,9 @@ vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
   createClientScopeContext: async () => ({ permits: (...args: any[]) => mocks.permits(...args) }),
 }));
 vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.intake }));
+vi.mock('../../../../../server/src/lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
+vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({ refreshSeatTrialBase: vi.fn() }) }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: vi.fn() }));
 vi.mock('../../../../../server/src/lib/co-managed/browserActor', () => ({ coManagedBrowserActor: vi.fn(async () => undefined) }));
 vi.mock('../../lib/co-managed/seatTrial', () => ({
@@ -27,12 +30,14 @@ vi.mock('../../lib/co-managed/seatTrial', () => ({
   cancelCoManagedSeatTrial: (...args: any[]) => mocks.cancel(...args),
 }));
 
-const query = { where: vi.fn().mockReturnThis(), first: vi.fn(async () => ({ client_id: 'client-good' })) };
+const query = { where: vi.fn().mockReturnThis(), first: vi.fn(async () => ({ client_id: 'client-good', allocation_id: 'allocation-good' })) };
 const knex = { tenant: 'fixture' };
 const invitation = { email: 'tech@example.test', firstName: 'Client', lastName: 'Tech', token: 'token' };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.intake.mockResolvedValue(true);
+  mocks.permission.mockResolvedValue(true);
   mocks.user.tenant = 'sponsor-good';
   mocks.createTenantKnex.mockResolvedValue({ knex });
   mocks.tenantDb.mockImplementation(() => ({ table: () => query }));
@@ -63,7 +68,20 @@ describe('co-managed Seat trial action tenant binding', () => {
 
     expect(mocks.tenantDb.mock.calls.every(([_, tenant]) => tenant === 'sponsor-good')).toBe(true);
     expect(mocks.replace).toHaveBeenCalledWith(knex, {
-      tenant: 'sponsor-good', trialId: 'trial-good', contactId: 'contact-new', invitedBy: 'admin-good',
+      tenant: 'sponsor-good', allocationId: 'allocation-good', trialId: 'trial-good', contactId: 'contact-new', invitedBy: 'admin-good',
     });
+  });
+
+  it('denies account-only purchasers, out-of-scope clients and closed intake before preparing', async () => {
+    const { prepareCoManagedSeatTrialAction } = await import('../../lib/actions/coManagedSeatTrialActions');
+    const request = { clientId: 'client-A', operationId: 'operation', contactId: 'contact', boards: [] };
+    mocks.permission.mockImplementation(async (_, resource) => resource === 'account_management');
+    await expect(prepareCoManagedSeatTrialAction(request)).rejects.toThrow('Permission denied');
+    mocks.permission.mockResolvedValue(true);
+    mocks.permits.mockResolvedValue(false);
+    await expect(prepareCoManagedSeatTrialAction(request)).rejects.toThrow('Permission denied');
+    mocks.intake.mockResolvedValue(false);
+    await expect(prepareCoManagedSeatTrialAction(request)).rejects.toThrow('intake is closed');
+    expect(mocks.prepare).not.toHaveBeenCalled();
   });
 });

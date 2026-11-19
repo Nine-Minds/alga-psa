@@ -57,7 +57,7 @@ export function isCoManagedPaymentEvent(event: Stripe.Event, priceId?: string): 
     return object.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND ||
       Boolean(priceId && object.items?.data?.some((item: any) => item.price?.id === priceId));
   }
-  if (event.type === 'checkout.session.completed') {
+  if (['checkout.session.completed','checkout.session.expired','checkout.session.async_payment_failed','checkout.session.async_payment_succeeded'].includes(event.type)) {
     return object.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND;
   }
   if (INVOICE_EVENTS.has(event.type)) {
@@ -89,12 +89,21 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
       claims: (event) => isCoManagedPaymentEvent(event, deps.priceId()),
       // Configuration and kill switch only: the event itself proves the tenant participates, and
       // an existing pool keeps being reconciled even if the release flag is later turned off.
-      admits: async () => Boolean(deps.priceId()) && killSwitchOpen(),
+      admits: async ({ event }) => {
+        const object = event.data.object as any;
+        const metadata = object.subscription_details?.metadata ?? object.parent?.subscription_details?.metadata ?? object.metadata;
+        return Boolean(deps.priceId()) && (killSwitchOpen() || Boolean(metadata?.seat_trial_id));
+      },
       // Never let a co-managed event fall through to the MSP's own seat handlers.
       consumeWhenClosed: true,
       async handle({ event, tenantId, knex }) {
         const object = event.data.object as any;
-        if (event.type === 'checkout.session.completed') {
+        if (['checkout.session.expired', 'checkout.session.async_payment_failed'].includes(event.type)) {
+          if (object.metadata?.seat_trial_id && object.metadata?.tenant_id === tenantId && object.metadata?.operation_id) {
+            const { releaseTrialPurchase } = await import('../co-managed/seatTrialConversion');
+            await releaseTrialPurchase(knex, tenantId, object.metadata.operation_id, 'failed', object.metadata.seat_trial_id);
+          }
+        } else if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
           await deps.finalizeCheckout(object as Stripe.Checkout.Session, tenantId, knex);
         } else if (SUBSCRIPTION_EVENTS.has(event.type)) {
           await deps.sync(tenantId, object.id, knex);

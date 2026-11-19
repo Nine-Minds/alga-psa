@@ -18,5 +18,24 @@ Related plans: `2026-11-17-co-managed-ee-boundary`, `2026-11-18-co-managed-first
 
 - On this branch the co-managed Seat arrangement and invitation owners are in `packages/co-managed/src/seatArrangement.ts` and `seatInvitation.ts`; the allocation pool reader and reservation owner are in `packages/licensing/src/lib/co-managed-capacity.ts` and `co-managed-reservation.ts`.
 - `co_managed_allocations` is a shared CE/EE ledger. A shared `funding_source` column with default `paid` is required so the shared pool reader can exclude EE pilot capacity without making CE behavior depend on pilot tables. The pilot ledger is EE-only.
-- The first-session auth callback is not sufficient for activation because MFA and custom-host flows converge later; the lifecycle primitive is being shaped as an authenticated Seat admission operation and must still be wired into a universal first Seat request boundary before launch.
+- The first tracked browser request through `packages/auth/src/lib/getSession.ts` activates the bound technician after authentication. API credentials can use an existing grant. The Seat resolver and write gate independently check the same tenant-scoped access view at decision time.
 - Local dev Postgres is `alga-psa-local-test-postgres-1` on host port 5474. Its migration ledger is from a different checkout and fails Knex's missing-file validation; do not use it for a migration result. The EE runner first defaulted to port 5432 and then hit this ledger mismatch on 5474.
+
+
+## Behavioral verification
+
+The application server stays outside this test run. The authentication test verifies a password through the normal sign-in owner, issues the tracked session and checks the production session reader with a decoded cookie fixture. Database tests use the production invitation, authorization and ticket-journal code. The integration suite uses the merged CE/EE migrations in an isolated PostgreSQL database. Stripe integration tests talk to the emulator over its vendor HTTP API.
+
+| Plan case | Main evidence |
+| --- | --- |
+| T001 | `coManagedSeatTrial.db.test.ts` races sponsor claims, exercises the invite action with a failed email transport, replaces accepted and unaccepted invitations and verifies tenant isolation. |
+| T002 | The same suite exercises missing and zero entitlement rows, a one-user sponsor, failed and successful password authentication, two first sessions and a database timezone with an intervening DST change. `getSession.test.ts` exercises failed and successful session admission. |
+| T003 | The trial DB suite exercises the ticket record authorizer for reads and updates, base lapse and restoration, deadline, staff history, and termination. |
+| T004 | The trial DB suite exercises paid Seat and Workspace allocations, resize, commercial lapse and competing reservations under the sponsor pool lock. |
+| T005 | `coManagedSeatPurchaseResume.emulator.integration.test.ts` exercises a stale quote, failed payment, cancellation, expired checkout, a paid webhook after expiry and restart, and conversion using an existing paid subscription. |
+| T006 | EE discovery, component and action tests plus the server route and CE tests exercise account-only discovery, client scope, direct action denial and local date/price rendering. The Stripe suite finishes an existing conversion with both capabilities forced off. |
+| T007 | The trial DB suite writes real ticket-journal mutations in both orders, with unrelated tickets and views. The emulator suite replays paid events and verifies the single conversion receipt and original author. |
+
+## Release
+
+The existing co-managed rollout and configured recurring Stripe price control intake. Confirm the production amount and currency before enabling the offer. Current pilots use their stored deadlines while intake is closed. Install the funding-aware readers before admitting pilots and keep them deployed while any trial-funded allocation exists.

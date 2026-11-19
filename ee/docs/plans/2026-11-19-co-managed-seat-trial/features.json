@@ -2,61 +2,61 @@
   {
     "id": "F001",
     "description": "Expose one optional Seat pilot per eligible hosted sponsor, independently of signup.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "description": "Bind one pilot to one client, allocation and technician under the normal setup permissions.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "Separate pilot funding from purchased quantity, paid usage and base seats.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "Resume pending setup, resend or replace an unused invitation, and invalidate its old binding.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "description": "Start the immutable fifteen-day interval on first successful technician sign-in.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "Apply base subscription availability and the pilot deadline to every pilot access decision.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "description": "Preserve scoped identity, MSP work and history through expiry, early end and recovery.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "description": "Show terms, dates and actionable status in the overview and client setup.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "description": "Convert the same assignment explicitly with available paid capacity or confirmed checkout.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
     "description": "Reconcile failed, concurrent and retried conversion operations without duplicate charges or lost capacity.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
     "description": "Capture sign-in, shared ticket activity and conversion once per pilot milestone.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
     "description": "Keep CE and appliance paths inert and honor deployment gates while servicing existing pilots.",
-    "implemented": false
+    "implemented": true
   }
 ]

@@ -138,6 +138,7 @@ beforeAll(async () => {
     await previousProductMigration.up(target);
     for (const migration of stripeMigrations) await migration.up(target);
     await subscriptionItemMigration.up(target);
+    await target.schema.alterTable('stripe_subscriptions', t => t.timestamp('trial_end', { useTz: true }));
     // StripeService writes cancel_at, which no checked-in migration creates (production schema drift).
     await target.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS cancel_at timestamptz');
   }
@@ -145,6 +146,9 @@ beforeAll(async () => {
   await purchaseMigration.up(db);
   // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
   await allocationKindMigration.up(db);
+  await require('../../../migrations/20261119100000_add_co_managed_allocation_funding_source.cjs').up(db);
+
+  await require('../../../migrations/20261119100200_co_managed_funding_views.cjs').up(db);
 
   host = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
   const started = await host.start();

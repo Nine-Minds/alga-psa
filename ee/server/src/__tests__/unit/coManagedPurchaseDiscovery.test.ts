@@ -11,7 +11,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, getLicenseStateRow: mocks.license }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async (tenant: string) => ({ knex: { tenant } }),
-  tenantDb: (_knex: unknown, tenant: string) => ({ table: (name: string) => { mocks.tenantDbArgs.push(`${tenant}:${name}`); return { first: mocks.tenantRow }; } }),
+  tenantDb: (_knex: unknown, tenant: string) => ({ table: (name: string) => { mocks.tenantDbArgs.push(`${tenant}:${name}`); return { first: name === 'co_managed_seat_trials' ? async () => undefined : mocks.tenantRow }; } }),
 }));
 
 const principal = () => mocks.user as { user_type: string; tenant?: string };
@@ -65,6 +65,7 @@ describe('co-managed first-purchase discovery (commercial eligibility)', () => {
   it('the sidebar action answers with the same decision as a bare boolean (no billing data)', async () => {
     expect(await getCoManagedPurchaseDiscoveryAction()).toBe(true);
     mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'manual' });
+    mocks.permission.mockImplementation(async (_user, resource) => resource === 'account_management');
     expect(await getCoManagedPurchaseDiscoveryAction()).toBe(false);
   });
 });
