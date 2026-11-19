@@ -9,8 +9,8 @@ async function admitSeatTrialAccess(tenant: string, userId: string, db: Knex | u
   if (!member) return true;
   const binding = home.table('co_managed_seat_assignments as a').where({ 'a.user_id': userId, 'a.state': 'active' });
   home.tenantJoin(binding, 'co_managed_seat_arrangements as r', 'r.arrangement_id', 'a.arrangement_id');
-  home.tenantJoin(binding, 'co_managed_allocations as f', 'f.allocation_id', 'r.allocation_id');
-  const subject = await binding.where('f.funding_source', 'seat_trial').first('a.assignment_id');
+  home.tenantJoin(binding, 'co_managed_trial_funding as f', 'f.allocation_id', 'r.allocation_id');
+  const subject = await binding.first('a.assignment_id');
   if (!subject) return true;
   // Active sessions consult the same current-time grant as the record reader. Only a
   // pending pilot needs to serialize a transition with invitation and capacity writers.

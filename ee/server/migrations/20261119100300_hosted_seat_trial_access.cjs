@@ -2,6 +2,9 @@ exports.up = async function (knex) {
   await knex.raw('ALTER TABLE co_managed_seat_trials ADD COLUMN IF NOT EXISTS conversion_quote jsonb');
   await knex.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS cancel_at timestamptz');
   await knex.raw('ALTER TABLE stripe_subscriptions ADD COLUMN IF NOT EXISTS trial_end timestamptz');
+  await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_funding AS
+    SELECT tenant, allocation_id FROM co_managed_allocations WHERE funding_source = 'seat_trial'
+    UNION SELECT tenant, allocation_id FROM co_managed_seat_trials WHERE state <> 'paid'`);
   // Match the canonical base license selection: a paid subscription takes precedence over a
   // remaining trial row. Legacy trial mirrors stored the trial cutoff in current_period_end.
   await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_sponsors AS
@@ -31,6 +34,8 @@ exports.down = async function (knex) {
   if (await knex('co_managed_allocations').where('funding_source', 'seat_trial').first()) {
     throw new Error('Trial-funded allocations require the hosted admission views');
   }
+  await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_funding AS
+    SELECT tenant, allocation_id FROM co_managed_allocations WHERE funding_source = 'seat_trial'`);
   await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_access AS SELECT NULL::uuid AS tenant,
     NULL::uuid AS allocation_id, NULL::uuid AS assignment_id WHERE false`);
   await knex.raw(`CREATE OR REPLACE VIEW co_managed_trial_sponsors AS SELECT NULL::uuid AS tenant,

@@ -13,6 +13,7 @@ import { usePaidSeatForTrial } from '../../../../ee/server/src/lib/co-managed/se
 import { resolveAuthorizationSubject } from '@alga-psa/authorization/subject';
 import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 import { coManagedSeatAuthority } from '@alga-psa/co-managed/seatAuthority';
+import { resolveCommentAudienceReader } from '../../../../shared/lib/commentAudience';
 import { writeTicketActivity } from '../../../../shared/lib/ticketActivity/writeTicketActivity';
 import { createCloseRulesFixture, insertTicket } from './helpers/closeRulesFixture';
 import { createClient, createUser, createTenant, ensureContactWithEmail } from '../../../test-utils/testDataFactory';
@@ -118,6 +119,8 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     await db('sessions').insert({ tenant, session_id: sessionId, user_id: accepted.user_id, created_at: db.fn.now(),
       expires_at: new Date(Date.now() + 86400000), login_method: 'credentials' });
     expect(await admitSeatTrialSession(tenant, accepted.user_id, sessionId, db)).toBe(true);
+    const reader = () => resolveCommentAudienceReader(db, tenant, { userId: accepted.user_id, userType: 'internal' });
+    expect(await reader()).toMatchObject({ kind: 'seat', clientId: fixture.clientId });
     const parties = technicianFirst ? [accepted.user_id, staff] : [staff, accepted.user_id];
     const ticket = await insertTicket(db, fixture);
     const other = await insertTicket(db, fixture);
@@ -153,6 +156,7 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
       activated_at: db.raw("statement_timestamp() - interval '360 hours'"), deadline_at: db.raw('statement_timestamp()'),
     });
     expect(await scope()).toEqual({ scope: null });
+    expect(await reader()).toBeNull();
     await expect(access(ticket, 'read')).rejects.toThrow();
     await expect(access(ticket, 'update')).rejects.toThrow();
     await expect(access(ticket, 'read', staff)).resolves.toMatchObject({ ticket_id: ticket });

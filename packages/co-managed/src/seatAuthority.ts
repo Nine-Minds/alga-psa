@@ -285,11 +285,8 @@ function seatFactsQuery(knex: Knex | Knex.Transaction, subject: { tenant: string
     return query;
   };
   const arrangements = ofUser(db.table('co_managed_seat_arrangements as r'), 'r.arrangement_id', false);
-  db.tenantJoin(arrangements, 'co_managed_allocations as funding', 'funding.allocation_id', 'r.allocation_id');
-  arrangements.where(query => query.where('funding.funding_source', 'paid').orWhereExists(
-    db.table('co_managed_trial_access as grant').select(knex.raw('1'))
-      .where('grant.allocation_id', knex.ref('r.allocation_id')).where('grant.assignment_id', knex.ref('a.assignment_id'))
-  ));
+  arrangements.whereNotExists(db.table('co_managed_unavailable_trial_assignments as blocked').select(knex.raw('1'))
+    .where('blocked.assignment_id', knex.ref('a.assignment_id')));
   return knex.queryBuilder().select(knex.raw(
     `jsonb_build_object('assignments', (?), 'arrangements', (?), 'boards', (?), 'projects', (?))`,
     [
