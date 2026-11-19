@@ -1,21 +1,21 @@
 /**
  * Resolve the public base URL for inbound email webhook endpoints.
  *
- * APPLICATION_URL is the canonical variable in worker/background contexts
- * (see ee/temporal-workflows startupValidation); NEXTAUTH_URL covers the Next
- * server. Never falls back to localhost: Microsoft Graph rejects non-HTTPS
- * callback URLs, so a wrong-but-public default is safer than a dead one.
+ * Appliances supply a public callback origin separately from the worker's
+ * internal APPLICATION_URL. Other deployments can use their application URL.
  */
 export function getEmailWebhookBaseUrl(): string {
-  const envApplicationUrl = process.env.APPLICATION_URL
-    || process.env.NEXTAUTH_URL
-    || process.env.NEXT_PUBLIC_BASE_URL;
+  const envApplicationUrl = process.env.NGROK_URL
+    || process.env.PUBLIC_WEBHOOK_BASE_URL
+    || process.env.APPLICATION_URL
+    || process.env.NEXT_PUBLIC_BASE_URL
+    || process.env.NEXTAUTH_URL;
 
   if (!envApplicationUrl) {
     return 'https://algapsa.com';
   }
 
-  const withScheme = envApplicationUrl.startsWith('http://localhost') || envApplicationUrl.startsWith('https://')
+  const withScheme = /^https?:\/\//i.test(envApplicationUrl)
     ? envApplicationUrl
     : `https://${envApplicationUrl}`;
 
@@ -25,6 +25,6 @@ export function getEmailWebhookBaseUrl(): string {
   // polling. Only normalize the host we own — a self-hosted www. domain may
   // legitimately be canonical.
   return withScheme
-    .replace(/\/$/, '')
+    .replace(/\/+$/, '')
     .replace(/^(https:\/\/)www\.algapsa\.com\b/i, '$1algapsa.com');
 }

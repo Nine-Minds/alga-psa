@@ -44,6 +44,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     // enter polling mode ('skipped' instead of 'recreated'). setup.ts guards
     // them per test now, but pin here too — this file's assertions depend on
     // the resolved URL being public HTTPS.
+    delete process.env.PUBLIC_WEBHOOK_BASE_URL;
     delete process.env.APPLICATION_URL;
     delete process.env.NEXTAUTH_URL;
     delete process.env.NEXT_PUBLIC_BASE_URL;
@@ -204,6 +205,8 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
   });
 
   it('recreates the subscription when Graph rejects renewal with an invalid parameter', async () => {
+    process.env.APPLICATION_URL = 'http://alga-core.msp.svc.cluster.local:3000';
+    process.env.PUBLIC_WEBHOOK_BASE_URL = 'https://psa.customer.example';
     provider.webhook_expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     mocks.adapter.renewWebhookSubscription.mockRejectedValueOnce({
       status: 400,
@@ -220,7 +223,9 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       lookAheadMinutes: 60,
     });
 
-    expect(mocks.adapter.initializeWebhook).toHaveBeenCalled();
+    expect(mocks.adapter.initializeWebhook).toHaveBeenCalledWith(
+      'https://psa.customer.example/api/email/webhooks/microsoft',
+    );
     expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
   });
 
