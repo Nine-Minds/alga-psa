@@ -45,16 +45,23 @@ const findPageNode = (workspace: DesignerWorkspaceSnapshot): WorkspaceNode => {
 };
 
 /** What the palette's "Page Break" block adds, and where. */
-const addPageBreak = (workspace: DesignerWorkspaceSnapshot, id: string, index: number) => {
-  const page = findPageNode(workspace);
+const addPageBreakTo = (
+  workspace: DesignerWorkspaceSnapshot,
+  parent: WorkspaceNode,
+  id: string,
+  index: number,
+) => {
   workspace.nodesById[id] = {
     id,
     type: 'page-break',
     props: { name: 'Page Break', style: { breakAfter: 'page' }, metadata: {} },
     children: [],
   };
-  page.children.splice(index, 0, id);
+  parent.children.splice(index, 0, id);
 };
+
+const addPageBreak = (workspace: DesignerWorkspaceSnapshot, id: string, index: number) =>
+  addPageBreakTo(workspace, findPageNode(workspace), id, index);
 
 /** What the inspector's "Start on a new page" toggle writes. */
 const startOnNewPage = (workspace: DesignerWorkspaceSnapshot, nodeId: string) => {
@@ -100,6 +107,25 @@ const quoteModel = {
   total_amount: 500000,
   items: [{ description: 'Managed endpoints', quantity: 10, unit_price: 50000, unitPrice: 50000, total_price: 500000, total: 500000 }],
   line_items: [{ description: 'Managed endpoints', quantity: 10, unit_price: 50000, unitPrice: 50000, total_price: 500000, total: 500000 }],
+};
+
+/** A quote spanning two sites, as the by-location layout expects. */
+const byLocationModel = {
+  ...quoteModel,
+  groups_by_location: [
+    {
+      name: 'Emerald City HQ',
+      address: '1 Yellow Brick Road',
+      subtotal: 500000,
+      items: [{ description: 'Managed endpoints', quantity: 10, unit_price: 50000, total_price: 500000 }],
+    },
+    {
+      name: 'Winkie Country Depot',
+      address: '2 West Gate',
+      subtotal: 250000,
+      items: [{ description: 'Winkie Country patching', quantity: 5, unit_price: 50000, total_price: 250000 }],
+    },
+  ],
 };
 
 const invoiceModel = {
@@ -158,6 +184,31 @@ describe('forced page breaks in the printed document', () => {
     const pages = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), invoiceModel);
     expect(pages).toHaveLength(2);
     expect(pages[1]).toMatch(/Managed endpoints/);
+  }, 120_000);
+
+  it('opens a page from a break dropped inside a block, not only at page level', async () => {
+    // The author's own layout (Billing -> Quotes, "Copy of By Location"): the
+    // Page Break block sits inside the repeated location band, between its
+    // header and its table — several levels below the page. Each band must
+    // therefore take its table onto a fresh page.
+    const source = getStandardQuoteTemplateAstByCode('standard-quote-by-location')!;
+    const workspace = importTemplateAstToWorkspace(JSON.parse(JSON.stringify(source)) as TemplateAst);
+
+    const bands = workspace.nodesById['location-bands'];
+    expect(bands, 'the by-location quote repeats a location band').toBeTruthy();
+
+    const withoutBreak = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), byLocationModel);
+    expect(withoutBreak).toHaveLength(1);
+
+    addPageBreakTo(workspace, bands, 'band-break', 1);
+    const pages = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), byLocationModel);
+
+    // One page per band header, then the band's own table overleaf.
+    expect(pages).toHaveLength(3);
+    expect(pages[0]).toMatch(/Emerald City/);
+    expect(pages[0]).not.toMatch(/Managed endpoints/);
+    expect(pages[1]).toMatch(/Managed endpoints/);
+    expect(pages[2]).toMatch(/Winkie Country patching/);
   }, 120_000);
 
   it('paginates an invoice on a forced break and adds no page for a trailing one', async () => {
