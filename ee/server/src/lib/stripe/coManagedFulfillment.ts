@@ -8,6 +8,8 @@
  * Delivery to the issuer goes through an outbox: an issuer outage leaves the fulfillment pending
  * and `deliverPendingFulfillments` retries it. Nothing here writes to Stripe, so a retry can never
  * charge again, and only verified payment ever produces a count above zero.
+ * The purchase ledger and outbox are platform records for appliance entitlements. The storefront
+ * uses master-tenant authorization and reconciliation verifies Stripe ownership and payment.
  */
 import type { Knex } from 'knex';
 import type Stripe from 'stripe';
@@ -77,6 +79,7 @@ export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'cat
     }
     return existing; // pinned terms stay as first recorded
   }
+  // write-admission: exempt — the authenticated storefront records a platform checkout binding for an appliance entitlement.
   const [row] = await deps.db(PURCHASES).insert({
     ...(input.purchaseId ? { purchase_id: input.purchaseId.toLowerCase() } : {}),
     stripe_account: offer.scope.stripeAccount, livemode: offer.scope.livemode, entitlement_id: input.entitlementId,
@@ -134,6 +137,7 @@ export async function reconcilePortalPurchase(deps: FulfillmentDeps, purchaseId:
     await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [purchase.entitlement_id]);
     if (!purchase.stripe_subscription_id) {
       // Bind the subscription once; a different subscription for the same purchase is foreign.
+      // write-admission: exempt — Stripe-verified subscription binding updates the platform purchase ledger under the entitlement lock.
       await trx(PURCHASES).where({ purchase_id: purchase.purchase_id }).whereNull('stripe_subscription_id')
         .update({ stripe_subscription_id: subscription.id, state: 'paid', updated_at: trx.fn.now() });
     }
@@ -150,6 +154,7 @@ export async function reconcilePortalPurchase(deps: FulfillmentDeps, purchaseId:
     if (decision.kind === 'stale') return { kind: 'stale' as const };
     if (decision.kind === 'duplicate') return { kind: 'duplicate' as const, fulfillment: latest! };
     const reused = await trx(FULFILLMENTS).where({ idempotency_key: base }).first('fulfillment_id');
+    // write-admission: exempt — Stripe reconciliation queues an appliance entitlement change in the platform outbox under the entitlement lock.
     const [row] = await trx(FULFILLMENTS).insert({
       purchase_id: purchase.purchase_id, entitlement_id: purchase.entitlement_id, stripe_subscription_id: subscription.id, sequence,
       paid_period_end: paidPeriodEnd, co_managed_seats: seats, idempotency_key: reused ? `${base}:s${sequence}` : base,
@@ -230,6 +235,7 @@ export async function deliverPendingFulfillments(deps: Pick<FulfillmentDeps, 'db
   const seen = new Set<string>();
   for (const row of pending) {
     if (seen.has(row.entitlement_id)) {
+      // write-admission: exempt — the platform outbox retires an older delivery after selecting a newer one for the appliance entitlement.
       await deps.db(FULFILLMENTS).where({ fulfillment_id: row.fulfillment_id }).update({ state: 'superseded' });
       totals.superseded += 1;
       continue;
@@ -244,10 +250,12 @@ export async function deliverPendingFulfillments(deps: Pick<FulfillmentDeps, 'db
     try {
       if (problems.length) throw new Error(`Invalid fulfillment: ${problems.join('; ')}`);
       const ack = await deps.deliver(request);
+      // write-admission: exempt — record the licensing issuer's acknowledgement in the platform outbox.
       await deps.db(FULFILLMENTS).where({ fulfillment_id: row.fulfillment_id })
         .update({ state: ack.result === 'stale' ? 'superseded' : 'delivered', delivered_at: deps.db.fn.now(), attempts: row.attempts + 1, last_error: null });
       totals[ack.result === 'stale' ? 'superseded' : 'delivered'] += 1;
     } catch (error) {
+      // write-admission: exempt — record a failed attempt so the platform outbox can retry delivery.
       await deps.db(FULFILLMENTS).where({ fulfillment_id: row.fulfillment_id })
         .update({ attempts: row.attempts + 1, last_error: (error instanceof Error ? error.message : String(error)).slice(0, 500) });
       totals.failed += 1;
