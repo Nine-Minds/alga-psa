@@ -4000,9 +4000,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_users_bulk_create",
     "method": "post",
     "path": "/api/v1/users/bulk/create",
-    "displayName": "Bulk create users (route currently mapped to single create)",
-    "summary": "Bulk create users (route currently mapped to single create)",
-    "description": "Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.",
+    "displayName": "Bulk create users",
+    "summary": "Bulk create users",
+    "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. dry_run validates every user and creates nothing.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -4023,66 +4023,38 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "password": {
-          "type": "string",
-          "minLength": 8
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "users": {
           "type": "array",
           "items": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/AccessCreateUserBodyV1"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "send_welcome_email": {
+              "type": "boolean",
+              "description": "Accepted but inert: welcome email delivery is tracked separately."
+            },
+            "force_password_reset": {
+              "type": "boolean",
+              "description": "Accepted but inert: forced password reset is tracked separately."
+            },
+            "skip_invalid": {
+              "type": "boolean",
+              "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
+            },
+            "dry_run": {
+              "type": "boolean",
+              "description": "Validates every user and creates nothing."
+            }
+          }
         }
       },
       "required": [
-        "username",
-        "email",
-        "password",
-        "role_ids"
+        "users"
       ]
     },
     "responseBodySchema": {
@@ -4117,9 +4089,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_users_bulk_deactivate",
     "method": "put",
     "path": "/api/v1/users/bulk/deactivate",
-    "displayName": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+    "displayName": "Bulk deactivate users",
+    "summary": "Bulk deactivate users",
+    "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -4140,57 +4112,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "user_ids": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "deactivate": {
+          "type": "boolean",
+          "description": "Default true; false reactivates the listed users (subject to seat limits)."
         }
-      }
+      },
+      "required": [
+        "user_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",

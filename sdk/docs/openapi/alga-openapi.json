@@ -2129,6 +2129,64 @@
           }
         }
       },
+      "AccessBulkCreateUsersBodyV1": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessCreateUserBodyV1"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "send_welcome_email": {
+                "type": "boolean",
+                "description": "Accepted but inert: welcome email delivery is tracked separately."
+              },
+              "force_password_reset": {
+                "type": "boolean",
+                "description": "Accepted but inert: forced password reset is tracked separately."
+              },
+              "skip_invalid": {
+                "type": "boolean",
+                "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
+              },
+              "dry_run": {
+                "type": "boolean",
+                "description": "Validates every user and creates nothing."
+              }
+            }
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
+      "AccessBulkDeactivateUsersBodyV1": {
+        "type": "object",
+        "properties": {
+          "user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "deactivate": {
+            "type": "boolean",
+            "description": "Default true; false reactivates the listed users (subject to seat limits)."
+          }
+        },
+        "required": [
+          "user_ids"
+        ]
+      },
       "AccessChangePasswordBodyV1": {
         "type": "object",
         "properties": {
@@ -39979,8 +40037,8 @@
     },
     "/api/v1/users/bulk/create": {
       "post": {
-        "summary": "Bulk create users (route currently mapped to single create)",
-        "description": "Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.",
+        "summary": "Bulk create users",
+        "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. dry_run validates every user and creates nothing.",
         "tags": [
           "Access Control & Users v1"
         ],
@@ -39995,8 +40053,7 @@
           "x-rbac-action": "create",
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or equivalent controller-specific auth path",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-controller-handler": "bulkCreateUsersRouteMismatch",
-          "x-route-controller-mismatch": true
+          "x-controller-handler": "bulkCreateUsers"
         },
         "x-alga-products": [
           "psa",
@@ -40007,14 +40064,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AccessCreateUserBodyV1"
+                "$ref": "#/components/schemas/AccessBulkCreateUsersBodyV1"
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Operation succeeded.",
+          "201": {
+            "description": "Batch processed; body reports total_processed, successful, failed, per-index errors and the created users.",
             "content": {
               "application/json": {
                 "schema": {
@@ -40068,8 +40125,8 @@
     },
     "/api/v1/users/bulk/deactivate": {
       "put": {
-        "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-        "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+        "summary": "Bulk deactivate users",
+        "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
         "tags": [
           "Access Control & Users v1"
         ],
@@ -40084,8 +40141,7 @@
           "x-rbac-action": "update",
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or equivalent controller-specific auth path",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-controller-handler": "bulkDeactivateUsersRouteMismatch",
-          "x-route-controller-mismatch": true
+          "x-controller-handler": "bulkDeactivateUsers"
         },
         "x-alga-products": [
           "psa",
@@ -40096,7 +40152,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AccessUpdateUserBodyV1"
+                "$ref": "#/components/schemas/AccessBulkDeactivateUsersBodyV1"
               }
             }
           }
@@ -40113,7 +40169,7 @@
             }
           },
           "400": {
-            "description": "Current route fails UUID extraction because ApiBaseController.update() treats path segment \"bulk\" as {id}.",
+            "description": "Validation failed (payload/query/path parsing).",
             "content": {
               "application/json": {
                 "schema": {
