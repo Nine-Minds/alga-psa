@@ -8,7 +8,7 @@ import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getTenantPortalBaseUrl, resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
+import { createClientScopeContext, type ClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { isValidEmail } from '@alga-psa/core';
 import { assertContactIsNotSharedMailbox, isSharedMailboxContact } from '@alga-psa/shared/models/contactModel';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
@@ -807,7 +807,7 @@ async function sendPortalInvitationForContact(
  * and the count the confirmation dialog shows come from the same rule.
  */
 async function resolveEligibleContactIdsForInvitation(
-  user: IUserWithRoles,
+  scope: ClientScopeContext,
   tenant: string,
   knex: Knex,
   clientId: string | null
@@ -815,7 +815,7 @@ async function resolveEligibleContactIdsForInvitation(
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
     const query = scopedDb.table('contacts as c');
-    (await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'c')).apply(query);
+    (await scope.narrowing('contact', 'c')).apply(query);
     scopedDb.tenantJoin(query, 'users as u', 'u.contact_id', 'c.contact_name_id', {
       type: 'left',
       on(join) {
@@ -873,9 +873,17 @@ export const sendBulkPortalInvitations = withAuth(async (
       return refusal('Select at least one contact to invite', 'NO_TARGETS_SELECTED');
     }
 
+    // Bundle narrowing is resolved once for the batch and applies to every way
+    // targets are chosen: an explicit list of ids is no wider a door than
+    // "invite all eligible".
+    const scope = await createClientScopeContext(knex, tenant, user);
+
     // A client-scoped batch is authorized once against that client; a free-form
     // list of ids is authorized contact by contact below.
-    if (clientId && !await canManageClientPortalTargetClient(user, tenant, knex, 'invite', clientId)) {
+    if (clientId && !(
+      await canManageClientPortalTargetClient(user, tenant, knex, 'invite', clientId)
+      && await scope.permits('client', clientId)
+    )) {
       return refusal('Permission denied: Cannot invite users', 'PERMISSION_DENIED_INVITE');
     }
 
@@ -890,13 +898,16 @@ export const sendBulkPortalInvitations = withAuth(async (
     let targetContactIds: string[];
 
     if (requestedContactIds.length > 0) {
-      const existingQuery = tenantDb(knex, tenant).table('contacts')
-        .whereIn('contact_name_id', requestedContactIds)
+      const existingQuery = tenantDb(knex, tenant).table('contacts as c')
+        .whereIn('c.contact_name_id', requestedContactIds)
         .modify((qb: Knex.QueryBuilder) => {
           // An id that belongs to another client is not this batch's to invite.
-          if (clientId) qb.andWhere('client_id', clientId);
+          if (clientId) qb.andWhere('c.client_id', clientId);
         })
-        .select('contact_name_id');
+        .select('c.contact_name_id');
+      // A contact the caller's bundle hides does not exist for this batch,
+      // exactly as it does not exist for their contact list.
+      (await scope.narrowing('contact', 'c')).apply(existingQuery);
       const resolvable = new Set(
         ((await existingQuery) as Array<{ contact_name_id: string }>).map((row) => row.contact_name_id)
       );
@@ -910,7 +921,7 @@ export const sendBulkPortalInvitations = withAuth(async (
         });
       }
     } else {
-      targetContactIds = await resolveEligibleContactIdsForInvitation(user, tenant, knex, clientId);
+      targetContactIds = await resolveEligibleContactIdsForInvitation(scope, tenant, knex, clientId);
       if (targetContactIds.length > BULK_PORTAL_INVITATION_LIMIT) {
         return refusal(
           `Too many eligible contacts (${targetContactIds.length}). Invite at most ${BULK_PORTAL_INVITATION_LIMIT} contacts at a time.`,

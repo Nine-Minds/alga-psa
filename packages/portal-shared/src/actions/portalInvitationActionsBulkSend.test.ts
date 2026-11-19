@@ -22,12 +22,17 @@ type ContactRow = {
 const state: {
   contacts: ContactRow[];
   portalUserContactIds: Set<string>;
-} = { contacts: [], portalUserContactIds: new Set() };
+  /** `null` means no bundle narrows this caller; otherwise the contacts they may read. */
+  scopedContactIds: string[] | null;
+  /** `null` means every client is in scope. */
+  scopedClientIds: string[] | null;
+} = { contacts: [], portalUserContactIds: new Set(), scopedContactIds: null, scopedClientIds: null };
 
 function contactsBuilder() {
   let selectedIds: string[] | null = null;
   let filterClientId: string | undefined;
   let singleId: string | undefined;
+  let scopeIds: string[] | null = null;
 
   const builder: any = {
     where(filters: Record<string, unknown>) {
@@ -42,6 +47,8 @@ function contactsBuilder() {
     },
     andWhere(column: string, value: unknown) {
       if (column === 'client_id' || column === 'c.client_id') filterClientId = value as string;
+      // Stands in for the compiled bundle predicate the real narrowing ANDs on.
+      if (column === 'scope.visible_contacts') scopeIds = value as string[];
       return builder;
     },
     whereNull() {
@@ -65,7 +72,8 @@ function contactsBuilder() {
         .filter(
           (contact) =>
             (!selectedIds || selectedIds.includes(contact.contact_name_id)) &&
-            (filterClientId === undefined || contact.client_id === filterClientId),
+            (filterClientId === undefined || contact.client_id === filterClientId) &&
+            (scopeIds === null || scopeIds.includes(contact.contact_name_id)),
         )
         .map((contact) => ({ contact_name_id: contact.contact_name_id }));
       return Promise.resolve(rows).then(resolve, reject);
@@ -142,8 +150,15 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
   createClientScopeContext: async () => ({
-    narrowing: async () => ({ narrowed: false, apply: (query: unknown) => query }),
-    permits: async () => true,
+    narrowing: async () => ({
+      narrowed: state.scopedContactIds !== null,
+      apply: (query: any) => {
+        if (state.scopedContactIds !== null) query.andWhere('scope.visible_contacts', state.scopedContactIds);
+        return query;
+      },
+    }),
+    permits: async (resource: string, id: string) =>
+      resource !== 'client' || state.scopedClientIds === null || state.scopedClientIds.includes(id),
   }),
 }));
 
@@ -195,6 +210,8 @@ describe('sendBulkPortalInvitations', () => {
       { contact_name_id: 'contact-send-fails', client_id: 'client-a', full_name: 'Send Fails', email: 'boom@acme.test' },
     ];
     state.portalUserContactIds = new Set(['contact-has-user']);
+    state.scopedContactIds = null;
+    state.scopedClientIds = null;
   });
 
   it('reports a per-contact status for a mixed batch and never aborts on one failure', async () => {
@@ -279,6 +296,32 @@ describe('sendBulkPortalInvitations', () => {
     expect(result.total).toBe(4);
     expect(result.sent + result.skipped + result.failed).toBe(4);
     expect(result.sent).toBe(2);
+  });
+
+  it('applies bundle narrowing to an explicit list of ids, not only to "all eligible"', async () => {
+    // A bundle-narrowed MSP user names four ids but may only read one of them.
+    state.scopedContactIds = ['contact-ok'];
+
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+    const result = await sendBulkPortalInvitations({
+      contactIds: ['contact-ok', 'contact-has-user', 'contact-bad-email', 'contact-send-fails'],
+    });
+
+    expect(result.sent).toBe(1);
+    expect(result.results.filter((item) => item.errorCode === 'CONTACT_NOT_FOUND')).toHaveLength(3);
+    expect(sendPortalInvitationEmailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a client-scoped batch for a client outside the caller\'s scope', async () => {
+    state.scopedClientIds = ['client-b'];
+
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+    const result = await sendBulkPortalInvitations({ clientId: 'client-a', allEligible: true });
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PERMISSION_DENIED_INVITE', total: 0 });
+    expect(sendPortalInvitationEmailMock).not.toHaveBeenCalled();
   });
 
   it('refuses an empty request rather than inviting the whole tenant', async () => {
