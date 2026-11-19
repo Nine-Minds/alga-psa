@@ -143,6 +143,54 @@ describe('paymentApplier', () => {
     );
   });
 
+  // alga-2026-0003364: reversing a synced payment "in AlgaPSA only" tombstones
+  // its mapping, so the live lookup finds nothing and the payment looks brand
+  // new on the next cycle. Re-applying it would hand back exactly the money the
+  // operator just took away.
+  it('a payment reversed in AlgaPSA only is never re-applied by a later sync', async () => {
+    const ledger = makeFakeLedger(null, [
+      {
+        id: 'pmap-1',
+        alga_entity_id: 'pay-1',
+        external_entity_id: 'pay-ext-001',
+        sync_status: 'reversed',
+        deleted_at: '2026-11-19T00:00:00.000Z',
+        metadata: {
+          locally_reversed: true,
+          locally_reversed_by: 'user-1',
+          locally_reversed_at: '2026-11-19T00:00:00.000Z'
+        }
+      }
+    ]);
+    const exceptions = makeFakeExceptions();
+    const stats = emptyCycleStats();
+
+    await applyExternalPaymentChange(
+      {
+        knex: makeFakeKnex(),
+        tenantId: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'r1',
+        ledger: ledger as any,
+        exceptions,
+        stats
+      },
+      makeInvoiceChange()
+    );
+
+    expect(recordExternalPayment).not.toHaveBeenCalled();
+    expect(ledger.insert).not.toHaveBeenCalled();
+    expect(stats.paymentsApplied).toBe(0);
+    expect(stats.paymentsSkipped).toBe(1);
+    // Filed, not silent: the two sides disagree on purpose and that is visible.
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityId: 'pay-ext-001',
+        context: expect.objectContaining({ reason: 'locally_reversed', alga_payment_id: 'pay-1' })
+      })
+    );
+  });
+
   it('idempotent: same sync token on existing mapping → skip', async () => {
     const existing = {
       id: 'pmap-1',
