@@ -21,6 +21,8 @@ interface BulkPortalInvitationDialogProps {
   isOpen: boolean;
   clientId: string;
   target: BulkPortalInvitationTarget;
+  /** The list's status filter, so a ticked inactive contact is previewed as itself. */
+  statusFilter: 'active' | 'inactive' | 'all';
   /** Rows on screen, so a selection can be named even when it is not invitable. */
   contacts: IContact[];
   onClose: () => void;
@@ -40,6 +42,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
   isOpen,
   clientId,
   target,
+  statusFilter,
   contacts,
   onClose,
   onSent,
@@ -51,6 +54,11 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
   const [sendResult, setSendResult] = useState<BulkSendInvitationResult | null>(null);
 
   const targetKey = target.mode === 'selected' ? target.contactIds.join(',') : 'all';
+  // "Invite all eligible" is the server's own set, which is active contacts
+  // only. A named selection is whatever the list was showing, so an inactive
+  // contact the user ticked is previewed as invitable rather than reported
+  // under the wrong reason.
+  const previewStatus = target.mode === 'allEligible' ? 'active' : statusFilter;
 
   useEffect(() => {
     if (!isOpen) {
@@ -63,7 +71,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     let isCancelled = false;
     setEligibleContacts(null);
     setLoadError(null);
-    getContactsEligibleForInvitation(clientId, 'active')
+    getContactsEligibleForInvitation(clientId, previewStatus)
       .then((rows) => {
         if (!isCancelled) setEligibleContacts(rows);
       })
@@ -79,7 +87,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, clientId, targetKey, t]);
+  }, [isOpen, clientId, targetKey, previewStatus, t]);
 
   const preview = useMemo(() => {
     if (!eligibleContacts) return null;
@@ -139,10 +147,14 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     if (!preview || preview.invitable.length === 0) return;
     setIsSending(true);
     try {
+      // Every contact the user chose goes to the server, not just the ones the
+      // preview thinks are invitable: the server is the authority on who is
+      // skipped, and the results screen must account for the same people the
+      // preview just counted.
       const result = await sendBulkPortalInvitations({
         clientId,
         ...(target.mode === 'selected'
-          ? { contactIds: preview.invitable.map((contact) => contact.contact_name_id) }
+          ? { contactIds: target.contactIds }
           : { allEligible: true }),
       });
       setSendResult(result);

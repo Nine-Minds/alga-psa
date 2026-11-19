@@ -20,6 +20,7 @@ const hoisted = vi.hoisted(() => ({
   getAllClients: vi.fn(),
   searchContactListIds: vi.fn(),
   getCurrentUserAsync: vi.fn(),
+  getContactPortalPermissions: vi.fn(),
   dialogTarget: vi.fn(),
 }));
 
@@ -47,6 +48,9 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
+}));
+vi.mock('@alga-psa/auth/actions', () => ({
+  getContactPortalPermissions: () => hoisted.getContactPortalPermissions(),
 }));
 vi.mock('../../lib/usersHelpers', () => ({ getCurrentUserAsync: hoisted.getCurrentUserAsync }));
 vi.mock('./ContactDetailsEdit', () => ({ default: () => null }));
@@ -132,6 +136,7 @@ beforeEach(() => {
   ]);
   hoisted.getAllClients.mockResolvedValue([client]);
   hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
+  hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
 });
 
 describe('ClientContactsList bulk portal invitations', () => {
@@ -169,5 +174,18 @@ describe('ClientContactsList bulk portal invitations', () => {
 
     await waitFor(() => expect(screen.getByTestId('bulk-invite-dialog')).toBeInTheDocument());
     expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({ mode: 'allEligible' });
+  });
+
+  it('shows no invitation affordance to a reader without user:invite', async () => {
+    hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: false, canUpdateRoles: false, canRead: true });
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    await waitFor(() => expect(hoisted.getContactPortalPermissions).toHaveBeenCalled());
+    expect(screen.queryByText('Invite all eligible')).not.toBeInTheDocument();
+    // No checkbox either: a selection with nothing to do with it is a dead end.
+    expect(screen.queryByLabelText('Select all contacts')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Select Ada Lovelace')).not.toBeInTheDocument();
   });
 });

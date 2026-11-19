@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { IContact, IClientWithLocation } from '@alga-psa/types';
 import { getContactsByClient, searchContactListIds } from '@alga-psa/clients/actions';
+import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -54,6 +55,10 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [invitationTarget, setInvitationTarget] = useState<BulkPortalInvitationTarget | null>(null);
+  // False until the check resolves, so the invite affordances never flash in
+  // for a reader who would only meet a server refusal. Same gate the contact's
+  // own Portal tab uses.
+  const [canInvite, setCanInvite] = useState(false);
   const openContactQuickView = useContactQuickViewDrawer();
   const openContactEdit = useContactEditDrawer();
 
@@ -86,6 +91,18 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
     fetchContacts();
   }, [clientId, statusFilter, t]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    getContactPortalPermissions()
+      .then((permissions) => {
+        if (!isCancelled) setCanInvite(Boolean(permissions?.canInvite));
+      })
+      .catch((err) => console.error('Error checking portal invitation permission:', err));
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Re-run the list query so a contact moved to another client drops out of
   // this list as soon as the drawer saves.
@@ -215,7 +232,9 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     });
   };
 
-  const columns: ColumnDefinition<IContact>[] = [
+  // The selection column exists only to feed the bulk invitation, so it is
+  // gated on the same permission as the buttons it serves.
+  const selectColumn: ColumnDefinition<IContact>[] = canInvite ? [
     {
       title: (
         <Checkbox
@@ -243,6 +262,10 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         />
       ),
     },
+  ] : [];
+
+  const columns: ColumnDefinition<IContact>[] = [
+    ...selectColumn,
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
@@ -466,7 +489,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           />
         </div>
         <div className="flex items-center gap-2">
-          {selectedContactIds.size > 0 && (
+          {canInvite && selectedContactIds.size > 0 && (
             <Button
               id="invite-selected-contacts-btn"
               variant="secondary"
@@ -478,15 +501,17 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               })}
             </Button>
           )}
-          <Button
-            id="invite-all-eligible-contacts-btn"
-            variant="secondary"
-            onClick={() => setInvitationTarget({ mode: 'allEligible' })}
-          >
-            {t('clientContactsList.actions.inviteAllEligible', {
-              defaultValue: 'Invite all eligible'
-            })}
-          </Button>
+          {canInvite && (
+            <Button
+              id="invite-all-eligible-contacts-btn"
+              variant="secondary"
+              onClick={() => setInvitationTarget({ mode: 'allEligible' })}
+            >
+              {t('clientContactsList.actions.inviteAllEligible', {
+                defaultValue: 'Invite all eligible'
+              })}
+            </Button>
+          )}
           <Button
             id="add-new-contact-btn"
             onClick={() => setIsQuickAddContactOpen(true)}
@@ -522,6 +547,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           isOpen
           clientId={clientId}
           target={invitationTarget}
+          statusFilter={statusFilter}
           contacts={contacts}
           onClose={() => setInvitationTarget(null)}
           onSent={() => {

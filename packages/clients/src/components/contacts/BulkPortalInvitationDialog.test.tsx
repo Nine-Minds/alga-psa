@@ -62,10 +62,15 @@ beforeEach(() => {
 });
 
 describe('BulkPortalInvitationDialog', () => {
-  it('counts the invitable, names the skip reasons and sends only the invitable', async () => {
+  it('counts the invitable, names the skip reasons and accounts for every chosen contact', async () => {
     hoisted.sendBulkPortalInvitations.mockResolvedValue({
-      success: true, total: 1, sent: 1, skipped: 0, failed: 0,
-      results: [{ contactId: 'fine', email: 'fine@acme.com', status: 'sent' }],
+      success: true, total: 4, sent: 1, skipped: 3, failed: 0,
+      results: [
+        { contactId: 'fine', email: 'fine@acme.com', status: 'sent' },
+        { contactId: 'no-email', status: 'skipped', message: 'Contact does not have an email address.' },
+        { contactId: 'shared', status: 'skipped', message: 'Shared mailbox contacts cannot be invited.' },
+        { contactId: 'already-a-user', status: 'skipped', message: 'A user account already exists for this contact.' },
+      ],
     });
 
     render(
@@ -73,6 +78,7 @@ describe('BulkPortalInvitationDialog', () => {
         isOpen
         clientId="acme"
         target={{ mode: 'selected', contactIds: ['fine', 'no-email', 'shared', 'already-a-user'] }}
+        statusFilter="active"
         contacts={[]}
         onClose={vi.fn()}
         onSent={vi.fn()}
@@ -90,11 +96,35 @@ describe('BulkPortalInvitationDialog', () => {
 
     fireEvent.click(screen.getByText('Send 1 invitations'));
 
+    // The whole selection is sent, so the results screen reports the same three
+    // skips the preview promised instead of contradicting it with "skipped 0".
     await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
       clientId: 'acme',
-      contactIds: ['fine'],
+      contactIds: ['fine', 'no-email', 'shared', 'already-a-user'],
     }));
-    expect(await screen.findByText('Sent 1, skipped 0, failed 0.')).toBeInTheDocument();
+    expect(await screen.findByText('Sent 1, skipped 3, failed 0.')).toBeInTheDocument();
+  });
+
+  it('previews a ticked inactive contact against the list\'s own status filter', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('dormant', 'dormant@acme.com', { is_inactive: true }),
+    ]);
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'selected', contactIds: ['dormant'] }}
+        statusFilter="all"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    await screen.findByText('1 contacts will be invited to the client portal.');
+    expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'all');
+    expect(screen.queryByText('1 — already has portal access')).not.toBeInTheDocument();
   });
 
   it('asks the server for every eligible contact when invited in bulk', async () => {
@@ -112,6 +142,7 @@ describe('BulkPortalInvitationDialog', () => {
         isOpen
         clientId="acme"
         target={{ mode: 'allEligible' }}
+        statusFilter="all"
         contacts={[]}
         onClose={vi.fn()}
         onSent={vi.fn()}
@@ -120,6 +151,9 @@ describe('BulkPortalInvitationDialog', () => {
 
     fireEvent.click(await screen.findByText('Send 1 invitations'));
 
+    // "All eligible" is the server's set — active contacts only — whatever the
+    // list happens to be filtered to.
+    expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'active');
     await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
       clientId: 'acme',
       allEligible: true,
