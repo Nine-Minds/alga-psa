@@ -133,6 +133,13 @@ export interface DesignerNodeStyle {
   whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
   overflowWrap?: 'normal' | 'break-word' | 'anywhere';
 
+  // Pagination (mirrors the template AST's break props in
+  // lib/invoice-template-ast/schema.ts): forced page breaks and keep-together
+  // bands for page-sized documents.
+  breakInside?: 'auto' | 'avoid' | 'avoid-page';
+  breakAfter?: 'auto' | 'avoid' | 'avoid-page' | 'page';
+  breakBefore?: 'auto' | 'avoid' | 'avoid-page' | 'page';
+
   // Non-container layout-like style declarations that can be attached directly
   // to nodes such as fields in template AST inline styles.
   display?: 'flex' | 'grid';

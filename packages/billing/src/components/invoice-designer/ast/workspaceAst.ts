@@ -477,6 +477,9 @@ const createNodeStyle = (node: WorkspaceNode): TemplateNode['style'] | undefined
   if (style.tableLayout) inline.tableLayout = style.tableLayout;
   if (style.whiteSpace) inline.whiteSpace = style.whiteSpace;
   if (style.overflowWrap) inline.overflowWrap = style.overflowWrap;
+  if (style.breakInside) inline.breakInside = style.breakInside;
+  if (style.breakAfter) inline.breakAfter = style.breakAfter;
+  if (style.breakBefore) inline.breakBefore = style.breakBefore;
   if (style.display) inline.display = style.display;
   if (style.flexDirection) inline.flexDirection = style.flexDirection;
   if (style.justifyContent) inline.justifyContent = style.justifyContent;
@@ -675,6 +678,20 @@ const coerceOverflowWrap = (value: unknown): DesignerNodeStyle['overflowWrap'] |
   return undefined;
 };
 
+const coerceBreakInside = (value: unknown): DesignerNodeStyle['breakInside'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceBreakBeforeAfter = (value: unknown): DesignerNodeStyle['breakAfter'] | undefined => {
+  if (value === 'auto' || value === 'avoid' || value === 'avoid-page' || value === 'page') {
+    return value;
+  }
+  return undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -847,6 +864,15 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
 
   const overflowWrap = coerceOverflowWrap(inline.overflowWrap);
   if (overflowWrap) style.overflowWrap = overflowWrap;
+
+  const breakInside = coerceBreakInside(inline.breakInside);
+  if (breakInside) style.breakInside = breakInside;
+
+  const breakAfter = coerceBreakBeforeAfter(inline.breakAfter);
+  if (breakAfter) style.breakAfter = breakAfter;
+
+  const breakBefore = coerceBreakBeforeAfter(inline.breakBefore);
+  if (breakBefore) style.breakBefore = breakBefore;
 
   const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
   if (display) style.display = display;
