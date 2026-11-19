@@ -934,14 +934,19 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       const newExpiry = new Date(
         Date.now() + MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS
       ).toISOString();
-      const webhookUrl = `${getEmailWebhookBaseUrl()}/api/email/webhooks/microsoft`;
-      
+      const hasPublicWebhookOverride = Boolean(process.env.PUBLIC_WEBHOOK_BASE_URL?.trim());
+      const webhookUrl = hasPublicWebhookOverride
+        ? `${getEmailWebhookBaseUrl()}/api/email/webhooks/microsoft`
+        : undefined;
+
       await this.httpClient.patch(`/subscriptions/${this.config.webhook_subscription_id}`, {
         expirationDateTime: newExpiry,
-        notificationUrl: webhookUrl,
+        ...(webhookUrl ? { notificationUrl: webhookUrl } : {}),
       });
 
-      this.config.webhook_notification_url = webhookUrl;
+      if (webhookUrl) {
+        this.config.webhook_notification_url = webhookUrl;
+      }
       this.config.webhook_expires_at = newExpiry;
       this.config.last_subscription_renewal = new Date().toISOString();
 
@@ -954,13 +959,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
             webhook_expires_at: newExpiry,
             last_subscription_renewal: this.config.last_subscription_renewal,
             updated_at: new Date().toISOString()
-          });
-
-        await tenantDb(knex, this.config.tenant).table('email_providers')
-          .where('id', this.config.id)
-          .update({
-            webhook_notification_url: webhookUrl,
-            updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
         this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
