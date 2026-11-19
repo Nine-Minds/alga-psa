@@ -12,6 +12,7 @@ import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
   INTERACTIVE_USER_TYPES,
+  getRoleAssignmentViolation,
   isInteractiveUserType,
   isLicensedUserType,
 } from '@alga-psa/types';
@@ -364,6 +365,20 @@ export class UserService extends BaseService<IUser> {
 
         if (roles.length !== data.role_ids.length) {
           throw new Error('One or more invalid role IDs provided');
+        }
+
+        // A role has to belong to the portal the new user lives in; existing
+        // role_ids are not enough, or a client user could be created holding
+        // only MSP roles and see nothing in its own portal.
+        // LEVERAGE: pattern role-assignment-user-type — same decision in policyActions.assignRoleToUser, users roleActions.assignRoleToUser and userActions.addUser (inline)
+        for (const role of roles) {
+          const roleViolation = getRoleAssignmentViolation(targetUserType, role);
+          if (roleViolation === 'portal_role_on_msp_user') {
+            throw new ValidationError('Cannot assign a client portal role to an MSP user.');
+          }
+          if (roleViolation === 'msp_role_on_portal_user') {
+            throw new ValidationError('Cannot assign an MSP role to a client portal user.');
+          }
         }
       }
 

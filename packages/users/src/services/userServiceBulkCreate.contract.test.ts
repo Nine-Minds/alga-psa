@@ -223,6 +223,7 @@ const { UserService } = await import('./UserService');
 
 const TENANT = 'tenant-1';
 const ROLE_ID = '33333333-3333-4333-8333-333333333333';
+const CLIENT_ROLE_ID = '44444444-4444-4444-8444-444444444444';
 const context: any = { tenant: TENANT, userId: 'actor-1', user: { user_id: 'actor-1' } };
 
 function makeService() {
@@ -258,8 +259,16 @@ beforeEach(() => {
   store.batchRollbacks = 0;
   store.seatPreReject = new Set();
   store.seatTripwire = new Set();
-  // The roles the batch references exist in this tenant.
-  store.committed.push({ table: 'roles', row: { tenant: TENANT, role_id: ROLE_ID, role_name: 'Technician' } });
+  // The roles the batch references exist in this tenant, each flagged for the
+  // portal it belongs to.
+  store.committed.push({
+    table: 'roles',
+    row: { tenant: TENANT, role_id: ROLE_ID, role_name: 'Technician', msp: true, client: false },
+  });
+  store.committed.push({
+    table: 'roles',
+    row: { tenant: TENANT, role_id: CLIENT_ROLE_ID, role_name: 'Client', msp: false, client: true },
+  });
 });
 
 describe('bulkCreateUsers', () => {
@@ -363,6 +372,25 @@ describe('bulkCreateUsers', () => {
     expect(committedEmails()).toEqual([]);
     expect(committedTable('user_roles')).toEqual([]);
     expect(store.batchRollbacks).toBe(1);
+  });
+
+  it('refuses a client user holding an MSP role, and creates the one with a client role', async () => {
+    const result = await makeService().bulkCreateUsers(
+      [
+        newUser('portal', { user_type: 'client', role_ids: [ROLE_ID] }),
+        newUser('portal2', { user_type: 'client', role_ids: [CLIENT_ROLE_ID] }),
+      ],
+      context,
+      { skip_invalid: true },
+    );
+
+    expect(result).toMatchObject({ total_processed: 2, successful: 1, failed: 1 });
+    expect(result.errors[0]).toMatchObject({
+      index: 0,
+      error: 'Cannot assign an MSP role to a client portal user.',
+      data: { email: 'tech.portal@example.com', user_type: 'client' },
+    });
+    expect(committedEmails()).toEqual(['tech.portal2@example.com']);
   });
 
   it('never echoes the submitted password in an error', async () => {
