@@ -850,7 +850,14 @@
       "noQuotesFound": "Sin cotizaciones.",
       "selectQuote": "Seleccionar cotización",
       "selectQuoteHint": "Seleccione una cotización para ver la vista previa con datos.",
-      "loadingQuoteDetails": "Cargando detalles de la cotización…"
+      "loadingQuoteDetails": "Cargando detalles de la cotización…",
+      "frameTitle": "Vista previa de la cotización",
+      "zoom": {
+        "fit": "Ajustar",
+        "actual": "100 %",
+        "label": "Zoom de la vista previa",
+        "fitWithScale": "Ajustar ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Renderizado",

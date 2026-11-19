@@ -1838,7 +1838,9 @@
           "actual": "100%",
           "label": "Powiększenie podglądu",
           "fitWithScale": "Dopasuj ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Strona {{page}} z {{total}}",
+        "frameTitle": "Podgląd faktury"
       },
       "tabs": {
         "design": "Projektowanie",

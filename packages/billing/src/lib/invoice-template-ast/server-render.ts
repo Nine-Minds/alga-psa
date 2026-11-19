@@ -261,12 +261,17 @@ export const renderTemplateAstFragment = async (
   return { html, css, locale };
 };
 
-export const renderTemplateAstHtmlDocument = async (
+/**
+ * Wrap an already-rendered fragment in its HTML document, with the page geometry the template prints
+ * by. Separate from the render so a caller that already holds the fragment (the designer previews,
+ * which also hand it to their own status pipeline) does not render the template a second time.
+ */
+export const buildTemplateHtmlDocument = (
   ast: TemplateAst,
-  evaluation: TemplateEvaluationResult,
+  fragment: { html: string; css: string; locale?: string },
   options: TemplateHtmlDocumentOptions = {}
-): Promise<string> => {
-  const { html, css, locale } = await renderTemplateAstFragment(ast, evaluation, options);
+): string => {
+  const { html, css, locale } = fragment;
   const title = escapeHtml(options.title ?? 'Invoice');
   // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
   const customPageCss = resolveCustomPageCssFromAst(ast);
@@ -283,7 +288,7 @@ export const renderTemplateAstHtmlDocument = async (
   const baseUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || '';
   const baseTag = baseUrl ? `\n    <base href="${escapeHtml(baseUrl)}" />` : '';
 
-  let renderedHtml = `<!doctype html>
+  return `<!doctype html>
 <html lang="${escapeHtml(locale ?? 'en')}">
   <head>
     <meta charset="utf-8" />${baseTag}
@@ -299,10 +304,19 @@ ${additionalCss}
 ${bodyHtml}
   </body>
 </html>`;
+};
+
+export const renderTemplateAstHtmlDocument = async (
+  ast: TemplateAst,
+  evaluation: TemplateEvaluationResult,
+  options: TemplateHtmlDocumentOptions = {}
+): Promise<string> => {
+  const fragment = await renderTemplateAstFragment(ast, evaluation, options);
+  const renderedHtml = buildTemplateHtmlDocument(ast, fragment, options);
 
   // Inline document images as base64 so Puppeteer can render them without auth.
   if (options.knex) {
-    renderedHtml = await inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
+    return inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
   }
 
   return renderedHtml;

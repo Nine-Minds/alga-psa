@@ -6,6 +6,7 @@ import { PREVIEW_SHEET_CLASS } from '../../../lib/invoice-template-ast/previewSh
 import {
   computePreviewSheetScale,
   readPreviewSheetMetrics,
+  type PreviewSheetFit,
   type PreviewZoomMode,
 } from './previewSheetScale';
 
@@ -13,6 +14,8 @@ import {
 const SHEET_GUTTER_PX = 24;
 /** Height budget a label is fitted into, and the fixed height of an unframed document preview. */
 const FIT_HEIGHT_PX = 640;
+/** A paginated document sheet carries its page number; a label sheet stands alone. */
+const PAGE_NUMBER_ATTRIBUTE = 'data-preview-page';
 
 interface PreviewSheetFrameProps {
   html: string;
@@ -24,10 +27,11 @@ interface PreviewSheetFrameProps {
 }
 
 /**
- * The authoritative preview iframe. For a label the server draws the markup on a sheet the size of the
- * printed cell; this frame zooms that sheet (fit or 100%) and sizes itself to the result, so a 4 x 2 in
- * label shows as a label instead of a speck in the corner of a full-width page. HTML without a sheet (a
- * full-page document) keeps the plain fixed-height frame.
+ * The authoritative preview iframe. The server draws the markup on sheets the size of the paper it
+ * prints on — one cell for a label, one per printed page for a document — and this frame zooms them
+ * (fit or 100%) and sizes itself to the result, so a 4 x 2 in label shows as a label instead of a
+ * speck in the corner of a full-width page, and a quote shows as the pages it will be read as.
+ * HTML without a sheet keeps the plain fixed-height frame.
  */
 export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automationId }: PreviewSheetFrameProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -43,9 +47,12 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
     const doc = iframe?.contentDocument;
     if (!iframe || !container || !doc?.documentElement) return;
 
-    const sheet = doc.querySelector<HTMLElement>(`.${PREVIEW_SHEET_CLASS}`);
-    const metrics = readPreviewSheetMetrics(sheet);
-    if (sheet && metrics) {
+    const sheets = Array.from(doc.querySelectorAll<HTMLElement>(`.${PREVIEW_SHEET_CLASS}`));
+    const metrics = readPreviewSheetMetrics(sheets[0] ?? null);
+    if (sheets.length > 0 && metrics) {
+      // A document is a stack of pages to scroll through, so it is fitted to the pane's width; a label
+      // is a single sheet that has to be visible whole.
+      const fit: PreviewSheetFit = sheets[0].hasAttribute(PAGE_NUMBER_ATTRIBUTE) ? 'width' : 'box';
       const scale = computePreviewSheetScale(
         metrics,
         {
@@ -53,9 +60,10 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
           heightPx: FIT_HEIGHT_PX - SHEET_GUTTER_PX * 2,
         },
         zoomMode,
+        fit,
       );
       // CSS zoom (not transform) so the scaled sheet takes up its scaled size and the frame can measure it.
-      sheet.style.setProperty('zoom', String(scale));
+      sheets.forEach((sheet) => sheet.style.setProperty('zoom', String(scale)));
       onScaleChangeRef.current?.(scale);
       setHasSheet(true);
     } else {

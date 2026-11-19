@@ -20,8 +20,6 @@ import { getTenantBrandingForDocumentPreview } from '../../../actions/tenantBran
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
-import PaperInvoice from '../PaperInvoice';
-import { TemplateRenderer } from '../TemplateRenderer';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
 import {
   exportWorkspaceToTemplateAst,
@@ -49,6 +47,8 @@ import type { TenantParty } from '../../../lib/adapters/tenantPartyAdapter';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
+import type { PreviewZoomMode } from '../../invoice-designer/preview/previewSheetScale';
 
 interface QuoteDocumentTemplateEditorProps {
   templateId: string | null;
@@ -121,6 +121,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     Awaited<ReturnType<typeof runAuthoritativeQuoteTemplatePreview>> | null
   >(null);
   const [manualRunNonce, setManualRunNonce] = useState(0);
+  const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
+  const [previewScale, setPreviewScale] = useState<number | null>(null);
   // Preview the quote in the language a client would receive it in.
   const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
     () => normalizeLocale(i18n.language) ?? (LOCALE_CONFIG.defaultLocale as SupportedLocale),
@@ -230,11 +232,12 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   });
 
   const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
-  const authoritativeRenderOutput =
+  // The preview is the printed pages, drawn server-side; see previewPagination.server.
+  const authoritativeDocumentHtml =
     authoritativePreview?.render.status === 'success' &&
-    typeof authoritativePreview.render.html === 'string' &&
-    typeof authoritativePreview.render.css === 'string'
-      ? { html: authoritativePreview.render.html, css: authoritativePreview.render.css }
+    typeof authoritativePreview.render.documentHtml === 'string' &&
+    authoritativePreview.render.documentHtml.length > 0
+      ? authoritativePreview.render.documentHtml
       : null;
   const isPreviewRunning =
     previewState.shapeStatus === 'running' ||
@@ -722,6 +725,28 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <ViewSwitcher
+                        aria-label={t('templateEditor.preview.zoom.label', { defaultValue: 'Preview zoom' })}
+                        currentView={previewZoomMode}
+                        onChange={(mode: PreviewZoomMode) => setPreviewZoomMode(mode)}
+                        options={[
+                          {
+                            value: 'fit',
+                            id: 'quote-designer-preview-zoom-fit',
+                            label: previewZoomMode === 'fit' && previewScale !== null
+                              ? t('templateEditor.preview.zoom.fitWithScale', {
+                                defaultValue: 'Fit ({{percent}}%)',
+                                percent: Math.round(previewScale * 100),
+                              })
+                              : t('templateEditor.preview.zoom.fit', { defaultValue: 'Fit' }),
+                          },
+                          {
+                            value: 'actual',
+                            id: 'quote-designer-preview-zoom-actual',
+                            label: t('templateEditor.preview.zoom.actual', { defaultValue: '100%' }),
+                          },
+                        ]}
+                      />
                       <PreviewLocaleSelect
                         id="quote-designer-preview-locale-select"
                         value={previewLocale}
@@ -801,15 +826,15 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                     </Alert>
                   )}
 
-                  {previewData && previewTemplate && authoritativeRenderOutput && (
+                  {previewData && previewTemplate && authoritativeDocumentHtml && (
                     <div className="p-2">
-                      <PaperInvoice templateAst={previewTemplate.templateAst ?? null}>
-                        <TemplateRenderer
-                          template={previewTemplate as any}
-                          invoiceData={previewData as any}
-                          renderOverride={authoritativeRenderOutput}
-                        />
-                      </PaperInvoice>
+                      <PreviewSheetFrame
+                        title={t('templateEditor.preview.frameTitle', { defaultValue: 'Quote preview' })}
+                        html={authoritativeDocumentHtml}
+                        zoomMode={previewZoomMode}
+                        onScaleChange={setPreviewScale}
+                        automationId="quote-designer-preview-frame"
+                      />
                     </div>
                   )}
                 </div>

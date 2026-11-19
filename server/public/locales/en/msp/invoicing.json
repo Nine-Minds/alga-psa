@@ -1786,7 +1786,9 @@
           "actual": "100%",
           "label": "Preview zoom",
           "fitWithScale": "Fit ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Page {{page}} of {{total}}",
+        "frameTitle": "Invoice preview"
       },
       "tabs": {
         "design": "Design",

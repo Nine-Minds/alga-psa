@@ -9,6 +9,7 @@ import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { buildTemplateHtmlDocument } from '../lib/invoice-template-ast/server-render';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 
@@ -45,6 +46,8 @@ type AuthoritativePreviewResult = {
     status: 'idle' | 'success' | 'error';
     html: string | null;
     css: string | null;
+    /** The same render as a full HTML document, drawn as the pages it prints as. */
+    documentHtml?: string | null;
     contentHeightPx?: number | null;
     error?: string;
   };
@@ -130,6 +133,13 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
         dateFormat,
         t: localized.t,
       });
+      // The author sees the pages this quote prints as, chunked by the same engine that prints them.
+      const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+      const paginated = await paginateDocumentPreviewHtml(
+        buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Quote preview' }),
+        validation.ast,
+        { locale: localized.locale },
+      );
       return {
         success: true,
         sourceHash,
@@ -142,6 +152,7 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
           status: 'success',
           html: rendered.html,
           css: rendered.css,
+          documentHtml: paginated.html,
           contentHeightPx: null,
         },
         verification: {

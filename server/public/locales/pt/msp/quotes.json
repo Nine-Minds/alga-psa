@@ -850,7 +850,14 @@
       "noQuotesFound": "Nenhuma cotação encontrada.",
       "selectQuote": "Selecione a cotação",
       "selectQuoteHint": "Selecione uma cotação para visualizar a saída vinculada a dados.",
-      "loadingQuoteDetails": "Carregando detalhes da cotação..."
+      "loadingQuoteDetails": "Carregando detalhes da cotação...",
+      "frameTitle": "Pré-visualização do orçamento",
+      "zoom": {
+        "fit": "Ajustar",
+        "actual": "100 %",
+        "label": "Zoom da pré-visualização",
+        "fitWithScale": "Ajustar ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Renderizar",

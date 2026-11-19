@@ -126,7 +126,7 @@ export const resolveDocumentPrintGeometryFromAst = (
  * Never emitted for a label (`label-cell` geometry): there the renderer's root padding IS the
  * margin, because composeLabelSheets gives the cell no padding of its own.
  */
-export const DOCUMENT_PRINT_GEOMETRY_CSS = `@media print {
+export const DOCUMENT_PRINT_GEOMETRY_RULES = `
   html, body { margin: 0; padding: 0; }
   .invoice-template-root > .ast-node-type-document {
     width: auto !important;
@@ -145,7 +145,9 @@ export const DOCUMENT_PRINT_GEOMETRY_CSS = `@media print {
     margin: 0 !important;
     padding: 0 !important;
   }
-}`;
+`;
+
+export const DOCUMENT_PRINT_GEOMETRY_CSS = `@media print {${DOCUMENT_PRINT_GEOMETRY_RULES}}`;
 
 /**
  * How a document type reaches paper, which decides what frames its content:
@@ -164,20 +166,23 @@ export interface TemplatePreviewSheet {
 }
 
 /**
- * The preview sheet that matches the printed label cell for `ast`, or null when the preview should stay
- * unframed. Only the `label-cell` path is framed: its geometry is exact (one clipped cell, nothing outside
- * the markup), so the sheet is the label.
+ * The sheet the authoritative preview draws `ast` on — always a real sheet, because both print paths
+ * now have an exact geometry to match.
  *
- * A `document` now has an exact geometry too — resolveDocumentPrintGeometryFromAst, one page box, one
- * margin, one content box, no shrink-to-fit — so a sheet CAN match its paper. It stays unframed here only
- * because a document flows across many sheets: framing it means drawing each page, which is its own card.
+ * A `document` takes resolveDocumentPrintGeometryFromAst: the page box the PDF prints onto and the
+ * margin it carries on every page, so the sheet and the PDF read the same numbers out of one place.
+ * A document flows across many sheets; previewPagination.server draws one of these per printed page.
+ *
+ * A `label-cell` takes the template's own page settings: one clipped cell with no outer margin, where
+ * the renderer's root padding is the margin, so the sheet is the label.
  */
 export const resolveTemplatePreviewSheetFromAst = (
   ast: TemplateAst | null | undefined,
   geometry: TemplatePrintGeometry
 ): TemplatePreviewSheet | null => {
   if (geometry !== 'label-cell') {
-    return null;
+    const page = resolveDocumentPrintGeometryFromAst(ast);
+    return { widthMm: page.pageWidthMm, heightMm: page.pageHeightMm, guideMarginMm: page.marginMm };
   }
   const resolved = resolveTemplatePrintSettingsFromAst(ast);
   const custom = resolved.source === 'explicit' ? resolved.customPageSize : undefined;

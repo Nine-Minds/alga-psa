@@ -1786,7 +1786,9 @@
           "actual": "⟦100%⟧",
           "label": "⟦Ƥřḗṽīḗẇ ẑȯȯḿ⟧",
           "fitWithScale": "⟦Ƒīŧ ({{percent}}%)⟧"
-        }
+        },
+        "pageCaption": "⟦Ƥȧɠḗ {{page}} ȯƒ {{total}}⟧",
+        "frameTitle": "⟦Īƞṽȯīƈḗ ƥřḗṽīḗẇ⟧"
       },
       "tabs": {
         "design": "⟦Ḓḗşīɠƞ⟧",

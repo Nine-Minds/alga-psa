@@ -1786,7 +1786,9 @@
           "actual": "100 %",
           "label": "Vorschau-Zoom",
           "fitWithScale": "Einpassen ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Seite {{page}} von {{total}}",
+        "frameTitle": "Rechnungsvorschau"
       },
       "tabs": {
         "design": "Entwurf",

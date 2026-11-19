@@ -850,7 +850,14 @@
       "noQuotesFound": "Geen offertes gevonden.",
       "selectQuote": "Offerte kiezen",
       "selectQuoteHint": "Kies een offerte voor een gegevensgebonden voorvertoning.",
-      "loadingQuoteDetails": "Offertedetails worden geladen…"
+      "loadingQuoteDetails": "Offertedetails worden geladen…",
+      "frameTitle": "Offertevoorbeeld",
+      "zoom": {
+        "fit": "Passend",
+        "actual": "100%",
+        "label": "Voorbeeldzoom",
+        "fitWithScale": "Passend ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Renderen",

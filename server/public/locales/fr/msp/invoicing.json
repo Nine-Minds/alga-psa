@@ -1786,7 +1786,9 @@
           "actual": "100 %",
           "label": "Zoom de l'aperçu",
           "fitWithScale": "Ajuster ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Page {{page}} sur {{total}}",
+        "frameTitle": "Aperçu de la facture"
       },
       "tabs": {
         "design": "Conception",

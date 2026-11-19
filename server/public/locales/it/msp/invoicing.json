@@ -1786,7 +1786,9 @@
           "actual": "100%",
           "label": "Zoom anteprima",
           "fitWithScale": "Adatta ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} di {{total}}",
+        "frameTitle": "Anteprima della fattura"
       },
       "tabs": {
         "design": "Progettazione",

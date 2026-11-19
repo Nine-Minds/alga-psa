@@ -1786,7 +1786,9 @@
           "actual": "100%",
           "label": "Zoom da pré-visualização",
           "fitWithScale": "Ajustar ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Página {{page}} de {{total}}",
+        "frameTitle": "Pré-visualização da fatura"
       },
       "tabs": {
         "design": "Projeto",

@@ -850,7 +850,14 @@
       "noQuotesFound": "Brak wycen.",
       "selectQuote": "Wybierz wycenę",
       "selectQuoteHint": "Wybierz wycenę, aby zobaczyć podgląd z danymi.",
-      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…"
+      "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
+      "frameTitle": "Podgląd oferty",
+      "zoom": {
+        "fit": "Dopasuj",
+        "actual": "100%",
+        "label": "Powiększenie podglądu",
+        "fitWithScale": "Dopasuj ({{percent}}%)"
+      }
     },
     "pipeline": {
       "render": "Renderowanie",

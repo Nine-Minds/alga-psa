@@ -850,7 +850,14 @@
       "noQuotesFound": "⟦Ƞȯ ʠŭȯŧḗş ƒȯŭƞḓ.⟧",
       "selectQuote": "⟦Şḗŀḗƈŧ Ɋŭȯŧḗ⟧",
       "selectQuoteHint": "⟦Şḗŀḗƈŧ ȧ ʠŭȯŧḗ ŧȯ ƥřḗṽīḗẇ ḓȧŧȧ-ƀȯŭƞḓ ȯŭŧƥŭŧ.⟧",
-      "loadingQuoteDetails": "⟦Ŀȯȧḓīƞɠ ʠŭȯŧḗ ḓḗŧȧīŀş...⟧"
+      "loadingQuoteDetails": "⟦Ŀȯȧḓīƞɠ ʠŭȯŧḗ ḓḗŧȧīŀş...⟧",
+      "frameTitle": "⟦Qŭȯŧḗ ƥřḗṽīḗẇ⟧",
+      "zoom": {
+        "fit": "⟦Ƒīŧ⟧",
+        "actual": "⟦100%⟧",
+        "label": "⟦Ƥřḗṽīḗẇ ẑȯȯḿ⟧",
+        "fitWithScale": "⟦Ƒīŧ ({{percent}}%)⟧"
+      }
     },
     "pipeline": {
       "render": "⟦Řḗƞḓḗř⟧",

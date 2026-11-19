@@ -1786,7 +1786,9 @@
           "actual": "100 %",
           "label": "Förhandsgranskningszoom",
           "fitWithScale": "Anpassa ({{percent}} %)"
-        }
+        },
+        "pageCaption": "Sida {{page}} av {{total}}",
+        "frameTitle": "Förhandsgranskning av faktura"
       },
       "tabs": {
         "design": "Design",

@@ -850,7 +850,14 @@
       "noQuotesFound": "Inga offerter hittades.",
       "selectQuote": "Välj offert",
       "selectQuoteHint": "Välj en offert för att förhandsgranska resultatet med offertens uppgifter.",
-      "loadingQuoteDetails": "Läser in offertdetaljer…"
+      "loadingQuoteDetails": "Läser in offertdetaljer…",
+      "frameTitle": "Förhandsgranskning av offert",
+      "zoom": {
+        "fit": "Anpassa",
+        "actual": "100 %",
+        "label": "Förhandsgranskningszoom",
+        "fitWithScale": "Anpassa ({{percent}} %)"
+      }
     },
     "pipeline": {
       "render": "Rendera",

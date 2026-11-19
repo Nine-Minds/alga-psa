@@ -1786,7 +1786,9 @@
           "actual": "100%",
           "label": "Zoom voorbeeld",
           "fitWithScale": "Passend ({{percent}}%)"
-        }
+        },
+        "pageCaption": "Pagina {{page}} van {{total}}",
+        "frameTitle": "Factuurvoorbeeld"
       },
       "tabs": {
         "design": "Ontwerp",
