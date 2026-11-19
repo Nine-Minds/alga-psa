@@ -15945,7 +15945,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Portal Invitations"
     ],
-    "approvalRequired": false,
+    "rbacResource": "user",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -16033,7 +16034,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "tags": [
       "Portal Invitations"
     ],
-    "approvalRequired": false,
+    "rbacResource": "user",
+    "approvalRequired": true,
     "parameters": [],
     "requestBodySchema": {
       "type": "object",

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { createRegistry } from '../../../lib/api/openapi/registry';
 import { registerPortalInvitationRoutes } from '../../../lib/api/openapi/routes/portalInvitations';
@@ -29,6 +31,33 @@ describe('portal invitations OpenAPI', () => {
   it('is wired into the base registry', () => {
     const doc = buildBaseRegistry().buildDocument({ title: 't', version: 'test', edition: 'ee' }) as any;
     for (const p of PATHS) expect(doc.paths[p]?.post).toBeTruthy();
+  });
+
+  it('requires approval before an agent mails a batch of contacts', () => {
+    const registry = createRegistry();
+    registerPortalInvitationRoutes(registry);
+    for (const route of registry.getRegisteredRoutes()) {
+      expect(route.extensions?.['x-chat-approval-required']).toBe(true);
+    }
+
+    // The spec nests route extensions, so the generated registries take the
+    // flag from the curated override. Both have to agree.
+    for (const registryPath of [
+      '../../../lib/mcp/registry.generated.ts',
+      '../../../../../ee/server/src/chat/registry/apiRegistry.generated.ts',
+    ]) {
+      const source = fs.readFileSync(path.resolve(__dirname, registryPath), 'utf8');
+      const marker = 'ChatApiRegistryEntry[] = ';
+      const start = source.indexOf(marker) + marker.length;
+      const entries = JSON.parse(source.slice(start, source.lastIndexOf('];') + 1)) as Array<{
+        method: string; path: string; approvalRequired?: boolean;
+      }>;
+      for (const p of PATHS) {
+        const entry = entries.find((candidate) => candidate.method === 'post' && candidate.path === p);
+        expect(entry, `${p} missing from ${registryPath}`).toBeTruthy();
+        expect(entry!.approvalRequired).toBe(true);
+      }
+    }
   });
 
   it('is ruled in the product surface registry rather than riding the fallback', () => {

@@ -74,7 +74,17 @@ export function registerPortalInvitationRoutes(registry: ApiOpenApiRegistry) {
     403: { description: 'Permission denied for user invite.', schema: ApiError },
     500: { description: 'Unexpected invitation failure.', schema: ApiError },
   };
-  const extensions = { 'x-tenant-scoped': true, 'x-rbac-resource': 'user', 'x-rbac-action': 'invite' };
+  // Mailing up to 500 client contacts cannot be taken back, so an agent must
+  // not run either endpoint unattended. The spec generator nests route
+  // extensions under `extensions`, so the MCP/chat registries read the flag
+  // from the curated override in ee/docs/api-registry/portal-invitations.json;
+  // portalInvitationsOpenApi.test.ts asserts both stay true together.
+  const extensions = {
+    'x-tenant-scoped': true,
+    'x-rbac-resource': 'user',
+    'x-rbac-action': 'invite',
+    'x-chat-approval-required': true,
+  };
 
   registry.registerRoute({
     method: 'post',

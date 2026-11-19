@@ -38155,6 +38155,7 @@ paths:
         x-tenant-scoped: true
         x-rbac-resource: user
         x-rbac-action: invite
+        x-chat-approval-required: true
       x-alga-products:
         - psa
         - algadesk
@@ -38220,6 +38221,7 @@ paths:
         x-tenant-scoped: true
         x-rbac-resource: user
         x-rbac-action: invite
+        x-chat-approval-required: true
       x-alga-products:
         - psa
         - algadesk
