@@ -42,6 +42,11 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
         hoisted.transactionOpen = false;
       }
     }),
+    // bulkCreateUsers opens a real savepoint per user in production; this
+    // suite only cares about the options (preferences + welcome mail), so the
+    // savepoint is a pass-through onto the same fake trx rather than a real
+    // nested transaction.
+    withSavepoint: vi.fn(async (trx: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(trx)),
   };
 });
 
@@ -55,10 +60,13 @@ function serviceWithStubbedCreate() {
   const service = new UserService();
   (service as any).ensurePermission = async () => true;
   (service as any).getKnex = async () => ({ knex: {} });
-  (service as any).create = async (data: any) => ({
-    user_id: `user-${data.email}`,
-    email: data.email,
-    user_type: data.user_type ?? 'internal',
+  (service as any).createUsingTransaction = async (data: any) => ({
+    user: {
+      user_id: `user-${data.email}`,
+      email: data.email,
+      user_type: data.user_type ?? 'internal',
+    },
+    admission: null,
   });
   return service;
 }
