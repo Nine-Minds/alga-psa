@@ -96,6 +96,14 @@ describe('ticket room validation', () => {
     ).toThrow('room ticket mismatch');
   });
 
+  it('rejects a ticket room credential without a recipient identity', () => {
+    const token = jwt.sign({ tenantId: 'tenant-1', ticketId: 'ticket-1' }, 'tenant-validation-secret', { expiresIn: '5m' });
+    expect(() => validateDocumentRoomAccess(
+      'ticket:tenant-1:ticket-1',
+      new Request(`http://localhost/hocuspocus?token=${token}`)
+    )).toThrow('missing user');
+  });
+
   it('T016: notifications rooms are refused by default instead of bypassing validation', () => {
     delete process.env.HOCUSPOCUS_LEGACY_NOTIFICATION_ROOMS;
     return expect(
