@@ -2931,7 +2931,7 @@
       "paymentsRecorded": "Machen Sie die Zahlungen rückgängig, bevor Sie stornieren.",
       "paymentsRecordedManual": "Stornieren Sie die in AlgaPSA erfassten Zahlungen ({{sources}}), bevor Sie diese Rechnung stornieren.",
       "paymentsRecordedIntegration": "Für diese Rechnung gibt es Zahlungen aus Ihrem Buchhaltungssystem ({{sources}}). Löschen oder bearbeiten Sie sie dort – die nächste Synchronisierung storniert sie dann hier – oder stornieren Sie sie nur in AlgaPSA.",
-      "paymentsRecordedStripe": "Für diese Rechnung gibt es Zahlungen über einen Zahlungsanbieter ({{sources}}). Erstatten Sie sie dort, bevor Sie stornieren.",
+      "paymentsRecordedGateway": "Für diese Rechnung gibt es Zahlungen über einen Zahlungsanbieter ({{sources}}). Erstatten Sie sie dort, bevor Sie stornieren.",
       "paymentsRecordedMixed": "Machen Sie die Zahlungen zu dieser Rechnung ({{sources}}) rückgängig, bevor Sie sie stornieren.",
       "creditNoteCreditApplied": "Für diese Gutschrift wurde bereits Guthaben verwendet. Heben Sie die Guthabenverwendung auf, bevor Sie stornieren."
     },
@@ -2941,7 +2941,7 @@
       "paymentNotFound": "Zahlung nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "notReversible": "Diese Zahlung kann nicht storniert werden.",
       "alreadyReversed": "Diese Zahlung wurde bereits storniert.",
-      "stripeRefundRequired": "Diese Zahlung wurde über Stripe abgewickelt. Erstatten Sie sie stattdessen über den Zahlungsanbieter.",
+      "gatewayRefundRequired": "Diese Zahlung wurde über einen Zahlungsanbieter abgewickelt ({{method}}). Erstatten Sie sie stattdessen dort.",
       "integrationOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie in {{provider}}; die nächste Synchronisierung storniert sie dann hier.",
       "remoteMutateRequired": "Zugriff verweigert: Zum Stornieren einer synchronisierten Zahlung nur in AlgaPSA ist die Berechtigung für Remote-Änderungen der Buchhaltung erforderlich.",
       "reverseFailed": "Die Zahlung konnte nicht storniert werden. Bitte versuchen Sie es erneut."
@@ -3015,7 +3015,7 @@
       "manual": "In AlgaPSA erfasst",
       "quickbooks": "QuickBooks",
       "xero": "Xero",
-      "stripe": "Stripe"
+      "gateway": "Zahlungsanbieter"
     },
     "fields": {
       "reason": "Grund"
@@ -3028,7 +3028,7 @@
       "close": "Schließen"
     },
     "notes": {
-      "stripeRefund": "Über Stripe abgewickelt: Erstatten Sie die Zahlung stattdessen beim Zahlungsanbieter.",
+      "gatewayRefund": "Über einen Zahlungsanbieter abgewickelt ({{method}}): Erstatten Sie die Zahlung stattdessen dort.",
       "alreadyReversed": "Bereits storniert.",
       "providerOwned": "Diese Zahlung stammt aus der {{provider}}-Zahlung {{reference}}. Löschen oder bearbeiten Sie sie dort; die nächste Synchronisierung storniert sie dann hier.",
       "algaOnlyWarning": "AlgaPSA und {{provider}} weichen bei dieser Zahlung voneinander ab: Der Datensatz in {{provider}} bleibt unverändert und die Zahlung wird hier entkoppelt."

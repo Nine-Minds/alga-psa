@@ -2983,7 +2983,7 @@
       "paymentsRecorded": "Wycofaj płatności przed anulowaniem.",
       "paymentsRecordedManual": "Wycofaj płatności zarejestrowane w AlgaPSA ({{sources}}) przed anulowaniem tej faktury.",
       "paymentsRecordedIntegration": "Ta faktura ma płatności z Twojego systemu księgowego ({{sources}}). Usuń je lub edytuj tam, a następna synchronizacja wycofa je tutaj, albo wycofaj je tylko w AlgaPSA.",
-      "paymentsRecordedStripe": "Ta faktura ma płatności pobrane przez dostawcę płatności ({{sources}}). Zwróć je tam przed anulowaniem.",
+      "paymentsRecordedGateway": "Ta faktura ma płatności pobrane przez dostawcę płatności ({{sources}}). Zwróć je tam przed anulowaniem.",
       "paymentsRecordedMixed": "Wycofaj płatności na tej fakturze ({{sources}}) przed jej anulowaniem.",
       "creditNoteCreditApplied": "Ta nota kredytowa ma zastosowany kredyt. Cofnij zastosowanie kredytu przed anulowaniem."
     },
@@ -2993,7 +2993,7 @@
       "paymentNotFound": "Nie znaleziono płatności. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
       "notReversible": "Tej płatności nie można wycofać.",
       "alreadyReversed": "Ta płatność została już wycofana.",
-      "stripeRefundRequired": "Ta płatność została pobrana przez Stripe. Zamiast tego zwróć ją u dostawcy płatności.",
+      "gatewayRefundRequired": "Ta płatność została pobrana przez dostawcę płatności ({{method}}). Zamiast tego zwróć ją tam.",
       "integrationOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj w {{provider}}, a następna synchronizacja wycofa ją tutaj.",
       "remoteMutateRequired": "Brak uprawnień: wycofanie zsynchronizowanej płatności tylko w AlgaPSA wymaga uprawnienia do zdalnych zmian w księgowości.",
       "reverseFailed": "Nie udało się wycofać płatności. Spróbuj ponownie."
@@ -3067,7 +3067,7 @@
       "manual": "Zarejestrowano w AlgaPSA",
       "quickbooks": "QuickBooks",
       "xero": "Xero",
-      "stripe": "Stripe"
+      "gateway": "Dostawca płatności"
     },
     "fields": {
       "reason": "Powód"
@@ -3080,7 +3080,7 @@
       "close": "Zamknij"
     },
     "notes": {
-      "stripeRefund": "Pobrano przez Stripe: zwróć ją u dostawcy płatności.",
+      "gatewayRefund": "Pobrano przez dostawcę płatności ({{method}}): zwróć ją tam.",
       "alreadyReversed": "Już wycofano.",
       "providerOwned": "Ta płatność pochodzi z płatności {{reference}} w {{provider}}. Usuń ją lub edytuj tam, a następna synchronizacja wycofa ją tutaj.",
       "algaOnlyWarning": "AlgaPSA i {{provider}} nie będą zgodne co do tej płatności: zapis w {{provider}} pozostaje bez zmian, a płatność zostaje tutaj odłączona."

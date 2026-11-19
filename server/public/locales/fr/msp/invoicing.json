@@ -2931,7 +2931,7 @@
       "paymentsRecorded": "Annulez les paiements avant d’annuler la facture.",
       "paymentsRecordedManual": "Annulez les paiements enregistrés dans AlgaPSA ({{sources}}) avant d’annuler cette facture.",
       "paymentsRecordedIntegration": "Cette facture comporte des paiements provenant de votre système comptable ({{sources}}). Supprimez-les ou modifiez-les là-bas et la prochaine synchronisation les annulera ici, ou annulez-les uniquement dans AlgaPSA.",
-      "paymentsRecordedStripe": "Cette facture comporte des paiements encaissés via un prestataire de paiement ({{sources}}). Remboursez-les là-bas avant d’annuler la facture.",
+      "paymentsRecordedGateway": "Cette facture comporte des paiements encaissés via un prestataire de paiement ({{sources}}). Remboursez-les là-bas avant d’annuler la facture.",
       "paymentsRecordedMixed": "Annulez les paiements de cette facture ({{sources}}) avant de l’annuler.",
       "creditNoteCreditApplied": "Cet avoir comporte du crédit appliqué. Annulez l’application du crédit avant d’annuler l’avoir."
     },
@@ -2941,7 +2941,7 @@
       "paymentNotFound": "Paiement introuvable. Il a peut-être été modifié ou supprimé. Veuillez actualiser la page et réessayer.",
       "notReversible": "Ce paiement ne peut pas être annulé.",
       "alreadyReversed": "Ce paiement a déjà été annulé.",
-      "stripeRefundRequired": "Ce paiement a été encaissé via Stripe. Remboursez-le plutôt via le prestataire de paiement.",
+      "gatewayRefundRequired": "Ce paiement a été encaissé via un prestataire de paiement ({{method}}). Remboursez-le plutôt là-bas.",
       "integrationOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le dans {{provider}} et la prochaine synchronisation l’annulera ici.",
       "remoteMutateRequired": "Accès refusé : annuler un paiement synchronisé uniquement dans AlgaPSA nécessite l’autorisation de modification distante de la comptabilité.",
       "reverseFailed": "Échec de l’annulation du paiement. Veuillez réessayer."
@@ -3015,7 +3015,7 @@
       "manual": "Enregistré dans AlgaPSA",
       "quickbooks": "QuickBooks",
       "xero": "Xero",
-      "stripe": "Stripe"
+      "gateway": "Prestataire de paiement"
     },
     "fields": {
       "reason": "Motif"
@@ -3028,7 +3028,7 @@
       "close": "Fermer"
     },
     "notes": {
-      "stripeRefund": "Encaissé via Stripe : remboursez-le plutôt chez le prestataire de paiement.",
+      "gatewayRefund": "Encaissé via un prestataire de paiement ({{method}}) : remboursez-le plutôt là-bas.",
       "alreadyReversed": "Déjà annulé.",
       "providerOwned": "Ce paiement provient du paiement {{reference}} de {{provider}}. Supprimez-le ou modifiez-le là-bas et la prochaine synchronisation l’annulera ici.",
       "algaOnlyWarning": "AlgaPSA et {{provider}} divergeront sur ce paiement : l’enregistrement dans {{provider}} reste inchangé et le paiement est dissocié ici."

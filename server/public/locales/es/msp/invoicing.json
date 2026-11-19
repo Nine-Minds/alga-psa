@@ -2910,7 +2910,7 @@
       "paymentsRecorded": "Revierta los pagos antes de anular.",
       "paymentsRecordedManual": "Revierta los pagos registrados en AlgaPSA ({{sources}}) antes de anular esta factura.",
       "paymentsRecordedIntegration": "Esta factura tiene pagos de su sistema contable ({{sources}}). Elimínelos o edítelos allí y la próxima sincronización los revertirá aquí, o reviértalos solo en AlgaPSA.",
-      "paymentsRecordedStripe": "Esta factura tiene pagos cobrados mediante un proveedor de pagos ({{sources}}). Reembólselos allí antes de anular.",
+      "paymentsRecordedGateway": "Esta factura tiene pagos cobrados mediante un proveedor de pagos ({{sources}}). Reembólselos allí antes de anular.",
       "paymentsRecordedMixed": "Revierta los pagos de esta factura ({{sources}}) antes de anularla.",
       "creditNoteCreditApplied": "Esta nota de crédito tiene crédito aplicado. Desaplique el crédito antes de anular."
     },
@@ -2920,7 +2920,7 @@
       "paymentNotFound": "No se encontró el pago. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
       "notReversible": "Este pago no se puede revertir.",
       "alreadyReversed": "Este pago ya se revirtió.",
-      "stripeRefundRequired": "Este pago se cobró mediante Stripe. Reembólselo a través del proveedor de pagos.",
+      "gatewayRefundRequired": "Este pago se cobró mediante un proveedor de pagos ({{method}}). Reembólselo allí.",
       "integrationOwned": "Este pago proviene del pago {{reference}} de {{provider}}. Elimínelo o edítelo en {{provider}} y la próxima sincronización lo revertirá aquí.",
       "remoteMutateRequired": "Permiso denegado: revertir un pago sincronizado solo en AlgaPSA requiere el permiso de modificación remota de contabilidad.",
       "reverseFailed": "No se pudo revertir el pago. Inténtelo de nuevo."
@@ -3015,7 +3015,7 @@
       "manual": "Registrado en AlgaPSA",
       "quickbooks": "QuickBooks",
       "xero": "Xero",
-      "stripe": "Stripe"
+      "gateway": "Proveedor de pagos"
     },
     "fields": {
       "reason": "Motivo"
@@ -3028,7 +3028,7 @@
       "close": "Cerrar"
     },
     "notes": {
-      "stripeRefund": "Cobrado mediante Stripe: reembólselo en el proveedor de pagos.",
+      "gatewayRefund": "Cobrado mediante un proveedor de pagos ({{method}}): reembólselo allí.",
       "alreadyReversed": "Ya revertido.",
       "providerOwned": "Este pago proviene del pago {{reference}} de {{provider}}. Elimínelo o edítelo allí y la próxima sincronización lo revertirá aquí.",
       "algaOnlyWarning": "AlgaPSA y {{provider}} no coincidirán en este pago: el registro de {{provider}} queda tal como está y el pago se desvincula aquí."

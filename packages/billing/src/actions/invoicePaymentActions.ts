@@ -39,6 +39,7 @@ import { SyncOperationsRepository } from '../services/accountingSync/syncOperati
 import {
   describePaymentSource,
   loadInvoicePaymentMappings,
+  loadReversedPaymentIds,
   providerLabelForSource,
   type InvoicePaymentRow,
   type PaymentMappingRef,
@@ -364,7 +365,7 @@ const REVERSE_KEY_PREFIX = 'msp/invoicing:errors.reversePayment';
 export type PaymentReversalBlockedReason =
   | 'not_reversible'
   | 'already_reversed'
-  | 'stripe_refund_required'
+  | 'gateway_refund_required'
   | 'integration_owned';
 
 export interface InvoicePaymentListRow {
@@ -442,8 +443,8 @@ async function loadPaymentRows(
 
 /**
  * Decides what a row offers. A reversal row (negative, status 'reversed') is
- * history, never reversible; an already-offset payment is done; Stripe money
- * can only go back through the gateway; an integration-owned payment is the
+ * history, never reversible; an already-offset payment is done; gateway money
+ * can only go back as a refund there; an integration-owned payment is the
  * accounting system's until the operator unlinks it deliberately.
  */
 function describeListRow(
@@ -460,8 +461,8 @@ function describeListRow(
       ? 'not_reversible'
       : reversed
         ? 'already_reversed'
-        : descriptor.source === 'stripe'
-          ? 'stripe_refund_required'
+        : descriptor.source === 'gateway'
+          ? 'gateway_refund_required'
           : null;
 
   return {
@@ -470,7 +471,9 @@ function describeListRow(
     amount,
     method: row.payment_method ?? null,
     referenceNumber: row.reference_number ?? null,
-    paymentDate: row.payment_date ? String(row.payment_date) : null,
+    // The calendar day this money is booked on, never a raw `Date` string:
+    // the dialog formats it, and `String(new Date())` is unparseable there.
+    paymentDate: toCalendarDate(row.payment_date),
     notes: row.notes ?? null,
     status: row.status ?? null,
     source: descriptor.source,
@@ -482,20 +485,12 @@ function describeListRow(
   };
 }
 
-/** Payment ids that already carry an offsetting reversal row. */
-function reversedPaymentIdsFrom(rows: PaymentRowWithInvoice[]): Set<string> {
-  const reversed = new Set<string>();
-  for (const row of rows) {
-    const reference = row.reference_number ?? '';
-    if (reference.startsWith('reversal:')) {
-      reversed.add(reference.slice('reversal:'.length));
-    }
-    const reversedId = (row as { metadata?: { reversed_payment_id?: string } }).metadata?.reversed_payment_id;
-    if (reversedId) {
-      reversed.add(String(reversedId));
-    }
-  }
-  return reversed;
+/** `yyyy-mm-dd` for a stored payment date (a day, not a moment). */
+function toCalendarDate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const instant = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(instant.getTime()) ? null : instant.toISOString().slice(0, 10);
 }
 
 /**
@@ -530,7 +525,7 @@ export const listInvoicePayments = withAuth(async (
     invoiceId,
     rows.map((row) => row.payment_id),
   );
-  const reversedIds = reversedPaymentIdsFrom(rows);
+  const reversedIds = await loadReversedPaymentIds(knex, tenant, invoiceId, rows);
 
   return rows.map((row) => describeListRow(row, mappings.get(row.payment_id), reversedIds));
 });
@@ -589,7 +584,7 @@ async function publishPaymentReversed(params: {
  * `algaOnly` is the deliberate exception — it additionally unlinks the payment
  * (tombstones its mapping), so AlgaPSA and the accounting system knowingly
  * disagree, and it needs the admin-level accounting remote-mutate capability.
- * Stripe money is refused outright; it can only go back as a refund.
+ * Gateway money is refused outright; it can only go back as a refund there.
  *
  * The write itself is `reverseExternalPayment`, the same primitive the sync
  * uses, so a reversal entered here and one observed from QuickBooks produce
@@ -640,8 +635,12 @@ export const reverseInvoicePayment = withAuth(async (
     return actionError('This payment cannot be reversed.', `${REVERSE_KEY_PREFIX}.notReversible`);
   }
 
+  // Includes the reversals the accounting sync wrote (it keys them on the
+  // external payment, not on this row), or a payment deleted in QuickBooks
+  // would be credited back here a second time.
   const invoiceRows = await loadPaymentRows(knex, tenant, payment.invoice_id);
-  if (reversedPaymentIdsFrom(invoiceRows).has(payment.payment_id)) {
+  const reversedIds = await loadReversedPaymentIds(knex, tenant, payment.invoice_id, invoiceRows);
+  if (reversedIds.has(payment.payment_id)) {
     return actionError('This payment has already been reversed.', `${REVERSE_KEY_PREFIX}.alreadyReversed`);
   }
 
@@ -654,10 +653,11 @@ export const reverseInvoicePayment = withAuth(async (
   const mapping = mappings.get(payment.payment_id);
   const descriptor = describePaymentSource(payment, mapping);
 
-  if (descriptor.source === 'stripe') {
+  if (descriptor.source === 'gateway') {
     return actionError(
-      'This payment was taken through Stripe. Refund it through the payment provider instead.',
-      `${REVERSE_KEY_PREFIX}.stripeRefundRequired`,
+      `This payment was taken through a payment provider (${payment.payment_method}). Refund it there instead.`,
+      `${REVERSE_KEY_PREFIX}.gatewayRefundRequired`,
+      { method: payment.payment_method ?? '' },
     );
   }
 
@@ -703,6 +703,11 @@ export const reverseInvoicePayment = withAuth(async (
       // One transaction: the money comes back and the link goes in the same
       // commit, so a sync can never see one without the other.
       const reversal = await reverseExternalPayment(trx, tenant, reversalInput);
+      if (reversal.alreadyRecorded) {
+        // Reversed between the check above and the lock: leave the mapping
+        // alone, the reversal that won owns what happens to it.
+        return reversal;
+      }
       if (!reversal.success || !reversal.paymentId) {
         throw new Error(reversal.error ?? 'Failed to reverse the payment.');
       }
@@ -715,9 +720,34 @@ export const reverseInvoicePayment = withAuth(async (
           locally_reversed_reason: reason,
         },
       });
+      // In the same commit as the unlink, as the AlgaPSA-only void writes its
+      // own: an unlinked payment with no record of who abandoned the provider's
+      // copy is exactly what this audit entry exists to prevent.
+      await writeAccountingAudit(trx, tenant, 'accounting_local_payment_reversal', {
+        userId: user.user_id,
+        provider: mapping.integrationType === 'xero' ? 'xero' : 'quickbooks_online',
+        recordId: mapping.externalEntityId,
+        details: {
+          algaEntityType: 'invoice_payment',
+          algaEntityId: payment.payment_id,
+          invoiceId: payment.invoice_id,
+          operation: 'reverse_payment_alga_only',
+          amountCents: amount,
+          reason,
+          // The point of the record: nothing was asked of the provider.
+          remoteRecordUntouched: true,
+        },
+      });
       return reversal;
     })
     : await reverseExternalPayment(knex, tenant, reversalInput);
+
+  // The in-lock guard found an offsetting row already there (a double click, or
+  // a sync reversal that landed first): nothing was written, so say so rather
+  // than reporting a second reversal that never happened.
+  if (outcome.alreadyRecorded) {
+    return actionError('This payment has already been reversed.', `${REVERSE_KEY_PREFIX}.alreadyReversed`);
+  }
 
   if (!outcome.success || !outcome.paymentId) {
     logger.warn('[reverseInvoicePayment] The AR landing refused the reversal', {
@@ -743,30 +773,6 @@ export const reverseInvoicePayment = withAuth(async (
       tenant,
       paymentId: payment.payment_id,
       error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  if (mapping) {
-    await writeAccountingAudit(knex, tenant, 'accounting_local_payment_reversal', {
-      userId: user.user_id,
-      provider: mapping.integrationType === 'xero' ? 'xero' : 'quickbooks_online',
-      recordId: mapping.externalEntityId,
-      details: {
-        algaEntityType: 'invoice_payment',
-        algaEntityId: payment.payment_id,
-        invoiceId: payment.invoice_id,
-        operation: 'reverse_payment_alga_only',
-        amountCents: amount,
-        reason,
-        // The point of the record: nothing was asked of the provider.
-        remoteRecordUntouched: true,
-      },
-    }).catch((error) => {
-      logger.warn('[reverseInvoicePayment] Failed to write the local-reversal audit entry', {
-        tenant,
-        paymentId: payment.payment_id,
-        error: error instanceof Error ? error.message : String(error),
-      });
     });
   }
 

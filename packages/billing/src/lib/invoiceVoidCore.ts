@@ -63,20 +63,16 @@ const CREDIT_NOTE_CREDIT_BLOCKER: LocalVoidBlocker = {
 };
 
 function labelForSource(source: PaymentSourceDescriptor): string {
-  switch (source.source) {
-    case 'quickbooks':
-    case 'xero':
-    case 'stripe': {
-      const provider = providerLabelForSource(source.source);
-      return source.externalReference
-        ? `${provider} payment ${source.externalReference}`
-        : `a ${provider} payment`;
-    }
-    default:
-      return source.externalReference
-        ? `${source.method ?? 'manual'} ${source.externalReference}`
-        : (source.method ?? 'manual');
+  if (source.source === 'quickbooks' || source.source === 'xero') {
+    const provider = providerLabelForSource(source.source);
+    return source.externalReference
+      ? `${provider} payment ${source.externalReference}`
+      : `a ${provider} payment`;
   }
+  // Manual and gateway money both read best as what the operator sees on the
+  // row: "check 1042", "stripe pi_3Qa...".
+  const method = source.method ?? (source.source === 'gateway' ? 'payment provider' : 'manual');
+  return source.externalReference ? `${method} ${source.externalReference}` : method;
 }
 
 /**
@@ -102,13 +98,13 @@ function buildPaymentsBlocker(sources: PaymentSourceDescriptor[]): LocalVoidBloc
     ? 'Mixed'
     : kinds.has('manual')
       ? 'Manual'
-      : kinds.has('stripe')
-        ? 'Stripe'
+      : kinds.has('gateway')
+        ? 'Gateway'
         : 'Integration';
 
   const message = variant === 'Manual'
     ? `Reverse the payments recorded in AlgaPSA (${list}) before voiding this invoice.`
-    : variant === 'Stripe'
+    : variant === 'Gateway'
       ? `This invoice has payments taken through a payment provider (${list}). Refund them there before voiding.`
       : variant === 'Integration'
         ? `This invoice has payments from your accounting system (${list}). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.`

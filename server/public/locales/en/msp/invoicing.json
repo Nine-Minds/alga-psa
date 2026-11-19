@@ -2931,7 +2931,7 @@
       "paymentsRecorded": "Unwind payments before voiding.",
       "paymentsRecordedManual": "Reverse the payments recorded in AlgaPSA ({{sources}}) before voiding this invoice.",
       "paymentsRecordedIntegration": "This invoice has payments from your accounting system ({{sources}}). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.",
-      "paymentsRecordedStripe": "This invoice has payments taken through a payment provider ({{sources}}). Refund them there before voiding.",
+      "paymentsRecordedGateway": "This invoice has payments taken through a payment provider ({{sources}}). Refund them there before voiding.",
       "paymentsRecordedMixed": "Unwind the payments on this invoice ({{sources}}) before voiding it.",
       "creditNoteCreditApplied": "This credit note has applied credit. Unapply the credit before voiding."
     },
@@ -2941,7 +2941,7 @@
       "paymentNotFound": "Payment not found. It may have been updated or deleted. Please refresh and try again.",
       "notReversible": "This payment cannot be reversed.",
       "alreadyReversed": "This payment has already been reversed.",
-      "stripeRefundRequired": "This payment was taken through Stripe. Refund it through the payment provider instead.",
+      "gatewayRefundRequired": "This payment was taken through a payment provider ({{method}}). Refund it there instead.",
       "integrationOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it in {{provider}} and the next sync will reverse it here.",
       "remoteMutateRequired": "Permission denied: reversing a synced payment in AlgaPSA only requires the accounting remote-mutate permission.",
       "reverseFailed": "Failed to reverse the payment. Please try again."
@@ -3015,7 +3015,7 @@
       "manual": "Recorded in AlgaPSA",
       "quickbooks": "QuickBooks",
       "xero": "Xero",
-      "stripe": "Stripe"
+      "gateway": "Payment provider"
     },
     "fields": {
       "reason": "Reason"
@@ -3028,7 +3028,7 @@
       "close": "Close"
     },
     "notes": {
-      "stripeRefund": "Taken through Stripe: refund it in the payment provider instead.",
+      "gatewayRefund": "Taken through a payment provider ({{method}}): refund it there instead.",
       "alreadyReversed": "Already reversed.",
       "providerOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it there and the next sync will reverse it here.",
       "algaOnlyWarning": "AlgaPSA and {{provider}} will disagree about this payment: the {{provider}} record is left exactly as it is and the payment is unlinked here."

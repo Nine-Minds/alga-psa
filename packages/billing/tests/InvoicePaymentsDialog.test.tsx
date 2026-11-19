@@ -33,7 +33,13 @@ vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useOptionalI18n: () => null,
   useTranslation: () => ({ t: mocks.translate }),
-  useFormatters: () => ({ locale: 'en-US', formatDate: () => '2 Nov 2026', formatCurrency: (v: number) => `$${v}` }),
+  useFormatters: () => ({
+    locale: 'en-US',
+    // The dialog must ask for the CALENDAR day: a payment booked on the 19th
+    // reads as the 18th west of UTC when formatted as an instant.
+    formatCalendarDate: (value: string) => `calendar:${value}`,
+    formatCurrency: (v: number) => `$${v}`,
+  }),
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children, footer, title }: any) => (
@@ -170,14 +176,20 @@ describe('InvoicePaymentsDialog', () => {
     expect(await screen.findByText('This payment has already been reversed.')).toBeInTheDocument();
   });
 
-  it('points a Stripe payment at the refund flow instead of offering a reversal', async () => {
+  it('points gateway money at the refund flow instead of offering a reversal', async () => {
     mocks.listInvoicePayments.mockResolvedValue([
-      manualPayment({ source: 'stripe', method: 'stripe', canReverse: false, blockedReason: 'stripe_refund_required' }),
+      manualPayment({ source: 'gateway', method: 'stripe', canReverse: false, blockedReason: 'gateway_refund_required' }),
     ]);
     open();
 
-    expect(await screen.findByText(/refund it in the payment provider/)).toBeInTheDocument();
+    expect(await screen.findByText(/Taken through a payment provider \(stripe\)/)).toBeInTheDocument();
     expect(screen.queryByText('Reverse payment')).not.toBeInTheDocument();
+  });
+
+  it('shows the payment date as a calendar day, not an instant', async () => {
+    open();
+
+    expect(await screen.findByText(/calendar:2026-11-02/)).toBeInTheDocument();
   });
 
   it('marks an already-reversed payment as spent', async () => {

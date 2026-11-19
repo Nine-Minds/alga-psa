@@ -50,7 +50,7 @@ const SOURCE_LABEL_DEFAULTS: Record<InvoicePaymentListRow['source'], string> = {
   manual: 'Recorded in AlgaPSA',
   quickbooks: 'QuickBooks',
   xero: 'Xero',
-  stripe: 'Stripe',
+  gateway: 'Payment provider',
 };
 
 export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({
@@ -62,7 +62,7 @@ export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({
   onChanged,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { locale, formatDate } = useFormatters();
+  const { locale, formatCalendarDate } = useFormatters();
   const capabilities = useAccountingCapabilities();
 
   const [loading, setLoading] = useState(false);
@@ -131,11 +131,12 @@ export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({
   };
 
   const renderRowActions = (row: InvoicePaymentListRow) => {
-    if (row.blockedReason === 'stripe_refund_required') {
+    if (row.blockedReason === 'gateway_refund_required') {
       return (
-        <p className="text-xs text-muted-foreground" id={`invoice-payments-stripe-note-${row.paymentId}`}>
-          {t('invoicePayments.notes.stripeRefund', {
-            defaultValue: 'Taken through Stripe: refund it in the payment provider instead.',
+        <p className="text-xs text-muted-foreground" id={`invoice-payments-gateway-note-${row.paymentId}`}>
+          {t('invoicePayments.notes.gatewayRefund', {
+            defaultValue: 'Taken through a payment provider ({{method}}): refund it there instead.',
+            method: row.method ?? '',
           })}
         </p>
       );
@@ -307,7 +308,10 @@ export const InvoicePaymentsDialog: React.FC<InvoicePaymentsDialogProps> = ({
                         </div>
                         <div className="text-muted-foreground">
                           {[
-                            row.paymentDate ? formatDate(String(row.paymentDate).slice(0, 10)) : null,
+                            // A payment is booked on a DAY: formatting the
+                            // stored instant in the viewer's timezone would
+                            // show the day before west of UTC.
+                            row.paymentDate ? formatCalendarDate(row.paymentDate) : null,
                             row.method,
                             row.referenceNumber,
                           ].filter(Boolean).join(' · ')}

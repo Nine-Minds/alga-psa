@@ -383,8 +383,71 @@ describe('reverseInvoicePayment', () => {
 
     const result: any = await reverseInvoicePayment({ paymentId: PAYMENT, reason: 'Wrong invoice' });
 
-    expect(result.messageKey).toBe('msp/invoicing:errors.reversePayment.stripeRefundRequired');
+    expect(result.messageKey).toBe('msp/invoicing:errors.reversePayment.gatewayRefundRequired');
     expect(payments()).toHaveLength(1);
+  });
+
+  // Every gateway, not just the one named 'stripe': the alternative-payments
+  // webhook lands its money under its own method and only it can refund.
+  it('sends a payment landed by another gateway to the refund flow too', async () => {
+    seed({ payment: { payment_method: 'alternative_payments', reference_number: 'evt_9' } });
+
+    const result: any = await reverseInvoicePayment({ paymentId: PAYMENT, reason: 'Wrong invoice' });
+
+    expect(result.messageKey).toBe('msp/invoicing:errors.reversePayment.gatewayRefundRequired');
+    expect(result.messageParams).toEqual({ method: 'alternative_payments' });
+    expect(payments()).toHaveLength(1);
+  });
+
+  /**
+   * The sync's own reversal keys its row on the EXTERNAL payment and leaves
+   * the original row untouched, so reading only the row would miss it — and
+   * the operator who followed our advice ("delete it in QuickBooks") would be
+   * offered the reversal a second time, crediting the invoice twice.
+   */
+  it('refuses a payment the accounting sync has already reversed', async () => {
+    seed({
+      payment: { payment_method: 'quickbooks', reference_number: '3547' },
+      mapping: {},
+      extraPayments: [{
+        payment_id: 'pay-sync-reversal',
+        invoice_id: INVOICE,
+        amount: -10000,
+        payment_method: 'quickbooks',
+        payment_date: '2026-11-18',
+        reference_number: 'reversal:3547',
+        notes: 'Payment deleted in QuickBooks',
+        status: 'reversed',
+        metadata: null,
+      }],
+    });
+    // What the sync's reverseExternalPayment leaves behind: the offset row
+    // above plus a payment_reversal transaction naming the row it offset.
+    rows('transactions').push({
+      transaction_id: 'txn-sync-reversal',
+      invoice_id: INVOICE,
+      type: 'payment_reversal',
+      amount: -10000,
+      metadata: { external_payment_id: '3547', reversed_payment_row: PAYMENT, realm: 'realm-1' },
+    });
+
+    const listed: any = await listInvoicePayments(INVOICE);
+    expect(listed[0]).toMatchObject({
+      paymentId: PAYMENT,
+      reversed: true,
+      canReverse: false,
+      blockedReason: 'already_reversed',
+      requiresAlgaOnly: false,
+    });
+
+    const result: any = await reverseInvoicePayment({
+      paymentId: PAYMENT, reason: 'Deleted in QuickBooks', algaOnly: true,
+    });
+
+    expect(result.messageKey).toBe('msp/invoicing:errors.reversePayment.alreadyReversed');
+    // No second offsetting row, and the mapping is left for the sync to own.
+    expect(payments()).toHaveLength(2);
+    expect(mappings()[0].deleted_at).toBeNull();
   });
 
   describe('a payment that came from the accounting system', () => {
@@ -515,12 +578,20 @@ describe('listInvoicePayments', () => {
     expect(result[1]).toMatchObject({ amount: -10000, canReverse: false, blockedReason: 'not_reversible' });
   });
 
-  it('points a Stripe payment at the refund flow', async () => {
+  it('points gateway money at the refund flow', async () => {
     seed({ payment: { payment_method: 'stripe' } });
 
     const result: any = await listInvoicePayments(INVOICE);
 
-    expect(result[0]).toMatchObject({ source: 'stripe', canReverse: false, blockedReason: 'stripe_refund_required' });
+    expect(result[0]).toMatchObject({ source: 'gateway', canReverse: false, blockedReason: 'gateway_refund_required' });
+  });
+
+  it('reports the payment date as the calendar day it is booked on', async () => {
+    seed({ payment: { payment_date: new Date('2026-11-19T00:00:00.000Z') } });
+
+    const result: any = await listInvoicePayments(INVOICE);
+
+    expect(result[0].paymentDate).toBe('2026-11-19');
   });
 
   it('refuses a caller without invoice:payment', async () => {

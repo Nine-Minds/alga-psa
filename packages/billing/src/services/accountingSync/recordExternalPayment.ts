@@ -25,7 +25,9 @@ import { buildExternalPaymentRecordedPayload } from '../../lib/paymentRecordedEv
  */
 
 import { computeBalanceDue } from '../../lib/balanceDue';
+import { loadReversedPaymentIds, reversalReferenceFor } from '../../lib/payments/paymentSources';
 export { computeBalanceDue };
+export { reversalReferenceFor };
 export type { InvoiceBalanceInputs } from '../../lib/balanceDue';
 
 export interface ExternalPaymentInput {
@@ -392,11 +394,6 @@ export interface ExternalPaymentReversalInput {
   reversedPaymentRowId?: string;
 }
 
-/** Marker reference carried by every reversal row, keyed on what it offsets. */
-export function reversalReferenceFor(paymentRowId: string): string {
-  return `reversal:${paymentRowId}`;
-}
-
 /**
  * Reverse a previously recorded external payment (edited or deleted in the
  * external system, or reversed by the MSP in AlgaPSA). Mirrors the refund
@@ -421,18 +418,25 @@ export async function reverseExternalPayment(
       .first();
 
     // Under the invoice lock, so two reversals of the same payment row queue
-    // and the loser sees the winner's row rather than inserting a second one.
+    // and the loser sees that it is already spent rather than crediting the
+    // invoice twice. Deliberately the shared reading of "already reversed":
+    // the accounting sync keys its reversal rows on the EXTERNAL payment, so
+    // the marker reference alone would not recognize its work as a reversal of
+    // this row.
     if (input.reversedPaymentRowId) {
-      const existing = await tenantDb(trx, tenantId).table('invoice_payments')
-        .where({
-          invoice_id: input.invoiceId,
-          reference_number: reversalReferenceFor(input.reversedPaymentRowId)
-        })
-        .first<{ payment_id: string } | undefined>();
-      if (existing) {
+      const reversed = await loadReversedPaymentIds(trx, tenantId, input.invoiceId);
+      if (reversed.has(input.reversedPaymentRowId)) {
+        const existing = await tenantDb(trx, tenantId).table('invoice_payments')
+          .where({
+            invoice_id: input.invoiceId,
+            reference_number: reversalReferenceFor(input.reversedPaymentRowId)
+          })
+          .first<{ payment_id: string } | undefined>();
         const paid = await sumPayments(trx, tenantId, input.invoiceId);
         return {
-          paymentId: existing.payment_id,
+          // Absent when the sync wrote the reversal: its row is keyed on the
+          // external payment, and the caller refuses on alreadyRecorded anyway.
+          paymentId: existing?.payment_id,
           newStatus: invoice.status,
           totalPaid: paid,
           alreadyRecorded: true
