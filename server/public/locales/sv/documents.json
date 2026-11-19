@@ -198,8 +198,5 @@
     "incompleteDetail": "Specifikationen av fakturerad tid kan vara ofullständig.",
     "detailPartial": "Endast tillgängliga fakturerade tidposter ingår i denna specifikation.",
     "detailUnavailable": "Ingen specifikation av fakturerade tidposter finns tillgänglig för denna faktura."
-  },
-  "preview": {
-    "pageBreak": "Sidbrytning"
   }
 }

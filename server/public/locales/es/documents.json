@@ -198,8 +198,5 @@
     "incompleteDetail": "El detalle del tiempo facturado puede estar incompleto.",
     "detailPartial": "Este detalle solo incluye las entradas de tiempo facturado disponibles.",
     "detailUnavailable": "El detalle de las entradas de tiempo facturado no está disponible para esta factura."
-  },
-  "preview": {
-    "pageBreak": "Salto de página"
   }
 }

@@ -198,8 +198,5 @@
     "incompleteDetail": "Die Zeitdetails sind möglicherweise unvollständig.",
     "detailPartial": "Diese Detailansicht enthält nur verfügbare abgerechnete Zeiteinträge.",
     "detailUnavailable": "Für diese Rechnung sind keine Details zu abgerechneten Zeiteinträgen verfügbar."
-  },
-  "preview": {
-    "pageBreak": "Seitenumbruch"
   }
 }

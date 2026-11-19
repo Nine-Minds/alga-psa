@@ -198,8 +198,5 @@
     "incompleteDetail": "Il dettaglio del tempo fatturato potrebbe essere incompleto.",
     "detailPartial": "Questo dettaglio include solo le registrazioni di tempo fatturato disponibili.",
     "detailUnavailable": "Il dettaglio delle registrazioni di tempo fatturato non è disponibile per questa fattura."
-  },
-  "preview": {
-    "pageBreak": "Interruzione di pagina"
   }
 }

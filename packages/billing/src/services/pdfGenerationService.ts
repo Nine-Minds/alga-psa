@@ -34,7 +34,7 @@ import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { templateUsesComponentPricing } from '../lib/invoice-template-ast/componentPricing';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale, loadDocumentLabelTranslator, resolvePageBreakPreviewLabel, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, loadDocumentLabelTranslator, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
 import { cadenceI18nKey } from '../lib/quoteItemCadence';
 import {
   appendAcceptanceBlockToHtmlDocument,
@@ -954,9 +954,6 @@ export class PDFGenerationService {
         locale: localized.locale,
         dateFormat,
         t: localized.t,
-        // The on-screen preview, not the PDF: the markup flows as one sheet,
-        // so the pages the author's breaks open are drawn in.
-        pageBreakPreviewLabel: resolvePageBreakPreviewLabel(localized.t),
       });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
@@ -995,9 +992,6 @@ export class PDFGenerationService {
         locale: localized.locale,
         dateFormat,
         t: localized.t,
-        // This is the on-screen preview, not the PDF: the markup flows as one
-        // sheet, so the pages the author's breaks open are drawn in.
-        pageBreakPreviewLabel: resolvePageBreakPreviewLabel(localized.t),
       });
       return { html: rendered.html, css: rendered.css, templateAst };
     });

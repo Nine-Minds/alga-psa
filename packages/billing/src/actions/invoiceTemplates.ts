@@ -29,7 +29,7 @@ import {
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import { localizeTemplateAstForLocale, resolvePageBreakPreviewLabel } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
@@ -476,9 +476,6 @@ export const renderTemplateOnServer = withAuth(async (
           locale: localized.locale,
           dateFormat,
           t: localized.t,
-          // The invoice preview panel, not the PDF: the flow on screen has no
-          // pages, so the ones the author's breaks open are drawn in.
-          pageBreakPreviewLabel: resolvePageBreakPreviewLabel(localized.t),
         });
 
         console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);

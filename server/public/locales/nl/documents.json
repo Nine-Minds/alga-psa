@@ -198,8 +198,5 @@
     "incompleteDetail": "De tijdspecificatie is mogelijk onvolledig.",
     "detailPartial": "Deze specificatie bevat alleen beschikbare gefactureerde tijdregistraties.",
     "detailUnavailable": "De specificatie van gefactureerde tijdregistraties is niet beschikbaar voor deze factuur."
-  },
-  "preview": {
-    "pageBreak": "Pagina-einde"
   }
 }

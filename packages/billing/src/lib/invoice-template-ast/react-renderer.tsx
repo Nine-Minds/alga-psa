@@ -64,13 +64,6 @@ type RenderContext = {
    * would print an empty final page.
    */
   trailingNodeIds: Set<string>;
-  /**
-   * Set by the on-screen preview only: the caption for the divider drawn where a
-   * forced break falls. The preview is one continuous flow, so without it the
-   * document reads as a single page and the author cannot see their own breaks.
-   * Never set on a path that produces a PDF — paper shows the break by turning.
-   */
-  pageBreakPreviewLabel?: string;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -623,37 +616,6 @@ const buildAstCss = (ast: TemplateAst): string => {
   /* The stock signature block (every standard quote layout and the tenant
      clones frozen from them share the id) is signed as one unit. */
   .invoice-template-root #signature-block { break-inside: avoid; }
-  /* Belt and braces: the preview's page-boundary caption is only ever emitted
-     for the screen, and paper shows a break by turning. */
-  .invoice-template-root .ast-page-break-preview { display: none; }
-}
-
-/* The page boundary as the preview draws it: the flow on screen has no pages,
-   so the boundary takes the shape of the gap between two sheets — the page
-   above ends at its edge, the next one starts below it, and the caption names
-   what happened. Emitted by the preview only. */
-.invoice-template-root .ast-page-break-preview {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  margin: 18px 0;
-  background: #e2e8f0;
-  border-top: 1px solid #94a3b8;
-  border-bottom: 1px solid #94a3b8;
-  box-shadow: inset 0 9px 10px -10px rgba(15, 23, 42, 0.55), inset 0 -9px 10px -10px rgba(15, 23, 42, 0.55);
-}
-.invoice-template-root .ast-page-break-preview-label {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  padding: 3px 12px;
-  color: #475569;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 .invoice-template-root .ast-totals-value {
   text-align: right;
@@ -823,7 +785,7 @@ const nodeHasVisibleContent = (
   }
 };
 
-const renderNodeElement = (
+const renderNode = (
   node: TemplateNode,
   evaluation: TemplateEvaluationResult,
   scope: RenderScope,
@@ -1209,52 +1171,6 @@ const renderNodeElement = (
   }
 };
 
-/** Which edges of a node open a page, as authored in the designer. */
-const forcedBreakSides = (node: TemplateNode, ctx: RenderContext): { before: boolean; after: boolean } => {
-  const inline = isRecord(node.style?.inline) ? node.style.inline : null;
-  return {
-    before: inline?.breakBefore === 'page',
-    // A break on the document's trailing edge has nothing after it: no page is
-    // produced, so the preview must not promise one.
-    after: inline?.breakAfter === 'page' && !ctx.trailingNodeIds.has(node.id),
-  };
-};
-
-/**
- * The node, plus the preview's page-boundary caption on whichever side opens a
- * page. Emitted only when the caller asked for it (the template editor's
- * preview), so the printed document never carries one.
- */
-const renderNode = (
-  node: TemplateNode,
-  evaluation: TemplateEvaluationResult,
-  scope: RenderScope,
-  ctx: RenderContext,
-  rootDocumentStyleOverride?: React.CSSProperties
-): React.ReactNode => {
-  const element = renderNodeElement(node, evaluation, scope, ctx, rootDocumentStyleOverride);
-  const label = ctx.pageBreakPreviewLabel;
-  if (!label || element === null) {
-    return element;
-  }
-  const { before, after } = forcedBreakSides(node, ctx);
-  if (!before && !after) {
-    return element;
-  }
-  const marker = (suffix: string) => (
-    <div key={`${node.id}-page-break-${suffix}`} className="ast-page-break-preview" aria-hidden="true">
-      <span className="ast-page-break-preview-label">{label}</span>
-    </div>
-  );
-  return (
-    <React.Fragment key={node.id}>
-      {before ? marker('before') : null}
-      {element}
-      {after ? marker('after') : null}
-    </React.Fragment>
-  );
-};
-
 export interface TemplateReactRendererProps {
   ast: TemplateAst;
   evaluation: TemplateEvaluationResult;
@@ -1272,8 +1188,6 @@ export interface TemplateReactRendererProps {
    */
   dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
-  /** Screen preview only: caption for the page-boundary divider (see RenderContext). */
-  pageBreakPreviewLabel?: string;
 }
 
 export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
@@ -1282,7 +1196,6 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
   locale: localeOverride,
   dateFormat,
   barcodes,
-  pageBreakPreviewLabel,
 }) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
@@ -1305,7 +1218,6 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
           dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
           barcodes,
           trailingNodeIds: collectTrailingNodeIds(ast.layout),
-          pageBreakPreviewLabel,
         },
         rootDocumentStyleOverride
       )}
@@ -1326,8 +1238,6 @@ export interface TemplateRenderOptions {
   t?: TemplateLabelTranslator;
   /** Output of renderBarcodeSvgs (barcode/prepass.server.ts). */
   barcodes?: Record<string, string>;
-  /** Screen preview only: caption for the page-boundary divider drawn at forced breaks. */
-  pageBreakPreviewLabel?: string;
 }
 
 /** Resolve a value expression outside a render (used by the barcode prepass). */
@@ -1366,7 +1276,6 @@ export const renderEvaluatedTemplateAst = async (
         locale={options.locale}
         dateFormat={options.dateFormat}
         barcodes={options.barcodes}
-        pageBreakPreviewLabel={options.pageBreakPreviewLabel}
       />
     ),
     css: buildAstCss(normalizedAst),

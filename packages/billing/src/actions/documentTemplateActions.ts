@@ -378,10 +378,6 @@ export const runAuthoritativeTemplatePreview = withAuth(
       dateFormat,
       // A label is drawn on the cell it prints in (same size, margin and clipping); documents stay unframed.
       previewSheet: resolveTemplatePreviewSheetFromAst(templateAst, getDocumentTypeRegistryEntry(type).printGeometry) ?? undefined,
-      // The preview is one continuous flow, so a forced break leaves no trace in
-      // it; caption each one so the author can see the pages they authored. A
-      // label prints on its own cell and has no page to break.
-      pageBreakPreview: type !== 'work-tag',
     });
     return { html };
   },

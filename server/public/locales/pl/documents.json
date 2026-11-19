@@ -198,8 +198,5 @@
     "incompleteDetail": "Szczegóły rozliczonego czasu mogą być niekompletne.",
     "detailPartial": "To zestawienie zawiera tylko dostępne wpisy rozliczonego czasu.",
     "detailUnavailable": "Szczegóły wpisów rozliczonego czasu nie są dostępne dla tej faktury."
-  },
-  "preview": {
-    "pageBreak": "Podział strony"
   }
 }

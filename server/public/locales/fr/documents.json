@@ -198,8 +198,5 @@
     "incompleteDetail": "Le détail du temps facturé peut être incomplet.",
     "detailPartial": "Seules les écritures de temps facturé disponibles figurent dans ce détail.",
     "detailUnavailable": "Le détail des écritures de temps facturé est indisponible pour cette facture."
-  },
-  "preview": {
-    "pageBreak": "Saut de page"
   }
 }
