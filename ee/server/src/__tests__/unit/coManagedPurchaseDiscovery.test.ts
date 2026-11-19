@@ -51,15 +51,22 @@ describe('co-managed first-purchase discovery (commercial eligibility)', () => {
     expect(await resolveCoManagedPurchaseDiscovery(principal(), 'sponsor')).toEqual({ eligible: false, reason });
   });
 
-  it('a closed surface reads nothing and a missing permission reads no tenant data', async () => {
-    mocks.surface.mockResolvedValue(false);
-    await resolveCoManagedPurchaseDiscovery(principal(), 'sponsor');
-    expect(mocks.permission).not.toHaveBeenCalled();
-    expect(mocks.tenantDbArgs).toEqual([]);
-    mocks.surface.mockResolvedValue(true);
+  it('a missing permission reads no tenant data and never probes the offer', async () => {
     mocks.permission.mockResolvedValue(false);
-    await resolveCoManagedPurchaseDiscovery(principal(), 'sponsor');
+    expect(await resolveCoManagedPurchaseDiscovery(principal(), 'sponsor')).toEqual({ eligible: false, reason: 'no_permission' });
     expect(mocks.tenantDbArgs).toEqual([]);
+    expect(mocks.surface).not.toHaveBeenCalled();
+  });
+
+  it('answers sidebar discovery for a retained tenant with no plan while the offer probe would stall', async () => {
+    mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: null, billing_source: 'stripe' });
+    const probeStarted = Promise.withResolvers<string>();
+    mocks.surface.mockImplementation(() => {
+      probeStarted.resolve('offer probe started');
+      return new Promise<boolean>(() => {});
+    });
+
+    expect(await Promise.race([getCoManagedPurchaseDiscoveryAction(), probeStarted.promise])).toBe(false);
   });
 
   it('the sidebar action answers with the same decision as a bare boolean (no billing data)', async () => {

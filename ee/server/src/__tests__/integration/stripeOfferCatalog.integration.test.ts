@@ -1,5 +1,5 @@
 /** Shared Stripe offer catalog against the migrated EE integration database (T001, T002, T007-catalog half). */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -122,6 +122,21 @@ describe('stripe offer catalog (postgres)', () => {
     expect(await live.classifyPrice({ stripeAccount: 'acct_1', livemode: true }, 'price_a')).toBeNull();
     expect(await catalog(TEST).classifyPrice(TEST, 'live_a')).toBeNull();
     expect((await catalog({ stripeAccount: 'acct_2', livemode: false }).inspect(KEY, 'month')).current).toBeNull();
+  });
+
+  it('skips Stripe scope resolution for an unconfigured offer', async () => {
+    const scope = vi.fn().mockResolvedValue(TEST);
+    const retrieve = vi.fn().mockResolvedValue(prices.price_a);
+    const c = createOfferCatalog({ db, scope, stripe: { prices: { retrieve } } as any, env: {} });
+    await catalog().publishBinding({ actor: operator, offerKey: 'other_offer', interval: 'month', priceId: 'price_b', expectedCurrentVersionId: null, productId: 'prod_seat' });
+
+    expect(await c.isOfferSellable(KEY, 'month')).toBe(false);
+    expect(scope).not.toHaveBeenCalled();
+
+    await catalog().publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
+    expect(await c.isOfferSellable(KEY, 'month')).toBe(true);
+    expect(scope).toHaveBeenCalledOnce();
+    expect(retrieve).not.toHaveBeenCalled();
   });
 
   it('T007: legacy env serves only unmanaged keys; managed keys fail closed and never fall back', async () => {

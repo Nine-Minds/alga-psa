@@ -51,6 +51,11 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return guarded(async () => Boolean(await deps.db(VERSIONS).where(identity(scope, offerKey, interval)).first('version_id')), false);
   }
 
+  async function isManagedAnywhere(offerKey: string, interval: BillingInterval): Promise<boolean> {
+    return guarded(async () => Boolean(await deps.db(VERSIONS)
+      .where({ offer_key: offerKey, billing_interval: interval }).first('version_id')), false);
+  }
+
   async function currentVersion(scope: CatalogScope, offerKey: string, interval: BillingInterval, db: Knex = deps.db): Promise<OfferVersionRow | undefined> {
     return db(VERSIONS).where({ ...identity(scope, offerKey, interval), is_current: true }).first();
   }
@@ -69,9 +74,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
     if (!scope) {
       // Without a scope we cannot tell whether this key is managed. Only a key that no scope manages
       // (and an unmigrated catalog) may use the legacy binding; otherwise fail closed.
-      const managedAnywhere = await guarded(async () => Boolean(await deps.db(VERSIONS).where({ offer_key: offerKey, billing_interval: interval }).first('version_id')), false);
       const legacy = legacyEnvPriceId(offerKey, interval, env);
-      if (managedAnywhere || !legacy) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
+      if (await isManagedAnywhere(offerKey, interval) || !legacy) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
       return legacyOffer(offerKey, interval, legacy, null);
     }
     if (!(await isManaged(scope, offerKey, interval))) {
@@ -123,9 +127,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
     const scope = await scopeOrNull();
     if (!scope) {
       // Scope unknown: only a key no scope manages may be recognised through the legacy binding.
-      const managedAnywhere = await guarded(async () => Boolean(await deps.db(VERSIONS).where({ offer_key: offerKey, billing_interval: interval }).first('version_id')), false);
       const legacy = legacyEnvPriceId(offerKey, interval, env);
-      if (managedAnywhere) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
+      if (await isManagedAnywhere(offerKey, interval)) throw new OfferUnavailableError('scope_unavailable', 'The Stripe account and mode for the offer catalog could not be determined.');
       return new Set(legacy ? [legacy] : []); // nothing managed, nothing configured: inert
     }
     const rows = await guarded(() => deps.db(VERSIONS).where(identity(scope, offerKey, interval)).select('price_id') as Promise<Array<{ price_id: string }>>, []);
@@ -137,11 +140,14 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return ids;
   }
 
-  /** Is anything configured to sell this offer? DB-only, so cheap enough for UI gating. */
+  /** Checks catalog configuration without validating the price in Stripe. */
   async function isOfferSellable(offerKey: string, interval: BillingInterval): Promise<boolean> {
+    const legacy = legacyEnvPriceId(offerKey, interval, env);
+    // Without a binding in any account, even a successful scope lookup cannot open this offer.
+    if (!legacy && !(await isManagedAnywhere(offerKey, interval))) return false;
     const scope = await scopeOrNull();
     if (!scope) return false;
-    if (!(await isManaged(scope, offerKey, interval))) return Boolean(legacyEnvPriceId(offerKey, interval, env));
+    if (!(await isManaged(scope, offerKey, interval))) return Boolean(legacy);
     try { return Boolean(await currentVersion(scope, offerKey, interval)); } catch { return false; }
   }
 
