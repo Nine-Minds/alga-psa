@@ -211,6 +211,32 @@ describe('the paginated preview matches the printed pages', () => {
     expectParity(sheets, printed);
   }, 180_000);
 
+  it('breaks before a block that states no display of its own', async () => {
+    // The reported regression, from the author's own quote: a Page Break dropped between the
+    // timeline and the pricing left the pricing rows on the timeline's sheet and moved only the
+    // totals overleaf — one block late — while the PDF broke in the right place. Every style this
+    // renderer writes is an inline style, and paged.js treats an element whose inline style omits
+    // `display` as not displayed, then looks past it for the element the break sits against. So the
+    // break has to be asserted against a neighbour that states no display: the line-items table.
+    const source = getStandardQuoteTemplateAstByCode('standard-quote-default')!;
+    const workspace = importTemplateAstToWorkspace(JSON.parse(JSON.stringify(source)) as TemplateAst);
+    const page = findPageNode(workspace);
+
+    const tableIndex = page.children.findIndex(
+      (childId) => workspace.nodesById[childId]?.type === 'dynamic-table',
+    );
+    expect(tableIndex, 'the standard quote carries a line-items table').toBeGreaterThan(0);
+    addPageBreak(workspace, 'pricing-break', tableIndex);
+
+    const { preview, printed, sheets } = await paginateBothWays(exportWorkspaceToTemplateAst(workspace), quoteModel);
+    expect(printed).toHaveLength(2);
+    expect(preview.pageCount).toBe(2);
+    expectParity(sheets, printed);
+    // Named explicitly, because parity alone would also be satisfied by both engines breaking in
+    // the same wrong place: the rows start the second sheet, they do not trail the first.
+    expect(pageOf(sheets, ['Managed endpoints'])).toEqual([2]);
+  }, 180_000);
+
   it('opens a sheet on natural overflow, not only on a forced break', async () => {
     const itemCount = 60;
     const ast = getStandardTemplateAstByCode('standard-default')!;

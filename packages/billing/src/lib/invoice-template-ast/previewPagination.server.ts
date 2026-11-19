@@ -183,6 +183,16 @@ export const paginateTemplatePreviewHtml = async (
             if (forced(style.breakBefore)) element.classList.add(classes.before);
             if (forced(style.breakAfter)) element.classList.add(classes.after);
             if (avoided(style.breakInside)) element.classList.add(classes.inside);
+            // paged.js's undisplayed filter marks EVERY element that carries a `style` attribute
+            // without a `display` in it as not displayed, and then refuses to see it when it looks
+            // for the element a break sits between — so in a document whose every style is inline
+            // (every document this renderer produces) a forced break lands on the wrong element or
+            // is dropped. Stating the display the element already computes to takes it back out of
+            // that bucket without changing a thing about the layout. An element that really is
+            // `display: none` keeps its empty inline display and stays correctly undisplayed.
+            if (element.style.display === '' && style.display !== 'none') {
+              element.style.display = style.display;
+            }
           });
         },
         { before: BREAK_BEFORE_CLASS, after: BREAK_AFTER_CLASS, inside: BREAK_INSIDE_CLASS },
