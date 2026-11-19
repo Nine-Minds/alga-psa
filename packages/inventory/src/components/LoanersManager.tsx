@@ -17,7 +17,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IClient, IStockLocation } from '@alga-psa/types';
+import type { ColumnDefinition, IStockLocation } from '@alga-psa/types';
 import {
   getUnitDetail,
   listStockLocations,
@@ -85,10 +85,8 @@ function dueStatus(value: string | Date | null | undefined): { state: DueState; 
 
 export function LoanersManager({
   initialLoaners,
-  clients,
 }: {
   initialLoaners: LoanerOutRow[];
-  clients: IClient[];
 }) {
   const { t } = useTranslation('features/inventory');
   const [rows, setRows] = useState<LoanerOutRow[]>(initialLoaners || []);
@@ -542,7 +540,6 @@ export function LoanersManager({
             <label className="block text-sm font-medium">{t('loaners.fields.client', 'Client')}</label>
             <ClientPicker
               id="loaner-loan-client"
-              clients={clients}
               selectedClientId={loanClientId}
               onSelect={(id) => setLoanClientId(id)}
               filterState={loanClientFilter}

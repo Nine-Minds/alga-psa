@@ -32,7 +32,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import { AsyncClientPicker } from '@alga-psa/ui/components/AsyncClientPicker';
 import { Plus, Trash2, ChevronDown, Search } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -50,7 +50,6 @@ type TranslateFn = ReturnType<typeof useTranslation>['t'];
 interface SlaPolicyFormProps {
   policyId?: string;  // If provided, edit mode
   boards: { board_id: string; name: string }[];
-  clients: { client_id: string; client_name: string; logoUrl: string | null }[];
   onSave?: (policy: ISlaPolicy) => void;
   onCancel?: () => void;
 }
@@ -346,7 +345,7 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
   );
 }
 
-export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: SlaPolicyFormProps) {
+export function SlaPolicyForm({ policyId, boards, onSave, onCancel }: SlaPolicyFormProps) {
   const { t } = useTranslation('msp/settings');
 
   // Loading and error states
@@ -364,7 +363,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
   const [businessHoursSchedules, setBusinessHoursSchedules] = useState<IBusinessHoursSchedule[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [allBoards, setAllBoards] = useState<{ board_id: string; name: string }[]>([]);
-  const [allClients, setAllClients] = useState<{ client_id: string; client_name: string; logoUrl: string | null }[]>([]);
 
   // Board/client assignments
   const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
@@ -398,7 +396,6 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
       setBusinessHoursSchedules(schedules);
       setPriorities(priorityList);
       setAllBoards(boards);
-      setAllClients(clients);
 
       if (policyId) {
         // Load existing policy and current assignments in parallel
@@ -536,7 +533,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
     } finally {
       setIsLoading(false);
     }
-  }, [policyId, boards, clients, t]);
+  }, [policyId, boards, t]);
 
   useEffect(() => {
     loadData();
@@ -840,23 +837,19 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
             />
 
             {/* Client assignment */}
-            <MultiSelectPanel
-              id="sla-policy-clients"
-              label={t('sla.policyForm.basics.assignClients', { defaultValue: 'Assign to Clients' })}
-              searchPlaceholder={t('sla.policyForm.basics.searchClients', { defaultValue: 'Search clients...' })}
-              items={allClients.map(c => ({
-                id: c.client_id,
-                label: c.client_name,
-                render: (
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ClientAvatar clientId={c.client_id} clientName={c.client_name} logoUrl={c.logoUrl} size="xs" />
-                    <span className="text-sm truncate">{c.client_name}</span>
-                  </div>
-                )
-              }))}
-              selectedIds={selectedClientIds}
-              onSelectedIdsChange={setSelectedClientIds}
-            />
+            <div>
+              <Label className="mb-1 block" htmlFor="sla-policy-clients">
+                {t('sla.policyForm.basics.assignClients', { defaultValue: 'Assign to Clients' })}
+              </Label>
+              {/* Searches and pages on the server; the selected clients are named from their ids. */}
+              <AsyncClientPicker
+                id="sla-policy-clients"
+                selectedClientIds={selectedClientIds}
+                onSelectedClientIdsChange={setSelectedClientIds}
+                fitContent={false}
+                placeholder={t('sla.policyForm.basics.searchClients', { defaultValue: 'Search clients...' })}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

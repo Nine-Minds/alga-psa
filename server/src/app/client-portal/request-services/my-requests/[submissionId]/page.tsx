@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import React from 'react';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { formatDate, getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -9,6 +8,7 @@ import { getDateFormatPreference } from '@alga-psa/clients/actions/countryAction
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getMyServiceRequestSubmissionDetailAction } from '../actions';
+import { ServiceRequestTicketLink } from '../../ServiceRequestTicketLink';
 import { getSubmissionFieldDisplay } from '../../submissionFieldPresentation';
 import { getSubmissionStatusPresentation } from '../../submissionStatusPresentation';
 
@@ -80,10 +80,6 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
       </div>
       <div>
         <h1 className="text-2xl font-semibold">{submission.request_name}</h1>
-        <p className="text-sm text-[rgb(var(--color-text-600))]">
-          {t('submissionDetail.requestIdLabel')}{' '}
-          <span className="font-mono">{submission.submission_id}</span>
-        </p>
       </div>
 
       <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
@@ -98,13 +94,12 @@ export default async function MyRequestDetailPage(props: MyRequestDetailPageProp
         </p>
         {submission.created_ticket_id && (
           <p className="text-sm">
-            {t('submissionDetail.ticketLabel')}{' '}
-            <Link
-              href={`/client-portal/tickets/${submission.created_ticket_id}`}
-              className="text-[rgb(var(--color-primary-600))] hover:underline"
-            >
-              {submission.created_ticket_id}
-            </Link>
+            {t('ticketReference.label')}{' '}
+            <ServiceRequestTicketLink
+              ticketId={submission.created_ticket_id}
+              ticketNumber={submission.ticket_number}
+              labels={{ viewTicket: t('ticketReference.viewTicket') }}
+            />
           </p>
         )}
       </section>

@@ -126,7 +126,6 @@ const actionCalls: Array<[string, (a: any) => Promise<unknown>]> = [
   ["runContractSimulation", (a) => a.runContractSimulation(scenario)],
   ["getRecentContractSimulationAssumptions", (a) => a.getRecentContractSimulationAssumptions(scenario)],
   ["getContractSimulationReplayAssumptions", (a) => a.getContractSimulationReplayAssumptions(scenario, "a", "b")],
-  ["listContractSimulationClients", (a) => a.listContractSimulationClients()],
 ];
 
 describe("contractSimulationActions access guard", () => {
@@ -192,56 +191,6 @@ describe("contractSimulationActions access guard", () => {
     const { runContractSimulation } = await import("./contractSimulationActions");
     await expect((runContractSimulation as any)(scenario)).resolves.toEqual({ periods: [] });
     expect(guards.resolveTenantTier).toHaveBeenCalledWith("t");
-  });
-
-  it("requires client:read before reading the client picker data", async () => {
-    guards.hasPermission.mockImplementation(async (...args: unknown[]) => args[1] === "billing");
-    const actions: any = await import("./contractSimulationActions");
-
-    await expect(actions.listContractSimulationClients()).rejects.toThrow(/Cannot read clients/);
-    expect(guards.hasPermission).toHaveBeenNthCalledWith(1, guards.currentUser, "billing", "read");
-    expect(guards.hasPermission).toHaveBeenNthCalledWith(2, guards.currentUser, "client", "read");
-    expect(guards.createTenantKnex).not.toHaveBeenCalled();
-  });
-
-  it("lists only active clients in the authenticated tenant for an internal client reader", async () => {
-    const rows = [
-      { tenant: "t", client_id: "allowed", client_name: "Allowed Co", is_inactive: false },
-      { tenant: "t", client_id: "inactive", client_name: "Inactive Co", is_inactive: true },
-      { tenant: "other-tenant", client_id: "foreign", client_name: "Foreign Co", is_inactive: false },
-    ];
-    const query: any = {
-      filtered: [...rows],
-      where(criteria: Record<string, unknown>) {
-        this.filtered = this.filtered.filter((row: any) =>
-          Object.entries(criteria).every(([key, value]) => row[key] === value),
-        );
-        return this;
-      },
-      orderBy(key: string, direction: string) {
-        this.filtered.sort((a: any, b: any) => direction === "asc" ? a[key].localeCompare(b[key]) : b[key].localeCompare(a[key]));
-        return this;
-      },
-      select(...columns: string[]) {
-        return Promise.resolve(this.filtered.map((row: any) => Object.fromEntries(columns.map((column) => [column, row[column]]))));
-      },
-    };
-    guards.tenantDb.mockImplementation((_knex: unknown, tenant: string) => ({
-      table: () => {
-        query.filtered = rows.filter((row) => row.tenant === tenant);
-        return query;
-      },
-    }));
-    guards.createTenantKnex.mockResolvedValue({ knex: () => query } as any);
-    guards.hasPermission.mockResolvedValue(true);
-    const actions: any = await import("./contractSimulationActions");
-
-    await expect(actions.listContractSimulationClients()).resolves.toEqual([
-      { client_id: "allowed", client_name: "Allowed Co" },
-    ]);
-    expect(guards.hasPermission).toHaveBeenNthCalledWith(1, guards.currentUser, "billing", "read");
-    expect(guards.hasPermission).toHaveBeenNthCalledWith(2, guards.currentUser, "client", "read");
-    expect(guards.tenantDb).toHaveBeenCalledWith(expect.any(Function), "t");
   });
 
   it("still returns not_enterprise in CE", async () => {

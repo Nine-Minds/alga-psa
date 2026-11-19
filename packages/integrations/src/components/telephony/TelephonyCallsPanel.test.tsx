@@ -8,7 +8,6 @@ import type { TelephonyCallSummary, TelephonyOverview } from '../../actions/inte
 const mocks = vi.hoisted(() => ({
   getOverview: vi.fn(),
   resolveCall: vi.fn(async () => ({ success: true })),
-  listTargets: vi.fn(async () => ({ success: true, targets: [] as any[] })),
   listLinkableTickets: vi.fn(async () => ({ success: true, tickets: [] as any[] })),
   linkToTicket: vi.fn(async () => ({ success: true })),
   createTicket: vi.fn(async () => ({ success: true })),
@@ -17,7 +16,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../actions/integrations/telephonyActions', () => ({
   getTelephonyOverview: mocks.getOverview,
   resolveTelephonyCall: mocks.resolveCall,
-  listTelephonyResolutionTargets: mocks.listTargets,
   listTelephonyLinkableTickets: mocks.listLinkableTickets,
   linkTelephonyCallToTicket: mocks.linkToTicket,
   createTicketFromTelephonyCall: mocks.createTicket,
@@ -30,7 +28,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   return { useTranslation: () => ({ t }), useFormatters: () => ({ locale: 'en' }) };
 });
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, clients, onSelect, placeholder, disabled }: any) => (
+  // The real picker searches on the server through the shell's searcher; this stand-in offers one client.
+  ClientPicker: ({ id, onSelect, placeholder, disabled }: any) => (
     <select
       id={`${id}-trigger`}
       aria-label={placeholder}
@@ -39,9 +38,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
       onChange={(event) => onSelect(event.target.value || null)}
     >
       <option value="">{placeholder}</option>
-      {clients.map((client: any) => (
-        <option key={client.client_id} value={client.client_id}>{client.client_name}</option>
-      ))}
+      <option value="client-7">Emerald City</option>
     </select>
   ),
 }));
@@ -102,7 +99,6 @@ describe('TelephonyCallsPanel', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mocks.listTargets.mockResolvedValue({ success: true, targets: [] });
     mocks.resolveCall.mockResolvedValue({ success: true });
   });
 
@@ -159,14 +155,8 @@ describe('TelephonyCallsPanel', () => {
         candidates: [],
       })],
     }));
-    mocks.listTargets.mockResolvedValue({
-      success: true,
-      targets: [{ contactId: null, clientId: 'client-7', label: 'Emerald City', sublabel: null }],
-    });
-
     render(<TelephonyCallsPanel />);
 
-    await waitFor(() => expect(mocks.listTargets).toHaveBeenCalledWith({ clientsOnly: true }));
     await screen.findByRole('option', { name: 'Emerald City' });
     await userEvent.selectOptions(
       await screen.findByRole('combobox', { name: 'Assign to client…' }),

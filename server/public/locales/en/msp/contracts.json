@@ -1442,6 +1442,8 @@
       "client": "Client context",
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
+      "pickClient": "Select a client",
+      "specificClient": "A specific client",
       "title": "Template simulation"
     },
     "pricing": {

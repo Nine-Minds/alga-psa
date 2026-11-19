@@ -47,7 +47,7 @@ vi.mock('./assetActions', () => ({ createAssetInTransaction: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
 vi.mock('@alga-psa/workflow-streams', () => ({ buildAssetCreatedPayload: vi.fn() }));
 
-import { findAssetByScannedTag } from './assetNumberingActions';
+import { activateAssetTagUniqueness, canManageAssetNumbering, findAssetByScannedTag, listAssetTagAudit } from './assetNumberingActions';
 import { hasPermission } from '@alga-psa/auth';
 
 const asset = (id: string) => ({ asset_id: id, asset_tag: 'Tag-01', name: `Asset ${id}`, client_id: 'client-1', asset_type: 'unknown' });
@@ -92,5 +92,25 @@ describe('scan lookup record visibility', () => {
     h.permitted = false;
     await expect(findAssetByScannedTag('TAG-01')).rejects.toThrow('Permission denied');
     expect(h.permissionCalls).toContain('asset:read');
+  });
+});
+
+describe('asset numbering settings permissions', () => {
+  beforeEach(() => {
+    h.permitted = true;
+    h.permissionCalls = [];
+    vi.clearAllMocks();
+  });
+
+  it('reads with asset:read and gates management on system_settings:update', async () => {
+    await listAssetTagAudit();
+    await canManageAssetNumbering();
+    expect(h.permissionCalls).toEqual(['asset:read', 'system_settings:update']);
+  });
+
+  it('refuses writes without system_settings:update', async () => {
+    h.permitted = false;
+    await expect(activateAssetTagUniqueness()).rejects.toThrow('Cannot update asset numbering settings');
+    expect(h.permissionCalls).toEqual(['system_settings:update']);
   });
 });

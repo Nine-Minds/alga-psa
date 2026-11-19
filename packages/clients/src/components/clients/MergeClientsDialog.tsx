@@ -24,6 +24,8 @@ import {
   previewClientMerge,
   type ClientMergePreview,
 } from '../../actions/clientMergeActions';
+import { getClientById } from '../../actions/queryActions';
+import { searchClientsForPicker } from '../../actions/clientPickerActions';
 import type { ContractDateChoice } from '../../lib/clientMergePlan';
 
 /**
@@ -53,8 +55,6 @@ interface MergeClientsDialogProps {
   onClose: () => void;
   /** The client the merge was launched from; pre-selected as the destination. */
   targetClientId: string;
-  /** Omitted when the caller has no list to hand; loaded on open instead. */
-  clients?: IClient[];
   onMerged?: () => void;
 }
 
@@ -83,12 +83,9 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
   isOpen,
   onClose,
   targetClientId: initialTargetClientId,
-  clients: providedClients,
   onMerged,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
-  const clients = providedClients ?? loadedClients;
   const [step, setStep] = useState<WizardStep>('select');
   // FR-G2: the default keeps today's behaviour — the merged site stays billed
   // under its own profile.
@@ -125,24 +122,32 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
     if (isOpen) reset();
   }, [isOpen, reset]);
 
+  // The chosen source client and its recorded parent are read by id; the tenant's client list is
+  // never loaded (the pickers search on the server).
+  const [sourceClient, setSourceClient] = useState<IClient | null>(null);
+  const [recordedParent, setRecordedParent] = useState<IClient | null>(null);
   useEffect(() => {
-    if (!isOpen || providedClients) return;
-    // Loaded lazily so the client page does not pay for a list nobody opens.
+    let cancelled = false;
+    setSourceClient(null);
+    setRecordedParent(null);
+    if (!isOpen || !sourceClientId) return;
     void (async () => {
       try {
-        const { getAllClients } = await import('../../actions/queryActions');
-        setLoadedClients(await getAllClients(false));
+        const source = await getClientById(sourceClientId);
+        if (cancelled || !source || isReturnedActionError(source)) return;
+        setSourceClient(source);
+        const parentId = (source.properties?.parent_client_id as string | undefined) ?? null;
+        if (!parentId) return;
+        const parent = await getClientById(parentId);
+        if (!cancelled && parent && !isReturnedActionError(parent)) setRecordedParent(parent);
       } catch (error) {
-        toast.error(getErrorMessage(error));
+        if (!cancelled) toast.error(getErrorMessage(error));
       }
     })();
-  }, [isOpen, providedClients]);
-
-  const sourceClient = clients.find((client) => client.client_id === sourceClientId) ?? null;
-  const recordedParentId = (sourceClient?.properties?.parent_client_id as string | undefined) ?? null;
-  const recordedParent = recordedParentId
-    ? clients.find((client) => client.client_id === recordedParentId) ?? null
-    : null;
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sourceClientId]);
 
   /** The per-contact location sets as they stand, in the shape both the dry run and the merge take. */
   const locationAssignments = useCallback(
@@ -422,7 +427,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
         </label>
         <ClientPicker
           id="merge-source-client-picker"
-          clients={clients}
+          searchClients={searchClientsForPicker}
           selectedClientId={sourceClientId}
           onSelect={(clientId) => {
             setSourceClientId(clientId);
@@ -440,7 +445,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
         </label>
         <ClientPicker
           id="merge-target-client-picker"
-          clients={clients}
+          searchClients={searchClientsForPicker}
           selectedClientId={targetClientId}
           onSelect={(clientId) => {
             setTargetClientId(clientId);

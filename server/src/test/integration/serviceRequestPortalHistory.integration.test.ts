@@ -133,6 +133,99 @@ describe('service request portal history', () => {
     expect(forbiddenDetail).toBeNull();
   });
 
+  it('T001: ticket number is joined for list, summary and detail; store-only has none; summary is client-scoped', async () => {
+    const tenant = uuidv4();
+    const definitionId = uuidv4();
+    const versionId = uuidv4();
+    const clientA = uuidv4();
+    const clientB = uuidv4();
+    const ticketId = uuidv4();
+    const ticketSubmission = uuidv4();
+    const storeOnlySubmission = uuidv4();
+    const foreignSubmission = uuidv4();
+
+    await tenantRows().insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+
+    await tenantTable(tenant, 'clients').insert({ tenant, client_id: clientA, client_name: 'Client A' });
+    await tenantTable(tenant, 'clients').insert({ tenant, client_id: clientB, client_name: 'Client B' });
+
+    await tenantTable(tenant, 'tickets').insert({
+      tenant,
+      ticket_id: ticketId,
+      ticket_number: '100150',
+      title: 'Access request ticket',
+      client_id: clientA,
+    });
+
+    await tenantTable(tenant, 'service_request_definitions').insert({
+      tenant,
+      definition_id: definitionId,
+      name: 'Account Access Request',
+      form_schema: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+      lifecycle_state: 'published',
+    });
+
+    await tenantTable(tenant, 'service_request_definition_versions').insert({
+      tenant,
+      version_id: versionId,
+      definition_id: definitionId,
+      version_number: 1,
+      name: 'Account Access Request',
+      form_schema_snapshot: { fields: [] },
+      execution_provider: 'ticket-only',
+      execution_config: {},
+      form_behavior_provider: 'basic',
+      form_behavior_config: {},
+      visibility_provider: 'all-authenticated-client-users',
+      visibility_config: {},
+    });
+
+    const base = {
+      tenant,
+      definition_id: definitionId,
+      definition_version_id: versionId,
+      requester_user_id: uuidv4(),
+      contact_id: uuidv4(),
+      request_name: 'Account Access Request',
+      submitted_payload: {},
+      execution_status: 'succeeded',
+    };
+    await tenantTable(tenant, 'service_request_submissions').insert([
+      { ...base, submission_id: ticketSubmission, client_id: clientA, created_ticket_id: ticketId },
+      { ...base, submission_id: storeOnlySubmission, client_id: clientA },
+      { ...base, submission_id: foreignSubmission, client_id: clientB },
+    ]);
+
+    const list = await listClientServiceRequestSubmissions(db, tenant, clientA);
+    expect(list).toHaveLength(2);
+    expect(list.find((r) => r.submission_id === ticketSubmission)).toMatchObject({
+      created_ticket_id: ticketId,
+      ticket_number: '100150',
+    });
+    expect(list.find((r) => r.submission_id === storeOnlySubmission)).toMatchObject({
+      created_ticket_id: null,
+      ticket_number: null,
+    });
+
+    const detail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, ticketSubmission);
+    expect(detail).toMatchObject({ created_ticket_id: ticketId, ticket_number: '100150' });
+    const storeOnlyDetail = await getClientServiceRequestSubmissionDetail(db, tenant, clientA, storeOnlySubmission);
+    expect(storeOnlyDetail).toMatchObject({ created_ticket_id: null, ticket_number: null });
+
+    // Another client's submission never appears in client A's list.
+    expect(list.map((r) => r.submission_id)).not.toContain(foreignSubmission);
+  });
+
   it('T025: submission detail includes attachment references when uploaded files were linked', async () => {
     const tenant = uuidv4();
     const definitionId = uuidv4();

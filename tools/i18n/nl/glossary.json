@@ -2628,7 +2628,8 @@
       "workflow",
       "workflows",
       "min",
-      "xml"
+      "xml",
+      "prefix"
     ],
     "patterns": [
       "^\\s*$",

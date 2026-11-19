@@ -1442,6 +1442,8 @@
       "client": "Klantcontext",
       "hypothetical": "Hypothetisch klantprofiel",
       "open": "Simuleren",
+      "pickClient": "Selecteer een klant",
+      "specificClient": "Een specifieke klant",
       "title": "Sjabloonsimulatie"
     },
     "pricing": {

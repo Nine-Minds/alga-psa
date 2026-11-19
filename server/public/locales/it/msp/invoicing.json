@@ -609,7 +609,8 @@
       "unfinalizeSelected": "Definalizza selezionato",
       "downloadPdf": "Scarica PDF",
       "sendEmail": "Invia e-mail",
-      "unfinalize": "Definalizza"
+      "unfinalize": "Definalizza",
+      "recordPayment": "Registra pagamento"
     },
     "status": {
       "finalized": "Finalizzata"
@@ -2915,6 +2916,17 @@
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
       "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}.",
       "evaluationFailed": "Associazione dei dati del modello non riuscita: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Autorizzazione negata: per registrare i pagamenti delle fatture è necessaria l'autorizzazione al pagamento delle fatture.",
+      "invoiceNotFound": "Fattura non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "amountPositive": "Inserisci un importo di pagamento maggiore di zero.",
+      "methodRequired": "Scegli un metodo di pagamento.",
+      "invalidDate": "Inserisci una data di pagamento valida.",
+      "noBalanceDue": "Questa fattura non ha un saldo da pagare.",
+      "statusNotPayable": "Impossibile registrare un pagamento per una fattura con stato: {{status}}.",
+      "overpaymentNotConfirmed": "Questo pagamento è superiore al saldo da pagare. Conferma il pagamento in eccesso per registrarlo.",
+      "recordFailed": "Registrazione del pagamento non riuscita. Riprova."
     }
   },
   "periodTotal": {
@@ -2937,6 +2949,43 @@
     "blocked": {
       "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci.",
       "exporting": "È in preparazione un’esportazione contabile per questa fattura. Attendi il completamento prima di modificarla."
+    }
+  },
+  "recordPayment": {
+    "title": "Registra pagamento",
+    "titleForInvoice": "Registra pagamento — {{invoiceNumber}}",
+    "loading": "Caricamento del saldo della fattura...",
+    "summary": {
+      "balanceDue": "Saldo da pagare",
+      "alreadyPaid": "Già pagato"
+    },
+    "fields": {
+      "amount": "Importo",
+      "paymentDate": "Data di pagamento",
+      "method": "Metodo di pagamento",
+      "reference": "Riferimento",
+      "notes": "Note"
+    },
+    "placeholders": {
+      "reference": "Numero di assegno o di transazione"
+    },
+    "methods": {
+      "manual": "Manuale",
+      "check": "Assegno",
+      "bank_transfer": "Bonifico bancario",
+      "cash": "Contanti",
+      "other": "Altro"
+    },
+    "overpayment": {
+      "warning": "Questo pagamento supera di {{excess}} il saldo da pagare di {{balanceDue}}.",
+      "confirm": "Registra comunque questo pagamento in eccesso"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "record": "Registra pagamento"
+    },
+    "toasts": {
+      "recorded": "Pagamento registrato"
     }
   }
 }

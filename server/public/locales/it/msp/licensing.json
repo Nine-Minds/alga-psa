@@ -701,6 +701,13 @@
     "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
     "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
     "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "buySeats": "Acquista posti in co-gestione",
+    "awaitingVerification_one": "Il tuo acquisto di {{count}} posto è in attesa della verifica del pagamento. Il posto comparirà qui dopo la conferma del pagamento.",
+    "awaitingVerification_other": "Il tuo acquisto di {{count}} posti è in attesa della verifica del pagamento. I posti compariranno qui dopo la conferma del pagamento.",
+    "refreshStatus": "Aggiorna stato",
+    "purchaseOnly": {
+      "intro": "Acquista qui un pool di posti in co-gestione. Dopo l'acquisto, assegna i posti ai clienti dalla scheda di ciascun cliente."
+    },
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",

@@ -6,6 +6,7 @@ import {
   isPasswordResetAllowed,
   isPasswordSessionRevokedByPolicy,
   normalizeTenantAuthPolicy,
+  offeredClientPortalSsoProviders,
   refusalReasonForDecision,
   validatePolicyChange,
   type BreakGlassCandidate,
@@ -347,5 +348,69 @@ describe('applyPolicyChange', () => {
     const next = applyPolicyChange(policy({ allowKnownDevice2faSkip: true }), { passwordBreakGlassUserIds: ['a', 'a', 'b'] }, now);
     expect(next.passwordBreakGlassUserIds).toEqual(['a', 'b']);
     expect(next.allowKnownDevice2faSkip).toBe(true);
+  });
+});
+
+describe('client portal SSO provider list', () => {
+  const normalizeList = (value: unknown) =>
+    normalizeTenantAuthPolicy({ sso: { clientPortalSsoProviders: value } }).clientPortalSsoProviders;
+
+  it('defaults to null (offer every available provider)', () => {
+    expect(DEFAULT_TENANT_AUTH_POLICY.clientPortalSsoProviders).toBeNull();
+    expect(normalizeTenantAuthPolicy(undefined).clientPortalSsoProviders).toBeNull();
+    expect(normalizeTenantAuthPolicy({ sso: {} }).clientPortalSsoProviders).toBeNull();
+  });
+
+  it('normalizes junk to null and arrays to supported, unique, canonical-order ids', () => {
+    expect(normalizeList('google')).toBeNull();
+    expect(normalizeList({ 0: 'google' })).toBeNull();
+    expect(normalizeList(null)).toBeNull();
+    expect(normalizeList([])).toEqual([]);
+    expect(normalizeList(['keycloak', 'okta', 'google', 'google', 7, 'azure-ad'])).toEqual([
+      'google',
+      'azure-ad',
+      'keycloak',
+    ]);
+  });
+
+  it('applyPolicyChange keeps the previous list on undefined and replaces it when explicit', () => {
+    const previous = policy({ clientPortalSsoProviders: ['azure-ad'] });
+    expect(applyPolicyChange(previous, {}).clientPortalSsoProviders).toEqual(['azure-ad']);
+    expect(applyPolicyChange(previous, { clientPortalSsoProviders: undefined }).clientPortalSsoProviders).toEqual(['azure-ad']);
+    expect(applyPolicyChange(previous, { clientPortalSsoProviders: [] }).clientPortalSsoProviders).toEqual([]);
+    expect(applyPolicyChange(previous, { clientPortalSsoProviders: null }).clientPortalSsoProviders).toBeNull();
+    expect(
+      applyPolicyChange(policy(), { clientPortalSsoProviders: ['keycloak', 'google'] }).clientPortalSsoProviders,
+    ).toEqual(['google', 'keycloak']);
+  });
+
+  it('validatePolicyChange rejects an unsupported requested id and accepts supported ones', () => {
+    const base = { next: policy(), hasConfiguredSsoProvider: true, breakGlassCandidates: [] };
+    const bad = validatePolicyChange({ ...base, requestedClientPortalSsoProviders: ['google', 'okta'] });
+    expect(bad.ok).toBe(false);
+    expect(bad.errors).toEqual(['client_portal_sso_provider_invalid']);
+    expect(validatePolicyChange({ ...base, requestedClientPortalSsoProviders: ['google', 'keycloak'] }).ok).toBe(true);
+    expect(validatePolicyChange({ ...base, requestedClientPortalSsoProviders: [] }).ok).toBe(true);
+    expect(validatePolicyChange(base).ok).toBe(true);
+  });
+
+  it('validatePolicyChange still rejects a bad list while SSO is being turned off', () => {
+    const result = validatePolicyChange({
+      next: policy(),
+      previous: policy({ requireSsoForInternalUsers: true }),
+      hasConfiguredSsoProvider: true,
+      breakGlassCandidates: [],
+      requestedClientPortalSsoProviders: ['okta'],
+    });
+    expect(result.errors).toEqual(['client_portal_sso_provider_invalid']);
+  });
+
+  it('offeredClientPortalSsoProviders returns available for null, the intersection for a list, none for []', () => {
+    const available = ['google', 'azure-ad', 'keycloak'] as const;
+    expect(offeredClientPortalSsoProviders(available, policy())).toEqual(['google', 'azure-ad', 'keycloak']);
+    expect(offeredClientPortalSsoProviders(available, policy({ clientPortalSsoProviders: ['azure-ad'] }))).toEqual(['azure-ad']);
+    expect(offeredClientPortalSsoProviders(['google'], policy({ clientPortalSsoProviders: ['azure-ad'] }))).toEqual([]);
+    expect(offeredClientPortalSsoProviders(available, policy({ clientPortalSsoProviders: [] }))).toEqual([]);
+    expect(offeredClientPortalSsoProviders(['keycloak', 'google'], policy())).toEqual(['google', 'keycloak']);
   });
 });

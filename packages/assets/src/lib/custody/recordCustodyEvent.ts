@@ -17,8 +17,7 @@ import {
   locationNames,
   mapCustodyRow,
   mapEventRow,
-  CUSTODY_COLUMNS,
-  FOLLOW_UP_SELECT,
+  CUSTODY_RETURNING,
   trimBin,
   userNames,
 } from './shared';
@@ -162,7 +161,7 @@ export async function recordCustodyEvent(
     .table('asset_custody')
     .where({ custody_id: custodyId })
     .update(patch)
-    .returning([...CUSTODY_COLUMNS, trx.raw(FOLLOW_UP_SELECT)] as any);
+    .returning(CUSTODY_RETURNING as any);
 
   const locNames = await locationNames(trx, tenant, [current.location_id, toLocationId]);
   const usrNames = await userNames(trx, tenant, [current.holder_user_id, toHolderId]);

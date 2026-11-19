@@ -18,7 +18,25 @@ vi.mock('@alga-psa/db', () => {
     };
     const api: any = {
       whereIn: (column: string, values: string[]) => { filters.push(row => values.includes(row[column])); return api; },
-      where: (column: string, value: unknown) => { filters.push(row => row[column] === value); return api; },
+      where: (column: string | ((group: any) => void), value?: unknown) => {
+        if (typeof column === 'function') {
+          // A grouped OR clause: only the shapes `whereEntitlementOperational` uses.
+          const any: Array<(row: Record<string, any>) => boolean> = [];
+          const group: any = {
+            whereNot: (c: string, v: unknown) => { any.push(row => row[c] !== v); return group; },
+            orWhereNot: (c: string, v: unknown) => group.whereNot(c, v),
+            orWhereNotNull: (c: string) => { any.push(row => row[c] != null); return group; },
+            orWhereRaw: (sql: string) => {
+              if (sql !== 'valid_until > verified_at') throw new Error(`unsupported raw: ${sql}`);
+              any.push(row => new Date(row.valid_until).getTime() > new Date(row.verified_at).getTime());
+              return group;
+            },
+          };
+          column(group);
+          filters.push(row => any.some(f => f(row)));
+        } else filters.push(row => row[column] === value);
+        return api;
+      },
       distinct: () => api,
       select: () => api,
       first: async () => run()[0],
@@ -102,7 +120,7 @@ describe('admits = flag AND a durable entitlement row', () => {
 
   it('is not eligible on another tenant\'s entitlement', async () => {
     flag(true);
-    store.tables.co_managed_entitlements = [{ tenant: B }];
+    store.tables.co_managed_entitlements = [{ tenant: B, source: 'admin_grant' }];
     expect((await admits(CAP, A)).admitted).toBe(false);
   });
 
@@ -121,7 +139,7 @@ describe('serves = participation, with no flag term', () => {
   it.each<{ name: string; tables: Record<string, Record<string, any>[]>; tenant: string }>([
     { name: 'customer relationship row', tables: { co_management_relationships: [{ tenant: A, sponsor_tenant: B }] }, tenant: A },
     { name: 'sponsor of a relationship', tables: { co_management_relationships: [{ tenant: A, sponsor_tenant: B }] }, tenant: B },
-    { name: 'entitlement row', tables: { co_managed_entitlements: [{ tenant: A }] }, tenant: A },
+    { name: 'entitlement row', tables: { co_managed_entitlements: [{ tenant: A, source: 'admin_grant' }] }, tenant: A },
     { name: 'co_managed product', tables: { tenants: [{ tenant: A, product_code: 'co_managed' }] }, tenant: A },
   ])('serves via $name even with the flag off', async ({ tables, tenant }) => {
     store.tables = tables;
@@ -138,7 +156,7 @@ describe('serves = participation, with no flag term', () => {
   });
 
   it('fails closed when the read throws', async () => {
-    store.tables = { co_managed_entitlements: [{ tenant: A }] };
+    store.tables = { co_managed_entitlements: [{ tenant: A, source: 'admin_grant' }] };
     store.fail = true;
     const decision = await serves(CAP, A);
     expect(decision.served).toBe(false);
@@ -171,7 +189,7 @@ describe('FORCE_CAPABILITIES', () => {
 
   it('co-managed:off closes both despite entitlement and participation', async () => {
     flag(true);
-    store.tables = { co_managed_entitlements: [{ tenant: A }] };
+    store.tables = { co_managed_entitlements: [{ tenant: A, source: 'admin_grant' }] };
     process.env.FORCE_CAPABILITIES = 'co-managed:off';
     expect((await admits(CAP, A)).admitted).toBe(false);
     expect((await serves(CAP, A)).served).toBe(false);
@@ -179,9 +197,55 @@ describe('FORCE_CAPABILITIES', () => {
 
   it('a malformed value closes the capability', async () => {
     flag(true);
-    store.tables = { co_managed_entitlements: [{ tenant: A }] };
+    store.tables = { co_managed_entitlements: [{ tenant: A, source: 'admin_grant' }] };
     process.env.FORCE_CAPABILITIES = 'co-managed:maybe';
     expect((await admits(CAP, A)).admitted).toBe(false);
     expect((await serves(CAP, A)).served).toBe(false);
+  });
+});
+
+describe('a pending hosted row is not operational authority', () => {
+  const now = Date.now();
+  const hostedRow = (over: Record<string, unknown>) => ({ tenant: A, source: 'hosted', capacity: 0,
+    verified_at: new Date(now), valid_until: new Date(now), lapse_started_at: null, ...over });
+
+  it('an unpaid observation (zero capacity, valid_until == verified_at, no lapse) neither admits nor serves', async () => {
+    flag(true);
+    store.tables = { co_managed_entitlements: [hostedRow({})] };
+    expect(await admits(CAP, A)).toMatchObject({ admitted: false });
+    expect((await admits(CAP, A)).reasons.admitted).toBe('not-eligible');
+    expect((await serves(CAP, A)).served).toBe(false);
+    expect(await coManagedParticipants([A])).toEqual(new Set());
+  });
+
+  it.each([
+    { name: 'a verified paid pool', row: { capacity: 4, valid_until: new Date(now + 86_400_000) } },
+    { name: 'a pool reduced to zero while still active', row: { capacity: 0, valid_until: new Date(now + 86_400_000) } },
+    { name: 'a lapsed sponsor with history (lapse started, valid_until passed)', row: { capacity: 4, valid_until: new Date(now - 1000), verified_at: new Date(now), lapse_started_at: new Date(now - 5000) } },
+    { name: 'a lapsed sponsor whose clock was cleared but whose pool was once active', row: { capacity: 4, valid_until: new Date(now + 1000), verified_at: new Date(now) } },
+  ])('$name still admits and serves', async ({ row }) => {
+    flag(true);
+    store.tables = { co_managed_entitlements: [hostedRow(row)] };
+    expect((await admits(CAP, A)).admitted).toBe(true);
+    expect((await serves(CAP, A)).served).toBe(true);
+  });
+
+  it('an operator grant or self-host row is never pending', async () => {
+    flag(true);
+    for (const source of ['admin_grant', 'self_host']) {
+      store.tables = { co_managed_entitlements: [hostedRow({ source })] };
+      clearCapabilityCache();
+      expect((await admits(CAP, A)).admitted).toBe(true);
+    }
+  });
+
+  it('a pending row does not hide relationship participation (a lapsed sponsor with relationships still serves)', async () => {
+    flag(true);
+    store.tables = {
+      co_managed_entitlements: [hostedRow({})],
+      co_management_relationships: [{ tenant: B, sponsor_tenant: A }],
+    };
+    expect((await serves(CAP, A)).served).toBe(true);
+    expect((await admits(CAP, A)).admitted).toBe(false);
   });
 });

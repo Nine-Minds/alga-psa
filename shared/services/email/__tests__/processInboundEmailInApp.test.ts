@@ -75,6 +75,8 @@ function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
     andWhereRaw: vi.fn().mockReturnThis(),
     andWhere: vi.fn((arg: unknown) => {

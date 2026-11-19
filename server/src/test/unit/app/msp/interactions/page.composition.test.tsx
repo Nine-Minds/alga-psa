@@ -69,7 +69,6 @@ describe('MSP contacts and interactions page composition', () => {
     loadMspInteractionsPageDataMock.mockResolvedValue({
       users,
       contacts: [contacts[1], contacts[2]],
-      clients,
       telephonyOverview: availableOverview,
     });
   });
@@ -91,7 +90,7 @@ describe('MSP contacts and interactions page composition', () => {
 
     expect(result.type).toBe(InteractionsPageWorkspaceMock);
     expect(result.props.users).toBe(users);
-    expect(result.props.clients).toBe(clients);
+    expect(result.props).not.toHaveProperty('clients');
     expect(result.props.contacts).toEqual([contacts[1], contacts[2]]);
     expect(result.props.telephonyOverview).toBe(availableOverview);
     expect(loadMspInteractionsPageDataMock).toHaveBeenCalledTimes(1);
@@ -109,7 +108,6 @@ describe('MSP contacts and interactions page composition', () => {
     loadMspInteractionsPageDataMock.mockResolvedValue({
       users,
       contacts: [contacts[1], contacts[2]],
-      clients,
       telephonyOverview,
     });
 

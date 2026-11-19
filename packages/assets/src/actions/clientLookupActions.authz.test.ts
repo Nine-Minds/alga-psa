@@ -113,7 +113,6 @@ vi.mock('@alga-psa/formatting/avatarUtils', () => ({
 vi.mock('@shared/services/productAccessGuard', () => ({ assertPsaOnlyTenantAccess: vi.fn(async () => undefined) }));
 
 import {
-  getAllClientsForAssets,
   getClientBillingProfilesForAssets,
   getClientByIdForAssets,
   getClientContactsForAssets,
@@ -154,29 +153,6 @@ describe('asset client lookup authorization', () => {
     vi.clearAllMocks();
   });
 
-  it('allows an authorized internal reader to list clients and resolve logos', async () => {
-    const clients = await getAllClientsForAssets(true);
-    expect(clients.map((client) => client.client_id)).toEqual(['client-a', 'client-b']);
-    expect(h.state.logoCalls).toEqual(['client-a', 'client-b']);
-  });
-
-  it('scopes client-user lists to their own client', async () => {
-    h.state.user = { ...h.state.user, user_type: 'client', clientId: 'client-a' };
-    const clients = await getAllClientsForAssets(true);
-    expect(clients.map((client) => client.client_id)).toEqual(['client-a']);
-    expect(h.state.logoCalls).toEqual(['client-a']);
-  });
-
-  it('applies the internal caller asset:read selected-clients bundle to lists', async () => {
-    setAssetReadBundleScopeForClientA();
-    const clients = await getAllClientsForAssets(true);
-    expect(clients.map((client) => client.client_id)).toEqual(['client-a']);
-    expect(h.state.protectedReads).toEqual([
-      expect.objectContaining({ table: 'clients', selectedColumns: ['*'], whereInClientIds: ['client-a'] }),
-    ]);
-    expect(h.state.logoCalls).toEqual(['client-a']);
-  });
-
   it('enforces conjunctive client_id constraints even when the real kernel allows the selected client', async () => {
     setAssetReadBundleScopeForClientA();
     const context = await createAssetReadContext(h.connection, 'tenant-1', h.state.user);
@@ -194,10 +170,8 @@ describe('asset client lookup authorization', () => {
       { field: 'client_id', operator: 'in', value: ['client-a', 'client-b'] },
       { field: 'client_id', operator: 'eq', value: 'client-a' },
     ]);
-    const clients = await getAllClientsForAssets(true);
-    expect(clients.map((client) => client.client_id)).toEqual(['client-a']);
+    await expect(getClientByIdForAssets('client-a')).resolves.toEqual(expect.objectContaining({ client_id: 'client-a' }));
     await expect(getClientByIdForAssets('client-b')).rejects.toThrow('asset read scope');
-    expect(h.state.logoCalls).toEqual(['client-a']);
   });
 
   it('fails closed when an asset scope constraint cannot be evaluated as a client constraint', async () => {
@@ -207,24 +181,13 @@ describe('asset client lookup authorization', () => {
       action: 'read',
       constraints: [{ field: 'owner_user_id', operator: 'eq', value: 'user-1' }],
     }];
-    const clients = await getAllClientsForAssets(true);
-    expect(clients).toEqual([]);
     await expect(getClientByIdForAssets('client-a')).rejects.toThrow('asset read scope');
-    expect(h.state.protectedReads).toEqual([]);
-    expect(h.state.logoCalls).toEqual([]);
-  });
-
-  it('rejects callers without asset read permission before protected reads', async () => {
-    h.state.permissions.clear();
-    await expect(getAllClientsForAssets(true)).rejects.toThrow('Permission denied');
-    expect(h.state.touchedTables).toEqual([]);
     expect(h.state.protectedReads).toEqual([]);
     expect(h.state.logoCalls).toEqual([]);
   });
 
   it('rejects an unresolved client user before reading candidate or protected client data', async () => {
     h.state.user = { ...h.state.user, user_type: 'client', clientId: undefined };
-    await expect(getAllClientsForAssets(true)).resolves.toEqual([]);
     await expect(getClientByIdForAssets('client-a')).rejects.toThrow('asset read scope');
     expect(h.state.touchedTables).not.toContain('clients');
     expect(h.state.protectedReads).toEqual([]);
@@ -244,7 +207,6 @@ describe('asset client lookup authorization', () => {
   });
 
   it.each([
-    ['client list', () => getAllClientsForAssets(true)],
     ['client detail', () => getClientByIdForAssets('client-a')],
     ['locations', () => getClientLocationsForAssets('client-a')],
     ['contacts', () => getClientContactsForAssets('client-a')],

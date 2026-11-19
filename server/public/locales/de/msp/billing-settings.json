@@ -682,7 +682,7 @@
         "placeholder": "Geben Sie eine Beschreibung ein"
       },
       "displayOrder": {
-        "label": "Reihenfolge anzeigen",
+        "label": "Anzeigereihenfolge",
         "placeholder": "Geben Sie die Anzeigereihenfolge ein",
         "help": "Steuert die Reihenfolge, in der Servicekategorien in Dropdown-Menüs auf der gesamten Plattform angezeigt werden. Niedrigere Zahlen erscheinen zuerst."
       }
@@ -712,7 +712,7 @@
       "nameExists": "Eine Kategorie mit diesem Namen existiert bereits.",
       "rename": "Mit neuem Namen importieren:",
       "orderInUse": "Anzeigereihenfolge {{displayOrder}} wird bereits verwendet.",
-      "reorder": "Import mit Auftrag {{order}}"
+      "reorder": "Import mit Reihenfolge {{order}}"
     },
     "toast": {
       "created": "Servicekategorie erfolgreich erstellt",
@@ -752,10 +752,10 @@
         "placeholder": "Abrechnungsmethode auswählen..."
       },
       "displayOrder": {
-        "label": "Reihenfolge anzeigen *",
+        "label": "Anzeigereihenfolge *",
         "placeholder": "z.B. 1, 2, 3...",
         "help": "Steuert die Reihenfolge, in der Diensttypen in Dropdown-Menüs auf der gesamten Plattform angezeigt werden. Niedrigere Zahlen erscheinen zuerst.",
-        "usedOrders": "Verwendete Bestellungen: {{orders}}"
+        "usedOrders": "Belegte Reihenfolgennummern: {{orders}}"
       }
     },
     "actions": {
@@ -768,8 +768,8 @@
       "summary": "Bitte füllen Sie die erforderlichen Felder aus:",
       "name": "Name des Diensttyps",
       "billingMethod": "Abrechnungsmethode",
-      "displayOrder": "Reihenfolge anzeigen",
-      "orderInUse": "Auftrag {{order}} wird bereits von „{{name}}“ verwendet"
+      "displayOrder": "Anzeigereihenfolge",
+      "orderInUse": "Reihenfolge {{order}} wird bereits von „{{name}}“ verwendet"
     },
     "delete": {
       "message": "Sind Sie sicher, dass Sie den Diensttyp „{{name}}“ löschen möchten? Dies kann nicht rückgängig gemacht werden.",
@@ -783,7 +783,7 @@
     "conflicts": {
       "description": "Bei den folgenden Elementen gibt es Konflikte, die gelöst werden müssen:",
       "nameExists": "Konflikt: Name existiert bereits",
-      "orderInUse": "Konflikt: Auftrag {{order}} wird bereits verwendet",
+      "orderInUse": "Konflikt: Reihenfolge {{order}} wird bereits verwendet",
       "rename": "Mit anderem Namen importieren:",
       "reorder": "Import mit anderer Reihenfolge:"
     },
@@ -1334,7 +1334,7 @@
       "actions": "Aktionen",
       "name": "Name",
       "description": "Beschreibung",
-      "order": "Befehl",
+      "order": "Reihenfolge",
       "code": "Code",
       "status": "Status",
       "billingMethod": "Abrechnungsmethode",
@@ -1381,7 +1381,7 @@
     "headers": {
       "name": "Name",
       "description": "Beschreibung",
-      "order": "Befehl",
+      "order": "Reihenfolge",
       "billingMethod": "Abrechnungsmethode"
     }
   },

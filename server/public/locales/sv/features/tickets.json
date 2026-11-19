@@ -182,12 +182,15 @@
   "resetFilters": "Återställ",
   "filters": {
     "allStatuses": "Alla statusar",
+    "allClients": "Alla kunder",
+    "unknownClient": "Okänd kund",
     "allOpen": "Alla öppna ärenden",
     "allClosed": "Alla stängda ärenden",
     "allPriorities": "Alla prioriteter",
     "search": "Sök i ärenden och kommentarer…",
     "button": "Filter",
     "unassigned": "Ej tilldelat",
+    "me": "Jag",
     "category": "Filtrera efter kategori",
     "removeFilterChip": "Ta bort filter: {{label}}",
     "assignee": "Ansvarig",
@@ -221,6 +224,8 @@
     "clientTags": "Kundtaggar",
     "tagModeAny": "Någon av",
     "tagModeNone": "Ingen av",
+    "matchMode": "Matcha",
+    "excludingLabel": "Utom {{label}}",
     "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades.",
     "clearFilters": "Rensa filter",
     "location": "Plats",
@@ -2367,6 +2372,7 @@
       "addHelp": "Välj en kund för att lägga till den. Dialogrutan förblir öppen så att du kan lägga till fler.",
       "alreadyAdded": "Redan tillagd",
       "pickerPlaceholder": "Välj en kund att lägga till",
+      "unnamedClient": "Kund",
       "addedHeading": "Tillagda i den här dialogrutan",
       "columns": {
         "client": "Kund",
@@ -2940,6 +2946,24 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "live": {
+    "updatedOne": "1 ärende uppdaterat",
+    "updatedMany": "{{count}} ärenden uppdaterade",
+    "newOne": "1 nytt ärende",
+    "newMany": "{{count}} nya ärenden",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nytt ärende och 1 uppdaterat ärende",
+        "manyUpdated": "1 nytt ärende och {{updatedCount}} uppdaterade ärenden"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nya ärenden och 1 uppdaterat ärende",
+        "manyUpdated": "{{newCount}} nya ärenden och {{updatedCount}} uppdaterade ärenden"
+      }
+    },
+    "updatedBadge": "Uppdaterat",
+    "boardActivity": "Ny aktivitet på den här tavlan"
   },
   "batchDuplicate": {
     "title": "Duplicera #{{number}} för kontakter",

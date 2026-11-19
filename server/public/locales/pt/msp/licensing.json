@@ -701,6 +701,13 @@
     "checkoutUnavailable": "O pagamento incorporado não está disponível. Tente novamente após reparar a configuração de pagamento.",
     "pendingCapacity_one": "Existe uma compra de {{count}} posto pendente.",
     "pendingCapacity_other": "Existe uma compra de {{count}} postos pendente.",
+    "buySeats": "Comprar lugares de cogestão",
+    "awaitingVerification_one": "A sua compra de {{count}} lugar aguarda a verificação do pagamento. O lugar aparecerá aqui quando o pagamento for confirmado.",
+    "awaitingVerification_other": "A sua compra de {{count}} lugares aguarda a verificação do pagamento. Os lugares aparecerão aqui quando o pagamento for confirmado.",
+    "refreshStatus": "Atualizar estado",
+    "purchaseOnly": {
+      "intro": "Compre aqui um conjunto de lugares de cogestão. Após a compra, atribua lugares aos clientes a partir de cada ficha de cliente."
+    },
     "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
     "purchaseNeedsAdmin": "Um administrador da conta tem de adicionar capacidade cogerida.",
     "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",

@@ -29,6 +29,7 @@
     "invoiceTitle": "FATTURA",
     "issueDate": "Data di emissione",
     "locationSubtotal": "Subtotale sede",
+    "unassignedLocation": "Intero preventivo",
     "monthly": "Mensile",
     "monthlyItems": "Voci mensili",
     "monthlyTotal": "Totale mensile",
