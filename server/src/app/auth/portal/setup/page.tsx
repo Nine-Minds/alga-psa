@@ -205,12 +205,18 @@ function PortalSetupContent() {
           router.push(signinUrl);
         }
       } else {
-        toast.error(translatePortalError(
+        const message = translatePortalError(
           result.errorCode,
           result.error,
           'auth.portalSetup.createFailed',
           'Failed to create account'
-        ));
+        );
+        if (result.errorCode === 'PORTAL_USER_ALREADY_EXISTS') {
+          // "You already have an account" is a dead end for this form: show the
+          // persistent card with the sign-in button, not a toast that scrolls away.
+          setError(message);
+        }
+        toast.error(message);
       }
     } catch (error) {
       console.error('Setup completion error:', error);

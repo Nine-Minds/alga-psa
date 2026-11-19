@@ -292,7 +292,7 @@
         "contactMissingEmail": "O contato não possui um endereço de e-mail.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato.",
-        "portalUserAlreadyExists": "Já existe um usuário do portal para este contato.",
+        "portalUserAlreadyExists": "Já existe uma conta para este endereço de e-mail. Faça login ou redefina sua senha na página de login.",
         "noDefaultClient": "Nenhum cliente padrão está configurado para este locatário.",
         "noDefaultLocation": "O cliente padrão não possui nenhum local padrão configurado.",
         "noLocationEmail": "A localização do cliente não possui email de contato configurado.",

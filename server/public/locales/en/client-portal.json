@@ -298,7 +298,7 @@
         "contactMissingEmail": "The contact doesn't have an email address.",
         "contactInvalidEmail": "The contact has an invalid email address.",
         "userExistsForContact": "A user account already exists for this contact.",
-        "portalUserAlreadyExists": "A portal user already exists for this contact.",
+        "portalUserAlreadyExists": "An account already exists for this email address. Please sign in, or reset your password from the sign-in page.",
         "noDefaultClient": "No default client is configured for this tenant.",
         "noDefaultLocation": "The default client has no default location configured.",
         "noLocationEmail": "The client location has no contact email configured.",

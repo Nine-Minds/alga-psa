@@ -37,6 +37,8 @@ export interface SendInvitationResult {
   success: boolean;
   invitationId?: string;
   message?: string;
+  /** True when the invitation adopted a portal account orphaned by a contact delete. */
+  relinked?: boolean;
   error?: string;
   errorCode?: PortalInvitationErrorCode;
 }
