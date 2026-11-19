@@ -196,6 +196,7 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'invoice', action: 'delete', msp: true, client: false, description: 'Delete draft invoices', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
   { resource: 'invoice', action: 'finalize', msp: true, client: false, description: 'Finalize and lock invoices', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
   { resource: 'invoice', action: 'generate', msp: true, client: false, description: 'Generate invoices from billable items', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
+  { resource: 'invoice', action: 'payment', msp: true, client: false, description: 'Record payments against invoices', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
   { resource: 'invoice', action: 'read', msp: true, client: false, description: 'View invoice details and history', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'invoice', action: 'send', msp: true, client: false, description: 'Send invoices to clients', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },
   { resource: 'invoice', action: 'update', msp: true, client: false, description: 'Modify invoice line items and details', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance'] } },

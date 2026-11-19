@@ -11,7 +11,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight } from 'lucide-react';
+import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight, Banknote } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,10 +28,12 @@ import {
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
+import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatInvoiceStatus } from '@alga-psa/ui/hooks/useInvoiceEnumOptions';
 import {
   getErrorMessage,
   getActionErrorMessageKey,
@@ -50,6 +52,43 @@ interface FinalizedTabProps {
 
 export const FINALIZED_AUTOPAY_DATA_INDEX = 'autopay_status';
 
+type BadgeVariant = React.ComponentProps<typeof Badge>['variant'];
+
+/** Badge colour per real invoice status; anything unexpected stays muted. */
+export function invoiceStatusBadgeVariant(status: string | null | undefined): BadgeVariant {
+  switch (status) {
+    case 'paid':
+      return 'success';
+    case 'partially_applied':
+    case 'pending':
+      return 'warning';
+    case 'overdue':
+      return 'error';
+    case 'cancelled':
+      return 'secondary';
+    default:
+      return 'default-muted';
+  }
+}
+
+/** Statuses a manual payment can still be recorded against. */
+export function canRecordPaymentForStatus(status: string | null | undefined): boolean {
+  return status !== 'draft' && status !== 'paid' && status !== 'cancelled' && status !== 'void';
+}
+
+/**
+ * Row-level gate for the Record Payment action. Mirrors what the server action
+ * answers (`getInvoicePaymentSummary`) as closely as a list row can: the same
+ * non-payable statuses, plus the part of the balance this row already knows —
+ * an invoice fully covered by credit owes nothing and must not offer the
+ * action. Prior payments are not in the row, so a row that slips through still
+ * meets an explained refusal in the dialog rather than a dead form.
+ */
+export function canRecordPaymentForInvoice(invoice: Pick<DbInvoiceViewModel, 'status' | 'total_amount' | 'credit_applied'>): boolean {
+  if (!canRecordPaymentForStatus(invoice.status)) return false;
+  return Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0) > 0;
+}
+
 const isInvoiceMutationError = (
   result: InvoiceMutationActionResult,
 ): result is Exclude<InvoiceMutationActionResult, { success: true }> => (
@@ -66,6 +105,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate, locale } = useFormatters();
+  const formatInvoiceStatus = useFormatInvoiceStatus();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -97,6 +137,10 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   // Email dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailDialogInvoiceIds, setEmailDialogInvoiceIds] = useState<string[]>([]);
+
+  // Record-payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentDialogInvoice, setPaymentDialogInvoice] = useState<{ id: string; number: string } | null>(null);
 
   // Ref to track if initial load has happened
   const initialLoadDone = useRef(false);
@@ -367,6 +411,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }
   };
 
+  const openRecordPaymentDialog = (invoice: DbInvoiceViewModel) => {
+    setPaymentDialogInvoice({ id: invoice.invoice_id, number: invoice.invoice_number });
+    setPaymentDialogOpen(true);
+  };
+
   const columns: ColumnDefinition<DbInvoiceViewModel>[] = [
     {
       title: (
@@ -421,11 +470,16 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     {
       title: t('finalizedTab.columns.status', { defaultValue: 'Status' }),
       id: 'finalized_status',
-      dataIndex: 'finalized_at',
+      dataIndex: 'status',
       sortable: false,
-      render: () => (
-        <Badge variant="success">
-          {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
+      // The real invoice status, not a hard-coded "Finalized": a Stripe- or
+      // manually-paid invoice has to read as Paid here, otherwise the MSP
+      // concludes nothing synced (alga-2026-0003329).
+      render: (_: unknown, record: DbInvoiceViewModel) => (
+        <Badge variant={invoiceStatusBadgeVariant(record.status)}>
+          {record.status
+            ? formatInvoiceStatus(record.status)
+            : t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
         </Badge>
       ),
     },
@@ -497,6 +551,16 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 <Mail className="h-4 w-4" />
                 {t('finalizedTab.actions.sendEmail', { defaultValue: 'Send Email' })}
               </DropdownMenuItem>
+              {canRecordPaymentForInvoice(record) && (
+                <DropdownMenuItem
+                  id={`finalized-record-payment-${record.invoice_id}`}
+                  onClick={() => openRecordPaymentDialog(record)}
+                  className="flex items-center gap-2"
+                >
+                  <Banknote className="h-4 w-4" />
+                  {t('finalizedTab.actions.recordPayment', { defaultValue: 'Record Payment' })}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={async () => {
                   setError(null);
@@ -688,6 +752,17 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         onClose={() => setEmailDialogOpen(false)}
         invoiceIds={emailDialogInvoiceIds}
         onSuccess={handleEmailDialogSuccess}
+      />
+
+      <RecordPaymentDialog
+        isOpen={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        invoiceId={paymentDialogInvoice?.id ?? null}
+        invoiceNumber={paymentDialogInvoice?.number}
+        onSuccess={async () => {
+          await loadData();
+          onRefreshNeeded();
+        }}
       />
     </div>
   );

@@ -59,6 +59,8 @@ export type CommentApi = {
       /** Ticket comments only: one-off Cc/Bcc for this comment's email. */
       cc?: string[];
       bcc?: string[];
+      /** Ticket comments only: the audience of a new thread on a co-managed seat ticket. */
+      collaboration_audience?: "requester" | "shared_it";
       auditHeaders?: Audit;
     },
   ): Promise<ApiResult<SuccessResponse<TicketComment>>>;

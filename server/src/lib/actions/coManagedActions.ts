@@ -5,7 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { admits } from '@alga-psa/core/capability';
-import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, isCoManagedPurchaseSurfaceOpen, readCoManagedFirstPurchasePhase } from '@alga-psa/licensing';
 import { isEnterpriseEdition } from '../features';
 import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement,
@@ -42,9 +42,13 @@ export const getCoManagedBillingState = withAuth(async (user, { tenant }) => {
 
 export interface CoManagedPurchaseAvailability {
   pending: { operationId: string; quantity: number; state: string } | null;
+  /** First purchase completed at the provider but not yet verified as paid capacity. */
+  awaitingVerification: { operationId: string; quantity: number } | null;
+  /** Smallest pool total the editor may propose: 1 for a first purchase, else the allocated seats. */
+  minimumQuantity: number;
   canPurchase: boolean;
   canResume: boolean;
-  reason: 'available' | 'self_host_license' | 'ineligible' | 'no_permission' | 'implementation_unavailable' | 'pending';
+  reason: 'available' | 'self_host_license' | 'ineligible' | 'no_permission' | 'implementation_unavailable' | 'pending' | 'awaiting_verification';
 }
 
 /**
@@ -70,11 +74,16 @@ export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
     .whereIn('state', ['preparing', 'checkout', 'payment_failed']).select('operation_id', 'quantity', 'state').first();
   const implementationAvailable = isEnterpriseEdition();
   const eligible = owner.plan === 'pro';
+  // Persisted purchase + entitlement state only; a checkout return or browser callback never reaches here.
+  const first = await readCoManagedFirstPurchasePhase(knex, tenant);
+  const awaiting = first.phase === 'awaiting_verification' ? { operationId: first.operationId, quantity: first.quantity } : null;
   const reason: CoManagedPurchaseAvailability['reason'] = selfHosted ? 'self_host_license'
     : !eligible ? 'ineligible' : !purchaser ? 'no_permission' : !implementationAvailable ? 'implementation_unavailable'
-      : pending ? 'pending' : 'available';
+      : pending ? 'pending' : awaiting ? 'awaiting_verification' : 'available';
   const availability: CoManagedPurchaseAvailability = {
     pending: pending ? { operationId: pending.operation_id, quantity: Number(pending.quantity), state: pending.state } : null,
+    awaitingVerification: awaiting,
+    minimumQuantity: first.phase === 'established' ? state.allocated : Math.max(1, state.allocated),
     canPurchase: reason === 'available', canResume: reason === 'pending', reason };
   return { ...state, selfHosted, purchase: availability };
 });

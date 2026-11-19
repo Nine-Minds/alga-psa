@@ -701,6 +701,13 @@
     "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
     "pendingCapacity_one": "Un achat de {{count}} poste est en attente.",
     "pendingCapacity_other": "Un achat de {{count}} postes est en attente.",
+    "buySeats": "Acheter des places en cogestion",
+    "awaitingVerification_one": "Votre achat de {{count}} place est en attente de vérification du paiement. La place apparaîtra ici une fois le paiement confirmé.",
+    "awaitingVerification_other": "Votre achat de {{count}} places est en attente de vérification du paiement. Les places apparaîtront ici une fois le paiement confirmé.",
+    "refreshStatus": "Actualiser l'état",
+    "purchaseOnly": {
+      "intro": "Achetez ici un pool de places en cogestion. Après l'achat, attribuez des places aux clients depuis chaque fiche client."
+    },
     "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
     "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
     "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",

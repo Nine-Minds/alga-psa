@@ -701,6 +701,13 @@
     "checkoutUnavailable": "Embedded checkout is unavailable. Retry after the payment setup is repaired.",
     "pendingCapacity_one": "A purchase of {{count}} seat is pending.",
     "pendingCapacity_other": "A purchase of {{count}} seats is pending.",
+    "buySeats": "Buy co-managed seats",
+    "awaitingVerification_one": "Your purchase of {{count}} seat is awaiting payment verification. The seat appears here once the payment is confirmed.",
+    "awaitingVerification_other": "Your purchase of {{count}} seats is awaiting payment verification. The seats appear here once the payment is confirmed.",
+    "refreshStatus": "Refresh status",
+    "purchaseOnly": {
+      "intro": "Buy a pool of co-managed seats here. After purchase, allocate seats to clients from each client record."
+    },
     "previewError": "Could not price this change. Refresh and try again.",
     "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
     "purchaseProviderUnconfigured": "The payment provider is not configured.",

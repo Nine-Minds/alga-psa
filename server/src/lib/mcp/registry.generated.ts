@@ -54809,7 +54809,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/priorities",
     "displayName": "List ticket priorities",
     "summary": "List ticket priorities",
-    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name.",
+    "description": "Returns the tenant ticket priorities (item_type=ticket), ordered by name, each with is_from_itil_standard. A board whose priority_type is itil accepts only ITIL priorities; any other board only the custom ones.",
     "tags": [
       "Work Management v1"
     ],
