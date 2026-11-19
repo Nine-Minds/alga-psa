@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => {
   const requestUse = vi.fn();
   const tokenPost = vi.fn();
   const dbUpdate = vi.fn().mockResolvedValue(1);
+  const dbPluck = vi.fn();
   const client = {
     interceptors: { request: { use: requestUse }, response: { use: vi.fn() } },
     get: vi.fn(),
@@ -11,7 +12,7 @@ const mocks = vi.hoisted(() => {
     patch: vi.fn(),
     delete: vi.fn(),
   };
-  return { client, requestUse, tokenPost, dbUpdate };
+  return { client, requestUse, tokenPost, dbUpdate, dbPluck };
 });
 
 vi.mock('axios', () => ({
@@ -25,7 +26,9 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     const query: any = {
       where: vi.fn().mockReturnThis(),
+      whereIn: vi.fn().mockReturnThis(),
       update: mocks.dbUpdate,
+      pluck: mocks.dbPluck,
     };
     return vi.fn(() => query);
   }),
@@ -181,17 +184,26 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     );
   });
 
-  it('deletes only same-notification-url subscriptions that are not the DB cursor', async () => {
+  it('keeps other subscriptions when mailboxes share the same webhook URL', async () => {
+    const provider = { ...config(), mailbox: 'support@example.test' };
+    const mailboxSubscription = {
+      notificationUrl: provider.webhook_notification_url,
+      changeType: 'created',
+      resource: 'users/support%40example.test/mailFolders/inbox/messages',
+    };
+    mocks.dbPluck.mockResolvedValue(['tracked-by-another-provider']);
     mocks.client.get.mockResolvedValue({
       data: {
         value: [
-          { id: 'old-subscription', notificationUrl: config().webhook_notification_url },
-          { id: 'orphan', notificationUrl: config().webhook_notification_url },
-          { id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
+          { ...mailboxSubscription, id: 'old-subscription' },
+          { ...mailboxSubscription, id: 'orphan' },
+          { ...mailboxSubscription, id: 'tracked-by-another-provider' },
+          { ...mailboxSubscription, id: 'other-app-url', notificationUrl: 'https://other.example.test/webhook' },
+          { ...mailboxSubscription, id: 'other-mailbox', resource: 'users/sales%40example.test/mailFolders/inbox/messages' },
         ],
       },
     });
-    const adapter = new MicrosoftGraphAdapter(config());
+    const adapter = new MicrosoftGraphAdapter(provider);
 
     await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
     expect(mocks.client.delete).toHaveBeenCalledTimes(1);

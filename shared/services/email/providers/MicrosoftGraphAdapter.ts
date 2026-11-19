@@ -759,18 +759,34 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     return messages;
   }
 
-  /** Delete app-owned subscriptions for this webhook URL that are not the DB cursor. */
+  /** Remove untracked subscriptions for this mailbox and folder. */
   async cleanupOrphanedSubscriptions(): Promise<number> {
     const webhookUrl = this.config.webhook_notification_url;
     if (!webhookUrl) return 0;
+    const { resource } = await this.buildFolderResourcePath(this.config.folder_to_monitor || 'Inbox');
     const response = await this.httpClient.get('/subscriptions');
     const currentId = this.config.webhook_subscription_id;
-    const orphans = (response.data?.value || []).filter(
-      (subscription: any) => subscription?.notificationUrl === webhookUrl && subscription?.id !== currentId
+    const candidates = (response.data?.value || []).filter(
+      (subscription: any) =>
+        typeof subscription?.id === 'string' &&
+        subscription.id !== currentId &&
+        subscription.notificationUrl === webhookUrl &&
+        subscription.changeType === 'created' &&
+        typeof subscription.resource === 'string' &&
+        subscription.resource.replace(/^\//, '') === resource.replace(/^\//, '')
     );
+    if (candidates.length === 0) return 0;
+
+    // An OAuth application and callback can be shared across mailbox providers.
+    const knex = await getAdminConnection();
+    const trackedIds = await tenantDb(knex, this.config.tenant)
+      .unscoped('microsoft_email_provider_config', 'protect subscription IDs tracked by any mailbox provider')
+      .whereIn('webhook_subscription_id', candidates.map((subscription: { id: string }) => subscription.id))
+      .pluck('webhook_subscription_id');
 
     let deleted = 0;
-    for (const orphan of orphans) {
+    for (const orphan of candidates) {
+      if (trackedIds.includes(orphan.id)) continue;
       try {
         await this.httpClient.delete(`/subscriptions/${encodeURIComponent(String(orphan.id))}`);
         deleted += 1;
