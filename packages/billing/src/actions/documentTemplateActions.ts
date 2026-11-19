@@ -378,6 +378,7 @@ export const runAuthoritativeTemplatePreview = withAuth(
       dateFormat,
       // A label is drawn on the cell it prints in (same size, margin and clipping); documents stay unframed.
       previewSheet: resolveTemplatePreviewSheetFromAst(templateAst, getDocumentTypeRegistryEntry(type).printGeometry) ?? undefined,
+      printGeometry: getDocumentTypeRegistryEntry(type).printGeometry,
     });
     return { html };
   },

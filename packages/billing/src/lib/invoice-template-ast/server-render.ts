@@ -5,7 +5,12 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
 import { tenantDb } from '@alga-psa/db';
-import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
+import {
+  DOCUMENT_PRINT_GEOMETRY_CSS,
+  resolveCustomPageCssFromAst,
+  type TemplatePreviewSheet,
+  type TemplatePrintGeometry,
+} from './printSettings';
 import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
 import { PDF_FONT_FACE_CSS } from '../pdf-fonts';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
@@ -49,6 +54,13 @@ export interface TemplateHtmlDocumentOptions {
    * Never set on a path that produces a PDF.
    */
   previewSheet?: TemplatePreviewSheet;
+  /**
+   * How this document reaches paper. `document` (the default, and every caller of this function
+   * except the work-tag preview) prints onto a page box that carries the margin, so the markup is
+   * stripped of its own for print. A `label-cell` template keeps the renderer's root padding —
+   * that padding is the label's margin.
+   */
+  printGeometry?: TemplatePrintGeometry;
 }
 
 // ---------------------------------------------------------------------------
@@ -258,8 +270,10 @@ export const renderTemplateAstHtmlDocument = async (
   const title = escapeHtml(options.title ?? 'Invoice');
   // Custom page size: emit a real @page rule (preferCSSPageSize makes Chromium honour it).
   const customPageCss = resolveCustomPageCssFromAst(ast);
+  // The page box carries the margin for every page of a document, so the markup carries none.
+  const printGeometryCss = (options.printGeometry ?? 'document') === 'document' ? DOCUMENT_PRINT_GEOMETRY_CSS : null;
   const previewSheetCss = options.previewSheet ? buildPreviewSheetCss(options.previewSheet) : null;
-  const additionalCss = [customPageCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
+  const additionalCss = [customPageCss, printGeometryCss, options.additionalCss, previewSheetCss].filter(Boolean).join('\n');
   const bodyHtml = options.previewSheet ? wrapInPreviewSheet(html, options.previewSheet) : html;
   const bodyClassName = options.bodyClassName ? ` class="${escapeHtml(options.bodyClassName)}"` : '';
 

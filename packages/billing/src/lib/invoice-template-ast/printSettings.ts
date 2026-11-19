@@ -71,6 +71,83 @@ export const resolveCustomPageCssFromAst = (ast: TemplateAst | null | undefined)
   resolveCustomPageCss(resolvePrintResolutionInputFromAst(ast));
 
 /**
+ * The numbers one document prints by, in millimetres: the sheet, the margin the page box carries
+ * on every page, and the content box left over. Nothing else in the pipeline may add a margin or
+ * pin a width — the page box owns the first and `DOCUMENT_PRINT_GEOMETRY_CSS` strips the second.
+ */
+export interface DocumentPrintGeometry {
+  pageWidthMm: number;
+  pageHeightMm: number;
+  marginMm: number;
+  contentWidthMm: number;
+  contentHeightMm: number;
+}
+
+const roundToTwoDecimals = (value: number): number => Math.round(value * 100) / 100;
+
+const pxToMm = (px: number): number => (px * 25.4) / 96;
+
+export const resolveDocumentPrintGeometryFromAst = (
+  ast: TemplateAst | null | undefined
+): DocumentPrintGeometry => {
+  const resolved = resolveTemplatePrintSettingsFromAst(ast);
+  const custom = resolved.source === 'explicit' ? resolved.customPageSize : undefined;
+  const page = custom
+    ? customPageSizeToMm(custom)
+    : resolved.source === 'legacy-unresolved'
+      ? { widthMm: pxToMm(resolved.pageWidthPx), heightMm: pxToMm(resolved.pageHeightPx) }
+      : { widthMm: resolved.preset.widthMm, heightMm: resolved.preset.heightMm };
+  // The same number resolveInvoicePdfPrintOptions puts in the Puppeteer margin and
+  // resolveCustomPageCss puts in the @page rule, so all three agree by construction.
+  const marginMm = roundToTwoDecimals(resolved.marginMm);
+  return {
+    pageWidthMm: roundToTwoDecimals(page.widthMm),
+    pageHeightMm: roundToTwoDecimals(page.heightMm),
+    marginMm,
+    contentWidthMm: roundToTwoDecimals(page.widthMm - marginMm * 2),
+    contentHeightMm: roundToTwoDecimals(page.heightMm - marginMm * 2),
+  };
+};
+
+/**
+ * Print geometry for a `document`: the page box carries the margin (resolveInvoicePdfPrintOptions
+ * for preset paper, the @page rule for a custom size), so the markup must carry none of its own.
+ *
+ * Three things in the markup would otherwise fight it. The browser's default body margin adds
+ * ~2 mm; the renderer pads the document root by the template margin, which only indents the first
+ * page (a box's padding cannot repeat per page, which is why later pages used to start higher than
+ * the first); and a designer-saved template pins that root to the full page WIDTH — the sheet the
+ * canvas draws — which overflows the printable area and made Chromium shrink every page to fit,
+ * printing the whole document a tenth smaller than it was authored. Stripped for print, the root
+ * takes exactly the content box the page box leaves.
+ *
+ * Screen is untouched: the preview still shows the page-sized root with its margin.
+ *
+ * Never emitted for a label (`label-cell` geometry): there the renderer's root padding IS the
+ * margin, because composeLabelSheets gives the cell no padding of its own.
+ */
+export const DOCUMENT_PRINT_GEOMETRY_CSS = `@media print {
+  html, body { margin: 0; padding: 0; }
+  .invoice-template-root > .ast-node-type-document {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* A template authored before the designer wraps its page in a single section that carries the
+     margin as padding — the same padding resolvePrintResolutionInputFromAst reads the margin from. */
+  .invoice-template-root > .ast-node-type-document > section.ast-node-type-section:only-child {
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}`;
+
+/**
  * How a document type reaches paper, which decides what frames its content:
  * - `document`: the single-document PDF path (pdfGenerationService). Content flows across pages.
  * - `label-cell`: the label batch path (composeLabelSheets). The template becomes one fixed-size cell with
@@ -86,20 +163,15 @@ export interface TemplatePreviewSheet {
   guideMarginMm: number;
 }
 
-const pxToMm = (px: number): number => (px * 25.4) / 96;
-
 /**
  * The preview sheet that matches the printed label cell for `ast`, or null when the preview should stay
  * unframed. Only the `label-cell` path is framed: its geometry is exact (one clipped cell, nothing outside
  * the markup), so the sheet is the label.
  *
- * `document` stays unframed because no screen sheet can match its paper today: the PDF path applies the
- * margin twice (Puppeteer `margin` from resolvePdfPrintOptionsFromAst plus the renderer's root padding),
- * and designer-saved templates pin the root to the full page width, so the content only fits because
- * Chromium's print path shrinks overflowing pages to fit. A sheet would clip what the PDF shrinks.
+ * A `document` now has an exact geometry too — resolveDocumentPrintGeometryFromAst, one page box, one
+ * margin, one content box, no shrink-to-fit — so a sheet CAN match its paper. It stays unframed here only
+ * because a document flows across many sheets: framing it means drawing each page, which is its own card.
  */
-// LEVERAGE: friction document-pdf-margin — document PDFs apply the margin twice and rely on print
-// shrink-to-fit; fix the single-document print geometry, then frame `document` previews here too.
 export const resolveTemplatePreviewSheetFromAst = (
   ast: TemplateAst | null | undefined,
   geometry: TemplatePrintGeometry

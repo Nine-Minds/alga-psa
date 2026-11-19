@@ -139,6 +139,9 @@ export default defineConfig({
       // Forced page breaks only exist in a paginating engine, so this one also
       // prints with real Chromium and counts the pages it produced.
       'src/lib/invoice-template-ast/pageBreaks.pdf.test.ts',
+      // Margins that repeat per page, and print scaling, likewise only exist on
+      // paper: this one prints and measures where the ink landed.
+      'src/lib/invoice-template-ast/printGeometry.pdf.test.ts',
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
