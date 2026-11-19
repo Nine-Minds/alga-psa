@@ -18,7 +18,7 @@ import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { buildInboundSourceObjectKey, normalizeInboundMessageIdentity } from './inboundEmailIdentity';
-import { extractMessageIds } from './inboundEmailMimeHelpers';
+import { extractMessageIds, repairUtf8Mojibake } from './inboundEmailMimeHelpers';
 import type { InboundProviderType } from '../../interfaces/inbound-email.interfaces';
 
 export interface StagedInboundSource {
@@ -168,7 +168,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
           name: item?.name || undefined,
         }))
       : undefined,
-    subject: parsed?.subject || '',
+    subject: repairUtf8Mojibake(parsed?.subject || ''),
     body: {
       text: parsed?.text || '',
       html: parsed?.html ? String(parsed.html) : undefined,
