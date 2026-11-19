@@ -52,6 +52,13 @@ vi.mock('../lib/internalUserLicenseGuard', async (importOriginal) => ({
   },
 }));
 
+// UserService pulls verifyAuthenticator from the auth package, whose index
+// reaches next-auth; stub the one export it uses rather than loading that
+// chain, as the rest of this package's suite does.
+vi.mock('@alga-psa/auth', () => ({
+  verifyAuthenticator: () => true,
+}));
+
 vi.mock('@alga-psa/core/encryption', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/core/encryption')>()),
   hashPassword: async (password: string) => `hashed:${password}`,
