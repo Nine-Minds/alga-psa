@@ -22,3 +22,7 @@ PSA ticket: alga-2026-0002826 (CloudVBS).
 - `server`: `npx vitest run src/test/unit/searchIdentifier.test.ts src/test/integration/ticketListFullNumberSearch.integration.test.ts`: 10/10 pass. With the pre-fix `optimizedTicketActions.ts` restored, the integration test fails 4 of 5, which reproduces the bug.
 - Package suites: search 16/16, clients 800/800, projects 668/668, tickets 2391/2392. The one tickets failure is `useTicketListChanges.protocol.test.tsx` ("Could not locate installed Hocuspocus server package"), an environment issue unrelated to search.
 - `tsc --noEmit` is clean for shared, packages/search, packages/tickets, packages/clients and packages/projects. Server `tsc` runs out of memory on this host.
+
+## Review preparation (2026-11-19)
+
+- The full-number rule first required a dash after the letters (`^[A-Z]+(-\d+){2,}$`). A tenant whose prefix has no trailing dash plus a `{YYYY}-` date template issues numbers like `CVB2026-0002826`; those were not classified as full numbers, so the subtitle trigram clause still returned siblings (`CVB2026-0002801`, and even `ALGA-2026-0002826`). The rule is now `^[A-Z]+[-/._]?\d+([-/._]\d+)+$`: letters, an optional separator, then two or more digit groups. T001 and T003 cover the dashless shape; T003 fails on the old rule (3 tickets returned) and passes on the new one.

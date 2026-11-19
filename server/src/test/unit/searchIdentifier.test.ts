@@ -6,6 +6,15 @@ describe('T001 deriveSearchIdentifierMatch', () => {
     expect(deriveSearchIdentifierMatch('ALGA-2026-0002826')).toEqual({ exact: 'alga-2026-0002826', prefix: null, isFullNumber: true });
   });
 
+  it('treats a dashless prefix with a date group as a full number (prefix CVB + {YYYY}-)', () => {
+    expect(deriveSearchIdentifierMatch('CVB2026-0002826')).toEqual({ exact: 'cvb2026-0002826', prefix: null, isFullNumber: true });
+    expect(deriveSearchIdentifierMatch('INV-2026-11-000005').isFullNumber).toBe(true);
+    expect(deriveSearchIdentifierMatch('TIC2026/000123').isFullNumber).toBe(true);
+    expect(deriveSearchIdentifierMatch('ALGA-2026').isFullNumber).toBe(false);
+    expect(deriveSearchIdentifierMatch('TIC0002826').isFullNumber).toBe(false);
+    expect(deriveSearchIdentifierMatch('printer 2026-11').isFullNumber).toBe(false);
+  });
+
   it('gives a prefix for a single number-shaped token', () => {
     expect(deriveSearchIdentifierMatch('TIC0002826')).toEqual({ exact: 'tic0002826', prefix: 'tic0002826', isFullNumber: false });
     expect(deriveSearchIdentifierMatch('ALGA-2026')).toEqual({ exact: 'alga-2026', prefix: 'alga-2026', isFullNumber: false });

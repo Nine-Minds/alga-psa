@@ -42,8 +42,15 @@ vi.mock('@alga-psa/formatting/avatarUtils', () => ({
 
 const describeDb = await describeWithDb();
 
-const NUMBERS = ['ALGA-2026-0000001', 'ALGA-2026-0000002', 'ALGA-2026-0002826'] as const;
+const NUMBERS = [
+  'ALGA-2026-0000001',
+  'ALGA-2026-0000002',
+  'ALGA-2026-0002826',
+  'CVB2026-0002801',
+  'CVB2026-0002826',
+] as const;
 const TARGET = 'ALGA-2026-0002826';
+const DASHLESS_TARGET = 'CVB2026-0002826';
 
 describeDb('ticket list full ticket-number search (DB-backed)', () => {
   let db: Knex;
@@ -111,6 +118,10 @@ describeDb('ticket list full ticket-number search (DB-backed)', () => {
   );
 
   it('the shared prefix still lists every ticket in the group', async () => {
-    expect(await search('ALGA-2026')).toEqual([...NUMBERS].sort());
+    expect(await search('ALGA-2026')).toEqual(['ALGA-2026-0000001', 'ALGA-2026-0000002', 'ALGA-2026-0002826']);
+  });
+
+  it('a full number with a dashless prefix (CVB + {YYYY}-) returns only that ticket', async () => {
+    expect(await search(DASHLESS_TARGET)).toEqual([DASHLESS_TARGET]);
   });
 });

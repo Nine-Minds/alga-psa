@@ -8,9 +8,13 @@
  *    (letters, optional hyphen, digits — e.g. `TIC0002826`, `ALGA-2026`, `TIC123`).
  *    Used for `LIKE prefix || '%'`. A multi-group number such as
  *    `ALGA-2026-0002826` is already complete, so it must not widen to its siblings.
+ *
+ * A full number is the shape the numbering service issues when a date template sits between the
+ * prefix and the counter: letters, an optional separator, then two or more digit groups joined by a
+ * separator (`ALGA-2026-0002826`, `CVB2026-0002826`, `INV-2026-11-000005`, `TIC2026/000123`).
  */
 const SINGLE_NUMBER_TOKEN_RE = /^[A-Z]+-?\d+$/i;
-const FULL_MULTI_GROUP_NUMBER_RE = /^[A-Z]+(?:-\d+){2,}$/i;
+const FULL_MULTI_GROUP_NUMBER_RE = /^[A-Z]+[-/._]?\d+(?:[-/._]\d+)+$/i;
 
 export interface SearchIdentifierMatch {
   exact: string | null;
