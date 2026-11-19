@@ -95,7 +95,15 @@ const buildPaginatedSheetCss = (geometry: DocumentPrintGeometry): string => {
   html { background: #e5e7eb; }
   html body { margin: 0; padding: 24px; box-sizing: border-box; background: transparent; }
   .pagedjs_pages { display: block; width: auto; height: auto; max-width: none; }
-  .${PREVIEW_PAGE_CLASS} { display: block; width: auto; height: auto; margin: 0; padding: 0; }
+  .${PREVIEW_PAGE_CLASS} {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+  }
   .${PREVIEW_PAGE_CLASS} + .${PREVIEW_PAGE_CLASS} { margin-top: 24px; }
   .${PREVIEW_SHEET_CLASS} {
     position: relative;
