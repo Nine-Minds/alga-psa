@@ -10,7 +10,7 @@ import { resolveCoManagedPurchaseDiscovery } from '@enterprise/lib/co-managed/pu
  * `resolveCoManagedPurchaseDiscovery`, the sidebar action), so a visible link always leads to a usable page.
  *
  *  - `commercial`: first-purchase eligibility (EE policy; always false in the community edition).
- *    Grants only the pool. It carries no Stripe call and no permission.
+ *    Grants access to the purchase pool only.
  *  - `operational`: the capability serves AND the actor holds `co_management:read`: the existing
  *    overview, client visibility and read-only rules.
  *

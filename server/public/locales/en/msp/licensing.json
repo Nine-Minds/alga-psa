@@ -694,6 +694,8 @@
     "proRequired": "A Pro PSA subscription is required to sponsor customer workspaces.",
     "loadError": "Could not load customer seat capacity. Please try again.",
     "purchaseError": "Could not complete the seat purchase. You can resume it safely.",
+    "termsChanged": "The price changed after you reviewed it. Review the updated terms before confirming.",
+    "offerUnavailable": "New seat purchases are temporarily unavailable. Nothing was charged.",
     "checkoutExpired": "This checkout expired. Start a new purchase to continue.",
     "grace": "Renew your license or resolve the capacity shortfall before {{date}} to keep customer workspaces writable.",
     "readOnly": "The grace period ended on {{date}}. Restore licensed capacity to resume customer workspace changes.",
