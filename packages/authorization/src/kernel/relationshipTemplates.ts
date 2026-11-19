@@ -107,6 +107,12 @@ export interface RelationshipSqlAdapter {
    * themselves must match nothing when `clientIds` is empty.
    */
   applyClients?(builder: Knex.QueryBuilder, clientIds: string[]): void;
+  /**
+   * Narrow `builder` to rows that have a published, externally-audienced parent (the SQL facet of
+   * `readable_via_published_parent`; the resource decides what "parent" and "published" mean). When
+   * omitted, the template denies all rows (fail closed).
+   */
+  applyReadableViaPublishedParent?(builder: Knex.QueryBuilder): void;
 }
 
 export interface RelationshipSqlContext {
@@ -312,6 +318,15 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     compileSql: (builder, ctx) => {
       if (!ctx.adapter.idColumn) { deny(builder); return; }
       whereInOrDeny(builder, ctx.adapter.idColumn, ctx.selectedRecordIds);
+    },
+  },
+  // The record is readable because a published parent (e.g. a client-audience KB article for its embedded
+  // images) is. The resource decides that when it builds the record; undefined is a refusal.
+  readable_via_published_parent: {
+    matches: (input) => input.record?.readableViaPublishedParent === true,
+    compileSql: (builder, ctx) => {
+      if (ctx.adapter.applyReadableViaPublishedParent) ctx.adapter.applyReadableViaPublishedParent(builder);
+      else deny(builder);
     },
   },
 };
