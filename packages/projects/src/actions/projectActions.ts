@@ -1,5 +1,6 @@
 'use server';
 
+import { deriveSearchIdentifierMatch } from '@alga-psa/shared/ticketClients/searchIdentifier';
 import { isMspPrincipalUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import ProjectModel from '../models/project';
@@ -132,7 +133,6 @@ export type ProjectUpdateResult = IProject & {
 };
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
-const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
 
 const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
@@ -675,7 +675,7 @@ export const searchProjectListIds = withAuth(async (
   }
 
   const prefixTsquery = buildProjectListSearchPrefixTsquery(rawSearch);
-  const identifier = rawSearch.match(PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const { exact: identifier, prefix: identifierPrefix, isFullNumber } = deriveSearchIdentifierMatch(rawSearch);
   const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
@@ -723,7 +723,9 @@ export const searchProjectListIds = withAuth(async (
             websearch_to_tsquery('english', ?) AS tsq,
             CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
             ?::text AS raw,
-            ?::text AS identifier
+            ?::text AS identifier,
+            ?::text AS identifier_prefix,
+            ?::boolean AS fuzzy_enabled
         ),
         matched AS (
           SELECT DISTINCT
@@ -747,15 +749,15 @@ export const searchProjectListIds = withAuth(async (
               OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
               OR si.title ILIKE '%' || q.raw || '%'
               OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
+              OR (q.fuzzy_enabled AND si.title % q.raw)
+              OR (q.fuzzy_enabled AND coalesce(si.subtitle, '') % q.raw)
               OR (
                 q.identifier IS NOT NULL
                 AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
               )
               OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+                q.identifier_prefix IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier_prefix || '%'
               )
             )
         )
@@ -769,6 +771,8 @@ export const searchProjectListIds = withAuth(async (
         prefixTsquery,
         rawSearch,
         identifier,
+        identifierPrefix,
+        !isFullNumber,
         ...searchIndex.bindings,
         ...projectTaskCommentJoin.bindings,
         ...projectPhaseJoin.bindings,

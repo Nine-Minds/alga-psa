@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -31,7 +31,7 @@ set -euo pipefail
 
 args="$*"
 state="$FAKE_KUBE_STATE_DIR"
-printf '%s\\n' "$args" >> "$FAKE_KUBE_CALL_LOG"
+printf '%s%s\\n' "\${FAKE_KUBE_TAG:-}" "$args" >> "$FAKE_KUBE_CALL_LOG"
 
 next_counter() {
   local file="$1"
@@ -264,54 +264,215 @@ test('smoke failures still transition and remove only the smoke PV', () => {
   assert.doesNotMatch(calls, /delete persistentvolume pv-(?:postgresql|redis|application)/);
 });
 
-// lstat-based: a dangling symlink (the lock's normal shape — its target is a
-// PID, not a path) makes fs.existsSync return false even when it still exists.
+// "No flock is held on the path": try to take it from a separate process. The
+// lock file itself is allowed to stay on disk (it is never unlinked).
 function lockAbsent(lockPath) {
-  try {
-    fs.lstatSync(lockPath);
-    return false;
-  } catch {
-    return true;
-  }
+  const probe = spawnSync('bash', ['-c', 'exec 9>>"$1"; flock -n 9', 'probe', lockPath]);
+  return probe.status === 0;
 }
 
-// The control-plane container being restarted mid-reconcile (e.g. by its
-// liveness probe) SIGKILLs the lock holder, so its cleanup trap never runs.
-// A leftover lock must never block future reconciles — that previously left
-// appliances permanently unable to update (alga0002202).
-test('a stale lock whose owner is dead is reclaimed instead of blocking', () => {
+function sleepMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(predicate, what) {
+  for (let i = 0; i < 100; i += 1) {
+    if (predicate()) return;
+    await sleepMs(50);
+  }
+  throw new Error(`timed out waiting for ${what}`);
+}
+
+// A real process holding flock on the lock path, exactly like a running installer.
+async function startHolder(lockPath) {
+  const holder = spawn('bash', ['-c', 'exec 9>"$1"; flock 9; sleep 30', 'holder', lockPath], {
+    stdio: 'ignore'
+  });
+  await waitFor(() => fs.existsSync(lockPath) && !lockAbsent(lockPath), 'holder to take the lock');
+  return holder;
+}
+
+function exited(child) {
+  return new Promise((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) resolve();
+    else child.once('exit', resolve);
+  });
+}
+
+function procState(pid) {
+  const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+  return stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3);
+}
+
+// A genuine zombie: the backgrounded `sleep 0` exits and its parent (the exec'd
+// `sleep 30`) never waits for it, so it stays defunct until the parent dies.
+async function startZombie() {
+  const parent = spawn('sh', ['-c', 'sleep 0 & echo $!; exec sleep 30'], {
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+  const zombiePid = await new Promise((resolve) => {
+    parent.stdout.once('data', (chunk) => resolve(Number(String(chunk).trim())));
+  });
+  await waitFor(() => {
+    try {
+      return procState(zombiePid) === 'Z';
+    } catch {
+      return false;
+    }
+  }, 'child to become a zombie');
+  return { parent, zombiePid };
+}
+
+function runInstallerAsync(harness, extraEnv = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(installer, ['--kubeconfig', harness.kubeconfig], {
+      cwd: repoRoot,
+      env: { ...harness.env, ...extraEnv }
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => { stdout += d; });
+    child.stderr.on('data', (d) => { stderr += d; });
+    child.on('close', (status) => resolve({ status, stdout, stderr }));
+  });
+}
+
+// Ticket alga-2026-0003233: a legacy PID-symlink lock whose owner is a zombie
+// passed `kill -0` and was never reclaimed. Ownership is no longer a PID.
+test('a legacy symlink lock pointing at a real zombie is migrated and the installer succeeds', async () => {
   const harness = createHarness();
-  // PID above every platform's pid_max, so it can never name a live process.
-  fs.symlinkSync('99999999', harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  const { parent, zombiePid } = await startZombie();
+  try {
+    assert.equal(procState(zombiePid), 'Z');
+    fs.symlinkSync(String(zombiePid), lockPath);
+    const result = runInstaller(harness);
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /Storage prerequisites are ready/);
+    assert.match(result.stdout, /Removed legacy symlink storage reconcile lock/);
+    const stat = fs.lstatSync(lockPath);
+    assert.equal(stat.isSymbolicLink(), false);
+    assert.equal(stat.isFile(), true);
+    assert.equal(fs.existsSync(path.join(path.dirname(lockPath), String(zombiePid))), false);
+    assert.equal(lockAbsent(lockPath), true);
+  } finally {
+    parent.kill('SIGKILL');
+    await exited(parent);
+  }
+});
+
+// Ticket alga-2026-0003233: a PID reused by an unrelated live process (PID
+// namespaces restart at low numbers) must not keep the lock held.
+test('a legacy symlink lock pointing at a live unrelated PID is reclaimed', () => {
+  const harness = createHarness();
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  fs.symlinkSync(String(process.pid), lockPath);
   const result = runInstaller(harness);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Storage prerequisites are ready/);
-  assert.equal(lockAbsent(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH), true);
+  assert.equal(fs.lstatSync(lockPath).isFile(), true);
+  assert.equal(lockAbsent(lockPath), true);
 });
 
+// An older build used a mkdir lock directory; it recorded no owner and must not
+// wedge the new scheme.
 test('a legacy mkdir-style lock directory left by an older build is reclaimed', () => {
   const harness = createHarness();
-  fs.mkdirSync(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  fs.mkdirSync(lockPath);
   const result = runInstaller(harness);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Storage prerequisites are ready/);
-  assert.equal(lockAbsent(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH), true);
+  assert.equal(fs.lstatSync(lockPath).isFile(), true);
+  assert.equal(lockAbsent(lockPath), true);
 });
 
-test('a lock held by a live process still blocks until the wait times out', () => {
+// A genuinely running reconcile must still exclude a second one, and the
+// waiter must not delete or steal the lock.
+test('a real flock holder still blocks until the wait times out', async () => {
   const harness = createHarness({ lockWaitAttempts: '1' });
-  fs.symlinkSync(String(process.pid), harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH);
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  const holder = await startHolder(lockPath);
+  try {
+    // A waiter must not truncate the holder's diagnostic line.
+    const diagnostic = '4242 holder-host boot-id 2026-01-01T00:00:00Z\n';
+    fs.writeFileSync(lockPath, diagnostic);
+    const result = runInstaller(harness);
+
+    assert.equal(read(lockPath), diagnostic);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Timed out waiting for another storage reconciliation to finish/);
+    assert.equal(fs.existsSync(lockPath), true);
+    assert.equal(lockAbsent(lockPath), false);
+  } finally {
+    holder.kill('SIGKILL');
+    await exited(holder);
+  }
+});
+
+// The control-plane container being restarted mid-reconcile (e.g. by its
+// liveness probe) SIGKILLs the lock holder, so no cleanup ever runs. A dead
+// owner must never block future reconciles — that previously left appliances
+// permanently unable to update (alga0002202). The kernel drops the flock.
+test('a lock whose holder was SIGKILLed is acquired immediately', async () => {
+  const harness = createHarness({ lockWaitAttempts: '1' });
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  const holder = await startHolder(lockPath);
+  holder.kill('SIGKILL');
+  await exited(holder);
+
   const result = runInstaller(harness);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Storage prerequisites are ready/);
+  assert.equal(lockAbsent(lockPath), true);
+});
+
+// Two concurrent reconciles must run one at a time. The fake kubectl tags every
+// logged call with the installer that made it, so interleaving shows up as the
+// tag changing more than once.
+test('two concurrent installers run one at a time without interleaving', async () => {
+  const harness = createHarness();
+  const [a, b] = await Promise.all([
+    runInstallerAsync(harness, { FAKE_KUBE_TAG: 'A|' }),
+    runInstallerAsync(harness, { FAKE_KUBE_TAG: 'B|' })
+  ]);
+
+  assert.equal(a.status, 0, a.stderr || a.stdout);
+  assert.equal(b.status, 0, b.stderr || b.stdout);
+  const tags = read(harness.callLog)
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => line.slice(0, 1));
+  assert.ok(tags.includes('A') && tags.includes('B'));
+  const switches = tags.filter((tag, i) => i > 0 && tag !== tags[i - 1]).length;
+  assert.equal(switches, 1, `kubectl calls interleaved: ${tags.join('')}`);
+  assert.equal(read(path.join(harness.stateDir, 'smoke-create-count')), '2');
+});
+
+// A host without util-linux must fail loudly, never silently run unlocked or
+// fall back to a PID lock.
+test('a missing flock fails loudly with no PID-lock fallback', () => {
+  const harness = createHarness();
+  const lockPath = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH;
+  const toolDir = path.join(harness.tmp, 'tools-without-flock');
+  fs.mkdirSync(toolDir);
+  for (const tool of ['env', 'bash', 'dirname', 'cat']) {
+    const resolved = spawnSync('bash', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
+    fs.symlinkSync(resolved, path.join(toolDir, tool));
+  }
+  const result = spawnSync(installer, ['--kubeconfig', harness.kubeconfig], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: { ...harness.env, PATH: `${path.join(harness.tmp, 'bin')}:${toolDir}` }
+  });
 
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Timed out waiting for another storage reconciliation to finish/);
-  // The held lock must be left in place for its owner.
-  assert.equal(
-    fs.readlinkSync(harness.env.ALGA_APPLIANCE_STORAGE_LOCK_PATH),
-    String(process.pid)
-  );
+  assert.match(result.stderr, /flock \(util-linux\) is required/);
+  assert.doesNotMatch(result.stdout, /Storage prerequisites are ready/);
+  assert.equal(fs.existsSync(lockPath), false);
 });
 
 test('storage reconciliation invokes the DNS reconcile launcher after storage converges', () => {
