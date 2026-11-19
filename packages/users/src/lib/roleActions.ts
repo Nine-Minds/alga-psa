@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
@@ -133,6 +133,11 @@ export const assignRoleToUser = withAuth(async (
             const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
                 .insert({ user_id: userId, role_id: roleId, tenant })
                 .returning('*');
+
+            // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
+            // in the same transaction as the role write (client users only).
+            await syncContactClientAdminFlag(trx, tenant, userId);
+
             return userRole;
         });
     } catch (error) {
@@ -174,6 +179,10 @@ export const removeRoleFromUser = withAuth(async (
             }
 
             await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();
+
+            // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
+            // in the same transaction as the role write (client users only).
+            await syncContactClientAdminFlag(trx, tenant, userId);
         });
     } catch (error) {
         const expected = userRoleActionErrorFrom(error);
