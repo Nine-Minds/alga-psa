@@ -32,7 +32,7 @@ The application server stays outside this test run. The authentication test veri
 | T002 | The same suite exercises missing and zero entitlement rows, a one-user sponsor, failed and successful password authentication, two first sessions and a database timezone with an intervening DST change. `getSession.test.ts` exercises failed and successful session admission. |
 | T003 | The trial DB suite exercises the ticket record authorizer for reads and updates, base lapse and restoration, deadline, staff history, and termination. |
 | T004 | The trial DB suite exercises paid Seat and Workspace allocations, resize, commercial lapse and competing reservations under the sponsor pool lock. |
-| T005 | `coManagedSeatPurchaseResume.emulator.integration.test.ts` exercises a stale quote, failed payment, cancellation, expired checkout, a paid webhook after expiry and restart, and conversion using an existing paid subscription. |
+| T005 | `coManagedSeatPurchaseResume.emulator.integration.test.ts` exercises a stale quote, failed payment, cancellation, expired checkout, a paid webhook after expiry and restart, conversion using an existing paid subscription, and recovery of paid capacity if the original arrangement ends during checkout. |
 | T006 | EE discovery, component and action tests plus the server route and CE tests exercise account-only discovery, client scope, direct action denial and local date/price rendering. The Stripe suite finishes an existing conversion with both capabilities forced off. |
 | T007 | The trial DB suite writes real ticket-journal mutations in both orders, with unrelated tickets and views. The emulator suite replays paid events and verifies the single conversion receipt and original author. |
 

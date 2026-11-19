@@ -74,6 +74,7 @@ describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: 
     await accept(afterAcceptance.invitation.token);
     const old = await db('co_managed_seat_trials').where({ tenant }).first();
     await cancelCoManagedSeatTrial(db, { tenant, trialId: won.trialId });
+    expect(await db('co_managed_seat_trial_milestones').where({ tenant })).toHaveLength(0);
     const replacement = await prepareCoManagedSeatTrial(db, choices[1-index]);
     expect(replacement.trialId).toBe(won.trialId);
     await expect(cancelCoManagedSeatTrial(db, { tenant, trialId: won.trialId, allocationId: old.allocation_id }))

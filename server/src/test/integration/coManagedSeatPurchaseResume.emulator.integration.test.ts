@@ -26,7 +26,7 @@ import { EmulatorHost } from '@alga-psa/emulator-host';
 import stripeEmulator from '@alga-psa/emulator-stripe';
 import { tenantDb } from '@alga-psa/db';
 import {
-  acceptCoManagedSeatInvitation, createCoManagedSeatArrangement, inviteCoManagedSeatTechnician, readCoManagedSeatArrangementPanel,
+  acceptCoManagedSeatInvitation, createCoManagedSeatArrangement, endCoManagedSeatArrangement, inviteCoManagedSeatTechnician, readCoManagedSeatArrangementPanel,
   readCoManagedSeatEnableState, setCoManagedSeatBoardScope,
 } from '@alga-psa/co-managed';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
@@ -224,7 +224,7 @@ describeDb('pool purchase review and resume from the seat setup (T045)', { shuff
       actor: { actorType: 'user', userId: accepted.user_id }, source: 'ui' });
     const pilot = () => sponsor.table('co_managed_seat_trials').where({ trial_id: prepared.trialId });
     const before = await pilot().first();
-    return { tenant, customerId, sponsor, prepared, accepted, ticketId, pilot, before };
+    return { tenant, customerId, sponsor, staff, prepared, accepted, ticketId, pilot, before };
   }
 
   it('adds one paid seat to an existing full subscription and hands it to the bound technician once', async () => {
@@ -247,6 +247,22 @@ describeDb('pool purchase review and resume from the seat setup (T045)', { shuff
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 2, allocated: 2, available: 0 });
     expect((await view('checkout-sessions')).filter(session => session.metadata?.operation_id === operationId)).toHaveLength(0);
     expect(await sponsor.table('co_managed_purchase_operations')).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('keeps a paid seat available when the original arrangement ends during checkout', async () => {
+    const { tenant, sponsor, staff, prepared, pilot, before } = await activePilot();
+    const service = new StripeService();
+    const operationId = randomUUID();
+    const quote = { quantity: 1, ...await service.previewCoManagedSeats(tenant, 1) };
+    const checkout = await service.purchaseCoManagedSeats(tenant, 1, operationId, { trialId: before.trial_id, quote });
+    if (checkout.kind !== 'checkout') throw new Error('Expected original checkout');
+    await endCoManagedSeatArrangement(db, { sponsorTenant: tenant, arrangementId: prepared.arrangementId, actorUserId: staff });
+    const start = (await view('events')).length;
+    await control('actions/complete-session', { sessionId: checkout.sessionId });
+    for (const event of (await view('events')).slice(start)) await service.handleWebhookEvent(event);
+    expect(await pilot().first()).toMatchObject({ state: 'ended', conversion_state: 'failed' });
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 1, allocated: 0, available: 1 });
+    expect(await sponsor.table('co_managed_seat_trial_milestones').where({ milestone: 'converted' })).toHaveLength(0);
   }, HOOK_TIMEOUT);
 
   it('hands verified checkout capacity to the expired pilot on webhook replay after restart', async () => {
