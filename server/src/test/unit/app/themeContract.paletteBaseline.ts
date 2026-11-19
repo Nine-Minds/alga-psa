@@ -205,7 +205,7 @@ export const PALETTE_BASELINE = new Map<string, number>([
   ['packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx', 97],
   ['packages/billing/src/components/invoice-designer/canvas/DropPreviewOverlay.tsx', 7],
   ['packages/billing/src/components/invoice-designer/canvas/SelectionAdorner.tsx', 2],
-  ['packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.tsx', 100],
+  ['packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.tsx', 96],
   ['packages/billing/src/components/invoice-designer/inspector/NodeOverridesSummary.tsx', 9],
   ['packages/billing/src/components/invoice-designer/inspector/widgets/DocumentImagePickerWidget.tsx', 10],
   ['packages/billing/src/components/invoice-designer/inspector/widgets/StandardLabelControl.tsx', 17],
