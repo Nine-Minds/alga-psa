@@ -1883,6 +1883,10 @@
         "label": "Abstandshalter",
         "description": "Leerraum zur Layout-Anpassung."
       },
+      "page-break": {
+        "label": "Seitenumbruch",
+        "description": "Beginnt den nächsten Block auf einer neuen Seite."
+      },
       "container": {
         "label": "Box-Container",
         "description": "Gestalteter Container zum Gruppieren von Inhalten (Rahmen, Hintergründe)."
@@ -2205,6 +2209,17 @@
               "label": "Farbe"
             }
           }
+        },
+        "pagination": {
+          "title": "Seitenumbrüche",
+          "fields": {
+            "breakBefore": {
+              "label": "Auf neuer Seite beginnen"
+            },
+            "breakInside": {
+              "label": "Auf einer Seite zusammenhalten"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Unterschrift",
       "attachmentsLabel": "Anhänge",
       "spacerLabel": "Abstandshalter",
+      "pageBreakLabel": "Seitenumbruch",
+      "pageBreakBefore": "Beginnt auf einer neuen Seite",
       "companyLogo": "Firmenlogo",
       "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
       "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",

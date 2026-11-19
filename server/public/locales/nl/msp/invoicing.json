@@ -1883,6 +1883,10 @@
         "label": "Tussenruimte",
         "description": "Lege ruimte voor lay-outaanpassing."
       },
+      "page-break": {
+        "label": "Pagina-einde",
+        "description": "Begint het volgende blok op een nieuwe pagina."
+      },
       "container": {
         "label": "Box-container",
         "description": "Gestileerde container voor het groeperen van inhoud (randen, achtergronden)."
@@ -2205,6 +2209,17 @@
               "label": "Kleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginering",
+          "fields": {
+            "breakBefore": {
+              "label": "Op een nieuwe pagina beginnen"
+            },
+            "breakInside": {
+              "label": "Bij elkaar houden op één pagina"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Handtekening",
       "attachmentsLabel": "Bijlagen",
       "spacerLabel": "Tussenruimte",
+      "pageBreakLabel": "Pagina-einde",
+      "pageBreakBefore": "Begint op een nieuwe pagina",
       "companyLogo": "Bedrijfslogo",
       "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
       "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",

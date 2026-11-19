@@ -1883,6 +1883,10 @@
         "label": "Spaziatore",
         "description": "Spazio vuoto per regolare il layout."
       },
+      "page-break": {
+        "label": "Interruzione di pagina",
+        "description": "Avvia il blocco successivo su una nuova pagina."
+      },
       "container": {
         "label": "Contenitore",
         "description": "Contenitore stilizzato per raggruppare contenuti (bordi, sfondi)."
@@ -2205,6 +2209,17 @@
               "label": "Colore"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginazione",
+          "fields": {
+            "breakBefore": {
+              "label": "Inizia su una nuova pagina"
+            },
+            "breakInside": {
+              "label": "Mantieni unito in una sola pagina"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Firma",
       "attachmentsLabel": "Allegati",
       "spacerLabel": "Spaziatore",
+      "pageBreakLabel": "Interruzione di pagina",
+      "pageBreakBefore": "Inizia su una nuova pagina",
       "companyLogo": "Logo aziendale",
       "insertionMarker": "Il prossimo blocco che aggiungi andrà qui",
       "emptyContainer": "Vuoto — selezionalo e aggiungi blocchi dal pannello a sinistra",

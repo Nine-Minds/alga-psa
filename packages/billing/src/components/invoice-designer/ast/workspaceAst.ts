@@ -1437,6 +1437,15 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'divider',
       };
+    case 'page-break':
+      // An instruction, not content: a rule-less, zero-height divider whose only
+      // contribution to the document is the forced break. The canvas draws its
+      // own marker band for it; nothing of that reaches the page.
+      return {
+        ...createBaseNode(node),
+        type: 'divider',
+        style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } },
+      };
     case 'barcode': {
       const metadata = getWorkspaceNodeMetadata(node);
       return {
@@ -2048,10 +2057,18 @@ export const importTemplateAstToWorkspace = (
             : node.src.type === 'binding'
               ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
               : '';
+        // A divider that forces a page break is what the designer calls a Page
+        // Break block, so it reopens as the block it was built from.
+        const isPageBreakDivider =
+          inputNode.type === 'divider' &&
+          isRecord(inputNode.style?.inline) &&
+          (inputNode.style.inline as Record<string, unknown>).breakAfter === 'page';
         const designerType =
           inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
             ? 'logo'
-            : typeMap[inputNode.type];
+            : isPageBreakDivider
+              ? 'page-break'
+              : typeMap[inputNode.type];
         if (!designerType) {
           // Fail loudly: silently dropping an unrecognized node would delete
           // content when a layout is opened and saved in the designer.

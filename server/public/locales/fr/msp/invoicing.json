@@ -1883,6 +1883,10 @@
         "label": "Espaceur",
         "description": "Espace vide pour ajuster la mise en page."
       },
+      "page-break": {
+        "label": "Saut de page",
+        "description": "Commence le bloc suivant sur une nouvelle page."
+      },
       "container": {
         "label": "Conteneur",
         "description": "Conteneur stylisé pour regrouper le contenu (bordures, arrière-plans)."
@@ -2205,6 +2209,17 @@
               "label": "Couleur"
             }
           }
+        },
+        "pagination": {
+          "title": "Pagination",
+          "fields": {
+            "breakBefore": {
+              "label": "Commencer sur une nouvelle page"
+            },
+            "breakInside": {
+              "label": "Garder groupé sur une seule page"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Signature",
       "attachmentsLabel": "Pièces jointes",
       "spacerLabel": "Espaceur",
+      "pageBreakLabel": "Saut de page",
+      "pageBreakBefore": "Commence sur une nouvelle page",
       "companyLogo": "Logo de l'entreprise",
       "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
       "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",

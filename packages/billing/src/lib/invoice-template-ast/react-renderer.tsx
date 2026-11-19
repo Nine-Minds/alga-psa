@@ -58,6 +58,12 @@ type RenderContext = {
    * without an entry is a bug and throws.
    */
   barcodes?: Record<string, string>;
+  /**
+   * Node ids on the document's trailing edge (the last child, its last child,
+   * and so on). A forced page break there has nothing after it, so honouring it
+   * would print an empty final page.
+   */
+  trailingNodeIds: Set<string>;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -209,6 +215,23 @@ const resolveFieldBorderStyle = (
     justifyContent: 'space-between',
     alignItems: 'center',
   };
+};
+
+/**
+ * The chain of nodes that close the document: its last child, that child's last
+ * child, and so on. Only these can carry a forced break with nothing after it.
+ */
+export const collectTrailingNodeIds = (root: TemplateNode): Set<string> => {
+  const ids = new Set<string>();
+  let current: TemplateNode | undefined = root;
+  while (current) {
+    const children: TemplateNode[] = Array.isArray(current.children) ? current.children : [];
+    const last = children[children.length - 1];
+    if (!last) break;
+    ids.add(last.id);
+    current = last;
+  }
+  return ids;
 };
 
 const resolveSyntheticRootDocumentStyle = (ast: TemplateAst): React.CSSProperties | undefined => {
@@ -983,8 +1006,23 @@ const renderNode = (
         />
       );
     }
-    case 'divider':
-      return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
+    case 'divider': {
+      // The designer's Page Break block exports as a rule-less divider whose only
+      // job is the forced break; mark it so print rules can address it.
+      const forcesPageBreak = isRecord(node.style?.inline) && node.style.inline.breakAfter === 'page';
+      const dividerStyle =
+        forcesPageBreak && ctx.trailingNodeIds.has(node.id)
+          ? { ...(style ?? {}), breakAfter: 'auto' as const }
+          : style;
+      return (
+        <hr
+          key={node.id}
+          id={node.id}
+          className={joinClassNames(elementClassName, forcesPageBreak && 'ast-page-break') || undefined}
+          style={dividerStyle}
+        />
+      );
+    }
     case 'table': {
       const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
@@ -1173,7 +1211,14 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
         ast.layout,
         evaluation,
         {},
-        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT, barcodes },
+        {
+          ast,
+          currencyCode,
+          locale,
+          dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT,
+          barcodes,
+          trailingNodeIds: collectTrailingNodeIds(ast.layout),
+        },
         rootDocumentStyleOverride
       )}
     </div>
@@ -1210,6 +1255,7 @@ export const resolveTemplateExpressionValue = (
     currencyCode,
     locale,
     dateFormat: options.dateFormat ?? SYSTEM_DATE_FORMAT,
+    trailingNodeIds: new Set<string>(),
   });
 };
 

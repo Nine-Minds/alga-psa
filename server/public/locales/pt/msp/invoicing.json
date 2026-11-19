@@ -1883,6 +1883,10 @@
         "label": "Espaçador",
         "description": "Espaço vazio para ajuste de layout."
       },
+      "page-break": {
+        "label": "Quebra de página",
+        "description": "Inicia o próximo bloco em uma nova página."
+      },
       "container": {
         "label": "Caixa Recipiente",
         "description": "Contêiner estilizado para agrupar conteúdo (bordas, planos de fundo)."
@@ -2205,6 +2209,17 @@
               "label": "Cor"
             }
           }
+        },
+        "pagination": {
+          "title": "Paginação",
+          "fields": {
+            "breakBefore": {
+              "label": "Começar em uma nova página"
+            },
+            "breakInside": {
+              "label": "Manter junto em uma única página"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Assinatura",
       "attachmentsLabel": "Anexos",
       "spacerLabel": "Espaçador",
+      "pageBreakLabel": "Quebra de página",
+      "pageBreakBefore": "Começa em uma nova página",
       "companyLogo": "Logotipo da empresa",
       "insertionMarker": "O próximo bloco que você adicionar ficará aqui",
       "emptyContainer": "Vazio — selecione-o e adicione blocos pelo painel esquerdo",

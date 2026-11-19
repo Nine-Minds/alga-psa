@@ -1266,6 +1266,23 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 	          </div>
 	        ),
 	      };
+	    case 'page-break':
+	      // Canvas-only: the document gets a bare forced break, so the band has to
+	      // be drawn here for the layout to read as pages rather than one flow.
+	      return {
+	        content: (
+	          <div
+	            className="w-full h-full flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
+	            data-automation-id="designer-canvas-page-break"
+	          >
+	            <span aria-hidden className="h-0 flex-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
+	            <span className="whitespace-nowrap">
+	              {t?.('designer.canvas.pageBreakLabel', { defaultValue: 'Page break' }) ?? 'Page break'}
+	            </span>
+	            <span aria-hidden className="h-0 flex-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
+	          </div>
+	        ),
+	      };
 	    case 'container':
 	      return { content: null }; // Container renders children directly
       case 'barcode': {
@@ -1465,6 +1482,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
+  const startsNewPage = getNodeStyle(node)?.breakBefore === 'page';
   // Nested containers share a top-left corner, so labelling every block at once stacks
   // the badges into an unreadable pile: only the hovered block and the selected one
   // (whose badge is its drag grip) are labelled.
@@ -1633,6 +1651,16 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         // A divider is a hairline; give the pointer a few px either side to grab it by.
         <span aria-hidden className="absolute -inset-1.5" />
       )}
+      {startsNewPage && (
+        // Canvas-only marker so a block that opens a page reads as one; the
+        // document itself carries nothing but the break-before declaration.
+        <div
+          aria-hidden
+          data-automation-id="designer-canvas-page-break-before"
+          title={t('designer.canvas.pageBreakBefore', { defaultValue: 'Starts on a new page' })}
+          className="pointer-events-none absolute -top-1 left-0 right-0 z-20 border-t-2 border-dashed border-primary-400"
+        />
+      )}
       {markerSide && (
         <div
           aria-hidden
@@ -1746,7 +1774,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
 	                  : isMediaNode
 	                    ? 'p-0 h-full overflow-hidden'
 	                    : 'p-2 whitespace-pre-wrap',
-	                node.type === 'spacer' && 'h-full p-0',
+	                (node.type === 'spacer' || node.type === 'page-break') && 'h-full p-0',
 	                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
 	                previewContent.isPlaceholder && 'text-slate-400'
 	              )}

@@ -33,6 +33,10 @@ const groupByCategory = (components: ComponentDefinition[]) => {
 
 const paletteGroups = groupByCategory(COMPONENT_CATALOG);
 
+// Work tags are fixed-size labels composed onto sheets by the label batch
+// pipeline, so a page break has nothing to break.
+const LABEL_HIDDEN_COMPONENT_TYPES = new Set<ComponentDefinition['type']>(['page-break']);
+
 type TemplateVariableOption = {
   path: string;
   label: string;
@@ -203,11 +207,18 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const filteredPaletteGroups = useMemo<Record<string, ComponentDefinition[]>>(() => {
-    if (!normalizedQuery) {
+  const kindPaletteGroups = useMemo<Record<string, ComponentDefinition[]>>(() => {
+    if (documentKind !== 'work-tag') {
       return paletteGroups;
     }
-    return Object.entries(paletteGroups).reduce<Record<string, ComponentDefinition[]>>((acc, [category, components]) => {
+    return groupByCategory(COMPONENT_CATALOG.filter((component) => !LABEL_HIDDEN_COMPONENT_TYPES.has(component.type)));
+  }, [documentKind]);
+
+  const filteredPaletteGroups = useMemo<Record<string, ComponentDefinition[]>>(() => {
+    if (!normalizedQuery) {
+      return kindPaletteGroups;
+    }
+    return Object.entries(kindPaletteGroups).reduce<Record<string, ComponentDefinition[]>>((acc, [category, components]) => {
       const filtered = components.filter((component) => {
         const haystack = `${component.label} ${component.description}`.toLowerCase();
         return haystack.includes(normalizedQuery);
@@ -217,7 +228,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
       }
       return acc;
     }, {});
-  }, [normalizedQuery]);
+  }, [normalizedQuery, kindPaletteGroups]);
 
   const filteredPresets = useMemo(() => {
     return LAYOUT_PRESETS.filter((preset) =>

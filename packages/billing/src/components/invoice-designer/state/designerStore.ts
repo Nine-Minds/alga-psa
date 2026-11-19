@@ -54,6 +54,7 @@ export type DesignerComponentType =
   | 'attachment-list'
   | 'divider'
   | 'spacer'
+  | 'page-break'
   | 'container';
 
 export interface Point {

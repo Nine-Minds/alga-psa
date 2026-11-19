@@ -338,6 +338,47 @@ const VALUE_TYPOGRAPHY_INSPECTOR: DesignerInspectorSchema = {
   panels: [createTypographyPanel('value-typography', 'Value Text')],
 };
 
+/**
+ * Document kinds that print onto pages, so pagination is meaningful. Work tags
+ * are fixed-size labels whose sheets are composed by the label batch pipeline.
+ */
+const PAGE_DOCUMENT_KINDS = ['invoice', 'quote', 'sales-order', 'staging-manifest', 'rma-return-slip'] as const;
+
+/**
+ * Forced breaks and keep-together bands, the two pagination rules an author
+ * reaches for when a quote has to read as a cover page, a pricing page and a
+ * signature page. Unchecking removes the property so the document's own flow
+ * decides again.
+ */
+const PAGINATION_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'pagination',
+      title: 'Pagination',
+      tab: 'layout',
+      visibleWhen: { kind: 'documentKindIn', kinds: PAGE_DOCUMENT_KINDS },
+      fields: [
+        {
+          kind: 'boolean',
+          id: 'breakBefore',
+          domId: 'designer-pagination-start-new-page',
+          label: 'Start on a new page',
+          path: 'style.breakBefore',
+          checkedValue: 'page',
+        },
+        {
+          kind: 'boolean',
+          id: 'breakInside',
+          domId: 'designer-pagination-keep-together',
+          label: 'Keep together on one page',
+          path: 'style.breakInside',
+          checkedValue: 'avoid',
+        },
+      ],
+    },
+  ],
+};
+
 const SECTION_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -847,10 +888,11 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'action-button',
         'divider',
         'spacer',
+        'page-break',
       ],
       allowedParents: ['document'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, PAGINATION_INSPECTOR),
   },
   section: {
     type: 'section',
@@ -894,10 +936,11 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
       ],
       allowedParents: ['page'],
     },
-    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, SECTION_INSPECTOR),
+    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, SECTION_INSPECTOR, PAGINATION_INSPECTOR),
   },
   column: {
     type: 'column',
@@ -928,11 +971,12 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
         'container',
       ],
       allowedParents: ['section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, PAGINATION_INSPECTOR),
   },
   text: {
     type: 'text',
@@ -1376,11 +1420,30 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'attachment-list',
         'divider',
         'spacer',
+        'page-break',
         'container',
       ],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: CONTAINER_INSPECTOR,
+    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, PAGINATION_INSPECTOR),
+  },
+  'page-break': {
+    type: 'page-break',
+    label: 'Page Break',
+    description: 'Starts the next block on a new page.',
+    category: 'Structure',
+    defaults: {
+      // Zero height: the break is an instruction, not content. The canvas draws
+      // its own marker band; the document gets nothing but the break itself.
+      size: { width: 320, height: 24 },
+      style: { breakAfter: 'page' },
+      metadata: {},
+    },
+    hierarchy: {
+      allowedChildren: [],
+      allowedParents: ['page', 'column', 'container', 'section'],
+    },
+    inspector: COMMON_INSPECTOR,
   },
 };
 

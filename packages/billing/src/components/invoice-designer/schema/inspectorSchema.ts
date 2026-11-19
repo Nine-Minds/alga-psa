@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import type { DesignerDocumentKind } from '../utils/documentKind';
 
 export type DesignerInspectorSchema = {
   panels: DesignerInspectorPanel[];
@@ -9,7 +10,9 @@ export type DesignerInspectorVisibleWhen =
   | { kind: 'nodeIsContainer' }
   | { kind: 'nodeIsLeaf' }
   | { kind: 'pathEquals'; path: string; value: string }
-  | { kind: 'parentPathEquals'; path: string; value: string };
+  | { kind: 'parentPathEquals'; path: string; value: string }
+  /** Only for the listed document kinds — e.g. pagination, which is meaningless on label sheets. */
+  | { kind: 'documentKindIn'; kinds: readonly DesignerDocumentKind[] };
 
 /** Which translatable value a text field edits: a text node's content, or a field/totals-row label. */
 export type DesignerInspectorTranslation = 'text-content' | 'node-label';
@@ -124,6 +127,11 @@ export type DesignerInspectorField =
       label: string;
       path: string;
       domId?: string;
+      /**
+       * Makes the checkbox edit a CSS keyword rather than a flag: checked writes
+       * this value, unchecked removes the property entirely so the cascade wins.
+       */
+      checkedValue?: string;
       visibleWhen?: DesignerInspectorVisibleWhen;
     }
   | {

@@ -1883,6 +1883,10 @@
         "label": "Spacer",
         "description": "Empty space for layout adjustment."
       },
+      "page-break": {
+        "label": "Page Break",
+        "description": "Starts the next block on a new page."
+      },
       "container": {
         "label": "Box Container",
         "description": "Styled container for grouping content (borders, backgrounds)."
@@ -2205,6 +2209,17 @@
               "label": "Color"
             }
           }
+        },
+        "pagination": {
+          "title": "Pagination",
+          "fields": {
+            "breakBefore": {
+              "label": "Start on a new page"
+            },
+            "breakInside": {
+              "label": "Keep together on one page"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Signature",
       "attachmentsLabel": "Attachments",
       "spacerLabel": "Spacer",
+      "pageBreakLabel": "Page break",
+      "pageBreakBefore": "Starts on a new page",
       "companyLogo": "Company logo",
       "insertionMarker": "The next block you add goes here",
       "emptyContainer": "Empty — select it and add blocks from the left panel",

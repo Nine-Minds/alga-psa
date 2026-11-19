@@ -1883,6 +1883,10 @@
         "label": "Avståndselement",
         "description": "Tomt utrymme för layoutjustering."
       },
+      "page-break": {
+        "label": "Sidbrytning",
+        "description": "Startar nästa block på en ny sida."
+      },
       "container": {
         "label": "Rutbehållare",
         "description": "Formaterad behållare för att gruppera innehåll (kantlinjer, bakgrunder)."
@@ -2205,6 +2209,17 @@
               "label": "Färg"
             }
           }
+        },
+        "pagination": {
+          "title": "Sidbrytning",
+          "fields": {
+            "breakBefore": {
+              "label": "Börja på en ny sida"
+            },
+            "breakInside": {
+              "label": "Håll ihop på en sida"
+            }
+          }
         }
       }
     },
@@ -2318,6 +2333,8 @@
       "signatureLabel": "Underskrift",
       "attachmentsLabel": "Bilagor",
       "spacerLabel": "Avståndselement",
+      "pageBreakLabel": "Sidbrytning",
+      "pageBreakBefore": "Börjar på en ny sida",
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
