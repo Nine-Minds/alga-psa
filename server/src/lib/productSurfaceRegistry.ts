@@ -310,6 +310,9 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/email/oauth',
       '/api/email/imap',
       '/api/v1/users',
+      // Client portal invitations follow the client portal itself, which every
+      // product serves: the contacts and users they invite are already here.
+      '/api/v1/portal-invitations',
       '/api/v1/teams',
       '/api/v1/interactions',
       '/api/v1/interaction-types',

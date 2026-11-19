@@ -304,7 +304,9 @@
         "noLocationEmail": "Lokalizacja klienta nie ma skonfigurowanego kontaktowego adresu e-mail.",
         "baseUrlNotConfigured": "Bazowy adres URL aplikacji nie jest skonfigurowany.",
         "invitationNotFound": "Nie znaleziono zaproszenia.",
-        "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie."
+        "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie.",
+        "batchLimitExceeded": "Zbyt wiele kontaktów w jednym żądaniu. Zaproś mniej kontaktów naraz.",
+        "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia."
       }
     },
     "features": {

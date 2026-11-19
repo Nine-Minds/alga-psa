@@ -304,7 +304,9 @@
         "noLocationEmail": "Für den Kundenstandort ist keine Kontakt-E-Mail konfiguriert.",
         "baseUrlNotConfigured": "Die Basis-URL der Anwendung ist nicht konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden.",
-        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut."
+        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut.",
+        "batchLimitExceeded": "Zu viele Kontakte in einer Anfrage. Bitte laden Sie weniger Kontakte auf einmal ein.",
+        "noTargetsSelected": "Wählen Sie mindestens einen Kontakt zum Einladen aus."
       }
     },
     "features": {
