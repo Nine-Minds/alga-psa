@@ -23,6 +23,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_seat_project_grants: { scope: 'tenant' },
   co_managed_seat_assignments: { scope: 'tenant' },
   co_managed_seat_arrangements: { scope: 'tenant' },
+  co_managed_seat_trials: { scope: 'tenant' },
+  co_managed_seat_trial_milestones: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
   co_managed_relationship_closures: { scope: 'tenant' },
   co_managed_archive_manifests: { scope: 'tenant' },
