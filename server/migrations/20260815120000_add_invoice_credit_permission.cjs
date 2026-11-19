@@ -36,6 +36,7 @@ async function ensurePermission(knex, tenant, def) {
           msp: def.msp,
           client: def.client,
           description: def.description,
+          updated_at: knex.fn.now(),
         });
     }
 
