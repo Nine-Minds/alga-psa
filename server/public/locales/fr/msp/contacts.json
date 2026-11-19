@@ -654,12 +654,43 @@
     "actions": {
       "openMenu": "Ouvrir le menu",
       "quickView": "Aperçu rapide",
-      "addNewContact": "Ajouter un nouveau contact"
+      "addNewContact": "Ajouter un nouveau contact",
+      "selectAll": "Sélectionner tous les contacts",
+      "selectContact": "Sélectionner {{name}}",
+      "inviteSelected": "Inviter au portail ({{selected}})",
+      "inviteAllEligible": "Inviter tous les éligibles"
     },
     "errors": {
       "loadFailed": "Impossible de charger les contacts.",
       "loadingTitle": "Erreur lors du chargement des contacts",
       "retryFailed": "Impossible de charger les contacts. Veuillez réessayer."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Inviter des contacts au portail client",
+    "description": "Confirmation des invitations groupées au portail avec aperçu des éligibles et résultats par contact",
+    "loading": "Vérification des personnes pouvant être invitées...",
+    "inviteCount": "{{total}} contacts seront invités au portail client.",
+    "skipCount": "{{total}} seront ignorés :",
+    "visibilityNote": "Chaque invitation accorde l’accès que le contact possède déjà : {{grouped}} sont limités à un groupe de visibilité du portail, {{full}} obtiennent un accès complet aux données de portail de leur client.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "a déjà accès au portail",
+      "missingEmail": "aucune adresse e-mail utilisable",
+      "sharedMailbox": "boîte aux lettres partagée"
+    },
+    "actions": {
+      "send": "Envoyer {{total}} invitations",
+      "sending": "Envoi..."
+    },
+    "results": {
+      "summary": "{{sent}} envoyées, {{skipped}} ignorées, {{failed}} en échec.",
+      "sent": "Envoyée",
+      "skipped": "Ignorée",
+      "failed": "Échec"
+    },
+    "errors": {
+      "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
+      "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer."
     }
   },
   "contactsLayout": {

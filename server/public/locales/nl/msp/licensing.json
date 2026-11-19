@@ -694,6 +694,8 @@
     "proRequired": "Een Pro PSA-abonnement is vereist om klantwerkruimtes te sponsoren.",
     "loadError": "De capaciteit aan klantplaatsen kon niet worden geladen. Probeer het opnieuw.",
     "purchaseError": "De aankoop van plaatsen kon niet worden voltooid. U kunt deze veilig hervatten.",
+    "termsChanged": "De prijs is gewijzigd nadat u de aankoop hebt gecontroleerd. Controleer de bijgewerkte voorwaarden voordat u bevestigt.",
+    "offerUnavailable": "U kunt tijdelijk geen nieuwe plaatsen kopen. Er is niets in rekening gebracht.",
     "checkoutExpired": "Deze checkout is verlopen. Start een nieuwe aankoop om verder te gaan.",
     "grace": "Verleng uw licentie of los het capaciteitstekort op vóór {{date}} om klantwerkruimtes beschrijfbaar te houden.",
     "readOnly": "De coulanceperiode eindigde op {{date}}. Herstel de gelicentieerde capaciteit om wijzigingen in klantwerkruimtes te hervatten.",

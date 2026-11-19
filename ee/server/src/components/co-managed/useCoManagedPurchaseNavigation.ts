@@ -18,7 +18,7 @@ export const CO_MANAGED_PURCHASE_MENU_GROUP: NavigationSection = {
 };
 
 /**
- * Resolves the server's commercial decision (no Stripe call) and returns the contribution when open.
+ * Resolves the server's commercial decision and returns the contribution when open.
  * A re-read never drops an already visible link: it only moves on a definite answer, so refreshing
  * access after a purchase does not blink the entry out.
  */

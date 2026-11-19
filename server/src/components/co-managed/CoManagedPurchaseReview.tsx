@@ -15,6 +15,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 export function coManagedPurchaseErrorMessage(error: string | null, t: Translate): string | null {
   return error === 'expired' ? t('coManaged.checkoutExpired', { defaultValue: 'The checkout session expired. Review the purchase again.' })
     : error === 'checkoutUnavailable' ? t('coManaged.checkoutUnavailable', { defaultValue: 'Embedded checkout is unavailable. Retry after the payment setup is repaired.' })
+      : error === 'termsChanged' ? t('coManaged.termsChanged', { defaultValue: 'The price changed after you reviewed it. Review the updated terms before confirming.' })
+      : error === 'offerUnavailable' ? t('coManaged.offerUnavailable', { defaultValue: 'New seat purchases are temporarily unavailable. Nothing was charged.' })
       : error === 'preview' ? t('coManaged.previewError', { defaultValue: 'Could not price this change. Refresh and try again.' })
         : error === 'purchase' ? t('coManaged.purchaseError', { defaultValue: 'The purchase could not be completed. Recover the same operation.' })
           : error;

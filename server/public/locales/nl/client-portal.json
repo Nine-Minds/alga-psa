@@ -252,7 +252,9 @@
         "noLocationEmail": "De klantlocatie heeft geen contact-e-mail geconfigureerd.",
         "baseUrlNotConfigured": "De basis-URL van de applicatie is niet geconfigureerd.",
         "invitationNotFound": "Uitnodiging niet gevonden.",
-        "revokeFailed": "De uitnodiging kon niet worden ingetrokken. Probeer het opnieuw."
+        "revokeFailed": "De uitnodiging kon niet worden ingetrokken. Probeer het opnieuw.",
+        "batchLimitExceeded": "Te veel contacten in één verzoek. Nodig minder contacten tegelijk uit.",
+        "noTargetsSelected": "Selecteer ten minste één contact om uit te nodigen."
       }
     },
     "features": {

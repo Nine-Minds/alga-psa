@@ -1171,7 +1171,7 @@ export class UserService extends BaseService<IUser> {
     const results: any[] = [];
     const errors: any[] = [];
 
-    return withTransaction(knex, async (trx) => {
+    const summary = await withTransaction(knex, async (trx) => {
       for (let i = 0; i < users.length; i++) {
         const userData = users[i];
         try {
@@ -1183,6 +1183,23 @@ export class UserService extends BaseService<IUser> {
             trx,
             async (userTrx) => (await this.createUsingTransaction(userData, context, userTrx)).user
           );
+          // Same pair an admin-initiated password reset records. Nothing reads
+          // must_change_password at sign-in yet, so send_welcome_email is what
+          // actually gets the owner off the password the importer chose.
+          if (options.force_password_reset) {
+            await UserPreferences.upsert(trx, {
+              user_id: createdUser.user_id,
+              setting_name: 'must_change_password',
+              setting_value: true,
+              updated_at: new Date()
+            });
+            await UserPreferences.upsert(trx, {
+              user_id: createdUser.user_id,
+              setting_name: 'has_reset_password',
+              setting_value: false,
+              updated_at: new Date()
+            });
+          }
           results.push(createdUser);
         } catch (error: any) {
           errors.push({
@@ -1205,6 +1222,38 @@ export class UserService extends BaseService<IUser> {
         results
       };
     });
+
+    // After the batch commits: an outbound send must never be held open by a
+    // transaction, and a mail failure must not undo a created account.
+    if (options.send_welcome_email) {
+      await this.sendBulkWelcomeEmails(results);
+    }
+
+    return summary;
+  }
+
+  /**
+   * Welcome mail for bulk-created accounts. Reuses the internal account email
+   * flow (recoverPassword), so the new user receives a link to set their own
+   * password rather than being told the one the importer chose. Best effort:
+   * the account exists either way.
+   */
+  private async sendBulkWelcomeEmails(createdUsers: any[]): Promise<void> {
+    if (createdUsers.length === 0) return;
+
+    const { recoverPassword } = await import('@alga-psa/auth/actions');
+    for (const createdUser of createdUsers) {
+      const email = createdUser?.email;
+      if (!email) continue;
+      try {
+        await recoverPassword(email, createdUser.user_type === 'client' ? 'client' : 'msp');
+      } catch (error) {
+        logger.warn('Bulk user create: welcome email could not be sent', {
+          user_id: createdUser.user_id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   /**

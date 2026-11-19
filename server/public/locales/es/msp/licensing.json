@@ -694,6 +694,8 @@
     "proRequired": "Se requiere una suscripción Pro de PSA para patrocinar espacios de trabajo de clientes.",
     "loadError": "No se pudo cargar la capacidad de puestos de clientes. Inténtelo de nuevo.",
     "purchaseError": "No se pudo completar la compra de puestos. Puede reanudarla con seguridad.",
+    "termsChanged": "El precio cambió después de que revisara la compra. Revise las condiciones actualizadas antes de confirmar.",
+    "offerUnavailable": "La compra de nuevas plazas no está disponible temporalmente. No se realizó ningún cargo.",
     "checkoutExpired": "Este pago caducó. Inicie una nueva compra para continuar.",
     "grace": "Renueve su licencia o resuelva el déficit de capacidad antes del {{date}} para mantener los espacios de trabajo de clientes editables.",
     "readOnly": "El período de gracia terminó el {{date}}. Restablezca la capacidad con licencia para reanudar los cambios en los espacios de trabajo de clientes.",

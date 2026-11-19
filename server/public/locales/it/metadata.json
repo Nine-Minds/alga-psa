@@ -232,6 +232,9 @@
       "title": "Richieste di servizio",
       "detail": {
         "fallbackTitle": "Richiesta di servizio"
+      },
+      "formBuilder": {
+        "title": "Editor del modulo"
       }
     },
     "surveys": {

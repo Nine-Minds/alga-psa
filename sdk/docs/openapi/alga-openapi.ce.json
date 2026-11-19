@@ -131,6 +131,9 @@
       "name": "Opportunities v1"
     },
     {
+      "name": "Portal Invitations"
+    },
+    {
       "name": "Priorities"
     },
     {
@@ -2145,11 +2148,11 @@
             "properties": {
               "send_welcome_email": {
                 "type": "boolean",
-                "description": "Accepted but inert: welcome email delivery is tracked separately."
+                "description": "Default true. Mails each created user a link to set their own password."
               },
               "force_password_reset": {
                 "type": "boolean",
-                "description": "Accepted but inert: forced password reset is tracked separately."
+                "description": "Default false. Records the must_change_password preference on each account, the same flag an admin-initiated password reset sets. Nothing enforces it at sign-in yet, so pair it with send_welcome_email to make the owner choose their own password."
               },
               "skip_invalid": {
                 "type": "boolean",
@@ -11269,6 +11272,161 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ClientBillingProfile"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PortalInvitationClientParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client UUID from clients.client_id."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PortalInvitationApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ClientPortalInvitationRequest": {
+        "type": "object",
+        "properties": {
+          "contact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500,
+            "description": "Contacts to invite. Ids that do not belong to the client in the path come back as skipped, never invited."
+          },
+          "all_eligible": {
+            "type": "boolean",
+            "description": "Invite every active contact of the client that has no client portal user yet. Ignored when contact_ids is given."
+          }
+        },
+        "description": "Supply contact_ids, or all_eligible=true. One of the two is required."
+      },
+      "BulkPortalInvitationRequest": {
+        "type": "object",
+        "properties": {
+          "contact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500,
+            "description": "Contacts to invite, in any client. Each contact is authorized against its own client."
+          }
+        },
+        "required": [
+          "contact_ids"
+        ]
+      },
+      "PortalInvitationResult": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "description": "contacts.contact_name_id."
+          },
+          "email": {
+            "type": "string",
+            "description": "Address the invitation went to, when the contact has one."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "skipped",
+              "failed"
+            ],
+            "description": "sent: an invitation email went out. skipped: the contact is not invitable as it stands (no email, invalid email, already a portal user, shared mailbox, not in this client). failed: the invitation could not be delivered."
+          },
+          "invitation_id": {
+            "type": "string",
+            "description": "portal_invitations.invitation_id of the invitation created."
+          },
+          "error_code": {
+            "type": "string",
+            "description": "Stable code for a skip or failure, e.g. USER_EXISTS_FOR_CONTACT."
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "status"
+        ]
+      },
+      "BulkPortalInvitationEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Contacts considered by this request."
+              },
+              "sent": {
+                "type": "integer"
+              },
+              "skipped": {
+                "type": "integer"
+              },
+              "failed": {
+                "type": "integer"
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PortalInvitationResult"
+                }
+              }
+            },
+            "required": [
+              "total",
+              "sent",
+              "skipped",
+              "failed",
+              "results"
+            ]
           },
           "meta": {
             "type": "object",
@@ -40038,7 +40196,7 @@
     "/api/v1/users/bulk/create": {
       "post": {
         "summary": "Bulk create users",
-        "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. dry_run validates every user and creates nothing.",
+        "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates every user and creates nothing.",
         "tags": [
           "Access Control & Users v1"
         ],
@@ -53469,6 +53627,191 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClientBillingProfileApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/portal-invitations": {
+      "post": {
+        "summary": "Invite a client's contacts to the client portal",
+        "description": "Sends client portal invitations for one client: either every eligible contact (all_eligible) or a named subset (contact_ids) validated against the client in the path. Invitations go out one at a time, so a contact that cannot be invited never costs the rest of the batch theirs; the response reports each contact's outcome and the request is a 200 even when some were skipped or failed.",
+        "tags": [
+          "Portal Invitations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "user",
+          "x-rbac-action": "invite",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client UUID from clients.client_id."
+            },
+            "required": true,
+            "description": "Client UUID from clients.client_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientPortalInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-contact invitation outcomes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPortalInvitationEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload, no targets selected, more than 500 contacts, or the tenant is not configured to send invitations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for user invite.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected invitation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal-invitations/bulk": {
+      "post": {
+        "summary": "Invite contacts to the client portal in bulk",
+        "description": "Sends client portal invitations for the named contacts, which may belong to different clients; each contact is authorized against its own client before anything is sent. Same per-contact result envelope as the client-scoped endpoint.",
+        "tags": [
+          "Portal Invitations"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "user",
+          "x-rbac-action": "invite",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPortalInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-contact invitation outcomes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPortalInvitationEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload, no targets selected, more than 500 contacts, or the tenant is not configured to send invitations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for user invite.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected invitation failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInvitationApiError"
                 }
               }
             }

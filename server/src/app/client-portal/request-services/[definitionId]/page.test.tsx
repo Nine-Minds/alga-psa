@@ -54,6 +54,35 @@ describe('RequestServiceDetailPage', () => {
     cleanup();
   });
 
+  it('leaves confirming a submit to the catalog page a submit lands on', async () => {
+    getRequestServiceDefinitionDetailAction.mockResolvedValue({
+      title: 'Access Request',
+      description: 'Request secure access',
+      icon: 'shield',
+      formSchema: {
+        fields: [{ key: 'subject', type: 'short-text', label: 'Subject' }],
+        settings: { successMessage: 'IT will reach out within one business day.' },
+      },
+      initialValues: {},
+      visibilityRules: [],
+    });
+
+    render(
+      await RequestServiceDetailPage({
+        params: Promise.resolve({ definitionId: 'definition-1' }),
+      })
+    );
+
+    // The form page has no confirmation of its own: a successful submit redirects to the
+    // catalog, which says the author's message there. A second banner here would only ever
+    // be dead wording.
+    expect(
+      screen.queryByText('IT will reach out within one business day.')
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ticket-/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('shield')).not.toBeInTheDocument();
+  });
+
   it('disables native browser validation so required file uploads flow through the server banner state', async () => {
     getRequestServiceDefinitionDetailAction.mockResolvedValue({
       title: 'Hardware Request',
@@ -138,6 +167,64 @@ describe('RequestServiceDetailPage', () => {
 
     expect(getRequestServiceVisibilityContextAction).not.toHaveBeenCalled();
     expect(vpnReason()).not.toBeNull();
+  });
+
+  it('honours conditions the server assembled from the elements themselves', async () => {
+    // `toPortalFormView` folds every element's own `visibleWhen` into one rule list, so a
+    // definition on any form-behavior provider arrives here already conditional.
+    getRequestServiceDefinitionDetailAction.mockResolvedValue(
+      conditionalDetail({
+        formSchema: {
+          fields: [
+            { key: 'needs_vpn', type: 'checkbox', label: 'Needs VPN' },
+            {
+              key: 'vpn_reason',
+              type: 'short-text',
+              label: 'VPN Reason',
+              visibleWhen: [{ source: 'needs_vpn', operator: 'is-true' }],
+            },
+          ],
+        },
+      })
+    );
+    getRequestServiceVisibilityContextAction.mockResolvedValue({
+      requesterUserId: 'user-1',
+      clientId: 'client-1',
+      contactId: null,
+    });
+
+    render(
+      await RequestServiceDetailPage({
+        params: Promise.resolve({ definitionId: 'definition-1' }),
+      })
+    );
+
+    expect(getRequestServiceVisibilityContextAction).toHaveBeenCalled();
+    expect(vpnReason()).toBeNull();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Needs VPN' }));
+    expect(vpnReason()).not.toBeNull();
+  });
+
+  it('takes the measure the form was authored at, so the card is not wider than the form', async () => {
+    getRequestServiceDefinitionDetailAction.mockResolvedValue({
+      title: 'Access Request',
+      description: null,
+      icon: null,
+      formSchema: {
+        fields: [{ key: 'subject', type: 'short-text', label: 'Subject' }],
+        settings: { layout: { width: 'wide' } },
+      },
+      initialValues: {},
+      visibilityRules: [],
+    });
+
+    const { container } = render(
+      await RequestServiceDetailPage({
+        params: Promise.resolve({ definitionId: 'definition-1' }),
+      })
+    );
+
+    expect(container.firstElementChild!.className).toContain('max-w-4xl');
   });
 
   it('shows no initial values dump or version, while still prefilling from initialValues', async () => {

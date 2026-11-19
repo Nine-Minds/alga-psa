@@ -694,6 +694,8 @@
     "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
     "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
     "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
+    "termsChanged": "Le prix a changé depuis votre vérification. Vérifiez les nouvelles conditions avant de confirmer.",
+    "offerUnavailable": "L’achat de nouvelles places est temporairement indisponible. Aucun montant n’a été débité.",
     "checkoutExpired": "Ce paiement a expiré. Lancez un nouvel achat pour continuer.",
     "grace": "Renouvelez votre licence ou résolvez le déficit de capacité avant le {{date}} pour que les espaces de travail clients restent modifiables.",
     "readOnly": "La période de grâce s'est terminée le {{date}}. Rétablissez la capacité sous licence pour reprendre les modifications des espaces de travail clients.",

@@ -280,6 +280,8 @@ export const registerClientUserSchema = z.object({
 // Bulk operations schemas
 export const bulkCreateUsersSchema = z.object({
   users: z.array(createUserSchema).min(1).max(100),
+  // Defaulted rather than optional: the service reads these, so a body that
+  // omits `options` must still get the documented defaults.
   options: z.object({
     send_welcome_email: z.boolean().optional().default(true),
     force_password_reset: z.boolean().optional().default(false),
