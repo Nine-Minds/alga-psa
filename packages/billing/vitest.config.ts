@@ -136,6 +136,9 @@ export default defineConfig({
       'src/lib/invoice-template-ast/bundleChildRows.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
       'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
+      // Forced page breaks only exist in a paginating engine, so this one also
+      // prints with real Chromium and counts the pages it produced.
+      'src/lib/invoice-template-ast/pageBreaks.pdf.test.ts',
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',

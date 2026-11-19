@@ -89,6 +89,45 @@ describe('template print behaviour', () => {
     expect(css).toMatch(/\.ast-node-type-totals \{ break-inside: avoid; \}/);
   });
 
+  it('emits forced page breaks and neutralizes one with nothing after it', async () => {
+    // What the designer's Page Break block and "Start on a new page" produce.
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      metadata: { templateName: 'Forced breaks' },
+      bindings: { values: {}, collections: {} },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          { id: 'cover', type: 'text', content: { type: 'literal', value: 'Cover' } },
+          { id: 'break-1', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+          { id: 'pricing', type: 'text', content: { type: 'literal', value: 'Pricing' } },
+          {
+            id: 'signature-page',
+            type: 'section',
+            style: { inline: { breakBefore: 'page' } },
+            children: [{ id: 'sign-here', type: 'text', content: { type: 'literal', value: 'Sign here' } }],
+          },
+          { id: 'trailing-break', type: 'divider', style: { inline: { breakAfter: 'page', border: '0', margin: '0', height: '0' } } },
+        ],
+      },
+    };
+    expect(() => validateTemplateAst(ast)).not.toThrow();
+
+    const { html } = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, {}), { locale: 'en-US' });
+
+    expect(html).toMatch(/id="break-1"[^>]*style="[^"]*break-after:\s*page/);
+    expect(html).toMatch(/id="signature-page"[^>]*style="[^"]*break-before:\s*page/);
+    // Both forced-break dividers are addressable for print rules.
+    expect(html).toMatch(/id="break-1"[^>]*class="[^"]*ast-page-break/);
+    expect(html).toMatch(/id="trailing-break"[^>]*class="[^"]*ast-page-break/);
+    // The trailing one has nothing after it, so honouring it would print a blank
+    // final page.
+    expect(html).toMatch(/id="trailing-break"[^>]*style="[^"]*break-after:\s*auto/);
+    expect(html).not.toMatch(/id="trailing-break"[^>]*style="[^"]*break-after:\s*page/);
+  });
+
   it('omits a hideWhenZero totals row when its value is zero and keeps it otherwise', async () => {
     const withOptionals = await render(9540);
     expect(withOptionals.html).toContain('Optional if selected');
