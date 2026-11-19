@@ -244,12 +244,23 @@ describe('stripe offer catalog (postgres)', () => {
       await expect(run('pause', ['--expect=none', '--confirm'])).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
     });
 
-    it('reports fulfillment retry totals and exits 2 while deliveries still fail', async () => {
+    it.each([
+      { failed: 1, expectedCode: 2 },
+      { failed: 0, expectedCode: 0 },
+    ])('reports fulfillment retry totals and exits $expectedCode with $failed failures', async ({ failed, expectedCode }) => {
       const lines: string[] = [];
-      const code = await runCatalogCommand('retry-fulfillments', [], { catalog: catalog(), db, actor: operator, out: (l) => lines.push(l), env: { MASTER_BILLING_TENANT_ID: MASTER },
-        stripe: {} as any, retryFulfillments: async () => ({ delivered: 1, failed: 1, superseded: 0 }) });
-      expect(code).toBe(2);
-      expect(lines.join()).toContain('1 delivered, 0 superseded, 1 still failing');
+      const code = await runCatalogCommand('retry-fulfillments', [], {
+        catalog: catalog(),
+        db,
+        actor: operator,
+        locale: 'de',
+        out: (line) => lines.push(line),
+        env: { MASTER_BILLING_TENANT_ID: MASTER },
+        stripe: {} as any,
+        retryFulfillments: async () => ({ delivered: 2, failed, superseded: 1 }),
+      });
+      expect(code).toBe(expectedCode);
+      expect(lines.join('\n')).toContain(`2 delivered, 1 superseded, ${failed} still failing`);
     });
 
     it('F002: inventory reports unmapped prices and does not map them', async () => {
