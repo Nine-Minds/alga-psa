@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DesignerSchemaInspector } from './DesignerSchemaInspector';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
+import { buildInvoiceTemplateBindings } from '../../../lib/invoice-template-ast/standardTemplates';
 import { buildLabelTemplateBindings } from '../../../lib/label-template-ast/bindings';
 import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
 
@@ -57,6 +58,12 @@ const seedWorkspace = (bindingCatalog: unknown) => {
             style: { width: '400px', height: '240px' },
             metadata: {},
           },
+          children: ['line-items'],
+        },
+        'line-items': {
+          id: 'line-items',
+          type: 'dynamic-table',
+          props: { name: 'Line Items', metadata: {} },
           children: [],
         },
       },
@@ -70,8 +77,10 @@ const seedWorkspace = (bindingCatalog: unknown) => {
   });
 };
 
-const sectionStyle = () =>
-  (useInvoiceDesignerStore.getState().nodesById['section-1'].props as { style?: Record<string, unknown> }).style ?? {};
+const nodeStyle = (nodeId: string) =>
+  (useInvoiceDesignerStore.getState().nodesById[nodeId].props as { style?: Record<string, unknown> }).style ?? {};
+
+const sectionStyle = () => nodeStyle('section-1');
 
 describe('DesignerSchemaInspector pagination group', () => {
   beforeEach(() => {
@@ -106,6 +115,25 @@ describe('DesignerSchemaInspector pagination group', () => {
     fireEvent.click(keepTogether);
     expect(sectionStyle().breakInside).toBe('avoid');
     expect((document.getElementById('designer-pagination-keep-together') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('offers the group on a line-items table, the block authors break before', () => {
+    // Reported from the designer: the only way to start the line items on their
+    // own page was to wrap them in something, because the table itself had no
+    // Pagination group. Every block an author can place on a page has one.
+    seedWorkspace(buildInvoiceTemplateBindings());
+    act(() => {
+      useInvoiceDesignerStore.getState().selectNode('line-items');
+    });
+    render(<Wrapper />);
+
+    expect(screen.getByText('Pagination')).toBeTruthy();
+
+    fireEvent.click(document.getElementById('designer-pagination-start-new-page') as HTMLInputElement);
+    expect(nodeStyle('line-items').breakBefore).toBe('page');
+
+    fireEvent.click(document.getElementById('designer-pagination-keep-together') as HTMLInputElement);
+    expect(nodeStyle('line-items').breakInside).toBe('avoid');
   });
 
   it('hides the group for a work-tag workspace, whose labels have no pages to break', () => {

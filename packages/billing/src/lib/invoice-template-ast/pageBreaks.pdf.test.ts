@@ -4,10 +4,11 @@
  *
  * The whole feature is a promise about pagination, and pagination only exists
  * in a paginating engine: jsdom has no pages, so nothing below this line can be
- * proven by a DOM assertion. Chromium also ignores break-before/break-after on
- * children of a flex or grid container, which is exactly what the designer's
- * page wrapper is — so this suite drives the designer's own export, not a
- * hand-built AST, and asserts page counts and per-page content.
+ * proven by a DOM assertion. Chromium fragments a column flex or grid container
+ * (which is what the designer's page wrapper is) but ignores a forced break
+ * between the items of a *row*, where there is no page boundary to take — so
+ * this suite drives the designer's own export, not a hand-built AST, and
+ * asserts page counts and per-page content.
  *
  * Requires Puppeteer's Chromium (or `PUPPETEER_EXECUTABLE_PATH`) and
  * `pdftotext` from poppler, as provided by both CI unit lanes.
@@ -137,6 +138,26 @@ describe('forced page breaks in the printed document', () => {
     expect(pages[0]).toMatch(/Q-PAGEBREAK/);
     expect(pages[1]).toMatch(/Managed endpoints/);
     expect(pages[2]).toMatch(/Signature|Accepted|Date/i);
+  }, 120_000);
+
+  it('starts the line-items table on its own page when the table itself is told to', async () => {
+    // The author's actual move (reported from the designer): select the line
+    // items and tick "Start on a new page", with no wrapper and no inserted
+    // block. The table is a flex item of the page stack, which Chromium does
+    // fragment — only a *row* flex parent swallows a forced break.
+    const source = getStandardTemplateAstByCode('standard-default')!;
+    const workspace = importTemplateAstToWorkspace(JSON.parse(JSON.stringify(source)) as TemplateAst);
+    const page = findPageNode(workspace);
+
+    const lineItemsId = page.children.find(
+      (childId) => workspace.nodesById[childId]?.type === 'dynamic-table'
+    );
+    expect(lineItemsId, 'the standard invoice carries a line-items table').toBeTruthy();
+    startOnNewPage(workspace, lineItemsId!);
+
+    const pages = await renderPdfPages(exportWorkspaceToTemplateAst(workspace), invoiceModel);
+    expect(pages).toHaveLength(2);
+    expect(pages[1]).toMatch(/Managed endpoints/);
   }, 120_000);
 
   it('paginates an invoice on a forced break and adds no page for a trailing one', async () => {

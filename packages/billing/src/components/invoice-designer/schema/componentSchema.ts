@@ -822,7 +822,7 @@ const TOTALS_ROWS_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
-export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
+const BASE_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> = {
   document: {
     type: 'document',
     label: 'Document',
@@ -892,7 +892,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['document'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, PAGINATION_INSPECTOR),
+    inspector: COMMON_INSPECTOR,
   },
   section: {
     type: 'section',
@@ -940,7 +940,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['page'],
     },
-    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, SECTION_INSPECTOR, PAGINATION_INSPECTOR),
+    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, SECTION_INSPECTOR),
   },
   column: {
     type: 'column',
@@ -976,7 +976,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['section'],
     },
-    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, PAGINATION_INSPECTOR),
+    inspector: COMMON_INSPECTOR,
   },
   text: {
     type: 'text',
@@ -1425,7 +1425,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: mergeInspectorSchemas(CONTAINER_INSPECTOR, PAGINATION_INSPECTOR),
+    inspector: CONTAINER_INSPECTOR,
   },
   'page-break': {
     type: 'page-break',
@@ -1446,6 +1446,33 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     inspector: COMMON_INSPECTOR,
   },
 };
+
+/**
+ * The document root is the page sequence itself and the Page Break block is a
+ * forced break already; everything else an author can place on a page can open
+ * one or ask to stay whole.
+ */
+const UNPAGINATED_COMPONENT_TYPES: ReadonlySet<DesignerComponentType> = new Set(['document', 'page-break']);
+
+/**
+ * Pagination belongs on every block, not only on containers: authors reach for
+ * it on the block they want on its own page — a line-items table as readily as
+ * a section — and wrapping that block in a container first is not an answer.
+ */
+const withPaginationPanel = (
+  schemas: Record<DesignerComponentType, DesignerComponentSchema>
+): Record<DesignerComponentType, DesignerComponentSchema> =>
+  Object.fromEntries(
+    Object.entries(schemas).map(([type, schema]) => [
+      type,
+      UNPAGINATED_COMPONENT_TYPES.has(type as DesignerComponentType)
+        ? schema
+        : { ...schema, inspector: mergeInspectorSchemas(schema.inspector, PAGINATION_INSPECTOR) },
+    ])
+  ) as Record<DesignerComponentType, DesignerComponentSchema>;
+
+export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerComponentSchema> =
+  withPaginationPanel(BASE_COMPONENT_SCHEMAS);
 
 export const getComponentSchema = (type: DesignerComponentType): DesignerComponentSchema =>
   DESIGNER_COMPONENT_SCHEMAS[type];
