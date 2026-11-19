@@ -88,11 +88,14 @@ function matchesFilters(row: Record<string, any>, filters: Record<string, any>) 
 
 function createVisibilityTrx(state: VisibilityState) {
   return ((table: string) => {
-    if (table === 'boards') {
+    // Extract base table name and alias from table string (e.g., 'asset_associations as aa' -> 'asset_associations')
+    const baseTable = table.split(' ')[0];
+
+    if (baseTable === 'boards') {
       return { select: async () => [] };
     }
 
-    if (table === 'contacts') {
+    if (baseTable === 'contacts') {
       return {
         where: (filters: Record<string, any>) => {
           const matches = state.contacts.filter((row) => matchesFilters(row, filters));
@@ -109,7 +112,7 @@ function createVisibilityTrx(state: VisibilityState) {
       };
     }
 
-    if (table === 'client_portal_visibility_groups') {
+    if (baseTable === 'client_portal_visibility_groups') {
       return {
         where: (filters: Record<string, any>) => {
           const matches = state.groups.filter((row) => matchesFilters(row, filters));
@@ -142,9 +145,22 @@ function createVisibilityTrx(state: VisibilityState) {
 
     // No billing-profile ticket grants in this fixture: reassigning a
     // visibility group must not depend on them.
-    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+    if (baseTable === 'client_billing_profiles' || baseTable === 'billing_profile_contacts') {
       return {
         where: () => ({ select: async () => [] }),
+      };
+    }
+
+    // Shared workspace tables are referenced but not needed for this fixture
+    if (baseTable === 'asset_associations' || baseTable === 'asset_group_members' || baseTable === 'asset_groups' || baseTable === 'asset_group_contacts') {
+      return {
+        join: () => ({
+          where: () => ({
+            whereIn: () => ({
+              distinct: async () => [],
+            }),
+          }),
+        }),
       };
     }
 

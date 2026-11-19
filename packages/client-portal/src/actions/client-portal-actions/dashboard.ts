@@ -276,7 +276,7 @@ export const getDashboardMetrics = withAuth(async (
             {
               contactColumn: 'assets.contact_name_id',
               // FR-E7: shared-workspace members count for their users too.
-              sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+              sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
             }
           )
             .whereIn('status', deployableSlugs)
