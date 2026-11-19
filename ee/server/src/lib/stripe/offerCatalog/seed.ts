@@ -19,7 +19,11 @@ export async function seedFromLegacyEnv(catalog: OfferCatalog, actor: CatalogOpe
       report.push({ offerKey, priceId, outcome: result.changed ? 'seeded-historical' : 'already-bound' });
     }
     if (!envPrice) { report.push({ offerKey, priceId: '', outcome: 'skipped', detail: `${binding.env} is not set` }); continue; }
-    const now = (await catalog.inspect(offerKey, binding.interval)).current;
+    const { current: now, versions } = await catalog.inspect(offerKey, binding.interval);
+    // Bound but not current means an operator paused (or retired) it: seeding must never reopen sales.
+    if (!now && versions.some((version) => version.price_id === envPrice)) {
+      report.push({ offerKey, priceId: envPrice, outcome: 'skipped', detail: 'bound but not current (new sales paused); resume with restore' }); continue;
+    }
     if (now && now.price_id !== envPrice) { report.push({ offerKey, priceId: envPrice, outcome: 'skipped', detail: `already managed with ${now.price_id} as current` }); continue; }
     const result = await catalog.publishBinding({ actor, offerKey, interval: binding.interval, priceId: envPrice, expectedCurrentVersionId: now?.version_id ?? null, productId: opts.productId, mode: 'seed' });
     report.push({ offerKey, priceId: envPrice, outcome: result.changed ? 'seeded-current' : 'already-bound' });

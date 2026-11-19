@@ -2,47 +2,47 @@
   {
     "id": "F001",
     "description": "Persist stable offer and interval bindings with account and mode isolation and reverse lookup for every historical price.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
     "description": "Seed verified legacy and historical bindings idempotently and identify unmapped existing operations or subscriptions before switching.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F003",
     "description": "Validate operator authority and Stripe product, recurrence and pricing compatibility before publication.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "Publish or restore one active binding atomically with concurrency and retry protection.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
     "description": "Resolve new sales for both hosted purchase entry points and the licensing portal through one authenticated catalog service.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",
     "description": "Display Stripe-derived terms and require a new review when terms change before confirmation.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
     "description": "Pin confirmed operations to purchaser, entitlement or tenant, quantity and price through checkout and resume.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",
     "description": "Preview and change existing quantities at their contracted historical price.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",
     "description": "Classify webhook, synchronization and recovery by actual historical price, owner and paid period.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
@@ -72,6 +72,6 @@
   {
     "id": "F015",
     "description": "Keep catalog authority on the platform and keep CE and appliance installations outside the operator and billing write paths.",
-    "implemented": false
+    "implemented": true
   }
 ]

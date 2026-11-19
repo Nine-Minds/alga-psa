@@ -57,9 +57,9 @@ exports.up = async function up(knex) {
       t.boolean('livemode').notNullable();
       t.text('offer_key').notNullable();
       t.text('billing_interval').notNullable();
-      t.text('action').notNullable(); // seed | publish | restore
+      t.text('action').notNullable(); // seed | publish | restore | pause
       t.uuid('from_version_id');
-      t.uuid('to_version_id').notNullable();
+      t.uuid('to_version_id'); // null for pause (no version is current afterwards)
       t.text('actor').notNullable();
       t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
       t.index(['stripe_account', 'livemode', 'offer_key', 'billing_interval', 'created_at'], 'stripe_offer_publications_identity_idx');

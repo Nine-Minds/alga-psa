@@ -237,12 +237,41 @@ export function createOfferCatalog(deps: CatalogDeps) {
     }
   }
 
+  /**
+   * Pause NEW sales of an offer: retire its current version without promoting another (rollout
+   * step 4). The offer stays managed, so resolution fails closed (`no_current_version`) and the
+   * legacy env binding is NOT revived; recognition is untouched, so renewals, reconciliation and
+   * paid licence delivery continue. Resume with `restore`. Same expected-version protection as
+   * publication; pausing an already-paused offer is a harmless no-op.
+   */
+  async function pauseSales(input: { actor: CatalogOperator | null | undefined; offerKey: string; interval: BillingInterval; expectedCurrentVersionId: string | null }):
+    Promise<{ changed: boolean; previousVersionId: string | null }> {
+    const actor = assertCatalogOperator(input.actor, env);
+    const scope = await deps.scope();
+    const id = identity(scope, input.offerKey, input.interval);
+    return deps.db.transaction(async (trx) => {
+      const current: OfferVersionRow | undefined = await trx(VERSIONS).where({ ...id, is_current: true }).forUpdate().first();
+      if (!current) {
+        if (!(await trx(VERSIONS).where(id).first('version_id'))) {
+          throw new OfferPublishError('INVALID_CANDIDATE', 'This offer is not managed by the catalog yet; seed it before pausing (an unmanaged offer is served by its legacy binding).');
+        }
+        return { changed: false, previousVersionId: null };
+      }
+      if (current.version_id !== input.expectedCurrentVersionId) {
+        throw new OfferPublishError('STALE_EXPECTED_VERSION', 'The current version changed since you reviewed it. Inspect the offer again before pausing.');
+      }
+      await trx(VERSIONS).where({ version_id: current.version_id }).update({ is_current: false, retired_at: trx.fn.now() });
+      await trx(PUBLICATIONS).insert({ ...id, action: 'pause', from_version_id: current.version_id, to_version_id: null, actor: actor.userId });
+      return { changed: true, previousVersionId: current.version_id };
+    });
+  }
+
   /** Operator dry run: validate a candidate against Stripe and return its terms; writes nothing. */
   async function reviewCandidateTerms(offerKey: string, interval: BillingInterval, priceId: string, productId?: string) {
     return reviewCandidate(await deps.scope(), offerKey, interval, priceId, { productId, requireActive: true });
   }
 
-  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect, publishBinding, scope: deps.scope };
+  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect, publishBinding, pauseSales, scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

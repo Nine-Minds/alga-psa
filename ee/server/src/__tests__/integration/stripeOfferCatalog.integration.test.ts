@@ -181,9 +181,79 @@ describe.skipIf(!url)('stripe offer catalog (postgres)', () => {
     });
 
     it('refuses a tenant admin for every command', async () => {
-      for (const command of ['inspect', 'publish', 'restore', 'seed', 'inventory']) {
+      for (const command of ['inspect', 'publish', 'restore', 'seed', 'inventory', 'pause']) {
         await expect(run(command, ['--price=price_a', '--confirm'], tenantAdmin)).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
       }
+    });
+
+    it('F002/F014/T007: rehearses the rollout end to end: legacy, inventory, seed, rotate, pause, restore', async () => {
+      const env = { STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_a' };
+      const c = catalog(TEST, env);
+      const co = (id: string, sub: string) => ({ id: sub, status: 'active', metadata: { subscription_kind: 'co_managed' }, items: { data: [{ price: { id } }] } });
+      await db.raw('CREATE TABLE IF NOT EXISTS co_managed_purchase_operations (tenant uuid, operation_id uuid, state text, price_id text, quantity int)');
+      await db('co_managed_purchase_operations').del();
+      try {
+        // Stage 1: nothing managed. The legacy env binding sells; an in-flight operation predates pinning.
+        await db('co_managed_purchase_operations').insert({ tenant: MASTER, operation_id: '44444444-4444-4444-8444-444444444444', state: 'checkout', price_id: null, quantity: 2 });
+        expect(await c.resolveCurrentOffer(KEY, 'month')).toMatchObject({ source: 'legacy_env', priceId: 'price_a' });
+        const subs = [co('price_a', 'sub_legacy')];
+        const before = await run('inventory', [], operator, subs, env);
+        expect(before.code).toBe(0);
+        expect(before.text).toContain('mapped via legacy env  price_a');
+        expect(before.text).toContain('1 open operation(s) predate pinning');
+
+        // Stage 2: seed twice (idempotent); the catalog now agrees with legacy selection.
+        expect((await run('seed', ['--product=prod_seat', '--confirm'], operator, [], env)).text).toContain('seeded-current');
+        expect((await run('seed', ['--product=prod_seat', '--confirm'], operator, [], env)).text).toContain('already-bound');
+        const v1 = (await c.inspect(KEY, 'month')).current!;
+        expect((await run('inspect', [], operator, [], env)).text).toContain('matches the current version');
+        expect(await c.resolveCurrentOffer(KEY, 'month')).toMatchObject({ source: 'catalog', priceId: 'price_a', versionId: v1.version_id });
+
+        // Stage 3: first rotation. New sales use price_b; the legacy subscription still classifies.
+        await run('publish', ['--price=price_b', `--expect=${v1.version_id}`, '--confirm'], operator, [], env);
+        const v2 = (await c.inspect(KEY, 'month')).current!;
+        expect((await c.resolveCurrentOffer(KEY, 'month')).priceId).toBe('price_b');
+        expect(await c.classifyPrice(TEST, 'price_a')).toMatchObject({ source: 'catalog', current: false });
+        expect((await run('inspect', [], operator, [], env)).text).toContain('DIFFERS from the current version');
+        expect((await run('inventory', [], operator, [...subs, co('price_b', 'sub_new')], env)).code).toBe(0);
+
+        // Stage 4: pause new sales. Dry run and a stale expectation write nothing.
+        expect((await run('pause', [], operator, [], env)).text).toContain('Dry run');
+        expect((await run('pause', ['--confirm'], operator, [], env)).code).toBe(2);
+        await expect(run('pause', [`--expect=${v1.version_id}`, '--confirm'], operator, [], env)).rejects.toMatchObject({ code: 'STALE_EXPECTED_VERSION' });
+        expect((await c.inspect(KEY, 'month')).current?.version_id).toBe(v2.version_id);
+        expect((await run('pause', [`--expect=${v2.version_id}`, '--confirm'], operator, [], env)).text).toContain('Paused.');
+        expect((await run('pause', ['--expect=none', '--confirm'], operator, [], env)).text).toContain('Already paused');
+        // ...new sales fail closed and the env var is NOT revived; recognition of both prices continues.
+        await expect(c.resolveCurrentOffer(KEY, 'month')).rejects.toMatchObject({ reason: 'no_current_version' });
+        expect(await c.isOfferSellable(KEY, 'month')).toBe(false);
+        expect([...(await c.recognizedPriceIds(KEY, 'month'))].sort()).toEqual(['price_a', 'price_b']);
+        expect(await c.classifyPrice(TEST, 'price_b')).toMatchObject({ source: 'catalog', current: false });
+        // ...and re-running the seed during a pause must not reopen sales.
+        expect((await run('seed', ['--product=prod_seat', '--confirm'], operator, [], env)).text).toContain('new sales paused');
+        expect((await c.inspect(KEY, 'month')).current).toBeNull();
+
+        // Stage 5: restore the previous binding; the next new purchase uses it.
+        expect((await run('restore', [`--version=${v1.version_id}`, '--expect=none', '--confirm'], operator, [], env)).text).toContain('Restored version 1');
+        expect(await c.resolveCurrentOffer(KEY, 'month')).toMatchObject({ source: 'catalog', priceId: 'price_a', versionId: v1.version_id });
+        expect(await db('stripe_offer_publications').orderBy('created_at').pluck('action')).toEqual(['seed', 'publish', 'pause', 'restore']);
+        expect(await db('stripe_offer_publications').where({ action: 'pause' }).first()).toMatchObject({ from_version_id: v2.version_id, to_version_id: null });
+        expect(await db('stripe_offer_versions')).toHaveLength(2);
+      } finally {
+        await db.raw('DROP TABLE co_managed_purchase_operations');
+      }
+    });
+
+    it('refuses to pause an offer the catalog does not manage', async () => {
+      await expect(run('pause', ['--expect=none', '--confirm'])).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
+    });
+
+    it('reports fulfillment retry totals and exits 2 while deliveries still fail', async () => {
+      const lines: string[] = [];
+      const code = await runCatalogCommand('retry-fulfillments', [], { catalog: catalog(), db, actor: operator, out: (l) => lines.push(l), env: { MASTER_BILLING_TENANT_ID: MASTER },
+        stripe: {} as any, retryFulfillments: async () => ({ delivered: 1, failed: 1, superseded: 0 }) });
+      expect(code).toBe(2);
+      expect(lines.join()).toContain('1 delivered, 0 superseded, 1 still failing');
     });
 
     it('F002: inventory reports unmapped prices and does not map them', async () => {

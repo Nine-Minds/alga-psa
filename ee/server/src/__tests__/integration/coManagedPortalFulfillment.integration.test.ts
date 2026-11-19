@@ -7,7 +7,7 @@ import knexFactory, { type Knex } from 'knex';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { createOfferCatalog, CO_MANAGED_SEAT_OFFER_KEY as KEY, OfferTermsChangedError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
-import { bindPortalPurchase, deliverPendingFulfillments, reconcilePortalPurchase, PortalPurchaseOwnershipError } from '../../lib/stripe/coManagedFulfillment';
+import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, reconcilePortalPurchase, PortalFulfillmentRetryableError, PortalPurchaseOwnershipError } from '../../lib/stripe/coManagedFulfillment';
 
 const url = process.env.OFFER_CATALOG_TEST_DATABASE_URL;
 const MASTER = '00000000-0000-4000-8000-0000000000aa';
@@ -115,5 +115,52 @@ describe.skipIf(!url)('co-managed portal fulfillment (postgres)', () => {
     await catalog.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_b', expectedCurrentVersionId: current.current!.version_id });
     sub = subscription({ items: { data: [{ id: 'si', quantity: 5, price: price('price_a') }] } });
     expect(await reconcilePortalPurchase(deps(), purchaseId)).toMatchObject({ kind: 'queued', delivery: 'delivered' });
+  });
+
+  describe('F009: webhook entry (no hosted tenant; the event body is only a pointer)', () => {
+    const event = (type: string, object: any) => ({ id: `evt_${type}`, type, data: { object } }) as any;
+
+    it('reconciles from invoice, subscription and checkout events without the browser return', async () => {
+      const paid = await handlePortalPurchaseEvent(deps(), event('invoice.paid', { subscription_details: { metadata: { portal_purchase_id: purchaseId } } }));
+      expect(paid).toMatchObject({ handled: true, purchaseId, outcome: { kind: 'queued', delivery: 'delivered' } });
+      for (const e of [event('customer.subscription.updated', sub), event('checkout.session.completed', session)]) {
+        expect(await handlePortalPurchaseEvent(deps(), e)).toMatchObject({ handled: true, outcome: { kind: 'duplicate' } });
+      }
+      expect(deliver).toHaveBeenCalledTimes(1);
+      expect(writes).toEqual([]);
+    });
+
+    it('ignores events without our marker (hosted and appliance-base events continue on their own paths)', async () => {
+      expect(await handlePortalPurchaseEvent(deps(), event('invoice.paid', { subscription_details: { metadata: { tenant_id: 't' } } }))).toEqual({ handled: false });
+      expect(await handlePortalPurchaseEvent(deps(), event('customer.created', { metadata: { portal_purchase_id: purchaseId } }))).toEqual({ handled: false });
+    });
+
+    it('consumes forged or unmapped facts without granting capacity', async () => {
+      expect(await handlePortalPurchaseEvent(deps(), event('customer.subscription.updated', { metadata: { portal_purchase_id: '99999999-9999-4999-8999-999999999999' } })))
+        .toMatchObject({ handled: true, outcome: { kind: 'rejected', code: 'PORTAL_PURCHASE_OWNERSHIP' } });
+      sub = subscription({ metadata: { portal_purchase_id: purchaseId, entitlement_id: 'ent_other' } });
+      expect(await handlePortalPurchaseEvent(deps(), event('customer.subscription.updated', sub))).toMatchObject({ outcome: { kind: 'rejected', code: 'PORTAL_PURCHASE_OWNERSHIP' } });
+      sub = subscription({ items: { data: [{ id: 'si', quantity: 5, price: price('price_unknown') }] } });
+      expect(await handlePortalPurchaseEvent(deps(), event('customer.subscription.updated', sub))).toMatchObject({ outcome: { kind: 'rejected', code: 'UNMAPPED_PRICE' } });
+      expect(await db('co_managed_fulfillments')).toHaveLength(0);
+      expect(deliver).not.toHaveBeenCalled();
+    });
+
+    it('answers retryable while the issuer is down; the redelivered event delivers once', async () => {
+      deliver.mockRejectedValueOnce(new Error('licensing service unavailable'));
+      const e = event('invoice.paid', { subscription_details: { metadata: { portal_purchase_id: purchaseId } } });
+      const failure = await handlePortalPurchaseEvent(deps(), e).catch((error) => error);
+      expect(failure).toBeInstanceOf(PortalFulfillmentRetryableError);
+      expect(failure.retryable).toBe(true);
+      expect(await handlePortalPurchaseEvent(deps(), e)).toMatchObject({ outcome: { kind: 'duplicate', delivery: 'delivered' } });
+      expect(deliver).toHaveBeenCalledTimes(2);
+      expect(await db('co_managed_fulfillments')).toHaveLength(1);
+      expect(writes).toEqual([]);
+    });
+
+    it('answers retryable when Stripe cannot be read', async () => {
+      const broken = { ...deps(), stripe: { subscriptions: { retrieve: async () => { throw new Error('stripe down'); } }, checkout: { sessions: { retrieve: async () => session } } } as any };
+      await expect(handlePortalPurchaseEvent(broken, event('customer.subscription.updated', sub))).rejects.toBeInstanceOf(PortalFulfillmentRetryableError);
+    });
   });
 });

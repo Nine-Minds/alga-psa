@@ -1,7 +1,8 @@
 /**
  * POST /api/v1/billing-catalog/operator   { command, args }
  *
- * Platform-operator catalog commands (inspect | inventory | seed | publish | restore), executed on the
+ * Platform-operator catalog commands (inspect | inventory | seed | publish | restore | pause |
+ * retry-fulfillments), executed on the
  * platform with its Stripe credential. Backs `npm run billing-catalog`. Master-tenant authority only
  * (`assertMasterTenantAccess`, re-checked by the catalog); a tenant admin is refused before any
  * Stripe or catalog access. Writes need `--confirm` and `--expect=<current version id|none>`.
@@ -13,7 +14,7 @@ import { BadRequest, catalogRoute, readJson, str } from '@ee/lib/stripe/offerCat
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const COMMANDS = ['inspect', 'inventory', 'seed', 'publish', 'restore'];
+const COMMANDS = ['inspect', 'inventory', 'seed', 'publish', 'restore', 'pause', 'retry-fulfillments'];
 
 export async function POST(request: NextRequest) {
   return catalogRoute(request, async (operator) => {

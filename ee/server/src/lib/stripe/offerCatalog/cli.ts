@@ -17,6 +17,8 @@ export interface CliDeps {
   actor: CatalogOperator | null | undefined;
   out: (line: string) => void;
   env?: Record<string, string | undefined>;
+  /** Re-deliver appliance fulfillments the licensing service has not accepted yet (outbox repair). */
+  retryFulfillments?: () => Promise<{ delivered: number; failed: number; superseded: number }>;
 }
 
 /** Amount for review, formatted from Stripe's own minor units and currency. Never assumes either. */
@@ -39,7 +41,13 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
     const view = await catalog.inspect(offerKey, interval);
     out(`Offer ${offerKey}/${interval} in ${view.scope.stripeAccount} (${view.scope.livemode ? 'LIVE' : 'test'} mode)`);
     out(view.current ? `Current: version ${view.current.version_number} ${view.current.price_id} [${view.current.version_id}]` : 'Current: none (new purchases are paused or the offer is unmanaged)');
-    if (view.legacyEnvPriceId) out(`Legacy env binding: ${view.legacyEnvPriceId}${view.versions.length ? ' (ignored: the offer is managed)' : ' (serving, offer unmanaged)'}`);
+    if (view.legacyEnvPriceId) {
+      // Cutover parity (rollout step 2): the env binding should equal the current version until it is retired.
+      const parity = !view.versions.length ? 'serving, offer unmanaged'
+        : view.current?.price_id === view.legacyEnvPriceId ? 'ignored: the offer is managed; matches the current version'
+          : `ignored: the offer is managed; DIFFERS from the current version, retire ${view.current ? 'or update ' : ''}the env var`;
+      out(`Legacy env binding: ${view.legacyEnvPriceId} (${parity})`);
+    }
     for (const version of view.versions) out(`  v${version.version_number} ${version.price_id} ${version.is_current ? 'CURRENT' : 'retired'} [${version.version_id}] by ${version.published_by}`);
     if (view.current) {
       try {
@@ -79,6 +87,27 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
     return 0;
   }
 
+  if (command === 'pause') {
+    const before = await catalog.inspect(offerKey, interval);
+    const expectedArg = flag(args, 'expect');
+    out(`Pausing new purchases of ${offerKey}/${interval} in ${before.scope.livemode ? 'LIVE' : 'test'} mode. Current version: ${before.current?.version_id ?? 'none'}`);
+    if (!has(args, 'confirm') || expectedArg === undefined) {
+      out('Renewals, reconciliation and licence delivery continue while paused; new checkouts fail closed. Resume with restore --version=<id>.');
+      out(has(args, 'confirm') ? 'Refusing to pause without --expect=<current version id>.' : 'Dry run. Re-run with --confirm --expect=<current version id> to pause.');
+      return has(args, 'confirm') ? 2 : 0;
+    }
+    const result = await catalog.pauseSales({ actor, offerKey, interval, expectedCurrentVersionId: expectedArg === 'none' ? null : expectedArg });
+    out(result.changed ? `Paused. Version ${result.previousVersionId} is retired; restore it with restore --version=${result.previousVersionId} --expect=none --confirm.` : 'Already paused; nothing changed.');
+    return 0;
+  }
+
+  if (command === 'retry-fulfillments') {
+    if (!deps.retryFulfillments) throw new Error('Fulfillment retry is not available in this context');
+    const totals = await deps.retryFulfillments();
+    out(`Fulfillments: ${totals.delivered} delivered, ${totals.superseded} superseded, ${totals.failed} still failing.`);
+    return totals.failed ? 2 : 0;
+  }
+
   if (command === 'seed') {
     const dryRun = !has(args, 'confirm');
     if (dryRun) { out('Seed reads the current environment bindings. Re-run with --confirm to write (idempotent). Use inventory first.'); return 0; }
@@ -90,7 +119,7 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
   }
 
   if (command === 'inventory') return inventory(deps, offerKey, interval);
-  throw new OfferPublishError('INVALID_CANDIDATE', `Unknown command ${command}. Use inspect | publish | restore | seed | inventory.`);
+  throw new OfferPublishError('INVALID_CANDIDATE', `Unknown command ${command}. Use inspect | publish | restore | pause | seed | inventory | retry-fulfillments.`);
 }
 
 /**

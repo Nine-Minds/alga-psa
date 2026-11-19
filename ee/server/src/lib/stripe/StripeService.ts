@@ -33,7 +33,7 @@ import {
 } from './stripeCustomerOwnership';
 import { dispatchPaymentEvent } from './paymentEventRegistry';
 import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
-import { bindPortalPurchase, deliverPendingFulfillments, reconcilePortalPurchase } from './coManagedFulfillment';
+import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, PortalFulfillmentRetryableError, portalPurchaseIdOfEvent, reconcilePortalPurchase } from './coManagedFulfillment';
 import {
   CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, createOfferCatalog, createScopeResolver,
   type CatalogOperator, type OfferCatalog, type ResolvedOffer,
@@ -1445,6 +1445,24 @@ export class StripeService {
     await this.ensureInitialized();
     logger.info(`[StripeService] Processing webhook event: ${event.type} (${event.id})`);
 
+    // Appliance co-managed seat purchases made in the licensing portal carry our
+    // `portal_purchase_id` marker and have no hosted tenant. Reconcile them first so
+    // the appliance lifecycle mirror never treats the add-on as the base subscription.
+    if (!tenantId && portalPurchaseIdOfEvent(event)) {
+      const deps = await this.fulfillmentDeps().catch((error) => {
+        throw new PortalFulfillmentRetryableError(`Portal purchase handling unavailable for ${event.id}: ${error instanceof Error ? error.message : String(error)}`, error);
+      });
+      const portal = await handlePortalPurchaseEvent(deps, event);
+      if (portal.handled) {
+        if (portal.outcome.kind === 'rejected') {
+          logger.error(`[StripeService] Portal co-managed purchase ${portal.purchaseId} rejected for ${event.id}: ${portal.outcome.message}`);
+        } else {
+          logger.info(`[StripeService] Portal co-managed purchase ${portal.purchaseId} reconciled for ${event.id} (${portal.outcome.kind})`);
+        }
+        return;
+      }
+    }
+
     // Appliance (self-hosted) subscriptions are minted by nm-store and have no
     // hosted tenant; their lifecycle is mirrored into the alga-license service
     // instead of the tenant tables. Hand them off before tenant resolution.
@@ -1650,14 +1668,14 @@ export class StripeService {
     return { db: await getAdminConnection(), stripe: this.stripe, catalog, deliver: applyCoManagedFulfillment };
   }
 
-  /** Operator catalog command (inspect / inventory / seed / publish / restore) run with the platform's
+  /** Operator catalog command (inspect / inventory / seed / publish / restore / pause / retry-fulfillments) run with the platform's
    * own Stripe credential and the admin connection; the caller must already be a proven operator. */
   async runCatalogOperatorCommand(command: string, args: string[], actor: CatalogOperator): Promise<{ code: number; lines: string[] }> {
     const { runCatalogCommand } = await import('./offerCatalog/cli');
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const lines: string[] = [];
     const code = await runCatalogCommand(command, args, { catalog: await this.getOfferCatalog(), db: await getAdminConnection(),
-      stripe: this.stripe, actor, out: (line) => lines.push(line) });
+      stripe: this.stripe, actor, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
     return { code, lines };
   }
 

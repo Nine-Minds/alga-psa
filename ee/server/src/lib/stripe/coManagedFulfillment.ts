@@ -147,6 +147,63 @@ export async function reconcilePortalPurchase(deps: FulfillmentDeps, purchaseId:
   return { kind: queued.kind, fulfillment: settled, delivery: settled.state };
 }
 
+const PORTAL_EVENT_TYPES = new Set([
+  'checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed', 'checkout.session.expired',
+  'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted',
+  'invoice.paid', 'invoice.payment_failed',
+]);
+
+/**
+ * Pure payload test: the portal purchase a Stripe event is about, from OUR metadata marker
+ * (`portal_purchase_id`, set by the licensing portal on the checkout session and the subscription).
+ * The id is only a pointer: reconciliation re-reads Stripe and verifies ownership itself.
+ */
+export function portalPurchaseIdOfEvent(event: Pick<Stripe.Event, 'type' | 'data'>): string | null {
+  if (!PORTAL_EVENT_TYPES.has(event.type)) return null;
+  const object = event.data.object as any;
+  const metadata = event.type.startsWith('invoice.')
+    ? (object.subscription_details ?? object.parent?.subscription_details)?.metadata
+    : object.metadata;
+  const id = metadata?.portal_purchase_id;
+  return typeof id === 'string' && id.length > 0 && id.length <= 100 ? id : null;
+}
+
+/** A portal-purchase webhook could not be settled now; the webhook answers 5xx so Stripe redelivers. */
+export class PortalFulfillmentRetryableError extends Error {
+  readonly retryable = true as const;
+  constructor(message: string, readonly cause?: unknown) { super(message); this.name = 'PortalFulfillmentRetryableError'; }
+}
+
+export type PortalWebhookOutcome =
+  | { handled: false }
+  | { handled: true; purchaseId: string; outcome: ReconcileOutcome | { kind: 'rejected'; code: string; message: string } };
+
+/**
+ * Webhook entry for portal (appliance) co-managed purchases, which have no hosted tenant (F009).
+ * Same path as the reconcile endpoint: the event body is never trusted, Stripe is re-read.
+ *  - unknown purchase, foreign ownership or an unmapped price: consumed, capacity unchanged, logged
+ *    for an operator (a redelivery cannot fix it; after the fix, call the reconcile endpoint);
+ *  - a fulfillment the issuer has not accepted yet, or any transient failure: retryable, so Stripe
+ *    redelivers and the outbox retries delivery (no Stripe write, so never a second charge).
+ */
+export async function handlePortalPurchaseEvent(deps: FulfillmentDeps, event: Pick<Stripe.Event, 'id' | 'type' | 'data'>): Promise<PortalWebhookOutcome> {
+  const purchaseId = portalPurchaseIdOfEvent(event);
+  if (!purchaseId) return { handled: false };
+  let outcome: ReconcileOutcome;
+  try {
+    outcome = await reconcilePortalPurchase(deps, purchaseId);
+  } catch (error) {
+    if (error instanceof PortalPurchaseOwnershipError || error instanceof UnmappedPriceError) {
+      return { handled: true, purchaseId, outcome: { kind: 'rejected', code: error.code, message: error.message } };
+    }
+    throw new PortalFulfillmentRetryableError(`Portal purchase ${purchaseId} reconciliation failed for ${event.id}: ${error instanceof Error ? error.message : String(error)}`, error);
+  }
+  if ('delivery' in outcome && outcome.delivery === 'pending') {
+    throw new PortalFulfillmentRetryableError(`Portal purchase ${purchaseId}: fulfillment ${outcome.fulfillment.fulfillment_id} is queued but the licensing service has not accepted it yet (${outcome.fulfillment.last_error ?? 'no error recorded'}).`);
+  }
+  return { handled: true, purchaseId, outcome };
+}
+
 /**
  * Deliver the newest pending fulfillment per entitlement (absolute counts: older pending ones are
  * superseded, never replayed out of order). An issuer failure leaves the row pending with the error

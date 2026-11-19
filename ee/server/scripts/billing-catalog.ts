@@ -9,16 +9,18 @@
  *   npm run billing-catalog -- seed [--historical=price_a,price_b] [--product=prod_x] --confirm
  *   npm run billing-catalog -- publish --price=price_new [--product=prod_x]          # dry run: review only
  *   npm run billing-catalog -- publish --price=price_new --expect=<current version id|none> --confirm
- *   npm run billing-catalog -- restore --version=<version id> --expect=<current version id> --confirm
+ *   npm run billing-catalog -- restore --version=<version id> --expect=<current version id|none> --confirm
+ *   npm run billing-catalog -- pause --expect=<current version id> --confirm      # stop new sales; renewals continue
+ *   npm run billing-catalog -- retry-fulfillments                           # re-deliver pending appliance licences
  *
  * Environment: ALGA_PSA_URL (platform base URL) and ALGA_OPERATOR_API_KEY (an API key of the master
  * billing tenant, the same authority the operator console routes require).
  * Optional flags: --offer=<key> (default co_managed_technician_seat), --interval=month.
- * Exit: 0 ok, 1 error or rejected, 2 needs attention (unmapped prices, missing --expect).
+ * Exit: 0 ok, 1 error or rejected, 2 needs attention (unmapped prices, missing --expect, failed deliveries).
  */
 async function main(): Promise<number> {
   const [command, ...args] = process.argv.slice(2);
-  if (!command || command === '--help') { console.log('Usage: billing-catalog inspect|inventory|seed|publish|restore [flags] (see the file header)'); return 0; }
+  if (!command || command === '--help') { console.log('Usage: billing-catalog inspect|inventory|seed|publish|restore|pause|retry-fulfillments [flags] (see the file header)'); return 0; }
   const base = process.env.ALGA_PSA_URL;
   const apiKey = process.env.ALGA_OPERATOR_API_KEY;
   if (!base || !apiKey) throw new Error('Set ALGA_PSA_URL and ALGA_OPERATOR_API_KEY (a master-tenant API key).');
