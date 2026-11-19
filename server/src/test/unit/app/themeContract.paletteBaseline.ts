@@ -640,7 +640,6 @@ export const PALETTE_BASELINE = new Map<string, number>([
   ['packages/tickets/src/components/ticket/TicketEmailNotifications.tsx', 2],
   ['packages/tickets/src/components/ticket/TicketExternalLinksSection.tsx', 8],
   ['packages/tickets/src/components/ticket/TicketInfo.tsx', 160],
-  ['packages/tickets/src/components/ticket/TicketMaterialsCard.tsx', 21],
   ['packages/tickets/src/components/ticket/TicketNavigation.tsx', 3],
   ['packages/tickets/src/components/ticket/TicketProperties.tsx', 52],
   ['packages/tickets/src/components/ticket/TicketTimeEntries.tsx', 3],
