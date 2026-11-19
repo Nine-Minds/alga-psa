@@ -1685,6 +1685,7 @@
       "printing": "Wird vorbereitet…",
       "print": "Drucken",
       "reason": "Grund",
+      "sizeMismatch": "Dieses Layout ist kleiner als das Etikett, für das diese Vorlage ausgelegt ist. Drucken Sie stattdessen in der Originalgröße der Vorlage.",
       "skipFailures": "Diese überspringen und den Rest drucken",
       "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
       "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
@@ -1695,6 +1696,9 @@
       "useTemplate": "{{template}} verwenden",
       "copiesPerAsset": "Exemplare pro Asset",
       "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
+    },
+    "layout": {
+      "template-preferred": "Vorlagengröße verwenden"
     }
   },
   "deleteEntity": {

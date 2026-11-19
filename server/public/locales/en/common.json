@@ -1685,6 +1685,7 @@
       "printing": "Preparing…",
       "print": "Print",
       "reason": "Reason",
+      "sizeMismatch": "This layout is smaller than the label this template is designed for. Print at the template’s own size instead.",
       "skipFailures": "Skip these and print the rest",
       "skipped_one": "{{count}} record was skipped because it could not be opened.",
       "skipped_other": "{{count}} records were skipped because they could not be opened.",
@@ -1695,6 +1696,9 @@
       "useTemplate": "Use {{template}}",
       "copiesPerAsset": "Copies per asset",
       "adjacentCopies": "Copies print together for each asset."
+    },
+    "layout": {
+      "template-preferred": "Match template size"
     }
   },
   "deleteEntity": {
