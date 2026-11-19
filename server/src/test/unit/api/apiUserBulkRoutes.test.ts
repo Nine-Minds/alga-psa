@@ -185,6 +185,26 @@ describe('POST /api/v1/users/bulk/create', () => {
     expect(status).toBe(409);
     expect(body.error.message).toContain('already exists');
   });
+
+  it('passes a seat-limit refusal through as the 403 single create returns', async () => {
+    // UserService throws LicenseLimitError when the tenant has no seat left.
+    // bulkCreate() only rewrites "already exists"; everything else has to reach
+    // handleApiError untouched, keeping its own status and code.
+    state.bulkCreateError = Object.assign(new Error('No available user licenses for this tenant'), {
+      name: 'LicenseLimitError',
+      statusCode: 403,
+      code: 'LICENSE_LIMIT_REACHED',
+    });
+
+    const { status, body } = await postBulkCreate({
+      users: [newUser('a')],
+      options: { skip_invalid: false },
+    });
+
+    expect(status).toBe(403);
+    expect(body.error.code).toBe('LICENSE_LIMIT_REACHED');
+    expect(body.error.message).toContain('No available user licenses');
+  });
 });
 
 describe('PUT /api/v1/users/bulk/deactivate', () => {

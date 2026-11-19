@@ -32,19 +32,24 @@ const store = vi.hoisted(() => ({
   savepoints: 0,
   savepointRollbacks: 0,
   batchRollbacks: 0,
+  // Emails the seat admission pre-check refuses, i.e. a tenant that is already
+  // at its limit when the batch starts — the common production rejection.
+  seatPreReject: new Set<string>(),
   // Emails whose post-insert seat tripwire fails, i.e. a user that is rejected
-  // only after its row is already written.
+  // only after its row is already written (the race).
   seatTripwire: new Set<string>(),
   roleIds: new Set<string>(),
 }));
 
+// Only the two seat probes are doubled; the rejection predicate the service
+// branches on is the real one, so the admission shapes here have to be the
+// shapes the guard actually returns.
 vi.mock('../lib/internalUserLicenseGuard', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/internalUserLicenseGuard')>()),
-  admitInternalUserSeat: async (_trx: unknown, _tenant: string, options: any) => ({
-    allowed: true,
-    email: options?.email,
-  }),
-  isInternalUserLicenseLimitRejected: () => false,
+  admitInternalUserSeat: async (_trx: unknown, _tenant: string, options: any) =>
+    store.seatPreReject.has(options?.email)
+      ? { ok: false, code: 'LICENSE_LIMIT_REACHED', error: 'No available user licenses for this tenant' }
+      : { ok: true, email: options?.email },
   assertInternalUserSeatsWithinLimit: async (_trx: unknown, _tenant: string, admission: any) => {
     if (admission?.email && store.seatTripwire.has(admission.email)) {
       throw new Error('Seat limit reached for this tenant');
@@ -251,6 +256,7 @@ beforeEach(() => {
   store.savepoints = 0;
   store.savepointRollbacks = 0;
   store.batchRollbacks = 0;
+  store.seatPreReject = new Set();
   store.seatTripwire = new Set();
   // The roles the batch references exist in this tenant.
   store.committed.push({ table: 'roles', row: { tenant: TENANT, role_id: ROLE_ID, role_name: 'Technician' } });
@@ -315,6 +321,48 @@ describe('bulkCreateUsers', () => {
     expect(committedEmails()).toEqual(['tech.a@example.com', 'tech.c@example.com']);
     expect(store.savepointRollbacks).toBe(1);
     expect(store.batchRollbacks).toBe(0);
+  });
+
+  it('skips a user the seat pre-check refuses and still creates the ones that fit', async () => {
+    // The ordinary production rejection: the tenant is already at its licensed
+    // seat count when the batch starts, so admission fails before any insert.
+    store.seatPreReject.add('tech.b@example.com');
+
+    const result = await makeService().bulkCreateUsers(
+      [newUser('a'), newUser('b'), newUser('c')],
+      context,
+      { skip_invalid: true },
+    );
+
+    expect(result).toMatchObject({ total_processed: 3, successful: 2, failed: 1 });
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatchObject({
+      index: 1,
+      error: 'No available user licenses for this tenant',
+      data: { email: 'tech.b@example.com' },
+    });
+    // The refused user never reaches an insert, and the user *after* it in the
+    // batch is still created.
+    expect(committedEmails()).toEqual(['tech.a@example.com', 'tech.c@example.com']);
+    expect(committedTable('user_roles')).toHaveLength(2);
+    expect(store.savepointRollbacks).toBe(1);
+    expect(store.batchRollbacks).toBe(0);
+  });
+
+  it('rolls the whole batch back when the seat pre-check refuses and skip_invalid is false', async () => {
+    store.seatPreReject.add('tech.c@example.com');
+
+    await expect(
+      makeService().bulkCreateUsers([newUser('a'), newUser('b'), newUser('c')], context, {
+        skip_invalid: false,
+      }),
+    ).rejects.toThrow('No available user licenses for this tenant');
+
+    // The two users ahead of the refused one fit their seats and were written;
+    // the batch is atomic, so nothing is committed.
+    expect(committedEmails()).toEqual([]);
+    expect(committedTable('user_roles')).toEqual([]);
+    expect(store.batchRollbacks).toBe(1);
   });
 
   it('never echoes the submitted password in an error', async () => {
