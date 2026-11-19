@@ -606,7 +606,8 @@
       "downloadPdf": "PDF downloaden",
       "sendEmail": "E-mail verzenden",
       "unfinalize": "Finaliseren ongedaan maken",
-      "recordPayment": "Betaling vastleggen"
+      "recordPayment": "Betaling vastleggen",
+      "viewPayments": "Betalingen"
     },
     "status": {
       "finalized": "Afgerond"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Reden voor ongeldig maken...",
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
-      "voiding": "Ongeldig maken…"
+      "voiding": "Ongeldig maken…",
+      "algaOnly": "Alleen in AlgaPSA ongeldig maken (ontkoppelen van {{provider}})",
+      "algaOnlyWarning": "Het document in {{provider}} blijft precies zoals het is en deze factuur wordt ervan ontkoppeld, waardoor AlgaPSA en {{provider}} hierover niet meer overeenkomen."
     },
     "history": {
       "title": "Geschiedenis",
@@ -2923,6 +2926,25 @@
       "statusNotPayable": "Kan geen betaling vastleggen voor een factuur met status: {{status}}.",
       "overpaymentNotConfirmed": "Deze betaling is hoger dan het openstaande bedrag. Bevestig de overbetaling om deze vast te leggen.",
       "recordFailed": "Het vastleggen van de betaling is mislukt. Probeer het opnieuw."
+    },
+    "void": {
+      "paymentsRecorded": "Draai de betalingen terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedManual": "Draai de in AlgaPSA vastgelegde betalingen ({{sources}}) terug voordat u deze factuur ongeldig maakt.",
+      "paymentsRecordedIntegration": "Deze factuur heeft betalingen uit uw boekhoudsysteem ({{sources}}). Verwijder of bewerk ze daar, dan draait de volgende synchronisatie ze hier terug, of draai ze alleen in AlgaPSA terug.",
+      "paymentsRecordedStripe": "Deze factuur heeft betalingen die via een betaalaanbieder zijn geïnd ({{sources}}). Betaal ze daar terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedMixed": "Draai de betalingen op deze factuur ({{sources}}) terug voordat u deze ongeldig maakt.",
+      "creditNoteCreditApplied": "Op deze creditnota is krediet toegepast. Maak de kredietverwerking ongedaan voordat u deze ongeldig maakt."
+    },
+    "reversePayment": {
+      "permissionDenied": "Toegang geweigerd: voor het terugdraaien van factuurbetalingen is de machtiging voor factuurbetalingen vereist.",
+      "reasonRequired": "Er is een reden vereist om een betaling terug te draaien.",
+      "paymentNotFound": "Betaling niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notReversible": "Deze betaling kan niet worden teruggedraaid.",
+      "alreadyReversed": "Deze betaling is al teruggedraaid.",
+      "stripeRefundRequired": "Deze betaling is via Stripe geïnd. Betaal deze in plaats daarvan terug via de betaalaanbieder.",
+      "integrationOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze in {{provider}}, dan draait de volgende synchronisatie deze hier terug.",
+      "remoteMutateRequired": "Toegang geweigerd: een gesynchroniseerde betaling alleen in AlgaPSA terugdraaien vereist de machtiging voor externe boekhoudwijzigingen.",
+      "reverseFailed": "Het terugdraaien van de betaling is mislukt. Probeer het opnieuw."
     }
   },
   "periodTotal": {
@@ -2982,6 +3004,37 @@
     },
     "toasts": {
       "recorded": "Betaling vastgelegd"
+    }
+  },
+  "invoicePayments": {
+    "title": "Betalingen",
+    "titleForInvoice": "Betalingen — {{invoiceNumber}}",
+    "loading": "Betalingen laden...",
+    "empty": "Er zijn geen betalingen vastgelegd voor deze factuur.",
+    "sources": {
+      "manual": "Vastgelegd in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "stripe": "Stripe"
+    },
+    "fields": {
+      "reason": "Reden"
+    },
+    "actions": {
+      "reverse": "Betaling terugdraaien",
+      "confirmReverse": "Betaling terugdraaien",
+      "algaOnly": "Alleen in AlgaPSA terugdraaien",
+      "cancel": "Annuleren",
+      "close": "Sluiten"
+    },
+    "notes": {
+      "stripeRefund": "Geïnd via Stripe: betaal deze terug bij de betaalaanbieder.",
+      "alreadyReversed": "Al teruggedraaid.",
+      "providerOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze daar, dan draait de volgende synchronisatie deze hier terug.",
+      "algaOnlyWarning": "AlgaPSA en {{provider}} komen hierover niet meer overeen: de registratie in {{provider}} blijft precies zoals deze is en de betaling wordt hier ontkoppeld."
+    },
+    "toasts": {
+      "reversed": "Betaling teruggedraaid"
     }
   }
 }

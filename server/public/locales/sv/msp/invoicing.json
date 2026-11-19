@@ -606,7 +606,8 @@
       "downloadPdf": "Ladda ner PDF",
       "sendEmail": "Skicka e-post",
       "unfinalize": "Återställ till utkast",
-      "recordPayment": "Registrera betalning"
+      "recordPayment": "Registrera betalning",
+      "viewPayments": "Betalningar"
     },
     "status": {
       "finalized": "Fastställd"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Orsak till makulering…",
       "cancel": "Avbryt",
       "confirm": "Makulera faktura",
-      "voiding": "Makulerar…"
+      "voiding": "Makulerar…",
+      "algaOnly": "Makulera endast i AlgaPSA (koppla bort från {{provider}})",
+      "algaOnlyWarning": "Dokumentet i {{provider}} lämnas exakt som det är och den här fakturan kopplas bort från det, så AlgaPSA och {{provider}} kommer att skilja sig åt om den."
     },
     "history": {
       "title": "Historik",
@@ -2923,6 +2926,25 @@
       "statusNotPayable": "Det går inte att registrera en betalning för en faktura med status: {{status}}.",
       "overpaymentNotConfirmed": "Betalningen är högre än det återstående beloppet. Bekräfta överbetalningen för att registrera den.",
       "recordFailed": "Det gick inte att registrera betalningen. Försök igen."
+    },
+    "void": {
+      "paymentsRecorded": "Återför betalningarna innan du makulerar.",
+      "paymentsRecordedManual": "Återför betalningarna som registrerats i AlgaPSA ({{sources}}) innan du makulerar den här fakturan.",
+      "paymentsRecordedIntegration": "Den här fakturan har betalningar från ditt bokföringssystem ({{sources}}). Ta bort eller redigera dem där så återför nästa synkronisering dem här, eller återför dem endast i AlgaPSA.",
+      "paymentsRecordedStripe": "Den här fakturan har betalningar som tagits emot via en betalleverantör ({{sources}}). Återbetala dem där innan du makulerar.",
+      "paymentsRecordedMixed": "Återför betalningarna på den här fakturan ({{sources}}) innan du makulerar den.",
+      "creditNoteCreditApplied": "Den här kreditfakturan har använt tillgodohavande. Ta bort användningen av tillgodohavandet innan du makulerar."
+    },
+    "reversePayment": {
+      "permissionDenied": "Åtkomst nekad: att återföra fakturabetalningar kräver behörigheten för fakturabetalning.",
+      "reasonRequired": "En orsak krävs för att återföra en betalning.",
+      "paymentNotFound": "Betalningen hittades inte. Den kan ha uppdaterats eller tagits bort. Uppdatera sidan och försök igen.",
+      "notReversible": "Den här betalningen kan inte återföras.",
+      "alreadyReversed": "Den här betalningen har redan återförts.",
+      "stripeRefundRequired": "Den här betalningen togs emot via Stripe. Återbetala den via betalleverantören i stället.",
+      "integrationOwned": "Den här betalningen kommer från betalning {{reference}} i {{provider}}. Ta bort eller redigera den i {{provider}} så återför nästa synkronisering den här.",
+      "remoteMutateRequired": "Åtkomst nekad: att återföra en synkroniserad betalning endast i AlgaPSA kräver behörigheten för fjärrändringar i bokföringen.",
+      "reverseFailed": "Det gick inte att återföra betalningen. Försök igen."
     }
   },
   "periodTotal": {
@@ -2982,6 +3004,37 @@
     },
     "toasts": {
       "recorded": "Betalning registrerad"
+    }
+  },
+  "invoicePayments": {
+    "title": "Betalningar",
+    "titleForInvoice": "Betalningar — {{invoiceNumber}}",
+    "loading": "Läser in betalningar...",
+    "empty": "Inga betalningar har registrerats för den här fakturan.",
+    "sources": {
+      "manual": "Registrerad i AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "stripe": "Stripe"
+    },
+    "fields": {
+      "reason": "Orsak"
+    },
+    "actions": {
+      "reverse": "Återför betalning",
+      "confirmReverse": "Återför betalning",
+      "algaOnly": "Återför endast i AlgaPSA",
+      "cancel": "Avbryt",
+      "close": "Stäng"
+    },
+    "notes": {
+      "stripeRefund": "Togs emot via Stripe: återbetala den hos betalleverantören i stället.",
+      "alreadyReversed": "Redan återförd.",
+      "providerOwned": "Den här betalningen kommer från betalning {{reference}} i {{provider}}. Ta bort eller redigera den där så återför nästa synkronisering den här.",
+      "algaOnlyWarning": "AlgaPSA och {{provider}} kommer att skilja sig åt om den här betalningen: posten i {{provider}} lämnas exakt som den är och betalningen kopplas bort här."
+    },
+    "toasts": {
+      "reversed": "Betalningen återfördes"
     }
   }
 }

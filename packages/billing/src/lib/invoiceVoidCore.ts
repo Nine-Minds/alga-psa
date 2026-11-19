@@ -4,6 +4,11 @@ import { tenantDb } from '@alga-psa/db';
 import { reverseCreditApplicationsForInvoice } from './creditReversal';
 import { suppressPrepaidReplenishmentForVoidedInvoice } from './prepaidAutoReplenishment';
 import { voidHourBlocksForVoidedInvoice } from '../services/prepaidBlockLifecycleService';
+import {
+  describeInvoicePaymentSources,
+  providerLabelForSource,
+  type PaymentSourceDescriptor,
+} from './payments/paymentSources';
 
 /**
  * Local invoice-void primitive shared by the user-facing void action
@@ -35,17 +40,103 @@ export function isCreditNoteInvoice(invoice: VoidableInvoiceRow): boolean {
   );
 }
 
+/** Stable machine codes for a refused void. Recorded by the sync callers. */
+export type LocalVoidBlockerCode = 'payments_recorded' | 'credit_note_credit_applied';
+
+export interface LocalVoidBlocker {
+  code: LocalVoidBlockerCode;
+  /** English sentence naming the payment sources and what to do about them. */
+  message: string;
+  /** Key for user-facing callers; `messageParams` carries `{ sources }`. */
+  messageKey: string;
+  messageParams?: Record<string, string | number>;
+  /** Present for 'payments_recorded' whenever the rows could be read. */
+  payments?: PaymentSourceDescriptor[];
+}
+
+const VOID_KEY_PREFIX = 'msp/invoicing:errors.void';
+
+const CREDIT_NOTE_CREDIT_BLOCKER: LocalVoidBlocker = {
+  code: 'credit_note_credit_applied',
+  message: 'This credit note has applied credit. Unapply the credit before voiding.',
+  messageKey: `${VOID_KEY_PREFIX}.creditNoteCreditApplied`,
+};
+
+function labelForSource(source: PaymentSourceDescriptor): string {
+  switch (source.source) {
+    case 'quickbooks':
+    case 'xero':
+    case 'stripe': {
+      const provider = providerLabelForSource(source.source);
+      return source.externalReference
+        ? `${provider} payment ${source.externalReference}`
+        : `a ${provider} payment`;
+    }
+    default:
+      return source.externalReference
+        ? `${source.method ?? 'manual'} ${source.externalReference}`
+        : (source.method ?? 'manual');
+  }
+}
+
+/**
+ * Builds the refusal from the payment sources, so the message says WHERE the
+ * money came from and what the operator can do about it: a manual payment can
+ * be reversed in AlgaPSA, a synced one belongs to the accounting system, and a
+ * gateway payment has to be refunded there. The payment-source read is
+ * best-effort — when it yields nothing the historical generic sentence stands.
+ */
+function buildPaymentsBlocker(sources: PaymentSourceDescriptor[]): LocalVoidBlocker {
+  if (sources.length === 0) {
+    return {
+      code: 'payments_recorded',
+      message: 'Unwind payments before voiding.',
+      messageKey: `${VOID_KEY_PREFIX}.paymentsRecorded`,
+      payments: [],
+    };
+  }
+
+  const list = sources.map(labelForSource).join(', ');
+  const kinds = new Set(sources.map((source) => source.source));
+  const variant = kinds.size > 1
+    ? 'Mixed'
+    : kinds.has('manual')
+      ? 'Manual'
+      : kinds.has('stripe')
+        ? 'Stripe'
+        : 'Integration';
+
+  const message = variant === 'Manual'
+    ? `Reverse the payments recorded in AlgaPSA (${list}) before voiding this invoice.`
+    : variant === 'Stripe'
+      ? `This invoice has payments taken through a payment provider (${list}). Refund them there before voiding.`
+      : variant === 'Integration'
+        ? `This invoice has payments from your accounting system (${list}). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.`
+        : `Unwind the payments on this invoice (${list}) before voiding it.`;
+
+  return {
+    code: 'payments_recorded',
+    // Flat key per variant: i18next cannot hold a string and a nested group at
+    // the same key, and `paymentsRecorded` is the keyless generic above.
+    message,
+    messageKey: `${VOID_KEY_PREFIX}.paymentsRecorded${variant}`,
+    messageParams: { sources: list },
+    payments: sources,
+  };
+}
+
 /**
  * Unlocked fast-fail guards: recorded payments and consumed credit-note credit
- * both block a void. Returns the user-facing reason, or null when clear. The
- * authoritative re-check for consumed credit runs under lock inside
- * voidInvoiceLocally (TOCTOU).
+ * both block a void. Returns a structured reason, or null when clear: the code
+ * is stable for the sync callers, the message names where the payments came
+ * from for the operator. The authoritative re-check for consumed credit runs
+ * under lock inside voidInvoiceLocally (TOCTOU).
  */
 export async function findLocalVoidBlocker(
   knex: Knex,
   tenant: string,
   invoice: VoidableInvoiceRow
-): Promise<string | null> {
+): Promise<LocalVoidBlocker | null> {
   const invoiceId = invoice.invoice_id;
 
   let paymentSum = 0;
@@ -59,7 +150,7 @@ export async function findLocalVoidBlocker(
     paymentSum = 0;
   }
   if (paymentSum > 0) {
-    return 'Unwind payments before voiding.';
+    return buildPaymentsBlocker(await describeInvoicePaymentSources(knex, tenant, invoiceId));
   }
 
   if (isCreditNoteInvoice(invoice)) {
@@ -76,7 +167,7 @@ export async function findLocalVoidBlocker(
         .first('credit_id');
 
       if (consumedCredit) {
-        return 'This credit note has applied credit. Unapply the credit before voiding.';
+        return CREDIT_NOTE_CREDIT_BLOCKER;
       }
     }
   }

@@ -21,9 +21,10 @@ import { emptyCycleStats } from './accountingSync.types';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import { recordExternalPayment, reverseExternalPayment } from './recordExternalPayment';
 
-function makeFakeLedger(existing: any = null) {
+function makeFakeLedger(existing: any = null, tombstoned: any[] = []) {
   const ledger: any = {
     findByExternalId: vi.fn(async (entityType?: string) => (entityType === 'credit_application' ? null : existing)),
+    findTombstonedByExternalId: vi.fn(async () => tombstoned),
     findByAlgaId: vi.fn(async () => undefined),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
@@ -34,6 +35,7 @@ function makeFakeLedger(existing: any = null) {
     insert: ledger.insert,
     update: ledger.update,
     findByExternalId: ledger.findByExternalId,
+    findTombstonedByExternalId: ledger.findTombstonedByExternalId,
     findByAlgaId: ledger.findByAlgaId,
     withKnex: ledger.withKnex
   }));

@@ -30,6 +30,7 @@ import {
 import {
   buildExternalPaymentAppliedPayload,
   buildExternalPaymentRecordedPayload,
+  buildExternalPaymentReversedPayload,
 } from '../../../../../../packages/billing/src/lib/paymentRecordedEvent';
 import type { EmitterContracts } from '../registryTypes';
 import { NO_EMITTER_UMBRELLA_TICKET } from '../registryTypes';
@@ -64,6 +65,7 @@ type BillingEventType =
   | 'PAYMENT_APPLIED'
   | 'PAYMENT_FAILED'
   | 'PAYMENT_REFUNDED'
+  | 'PAYMENT_REVERSED'
   | 'CREDIT_NOTE_CREATED'
   | 'CREDIT_NOTE_APPLIED'
   | 'CREDIT_NOTE_VOIDED'
@@ -409,6 +411,26 @@ export const billingContracts = {
             amount: 100,
             currency: 'USD',
             reason: 'Stripe refund via charge.refunded',
+          }),
+      },
+    ],
+  },
+  PAYMENT_REVERSED: {
+    status: 'covered',
+    cases: [
+      {
+        site: `${INVOICE_PAYMENT_ACTIONS}#reverseInvoicePayment`,
+        ctx: { ...user, occurredAt: NOW },
+        build: () =>
+          buildExternalPaymentReversedPayload({
+            paymentId: IDS.payment,
+            invoiceId,
+            reversedAt: NOW,
+            reversedByUserId: IDS.user,
+            amount: 500,
+            currency: 'USD',
+            reason: 'Linked to the wrong QuickBooks invoice',
+            unlinkedFromProvider: true,
           }),
       },
     ],

@@ -24,10 +24,15 @@ function makeFakeExceptions() {
   };
 }
 
-/** Local-void applier fake: applies by default, `blocked` refuses with a reason. */
-function makeFakeLocalVoid(blocked?: string) {
+/**
+ * Local-void applier fake: applies by default, `blocked` refuses with the
+ * structured reason the shared blocker produces (stable code + sentence).
+ */
+function makeFakeLocalVoid(blocked?: string, blockedCode?: string) {
   return vi.fn(async (_invoiceId: string) =>
-    blocked ? { status: 'blocked' as const, reason: blocked } : { status: 'applied' as const }
+    blocked
+      ? { status: 'blocked' as const, reason: blocked, ...(blockedCode ? { reasonCode: blockedCode } : {}) }
+      : { status: 'applied' as const }
   );
 }
 
@@ -147,15 +152,28 @@ describe('driftDetector', () => {
     const stats = emptyCycleStats();
 
     await applyExternalDocumentChange(
-      makeDeps(ledger, exceptions, stats, makeFakeLocalVoid('Unwind payments before voiding.')),
+      makeDeps(
+        ledger,
+        exceptions,
+        stats,
+        makeFakeLocalVoid(
+          'This invoice has payments from your accounting system (QuickBooks payment 3547). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.',
+          'payments_recorded'
+        )
+      ),
       makeChange({ deleted: true })
     );
 
+    // The CODE is what is recorded and matched on; the sentence that names the
+    // payment sources rides along for the operator.
     expect(ledger.update).toHaveBeenCalledWith(
       'map-1',
       expect.objectContaining({
         syncStatus: MAPPING_SYNC_STATUS.externalVoided,
-        metadata: expect.objectContaining({ local_void_blocked_reason: 'Unwind payments before voiding.' })
+        metadata: expect.objectContaining({
+          local_void_blocked_reason: 'payments_recorded',
+          local_void_blocked_message: expect.stringContaining('QuickBooks payment 3547')
+        })
       })
     );
     expect(stats.driftFound).toBe(1);
@@ -163,7 +181,8 @@ describe('driftDetector', () => {
     const exCall = exceptions.createOrUpdate.mock.calls[0][0];
     expect(exCall.type).toBe('accounting_sync_drift');
     expect(exCall.context.drift_kind).toBe('external_voided');
-    expect(exCall.context.local_void_blocked_reason).toBe('Unwind payments before voiding.');
+    expect(exCall.context.local_void_blocked_reason).toBe('payments_recorded');
+    expect(exCall.context.resolution_hint).toContain('QuickBooks payment 3547');
     expect(exceptions.resolve).not.toHaveBeenCalled();
   });
 

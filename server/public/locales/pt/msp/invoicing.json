@@ -606,7 +606,8 @@
       "downloadPdf": "Baixar PDF",
       "sendEmail": "Enviar e-mail",
       "unfinalize": "Desfinalizar",
-      "recordPayment": "Registrar pagamento"
+      "recordPayment": "Registrar pagamento",
+      "viewPayments": "Pagamentos"
     },
     "status": {
       "finalized": "Finalizado"
@@ -894,7 +895,9 @@
       "reasonPlaceholder": "Motivo da anulação...",
       "cancel": "Cancelar",
       "confirm": "Anular fatura",
-      "voiding": "Anulando..."
+      "voiding": "Anulando...",
+      "algaOnly": "Anular somente no AlgaPSA (desvincular do {{provider}})",
+      "algaOnlyWarning": "O documento no {{provider}} permanece exatamente como está e esta fatura é desvinculada dele, portanto o AlgaPSA e o {{provider}} vão divergir sobre ela."
     },
     "history": {
       "title": "Histórico",
@@ -2923,6 +2926,25 @@
       "statusNotPayable": "Não é possível registrar um pagamento para uma fatura com status: {{status}}.",
       "overpaymentNotConfirmed": "Este pagamento é maior que o saldo devedor. Confirme o pagamento em excesso para registrá-lo.",
       "recordFailed": "Falha ao registrar o pagamento. Tente novamente."
+    },
+    "void": {
+      "paymentsRecorded": "Reverta os pagamentos antes de anular.",
+      "paymentsRecordedManual": "Reverta os pagamentos registrados no AlgaPSA ({{sources}}) antes de anular esta fatura.",
+      "paymentsRecordedIntegration": "Esta fatura tem pagamentos do seu sistema contábil ({{sources}}). Exclua-os ou edite-os lá e a próxima sincronização os reverterá aqui, ou reverta-os somente no AlgaPSA.",
+      "paymentsRecordedStripe": "Esta fatura tem pagamentos recebidos por um provedor de pagamentos ({{sources}}). Reembolse-os lá antes de anular.",
+      "paymentsRecordedMixed": "Reverta os pagamentos desta fatura ({{sources}}) antes de anulá-la.",
+      "creditNoteCreditApplied": "Esta nota de crédito tem crédito aplicado. Remova a aplicação do crédito antes de anular."
+    },
+    "reversePayment": {
+      "permissionDenied": "Permissão negada: reverter pagamentos de faturas exige a permissão de pagamento de faturas.",
+      "reasonRequired": "É necessário um motivo para reverter um pagamento.",
+      "paymentNotFound": "Pagamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "notReversible": "Este pagamento não pode ser revertido.",
+      "alreadyReversed": "Este pagamento já foi revertido.",
+      "stripeRefundRequired": "Este pagamento foi recebido pelo Stripe. Reembolse-o pelo provedor de pagamentos.",
+      "integrationOwned": "Este pagamento veio do pagamento {{reference}} do {{provider}}. Exclua-o ou edite-o no {{provider}} e a próxima sincronização o reverterá aqui.",
+      "remoteMutateRequired": "Permissão negada: reverter um pagamento sincronizado somente no AlgaPSA exige a permissão de alteração remota da contabilidade.",
+      "reverseFailed": "Falha ao reverter o pagamento. Tente novamente."
     }
   },
   "periodTotal": {
@@ -2982,6 +3004,37 @@
     },
     "toasts": {
       "recorded": "Pagamento registrado"
+    }
+  },
+  "invoicePayments": {
+    "title": "Pagamentos",
+    "titleForInvoice": "Pagamentos — {{invoiceNumber}}",
+    "loading": "Carregando os pagamentos...",
+    "empty": "Nenhum pagamento foi registrado para esta fatura.",
+    "sources": {
+      "manual": "Registrado no AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "stripe": "Stripe"
+    },
+    "fields": {
+      "reason": "Motivo"
+    },
+    "actions": {
+      "reverse": "Reverter pagamento",
+      "confirmReverse": "Reverter pagamento",
+      "algaOnly": "Reverter somente no AlgaPSA",
+      "cancel": "Cancelar",
+      "close": "Fechar"
+    },
+    "notes": {
+      "stripeRefund": "Recebido pelo Stripe: reembolse no provedor de pagamentos.",
+      "alreadyReversed": "Já revertido.",
+      "providerOwned": "Este pagamento veio do pagamento {{reference}} do {{provider}}. Exclua-o ou edite-o lá e a próxima sincronização o reverterá aqui.",
+      "algaOnlyWarning": "O AlgaPSA e o {{provider}} vão divergir sobre este pagamento: o registro no {{provider}} permanece exatamente como está e o pagamento é desvinculado aqui."
+    },
+    "toasts": {
+      "reversed": "Pagamento revertido"
     }
   }
 }
