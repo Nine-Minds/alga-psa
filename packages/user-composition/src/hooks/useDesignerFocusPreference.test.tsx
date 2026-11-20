@@ -208,6 +208,30 @@ describe('useDesignerFocusPreference', () => {
     expect(setUserPreference).toHaveBeenCalledWith('user-1', 'designer_focus_mode_workflow', true);
   });
 
+  it('saves a toggle made before a first-ever load resolves to nothing', async () => {
+    // No saved row: the load resolves to null and leaves the chosen value in place, so the
+    // held choice has to be written anyway or it would never leave this browser.
+    const pending = deferred<boolean | null>();
+    getUserPreference.mockReturnValue(pending.promise);
+
+    render(<Probe designer="quote_layout" />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await userEvent.click(document.getElementById('probe-toggle')!);
+    expect(screen.getByTestId('probe-state')).toHaveTextContent('focused');
+
+    await act(async () => {
+      pending.resolve(null);
+      await Promise.resolve();
+    });
+    await settle();
+
+    expect(screen.getByTestId('probe-state')).toHaveTextContent('focused');
+    expect(setUserPreference).toHaveBeenCalledWith('user-1', 'designer_focus_mode_quote_layout', true);
+  });
+
   it('falls back to the cached value when the account value cannot be loaded', async () => {
     window.localStorage.setItem('designer_focus_mode_invoice_layout', 'true');
     getUserPreference.mockRejectedValue(new Error('offline'));

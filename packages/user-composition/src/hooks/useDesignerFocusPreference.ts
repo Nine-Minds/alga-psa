@@ -38,16 +38,17 @@ export function useDesignerFocusPreference(
 
   // A toggle made before the account value has loaded is the user's latest word on the matter:
   // hold it, show it, and write it again once the late-arriving value has landed (which would
-  // otherwise overwrite it, and which the underlying hook only saves after that load).
+  // otherwise overwrite it, and which the underlying hook only saves after that load). It is
+  // written again even when it matches what resolved: a user with no saved row keeps the value
+  // they just chose, and that first choice has to reach their account, not only this browser.
+  // The underlying hook drops a save that repeats what the account already holds.
   const [pendingChoice, setPendingChoice] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!hasResolved || pendingChoice === null) return;
     setPendingChoice(null);
-    if (pendingChoice !== value) {
-      setValue(pendingChoice);
-    }
-  }, [hasResolved, pendingChoice, setValue, value]);
+    setValue(pendingChoice);
+  }, [hasResolved, pendingChoice, setValue]);
 
   const setFocused = useCallback(
     (focused: boolean) => {

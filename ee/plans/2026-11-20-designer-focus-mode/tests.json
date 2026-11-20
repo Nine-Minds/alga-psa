@@ -1361,5 +1361,34 @@
     ],
     "implemented": false,
     "description": "Browser: the workflow list at /msp/workflow-editor shows the sidebar and header even with the preference saved as true"
+  },
+  {
+    "id": "T151",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F001",
+      "F079"
+    ],
+    "implemented": true,
+    "description": "Unit: a surface rendered with focusable={false} stays in the normal layout with a saved preference of true, shows no toggle and reports not focused to descendants"
+  },
+  {
+    "id": "T152",
+    "commitGroup": "shortcut-i18n",
+    "featureIds": [
+      "F017",
+      "F079"
+    ],
+    "implemented": true,
+    "description": "Component: mod+. does nothing while the mounted surface is not focusable (the workflow list case)"
+  },
+  {
+    "id": "T153",
+    "commitGroup": "focus-primitive",
+    "featureIds": [
+      "F005"
+    ],
+    "implemented": true,
+    "description": "Component: toggle on while the account value is still loading, then let it resolve to nothing (no saved row); the hook stays focused and true reaches the account"
   }
 ]
