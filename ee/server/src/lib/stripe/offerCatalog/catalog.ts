@@ -29,6 +29,15 @@ const dbCode = (error: unknown): string | undefined => (error as { code?: string
 const identity = (scope: CatalogScope, offerKey: string, interval: BillingInterval) =>
   ({ stripe_account: scope.stripeAccount, livemode: scope.livemode, offer_key: offerKey, billing_interval: interval });
 
+export interface EffectiveCatalogAccountSetting {
+  livemode: boolean;
+  stripeAccount: string | null;
+  priceId: string | null;
+  accountSource: 'database' | 'environment bootstrap' | 'catalog history' | 'unconfigured' | 'ambiguous';
+  priceSource: 'database setting' | 'database catalog' | 'environment bootstrap' | 'unconfigured' | 'ambiguous';
+  historicalAccounts: string[];
+}
+
 /** Legacy binding for a key: only offers the catalog does not manage yet. */
 export function legacyEnvPriceId(offerKey: string, interval: BillingInterval, env: EnvLike = process.env): string | undefined {
   const binding = LEGACY_ENV_BINDINGS[offerKey];
@@ -134,8 +143,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
   }
 
   /** Every Price ID that is, or ever was, bound to the offer in this scope. */
-  async function recognizedPriceIds(offerKey: string, interval: BillingInterval): Promise<Set<string>> {
-    const scope = await scopeOrNull();
+  async function recognizedPriceIds(offerKey: string, interval: BillingInterval, requestedScope?: CatalogScope): Promise<Set<string>> {
+    const scope = requestedScope ?? await scopeOrNull();
     if (!scope) {
       // Scope unknown: only a key no scope manages may be recognised through the legacy binding.
       const legacy = legacyEnvPriceId(offerKey, interval, env);
@@ -177,14 +186,71 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return guarded(async () => deps.db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
   }
 
+  async function deploymentLivemode(): Promise<boolean> {
+    return deps.livemode ? deps.livemode() : (await deps.scope()).livemode;
+  }
+
+  async function historicalAccounts(livemode: boolean, db: Knex = deps.db): Promise<string[]> {
+    return guarded(async () => db(VERSIONS).where({ offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month', livemode })
+      .distinct('stripe_account').pluck('stripe_account'), []);
+  }
+
+  async function historicalScopeForPrice(priceId: string, livemode?: boolean, db: Knex = deps.db): Promise<CatalogScope | null> {
+    const query = db(VERSIONS).where({ price_id: priceId, offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' });
+    if (livemode !== undefined) query.where({ livemode });
+    const rows: Array<{ stripe_account: string; livemode: boolean }> = await guarded(async () => query.distinct('stripe_account', 'livemode'), []);
+    return rows.length === 1 ? { stripeAccount: rows[0].stripe_account, livemode: rows[0].livemode } : null;
+  }
+
+  async function effectiveAccountSetting(livemode: boolean, db: Knex = deps.db): Promise<EffectiveCatalogAccountSetting> {
+    const setting = await guarded(async () => db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
+    const accounts = await historicalAccounts(livemode, db);
+    const applies = (await deploymentLivemode()) === livemode;
+    const bootstrapAccount = applies ? env.STRIPE_ACCOUNT_ID || null : null;
+    let stripeAccount: string | null = null;
+    let accountSource: EffectiveCatalogAccountSetting['accountSource'] = 'unconfigured';
+    if (setting) {
+      stripeAccount = setting.stripe_account;
+      accountSource = 'database';
+    } else if (bootstrapAccount) {
+      stripeAccount = bootstrapAccount;
+      accountSource = 'environment bootstrap';
+    } else if (accounts.length === 1) {
+      stripeAccount = accounts[0];
+      accountSource = 'catalog history';
+    } else if (accounts.length > 1) {
+      accountSource = 'ambiguous';
+    }
+
+    let priceId: string | null = null;
+    let priceSource: EffectiveCatalogAccountSetting['priceSource'] = 'unconfigured';
+    if (setting) {
+      priceId = setting.price_id;
+      priceSource = 'database setting';
+    } else if (accountSource === 'ambiguous') {
+      priceSource = 'ambiguous';
+    } else if (stripeAccount) {
+      const current = await guarded(async () => currentVersion({ stripeAccount: stripeAccount!, livemode }, CO_MANAGED_SEAT_OFFER_KEY, 'month', db), undefined);
+      if (current) {
+        priceId = current.price_id;
+        priceSource = 'database catalog';
+      }
+    }
+    if (!priceId && priceSource !== 'ambiguous' && accounts.length === 0 && applies && env.STRIPE_CO_MANAGED_USER_PRICE_ID) {
+      priceId = env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+      priceSource = 'environment bootstrap';
+    }
+    return { livemode, stripeAccount, priceId, accountSource, priceSource, historicalAccounts: accounts };
+  }
+
   async function setAccountSetting(input: { actor: CatalogOperator | null | undefined; livemode: boolean; stripeAccount: string;
     priceId: string; expectedAccount: string | null; expectedPriceId: string | null; confirmSwitch: boolean }) {
     const actor = assertCatalogOperator(input.actor, env);
     if (!/^acct_[A-Za-z0-9]+$/.test(input.stripeAccount) || !/^price_[A-Za-z0-9]+$/.test(input.priceId)) {
       throw new OfferPublishError('INVALID_CANDIDATE', 'A valid Stripe account ID and Price ID are required.');
     }
-    const currentMode = await deps.scope();
-    if (currentMode.livemode !== input.livemode) throw new OfferPublishError('WRONG_MODE', 'Use a deployment whose restricted Stripe key matches the mode being configured.');
+    const currentLivemode = await deploymentLivemode();
+    if (currentLivemode !== input.livemode) throw new OfferPublishError('WRONG_MODE', 'Use a deployment whose restricted Stripe key matches the mode being configured.');
     let price;
     try { price = await deps.stripe.prices.retrieve(input.priceId, { stripeAccount: input.stripeAccount }); }
     catch (error) { throw new OfferPublishError('STRIPE_UNAVAILABLE', `Stripe could not retrieve the candidate Price in the requested account: ${error instanceof Error ? error.message : String(error)}`); }
@@ -204,39 +270,54 @@ export function createOfferCatalog(deps: CatalogDeps) {
     const result = await deps.db.transaction(async (trx) => {
       await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`stripe-billing-catalog:${input.livemode ? 'live' : 'test'}`]);
       const current = await trx('stripe_offer_catalog_settings').where({ livemode: input.livemode }).forUpdate().first();
-      const bootstrapApplies = currentMode.livemode === input.livemode;
-      const previousAccount = current?.stripe_account ?? (bootstrapApplies ? env.STRIPE_ACCOUNT_ID ?? null : null);
-      const previousPriceId = current?.price_id ?? (bootstrapApplies ? env.STRIPE_CO_MANAGED_USER_PRICE_ID ?? null : null);
+      const effective = await effectiveAccountSetting(input.livemode, trx);
+      const previousAccount = effective.stripeAccount;
+      const previousPriceId = effective.priceId;
       if (previousAccount !== input.expectedAccount || previousPriceId !== input.expectedPriceId) {
         throw new OfferPublishError('STALE_EXPECTED_VERSION', 'The account setting changed since it was reviewed. Inspect it again.');
       }
-      if (previousAccount && (previousAccount !== input.stripeAccount || previousPriceId !== input.priceId)) {
-        const pending = await trx('co_managed_portal_purchases').where({ stripe_account: previousAccount, livemode: input.livemode, state: 'pending' }).first('purchase_id');
-        if (pending) throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has a pending checkout. Resolve it before switching.');
+      if (previousAccount !== input.stripeAccount || previousPriceId !== input.priceId) {
+        const oldAccounts = new Set(effective.historicalAccounts);
+        if (previousAccount) oldAccounts.add(previousAccount);
+        if (await trx.schema.hasTable('co_managed_portal_purchases')) {
+          const unresolvedPortal = await trx('co_managed_portal_purchases').where({ state: 'pending' })
+            .andWhere((q) => q.where({ livemode: input.livemode }).whereIn('stripe_account', [...oldAccounts]).orWhereNull('stripe_account')).first('purchase_id');
+          if (unresolvedPortal) throw new OfferPublishError('INVALID_CANDIDATE', 'A pending portal checkout is tied to the prior or unresolved catalog. Resolve it before switching.');
+        }
         if (await trx.schema.hasTable('co_managed_purchase_operations')) {
           const hostedPending = await trx('co_managed_purchase_operations').whereIn('state', ['preparing', 'checkout', 'payment_failed'])
-            .andWhere((q) => q.where({ stripe_account: previousAccount, livemode: input.livemode }).orWhereNull('stripe_account'))
+            .andWhere((q) => q.where({ livemode: input.livemode }).whereIn('stripe_account', [...oldAccounts]).orWhereNull('stripe_account'))
             .first('operation_id');
           if (hostedPending) throw new OfferPublishError('INVALID_CANDIDATE', 'A pending hosted checkout is pinned to the previous or an unresolved account. Resolve it before switching.');
         }
         if (await trx.schema.hasTable('stripe_subscriptions')) {
-          const active = trx('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired'])
-            .where((q) => q.whereRaw("metadata->>'subscription_kind' = 'co_managed'").orWhereRaw("metadata->>'portal_purchase_id' IS NOT NULL"));
-          if (await active.clone().where({ stripe_account: previousAccount, livemode: input.livemode }).first('stripe_subscription_id')) {
-            throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has an active co-managed subscription; finish or migrate it before switching.');
+          const active = trx('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired']);
+          if (await active.clone().where((q) => q.whereRaw("metadata->>'subscription_kind' = 'co_managed'").orWhereRaw("metadata->>'portal_purchase_id' IS NOT NULL"))
+            .where((q) => q.where({ livemode: input.livemode }).whereIn('stripe_account', [...oldAccounts]).orWhereNull('stripe_account')).first('stripe_subscription_id')) {
+            throw new OfferPublishError('INVALID_CANDIDATE', 'An active co-managed subscription remains on the prior or unresolved catalog; preserve its merchant identity before switching.');
           }
-          if (await active.clone().whereNull('stripe_account').first('stripe_subscription_id')) {
-            throw new OfferPublishError('INVALID_CANDIDATE', 'An active co-managed subscription has no persisted account identity; inventory it before switching.');
+          const historicalPrices = oldAccounts.size
+            ? await trx('stripe_offer_versions').where({ livemode: input.livemode, offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' }).whereIn('stripe_account', [...oldAccounts]).distinct('price_id').pluck('price_id')
+            : [];
+          if (historicalPrices.length) {
+            const byHistoricalPrice = await trx('stripe_subscriptions as s').join('stripe_prices as p', 's.stripe_price_id', 'p.stripe_price_id')
+              .whereNotIn('s.status', ['canceled', 'incomplete_expired']).whereIn('p.stripe_price_external_id', historicalPrices)
+              .first('s.stripe_subscription_id');
+            if (byHistoricalPrice) throw new OfferPublishError('INVALID_CANDIDATE', 'An active subscription uses a historical co-managed Price; preserve its merchant identity before switching.');
           }
         }
         if (deps.subscriptions) {
-          for await (const subscription of deps.subscriptions.list({ status: 'all', limit: 100 }, { stripeAccount: previousAccount })) {
-            const coManaged = subscription.metadata?.subscription_kind === 'co_managed' || Boolean(subscription.metadata?.portal_purchase_id);
-            if (coManaged && !['canceled', 'incomplete_expired'].includes(subscription.status)) {
-              const mapped = await trx('stripe_offer_versions').where({ stripe_account: previousAccount, livemode: input.livemode }).pluck('price_id');
-              const allowed = new Set(mapped);
-              if (subscription.items.data.some((item) => !allowed.has(item.price.id))) throw new OfferPublishError('INVALID_CANDIDATE', 'An active subscription on the previous account has an unresolved historical price.');
-              throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has an active co-managed subscription; finish or migrate it before switching.');
+          if (oldAccounts.size > 1 && !previousAccount) throw new OfferPublishError('INVALID_CANDIDATE', 'Historical catalog references span multiple accounts; reconcile the prior account before switching.');
+          for (const oldAccount of oldAccounts) {
+            const recognized = new Set(await trx('stripe_offer_versions').where({ stripe_account: oldAccount, livemode: input.livemode,
+              offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' }).pluck('price_id'));
+            for await (const subscription of deps.subscriptions.list({ status: 'all', limit: 100 }, { stripeAccount: oldAccount })) {
+              const historical = subscription.items.data.some((item) => recognized.has(item.price.id));
+              const coManaged = subscription.metadata?.subscription_kind === 'co_managed' || Boolean(subscription.metadata?.portal_purchase_id) || historical;
+              if (coManaged && !['canceled', 'incomplete_expired'].includes(subscription.status)) {
+                if (subscription.items.data.some((item) => !recognized.has(item.price.id))) throw new OfferPublishError('INVALID_CANDIDATE', 'An active subscription on the previous account has an unresolved historical price.');
+                throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has an active co-managed subscription; preserve its merchant identity before switching.');
+              }
             }
           }
         }
@@ -382,7 +463,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return reviewCandidate(await deps.scope(), offerKey, interval, priceId, { productId, requireActive: true });
   }
 
-  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect, inspectAccountSetting, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
+  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect,
+    inspectAccountSetting, deploymentLivemode, effectiveAccountSetting, historicalAccounts, historicalScopeForPrice, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

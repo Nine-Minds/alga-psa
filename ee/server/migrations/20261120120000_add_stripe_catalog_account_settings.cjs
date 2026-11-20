@@ -43,20 +43,20 @@ exports.up = async function up(knex) {
   }
   if (await knex.schema.hasTable('co_managed_purchase_operations') && await knex.schema.hasTable('stripe_offer_versions')) {
     await knex.raw(`UPDATE co_managed_purchase_operations o SET stripe_account = v.stripe_account, livemode = v.livemode
-      FROM stripe_offer_versions v WHERE o.offer_version_id = v.version_id AND (o.stripe_account IS NULL OR o.livemode IS NULL)`);
-    const account = process.env.STRIPE_ACCOUNT_ID;
-    const key = process.env.STRIPE_SECRET_KEY || '';
-    const livemode = /^(sk|rk)_live_/.test(key) ? true : /^(sk|rk)_test_/.test(key) ? false : null;
-    if (account && livemode !== null) {
-      await knex('co_managed_purchase_operations').whereNull('stripe_account').update({ stripe_account: account, livemode });
-    }
+      FROM stripe_offer_versions v WHERE o.offer_version_id = v.version_id AND o.stripe_account IS NULL AND o.livemode IS NULL`);
+    // A price ID is a safe migration key only when the historical catalog assigns it to exactly
+    // one merchant and mode. Pending operations with no such evidence remain pinned-null and are
+    // explicitly reconciled on resume; never guess from today's environment or database setting.
+    await knex.raw(`WITH unique_price_scope AS (
+      SELECT price_id, MIN(stripe_account) AS stripe_account, BOOL_AND(livemode) AS livemode
+      FROM stripe_offer_versions WHERE offer_key = 'co_managed_technician_seat' AND billing_interval = 'month' GROUP BY price_id
+      HAVING COUNT(DISTINCT (stripe_account, livemode)) = 1
+    )
+    UPDATE co_managed_purchase_operations o SET stripe_account = v.stripe_account, livemode = v.livemode
+    FROM unique_price_scope v WHERE o.price_id = v.price_id AND o.stripe_account IS NULL AND o.livemode IS NULL`);
   }
-  const bootstrapAccount = process.env.STRIPE_ACCOUNT_ID;
-  const stripeKey = process.env.STRIPE_SECRET_KEY || '';
-  const bootstrapMode = /^(sk|rk)_live_/.test(stripeKey) ? true : /^(sk|rk)_test_/.test(stripeKey) ? false : null;
-  if (bootstrapAccount && bootstrapMode !== null && await knex.schema.hasTable('stripe_subscriptions')) {
-    await knex('stripe_subscriptions').whereNull('stripe_account').update({ stripe_account: bootstrapAccount, livemode: bootstrapMode });
-  }
+  // Existing stripe_subscriptions rows without historical account evidence deliberately stay null.
+  // Runtime reconciliation resolves them from historical Price mappings or fails closed.
 };
 
 exports.down = async function down(knex) {

@@ -22,7 +22,7 @@ describe('stripe offer catalog (postgres)', () => {
   let prices: Record<string, any>;
   const catalog = (scope: CatalogScope = TEST, env: Record<string, string | undefined> = {}, stripeFails = false,
     subscriptions?: any) => createOfferCatalog({
-    db, scope: async () => scope, env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
+    db, livemode: () => scope.livemode, scope: async () => scope, env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
     stripe: { prices: { retrieve: async (id: string) => { if (stripeFails) throw new Error('stripe down'); if (!prices[id]) throw new Error('no such price'); return prices[id]; } } } as any,
     subscriptions,
   });
@@ -140,6 +140,44 @@ describe('stripe offer catalog (postgres)', () => {
     expect(await db('stripe_offer_catalog_setting_audit').first()).toMatchObject({ operator: operator.userId,
       previous_account: null, new_account: 'acct_target', new_price_id: 'price_a' });
     expect((await restricted.resolveCurrentOffer(KEY, 'month')).priceId).toBe('price_a');
+  });
+
+  it('T011: history without a settings row supplies the expected prior pair and catches an untagged retired-price subscription', async () => {
+    await catalog(TEST).publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
+    const requests: unknown[] = [];
+    const c = createOfferCatalog({ db, livemode: () => false, scope: async () => { throw new Error('account read denied'); },
+      env: { MASTER_BILLING_TENANT_ID: MASTER },
+      stripe: { prices: { retrieve: async (id: string, options: unknown) => { requests.push({ id, options }); return prices[id]; } } } as any,
+      subscriptions: { list: async function* (_params: unknown, options: unknown) {
+        requests.push(options);
+        yield { id: 'sub_untagged', status: 'active', metadata: {}, items: { data: [{ price: { id: 'price_a' } }] } };
+      } } as any });
+    const effective = await c.effectiveAccountSetting(false);
+    expect(effective).toMatchObject({ stripeAccount: 'acct_1', priceId: 'price_a', accountSource: 'catalog history', priceSource: 'database catalog' });
+    await expect(c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_b',
+      expectedAccount: effective.stripeAccount, expectedPriceId: effective.priceId, confirmSwitch: true })).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
+    expect(requests).toContainEqual({ stripeAccount: 'acct_1' });
+    expect(await c.inspectAccountSetting(false)).toBeFalsy();
+  });
+
+  it('T011: actual operator commands inspect and configure an empty catalog with account reads denied', async () => {
+    const retrieved: Array<{ id: string; options: unknown }> = [];
+    const outputs: string[] = [];
+    const restricted = createOfferCatalog({ db, livemode: () => false,
+      // The restricted fixture intentionally exposes Price reads only. It has no accounts API at all.
+      scope: async () => { throw new Error('account reads are denied'); },
+      env: { MASTER_BILLING_TENANT_ID: MASTER },
+      stripe: { prices: { retrieve: async (id: string, options: unknown) => { retrieved.push({ id, options }); return prices[id]; } } } as any });
+    const restrictedPriceRead = async (id: string, options: unknown) => { retrieved.push({ id, options }); return prices[id]; };
+    const context = { catalog: restricted, stripe: { prices: { retrieve: (id: string, options: unknown) => restrictedPriceRead(id, options) } } as any,
+      db, actor: operator, locale: 'en', out: (line: string) => outputs.push(line), env: { MASTER_BILLING_TENANT_ID: MASTER } };
+    expect(await runCatalogCommand('inspect-account', [], context)).toBe(0);
+    expect(outputs.join('\n')).toContain('unconfigured');
+    expect(await runCatalogCommand('set-account', ['--account=acct_target', '--price=price_a', '--expect-account=none', '--expect-price=none', '--confirm-switch'], context)).toBe(0);
+    expect(retrieved).toEqual([{ id: 'price_a', options: { stripeAccount: 'acct_target' } }]);
+    expect(await runCatalogCommand('inspect-account', [], context)).toBe(0);
+    expect(outputs.join('\n')).toContain('Current co-managed price: price_a');
+    expect(await restricted.effectiveAccountSetting(false)).toMatchObject({ stripeAccount: 'acct_target', priceId: 'price_a', accountSource: 'database', priceSource: 'database setting' });
   });
 
   it('T011: rejects unauthorized, mismatched-mode, unconfirmed, and pending-reference switches without changing effective settings', async () => {

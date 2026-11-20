@@ -43,6 +43,7 @@ function fixture() {
   service.syncCoManagedSubscription = vi.fn().mockResolvedValue(undefined);
   // Catalog not migrated: the offer is unmanaged, so the legacy environment binding serves it.
   const unmigrated: any = () => ({ where: () => ({ first: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); },
+    distinct: () => ({ pluck: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); } }),
     select: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); } }) });
   service.offerCatalogInstance = createOfferCatalog({ db: unmigrated, scope: async () => ({ stripeAccount: 'acct_test', livemode: false }),
     stripe: { prices: { retrieve: (id: string) => service.stripe.prices.retrieve(id) } } as any, env: { STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_co' } });
@@ -56,7 +57,9 @@ function fixture() {
   };
   mocks.connection.mockResolvedValue(db);
   mocks.purchase.mockImplementation(async (_db, input, provider) => provider({ operation_id: input.operationId,
-    quantity: input.quantity, state: 'preparing', provider_reference: null }));
+    quantity: input.quantity, state: 'preparing', provider_reference: null,
+    stripe_account: input.pinned?.stripeAccount ?? null, livemode: input.pinned?.livemode ?? null,
+    price_id: input.pinned?.priceId ?? null, offer_version_id: input.pinned?.offerVersionId ?? null }));
   return { service, db, rows, subscriptions, sessions, pro };
 }
 
@@ -69,7 +72,7 @@ describe('dedicated co-managed purchase adapter', () => {
     expect(await service.previewCoManagedSeats(tenant, 6)).toEqual({ unitAmount: 1149, monthlyTotal: 6894, amountDue: 1700, currency: 'usd', offerRef: 'price:price_co' });
     expect(service.stripe.invoices.createPreview).toHaveBeenCalledWith(expect.objectContaining({
       subscription: 'sub_co', subscription_details: { items: [{ id: 'si_co', quantity: 6 }], proration_behavior: 'always_invoice' },
-    }));
+    }), { stripeAccount: 'acct_test' });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(mocks.purchase).not.toHaveBeenCalled();
   });
@@ -78,10 +81,11 @@ describe('dedicated co-managed purchase adapter', () => {
     expect(await service.purchaseCoManagedSeats(tenant, 6, operationId)).toEqual({ kind: 'checkout', sessionId: 'cs_co', clientSecret: 'secret' });
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({
       customer: 'cus_msp', mode: 'subscription', ui_mode: 'embedded', line_items: [{ price: 'price_co', quantity: 6 }],
-      metadata, subscription_data: { metadata },
+      metadata: { ...metadata, billing_catalog_account: 'acct_test', billing_catalog_livemode: 'false' },
+      subscription_data: { metadata: { ...metadata, billing_catalog_account: 'acct_test', billing_catalog_livemode: 'false' } },
       // Returns to the account pool editor (always reachable), never the entitlement-gated overview.
       redirect_on_completion: 'if_required', return_url: expect.stringMatching(/\/msp\/account#account-co-managed$/),
-    }), { idempotencyKey: `co-managed:${tenant}:${operationId}` });
+    }), { idempotencyKey: `co-managed:${tenant}:${operationId}`, stripeAccount: 'acct_test' });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(service.syncCoManagedSubscription).not.toHaveBeenCalled();
   });
@@ -94,7 +98,8 @@ describe('dedicated co-managed purchase adapter', () => {
   });
   it('resumes a completed checkout and reconciles paid capacity', async () => {
     const { service } = fixture();
-    mocks.purchase.mockImplementation(async (_db, _input, provider) => provider({ state: 'checkout', provider_reference: 'cs_co' }));
+    mocks.purchase.mockImplementation(async (_db, input, provider) => provider({ state: 'checkout', provider_reference: 'cs_co',
+      stripe_account: input.pinned?.stripeAccount, livemode: input.pinned?.livemode, price_id: input.pinned?.priceId }));
     service.stripe.checkout.sessions.retrieve.mockResolvedValue(checkout({ status: 'complete', subscription: 'sub_co' }));
     expect(await service.purchaseCoManagedSeats(tenant, 6, operationId)).toEqual({ kind: 'updated', subscriptionId: 'sub_co' });
     expect(service.syncCoManagedSubscription).toHaveBeenCalledWith(tenant, 'sub_co', expect.anything());
@@ -111,7 +116,7 @@ describe('dedicated co-managed purchase adapter', () => {
     expect(service.stripe.subscriptions.update).toHaveBeenCalledExactlyOnceWith('sub_co', {
       items: [{ id: 'si_co', quantity: 6 }], cancel_at_period_end: false,
       payment_behavior: 'error_if_incomplete', proration_behavior: 'always_invoice',
-    }, { idempotencyKey: `co-managed:${tenant}:${operationId}` });
+    }, { idempotencyKey: `co-managed:${tenant}:${operationId}`, stripeAccount: 'acct_test' });
     expect(service.stripe.checkout.sessions.create).not.toHaveBeenCalled();
   });
   it('does not repeat an applied quantity update after provider idempotency expires', async () => {
@@ -125,9 +130,9 @@ describe('dedicated co-managed purchase adapter', () => {
     expect((await service.previewCoManagedSeats(tenant, 0)).monthlyTotal).toBe(0);
     expect(service.stripe.invoices.createPreview).toHaveBeenCalledWith(expect.objectContaining({
       subscription: 'sub_co', subscription_details: { cancel_at: expect.any(Number), proration_behavior: 'always_invoice' },
-    }));
+    }), { stripeAccount: 'acct_test' });
     await service.purchaseCoManagedSeats(tenant, 0, operationId);
-    expect(service.stripe.subscriptions.cancel).toHaveBeenCalledExactlyOnceWith('sub_co', { invoice_now: true, prorate: true }, { idempotencyKey: `co-managed:${tenant}:${operationId}` });
+    expect(service.stripe.subscriptions.cancel).toHaveBeenCalledExactlyOnceWith('sub_co', { invoice_now: true, prorate: true }, { idempotencyKey: `co-managed:${tenant}:${operationId}`, stripeAccount: 'acct_test' });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
   });
   it.each(['essentials', 'solo'])('denies %s sponsorship before contacting the purchase provider', async (plan) => {
@@ -142,14 +147,14 @@ describe('dedicated co-managed purchase adapter', () => {
   });
   it('finalizes a replacement checkout under purchase locks before entitlement reconciliation', async () => {
     const { service, rows, db } = fixture();
-    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 4, state: 'checkout' }];
+    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 4, state: 'checkout', stripe_account: 'acct_test', livemode: false }];
     await service.finalizeCoManagedCheckout(checkout({ mode: 'subscription', status: 'complete', subscription: 'sub_co' }), tenant, db);
     expect(mocks.purchase).toHaveBeenCalledWith(db, { sponsorTenant: tenant, operationId, quantity: 4 }, expect.any(Function));
     expect(mocks.purchase.mock.invocationCallOrder[0]).toBeLessThan(service.syncCoManagedSubscription.mock.invocationCallOrder[0]);
   });
   it('rejects checkout completion with a different authorized quantity', async () => {
     const { service, rows, db } = fixture();
-    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 99, state: 'checkout' }];
+    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 99, state: 'checkout', stripe_account: 'acct_test', livemode: false }];
     await expect(service.finalizeCoManagedCheckout(checkout({ mode: 'subscription', subscription: 'sub_co' }), tenant, db)).rejects.toThrow('authorized purchase');
     expect(mocks.purchase).not.toHaveBeenCalled();
     expect(service.syncCoManagedSubscription).not.toHaveBeenCalled();
@@ -164,6 +169,9 @@ describe('shared offer catalog rotation', () => {
   /** Current version v2 is price_new; price_old (v1) is retired but recognised. */
   const managed = (current: any = 'ok') => ({
     scope: async () => scope,
+    deploymentLivemode: async () => false,
+    historicalAccounts: async () => [],
+    historicalScopeForPrice: async (id: string) => ['price_old', 'price_new'].includes(id) ? scope : null,
     recognizedPriceIds: async () => new Set(['price_old', 'price_new']),
     classifyPrice: vi.fn(async (_s: any, id: string) => ({ source: 'catalog', offerKey: 'co_managed_technician_seat', interval: 'month',
       versionId: id === 'price_old' ? 'v1' : 'v2', current: id === 'price_new' })),
@@ -187,14 +195,14 @@ describe('shared offer catalog rotation', () => {
     expect(catalog.resolveCurrentOffer).not.toHaveBeenCalled();
     await service.purchaseCoManagedSeats(tenant, 6, operationId);
     expect(service.stripe.subscriptions.update).toHaveBeenCalledExactlyOnceWith('sub_co', expect.objectContaining({ items: [{ id: 'si_co', quantity: 6 }] }), expect.anything());
-    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v1', priceId: 'price_old' });
+    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v1', priceId: 'price_old', stripeAccount: 'acct_test', livemode: false });
   });
 
   it('a brand-new purchase uses the replacement and pins its version and price on the operation', async () => {
     const { service } = rotated();
     expect(await service.previewCoManagedSeats(tenant, 6)).toMatchObject({ unitAmount: 1300, currency: 'usd', offerRef: 'v2' });
     await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v2');
-    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v2', priceId: 'price_new' });
+    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v2', priceId: 'price_new', stripeAccount: 'acct_test', livemode: false });
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_new', quantity: 6 }] }), expect.anything());
   });
 
@@ -211,7 +219,10 @@ describe('shared offer catalog rotation', () => {
     const { service, rows, catalog } = rotated();
     rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 6, state: 'preparing', offer_version_id: 'v1', price_id: 'price_old' }];
     mocks.purchase.mockImplementation(async (_db, input, provider) => provider({ operation_id: input.operationId, quantity: 6, state: 'preparing', provider_reference: null,
+      stripe_account: input.pinned?.stripeAccount, livemode: input.pinned?.livemode,
       offer_version_id: 'v1', price_id: 'price_old' }));
+    rows.co_managed_purchase_operations[0].stripe_account = 'acct_test';
+    rows.co_managed_purchase_operations[0].livemode = false;
     await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v2'); // even a stale/newer reviewed ref cannot move a recorded operation
     expect(catalog.resolveCurrentOffer).not.toHaveBeenCalled();
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_old', quantity: 6 }] }), expect.anything());

@@ -106,6 +106,8 @@ export interface CatalogDeps {
   subscriptions?: Pick<Stripe, 'subscriptions'>['subscriptions'];
   /** Trusted configuration: Stripe account and mode. Resolved lazily and memoised by the caller. */
   scope: () => Promise<CatalogScope>;
+  /** The key's mode is available even when no merchant account can yet be resolved. */
+  livemode?: () => boolean;
   env?: EnvLike;
 }
 
