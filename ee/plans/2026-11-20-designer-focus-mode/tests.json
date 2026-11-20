@@ -856,7 +856,7 @@
     "featureIds": [
       "F052"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the document editor renders no Layout Details heading, no description paragraph and no Created / Last Updated footer"
   },
   {
@@ -865,7 +865,7 @@
     "featureIds": [
       "F052"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the header row and the Visual / Code tabs are inside one card"
   },
   {
@@ -874,7 +874,7 @@
     "featureIds": [
       "F053"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the back navigation names the document type and clicking it calls onCancel"
   },
   {
@@ -883,7 +883,7 @@
     "featureIds": [
       "F054"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: an existing layout shows 'Edit Layout: <name>' and the title follows the name as it is typed"
   },
   {
@@ -892,7 +892,7 @@
     "featureIds": [
       "F054"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a new layout shows 'New <Type> Layout' for its document type"
   },
   {
@@ -901,7 +901,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #document-template-name-input is in the header, shows the loaded name and its type-specific placeholder, and accepts typing"
   },
   {
@@ -910,7 +910,7 @@
     "featureIds": [
       "F056"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #document-template-version-input is in the header and clamps 0, negative and non-numeric input to 1"
   },
   {
@@ -919,7 +919,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a work-tag layout renders #document-template-label-settings in the header"
   },
   {
@@ -928,7 +928,7 @@
     "featureIds": [
       "F057"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a non-label document type renders no Label settings button and no label controls"
   },
   {
@@ -937,7 +937,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: clicking Label settings shows #document-template-label-class-select and a checkbox per hideable field with the hint text"
   },
   {
@@ -946,7 +946,7 @@
     "featureIds": [
       "F058"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: choosing a label class and unticking a field leave the popover open"
   },
   {
@@ -955,7 +955,7 @@
     "featureIds": [
       "F059"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: untick a field, close the popover, reopen it; the field is still unticked"
   },
   {
@@ -964,7 +964,7 @@
     "featureIds": [
       "F059"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: change the label class and untick a field, then save; the save call carries the new class and hidden field as it did before the reorganisation"
   },
   {
@@ -973,7 +973,7 @@
     "featureIds": [
       "F060"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the saved status shows the formatted updated_at for a saved layout, 'Not saved yet' for a new one, and the created date in its title"
   },
   {
@@ -982,7 +982,7 @@
     "featureIds": [
       "F061"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #document-template-editor-close calls onCancel"
   },
   {
@@ -991,7 +991,7 @@
     "featureIds": [
       "F061"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #document-template-editor-save is disabled while saving and saves the edited name and version"
   },
   {
@@ -1000,7 +1000,7 @@
     "featureIds": [
       "F062"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a failed save renders the error alert inside the card header"
   },
   {
@@ -1009,7 +1009,7 @@
     "featureIds": [
       "F064"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: every header string the document editor uses resolves in each production locale of msp/invoicing and in xx / yy"
   },
   {
@@ -1018,7 +1018,7 @@
     "featureIds": [
       "F064"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: msp/invoicing no longer carries the removed description, details heading and footer keys, and no source file references them"
   },
   {
@@ -1027,7 +1027,7 @@
     "featureIds": [
       "F065"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the DocumentTemplateEditor existingDocument suite passes against the reorganised editor"
   },
   {

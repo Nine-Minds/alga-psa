@@ -2803,29 +2803,24 @@
     "editor": {
       "titles": {
         "create": "Nieuwe indeling voor {{type}}",
-        "edit": "Indeling voor {{type}} bewerken"
-      },
-      "description": "Ontwerp de indeling voor {{type}} in de visuele editor en bekijk deze daarna met voorbeeldgegevens.",
-      "errorTitle": "Indelingseditor voor {{type}}",
-      "sections": {
-        "details": "Indelingsgegevens"
+        "edit": "Lay-out bewerken: {{name}}"
       },
       "fields": {
-        "version": "Versie",
+        "created": "Gemaakt {{time}}",
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
-        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
+        "notSaved": "Nog niet opgeslagen",
+        "savedAt": "Opgeslagen {{time}}",
+        "version": "Versie"
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
       },
       "actions": {
-        "back": "Terug naar indelingen",
+        "back": "Terug naar {{type}}-indelingen",
+        "labelSettings": "Labelinstellingen",
         "save": "Indeling opslaan"
-      },
-      "labels": {
-        "created": "Gemaakt: {{date}}",
-        "lastUpdated": "Laatst bijgewerkt: {{date}}"
       },
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",

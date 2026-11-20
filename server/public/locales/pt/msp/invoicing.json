@@ -2803,29 +2803,24 @@
     "editor": {
       "titles": {
         "create": "Novo layout de {{type}}",
-        "edit": "Editar layout de {{type}}"
-      },
-      "description": "Crie o layout de {{type}} no editor visual e depois visualize-o com dados de exemplo.",
-      "errorTitle": "Editor de layout de {{type}}",
-      "sections": {
-        "details": "Detalhes do layout"
+        "edit": "Editar layout: {{name}}"
       },
       "fields": {
-        "version": "Versão",
+        "created": "Criado {{time}}",
         "labelClass": "Classe da etiqueta",
         "labelFields": "Campos exibidos na etiqueta",
-        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos."
+        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos.",
+        "notSaved": "Ainda não salvo",
+        "savedAt": "Salvo {{time}}",
+        "version": "Versão"
       },
       "placeholders": {
         "templateName": "Modelo de {{type}}"
       },
       "actions": {
-        "back": "Voltar aos layouts",
+        "back": "Voltar para Layouts de {{type}}",
+        "labelSettings": "Configurações de etiqueta",
         "save": "Salvar layout"
-      },
-      "labels": {
-        "created": "Criado: {{date}}",
-        "lastUpdated": "Última atualização: {{date}}"
       },
       "preview": {
         "sampleNote": "Gerado com dados de exemplo representativos de {{type}}.",

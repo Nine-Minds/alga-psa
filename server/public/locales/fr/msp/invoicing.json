@@ -2803,29 +2803,24 @@
     "editor": {
       "titles": {
         "create": "Nouvelle mise en page pour {{type}}",
-        "edit": "Modifier la mise en page pour {{type}}"
-      },
-      "description": "Concevez la mise en page pour le type « {{type}} » dans l’éditeur visuel, puis prévisualisez-la avec des données d’exemple.",
-      "errorTitle": "Éditeur de mise en page pour {{type}}",
-      "sections": {
-        "details": "Détails de la mise en page"
+        "edit": "Modifier la mise en page : {{name}}"
       },
       "fields": {
-        "version": "Version",
+        "created": "Créé {{time}}",
         "labelClass": "Classe d'étiquette",
         "labelFields": "Champs affichés sur l'étiquette",
-        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés.",
+        "notSaved": "Pas encore enregistré",
+        "savedAt": "Enregistré {{time}}",
+        "version": "Version"
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"
       },
       "actions": {
-        "back": "Retour aux mises en page",
+        "back": "Retour aux présentations de {{type}}",
+        "labelSettings": "Réglages d’étiquette",
         "save": "Enregistrer la mise en page"
-      },
-      "labels": {
-        "created": "Créée : {{date}}",
-        "lastUpdated": "Dernière mise à jour : {{date}}"
       },
       "preview": {
         "sampleNote": "Produite à partir de données d’exemple représentatives du type « {{type}} ».",
