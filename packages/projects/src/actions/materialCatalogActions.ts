@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { assertResourceOperationOpen } from '@alga-psa/authorization/recordCreateAuthorization';
 import type {
   IProjectMaterial,
   IService,
@@ -112,6 +113,7 @@ export const getProjectMaterialBillingOptions = withAuth(async (
     }
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx) => {
+      await assertResourceOperationOpen(trx, { tenant, user, resourceType: 'project', operation: 'project_materials' }, 'projects');
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
       const config = await trx('project_billing_configs')
         .where({ tenant, project_id: projectId })
@@ -141,11 +143,12 @@ export const getProjectMaterialBillingOptions = withAuth(async (
 });
 
 export const searchServiceCatalogForPicker = withAuth(async (
-  _user,
+  user,
   { tenant },
   options: CatalogPickerSearchOptions = {}
 ): Promise<{ items: CatalogPickerItem[]; totalCount: number }> => {
   const { knex: db } = await createTenantKnex();
+  await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'service_catalog' }, 'projects');
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const { items, totalCount } = await queryCatalogPickerItems(trx, tenant, options);
     return { items: items as CatalogPickerItem[], totalCount };
@@ -153,11 +156,12 @@ export const searchServiceCatalogForPicker = withAuth(async (
 });
 
 export const getServicePrices = withAuth(async (
-  _user,
+  user,
   { tenant },
   serviceId: string
 ): Promise<IServicePrice[]> => {
   const { knex: db } = await createTenantKnex();
+  await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'service_catalog' }, 'projects');
   return withTransaction(db, async (trx: Knex.Transaction) => {
     return queryServicePrices(trx, tenant, serviceId);
   });
@@ -174,6 +178,7 @@ export const listProjectMaterials = withAuth(async (
     }
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx) => {
+      await assertResourceOperationOpen(trx, { tenant, user, resourceType: 'project', operation: 'project_materials' }, 'projects');
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
       return await listMaterials(trx, tenant, 'project', projectId) as IProjectMaterial[];
     });

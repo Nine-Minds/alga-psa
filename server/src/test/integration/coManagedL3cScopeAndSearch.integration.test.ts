@@ -195,4 +195,83 @@ describe('CM L3c project scope access and search', () => {
     expect(byBody.typeahead.map(h => h.id)).not.toContain(taskId);
     expect(byBody.total).toBe(0);
   });
+
+  it.each(['tasks', 'project_tasks'])('C: a redacted whole-resource "%s" removes every task hit (results, typeahead, counts, groups, hidden description) and leaves project and phase alone', async resource => {
+    const { w, taskId } = await redactionWorld('gryphonslate', 'axolotlmoss');
+    const open = await searchAll(w, 'Redaction');
+    await setRelationshipRedactions(w, [resource]);
+    for (const term of ['gryphonslate', 'axolotlmoss']) {
+      const masked = await searchAll(w, term);
+      expect(masked.hits.filter(hit => hit.type === 'project_task')).toEqual([]);
+      expect(masked.typeahead.map(hit => hit.id)).not.toContain(taskId);
+      expect(masked.total).toBe(0);
+      expect(masked.byType).toEqual({});
+    }
+    const masked = await searchAll(w, 'Redaction');
+    expect(masked.hits.some(hit => hit.type === 'project_task')).toBe(false);
+    expect(masked.byType.project_task ?? 0).toBe(0);
+    expect(Object.keys(masked.byType)).not.toContain('project_task');
+    expect(masked.byType).toMatchObject({ project: open.byType.project, project_phase: open.byType.project_phase });
+    expect(masked.hits.filter(hit => hit.type !== 'project_task').map(hit => hit.id).sort())
+      .toEqual(open.hits.filter(hit => hit.type !== 'project_task').map(hit => hit.id).sort());
+  });
+
+  it('control: with no redactions the reader sees identical results, order and counts as before', async () => {
+    const { w, taskId } = await redactionWorld('basiliskfern', 'tapirdust');
+    const before = await searchAll(w, 'Redaction');
+    await setRelationshipRedactions(w, []);
+    const after = await searchAll(w, 'Redaction');
+    expect(after.hits.map(hit => hit.id)).toEqual(before.hits.map(hit => hit.id));
+    expect(after.byType).toEqual(before.byType);
+    expect(after.total).toBe(before.total);
+    expect(after.hits.map(hit => hit.id)).toContain(taskId);
+    expect(after.byType.project_task).toBe(1);
+  });
+
+  it('field-only: a hidden task_name keeps the task row under the placeholder title, and a field-level tasks.description does not drop it', async () => {
+    const { w, taskId } = await redactionWorld('ocelotbirch', 'wombatreed');
+    await setRelationshipRedactions(w, ['task_name']);
+    const hit = (await searchAll(w, 'Redaction')).hits.find(h => h.id === taskId);
+    expect(hit).toBeDefined();
+    expect(hit?.title).toBe('Project task');
+    // The same row is invisible to its real title: this is case A, seen from the other side.
+    expect((await searchAll(w, 'ocelotbirch')).total).toBe(0);
+
+    await setRelationshipRedactions(w, ['project_tasks.description']);
+    const byTerm = await searchAll(w, 'Redaction');
+    expect(byTerm.byType.project_task).toBe(1);
+    expect((await searchAll(w, 'wombatreed')).total).toBe(0);
+  });
+
+  it('D: a redacted tasks.description nulls the body and stops body-only matches, keeping the task row', async () => {
+    const { w, taskId } = await redactionWorld('marmotvale', 'pangolinash');
+    // Hits have no `body` field: the body is exposed only through `snippet` (ts_headline over the indexed body, undefined when empty).
+    // Sanity: unredacted, the snippet carries the description, so the undefined assertion below is meaningful.
+    const open = await searchAll(w, 'pangolinash');
+    expect(open.hits.find(h => h.id === taskId)?.snippet).toContain('pangolinash');
+
+    await setRelationshipRedactions(w, ['tasks.description']);
+    const hit = (await searchAll(w, 'Redaction')).hits.find(h => h.id === taskId);
+    expect(hit).toBeDefined();
+    expect(hit?.title).toBe('Project task');
+    expect(hit?.snippet).toBeUndefined();
+    const byBody = await searchAll(w, 'pangolinash');
+    expect(byBody.hits.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.typeahead.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.byType).toEqual({});
+    expect(byBody.total).toBe(0);
+  });
+
+  it('E: a redacted tasks.task_id removes every task hit (results, typeahead, counts, groups) and leaves project and phase alone', async () => {
+    const { w, taskId } = await redactionWorld('civetmarsh', 'dugongfern');
+    const open = await searchAll(w, 'Redaction');
+    await setRelationshipRedactions(w, ['tasks.task_id']);
+    const masked = await searchAll(w, 'Redaction');
+    expect(masked.hits.filter(hit => hit.type === 'project_task')).toEqual([]);
+    expect(masked.hits.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.typeahead.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.byType.project_task ?? 0).toBe(0);
+    expect(masked.byType).toMatchObject({ project: open.byType.project, project_phase: open.byType.project_phase });
+    expect(masked.hits.map(hit => hit.id).sort()).toEqual(open.hits.filter(hit => hit.type !== 'project_task').map(hit => hit.id).sort());
+  });
 });

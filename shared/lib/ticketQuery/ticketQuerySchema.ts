@@ -181,6 +181,31 @@ const COMPUTED_RESOLVERS = (() => {
       ],
     };
   },
+
+  /**
+   * `seat_responsibility equals client_it|msp`: who is responsible for a ticket of a client in a live
+   * co-managed seat arrangement (`co_managed_seat_ticket_work`, see seatTicketWork). A ticket with no
+   * work row is the MSP's. A work row written under an earlier arrangement does not count: under the
+   * client's current arrangement the ticket starts with the MSP. A ticket whose client has no live
+   * arrangement has no responsibility, so it matches neither value.
+   */
+  seat_responsibility: (alias, value) => {
+    const live = `EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+        AND __sa.client_id = ?? AND __sa.state = 'active'`;
+    const clientIt = `EXISTS (SELECT 1 FROM co_managed_seat_ticket_work AS __sw WHERE __sw.tenant = ??
+        AND __sw.ticket_id = ?? AND __sw.responsibility = 'client_it'
+        AND EXISTS (SELECT 1 FROM co_managed_seat_arrangements AS __sa WHERE __sa.tenant = ??
+          AND __sa.arrangement_id = __sw.arrangement_id AND __sa.client_id = ?? AND __sa.state = 'active'))`;
+    const itBindings = [`${alias}.tenant`, `${alias}.ticket_id`, `${alias}.tenant`, `${alias}.client_id`];
+    switch (scalar(value)) {
+      case 'client_it':
+        return { sql: clientIt, bindings: itBindings };
+      case 'msp':
+        return { sql: `${live}) AND NOT ${clientIt}`, bindings: [`${alias}.tenant`, `${alias}.client_id`, ...itBindings] };
+      default:
+        return { sql: 'FALSE', bindings: [] };
+    }
+  },
   } satisfies Record<string, Resolver>;
 })();
 
@@ -188,8 +213,8 @@ export type TicketComputedAttributeName = keyof typeof COMPUTED_RESOLVERS;
 
 /** Static facts about each computed attribute; the test asserts this is the complete set. */
 const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute, 'type' | 'operators'>> = {
-  title_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] },
-  description_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] },
+  title_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'] },
+  description_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'] },
   from_service_request: { type: 'boolean', operators: ['equals'] },
   service_request_definition_id: { type: 'uuid', operators: ['equals', 'in', 'is_empty', 'is_not_empty'] },
   board_inactive: { type: 'boolean', operators: ['equals'] },
@@ -198,6 +223,7 @@ const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute,
   category: { type: 'uuid', operators: ['in', 'not_in'] },
   sla_state: { type: 'string', operators: ['equals'] },
   involves_user: { type: 'uuid', operators: ['equals'] },
+  seat_responsibility: { type: 'string', operators: ['equals'] },
 };
 
 export const TICKET_COMPUTED_ATTRIBUTES = Object.keys(COMPUTED_RESOLVERS) as TicketComputedAttributeName[];
@@ -235,6 +261,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       priority_id: uuidColumn('priority_id'),
       category_id: uuidColumn('category_id'),
       subcategory_id: uuidColumn('subcategory_id'),
+      location_id: uuidColumn('location_id', ['equals', 'in', 'not_in', 'is_empty', 'is_not_empty']),
       assigned_to: uuidColumn('assigned_to'),
       assigned_team_id: uuidColumn('assigned_team_id'),
       master_ticket_id: uuidColumn('master_ticket_id', ['is_empty', 'is_not_empty']),
@@ -248,6 +275,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
       category: computed('category', nowIso),
       sla_state: computed('sla_state', nowIso),
       involves_user: computed('involves_user', nowIso),
+      seat_responsibility: computed('seat_responsibility', nowIso),
     },
     relations: {
       client: {
@@ -256,7 +284,7 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         local: 'client_id',
         foreign: 'client_id',
         attributes: {
-          id: uuidColumn('client_id', ['equals', 'in']),
+          id: uuidColumn('client_id', ['equals', 'in', 'not_in']),
           tags: tagSet({ taggedType: 'client', local: 'client_id' }),
         },
       },
@@ -268,6 +296,16 @@ export function createTicketQuerySchema(nowIso: () => string = () => new Date().
         attributes: {
           id: uuidColumn('contact_name_id', ['equals', 'in']),
           tags: tagSet({ taggedType: 'contact', local: 'contact_name_id' }),
+          // "Where the requester works", as a set: a person can be linked to several locations, so
+          // `in` means "linked to any of these" exactly as a tag clause does.
+          locations: {
+            kind: 'set',
+            table: 'contact_locations',
+            local: 'contact_name_id',
+            foreign: 'contact_name_id',
+            valueColumn: 'location_id',
+            valueType: 'uuid',
+          },
         },
       },
     },

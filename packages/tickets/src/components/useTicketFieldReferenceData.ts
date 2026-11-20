@@ -9,7 +9,7 @@ import { getPrioritiesByBoardType } from '@alga-psa/reference-data/actions/prior
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { getAllBoards } from '../actions/board-actions';
 import { getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
-import { getChecklistTemplates } from '../actions/checklists/checklistTemplateActions';
+import { getChecklistTemplateOptionsForEditor } from '../actions/checklists/checklistTemplateActions';
 import { isChecklistTemplateInScopeForClient } from '@alga-psa/shared/lib/ticketChecklists/scope';
 import { unwrapRecurring } from './recurring/recurringUi';
 
@@ -59,7 +59,10 @@ export interface TicketFieldReferenceData {
  * its overrides dialog): the same lookups the quick-add ticket dialog uses, loaded once, plus a per-board
  * cache so every board mentioned is fetched at most once.
  */
-export function useTicketFieldReferenceData(): TicketFieldReferenceData {
+export function useTicketFieldReferenceData(
+  resource: 'ticket_template' | 'recurring_ticket',
+  clientId: string | null = null
+): TicketFieldReferenceData {
   const [state, setState] = useState<Omit<TicketFieldReferenceData, 'ensureBoard' | 'boardData'>>({
     loading: true,
     error: null,
@@ -73,13 +76,14 @@ export function useTicketFieldReferenceData(): TicketFieldReferenceData {
 
   useEffect(() => {
     let cancelled = false;
+    setState((current) => ({ ...current, loading: true, error: null, checklistTemplates: [] }));
     void (async () => {
       try {
         const [users, boards, teams, templates] = await Promise.all([
           getAllUsers(false),
           getAllBoards(),
           getTeams(),
-          getChecklistTemplates(),
+          getChecklistTemplateOptionsForEditor({ resource, clientId }),
         ]);
         if (cancelled) return;
         setState({
@@ -105,7 +109,7 @@ export function useTicketFieldReferenceData(): TicketFieldReferenceData {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [resource, clientId]);
 
   const ensureBoard = useCallback(async (boardId: string) => {
     if (!boardId) return;

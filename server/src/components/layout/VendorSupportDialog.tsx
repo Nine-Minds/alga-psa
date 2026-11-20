@@ -64,6 +64,7 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState<string | null>(null);
   const [error, setError] = useState<VendorSupportRequestError | null>(null);
 
   const replyEmail = userEmail ?? '';
@@ -71,6 +72,7 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
   const handleClose = () => {
     setSubmitting(false);
     setSent(false);
+    setTicketNumber(null);
     setError(null);
     setSubject('');
     setDescription('');
@@ -93,6 +95,7 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
 
       if (result.success === true) {
         setSent(true);
+        setTicketNumber(result.ticketNumber ?? null);
       } else {
         outcome = result.error;
         setError(result.error);
@@ -118,10 +121,16 @@ export const VendorSupportDialog: React.FC<VendorSupportDialogProps> = ({
       <DialogContent>
         {sent ? (
           <p className="text-sm text-[rgb(var(--color-text-700))]">
-            {t('header.supportDialog.success', {
-              defaultValue: 'Sent to Nine Minds support. Replies go to {{email}}.',
-              email: replyEmail,
-            })}
+            {ticketNumber
+              ? t('header.supportDialog.successWithTicket', {
+                  defaultValue: 'Sent to Nine Minds support as ticket {{ticketNumber}}. Replies go to {{email}}.',
+                  ticketNumber,
+                  email: replyEmail,
+                })
+              : t('header.supportDialog.success', {
+                  defaultValue: 'Sent to Nine Minds support. Replies go to {{email}}.',
+                  email: replyEmail,
+                })}
           </p>
         ) : (
           <div className="space-y-4">

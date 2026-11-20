@@ -566,6 +566,17 @@
       "projectStatus": "Ausgangszustand",
       "projectTemplate": "Erstellen Sie ein Onboarding-Projekt (optional)",
       "title": "Als gewonnen markieren"
+    },
+    "declare": {
+      "title": "Zu {{stage}} verschieben",
+      "sourceLabel": "Unterstützende Quelle",
+      "noSource": "Keine Quelle",
+      "sourceHelp": "Optional. Verweisen Sie auf eine Interaktion oder ein Dokument dieses Deals. Hängen Sie ein Dokument zuerst an den Deal an, falls es nicht aufgeführt ist.",
+      "submit": "Festlegen",
+      "source": "Quelle",
+      "sourceRemoved": "Quelle entfernt",
+      "interactionFallback": "Interaktion",
+      "documentFallback": "Dokument"
     }
   }
 }

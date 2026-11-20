@@ -266,7 +266,11 @@
         "title": "{{tier}} è attivo",
         "description": "La tua licenza a pagamento è attiva su questa appliance.",
         "descriptionWithExpiry": "La tua licenza è attiva fino al {{date}}.",
-        "badge": "Con licenza"
+        "badge": "Con licenza",
+        "descriptionEnding": "Il tuo abbonamento è stato annullato. Pro resta attivo fino al {{date}}.",
+        "descriptionTermEnds": "Pro è attivo fino al {{date}}, quando termina la durata fissa.",
+        "descriptionPaymentFailed": "Pro è attivo, ma l’ultimo pagamento di rinnovo non è riuscito. Aggiorna il metodo di pagamento per mantenere Pro.",
+        "descriptionPaymentFailedEnded": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Pro resta attivo fino al {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "La licenza richiede attenzione",
@@ -291,6 +295,12 @@
         "title": "Stai usando Essentials",
         "description": "Essentials è attivo su questa appliance. Continua a usare il set principale di funzionalità oppure avvia un unico periodo di prova Pro di 15 giorni.",
         "badge": "Essentials attivo"
+      },
+      "subscriptionLapsed": {
+        "eyebrow": "Abbonamento terminato",
+        "title": "Ora stai usando l'edizione gratuita",
+        "description": "Il tuo abbonamento Pro è terminato. I dati vengono conservati e le funzioni Pro si riattivano quando ti riabboni.",
+        "badge": "Edizione gratuita"
       }
     },
     "trialCta": {
@@ -356,7 +366,31 @@
       "activateLicenseKey": "Impossibile attivare la chiave di licenza.",
       "activateClaimCode": "Impossibile attivare il codice di attivazione.",
       "startTrial": "Impossibile avviare il periodo di prova.",
-      "refreshLicense": "Impossibile aggiornare la licenza."
+      "refreshLicense": "Impossibile aggiornare la licenza.",
+      "credentialRevoked": "Le credenziali di licenza di questa appliance sono state revocate. Ricollegala con un nuovo codice di attivazione dal portale delle licenze.",
+      "subscriptionEnding": "Il tuo abbonamento Pro è stato annullato. Pro termina il {{date}}.",
+      "subscriptionEndingNoDate": "Il tuo abbonamento Pro è stato annullato.",
+      "subscriptionEnded": "Il tuo abbonamento Pro è terminato. Questa appliance usa l'edizione gratuita.",
+      "subscriptionEndingPaymentFailed": "Il tuo abbonamento Pro è terminato — pagamento non riuscito. Pro termina il {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Il tuo abbonamento Pro è terminato — pagamento non riuscito.",
+      "subscriptionEndedPaymentFailed": "Pro è terminato — pagamento non riuscito. La tua appliance usa Essentials.",
+      "resubscribeAt": "Riabbonati su {{url}}.",
+      "resubscribeToRestore": "Riabbonati per ripristinare Pro."
+    },
+    "lapse": {
+      "lapsedTitle": "Ora stai usando l'edizione gratuita. Riabbonati per ripristinare Pro.",
+      "endingTitle": "Il tuo abbonamento Pro è stato annullato.",
+      "endedOn": "Pro è terminato il {{date}}.",
+      "endsOn": "Pro termina il {{date}}.",
+      "dataKept": "Non viene eliminato nulla. I dati restano al loro posto e le funzioni Pro si riattivano dopo il riabbonamento e l'aggiornamento della licenza.",
+      "resubscribe": "Riabbonati",
+      "termEndsTitle": "Il tuo periodo Pro sta per terminare.",
+      "paymentFailedTitle": "Pagamento non riuscito — riproveremo il {{date}}. Aggiorna il metodo di pagamento per mantenere Pro.",
+      "paymentFailedTitleNoRetry": "Pagamento non riuscito. Aggiorna il metodo di pagamento per mantenere Pro.",
+      "paymentFailedEndedTitle": "Pro è terminato — pagamento non riuscito. La tua appliance funziona con Essentials.",
+      "paymentFailedEndingTitle": "Il tuo abbonamento Pro è terminato — pagamento non riuscito.",
+      "paymentFailedEndsOn": "Pro termina il {{date}} se il pagamento continua a non riuscire.",
+      "updatePaymentMethod": "Aggiorna il metodo di pagamento"
     }
   },
   "errors": {
@@ -364,6 +398,186 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "trial": {
+      "title": "Prova di 15 giorni per una postazione cogestita",
+      "description": "Invita un tecnico del cliente a lavorare sulle bacheche che scegli. I 15 giorni decorrono dal suo primo accesso. Per accedere occorre un abbonamento di base attivo o una prova attiva del piano di base.",
+      "terms": "Una postazione a pagamento costa {{amount}} al mese. La prova termina senza addebiti, a meno che non confermi la capacità a pagamento.",
+      "status": {
+        "active": "Attiva",
+        "pending": "In attesa del primo accesso",
+        "base_paused": "Abbonamento di base in pausa",
+        "expired": "Prova scaduta",
+        "paid": "Postazione a pagamento in uso",
+        "ended": "Prova terminata",
+        "checkout_pending": "In attesa del pagamento"
+      },
+      "purchaseAwaitingVerification": "Acquisto in attesa di verifica",
+      "conversionFailed": "Il passaggio a una postazione a pagamento non è stato completato. Verifica la capacità a pagamento disponibile o riprova a effettuare l’acquisto.",
+      "deadline": "La prova della postazione termina il {{date}}.",
+      "baseUntil": "L’accesso di base attuale termina il {{date}}.",
+      "openSetup": "Apri la configurazione della postazione del cliente",
+      "invite": "Invita il tecnico per 15 giorni",
+      "resend": "Invia nuovamente l’invito",
+      "replace": "Sostituisci il tecnico",
+      "cancelInvitation": "Annulla l’invito",
+      "restoreBase": "Ripristina l’accesso di base in Account",
+      "resumePurchase": "Riprendi l’acquisto",
+      "cancelConversion": "Annulla la conversione della postazione",
+      "spareSeatTerms": "Usa subito una postazione a pagamento disponibile. Il totale delle postazioni del gruppo rimane invariato.",
+      "confirmSpareSeat": "Conferma l’uso di una postazione a pagamento",
+      "keepSeat": "Mantieni questa postazione",
+      "refresh": "Aggiorna lo stato della prova",
+      "returnToTrial": "Torna alla prova della postazione del cliente",
+      "notice": {
+        "invitationSaved": "Invito salvato. Riprova a inviarlo qui sotto.",
+        "deliveryFailed": "Invio non riuscito. Puoi riprovare.",
+        "replacementSent": "Invito inviato al tecnico sostitutivo.",
+        "replacementSaved": "Tecnico sostitutivo salvato. Riprova a inviare l’invito."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossibile caricare le bacheche disponibili.",
+        "actionFailed": "Impossibile completare l’operazione. Aggiorna lo stato della prova e riprova.",
+        "paymentFailed": "Impossibile completare il pagamento. Controlla lo stato della prova."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Questo spazio di lavoro non ha un pool cogestito. Aggiungi postazioni cogestite per usarlo.",
+        "lapsed": "Il pool cogestito è scaduto. Ripristinalo prima di aggiungere postazioni.",
+        "capacity": "Il pool non ha più postazioni disponibili. Aggiungi postazioni al pool o liberane alcune da un altro cliente.",
+        "clientInactive": "Riattiva questo cliente prima di abilitare l’IT cogestita.",
+        "clientNotFound": "Questo cliente non è più disponibile.",
+        "hasArrangement": "Questo cliente ha già l’IT cogestita. Aggiorna per vederla."
+      },
+      "error": {
+        "operationConflict": "Questa richiesta è già stata inviata con dettagli diversi. Aggiorna e ricomincia.",
+        "invalidSeats": "Inserisci un numero intero di postazioni, almeno 1.",
+        "invalidInvitation": "Scegli un contatto da invitare.",
+        "contactNotFound": "Questo contatto non è più disponibile. Scegli un altro contatto.",
+        "contactWrongClient": "Questo contatto appartiene a un altro cliente. Scegli un contatto di questo cliente.",
+        "contactInactive": "Questo contatto è inattivo. Riattivalo prima.",
+        "contactNoEmail": "Questo contatto non ha un indirizzo email. Aggiungine uno al contatto prima.",
+        "contactHasSeat": "Questo contatto ha già un posto o un invito in sospeso.",
+        "emailInUse": "Questa email appartiene già a un account utente. Usa un altro indirizzo.",
+        "emailInvited": "Questa email ha già un invito in sospeso.",
+        "seatLimit": "Tutte le postazioni sono in uso. Aggiungi postazioni o ritira prima un invito.",
+        "poolLimit": "Il pool non ha così tante postazioni disponibili.",
+        "allocationConflict": "Le postazioni sono cambiate durante la modifica. Aggiorna e riprova.",
+        "board": "Una bacheca selezionata non è più disponibile. Aggiorna e scegli di nuovo.",
+        "project": "Un progetto selezionato non è più disponibile. Aggiorna e scegli di nuovo.",
+        "handoffUser": "La persona selezionata non è più disponibile. Scegli un’altra persona.",
+        "notPending": "Questo tecnico ha già accettato, quindi l’invito non può essere modificato.",
+        "arrangementGone": "Questo accordo di postazioni non è più attivo. Aggiorna per vederne lo stato.",
+        "generic": "Non ha funzionato. Aggiorna e riprova.",
+        "load": "Impossibile caricare le opzioni. Aggiorna e riprova.",
+        "submit": "La richiesta potrebbe non essere stata completata. Riprova; non verrà applicata due volte."
+      },
+      "purchase": {
+        "checking": "Controllo del pool…",
+        "review": "Il pool ha troppi pochi posti. Rivedi l'acquisto per assegnare {{count}} posti.",
+        "waiting": "In attesa del completamento dell'acquisto. I {{count}} posti verranno assegnati non appena il pool li avrà.",
+        "stalled": "I nuovi posti non sono ancora comparsi. Controlla di nuovo a breve; non ti verrà addebitato due volte.",
+        "failed": "Il pagamento non è andato a buon fine. Riprova lo stesso acquisto per assegnare {{count}} posti.",
+        "check": "Controlla di nuovo",
+        "cancel": "Annulla",
+        "error": "Impossibile controllare il pool. Aggiorna e riprova; nulla viene addebitato due volte."
+      },
+      "saved": "Salvato.",
+      "boards": {
+        "title": "Ambito delle bacheche",
+        "hint": "I tecnici lavorano i ticket di questo cliente sulle bacheche selezionate qui. Se non ne è selezionata nessuna, non vedono ticket.",
+        "save": "Salva ambito delle bacheche",
+        "none": "Non ci sono bacheche tra cui scegliere.",
+        "canCreate": "Può creare ticket"
+      },
+      "projects": {
+        "title": "Progetti condivisi",
+        "hint": "Progetti di questo cliente che i suoi tecnici possono aprire.",
+        "none": "Questo cliente non ha progetti da condividere.",
+        "save": "Salva progetti condivisi"
+      },
+      "handoff": {
+        "title": "Impostazioni predefinite del passaggio",
+        "assignee": "Assegna i ticket passati a te a",
+        "nobody": "Lascia non assegnato",
+        "save": "Salva impostazioni predefinite del passaggio"
+      },
+      "client": {
+        "seatArrangement": "Accordo di postazioni",
+        "summary": "Accordo di postazioni: {{used}} di {{count}} postazioni in uso"
+      },
+      "technicians": {
+        "sent": "Invito inviato.",
+        "notSent": "La postazione è riservata, ma l’email non è stata inviata. Invia di nuovo.",
+        "name": "Nome",
+        "email": "Email",
+        "status": "Stato",
+        "active": "Attivo",
+        "expired": "Invito scaduto",
+        "invited": "Invitato",
+        "resend": "Invia di nuovo",
+        "withdraw": "Ritira",
+        "title": "Tecnici",
+        "none": "Ancora nessun tecnico.",
+        "invite": "Invita tecnico",
+        "withdrawTitle": "Ritira invito",
+        "withdrawMessage": "Ritirare l’invito per {{email}}? La postazione torna a questo accordo.",
+        "withdrawn": "Invito ritirato."
+      },
+      "panel": {
+        "title": "Accordo di postazioni",
+        "usage": "{{used}} di {{count}} postazioni in uso",
+        "allocation": "Postazioni assegnate",
+        "changeSeats": "Modifica postazioni"
+      },
+      "access": {
+        "title": "Accesso e passaggio"
+      },
+      "setup": {
+        "seats": "Numero di postazioni",
+        "boards": "Bacheche nell’ambito",
+        "boardsHint": "I tecnici vedono i ticket della loro azienda solo su queste bacheche.",
+        "technician": "Primo tecnico",
+        "technicianHint": "Scegli un contatto di questo cliente. Viene invitato via email.",
+        "submit": "Abilita postazioni",
+        "title": "Accordo di postazioni"
+      },
+      "contact": {
+        "label": "Tecnico",
+        "placeholder": "Scegli un contatto",
+        "addedNoEmail": "{{name}} è stato aggiunto ma non ha un indirizzo email, quindi non può ancora essere invitato.",
+        "addedUnavailable": "{{name}} è stato aggiunto ma non può essere invitato.",
+        "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
+      },
+      "chooser": {
+        "seat": "Postazione",
+        "seatHint": "I tecnici del cliente lavorano nel tuo PSA, limitati alla loro azienda.",
+        "workspace": "Spazio di lavoro",
+        "workspaceHint": "Il team IT del cliente ha un proprio service desk e inoltra in escalation a te.",
+        "description": "Scegli come il team IT di questo cliente lavora con te.",
+        "shape": "Formula cogestita",
+        "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate."
+      },
+      "states": {
+        "active": "Attivo",
+        "ended": "Terminato"
+      }
+    },
+    "portableExport": {
+      "title": "Esporta area di lavoro",
+      "description": "Scarica un archivio portabile e crittografato dei record e dei file della tua area di lavoro.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l’archivio non può essere aperto.",
+      "connections": "L’archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, così come la cronologia di tempi, pianificazioni, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Dati di fatturazione, dati privati dell’MSP e segreti delle integrazioni non sono inclusi.",
+      "passphrase": "Passphrase di recupero",
+      "confirmPassphrase": "Conferma passphrase di recupero",
+      "download": "Prepara e scarica l’archivio",
+      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
+      "loadError": "Non puoi esportare questa area di lavoro con il tuo accesso attuale.",
+      "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
+      "matchError": "Le passphrase di recupero devono corrispondere.",
+      "unavailable": "L’esportazione dell’area di lavoro non è disponibile in questa edizione.",
+      "loading": "Caricamento…"
+    },
     "acceptance": {
       "accept": "Accetta e attiva lo spazio di lavoro",
       "administratorRequired": "Un amministratore locale dello spazio di lavoro deve accettare questa relazione prima che il tuo team possa iniziare.",
@@ -425,6 +639,10 @@
     },
     "loading": "Caricamento della capacità di postazioni per i clienti…",
     "overview": {
+      "shape": "Formula",
+      "state": "Stato",
+      "seatsUsed": "Postazioni in uso",
+      "seatsAllocated": "Postazioni assegnate",
       "actions": "Azioni",
       "client": "Cliente",
       "empty": "Nessun cliente cogestito corrisponde a questa ricerca.",
@@ -436,7 +654,8 @@
       "workspace": "Area di lavoro",
       "capacity": "{{allocated}} di {{count}} postazioni co-gestite assegnate.",
       "openClient": "Configura l’IT co-gestita per questo cliente",
-      "readOnly": "L'IT co-gestito è in sola lettura per questo spazio di lavoro. Vengono mostrate le relazioni esistenti; una nuova configurazione non è disponibile."
+      "readOnly": "L'IT co-gestito è in sola lettura per questo spazio di lavoro. Vengono mostrate le relazioni esistenti; una nuova configurazione non è disponibile.",
+      "slaPriorities": "Mappature delle priorità SLA"
     },
     "provisioning": {
       "administrator": "Amministratore",
@@ -517,6 +736,8 @@
     "proRequired": "Per sponsorizzare gli spazi di lavoro dei clienti è richiesto un abbonamento PSA Pro.",
     "loadError": "Impossibile caricare la capacità delle postazioni cliente. Riprova.",
     "purchaseError": "Impossibile completare l'acquisto delle postazioni. Puoi riprenderlo in sicurezza.",
+    "termsChanged": "Il prezzo è cambiato dopo la verifica. Controlla le condizioni aggiornate prima di confermare.",
+    "offerUnavailable": "L’acquisto di nuovi posti è temporaneamente non disponibile. Non è stato addebitato alcun importo.",
     "checkoutExpired": "Questo checkout è scaduto. Avvia un nuovo acquisto per continuare.",
     "grace": "Rinnova la licenza o risolvi la carenza di capacità entro il {{date}} per mantenere modificabili gli spazi di lavoro dei clienti.",
     "readOnly": "Il periodo di tolleranza è terminato il {{date}}. Ripristina la capacità in licenza per riprendere le modifiche agli spazi di lavoro dei clienti.",
@@ -524,7 +745,19 @@
     "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
     "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
     "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "buySeats": "Acquista posti in co-gestione",
+    "awaitingVerification_one": "Il tuo acquisto di {{count}} posto è in attesa della verifica del pagamento. Il posto comparirà qui dopo la conferma del pagamento.",
+    "awaitingVerification_other": "Il tuo acquisto di {{count}} posti è in attesa della verifica del pagamento. I posti compariranno qui dopo la conferma del pagamento.",
+    "refreshStatus": "Aggiorna stato",
+    "purchaseOnly": {
+      "intro": "Acquista qui un pool di posti in co-gestione. Dopo l'acquisto, assegna i posti ai clienti dalla scheda di ciascun cliente."
+    },
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "billingCustomerUnlinked": "Impossibile verificare un account di fatturazione Stripe per questo spazio di lavoro. Contatta l’assistenza per collegarlo.",
+    "proSubscriptionRequired": "Le postazioni in cogestione richiedono un abbonamento Pro in corso. Verifica il tuo abbonamento in Gestione account.",
+    "offerPaused": "Gli acquisti di nuovi posti sono sospesi. Contatta il tuo account manager per aggiornamenti.",
+    "offerMisconfigured": "L’offerta di posti co-gestiti non è configurata correttamente. Contatta il supporto.",
+    "offerTemporarilyUnavailable": "Il servizio di determinazione dei prezzi è temporaneamente non disponibile. Riprova tra poco.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",
     "purchaseUnavailable": "L'acquisto di co-gestione ospitata non è disponibile in questa distribuzione.",
@@ -579,7 +812,22 @@
       "previous": "Indietro",
       "priority": "Priorità",
       "status": "Stato",
-      "titleColumn": "Titolo"
+      "titleColumn": "Titolo",
+      "title": "Ticket dei clienti",
+      "view": "Vista",
+      "columns": "Colonne",
+      "density": "Densità",
+      "filters": "Filtri",
+      "client": "Cliente",
+      "allClients": "Tutti i clienti",
+      "share": "Condividi",
+      "clearSignal": "Rimuovi",
+      "unavailable": "Questa vista non è ancora disponibile per il tuo account.",
+      "allTickets": "Tutti i ticket",
+      "signals": {
+        "escalatedUnassigned": "Escalation non assegnati",
+        "awaitingReply": "In attesa della tua risposta"
+      }
     },
     "delegation": {
       "actions": "Azioni",
@@ -659,7 +907,8 @@
       "viewer": "Visualizzatore",
       "viewOnly": "Sola lettura",
       "visibility": "Visibilità dei ticket",
-      "whyTitle": "Perché qualcuno non riesce a vederlo?"
+      "whyTitle": "Perché qualcuno non riesce a vederlo?",
+      "readOnly": "Puoi visualizzare questa configurazione ma non modificarla."
     },
     "sharedTasks": {
       "link": "Attività condivise",
@@ -694,6 +943,7 @@
       "noTasks": "Questo progetto non ha attività che puoi vedere.",
       "assignment": "Assegnazione",
       "assignedTo": "Assegnata a {{name}}",
+      "assignedHidden": "Assegnata (nome nascosto)",
       "assignConflict": "Questa attività è stata assegnata o modificata da qualcun altro. È stata ricaricata; riprova se ne hai ancora bisogno.",
       "assignFailed": "Impossibile assegnare questa attività.",
       "assignMe": "Assegna a me",
@@ -714,7 +964,315 @@
       "reloadLatest": "Ricarica l'ultima versione",
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
-      "save": "Salva"
+      "save": "Salva",
+      "projectNotFound": "Questo progetto non è disponibile. Potrebbe non essere più condiviso con te."
+    },
+    "sla": {
+      "title": "Priorità SLA in co-gestione",
+      "description": "Scegli quale delle tue priorità, e quindi quale dei tuoi obiettivi SLA, si applica quando un cliente escala un ticket di ciascuna priorità.",
+      "missingPolicy": "Nessuna policy SLA configurata",
+      "settings": "Gestisci le policy SLA",
+      "mappingFor": "La priorità cliente {{name}} corrisponde a",
+      "unmapped": "Non associata"
+    },
+    "portableExport": {
+      "title": "Esporta area di lavoro",
+      "description": "Scarica un archivio portabile e crittografato con i record e i file della tua area di lavoro.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l'archivio non può essere aperto.",
+      "connections": "L'archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, oltre alla cronologia di tempo, pianificazione, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Fatturazione, dati privati dell'MSP e segreti di integrazione non sono inclusi.",
+      "passphrase": "Passphrase di recupero",
+      "confirmPassphrase": "Conferma passphrase di recupero",
+      "download": "Prepara e scarica archivio",
+      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
+      "loadError": "Non puoi esportare quest'area di lavoro con il tuo accesso attuale.",
+      "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
+      "matchError": "Le passphrase di recupero devono coincidere.",
+      "unavailable": "L'esportazione dell'area di lavoro non è disponibile in questa edizione.",
+      "loading": "Caricamento…"
+    },
+    "section": {
+      "title": "Cogestione",
+      "viewHistory": "Visualizza cronologia dei passaggi",
+      "responsible": "Responsabile",
+      "change": "Modifica",
+      "privateTo": "Privato per {{organization}}"
+    },
+    "ticket": {
+      "title": "Ticket cogestito",
+      "escalate": "Inoltra all’MSP",
+      "handback": "Restituisci al cliente",
+      "takeBack": "Riprendi",
+      "revoke": "Revoca accesso al ticket",
+      "escalateHelp": "L’MSP assume subito la responsabilità. Aggiungi il contesto necessario per proseguire.",
+      "handbackHelp": "La responsabilità torna al cliente. L’MSP mantiene l’accesso approvato al ticket.",
+      "revokeHelp": "L’accesso individuale al ticket viene revocato e la responsabilità torna al cliente. Gli accessi alla bacheca approvati separatamente restano validi.",
+      "note": "Nota di passaggio",
+      "noteAudience": "Visibile al personale IT autorizzato di entrambe le organizzazioni. Questa nota non viene inviata ai richiedenti.",
+      "uncertain": "Impossibile confermare il risultato. Riprova la stessa richiesta o ricarica lo stato attuale prima di altre modifiche.",
+      "saving": "Salvataggio…",
+      "retry": "Riprova",
+      "reload": "Ricarica stato attuale",
+      "cancel": "Annulla",
+      "loadError": "Impossibile caricare il ticket o l’elenco degli accessi. Le autorizzazioni potrebbero essere cambiate.",
+      "loading": "Caricamento…",
+      "restricted": "Ticket con accesso limitato",
+      "responsibility": "Responsabile: {{organization}}",
+      "formerSponsor": "MSP precedente",
+      "readOnly": "Questo spazio è in sola lettura. Gli amministratori del cliente possono ancora revocare gli accessi.",
+      "history": "Cronologia condivisa dei passaggi IT",
+      "noHistory": "Nessun passaggio visibile.",
+      "historyError": "Impossibile caricare la cronologia dei passaggi.",
+      "older": "Carica precedenti",
+      "transitions": {
+        "escalated": "Inoltrato all’MSP",
+        "handed_back": "Restituito al cliente",
+        "access_revoked": "Accesso individuale al ticket revocato"
+      },
+      "assignment": {
+        "needsHandoff": "Inoltra questo ticket al MSP prima di assegnare il suo personale.",
+        "unavailable": "Il collaboratore MSP assegnato non è più disponibile."
+      },
+      "refusal": {
+        "invalidHandoff": "Fornisci un passaggio valido con una nota IT condivisa.",
+        "handoffChanged": "Questo passaggio è cambiato da quando lo hai aperto. Ricarica il ticket e riprova.",
+        "alreadyResponsible": "La responsabilità di questo ticket è già quella richiesta. Ricarica per vedere chi è responsabile ora.",
+        "alreadyRevoked": "L’accesso a questo ticket è già stato revocato.",
+        "destinationUnavailable": "La destinazione MSP approvata non è disponibile.",
+        "capabilityUnavailable": "Questa operazione non è al momento disponibile per il tuo spazio di lavoro.",
+        "notAvailable": "Questo ticket non è più condiviso o non è più disponibile per te.",
+        "readOnly": "Questo ticket è attualmente di sola lettura, quindi non è possibile apportare questa modifica."
+      }
+    },
+    "callout": {
+      "title": "Alcuni ticket dei clienti hanno bisogno di te",
+      "escalatedUnassigned_one": "{{count}} ticket in escalation non assegnato",
+      "escalatedUnassigned_other": "{{count}} ticket in escalation non assegnati",
+      "awaitingReply_one": "{{count}} ticket in attesa della tua risposta",
+      "awaitingReply_other": "{{count}} ticket in attesa della tua risposta",
+      "dismiss": "Chiudi"
+    },
+    "queue": {
+      "title": "Code dei ticket cogestiti",
+      "workingDescription": "Ticket condivisi di cui il tuo team è responsabile o a cui è assegnato.",
+      "oversightDescription": "Ticket dei clienti entro gli accessi approvati, inclusi quelli gestiti dal loro team IT.",
+      "view": "Vista",
+      "working": "Coda di lavoro",
+      "oversight": "Supervisione clienti",
+      "workspace": "Spazio di lavoro",
+      "allWorkspaces": "Tutti gli spazi",
+      "state": "Stato",
+      "open": "Aperti",
+      "closed": "Chiusi",
+      "all": "Tutti gli stati",
+      "sort": "Ordina per",
+      "direction": "Ordine",
+      "asc": "Crescente",
+      "desc": "Decrescente",
+      "search": "Cerca ticket",
+      "loadError": "Impossibile caricare i ticket. Aggiorna per verificare il tuo accesso.",
+      "counts_one": "{{count}} ticket · {{open}} aperto · {{closed}} chiuso",
+      "counts_other": "{{count}} ticket · {{open}} aperti · {{closed}} chiusi",
+      "empty": "Nessun ticket consentito corrisponde a questi filtri.",
+      "emptyUnfiltered": "Non ci sono ancora ticket dei clienti da mostrare.",
+      "retry": "Riprova",
+      "page": "Pagina {{page}}",
+      "sortFields": {
+        "updated": "Ultimo aggiornamento",
+        "created": "Creazione",
+        "title": "Titolo",
+        "number": "Numero ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Spazio di lavoro",
+        "state": "Stato",
+        "status": "Stato",
+        "priority": "Priorità",
+        "responsibility": "Organizzazione responsabile",
+        "updated": "Aggiornamento",
+        "title": "Titolo"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT del cliente"
+      },
+      "export": "Esporta CSV",
+      "exporting": "Esportazione…",
+      "exportError": "Impossibile esportare i ticket. Aggiorna la coda e riprova.",
+      "bulkHandback": {
+        "title": "Restituisci i ticket al team IT del cliente",
+        "select": "Seleziona i ticket di questa pagina. La stessa nota IT condivisa verrà aggiunta a ogni ticket selezionato.",
+        "returned": "Restituito al team IT del cliente",
+        "forbidden": "Accesso negato",
+        "changed": "Il ticket è cambiato. Aggiorna prima di riprovare.",
+        "invalid": "Selezione non valida",
+        "selected": "Verranno restituiti {{count}} ticket selezionati.",
+        "resume": "Un rinvio all'IT del cliente è stato interrotto. Riprendilo per confermare l'esito.",
+        "noReloadRecovery": "Il recupero dopo il ricaricamento non è disponibile in questo browser; puoi comunque riprovare in questa sessione.",
+        "done": "Completato",
+        "selectAll": "Seleziona tutti i ticket restituibili",
+        "selectRow": "Seleziona ticket",
+        "readOnly": "Accesso in sola lettura"
+      },
+      "scopeUnavailable": "Apertura dell'elenco dei ticket…",
+      "searchPlaceholder": "Cerca per numero o titolo",
+      "mspAlsoAssigned": "MSP assegnato anche",
+      "unavailableWorkspace": "Area di lavoro non disponibile",
+      "reset": "Reimposta"
+    },
+    "projects": {
+      "assignment": {
+        "title": "Assegnazione al MSP",
+        "unassigned": "Non assegnato al MSP",
+        "kind": "Assegna a",
+        "user": "Tecnico",
+        "team": "Team",
+        "assignee": "Responsabile",
+        "more": "Altri responsabili",
+        "assign": "Assegna",
+        "clear": "Rimuovi assegnazione al MSP"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Alcuni valori non sono validi. Controlla le modifiche e riprova.",
+        "conflict": "Questo ticket è stato modificato. Ricaricalo prima di salvare le tue modifiche.",
+        "operationConflict": "Questa richiesta di salvataggio è già stata usata per un’altra modifica. Ricarica il ticket.",
+        "forbidden": "Il tuo accesso a questo ticket è cambiato. Ricarica per continuare.",
+        "readOnly": "Questo spazio è di sola lettura. Ricarica per visualizzarne lo stato attuale.",
+        "closeRules": "Il ticket deve soddisfare i requisiti di chiusura della sua bacheca prima di poter essere chiuso.",
+        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica.",
+        "slaSetupRequired": "Il MSP deve configurare la policy SLA e la corrispondenza delle priorità prima di riaprire questo ticket sotto la propria responsabilità."
+      }
+    },
+    "attachments": {
+      "title": "Allegati",
+      "add": "Allega file",
+      "choose": "Scegli file",
+      "help": "I file ereditano la visibilità di questo messaggio. Massimo {{size}} MiB.",
+      "uploading": "Caricamento…",
+      "upload": "Carica",
+      "invalid": "Scegli un file consentito entro il limite di dimensione.",
+      "loadError": "Gli allegati non sono disponibili. Aggiorna per verificare il tuo accesso.",
+      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file.",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovi allegato",
+      "removeHelp": "Rimuovere {{name}} da questo messaggio? Chi visualizza il messaggio non potrà più scaricare questo file.",
+      "removeUnknownOutcome": "Impossibile confermare la rimozione. Riprova per verificare lo stesso file.",
+      "removing": "Rimozione…",
+      "removeNamed": "Rimuovi {{name}}"
+    },
+    "disclosure": {
+      "title": "Modifica il pubblico della discussione",
+      "review": "Rivedi",
+      "confirm": "Conferma modifica",
+      "scope": "Questo cambia il pubblico dell’intera discussione: {{comments}} messaggi e {{attachments}} allegati.",
+      "current": "Pubblico attuale: {{audience}}",
+      "help": "Risposte e allegati ereditano questo pubblico. Limitare l’accesso non recupera le informazioni già lette o scaricate.",
+      "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
+      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica.",
+      "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura.",
+      "open": "Modifica chi può vedere questa conversazione"
+    },
+    "conversation": {
+      "audience": "Visibile a",
+      "audiences": {
+        "requester": "Richiedente e team IT",
+        "shared_it": "Team IT condivisi",
+        "organization_private": "Solo la mia organizzazione"
+      },
+      "audienceHelp": {
+        "requester": "Visibile ai richiedenti autorizzati e al personale IT di entrambe le organizzazioni.",
+        "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
+        "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
+      },
+      "drafts": {
+        "title": "Messaggi non inviati",
+        "help": "Questi messaggi sono stati iniziati ma non inviati. Controllane uno, seleziona di nuovo i file mancanti, poi invialo o scartalo.",
+        "fileReady": "Caricato",
+        "fileMissing": "Da selezionare di nuovo",
+        "choose": "Seleziona i file mancanti",
+        "resume": "Invia",
+        "discard": "Scarta",
+        "missing": "Prima di inviare, seleziona ogni file mancante con lo stesso nome.",
+        "unsent": "Non è stato possibile confermare l’invio del messaggio e dei file. Sono salvati e compariranno in «Messaggi non inviati»: riprendili o scartali da lì."
+      },
+      "files": {
+        "choose": "Allega file",
+        "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",
+        "remove": "Rimuovi",
+        "removeNamed": "Rimuovi {{name}}",
+        "invalid": "Rimuovi i file che superano il limite di dimensione o quantità prima di inviare.",
+        "preparing": "Preparazione dei file…",
+        "uploading": "Caricati {{completed}} di {{total}} file…",
+        "publishing": "Pubblicazione del messaggio e dei file…",
+        "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
+        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare.",
+        "abandoned": "Questa bozza è stata eliminata. Salva di nuovo per creare un nuovo messaggio con i file selezionati.",
+        "audienceUnavailable": "Non è possibile allegare file ai messaggi per questo pubblico. Rimuovi i file o scegli un altro pubblico.",
+        "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
+        "canceling": "Annullamento…"
+      },
+      "title": "Conversazione",
+      "reload": "Ricarica",
+      "loadError": "Impossibile caricare la conversazione.",
+      "readOnly": "Puoi leggere questa conversazione, ma non aggiungere messaggi.",
+      "new": "Nuovo commento",
+      "empty": "Ancora nessun commento.",
+      "restrictedAuthor": "Autore nascosto",
+      "replyMarker": "Risposta",
+      "deleted": "Questo commento è stato eliminato.",
+      "reply": "Rispondi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "newer": "Più recenti",
+      "older": "Meno recenti",
+      "message": "Messaggio",
+      "deleteHelp": "Il commento viene sostituito da un indicatore di eliminazione. Le risposte restano nel thread.",
+      "conflict": "Questo commento è cambiato da quando l’hai aperto. Annulla e ricarica per continuare.",
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova; non verrà applicato due volte.",
+      "invalid": "Impossibile salvare questo commento.",
+      "send": "Invia",
+      "cancel": "Annulla"
+    },
+    "upgrade": {
+      "title": "Passa ad AlgaPSA",
+      "description": "Usa questo spazio di lavoro in modo indipendente con la tua licenza AlgaPSA a pagamento.",
+      "preserved": "Ticket, progetti, documenti e cronologia restano in questo spazio di lavoro.",
+      "trustEnds": "Il passaggio termina l’accesso attivo del tuo MSP e libera i posti di co-gestione. Il tuo MSP conserva l’archivio delle attività consentite.",
+      "alreadyDeparted": "Il rapporto con il tuo MSP è già terminato. L’archivio esistente resta invariato.",
+      "seats": "Posti tecnici a pagamento richiesti: {{count}}",
+      "hosting": "Il passaggio mantiene l’hosting attuale. Per lasciare questa installazione è necessario esportare e ripristinare i dati separatamente.",
+      "licenseRequired": "Attiva una licenza Pro associata al tenant e con posti sufficienti prima di procedere.",
+      "subscriptionRequired": "Prima di procedere è necessario un abbonamento AlgaPSA attivo e pagato, intestato a questo spazio di lavoro.",
+      "manageLicense": "Gestisci la licenza dello spazio di lavoro",
+      "running": "Il passaggio è in corso. La pagina si aggiornerà al termine.",
+      "failed": "Il passaggio non è riuscito. Controlla il tuo diritto d’uso e riprova.",
+      "unavailable": "L’avanzamento del passaggio non è al momento disponibile. Aggiorna per controllare di nuovo.",
+      "start": "Passa lo spazio di lavoro",
+      "refresh": "Aggiorna stato",
+      "completed": "Questo spazio di lavoro è ora indipendente su AlgaPSA.",
+      "openPsa": "Apri AlgaPSA",
+      "loadError": "Impossibile caricare lo stato del passaggio. Aggiorna e riprova.",
+      "startError": "Impossibile avviare il passaggio. Puoi inviare di nuovo la richiesta.",
+      "confirmTitle": "Passare questo spazio di lavoro?",
+      "confirmMessage": "Lo spazio di lavoro verrà convertito ad AlgaPSA e ogni rapporto MSP attivo terminerà. Il tuo diritto d’uso a pagamento coprirà questo spazio. L’hosting dei dati non cambierà.",
+      "cancel": "Annulla",
+      "billingInterval": "Frequenza di fatturazione",
+      "month": "Mensile",
+      "year": "Annuale",
+      "paymentProcessing": "Il pagamento è in elaborazione. Aggiorna lo stato o riprendi l’acquisto per controllare di nuovo.",
+      "purchaseScope": "Questo acquisto copre questo spazio di lavoro. L’accesso MSP termina solo quando confermi il passaggio dopo il pagamento.",
+      "paymentFailed": "Il pagamento iniziale non è riuscito. Puoi avviare un nuovo checkout dopo aver chiuso questo tentativo non pagato.",
+      "retryPayment": "Riprova il pagamento",
+      "retryTitle": "Riprova questo pagamento?",
+      "retryMessage": "Chiudi questo tentativo di pagamento non riuscito e apri un nuovo checkout. L’accesso MSP e i posti di co-gestione restano attivi.",
+      "billingTitle": "La tua fatturazione AlgaPSA",
+      "paymentMethod": "Aggiorna metodo di pagamento",
+      "paidSeats": "Posti tecnici a pagamento",
+      "reviewSeatChange": "Rivedi la modifica dei posti",
+      "billingError": "Impossibile aprire la fatturazione. Aggiorna lo stato e riprova.",
+      "purchaseUnconfigured": "Gli acquisti non sono configurati per questa distribuzione."
     }
   },
   "common": {

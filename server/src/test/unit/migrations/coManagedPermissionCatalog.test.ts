@@ -79,3 +79,29 @@ describe('co_managed system_settings grants (customer-owned provider setup, L9)'
     }
   });
 });
+
+describe('CM L4c requester task thread client permissions', () => {
+  const find = (product: string, resource: string, action: string, options?: any) =>
+    catalog.getProductPermissions(product, options).find((p: any) => p.resource === resource && p.action === action && p.client === true);
+
+  it('co_managed client Admin and User hold project:read and project_task_comment:create', () => {
+    const grants = roleGrants.compileRoleGrants('co_managed');
+    const holders = (resource: string, action: string) => {
+      const entry = find('co_managed', resource, action);
+      expect(entry).toBeTruthy();
+      return entry.defaultGrants.co_managed;
+    };
+    expect(holders('project', 'read')).toEqual(['client:Admin', 'client:User']);
+    expect(holders('project_task_comment', 'create')).toEqual(['client:Admin', 'client:User']);
+    expect(grants).toBeTruthy();
+  });
+
+  it('psa and algadesk never gain project_task_comment:create (DO-NOT-PORT #27) and psa project:read is unchanged', () => {
+    for (const product of ['psa', 'algadesk']) {
+      expect(find(product, 'project_task_comment', 'create')).toBeUndefined();
+      expect(find(product, 'project_task_comment', 'create', { capabilities: ['co-managed'] })).toBeUndefined();
+    }
+    expect(find('psa', 'project', 'read').defaultGrants.psa).toEqual(['client:Admin', 'client:Finance', 'client:User']);
+    expect(find('algadesk', 'project', 'read')).toBeUndefined();
+  });
+});

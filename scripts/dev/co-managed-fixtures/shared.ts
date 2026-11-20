@@ -68,7 +68,8 @@ export interface FixtureEngines {
   runOnboardingSeeds: (tenantId: string, productCode: string,
     options: { transaction: Knex.Transaction; log: SeedLog }) => Promise<unknown>;
   verifyPassword: (password: string, stored: string) => Promise<boolean>;
-  /** NEXTAUTH_SECRET, for the deterministic password hashes. */
+  hashPassword: (password: string) => Promise<string>;
+  /** NEXTAUTH_SECRET, used by base-layer deterministic password hashes. */
   secret: string;
 }
 
@@ -84,7 +85,7 @@ export interface FixtureModule {
   requires: string[];
   apply(trx: Knex.Transaction, engines: FixtureEngines): Promise<void>;
   /** Read-only assertions; must not write. */
-  verify(db: Knex): Promise<VerifyReport[]>;
+  verify(db: Knex, engines?: FixtureEngines): Promise<VerifyReport[]>;
   /** Remove only what `apply` created (dependents are reset first by the runner). */
   reset(trx: Knex.Transaction): Promise<void>;
 }

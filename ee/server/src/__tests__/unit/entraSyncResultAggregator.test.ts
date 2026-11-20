@@ -18,6 +18,7 @@ describe('EntraSyncResultAggregator', () => {
       ambiguous: 0,
       inactivated: 0,
       skipped: 0,
+      failed: 0,
     });
   });
 
@@ -36,6 +37,7 @@ describe('EntraSyncResultAggregator', () => {
       ambiguous: 0,
       inactivated: 0,
       skipped: 0,
+      failed: 0,
     });
   });
 
@@ -53,6 +55,24 @@ describe('EntraSyncResultAggregator', () => {
       ambiguous: 6,
       inactivated: 0,
       skipped: 0,
+      failed: 0,
+    });
+  });
+
+  it('T007: tracks the failed counter across increment and add operations', () => {
+    const aggregator = new EntraSyncResultAggregator();
+
+    aggregator.increment('failed');
+    aggregator.add({ failed: 2, created: 1 });
+
+    expect(aggregator.toJSON()).toEqual({
+      created: 1,
+      linked: 0,
+      updated: 0,
+      ambiguous: 0,
+      inactivated: 0,
+      skipped: 0,
+      failed: 3,
     });
   });
 });

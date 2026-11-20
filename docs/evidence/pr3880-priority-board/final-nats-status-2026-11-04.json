@@ -1,0 +1,50 @@
+{
+  "metaCluster": {
+    "name": "alga",
+    "leader": "robert-X670E-Pro-RS",
+    "peer": "Xlet3IKp",
+    "replicas": [
+      {
+        "name": "Robers-MBP",
+        "current": true,
+        "active": 35863614,
+        "peer": "jYqOp0Gd"
+      },
+      {
+        "name": "robert-Desktop-AMD-Ryzen-AI-Max-300-Series",
+        "current": true,
+        "active": 45459497,
+        "peer": "aTFdlQ6q"
+      }
+    ],
+    "cluster_size": 3,
+    "pending": 0
+  },
+  "streams": 56,
+  "streamsWithNonCurrentReplicas": [
+    "KV_wf-design-sessions",
+    "KV_wf-settings",
+    "OBJ_xo-files",
+    "KV_wf-judgments",
+    "KV_wf-scan-cache",
+    "KV_wf-substrate",
+    "KV_wf-awaits",
+    "KV_wf-scan-labels",
+    "OBJ_alga-deploy",
+    "XO_TIER0",
+    "KV_deploy",
+    "KV_wf-card-services",
+    "KV_wf-reservations",
+    "KV_wf-scan-findings",
+    "KV_xo-briefing",
+    "KV_wf-provider-circuits",
+    "KV_wf-card-stories",
+    "WF_EVENTS",
+    "KV_wf-run-jobs",
+    "KV_wf-scan-runs",
+    "KV_wf-semaphores",
+    "KV_wf-state-history",
+    "KV_wf-templates",
+    "KV_wf-trigger-fires"
+  ]
+}

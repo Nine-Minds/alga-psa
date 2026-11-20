@@ -84,7 +84,7 @@ async function seedWorld(name: string, productCode: 'psa' | 'co_managed' = 'psa'
   return { tenant, clientId, contactId, portalUserId, techId, ticketId };
 }
 
-const createShared = async (p: Persona, request: any) => (await import('../../lib/co-managed/createTicketComment')).createSharedTicketComment(db, p.actor, p.resource, request);
+const createShared = async (p: Persona, request: any) => (await import('@alga-psa/co-managed/sharedTicketCommentWriter')).createSharedTicketComment(db, p.actor, p.resource, request);
 const mutatePrivate = async (p: Persona, command: any) => (await import('../../../../packages/co-managed/src/privateTicketConversation')).mutateCoManagedPrivateTicketComment(db, p.actor, p.resource, command);
 const aliceConversation = async () => (await import('../../../../packages/co-managed/src/ticketConversation')).getCoManagedTicketConversation(db, alice.actor, alice.resource);
 const portalAs = (w: World) => { currentUser = { user_id: w.portalUserId, user_type: 'client', tenant: w.tenant, email: 'rita@example.com' }; };

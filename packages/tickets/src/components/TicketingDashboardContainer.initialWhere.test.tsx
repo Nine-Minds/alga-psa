@@ -11,7 +11,7 @@ import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
  * with a toast and stripped from the URL (syncFromUrl only covers popstate).
  */
 
-const fetchTicketsWithPagination = vi.fn(async () => ({ tickets: [], totalCount: 0 }));
+const fetchTicketsWithPagination = vi.fn(async (): Promise<any> => ({ tickets: [], totalCount: 0, loadedAt: 100 }));
 
 let currentPathname = '/msp/tickets';
 
@@ -22,6 +22,9 @@ vi.mock('next/navigation', () => ({
 type DashboardProps = {
   onFilterChange: (update: Partial<ITicketListFilters>, options?: TicketFilterChangeOptions) => void;
   onNavigateAway?: () => void;
+  onRefreshListForChanges: () => Promise<unknown>;
+  loadedAt: number;
+  initialTickets: unknown[];
 };
 
 let dashboardProps: DashboardProps | null = null;
@@ -181,5 +184,22 @@ describe('ticket list initial-load where drop (AC12)', () => {
     expect(toastMock).not.toHaveBeenCalled();
     expect(new URLSearchParams(window.location.search).get('where')).toBe(valid);
     replaceState.mockRestore();
+  });
+
+  it('acknowledges a list refresh only after the container fetch succeeds', async () => {
+    const { props: initialProps } = renderContainer();
+    const originalLoadedAt = initialProps.loadedAt;
+    const originalRows = initialProps.initialTickets;
+
+    fetchTicketsWithPagination.mockResolvedValueOnce({ actionError: 'temporary failure' });
+    await act(async () => { await initialProps.onRefreshListForChanges(); });
+    expect(dashboardProps?.loadedAt).toBe(originalLoadedAt);
+    expect(dashboardProps?.initialTickets).toBe(originalRows);
+
+    const refreshedRows = [{ ticket_id: 'ticket-refreshed' }];
+    fetchTicketsWithPagination.mockResolvedValueOnce({ tickets: refreshedRows, totalCount: 1, loadedAt: 200 });
+    await act(async () => { await initialProps.onRefreshListForChanges(); });
+    expect(dashboardProps?.loadedAt).toBe(200);
+    expect(dashboardProps?.initialTickets).toEqual(refreshedRows);
   });
 });

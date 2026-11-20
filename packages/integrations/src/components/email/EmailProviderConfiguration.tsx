@@ -28,6 +28,7 @@ import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManag
 import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
 import { GmailDiagnosticsDialog } from './admin/GmailDiagnosticsDialog';
+import { InboundQuarantineQueue } from './admin/InboundQuarantineQueue';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -40,7 +41,7 @@ import {
 } from '../../actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
-  EmailProvider,
+  PublicEmailProvider,
   GoogleEmailProviderConfig,
   ImapEmailProviderConfig,
   MicrosoftEmailProviderConfig,
@@ -74,8 +75,8 @@ const getImapResyncPollInterval = (elapsedMs: number) => {
 };
 
 export interface EmailProviderConfigurationProps {
-  onProviderAdded?: (provider: EmailProvider) => void;
-  onProviderUpdated?: (provider: EmailProvider) => void;
+  onProviderAdded?: (provider: PublicEmailProvider) => void;
+  onProviderUpdated?: (provider: PublicEmailProvider) => void;
   onProviderDeleted?: (providerId: string) => void;
 }
 
@@ -86,15 +87,15 @@ function EmailProviderConfigurationContent({
 }: EmailProviderConfigurationProps) {
   const { t } = useTranslation('msp/email-providers');
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
-  const [providers, setProviders] = useState<EmailProvider[]>([]);
+  const [providers, setProviders] = useState<PublicEmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
   const [tenant, setTenant] = useState<string>('');
-  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules'>('providers');
+  const [activeSection, setActiveSection] = useState<'providers' | 'defaults' | 'rules' | 'quarantine'>('providers');
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const [diagnosticsProvider, setDiagnosticsProvider] = useState<EmailProvider | null>(null);
+  const [diagnosticsProvider, setDiagnosticsProvider] = useState<PublicEmailProvider | null>(null);
   const [microsoftEmailSetup, setMicrosoftEmailSetup] = useState<MicrosoftEmailSetupReadiness | null | undefined>(undefined);
   const [reconnectingProviderIds, setReconnectingProviderIds] = useState<Set<string>>(new Set());
   const resyncPollsRef = useRef<Map<string, ImapResyncPoll>>(new Map());
@@ -178,7 +179,7 @@ function EmailProviderConfigurationContent({
 
   // Add handled via wizard; we refresh list on completion
 
-  const handleProviderUpdated = (provider: EmailProvider) => {
+  const handleProviderUpdated = (provider: PublicEmailProvider) => {
     setProviders(prev => prev.map(p => p.id === provider.id ? provider : p));
     onProviderUpdated?.(provider);
   };
@@ -201,7 +202,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleTestConnection = async (provider: EmailProvider) => {
+  const handleTestConnection = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
 
@@ -235,7 +236,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRefreshWatchSubscription = async (provider: EmailProvider) => {
+  const handleRefreshWatchSubscription = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
 
@@ -265,7 +266,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRetryRenewal = async (provider: EmailProvider) => {
+  const handleRetryRenewal = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const result = await retryMicrosoftSubscriptionRenewal(provider.id);
@@ -284,7 +285,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleReconnectOAuth = async (provider: EmailProvider) => {
+  const handleReconnectOAuth = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const response = await fetch('/api/email/oauth/imap/initiate', {
@@ -335,7 +336,7 @@ function EmailProviderConfigurationContent({
       return;
     }
 
-    let refreshedProvider: EmailProvider | undefined;
+    let refreshedProvider: PublicEmailProvider | undefined;
     try {
       const data = await getEmailProviders();
       const currentPoll = resyncPollsRef.current.get(providerId);
@@ -370,7 +371,7 @@ function EmailProviderConfigurationContent({
     }, getImapResyncPollInterval(Date.now() - currentPoll.startedAt));
   };
 
-  const handleResyncProvider = async (provider: EmailProvider) => {
+  const handleResyncProvider = async (provider: PublicEmailProvider) => {
     try {
       setError(null);
       const toastId = toast.loading(t('configuration.feedback.resyncing', {
@@ -412,7 +413,7 @@ function EmailProviderConfigurationContent({
     }
   };
 
-  const handleRunDiagnostics = (provider: EmailProvider) => {
+  const handleRunDiagnostics = (provider: PublicEmailProvider) => {
     setDiagnosticsProvider(provider);
     setDiagnosticsOpen(true);
   };
@@ -422,7 +423,7 @@ function EmailProviderConfigurationContent({
   // the card: Microsoft/Google open their setup flow in the edit drawer,
   // IMAP OAuth mailboxes start the popup reconnect flow, and password IMAP
   // mailboxes open credential editing.
-  const handleReconnect = (provider: EmailProvider) => {
+  const handleReconnect = (provider: PublicEmailProvider) => {
     if (provider.providerType === 'imap' && provider.imapConfig?.auth_type === 'oauth2') {
       handleReconnectOAuth(provider);
       return;
@@ -436,7 +437,7 @@ function EmailProviderConfigurationContent({
     closeDrawer();
   };
 
-  const openEditDrawer = (provider: EmailProvider) => {
+  const openEditDrawer = (provider: PublicEmailProvider) => {
     openDrawer(
       (
         <div className="space-y-4">
@@ -685,6 +686,20 @@ function EmailProviderConfigurationContent({
               defaultValue: 'Inbound Rules',
             })}
           </Button>
+          <Button
+            id="nav-inbound-quarantine"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'quarantine'
+                ? 'text-[rgb(var(--color-primary-700))] font-semibold underline decoration-[rgb(var(--color-primary-600))] decoration-2 underline-offset-4 bg-primary-500/10'
+                : 'text-[rgb(var(--color-text-700))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-50))]'
+            }`}
+            onClick={() => setActiveSection('quarantine')}
+          >
+            {t('quarantine.openQueue', {
+              defaultValue: 'Quarantined email',
+            })}
+          </Button>
         </nav>
       </div>
       <div className="flex-1 min-w-0">
@@ -717,6 +732,10 @@ function EmailProviderConfigurationContent({
               window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
             }} />
           </div>
+        ) : activeSection === 'quarantine' ? (
+          // Refused inbound mail for every mailbox (alga-2026-0003119). The same queue is also
+          // served at /msp/settings/email/quarantine for the ticket banner and notification links.
+          <InboundQuarantineQueue />
         ) : (
           <div className="space-y-4">
             <InboundEmailRulesManager />

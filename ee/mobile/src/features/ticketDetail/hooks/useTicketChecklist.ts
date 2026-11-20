@@ -20,7 +20,10 @@ export function useTicketChecklist(deps: TicketDetailDeps) {
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(() => new Set());
 
   const fetchChecklist = useCallback(async () => {
-    if (!client || !session) return;
+    if (!client || !session) {
+      setLoading(false);
+      return;
+    }
     setError(null);
     try {
       const result = await getTicketChecklist(client, {

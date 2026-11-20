@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { isEnterprise } from '@alga-psa/core';
 import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
 import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
@@ -15,6 +16,7 @@ import {
   type ContactPhoneCanonicalType,
   type ContactPhoneNumberInput,
   CONTACT_EMAIL_CANONICAL_TYPES,
+  CONTACT_WORK_ARRANGEMENTS,
   type ContactEmailCanonicalType,
   type IContactEmailAddress,
   type ContactEmailAddressInput,
@@ -24,9 +26,11 @@ import {
   type UpdateContactInput,
 } from '../interfaces/contact.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
+import { checkContactPhoneNumberValue, normalizePhoneForSearch } from './contactPhoneValue';
 
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
+const workArrangementSchema = z.enum(CONTACT_WORK_ARRANGEMENTS);
 
 export async function isSharedMailboxContact(
   db: Knex | Knex.Transaction,
@@ -69,12 +73,104 @@ export async function clearContactLinksBeforeDelete(
   await scoped.table('assets')
     .where({ contact_name_id: contactId })
     .update({ contact_name_id: null });
+  // quote_decisions.contact_id is a NO ACTION composite FK on Citus; the signer name
+  // and email stay on the row, so the acceptance audit trail survives the contact.
+  await scoped.table('quote_decisions')
+    .where({ contact_id: contactId })
+    .update({ contact_id: null });
   // FR-C5: the assignments the contact held are closed, not deleted — "who had
   // this laptop in March" must survive the person leaving.
   await closeOpenAssignmentsForContact(db, tenant, contactId);
   // FR-E6: the contact stops being a workspace user; a deleted bundle owner
   // leaves its members unassigned.
   await clearGroupContactLinksForContact(db, tenant, contactId);
+}
+
+export interface DeleteContactCascadeOptions {
+  /** Tag cleanup lives in @alga-psa/tags, which shared cannot depend on; callers inject it. */
+  deleteTags?: (trx: Knex.Transaction, contactId: string) => Promise<unknown>;
+}
+
+/** Nulls the Entra reconciliation queue's pointer at a contact about to be deleted. */
+async function cleanupEntraReferencesBeforeContactDelete(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const queueTableExists = await trx('information_schema.tables')
+    .where({ table_schema: 'public', table_name: 'entra_contact_reconciliation_queue' })
+    .first('table_name');
+
+  if (!queueTableExists) {
+    return;
+  }
+
+  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenant)
+    .where({ resolved_contact_id: contactId })
+    .update({
+      resolved_contact_id: null,
+      updated_at: trx.fn.now(),
+    });
+}
+
+/**
+ * The whole hard-delete cascade for one contact, run inside the caller's transaction.
+ * Every delete path (MSP action, REST API) shares it so none of them can quietly
+ * skip a child table and leave orphans — a portal user stranded on a deleted
+ * contact can neither sign in nor be invited again.
+ *
+ * Returns the number of contact rows removed (0 when the contact was already gone).
+ */
+export async function deleteContactCascade(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  options: DeleteContactCascadeOptions = {}
+): Promise<number> {
+  await options.deleteTags?.(trx, contactId);
+
+  // Child records owned by the contact
+  await tenantScopedTable(trx, 'contact_phone_numbers', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'contact_additional_email_addresses', tenant).where({ contact_name_id: contactId }).delete();
+  await tenantScopedTable(trx, 'comments', tenant).where({ contact_id: contactId }).delete();
+  await tenantScopedTable(trx, 'portal_invitations', tenant).where({ contact_id: contactId }).delete();
+
+  await clearContactLinksBeforeDelete(trx, tenant, contactId);
+
+  // Unlink from any RMM org mapping using this contact as its default
+  // notification contact (no FK; Citus rejects ON DELETE SET NULL).
+  await tenantScopedTable(trx, 'rmm_organization_mappings', tenant)
+    .where({ default_contact_id: contactId })
+    .update({ default_contact_id: null, updated_at: new Date().toISOString() });
+
+  const contactRecord = await tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .select('notes_document_id')
+    .first();
+
+  if (contactRecord?.notes_document_id) {
+    await tenantScopedTable(trx, 'document_block_content', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+
+    await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: contactRecord.notes_document_id })
+      .delete();
+  }
+
+  await cleanupEntraReferencesBeforeContactDelete(trx, tenant, contactId);
+
+  return tenantScopedTable(trx, 'contacts', tenant)
+    .where({ contact_name_id: contactId })
+    .delete();
 }
 
 /**
@@ -195,6 +291,7 @@ export const contactFormSchema = z.object({
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
+  work_arrangement: workArrangementSchema.nullish(),
 });
 
 export const contactSchema = z.object({
@@ -239,6 +336,7 @@ export const contactSchema = z.object({
   role: z.string().nullable(),
   notes: z.string().nullable(),
   is_inactive: z.boolean().nullable(),
+  work_arrangement: workArrangementSchema.nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -345,7 +443,6 @@ type PreparedPrimaryEmailTypeInput = {
 
 type ContactWithPhones = ContactRecord & Pick<IContact, 'phone_numbers' | 'default_phone_number' | 'default_phone_type'>;
 
-const phonePattern = /^[0-9A-Za-z+().\-#\s/]+$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function tenantScopedTable(trx: Knex.Transaction, table: string, tenant: string): Knex.QueryBuilder {
@@ -414,10 +511,6 @@ export function parseFullName(fullName: string): { firstName: string; lastName: 
 
 function normalizeCustomTypeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function normalizePhoneForSearch(phoneNumber: string): string {
-  return phoneNumber.replace(/\D/g, '');
 }
 
 function normalizeEmailAddress(emailAddress: string): string {
@@ -617,14 +710,12 @@ export class ContactModel {
         };
       }
 
-      const trimmedPhoneNumber = parsedRow.data.phone_number.trim();
+      const phoneValueCheck = checkContactPhoneNumberValue(parsedRow.data.phone_number);
+      if (phoneValueCheck.valid === false) {
+        return { valid: false, errors: [`phone_numbers.${index}.phone_number: ${phoneValueCheck.message}`] };
+      }
+      const trimmedPhoneNumber = phoneValueCheck.phoneNumber;
       const normalizedDigits = normalizePhoneForSearch(trimmedPhoneNumber);
-      if (!normalizedDigits) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number must contain at least one digit`] };
-      }
-      if (!phonePattern.test(trimmedPhoneNumber)) {
-        return { valid: false, errors: [`phone_numbers.${index}.phone_number: Phone number contains unsupported characters`] };
-      }
 
       const canonicalType = parsedRow.data.canonical_type ?? null;
       const customType = parsedRow.data.custom_type?.trim() || null;
@@ -894,6 +985,7 @@ export class ContactModel {
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
+      work_arrangement: validatedInput.work_arrangement ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -1093,11 +1185,19 @@ export class ContactModel {
       // Moving to another client drops the old manager: a manager never crosses clients.
       (updateData as { manager_contact_id?: string | null }).manager_contact_id = null;
     }
+    let removedLocationCount = 0;
     if (clientChanged) {
       // ...and detaches everyone who reported to this contact in the old client.
       await tenantScopedTable(trx, 'contacts', tenant)
         .where('manager_contact_id', contactId)
         .update({ manager_contact_id: null });
+
+      // A location link only ever points at the contact's own client's locations, so moving the
+      // contact removes them all. The count rides back on the returned contact so the caller can
+      // report what the move cost (the UI confirms with it before the save).
+      removedLocationCount = await tenantScopedTable(trx, 'contact_locations', tenant)
+        .where('contact_name_id', contactId)
+        .delete();
     }
 
     const now = new Date().toISOString();
@@ -1167,7 +1267,7 @@ export class ContactModel {
       throw new Error('SYSTEM_ERROR: Failed to load contact after update');
     }
 
-    return hydratedContact;
+    return { ...hydratedContact, removedLocationCount };
   }
 
   static async replacePhoneNumbers(

@@ -115,3 +115,43 @@ export interface ImapEmailProviderConfig {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Secret-free read model. These are the only provider shapes allowed to cross
+ * the server-action boundary to the browser. Secret values are replaced by
+ * `has_*` booleans; build them with `toPublicProvider()`.
+ */
+export interface PublicMicrosoftConfig
+  extends Omit<
+    MicrosoftEmailProviderConfig,
+    'client_secret' | 'access_token' | 'refresh_token' | 'webhook_verification_token'
+  > {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+  has_webhook_verification_token: boolean;
+}
+
+export interface PublicGoogleConfig
+  extends Omit<GoogleEmailProviderConfig, 'client_secret' | 'access_token' | 'refresh_token'> {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+}
+
+export interface PublicImapConfig
+  extends Omit<
+    ImapEmailProviderConfig,
+    'password' | 'oauth_client_secret' | 'access_token' | 'refresh_token'
+  > {
+  has_client_secret: boolean;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+}
+
+export interface PublicEmailProvider
+  extends Omit<EmailProvider, 'microsoftConfig' | 'googleConfig' | 'imapConfig'> {
+  microsoftConfig?: PublicMicrosoftConfig;
+  googleConfig?: PublicGoogleConfig;
+  imapConfig?: PublicImapConfig;
+}

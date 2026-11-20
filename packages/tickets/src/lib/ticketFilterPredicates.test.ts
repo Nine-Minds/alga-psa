@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatePredicate } from '@alga-psa/predicates';
 import type { PredicateClause, PredicateGroup } from '@alga-psa/predicates';
-import type { ITicketListFilters } from '@alga-psa/types';
+import { TICKET_ASSIGNEE_ME, type ITicketListFilters } from '@alga-psa/types';
 import { ticketFiltersToPredicates, todayRange, type TicketFilterCodecContext } from './ticketFilterPredicates';
 import { ticketQuerySchema } from './ticketQuerySchema';
 import { TICKET_STATUS_FILTER_ALL, createTicketStatusNameFilterValue } from './ticketStatusFilter';
@@ -83,6 +83,30 @@ describe('ticketFiltersToPredicates (T012)', () => {
           { path: 'assigned_to', operator: 'is_empty' },
         ],
       },
+    ]);
+  });
+
+  it('resolves the "Me" sentinel to the viewer inside the same OR group, deduped', () => {
+    expect(
+      clauses(encode({ assignedToIds: [TICKET_ASSIGNEE_ME, U(1)], assignedTeamIds: [U(2)], includeUnassigned: true })),
+    ).toEqual([
+      {
+        join: 'or',
+        clauses: [
+          { path: 'assigned_to', operator: 'in', value: [U(99), U(1)] },
+          { path: 'assigned_team_id', operator: 'in', value: [U(2)] },
+          { path: 'assigned_to', operator: 'is_empty' },
+        ],
+      },
+    ]);
+    expect(clauses(encode({ assignedToIds: [TICKET_ASSIGNEE_ME, U(99)] }))).toEqual([
+      { path: 'assigned_to', operator: 'in', value: [U(99)] },
+    ]);
+  });
+
+  it('does not bypass or widen "Me" the way assignedToMe is', () => {
+    expect(clauses(encode({ assignedToIds: [TICKET_ASSIGNEE_ME] }, context({ assignedToMeBypass: true })))).toEqual([
+      { path: 'assigned_to', operator: 'in', value: [U(99)] },
     ]);
   });
 

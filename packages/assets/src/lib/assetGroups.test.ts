@@ -71,6 +71,7 @@ const h = vi.hoisted(() => {
     }
 
     join(_table: string, _fn: unknown) { return this; }
+    forUpdate() { return this; }
     select(..._cols: unknown[]) { return this; }
     orderBy() { return this; }
     groupBy() { return this; }

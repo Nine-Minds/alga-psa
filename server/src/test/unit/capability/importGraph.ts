@@ -4,8 +4,23 @@ import ts from 'typescript';
 
 export const REPO = resolve(__dirname, '../../../../..');
 
+// Every closure walks a large shared subgraph; each file is read and parsed once per process, not once per entry or
+// per test. A cache hit must not touch the disk: on a loaded CI runner the re-read of ~1,100 files that a verifying
+// compare needs took longer than the parse itself (run 41148754710, shard 1: the warm Rule D retry still spent 39 s
+// in I/O behind four forks writing coverage). An injected source still wins, keyed on the exact text.
+const parsedImports = new Map<string, { source: string; imports: string[]; fromDisk: boolean }>();
+
 export function importsOf(file: string, source?: string): string[] {
-  const sf = ts.createSourceFile(file, source ?? readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  const hit = parsedImports.get(file);
+  if (hit && (source === undefined ? hit.fromDisk : hit.source === source)) return hit.imports;
+  const text = source ?? readFileSync(file, 'utf8');
+  const imports = parseImports(file, text);
+  parsedImports.set(file, { source: text, imports, fromDisk: source === undefined });
+  return imports;
+}
+
+function parseImports(file: string, text: string): string[] {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out: string[] = [];
   const visit = (n: ts.Node) => {
     if (
@@ -32,8 +47,16 @@ function tryFile(base: string): string | null {
   return null;
 }
 
+const resolved = new Map<string, string | null>();
+
 /** Resolve a specifier to a repo source file, or null for third-party/unresolvable. */
 export function resolveSpecifier(from: string, spec: string): string | null {
+  const key = `${dirname(from)}\0${spec}`;
+  if (!resolved.has(key)) resolved.set(key, resolveUncached(from, spec));
+  return resolved.get(key)!;
+}
+
+function resolveUncached(from: string, spec: string): string | null {
   if (spec.startsWith('.')) return tryFile(resolve(dirname(from), spec));
   const m = /^@alga-psa\/([^/]+)(?:\/(.+))?$/.exec(spec);
   if (!m) return null;

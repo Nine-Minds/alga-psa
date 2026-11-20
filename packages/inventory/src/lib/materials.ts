@@ -1,4 +1,9 @@
-import { admitOperationalWrite, registerAfterCommitWithConnection, withTransaction } from '@alga-psa/db';
+import {
+  admitOperationalWrite,
+  registerAfterCommit,
+  registerAfterCommitWithConnection,
+  withTransaction,
+} from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   IProjectMaterial,
@@ -13,8 +18,9 @@ import { collectDefaultLocationStockLowSignalAfterConsume, collectStockLowSignal
 import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
- * Reuse a caller transaction or open an owned transaction. The shared helper
- * also flushes registered after-commit effects with a live root connection.
+ * Reuse a caller-owned transaction or open one through the shared DB helper.
+ * Using the shared helper is required so after-commit effects registered by
+ * material operations flush only after the owning transaction commits.
  */
 function runInTransaction<T>(db: Knex, fn: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
   return withTransaction(db, fn);
@@ -341,6 +347,7 @@ export async function addMaterial(
       allow_reserved_override: input.allow_reserved_override === true,
       ...(claimant ? { claimant, location_id: claimLocationId } : {}),
     });
+    const pendingAsset = consumption.pending_asset_link ?? null;
 
     if (fromStagingLineId) {
       await trx('project_staging_lines')
@@ -362,23 +369,20 @@ export async function addMaterial(
         : await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity))
       : null;
 
-    const pendingAsset = consumption.pending_asset_link ?? null;
-    if (pendingAsset || pendingStockLow) {
+    if (pendingAsset) {
+      // F029: delivered assets commit independently, so link them only after this transaction commits.
       registerAfterCommitWithConnection(trx, async (rootConnection) => {
-        // Asset creation owns an independent transaction; using the live root
-        // connection here ensures it can only run after material consumption commits.
-        if (pendingAsset) {
-          try {
-            const { createAndLinkDeliveredAsset } = await import('./assetLink');
-            await createAndLinkDeliveredAsset(rootConnection, tenant, pendingAsset);
-          } catch (e) {
-            console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
-          }
+        try {
+          const { createAndLinkDeliveredAsset } = await import('./assetLink');
+          await createAndLinkDeliveredAsset(rootConnection, tenant, pendingAsset);
+        } catch (e) {
+          console.error(`Asset creation for delivered ${cfg.label}-material unit failed:`, e);
         }
-        if (pendingStockLow) {
-          await publishInventoryEvent('INVENTORY_STOCK_LOW', pendingStockLow);
-        }
-      }, `${cfg.label}-material post-commit effects ${row[cfg.pk]}`);
+      }, `delivered-${cfg.label}-material-asset`);
+    }
+    if (pendingStockLow) {
+      registerAfterCommit(trx, () => publishInventoryEvent('INVENTORY_STOCK_LOW', pendingStockLow),
+        `stock-low-after-${cfg.label}-material`);
     }
 
     return row;

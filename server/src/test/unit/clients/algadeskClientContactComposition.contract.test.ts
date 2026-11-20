@@ -23,14 +23,18 @@ describe('AlgaDesk client/contact composition contracts', () => {
   });
 
   it('preserves contact CRUD, ticket context, phone/email management, and notes', () => {
-    const source = read('../packages/clients/src/components/contacts/ContactDetails.tsx');
+    // ContactDetails.tsx was never rendered and has been deleted; the live surfaces carry these.
+    const edit = read('../packages/clients/src/components/contacts/ContactDetailsEdit.tsx');
+    const list = read('../packages/clients/src/components/contacts/Contacts.tsx');
+    const bento = read('../packages/clients/src/components/contacts/bento/ContactBentoLayout.tsx');
+    const crossFeature = read('../packages/clients/src/context/ClientCrossFeatureContext.tsx');
 
-    expect(source).toContain('updateContact(dataToUpdate)');
-    expect(source).toContain('deleteContact(');
-    expect(source).toContain('renderContactTickets({');
-    expect(source).toContain('<ContactPhoneNumbersEditor');
-    expect(source).toContain('<ContactEmailAddressesEditor');
-    expect(source).toContain('<ContactNotesPanel');
+    expect(edit).toContain('await updateContact({');
+    expect(list).toContain('deleteContact(');
+    expect(crossFeature).toContain('renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;');
+    expect(edit).toContain('<ContactPhoneNumbersEditor');
+    expect(edit).toContain('<ContactEmailAddressesEditor');
+    expect(bento).toContain("saveField('notes'");
   });
 
   it('runs AlgaDesk contact detail page in product-safe mode', () => {
