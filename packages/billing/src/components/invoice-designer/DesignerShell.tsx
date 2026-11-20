@@ -843,6 +843,9 @@ export const DesignerShell: React.FC<DesignerShellProps> = ({ fillParent = false
     [applyHandleResizePatches]
   );
 
+  // Not a prop: the shell is rendered with none in three hosts and in many tests.
+  const { isFocused: isFocusedSurface } = useDesignerFocusState();
+
   const zoomToFit = useCallback(() => {
     const viewport = document.querySelector<HTMLElement>(DESIGNER_CANVAS_VIEWPORT_SELECTOR);
     const page = useInvoiceDesignerStore.getState().nodes.find((node) => node.type === 'page');
@@ -850,14 +853,31 @@ export const DesignerShell: React.FC<DesignerShellProps> = ({ fillParent = false
     setCanvasScale(resolveFitScale(viewport.clientWidth, page.size.width));
   }, [setCanvasScale]);
 
-  // Each document opens at a zoom where the whole page width is visible, unless it
-  // was saved at another zoom.
+  // Each document opens at a zoom where the whole page width is visible, unless it was
+  // saved at another zoom. Focus mode is the exception: the canvas has the window to
+  // itself there, so it shows the page at actual size, and the zoom the page layout was
+  // working at comes back on the way out. The live zoom is read, never watched, so a
+  // manual zoom inside focus mode is left alone.
   const workspaceLoadCount = useInvoiceDesignerStore((state) => state.workspaceLoadCount);
+  const scaleBeforeFocusRef = useRef<number | null>(null);
   useEffect(() => {
-    if (useInvoiceDesignerStore.getState().canvasScale !== 1) return;
+    const currentScale = useInvoiceDesignerStore.getState().canvasScale;
+    if (isFocusedSurface) {
+      if (currentScale === 1) return;
+      scaleBeforeFocusRef.current = currentScale;
+      setCanvasScale(1);
+      return;
+    }
+    const scaleBeforeFocus = scaleBeforeFocusRef.current;
+    scaleBeforeFocusRef.current = null;
+    if (scaleBeforeFocus !== null) {
+      setCanvasScale(scaleBeforeFocus);
+      return;
+    }
+    if (currentScale !== 1) return;
     const frame = requestAnimationFrame(zoomToFit);
     return () => cancelAnimationFrame(frame);
-  }, [workspaceLoadCount, zoomToFit]);
+  }, [isFocusedSurface, workspaceLoadCount, setCanvasScale, zoomToFit]);
 
   const handleTextEdit = useCallback(
     (id: string, text: string, commit: boolean) => {
@@ -916,8 +936,6 @@ export const DesignerShell: React.FC<DesignerShellProps> = ({ fillParent = false
   }, [nodes, selectedNode]);
 
 	  useDesignerShortcuts();
-	  // Not a prop: the shell is rendered with none in three hosts and in many tests.
-	  const { isFocused: isFocusedSurface } = useDesignerFocusState();
 	  const structureCommands = useStructureCommands();
 	  const nameBeforeEditRef = useRef('');
 	  const [renameSuggestion, setRenameSuggestion] = useState<{

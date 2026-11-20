@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DesignerFocusSurface } from '@alga-psa/ui/components/designer';
@@ -85,5 +85,68 @@ describe('DesignerShell focus mode sizing', () => {
     expect(root.className).toContain('min-h-0');
     expect(root.className).not.toContain(VIEWPORT_HEIGHT);
     expect(root.className).not.toContain('min-h-[480px]');
+  });
+});
+
+function surface(focused: boolean) {
+  return (
+    <DesignerFocusSurface id="designer-focus-surface" focused={focused} onFocusedChange={() => undefined}>
+      <DesignerShell />
+    </DesignerFocusSurface>
+  );
+}
+
+const canvasScale = () => useInvoiceDesignerStore.getState().canvasScale;
+
+describe('DesignerShell focus mode zoom', () => {
+  beforeEach(() => {
+    useInvoiceDesignerStore.getState().resetWorkspace();
+  });
+
+  it('shows the page at actual size once the surface takes focus', () => {
+    act(() => useInvoiceDesignerStore.getState().setCanvasScale(0.65));
+
+    const view = render(surface(false));
+    expect(canvasScale()).toBe(0.65);
+
+    act(() => view.rerender(surface(true)));
+
+    expect(canvasScale()).toBe(1);
+  });
+
+  it('puts the zoom the page layout was working at back when focus ends', () => {
+    act(() => useInvoiceDesignerStore.getState().setCanvasScale(0.7));
+    const view = render(surface(false));
+    act(() => view.rerender(surface(true)));
+    expect(canvasScale()).toBe(1);
+
+    act(() => view.rerender(surface(false)));
+
+    expect(canvasScale()).toBe(0.7);
+  });
+
+  it('holds actual size when a document loads while focused, and hands its saved zoom back', () => {
+    const view = render(surface(true));
+    const saved = useInvoiceDesignerStore.getState().exportWorkspace();
+
+    act(() => useInvoiceDesignerStore.getState().loadWorkspace({ ...saved, canvasScale: 0.5 }));
+    expect(canvasScale()).toBe(1);
+
+    act(() => view.rerender(surface(false)));
+
+    expect(canvasScale()).toBe(0.5);
+  });
+
+  it('leaves a zoom chosen inside focus mode alone until focus ends', () => {
+    act(() => useInvoiceDesignerStore.getState().setCanvasScale(0.65));
+    const view = render(surface(false));
+    act(() => view.rerender(surface(true)));
+
+    act(() => useInvoiceDesignerStore.getState().setCanvasScale(1.5));
+    act(() => view.rerender(surface(true)));
+    expect(canvasScale()).toBe(1.5);
+
+    act(() => view.rerender(surface(false)));
+    expect(canvasScale()).toBe(0.65);
   });
 });
