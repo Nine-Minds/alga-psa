@@ -307,7 +307,10 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
         />
       </div>
       
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* The list keeps a floor of its own: in a short palette (a layout editor fitted to a
+          small window) the outline below yields its space rather than squeezing the list,
+          and the + buttons stay on screen. */}
+      <div className="flex-1 min-h-[7rem] overflow-y-auto" data-automation-id="designer-palette-list-pane">
         {activeTab === 'blocks' ? (
           <div className="px-2 py-2 space-y-2">
             <div
@@ -430,11 +433,13 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
           </div>
         ) : null}
       </div>
-      {/* The outline stays visible while adding blocks: select a target here, then press +. */}
+      {/* The outline stays visible while adding blocks: select a target here, then press +.
+          It asks for 42% of the palette but can give all of it back (min-h-0): a short
+          palette splits in favour of the block list, which keeps the floor above. */}
       <div
         className={clsx(
           'flex flex-col border-t border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))]',
-          outlineOpen ? 'h-[42%] min-h-[180px]' : ''
+          outlineOpen ? 'h-[42%] min-h-0' : ''
         )}
         data-automation-id="designer-palette-outline-pane"
       >
@@ -442,7 +447,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
           type="button"
           id="designer-outline-toggle"
           aria-expanded={outlineOpen}
-          className="flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold tracking-wide text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+          className="flex shrink-0 items-center justify-between px-3 py-1.5 text-[11px] font-semibold tracking-wide text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           onClick={() => setOutlineOpen((open) => !open)}
         >
           <span>{t('designer.palette.tabs.outline', { defaultValue: 'OUTLINE' })}</span>
