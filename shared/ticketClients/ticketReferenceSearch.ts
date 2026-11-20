@@ -1,11 +1,6 @@
-/**
- * Pure helpers for matching a pasted ticket reference (e.g. "Ticket #ALGA-2026-0002826")
- * against a stored ticket_number. No React, DB or server-only imports, so both the
- * client portal and the MSP ticket search can use it.
- */
+import { cleanSearchIdentifierQuery } from './searchIdentifier';
 
-// Optional leading "Ticket" (a whole word) followed by optional "#", with whitespace around them.
-const LEADING_TICKET_PREFIX = /^(?:ticket(?![a-z0-9])\s*)?#?\s*/i;
+const LEADING_TICKET_LABEL = /^ticket(?=\s|#|$)/i;
 const SEPARATORS = /[\s-]+/g;
 
 export interface TicketSearchQuery {
@@ -24,7 +19,7 @@ export function compactTicketReference(value: string): string {
 
 export function parseTicketSearchQuery(rawQuery: string): TicketSearchQuery {
   const text = rawQuery.trim();
-  const reference = compactTicketReference(text.replace(LEADING_TICKET_PREFIX, ''));
+  const reference = compactTicketReference(cleanSearchIdentifierQuery(text.replace(LEADING_TICKET_LABEL, '')));
   return { text, reference };
 }
 

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
-import { parseTicketSearchQuery, ticketNumberMatchesQuery } from './ticketReferenceSearch';
+import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '../ticketReferenceSearch';
 
 const NUMBER = 'ALGA-2026-0002826';
 const matches = (q: string, n: string = NUMBER) => ticketNumberMatchesQuery(n, parseTicketSearchQuery(q));
@@ -11,6 +11,7 @@ describe('ticketReferenceSearch', () => {
     'ALGA-2026-0002826',
     ' #ALGA-2026-0002826 ',
     'Ticket #ALGA-2026-0002826',
+    'Ticket ALGA-2026-0002826',
     'ticket# alga-2026-0002826',
     'alga 2026 0002826',
     'alga20260002826',
@@ -22,6 +23,11 @@ describe('ticketReferenceSearch', () => {
   it('only trims plain title text', () => {
     const parsed = parseTicketSearchQuery('  Printer broken ');
     expect(parsed.text).toBe('Printer broken');
+  });
+
+  it('preserves Ticket when it is part of the identifier', () => {
+    expect(matches('#TICKET-2026-0002826', 'TICKET-2026-0002826')).toBe(true);
+    expect(matches('TICKET-2026-0002826', 'ALGA-2026-0002826')).toBe(false);
   });
 
   it('does not match a different number or an empty reference', () => {

@@ -20,6 +20,7 @@ describe('buildTicketSearchPredicate', () => {
     'alga20260002826',
     '2826',
     ' printer offline ',
+    ' OPEN ',
     ' HIGH ',
   ])('finds the ticket for %j and not the other', (q) => {
     const p = buildTicketSearchPredicate(q);

@@ -1,5 +1,5 @@
 import type { ITicketListItem } from '@alga-psa/types';
-import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '@alga-psa/tickets/lib';
+import { parseTicketSearchQuery, ticketNumberMatchesQuery } from '@shared/ticketClients/ticketReferenceSearch';
 
 type SearchableTicket = Pick<ITicketListItem, 'title' | 'ticket_number' | 'status_name' | 'priority_name'>;
 
