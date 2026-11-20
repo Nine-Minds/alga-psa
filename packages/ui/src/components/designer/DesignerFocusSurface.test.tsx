@@ -24,10 +24,12 @@ function surface(): HTMLElement {
 /** A host that owns the focused flag, as a real designer page does through its preference. */
 function Host({
   initialFocused = false,
+  focusable,
   onFocusedChange,
   children,
 }: {
   initialFocused?: boolean;
+  focusable?: boolean;
   onFocusedChange?: (focused: boolean) => void;
   children?: React.ReactNode;
 }) {
@@ -40,6 +42,7 @@ function Host({
         onFocusedChange?.(next);
         setFocused(next);
       }}
+      focusable={focusable}
       className="host-class"
       focusedClassName="host-focused-class"
     >
@@ -180,6 +183,23 @@ describe('DesignerFocusSurface', () => {
 
   it('reports not focused with a no-op toggle outside any surface', async () => {
     render(<StateProbe />);
+
+    expect(screen.getByTestId('probe-state')).toHaveTextContent('not-focused');
+    await userEvent.click(screen.getByRole('button', { name: 'probe toggle' }));
+    expect(screen.getByTestId('probe-state')).toHaveTextContent('not-focused');
+  });
+
+  it('stays in the normal layout and offers nothing when it is not focusable', async () => {
+    render(
+      <Host initialFocused focusable={false}>
+        <StateProbe />
+      </Host>
+    );
+
+    // The saved preference says focused, but this view has no designer in it.
+    expect(surface()).toHaveAttribute('data-focus-mode', 'off');
+    expect(surface().className).toBe('host-class');
+    expect(document.getElementById('designer-focus-toggle')).toBeNull();
 
     expect(screen.getByTestId('probe-state')).toHaveTextContent('not-focused');
     await userEvent.click(screen.getByRole('button', { name: 'probe toggle' }));

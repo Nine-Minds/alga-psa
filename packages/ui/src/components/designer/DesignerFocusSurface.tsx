@@ -59,13 +59,13 @@ export const DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID = 'designer.toggleFocusMode'
  */
 const DESIGNER_FOCUS_MODE_EDITOR_SCOPE_ACTION_ID = 'designer.toggleFocusModeInEditor';
 
-/** Registers `designer.toggleFocusMode` for as long as the surface is mounted. */
-function useDesignerFocusModeShortcut(toggle: () => void): void {
+/** Registers `designer.toggleFocusMode` for as long as the surface is mounted and focusable. */
+function useDesignerFocusModeShortcut(toggle: () => void, enabled: boolean): void {
   const handler = useCallback(() => {
     toggle();
   }, [toggle]);
 
-  useCatalogShortcut(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID, handler);
+  useCatalogShortcut(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID, handler, { enabled });
 
   const bindings = useResolvedShortcutBindings(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID);
   const isDisabled = useShortcutActionDisabled(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID);
@@ -83,10 +83,10 @@ function useDesignerFocusModeShortcut(toggle: () => void): void {
       scope: 'editor',
       allowInEditable: catalogEntry?.allowInEditable,
       defaultBindings: resolvedBindings,
-      enabled: !isDisabled && resolvedBindings.length > 0,
+      enabled: enabled && !isDisabled && resolvedBindings.length > 0,
       handler,
     };
-  }, [bindingKey, handler, isDisabled]);
+  }, [bindingKey, enabled, handler, isDisabled]);
 
   useShortcutAction(editorScopeAction);
 }
@@ -100,6 +100,13 @@ export interface DesignerFocusSurfaceProps {
   className?: string;
   /** Extra classes while focused, on top of the shared focused classes. */
   focusedClassName?: string;
+  /**
+   * Whether this surface can enter focus mode at all. A host that keeps one surface around
+   * several views (the workflow designer's list and control panel) passes false for the views
+   * that have no designer in them: no shortcut, no context, so the toggle inside renders nothing
+   * and the shells below behave exactly as on an ordinary page.
+   */
+  focusable?: boolean;
   children: React.ReactNode;
 }
 
@@ -109,24 +116,33 @@ export function DesignerFocusSurface({
   onFocusedChange,
   className,
   focusedClassName,
+  focusable = true,
   children,
 }: DesignerFocusSurfaceProps): React.JSX.Element {
-  const toggle = useCallback(() => onFocusedChange(!focused), [focused, onFocusedChange]);
-  const state = useMemo<DesignerFocusState>(() => ({ isFocused: focused, toggle }), [focused, toggle]);
+  const isFocused = focusable && focused;
+  const toggle = useCallback(() => {
+    if (!focusable) return;
+    onFocusedChange(!isFocused);
+  }, [focusable, isFocused, onFocusedChange]);
+  const state = useMemo<DesignerFocusState>(() => ({ isFocused, toggle }), [isFocused, toggle]);
 
-  useDesignerFocusModeShortcut(toggle);
+  useDesignerFocusModeShortcut(toggle, focusable);
 
-  const classes = focused
+  const classes = isFocused
     ? `${DESIGNER_FOCUS_SURFACE_FOCUSED_CLASSES} ${focusedClassName ?? ''}`.trim()
     : (className ?? '');
 
-  return (
-    <DesignerFocusContext.Provider value={state}>
-      <div id={id} data-focus-mode={focused ? 'on' : 'off'} className={classes}>
-        {children}
-      </div>
-    </DesignerFocusContext.Provider>
+  const surface = (
+    <div id={id} data-focus-mode={isFocused ? 'on' : 'off'} className={classes}>
+      {children}
+    </div>
   );
+
+  if (!focusable) {
+    return surface;
+  }
+
+  return <DesignerFocusContext.Provider value={state}>{surface}</DesignerFocusContext.Provider>;
 }
 
 export default DesignerFocusSurface;

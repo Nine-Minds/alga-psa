@@ -21,14 +21,19 @@ function Scope({ scope }: { scope: ShortcutScope }) {
   return null;
 }
 
-function Host({ scope }: { scope?: ShortcutScope }) {
+function Host({ scope, focusable }: { scope?: ShortcutScope; focusable?: boolean }) {
   const [focused, setFocused] = useState(false);
   return (
     <KeyboardShortcutsProvider platform="other">
       {/* The MSP shell pushes the page scope around every route. */}
       <Scope scope="page" />
       {scope ? <Scope scope={scope} /> : null}
-      <DesignerFocusSurface id="designer-focus-surface" focused={focused} onFocusedChange={setFocused}>
+      <DesignerFocusSurface
+        id="designer-focus-surface"
+        focused={focused}
+        onFocusedChange={setFocused}
+        focusable={focusable}
+      >
         <DesignerFocusToggle id="designer-focus-toggle" />
         <input aria-label="designer input" />
       </DesignerFocusSurface>
@@ -111,6 +116,14 @@ describe('DesignerFocusSurface shortcut registration', () => {
     pressToggleShortcut();
 
     expect(surface()).toHaveAttribute('data-focus-mode', 'on');
+  });
+
+  it('is not registered while the surface is not focusable (the workflow list case)', () => {
+    render(<Host focusable={false} />);
+
+    pressToggleShortcut();
+
+    expect(surface()).toHaveAttribute('data-focus-mode', 'off');
   });
 });
 

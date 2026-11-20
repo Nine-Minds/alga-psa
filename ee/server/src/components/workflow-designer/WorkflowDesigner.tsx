@@ -5895,7 +5895,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     <DesignerFocusSurface
       id="workflow-designer-surface"
       focused={isDesignerFocusMode}
-      onFocusedChange={isEditorDesignerMode ? focus.setFocused : () => undefined}
+      onFocusedChange={focus.setFocused}
+      focusable={isEditorDesignerMode}
       className="h-full min-h-0 flex flex-col"
     >
       <div ref={designerHeaderRef} className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4 shrink-0">
