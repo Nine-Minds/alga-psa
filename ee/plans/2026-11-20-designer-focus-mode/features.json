@@ -781,5 +781,15 @@
     ],
     "implemented": true,
     "description": "Toggling focus mode keeps the workflow draft, the selected step, the list / graph view and the properties panel width"
+  },
+  {
+    "id": "F085",
+    "commitGroup": "quote-editor-header",
+    "prdRefs": [
+      "FR-H7",
+      "FR-I6"
+    ],
+    "implemented": true,
+    "description": "In a Design view fitted to a short window the block palette stays usable: the block list keeps a floor and the outline pane yields its share, so the + buttons stay reachable with the outline expanded"
   }
 ]

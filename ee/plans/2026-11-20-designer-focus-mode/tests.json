@@ -1429,5 +1429,32 @@
     ],
     "implemented": true,
     "description": "Component: the billing DesignerShell asked to fill its parent drops the viewport calc height and the 480px minimum, with no surface above it"
+  },
+  {
+    "id": "T158",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F085"
+    ],
+    "implemented": true,
+    "description": "Component: in a palette column too short for both panes the block list carries the pixel floor and the outline pane carries none, so the outline is what shrinks"
+  },
+  {
+    "id": "T159",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F085"
+    ],
+    "implemented": true,
+    "description": "Component: the outline toggle keeps its own height when the pane shrinks, and collapsing the outline drops its height claim entirely"
+  },
+  {
+    "id": "T160",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F085"
+    ],
+    "implemented": true,
+    "description": "Component: a searched block can still be added from the filtered list (the reviewer's unreachable + button)"
   }
 ]
