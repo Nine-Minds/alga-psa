@@ -627,10 +627,11 @@ describe('Collaborative Editing — Integration Tests', () => {
     }
 
     async function connectWithRenewal(room: string, issueCredential: () => Promise<{ token: string; expiresAt: number }>) {
-      const document = new Y.Doc(); documents.add(document);
-      const provider = new HocuspocusProvider({
-        url, name: room, document, parameters: { tenantId, userId }, preserveConnection: false,
+      const { createYjsProvider } = await import('@alga-psa/ui/editor');
+      const { provider, ydoc: document } = createYjsProvider(room, {
+        parameters: { tenantId, userId }, connect: false,
       });
+      documents.add(document);
       providers.add(provider);
       const { startDocumentRoomConnection } = await import('@alga-psa/documents/lib/documentRoomConnection');
       const connection = startDocumentRoomConnection(provider, issueCredential, error => {
@@ -815,7 +816,10 @@ describe('Collaborative Editing — Integration Tests', () => {
           renewalStarted();
           await renewalGate;
         }
-        const credential = shortLivedCredential(documentId);
+        const credential = tokenCalls === 1 ? shortLivedCredential(documentId) : {
+          token: signDocumentRoomToken({ tenantId, documentId, userId }),
+          expiresAt: Date.now() + 900_000,
+        };
         if (tokenCalls === 1) {
           firstExpiresAt = credential.expiresAt;
           firstToken = credential.token;
@@ -843,10 +847,16 @@ describe('Collaborative Editing — Integration Tests', () => {
       expect(tokenCalls).toBeGreaterThanOrEqual(2);
       expect(() => validateDocumentRoomToken(room, firstToken)).toThrow();
 
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Pending edit survives credential rotation');
+      write(editor.document, 'Editing continues after the original credential expires');
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
+        .toBe('Editing continues after the original credential expires');
+
       editor.provider.destroy(); providers.delete(editor.provider);
       await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
       await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text, { timeout: 5000 })
-        .toBe('Pending edit survives credential rotation');
+        .toBe('Editing continues after the original credential expires');
       expect(requests.some(request => request.path.endsWith('/persist') && request.status === 200)).toBe(true);
     });
 

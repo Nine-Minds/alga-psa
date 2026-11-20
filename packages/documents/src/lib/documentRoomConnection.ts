@@ -6,20 +6,25 @@ export interface DocumentRoomCredential {
 }
 
 const RENEWAL_LEAD_MS = 60_000;
-const RECONNECT_GRACE_MS = 100;
-const CLOSE_WAIT_MS = 500;
+const CLOSE_WAIT_MS = 10_000;
 
 function waitForSocketClose(provider: HocuspocusProvider): Promise<void> {
-  if (!provider.isConnected) return Promise.resolve();
-  return new Promise(resolve => {
-    let timeout: ReturnType<typeof setTimeout>;
+  const socket = provider.configuration.websocketProvider;
+  if (!socket.webSocket) {
+    provider.disconnect();
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
     const finish = () => {
       clearTimeout(timeout);
-      provider.off('close', finish);
+      socket.off('close', finish);
       resolve();
     };
-    provider.on('close', finish);
-    timeout = setTimeout(finish, CLOSE_WAIT_MS);
+    const timeout = setTimeout(() => {
+      socket.off('close', finish);
+      reject(new Error('Timed out closing the document socket for credential renewal.'));
+    }, CLOSE_WAIT_MS);
+    socket.on('close', finish);
     provider.disconnect();
   });
 }
@@ -30,6 +35,10 @@ export function startDocumentRoomConnection(
   issueCredential: () => Promise<DocumentRoomCredential>,
   onRenewalDenied: (error: unknown) => void,
 ): { ready: Promise<void>; stop: () => void } {
+  // This lifecycle owns the socket. Hocuspocus only authenticates a document
+  // once per socket, so disconnect must close it before rotating credentials.
+  provider.setConfiguration({ preserveConnection: false });
+
   let stopped = false;
   let renewalTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -56,7 +65,6 @@ export function startDocumentRoomConnection(
 
       provider.setConfiguration({ token: credential.token });
       await waitForSocketClose(provider);
-      await new Promise(resolve => setTimeout(resolve, RECONNECT_GRACE_MS));
       if (stopped) return;
 
       await provider.connect();
