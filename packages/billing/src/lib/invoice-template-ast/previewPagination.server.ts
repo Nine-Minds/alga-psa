@@ -1,6 +1,8 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import type { BrowserContext } from 'puppeteer';
+
 import { browserPoolService } from '../../services/browserPoolService';
 import { PREVIEW_SHEET_CLASS, PREVIEW_SHEET_GUIDE_CLASS, previewSheetSizePx } from './previewSheet';
 import {
@@ -170,10 +172,27 @@ export const paginateTemplatePreviewHtml = async (
   });
 
   let browser = null;
+  let context: BrowserContext | null = null;
   try {
     browser = await browserPoolService.getBrowser();
-    const page = await browser.newPage();
+    // The same page boundary every other server-side render here uses (pdfGenerationService):
+    // browsers are pooled, document state never is, so the chunking page gets its own context
+    // with its own cookies, cache and storage, and every request that is not already in the
+    // document is refused. The one rule it cannot borrow is configureIsolatedPage's
+    // `setJavaScriptEnabled(false)`: the chunker IS JavaScript, so it has to run. paged.js is
+    // injected from disk as inline script content, which asks the network for nothing.
+    context = await browser.createBrowserContext();
+    const page = await context.newPage();
     try {
+      await page.setRequestInterception(true);
+      page.on('request', (request) => {
+        const url = request.url();
+        if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
+          void request.continue();
+          return;
+        }
+        void request.abort('blockedbyclient');
+      });
       // Chunk in print media: the fragmentation hints that keep a table row, a totals block or a
       // heading whole live in `@media print`, and a preview chunked without them would break where
       // the PDF does not.
@@ -286,12 +305,15 @@ export const paginateTemplatePreviewHtml = async (
       const paginated = await page.content();
       return { html: withPreviewFramingCss(paginated, buildPaginatedSheetCss(geometry)), pageCount };
     } finally {
-      await page.close();
+      await page.close().catch(() => undefined);
     }
   } catch (error) {
     console.error('Failed to paginate the template preview:', error);
     return { html, pageCount: 0 };
   } finally {
+    if (context) {
+      await context.close().catch(() => undefined);
+    }
     await browserPoolService.releaseBrowser(browser);
   }
 };

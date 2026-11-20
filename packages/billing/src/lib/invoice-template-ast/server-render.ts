@@ -169,6 +169,25 @@ export async function inlineDocumentImageUrls(
   );
 }
 
+/**
+ * Inline the tenant's images into a preview document, the way the PDF path inlines them.
+ *
+ * The preview is chunked into pages by the same pooled Chromium the PDF is printed by, and that
+ * browser is launched with no route to the app (ISOLATED_RENDERER_BROWSER_ARGS black-holes its
+ * egress). So a logo left as a `/api/documents/view/...` URL loads for nobody but the author's own
+ * iframe, and the sheets get chunked around a header shorter than the one that prints. An
+ * un-inlined preview still beats no preview, so a failure here degrades rather than throws.
+ */
+export const inlinePreviewDocumentImages = async (html: string): Promise<string> => {
+  try {
+    const { createTenantKnex } = await import('@alga-psa/db');
+    const { knex } = await createTenantKnex();
+    return await inlineDocumentImageUrls(html, { knex });
+  } catch {
+    return html;
+  }
+};
+
 // A value that is, in its entirety, a document view URL (optionally `?t=...`).
 const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?$/i;
 

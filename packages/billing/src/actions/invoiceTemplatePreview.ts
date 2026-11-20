@@ -12,7 +12,7 @@ import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-tem
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { localizeTemplateAstForLocale, resolveTemplateAstI18n } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import { buildTemplateHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { buildTemplateHtmlDocument, inlinePreviewDocumentImages } from '../lib/invoice-template-ast/server-render';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 
@@ -177,9 +177,13 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         t: localized.t,
       });
       // The author sees the pages this invoice prints as, chunked by the same engine that prints them.
+      // Its images are inlined first (inlinePreviewDocumentImages), or the chunker would
+      // measure a header the author's iframe then draws taller.
       const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
       const paginated = await paginateDocumentPreviewHtml(
-        buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Invoice preview' }),
+        await inlinePreviewDocumentImages(
+          buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Invoice preview' }),
+        ),
         validation.ast,
         { locale: localized.locale },
       );

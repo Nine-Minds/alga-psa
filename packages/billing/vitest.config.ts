@@ -152,6 +152,9 @@ export default defineConfig({
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
+      // The chunker has no route to the app, so a preview it paginates has to carry
+      // its images inline or its pages disagree with the printed ones.
+      'src/actions/templatePreviewImageInlining.test.ts',
       // Invoice discount render model (alga0002295): unformatted-field behaviour,
       // opt-in layout + back-compat renders, the derivation helper's call sites, and
       // the designer's catalog / Discount Row / preview-sample coverage.

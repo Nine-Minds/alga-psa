@@ -9,7 +9,7 @@ import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast
 import { evaluateTemplateAst, TemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
 import { localizeTemplateAstForLocale } from '../lib/invoice-template-ast/i18nLabels';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import { buildTemplateHtmlDocument } from '../lib/invoice-template-ast/server-render';
+import { buildTemplateHtmlDocument, inlinePreviewDocumentImages } from '../lib/invoice-template-ast/server-render';
 import { validateTemplateAst } from '../lib/invoice-template-ast/schema';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 
@@ -134,9 +134,13 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
         t: localized.t,
       });
       // The author sees the pages this quote prints as, chunked by the same engine that prints them.
+      // Its images are inlined first (inlinePreviewDocumentImages), or the chunker would
+      // measure a header the author's iframe then draws taller.
       const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
       const paginated = await paginateDocumentPreviewHtml(
-        buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Quote preview' }),
+        await inlinePreviewDocumentImages(
+          buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Quote preview' }),
+        ),
         validation.ast,
         { locale: localized.locale },
       );
