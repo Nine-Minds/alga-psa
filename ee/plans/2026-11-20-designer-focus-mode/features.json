@@ -791,5 +791,14 @@
     ],
     "implemented": true,
     "description": "In a Design view fitted to a short window the block palette stays usable: the block list keeps a floor and the outline pane yields its share, so the + buttons stay reachable with the outline expanded"
+  },
+  {
+    "id": "F086",
+    "commitGroup": "billing-shell-invoice",
+    "prdRefs": [
+      "FR-D3"
+    ],
+    "implemented": true,
+    "description": "Focus mode shows the layout canvas at 100%: entering focus mode (and loading a layout while focused) sets the zoom to actual size, leaving it restores the zoom the page layout was working at, and a zoom chosen by hand inside focus mode is left alone"
   }
 ]

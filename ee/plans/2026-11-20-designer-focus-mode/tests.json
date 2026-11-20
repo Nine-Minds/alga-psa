@@ -1456,5 +1456,41 @@
     ],
     "implemented": true,
     "description": "Component: a searched block can still be added from the filtered list (the reviewer's unreachable + button)"
+  },
+  {
+    "id": "T161",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F086"
+    ],
+    "implemented": true,
+    "description": "Component: the canvas zoom becomes 100% when the surface around the billing designer takes focus"
+  },
+  {
+    "id": "T162",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F086"
+    ],
+    "implemented": true,
+    "description": "Component: the zoom the page layout was working at comes back when focus ends"
+  },
+  {
+    "id": "T163",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F086"
+    ],
+    "implemented": true,
+    "description": "Component: a layout loaded while focused is shown at 100% and hands its saved zoom back on the way out"
+  },
+  {
+    "id": "T164",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F086"
+    ],
+    "implemented": true,
+    "description": "Component: a zoom chosen inside focus mode is not overridden while focus lasts"
   }
 ]

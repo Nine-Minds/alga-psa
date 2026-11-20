@@ -136,6 +136,7 @@ The primitive holds no storage. It is told whether it is focused and reports whe
 
 - **FR-D1.** The billing `DesignerShell` reads `useDesignerFocusState()`. Unfocused it keeps `h-[calc(100vh-24.75rem)] min-h-[480px]`. Focused it fills its parent.
 - **FR-D2.** Rendered outside any surface, the shell behaves exactly as it does today.
+- **FR-D3.** (operator feedback) Entering focus mode puts the canvas at 100%, including when a layout loads while focused. Leaving focus mode restores the zoom the page layout was working at. A zoom chosen by hand inside focus mode is left alone until focus ends, and the Fit button keeps working in both modes.
 
 **FR-E — Invoice layout designer**
 
