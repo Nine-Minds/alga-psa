@@ -22,6 +22,7 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
   const router = useRouter();
   const email = searchParams.get('email');
   const portal = searchParams.get('portal') || 'msp'; // Default to MSP if not specified
+  const tenantSlug = searchParams.get('tenant')?.trim() || undefined; // scoped MSP sign-in
   const { t } = useTranslation();
 
   const handleResend = async () => {
@@ -29,7 +30,11 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
 
     setIsResending(true);
     try {
-      await recoverPassword(email, portal as 'msp' | 'client', portal === 'client' ? portalDomain : undefined);
+      await recoverPassword(
+        email,
+        portal as 'msp' | 'client',
+        portal === 'client' ? { portalDomain } : { tenantSlug }
+      );
       toast.success(t('auth.checkEmail.resendSuccess', 'Email sent! Please check your inbox.'));
     } catch {
       toast.error(t('auth.checkEmail.resendFailed', 'Failed to resend email. Please try again.'));
@@ -39,7 +44,9 @@ const CheckEmailClient: React.FC<CheckEmailClientProps> = ({ branding, portalDom
   };
 
   const handleBackToSignIn = () => {
-    const signinHref = portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin';
+    const signinHref = portal === 'client'
+      ? '/auth/client-portal/signin'
+      : tenantSlug ? `/auth/msp/signin?tenant=${encodeURIComponent(tenantSlug)}` : '/auth/msp/signin';
     router.push(portal === 'client' ? appendPortalDomain(signinHref, portalDomain) : signinHref);
   };
 

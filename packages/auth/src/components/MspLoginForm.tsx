@@ -286,7 +286,7 @@ export default function MspLoginForm({
 
         <div className="text-sm text-right space-y-1">
           <div>
-            <Link href="/auth/msp/forgot-password"
+            <Link href={tenantSlug ? `/auth/msp/forgot-password?tenant=${encodeURIComponent(tenantSlug)}` : '/auth/msp/forgot-password'}
             className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
             {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
               {t('signIn.form.forgotPassword', 'Forgot your password?')}

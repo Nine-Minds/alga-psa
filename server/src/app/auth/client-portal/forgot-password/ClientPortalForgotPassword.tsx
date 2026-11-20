@@ -35,7 +35,7 @@ const ClientPortalForgotPassword: React.FC<ClientPortalForgotPasswordProps> = ({
     console.log('Password reset requested for client portal user:', formData.email);
 
     // Always show success message for security - don't reveal if email exists
-    await recoverPassword(formData.email, 'client', portalDomain);
+    await recoverPassword(formData.email, 'client', { portalDomain });
     toast.success(t('auth.forgotPasswordPage.resetLinkSent', 'If an account exists with this email, a password reset link has been sent.'));
     const checkEmailHref = `/auth/check-email?email=${encodeURIComponent(formData.email)}&type=forgot_password&portal=client`;
     router.push(appendPortalDomain(checkEmailHref, portalDomain));

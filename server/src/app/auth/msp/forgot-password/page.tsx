@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, FormEvent } from 'react'; 
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link'; 
 import * as Label from '@radix-ui/react-label';
@@ -23,15 +23,19 @@ const MspForgotPassword: React.FC = () => {
   });
 
   const router = useRouter();
+  // `?tenant=<slug>` comes from a scoped MSP sign-in. It only narrows the reset
+  // to that organization; the server decides whether it names a real tenant.
+  const tenantSlug = useSearchParams().get('tenant')?.trim() || undefined;
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('Password reset requested for MSP user:', formData.email);
     
     // Always show success message for security - don't reveal if email exists
-    await recoverPassword(formData.email, 'msp');
+    await recoverPassword(formData.email, 'msp', { tenantSlug });
     toast.success(t('forgotPassword.resetLinkSent', 'If an account exists with this email, a password reset link has been sent.'));
-    router.push(`/auth/check-email?email=${formData.email}&type=forgot_password&portal=msp`);
+    const tenantQuery = tenantSlug ? `&tenant=${encodeURIComponent(tenantSlug)}` : '';
+    router.push(`/auth/check-email?email=${formData.email}&type=forgot_password&portal=msp${tenantQuery}`);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +96,7 @@ const MspForgotPassword: React.FC = () => {
           </div>
         </Form.Root>
         <div className="text-center">
-          <Link href="/auth/msp/signin" className="text-sm font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
+          <Link href={tenantSlug ? `/auth/msp/signin?tenant=${encodeURIComponent(tenantSlug)}` : '/auth/msp/signin'} className="text-sm font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
             {t('forgotPassword.backToLogin', '← Back to log in')}
           </Link>
         </div>
@@ -106,7 +110,9 @@ const MspForgotPassword: React.FC = () => {
 export default function MspForgotPasswordPage() {
   return (
     <I18nWrapper portal="msp">
-      <MspForgotPassword />
+      <Suspense fallback={null}>
+        <MspForgotPassword />
+      </Suspense>
     </I18nWrapper>
   );
 }

@@ -27,6 +27,13 @@
  *     absent but a trusted fallback (NEXTAUTH_URL) configured, the delivered
  *     link is an absolute URL on that origin and is logged as sent.
  *
+ *  8. Tenant binding (alga-2026-0002632): one client email in two tenants, each
+ *     with its own portal domain, in both insert orders. A hinted request sends
+ *     exactly one email through the hinted tenant with a token naming that
+ *     tenant's user; redemption changes only that user's password; an unhinted
+ *     request fans out one email per tenant; MSP slug hints behave the same.
+ *     Over the per-email rate limit nothing is sent.
+ *
  * The only mocked seams are the application logger (to inspect diagnostics)
  * and the @alga-psa/auth barrel that setup.ts globally replaces; the action is
  * imported through the real @alga-psa/auth/actions source.
@@ -46,6 +53,9 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-uti
 import { createTenant, createUser } from '../../../../test-utils/testDataFactory';
 
 import { getInfoFromToken } from '../../../../../packages/auth/src/lib/tokenizer';
+import { setNewPassword, getAccountInfoFromToken } from '../../../../../packages/auth/src/actions/useRegister';
+import { invalidateTenantAuthPolicyCache } from '../../../../../packages/auth/src/lib/authPolicyStore';
+import { buildTenantPortalSlug } from '../../../../../packages/db/src/lib/tenantSlug';
 import {
   registerAuthEmailProvider,
   resetAuthEmailRegistry,
@@ -64,6 +74,15 @@ vi.mock('@alga-psa/core/logger', () => ({
     system: (...args: unknown[]) => loggerInfo(...args),
   },
 }));
+
+// The per-email limit is a real in-memory budget (3 per 15 minutes) that this
+// suite would exhaust by reusing addresses. It is controllable here; the limiter
+// itself is covered by rateLimiting.test.ts.
+const limitMock = vi.hoisted(() => vi.fn(async (_email: string) => ({ success: true as boolean })));
+vi.mock('../../../../../packages/auth/src/lib/security/rateLimiting', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, checkPasswordResetLimit: (email: string) => limitMock(email) };
+});
 
 const SMTP_PROVIDER_ID = 'tenant-smtp-emulator';
 const HOOK_TIMEOUT = 240_000;
@@ -85,6 +104,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
   let db: Knex;
   let host: EmulatorHost;
   let controlUrl: string;
+  let smtpPort: number;
   let tenantId: string;
   let internalEmail: string;
   let clientEmail: string;
@@ -125,6 +145,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3614';
     delete process.env.NEXTAUTH_URL;
     delete process.env.HOST;
+    limitMock.mockReset().mockResolvedValue({ success: true });
     loggerError.mockClear();
     loggerWarn.mockClear();
     loggerInfo.mockClear();
@@ -165,7 +186,7 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     host = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
     const { controlPort, ports } = await host.start();
     controlUrl = `http://127.0.0.1:${controlPort}`;
-    const smtpPort = ports['smtp-sink'];
+    smtpPort = ports['smtp-sink'];
 
     for (const key of Object.keys(envBackup)) {
       envBackup[key] = process.env[key];
@@ -451,5 +472,271 @@ describe('password recovery email provider path (real DB + real SMTP)', () => {
     expect(payload.tenant).toBe(tenantId);
     expect(String(payload.error ?? '')).toContain('SMTP');
     expectNoTokenOrUrlIn(payload);
+  });
+
+  describe('one email in two tenants (alga-2026-0002632)', () => {
+    interface Org {
+      tenant: string;
+      userId: string;
+      firstName: string;
+      portalDomain: string;
+      slug: string;
+      password: string;
+    }
+
+    function tokenOf(email: CapturedEmail): string {
+      const match = (email.text || email.html || '').match(/token=([^&\s"]+)/);
+      if (!match) throw new Error('No token parameter found in delivered message');
+      return decodeURIComponent(match[1]);
+    }
+
+    async function provisionTenant(name: string, from: string): Promise<string> {
+      const tenant = await createTenant(db, name);
+      const clientId = uuidv4();
+      await tenantDb(db, tenant).table('clients').insert({
+        client_id: clientId,
+        tenant,
+        client_name: name,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      await tenantDb(db, tenant).table('tenant_companies').insert({ tenant, client_id: clientId, is_default: true });
+      await tenantDb(db, tenant).table('tenant_email_settings').insert({
+        tenant,
+        default_from_domain: 'example.com',
+        custom_domains: JSON.stringify([]),
+        email_provider: 'smtp',
+        provider_configs: JSON.stringify([
+          {
+            providerId: SMTP_PROVIDER_ID,
+            providerType: 'smtp',
+            isEnabled: true,
+            config: { host: '127.0.0.1', port: smtpPort, secure: false, from, rejectUnauthorized: false, requireTLS: false },
+          },
+        ]),
+        fallback_enabled: true,
+        tracking_enabled: false,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+      return tenant;
+    }
+
+    async function addPortalDomain(tenant: string, domain: string): Promise<void> {
+      await db('portal_domains').insert({
+        tenant,
+        domain,
+        canonical_host: `canonical-${domain}`,
+        status: 'active',
+      });
+    }
+
+    async function hashOf(org: Org): Promise<string> {
+      const row = await tenantDb(db, org.tenant).table('users').where({ user_id: org.userId }).first();
+      return row.hashed_password;
+    }
+
+    async function sentTenants(): Promise<string[]> {
+      const rows = await db('email_sending_logs').whereIn('tenant', [orgA.tenant, orgB.tenant]).where({ status: 'sent' });
+      return rows.map((r: { tenant: string }) => r.tenant);
+    }
+
+    let orgA: Org;
+    let orgB: Org;
+    let sharedEmail: string;
+    let sharedInternalEmail: string;
+
+    /**
+     * Two tenants holding the same client and internal email. `first` is the tenant
+     * whose users are inserted first: heap order alone must not decide the outcome.
+     */
+    async function buildFixture(first: 'A' | 'B'): Promise<void> {
+      const suffix = uuidv4().slice(0, 8);
+      sharedEmail = `dual-${suffix}@example.com`;
+      sharedInternalEmail = `dual-internal-${suffix}@example.com`;
+      const make = async (label: 'A' | 'B'): Promise<Org> => {
+        const tenant = await provisionTenant(`Reset Tenant ${label} ${suffix}`, `reset-${label.toLowerCase()}-${suffix}@example.com`);
+        const portalDomain = `portal-${label.toLowerCase()}-${suffix}.example.test`;
+        await addPortalDomain(tenant, portalDomain);
+        const firstName = `Name${label}${suffix}`;
+        const userId = await createUser(db, tenant, {
+          email: sharedEmail,
+          username: `client-${label}-${suffix}`,
+          first_name: firstName,
+          last_name: 'Client',
+          user_type: 'client',
+          hashed_password: `original-hash-${label}-${suffix}`,
+        });
+        await createUser(db, tenant, {
+          email: sharedInternalEmail,
+          username: `internal-${label}-${suffix}`,
+          first_name: `Internal${label}`,
+          last_name: 'User',
+          user_type: 'internal',
+        });
+        return { tenant, userId, firstName, portalDomain, slug: buildTenantPortalSlug(tenant), password: `original-hash-${label}-${suffix}` };
+      };
+      if (first === 'A') {
+        orgA = await make('A');
+        orgB = await make('B');
+      } else {
+        orgB = await make('B');
+        orgA = await make('A');
+      }
+    }
+
+    async function expectSingleEmailFrom(org: Org, other: Org): Promise<CapturedEmail> {
+      const emails = await capturedEmails();
+      expect(emails).toHaveLength(1);
+      expect(emails[0].to).toContain(sharedEmail);
+      expect(emails[0].from).toContain(`reset-${org === orgA ? 'a' : 'b'}-`);
+      expect(await sentTenants()).toEqual([org.tenant]);
+      const info = await getInfoFromToken(tokenOf(emails[0]));
+      expect(info.errorType).toBeNull();
+      expect(info.userInfo?.tenant).toBe(org.tenant);
+      expect(info.userInfo?.user_id).toBe(org.userId);
+      expect(info.userInfo?.tenant).not.toBe(other.tenant);
+      expect(emails[0].text).toContain(`portalDomain=${org.portalDomain}`);
+      return emails[0];
+    }
+
+    describe.each(['A', 'B'] as const)('users inserted %s first', (first) => {
+      beforeAll(async () => {
+        await buildFixture(first);
+      }, HOOK_TIMEOUT);
+
+      beforeEach(async () => {
+        await db('email_sending_logs').whereIn('tenant', [orgA.tenant, orgB.tenant]).del();
+        await TenantEmailService.invalidateTenantSettings(orgA.tenant);
+        await TenantEmailService.invalidateTenantSettings(orgB.tenant);
+      });
+
+      // T001
+      it("A's portal domain sends exactly one email through A, naming A's user", async () => {
+        expect(await recoverPassword(sharedEmail, 'client', { portalDomain: orgA.portalDomain })).toBe(true);
+        await expectSingleEmailFrom(orgA, orgB);
+      });
+
+      it("B's portal domain sends exactly one email through B, naming B's user", async () => {
+        expect(await recoverPassword(sharedEmail, 'client', { portalDomain: orgB.portalDomain })).toBe(true);
+        await expectSingleEmailFrom(orgB, orgA);
+      });
+
+      it('the legacy string form of the third argument still hints the portal domain', async () => {
+        expect(await recoverPassword(sharedEmail, 'client', orgA.portalDomain)).toBe(true);
+        await expectSingleEmailFrom(orgA, orgB);
+      });
+
+      // T002
+      it("redeeming A's token changes only A's hash and shows A's name; likewise B", async () => {
+        for (const [org, other] of [[orgA, orgB], [orgB, orgA]] as const) {
+          await host.reset('smtp-sink');
+          await recoverPassword(sharedEmail, 'client', { portalDomain: org.portalDomain });
+          const [email] = await capturedEmails();
+          const token = tokenOf(email);
+
+          const info = await getAccountInfoFromToken(token, 'client');
+          expect(info?.name).toBe(`${org.firstName} Client`);
+
+          const otherBefore = await hashOf(other);
+          const ownBefore = await hashOf(org);
+          expect(await setNewPassword('Brand-new-Passw0rd!', token)).toBe(true);
+          expect(await hashOf(org)).not.toBe(ownBefore);
+          expect(await hashOf(other)).toBe(otherBefore);
+        }
+      });
+
+      // T003
+      it('with no hint, sends one email per tenant, each bound to its own user and portal domain', async () => {
+        expect(await recoverPassword(sharedEmail, 'client')).toBe(true);
+        const emails = await capturedEmails();
+        expect(emails).toHaveLength(2);
+        expect((await sentTenants()).sort()).toEqual([orgA.tenant, orgB.tenant].sort());
+        for (const org of [orgA, orgB]) {
+          const mine = emails.filter((e) => e.text.includes(`portalDomain=${org.portalDomain}`));
+          expect(mine).toHaveLength(1);
+          const info = await getInfoFromToken(tokenOf(mine[0]));
+          expect(info.userInfo?.tenant).toBe(org.tenant);
+          expect(info.userInfo?.user_id).toBe(org.userId);
+        }
+      });
+
+      it('an inactive subject is skipped without suppressing the other tenant', async () => {
+        await tenantDb(db, orgA.tenant).table('users').where({ user_id: orgA.userId }).update({ is_inactive: true });
+        try {
+          expect(await recoverPassword(sharedEmail, 'client')).toBe(true);
+          const emails = await capturedEmails();
+          expect(emails).toHaveLength(1);
+          expect(await sentTenants()).toEqual([orgB.tenant]);
+          expect((await getInfoFromToken(tokenOf(emails[0]))).userInfo?.user_id).toBe(orgB.userId);
+
+          // A hint at the inactive tenant sends nothing: it never falls through to B.
+          await host.reset('smtp-sink');
+          await db('email_sending_logs').whereIn('tenant', [orgA.tenant, orgB.tenant]).del();
+          expect(await recoverPassword(sharedEmail, 'client', { portalDomain: orgA.portalDomain })).toBe(true);
+          expect(await capturedEmails()).toHaveLength(0);
+        } finally {
+          await tenantDb(db, orgA.tenant).table('users').where({ user_id: orgA.userId }).update({ is_inactive: false });
+        }
+      });
+
+      it('an SSO-required internal subject is skipped without suppressing the other tenant', async () => {
+        const settings = tenantDb(db, orgA.tenant).table('tenant_settings');
+        const existing = await settings.where({ tenant: orgA.tenant }).first();
+        const next = { ...(typeof existing?.settings === 'object' ? existing.settings : {}), sso: { requireSsoForInternalUsers: true } };
+        if (existing) {
+          await tenantDb(db, orgA.tenant).table('tenant_settings').where({ tenant: orgA.tenant }).update({ settings: JSON.stringify(next) });
+        } else {
+          await tenantDb(db, orgA.tenant).table('tenant_settings').insert({ tenant: orgA.tenant, settings: JSON.stringify(next) });
+        }
+        invalidateTenantAuthPolicyCache(orgA.tenant);
+        try {
+          expect(await recoverPassword(sharedInternalEmail, 'msp')).toBe(true);
+          const emails = await capturedEmails();
+          expect(emails).toHaveLength(1);
+          expect(await sentTenants()).toEqual([orgB.tenant]);
+          const info = await getInfoFromToken(tokenOf(emails[0]));
+          expect(info.userInfo?.tenant).toBe(orgB.tenant);
+        } finally {
+          if (existing) {
+            await tenantDb(db, orgA.tenant).table('tenant_settings').where({ tenant: orgA.tenant }).update({ settings: JSON.stringify(existing.settings) });
+          } else {
+            await tenantDb(db, orgA.tenant).table('tenant_settings').where({ tenant: orgA.tenant }).del();
+          }
+          invalidateTenantAuthPolicyCache(orgA.tenant);
+        }
+      });
+
+      // T006
+      it('returns the same value for match, hint mismatch, fan-out and over-limit; over the limit sends nothing', async () => {
+        const results: unknown[] = [];
+        results.push(await recoverPassword(sharedEmail, 'client', { portalDomain: orgA.portalDomain }));
+        results.push(await recoverPassword(sharedEmail, 'client'));
+        results.push(await recoverPassword(`nobody-${uuidv4().slice(0, 6)}@example.com`, 'client', { portalDomain: orgA.portalDomain }));
+        await host.reset('smtp-sink');
+        limitMock.mockResolvedValueOnce({ success: false });
+        results.push(await recoverPassword(sharedEmail, 'client'));
+        expect(results).toEqual([true, true, true, true]);
+        expect(await capturedEmails()).toHaveLength(0);
+        expect(limitMock).toHaveBeenCalledWith(sharedEmail);
+      });
+
+      // T008
+      it("an MSP slug hint sends only that tenant's email; no hint sends both", async () => {
+        expect(await recoverPassword(sharedInternalEmail, 'msp', { tenantSlug: orgB.slug })).toBe(true);
+        let emails = await capturedEmails();
+        expect(emails).toHaveLength(1);
+        expect(await sentTenants()).toEqual([orgB.tenant]);
+        const info = await getInfoFromToken(tokenOf(emails[0]));
+        expect(info.userInfo?.tenant).toBe(orgB.tenant);
+        expect(info.userInfo?.user_type).toBe('internal');
+
+        await host.reset('smtp-sink');
+        await db('email_sending_logs').whereIn('tenant', [orgA.tenant, orgB.tenant]).del();
+        expect(await recoverPassword(sharedInternalEmail, 'msp', { tenantSlug: 'not-a-slug' })).toBe(true);
+        emails = await capturedEmails();
+        expect(emails).toHaveLength(2);
+      });
+    });
   });
 });
