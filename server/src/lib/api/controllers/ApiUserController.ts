@@ -675,8 +675,9 @@ export class ApiUserController extends ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
 
-        // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        // Run as the API-key user within its tenant, so anything downstream
+        // that resolves the caller through getCurrentUser() sees that user.
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'create');
 
@@ -716,8 +717,8 @@ export class ApiUserController extends ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
 
-        // Run within tenant context
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        // Run as the API-key user within its tenant, as bulkCreate() does.
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'update');
 
