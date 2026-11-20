@@ -96,18 +96,25 @@ const buildPaginatedSheetCss = (geometry: DocumentPrintGeometry): string => {
   html body { margin: 0; padding: 24px; box-sizing: border-box; background: transparent; }
   .pagedjs_pages { display: block; width: auto; height: auto; max-width: none; }
   /* paged.js sizes the page box to the sheet itself, so centring the sheet inside the box does
-     nothing — the box is what has to sit in the middle of the backdrop, hence the auto margins. */
-  .${PREVIEW_PAGE_CLASS} {
+     nothing — the box is what has to sit in the middle of the backdrop, hence the auto margins.
+     It states that size with a two-class selector (.pagedjs_page.pagedjs_right_page), which outweighs
+     a one-class override: the box would keep the paper's full unzoomed size, so a sheet the frame had
+     zoomed to fit floated in a page-sized backdrop that still scrolled sideways. Matched with the same
+     weight, later in the cascade, the box hugs the sheet at whatever zoom is applied. */
+  .pagedjs_page.${PREVIEW_PAGE_CLASS} {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: auto;
+    width: -webkit-fit-content;
+    width: fit-content;
     height: auto;
     margin: 0 auto;
     padding: 0;
   }
   .${PREVIEW_PAGE_CLASS} + .${PREVIEW_PAGE_CLASS} { margin-top: 24px; }
-  .${PREVIEW_SHEET_CLASS} {
+  /* Two classes for the same reason (.pagedjs_right_page .pagedjs_sheet states the size too): the
+     drawn sheet has to be the geometry the frame's zoom-to-fit does its arithmetic on. */
+  .pagedjs_page .${PREVIEW_SHEET_CLASS} {
     position: relative;
     box-sizing: border-box;
     width: ${geometry.pageWidthMm}mm;

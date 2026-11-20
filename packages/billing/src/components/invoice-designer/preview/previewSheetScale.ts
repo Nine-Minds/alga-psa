@@ -17,6 +17,12 @@ export type PreviewSheetFit = 'box' | 'width';
 export const MAX_FIT_SCALE = 4;
 const MIN_SCALE = 0.1;
 
+/**
+ * Body padding the server's screen-only sheet CSS puts around the sheet, per side (previewSheet.ts,
+ * previewPagination.server.ts). The pane's width minus this gutter is what a sheet is fitted into.
+ */
+export const PREVIEW_SHEET_GUTTER_PX = 24;
+
 export interface PreviewSheetMetrics {
   widthPx: number;
   heightPx: number;

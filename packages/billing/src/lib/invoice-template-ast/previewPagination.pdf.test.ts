@@ -25,6 +25,7 @@ import {
   exportWorkspaceToTemplateAst,
   importTemplateAstToWorkspace,
 } from '../../components/invoice-designer/ast/workspaceAst';
+import { PREVIEW_SHEET_GUTTER_PX } from '../../components/invoice-designer/preview/previewSheetScale';
 import type { DesignerWorkspaceSnapshot } from '../../components/invoice-designer/state/designerStore';
 import { browserPoolService } from '../../services/browserPoolService';
 import { evaluateTemplateAst } from './evaluator';
@@ -268,5 +269,82 @@ describe('the paginated preview matches the printed pages', () => {
     expect(printed).toHaveLength(1);
     expect(preview.pageCount).toBe(1);
     expectParity(sheets, printed);
+  }, 180_000);
+});
+
+/**
+ * How the drawn sheets sit in a pane narrower than the paper. Measured in real Chromium because the
+ * thing under test is a cascade fight: paged.js states the page box's size with a two-class selector,
+ * so the screen-only framing has to outweigh it or the box keeps the paper's unzoomed size.
+ */
+const measureFrameLayout = async (paginatedHtml: string, paneWidthPx: number) => {
+  const browser = await browserPoolService.getBrowser();
+  try {
+    const page = await browser.newPage();
+    try {
+      await page.setViewport({ width: paneWidthPx, height: 800 });
+      await page.setContent(paginatedHtml, { waitUntil: 'load' });
+      return await page.evaluate(
+        (input) => {
+          const sheets = Array.from(document.querySelectorAll<HTMLElement>('.alga-preview-sheet'));
+          const sheetWidthPx = Number(sheets[0]?.getAttribute('data-sheet-width-px'));
+          // The frame's own arithmetic: fit the paper into the pane minus its gutter, never past 1.
+          const scale = Math.max(0.1, Math.floor(Math.min((input.paneWidthPx - input.gutterPx * 2) / sheetWidthPx, 1) * 100) / 100);
+          const read = () => {
+            const box = document.querySelector<HTMLElement>('.alga-preview-page')!.getBoundingClientRect();
+            const sheet = sheets[0].getBoundingClientRect();
+            return {
+              overflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+              documentHeightPx: Math.ceil(document.body.getBoundingClientRect().height),
+              backdropWidthPx: box.width,
+              backdropHeightPx: box.height,
+              sheetWidthPx: sheet.width,
+              sheetHeightPx: sheet.height,
+              sheetLeftPx: sheet.left,
+            };
+          };
+          const actual = read();
+          sheets.forEach((sheet) => sheet.style.setProperty('zoom', String(scale)));
+          return { scale, paperWidthPx: sheetWidthPx, fit: read(), actual };
+        },
+        { paneWidthPx, gutterPx: PREVIEW_SHEET_GUTTER_PX },
+      );
+    } finally {
+      await page.close();
+    }
+  } finally {
+    await browserPoolService.releaseBrowser(browser);
+  }
+};
+
+describe('the drawn sheets in a pane narrower than the paper', () => {
+  it('shrinks the backdrop with the paper, leaving nothing to scroll sideways', async () => {
+    const source = getStandardQuoteTemplateAstByCode('standard-quote-default')!;
+    const workspace = importTemplateAstToWorkspace(JSON.parse(JSON.stringify(source)) as TemplateAst);
+    addPageBreak(workspace, 'cover-break', 1);
+    const ast = exportWorkspaceToTemplateAst(workspace);
+    const { pageCount, html } = await paginateDocumentPreviewHtml(await renderHtml(ast, quoteModel), ast, {
+      locale: 'en',
+    });
+    expect(pageCount).toBe(2);
+
+    const paneWidthPx = 560;
+    const layout = await measureFrameLayout(html, paneWidthPx);
+    expect(layout.scale).toBeLessThan(1);
+
+    // Fitted: the page box is the zoomed sheet, so the sheet is centred on the backdrop and the whole
+    // of it is on screen. Before the specificity fix the box stayed 8.5 x 11in and the fitted sheet
+    // sat in the middle of a backdrop that scrolled 280px sideways.
+    expect(layout.fit.overflowPx).toBe(0);
+    expect(layout.fit.sheetWidthPx).toBeCloseTo(layout.paperWidthPx * layout.scale, 0);
+    expect(layout.fit.backdropWidthPx).toBeCloseTo(layout.fit.sheetWidthPx, 0);
+    expect(layout.fit.backdropHeightPx - layout.fit.sheetHeightPx).toBeLessThan(40); // the caption
+    expect(layout.fit.documentHeightPx).toBeLessThan(layout.actual.documentHeightPx);
+
+    // At 100% the paper is wider than the pane on purpose — but it starts at the gutter, so the part
+    // that is off-screen is off to the right, where a scroll (or a drag) can still reach it.
+    expect(layout.actual.sheetWidthPx).toBeCloseTo(layout.paperWidthPx, 0);
+    expect(layout.actual.sheetLeftPx).toBe(PREVIEW_SHEET_GUTTER_PX);
+    expect(layout.actual.overflowPx).toBeCloseTo(layout.paperWidthPx + PREVIEW_SHEET_GUTTER_PX - paneWidthPx, 0);
   }, 180_000);
 });
