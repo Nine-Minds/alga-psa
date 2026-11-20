@@ -937,6 +937,7 @@
       "portalAdminUpdateFailed": "De portaalbeheerdersstatus kon niet worden bijgewerkt. Vernieuw de pagina en probeer het opnieuw.",
       "userLoadFailed": "Gebruiker kon niet worden opgehaald",
       "sharedMailboxAdmin": "Contacten van gedeelde postvakken kunnen geen klantbeheerders zijn.",
+      "portalAdminRoleManaged": "Dit contact heeft een portaalgebruiker, dus portaalbeheerder wordt bepaald door de rol van die gebruiker.",
       "createFailed": "Er is een onverwachte fout opgetreden bij het aanmaken van het contact",
       "importDuplicateEmail": "Er bestaat al een contact met dit e-mailadres: {{value}}",
       "importDuplicateName": "Er bestaat al een contact met deze naam: {{value}}",

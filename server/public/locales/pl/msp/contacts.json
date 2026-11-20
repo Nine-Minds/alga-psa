@@ -941,6 +941,7 @@
       "portalAdminUpdateFailed": "Nie można zaktualizować statusu administratora portalu. Odśwież stronę i spróbuj ponownie.",
       "userLoadFailed": "Nie udało się pobrać użytkownika",
       "sharedMailboxAdmin": "Kontakty współdzielonych skrzynek pocztowych nie mogą być administratorami klientów.",
+      "portalAdminRoleManaged": "Ten kontakt ma użytkownika portalu, więc dostęp administratora portalu zależy od roli tego użytkownika.",
       "createFailed": "Wystąpił nieoczekiwany błąd podczas tworzenia kontaktu",
       "importDuplicateEmail": "Kontakt z tym adresem e-mail już istnieje: {{value}}",
       "importDuplicateName": "Kontakt o tej nazwie już istnieje: {{value}}",

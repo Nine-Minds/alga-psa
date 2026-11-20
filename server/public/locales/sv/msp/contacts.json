@@ -941,6 +941,7 @@
       "portalAdminUpdateFailed": "Det gick inte att uppdatera portaladministratörsstatusen. Uppdatera sidan och försök igen.",
       "userLoadFailed": "Det gick inte att hämta användaren",
       "sharedMailboxAdmin": "Kontakter för delade postlådor kan inte vara kundadministratörer.",
+      "portalAdminRoleManaged": "Den här kontakten har en portalanvändare, så portaladministratör styrs av den användarens roll.",
       "createFailed": "Ett oväntat fel uppstod när kontakten skapades",
       "importDuplicateEmail": "En kontakt med den här e-postadressen finns redan: {{value}}",
       "importDuplicateName": "En kontakt med det här namnet finns redan: {{value}}",

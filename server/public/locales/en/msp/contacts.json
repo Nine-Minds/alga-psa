@@ -941,6 +941,7 @@
       "portalAdminUpdateFailed": "Unable to update portal admin status. Please refresh and try again.",
       "userLoadFailed": "Failed to get user",
       "sharedMailboxAdmin": "Shared mailbox contacts cannot be client admins.",
+      "portalAdminRoleManaged": "This contact has a portal user, so portal admin is controlled by that user's role.",
       "createFailed": "An unexpected error occurred while creating the contact",
       "importDuplicateEmail": "Contact with this email already exists: {{value}}",
       "importDuplicateName": "Contact with this name already exists: {{value}}",

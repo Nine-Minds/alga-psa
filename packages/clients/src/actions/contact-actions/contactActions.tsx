@@ -1890,6 +1890,21 @@ export const updateContactPortalAdminStatus = withAuth(async (
         await assertContactIsNotSharedMailbox(trx, tenant, contactId, await contactText('errors.contact.sharedMailboxAdmin'));
       }
 
+      // contacts.is_client_admin is only a switch while the contact has no
+      // portal user: it is the invitation pre-seed that decides which role the
+      // account is created with. Once the user exists the flag is a mirror of
+      // their client 'Admin' role (alga-2026-0003347), and writing it here
+      // would disagree with the roles until the next role change. The UI hides
+      // the toggle in that state (ContactPortalTab); this is the action saying
+      // the same thing to any other caller.
+      const portalUser = await tenantScopedTable(trx, 'users', tenant)
+        .where({ contact_id: contactId, user_type: 'client' })
+        .first('user_id');
+
+      if (portalUser) {
+        throw await contactError('errors.contact.portalAdminRoleManaged');
+      }
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ contact_name_id: contactId })
         .update({

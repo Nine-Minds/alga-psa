@@ -941,6 +941,7 @@
       "portalAdminUpdateFailed": "Impossibile aggiornare lo stato di amministratore del portale. Aggiorna la pagina e riprova.",
       "userLoadFailed": "Impossibile recuperare l’utente",
       "sharedMailboxAdmin": "I contatti delle caselle di posta condivise non possono essere amministratori dei clienti.",
+      "portalAdminRoleManaged": "Questo contatto ha un utente del portale, quindi l'accesso come amministratore del portale è controllato dal ruolo di quell'utente.",
       "createFailed": "Si è verificato un errore imprevisto durante la creazione del contatto",
       "importDuplicateEmail": "Esiste già un contatto con questa email: {{value}}",
       "importDuplicateName": "Esiste già un contatto con questo nome: {{value}}",

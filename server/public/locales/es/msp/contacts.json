@@ -941,6 +941,7 @@
       "portalAdminUpdateFailed": "No se pudo actualizar el estado de administrador del portal. Actualice la página e intente de nuevo.",
       "userLoadFailed": "No se pudo obtener el usuario",
       "sharedMailboxAdmin": "Los contactos de buzones compartidos no pueden ser administradores de clientes.",
+      "portalAdminRoleManaged": "Este contacto tiene un usuario del portal, por lo que el rol de ese usuario controla el acceso de administrador del portal.",
       "createFailed": "Ocurrió un error inesperado al crear el contacto",
       "importDuplicateEmail": "Ya existe un contacto con este correo electrónico: {{value}}",
       "importDuplicateName": "Ya existe un contacto con este nombre: {{value}}",
