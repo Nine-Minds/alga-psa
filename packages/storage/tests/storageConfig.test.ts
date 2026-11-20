@@ -7,6 +7,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 import { clearCachedStorageConfig, getStorageConfig, validateFileUpload, validateSystemArtifact } from '../src/config/storage';
+import { isUploadContentTypeError, isUploadSizeLimitError } from '../src/ingest/errors';
 
 describe('storage config', () => {
   beforeEach(() => {
@@ -49,5 +50,27 @@ describe('storage config', () => {
     process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '10';
     await expect(validateSystemArtifact(11)).rejects.toThrow(/File size exceeds limit/);
     await expect(validateSystemArtifact(10)).resolves.toBeUndefined();
+  });
+
+  it('refuses with the ingest pipeline typed errors so entry points map them by type, not by message', async () => {
+    process.env.STORAGE_LOCAL_MAX_FILE_SIZE = '10';
+    process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES = 'image/*';
+    const tooBig = await validateFileUpload('image/png', 11).catch((error) => error);
+    expect(isUploadSizeLimitError(tooBig)).toBe(true);
+    expect(tooBig.message).toBe('File size exceeds limit of 10 bytes');
+    const wrongType = await validateFileUpload('application/x-msdownload', 1).catch((error) => error);
+    expect(isUploadContentTypeError(wrongType)).toBe(true);
+    expect(wrongType.message).toBe('File type not allowed');
+  });
+});
+
+describe('isMimeAllowed normalisation', () => {
+  it('ignores case and ; parameters on both the type and the allowlist', async () => {
+    const { isMimeAllowed } = await import('../src/config/storage-mime');
+    expect(isMimeAllowed(['image/png', 'text/*'], 'Image/PNG; foo=bar')).toBe(true);
+    expect(isMimeAllowed(['Application/PDF'], 'application/pdf')).toBe(true);
+    expect(isMimeAllowed(['text/*'], 'TEXT/Plain; charset=utf-8')).toBe(true);
+    expect(isMimeAllowed(['image/png'], 'image/jpeg; q=1')).toBe(false);
+    expect(isMimeAllowed(['*/*'], 'anything/at-all')).toBe(true);
   });
 });

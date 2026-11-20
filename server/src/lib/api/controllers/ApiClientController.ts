@@ -17,6 +17,7 @@ import {
   clientMergeRequestSchema,
   setBillingProfileContactsSchema
 } from '../schemas/client';
+import { contactFilterSchema } from '../schemas/contact';
 import { 
   runWithTenant 
 } from '../../db';
@@ -29,6 +30,10 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+
+// LEVERAGE: pattern path-uuid-validation — ApiBaseController.extractIdFromPath repeats this regex twice; a shared
+// path-param parser in the base controller would replace the per-controller copies.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class ApiClientController extends ApiBaseController {
   private clientService: ClientService;
@@ -104,12 +109,28 @@ export class ApiClientController extends ApiBaseController {
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
+          // The client-scoped list accepts the contact filters that make sense inside one client,
+          // validated by the same schema /api/v1/contacts uses; client_id stays ours, so a query
+          // string cannot widen the scope past the client in the path.
+          let filters: Record<string, unknown>;
+          try {
+            const { client_id: _scoped, ...parsed } = contactFilterSchema
+              .partial()
+              .parse(Object.fromEntries(url.searchParams.entries()));
+            filters = parsed;
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.issues);
+            }
+            throw error;
+          }
+
           // Use ContactService to get contacts for this client
           const contacts = await this.contactService.list(
-            { 
-              page, 
+            {
+              page,
               limit,
-              filters: { client_id: clientId } 
+              filters: { ...filters, client_id: clientId }
             },
             apiRequest.context!
           );
@@ -183,9 +204,8 @@ export class ApiClientController extends ApiBaseController {
     const clientsIndex = pathParts.findIndex(part => part === 'clients');
     const clientId = pathParts[clientsIndex + 1];
     const locationId = pathParts[pathParts.indexOf('locations', clientsIndex) + 1];
-    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!clientId || !uuid.test(clientId)) throw new ValidationError('Invalid client ID format');
-    if (!locationId || !uuid.test(locationId)) throw new ValidationError('Invalid location ID format');
+    if (!clientId || !UUID_PATTERN.test(clientId)) throw new ValidationError('Invalid client ID format');
+    if (!locationId || !UUID_PATTERN.test(locationId)) throw new ValidationError('Invalid location ID format');
     return { clientId, locationId };
   }
 
@@ -301,6 +321,15 @@ export class ApiClientController extends ApiBaseController {
     return index === -1 ? undefined : parts[index + 1];
   }
 
+  /** pathSegmentAfter for an id segment: a present but malformed UUID is a 400, not a database error. */
+  private uuidSegmentAfter(req: NextRequest, segment: string, label: string): string | undefined {
+    const value = this.pathSegmentAfter(req, segment);
+    if (value && !UUID_PATTERN.test(value)) {
+      throw new ValidationError(`Invalid ${label} ID format`);
+    }
+    return value;
+  }
+
   private async parseBody<T>(req: NextRequest, schema: { parse: (value: unknown) => T }): Promise<T> {
     try {
       return schema.parse(await req.json());
@@ -405,6 +434,47 @@ export class ApiClientController extends ApiBaseController {
             skipped_external_mapping_ids: result.skippedExternalMappingIds,
             billing_strategy: result.billingStrategy,
           });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  listBillingProfiles() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const clientId = this.uuidSegmentAfter(req, 'clients', 'client');
+          if (!clientId) {
+            throw new NotFoundError('Client not found');
+          }
+          const profiles = await this.clientService.listBillingProfiles(clientId, apiRequest.context!);
+          return createSuccessResponse(profiles);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  getBillingProfile() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          const clientId = this.uuidSegmentAfter(req, 'clients', 'client');
+          const profileId = this.uuidSegmentAfter(req, 'billing-profiles', 'billing profile');
+          if (!clientId || !profileId) {
+            throw new NotFoundError('Billing profile not found for this client');
+          }
+          const profile = await this.clientService.getBillingProfile(clientId, profileId, apiRequest.context!);
+          return createSuccessResponse(profile);
         });
       } catch (error) {
         return handleApiError(error);

@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { IUser } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import {
   getMappingDestinationProvider,
 } from './destinations';
@@ -288,8 +289,9 @@ async function evaluateRule(
   const evaluation = baseEvaluation(rule);
   const { knex, tenant, submission } = input;
 
+  // A display block is not a mappable source: it carries no answer.
   const questionExists = getFormFields(submission.formSchema).some(
-    (field) => field?.key === rule.questionKey
+    (field) => field?.key === rule.questionKey && getFieldElementKind((field as any)?.type) === 'input'
   );
   if (!questionExists) {
     evaluation.status = 'skipped_answer_absent';

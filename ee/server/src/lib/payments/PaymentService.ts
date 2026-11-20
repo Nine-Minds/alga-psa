@@ -361,6 +361,30 @@ export class PaymentService {
     try {
       const result = await this.handleWebhookEvent(event);
 
+      // A rejected-but-handled event must not be filed as 'completed': the row
+      // has to agree with the processed:false answer the route gives Stripe.
+      // Left unprocessed (like the throw path) so a retry can reprocess it.
+      if (!result.success) {
+        await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
+          .where({
+            provider_type: event.provider,
+            external_event_id: event.eventId,
+          })
+          .update({
+            processing_status: 'failed',
+            processing_error: result.error ?? 'Unknown error',
+          });
+
+        logger.error('[PaymentService] Webhook processing rejected', {
+          tenantId: this.tenantId,
+          eventId: event.eventId,
+          eventType: event.eventType,
+          error: result.error,
+        });
+
+        return result;
+      }
+
       // Update event as processed
       await this.tenantTable<IPaymentWebhookEvent>('payment_webhook_events')
         .where({
@@ -482,24 +506,33 @@ export class PaymentService {
       return { success: true, paymentRecorded: false };
     }
 
-    // Check if already recorded (from checkout.session.completed)
-    const existingPayment = await tenantDb(this.knex, this.tenantId).table('invoice_payments')
-      .where({
-        invoice_id: event.invoiceId,
-        reference_number: event.paymentIntentId,
-      })
-      .first();
-
-    if (existingPayment) {
-      logger.debug('[PaymentService] Payment already recorded', {
-        tenantId: this.tenantId,
-        invoiceId: event.invoiceId,
-        paymentIntentId: event.paymentIntentId,
-      });
-      return { success: true, paymentRecorded: false, paymentId: existingPayment.payment_id };
-    }
-
+    // Duplicate settlements (the sibling checkout.session.completed) are caught
+    // by recordPaymentFromWebhook's shared idempotency guard.
     return this.recordPaymentFromWebhook(event);
+  }
+
+  /**
+   * Returns the payment already landed for this invoice under the given
+   * PaymentIntent reference, if any.
+   *
+   * Stripe emits payment_intent.succeeded and checkout.session.completed for the
+   * same settlement (~0.7s apart), so whichever arrives second must recognise the
+   * first's work instead of treating the now-`paid` invoice as unpayable.
+   * Negative rows (refund/reversal entries written under the same reference) are
+   * excluded so a refunded intent is not mistaken for a recorded payment.
+   */
+  private async findRecordedPayment(
+    invoiceId: string,
+    paymentIntentId: string | undefined,
+  ): Promise<{ payment_id: string } | undefined> {
+    if (!paymentIntentId) return undefined;
+    return tenantDb(this.knex, this.tenantId).table('invoice_payments')
+      .where({
+        invoice_id: invoiceId,
+        reference_number: paymentIntentId,
+      })
+      .where('amount', '>', 0)
+      .first<{ payment_id: string } | undefined>();
   }
 
   async recordAutoPaySuccess(input: { invoiceId: string; amount: number; currency: string; paymentIntentId: string; attemptId: string }): Promise<WebhookProcessingResult> {
@@ -712,7 +745,28 @@ export class PaymentService {
       throw new Error(`Invoice not found: ${event.invoiceId}`);
     }
 
-    // Validate invoice status - reject payments for non-payable invoices
+    // Idempotency first: the sibling event for this very PaymentIntent already
+    // settled the invoice (which is why its status may now be 'paid'). Report
+    // success so Stripe is not told the delivery failed.
+    const alreadyLanded = await this.findRecordedPayment(event.invoiceId, event.paymentIntentId);
+    if (alreadyLanded) {
+      logger.debug('[PaymentService] Payment already recorded', {
+        tenantId: this.tenantId,
+        invoiceId: event.invoiceId,
+        paymentIntentId: event.paymentIntentId,
+        eventType: event.eventType,
+      });
+      return {
+        success: true,
+        paymentRecorded: false,
+        paymentId: alreadyLanded.payment_id,
+        invoiceId: event.invoiceId,
+      };
+    }
+
+    // Validate invoice status - reject payments for non-payable invoices.
+    // 'paid' stays local to this webhook path: recordExternalPayment must keep
+    // accepting partial-payment top-ups.
     const nonPayableStatuses = ['cancelled', 'draft', 'void', 'paid'];
     if (nonPayableStatuses.includes(invoice.status)) {
       return {

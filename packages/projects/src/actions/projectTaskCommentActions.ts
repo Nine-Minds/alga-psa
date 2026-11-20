@@ -4,8 +4,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { serves } from '@alga-psa/core/capability';
+import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
-import type { IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
+import type { CommentAudience, IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
 import {
   countTaskCommentsBatchWithDb,
   countTaskCommentsWithDb,
@@ -52,9 +53,20 @@ function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentAc
     if (message === 'Comment not found') {
       return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
     }
+    if (message.startsWith('Task comment was changed')) {
+      return actionError(message, 'projects:errors.comment.revisionConflict');
+    }
     if (message.startsWith('You can only edit') || message.startsWith('You can only delete')) {
       return actionError(message);
     }
+  }
+
+  if (error instanceof Error && error.name === 'CommentAudienceError') {
+    return permissionError('Permission denied: Cannot comment with that audience');
+  }
+
+  if (isCoManagedSharedWorkError(error)) {
+    return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
   }
 
   const dbError = error as { code?: string; column?: string };
@@ -82,16 +94,19 @@ export const createTaskComment = withAuth(async (
   { tenant },
   comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'> & {
     parent_comment_id?: string | null;
+    /** Who may read it. A seat technician must name one; MSP callers leave it out. */
+    audience?: CommentAudience | null;
   }
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx }) =>
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx, collaboration, governed }) =>
       createTaskCommentWithDb(trx, tenant, user, {
         taskId: comment.taskId,
         note: comment.note,
         parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-      }));
+        audience: comment.audience ?? null,
+      }, { collaboration, governed }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -109,8 +124,8 @@ export const getTaskComments = withAuth(async (
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx }) =>
-      listTaskCommentsWithDb(trx, tenant, taskId));
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx, collaboration, governed }) =>
+      listTaskCommentsWithDb(trx, tenant, taskId, { collaboration, governed, viewerUserId: user.user_id, viewerUserType: user.user_type }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -125,12 +140,14 @@ export const updateTaskComment = withAuth(async (
   user,
   { tenant },
   taskCommentId: string,
-  updates: Partial<Pick<IProjectTaskComment, 'note'>>
+  updates: Partial<Pick<IProjectTaskComment, 'note'>>,
+  /** Co-managed workspaces only: the revision the editor last saw (a stale edit is refused, not merged). */
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'update', ({ trx }) =>
-      updateTaskCommentWithDb(trx, tenant, user, taskCommentId, updates));
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'update', ({ trx, collaboration }) =>
+      updateTaskCommentWithDb(trx, tenant, user, taskCommentId, updates, { collaboration, expectedRevision }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -144,12 +161,14 @@ export const updateTaskComment = withAuth(async (
 export const deleteTaskComment = withAuth(async (
   user,
   { tenant },
-  taskCommentId: string
+  taskCommentId: string,
+  /** Co-managed workspaces only: the revision the viewer last saw. */
+  expectedRevision?: number
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'delete', ({ trx }) =>
-      deleteTaskCommentWithDb(trx, tenant, user, taskCommentId));
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'delete', ({ trx, collaboration }) =>
+      deleteTaskCommentWithDb(trx, tenant, user, taskCommentId, { collaboration, expectedRevision }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

@@ -1,8 +1,9 @@
 'use server'
 
 import Team from '../../models/team';
-import { USER_RESPONSE_FIELD_NAMES, type DeletionValidationResult, type IRole, type ITeam, type ITeamMember, type IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { USER_RESPONSE_FIELD_NAMES, sanitizeUserForResponse } from '@alga-psa/types';
+import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
+import { assertSeatTechnicianWrite, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -25,7 +26,7 @@ async function getUsersWithRoles(
 
   const userIds = members.map((member) => member.user_id);
   const db = tenantDb(trx, tenant);
-  const users = await db.table('users')
+  const users = await db.table<IUser>('users')
     .select(USER_RESPONSE_FIELD_NAMES)
     .whereIn('user_id', userIds);
 
@@ -54,15 +55,13 @@ async function getUsersWithRoles(
 
   const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
 
-  return users.map((user: Record<string, any>) => {
-    const member: Record<string, unknown> = {};
-    for (const field of USER_RESPONSE_FIELD_NAMES) {
-      member[field] = user[field];
-    }
-    member.roles = rolesByUser.get(user.user_id) ?? [];
-    member.role = roleByUser.get(user.user_id) ?? 'member';
-    return member as unknown as ITeamMember;
-  });
+  // Credential columns are never fetched (allow-list projection above) and the sanitizer is the
+  // belt-and-braces strip on the way out, so team members can never carry hashed_password etc.
+  return users.map((user) => ({
+    ...sanitizeUserForResponse(user as Record<string, unknown>),
+    roles: rolesByUser.get(user.user_id) ?? [],
+    role: roleByUser.get(user.user_id) ?? 'member',
+  }));
 }
 
 /**
@@ -401,6 +400,9 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
         if (inactiveIds.length > 0) {
           throw new Error('Cannot add inactive users to team');
         }
+
+        // A live seat technician joins no MSP team.
+        await assertSeatTechnicianWrite(trx, tenant, changes.addUserIds, { teamMembership: true });
 
         await db.table('team_members').insert(
           changes.addUserIds.map(userId => ({

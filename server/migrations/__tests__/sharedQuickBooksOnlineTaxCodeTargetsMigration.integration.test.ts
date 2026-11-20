@@ -87,6 +87,11 @@ afterAll(async () => {
     await db(MAPPINGS).where({ tenant }).del();
     await db('tenants').where({ tenant }).del();
   }
+  // Hand the DB back at the latest shape (QBO services/discounts shared too).
+  await require(path.resolve(
+    __dirname,
+    '../20261029170000_allow_shared_quickbooks_online_item_targets.cjs'
+  )).up(db).catch(() => undefined);
   await db.destroy().catch(() => undefined);
 });
 

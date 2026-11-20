@@ -1482,6 +1482,7 @@ describe('project business operation db actions', () => {
         token: `project-${uuidv4()}`,
         project_id: deletableProjectId,
         entity_type: 'project',
+        expires_at: new Date(Date.now() + 60_000),
         created_at: new Date().toISOString(),
       });
     }

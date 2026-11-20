@@ -11,9 +11,14 @@ import {
   getVisiblePublishedServiceRequestDefinitionDetail,
   submitPortalServiceRequest,
   resolveSubmissionVisibility,
-  validateSubmissionAgainstPublishedSchema,
-  type ServiceRequestPortalDefinitionDetail,
+  collectSubmissionValidationIssues,
+  toPortalFormView,
+  ServiceRequestSubmissionValidationError,
+  type ServiceRequestPortalFormView,
 } from '../../../../lib/service-requests';
+import type { FormFieldIssue } from '../../../../lib/service-requests/formValidation';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getFieldElementKind } from '@alga-psa/ui/form-fields';
 import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
@@ -54,6 +59,29 @@ function buildRequestServiceCatalogRedirectUrl(
     : '/client-portal/request-services';
 }
 
+/**
+ * The server's own validation failures, in the requester's language. The browser blocks these
+ * first with the same wording; this path is what a bypassed or stale form falls back to, and it
+ * must not answer a client user in English.
+ */
+async function describeSubmissionIssuesForRequester(
+  issues: ReadonlyArray<FormFieldIssue>
+): Promise<string> {
+  const { t } = await getServerTranslation(undefined, 'client-portal/service-requests');
+  const sentences = issues.map((entry) => {
+    if (entry.issue.rule === 'required') {
+      return `"${entry.label}": ${t('detail.requiredField')}`;
+    }
+    if (entry.issue.customMessage) {
+      return `"${entry.label}": ${entry.issue.customMessage}`;
+    }
+    return `"${entry.label}": ${t(`detail.validation.${entry.issue.rule}`, {
+      ...(entry.issue.params ?? {}),
+    })}`;
+  });
+  return `${t('detail.unableToSubmit')}: ${sentences.join('; ')}`;
+}
+
 function requestServiceSubmitErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
     return 'Unable to submit request. Please review the form and try again.';
@@ -82,7 +110,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
   definitionId: string
-): Promise<ServiceRequestPortalDefinitionDetail | null> => {
+): Promise<ServiceRequestPortalFormView | null> => {
   if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
@@ -90,7 +118,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
     const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
-    return getVisiblePublishedServiceRequestDefinitionDetail(
+    const detail = await getVisiblePublishedServiceRequestDefinitionDetail(
       trx,
       {
         tenant,
@@ -100,6 +128,7 @@ export const getRequestServiceDefinitionDetailAction = withAuth(async (
       },
       definitionId
     );
+    return detail ? toPortalFormView(detail) : null;
   });
 });
 
@@ -174,6 +203,19 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         continue;
       }
 
+      // A display block carries no answer and never appears in a payload.
+      if (getFieldElementKind(field.type) === 'display') {
+        continue;
+      }
+
+      if (field.type === 'multi-select') {
+        const selected = formData
+          .getAll(field.key)
+          .filter((entry): entry is string => typeof entry === 'string');
+        payload[field.key] = selected;
+        continue;
+      }
+
       if (field.type === 'file-upload') {
         const fileValue = formData.get(field.key);
         if (typeof File !== 'undefined' && fileValue instanceof File && fileValue.size > 0) {
@@ -207,7 +249,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
     const visiblePendingUploads = pendingUploads.filter((upload) =>
       visibleFieldKeySet.has(upload.fieldKey)
     );
-    const validationErrors = validateSubmissionAgainstPublishedSchema({
+    const validationIssues = collectSubmissionValidationIssues({
       formSchema: detail.formSchema,
       payload,
       attachments: visiblePendingUploads.map((upload) => ({
@@ -216,10 +258,10 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
       })),
       visibleFieldKeys,
     });
-    if (validationErrors.length > 0) {
+    if (validationIssues.length > 0) {
       return {
         status: 'error' as const,
-        message: `Submission validation failed: ${validationErrors.join('; ')}`,
+        message: await describeSubmissionIssuesForRequester(validationIssues),
       };
     }
 
@@ -287,9 +329,15 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         )
       );
 
+      // The server validates once more against the published schema it just read; if that
+      // second pass rejects the submission the requester hears it in their language too,
+      // never the English the error message carries for the API and the logs.
       return {
         status: 'error' as const,
-        message: requestServiceSubmitErrorMessage(error),
+        message:
+          error instanceof ServiceRequestSubmissionValidationError
+            ? await describeSubmissionIssuesForRequester(error.issues)
+            : requestServiceSubmitErrorMessage(error),
       };
     }
   });
@@ -312,7 +360,6 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   redirect(
     buildRequestServiceCatalogRedirectUrl({
       submitted: outcome.submissionId,
-      ticketId: outcome.createdTicketId,
     })
   );
 });

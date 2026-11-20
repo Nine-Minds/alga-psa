@@ -6,6 +6,7 @@ export * from './accountingExport.interfaces';
 export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
+export * from './assetAudit.interfaces';
 export * from './assetCustody.interfaces';
 export * from './inventory.interfaces';
 export type {
@@ -23,8 +24,6 @@ export type {
   IUserAuthenticated,
   TPasswordCriteria,
 } from './auth.interfaces';
-export { USER_RESPONSE_FIELD_NAMES } from './userResponseFields';
-export type { AllowlistedUserField } from './userResponseFields';
 export * from './billing.interfaces';
 export * from './billingCompute.interfaces';
 export * from './board.interface';

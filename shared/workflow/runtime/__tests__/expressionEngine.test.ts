@@ -1,11 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { compileExpression, evaluateExpressionSource, validateExpressionSource } from '../expressionEngine';
+import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { compileExpression, evaluateExpressionSource, validateExpressionSource, verifyBudgetHooksActive } from '../expressionEngine';
 
 describe('expressionEngine guardrails', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('accepts runtime-allowlisted helper calls', () => {
     expect(() => validateExpressionSource('coalesce(payload.primary, payload.fallback)')).not.toThrow();
     expect(() => validateExpressionSource('$append(payload.items, payload.extra)')).not.toThrow();
@@ -38,6 +36,17 @@ describe('expressionEngine guardrails', () => {
     expect(() => validateExpressionSource('$map(payload.items, function($v){ $v })')).toThrow('lambda');
   });
 
+  it.each([
+    '($append := $eval; $append("1+1"))',
+    '[$eval]@$append.$append("1+1")',
+    '( $workflowBoundedRange := $eval; [1..4] )',
+    '({"append": $eval}).append("1+1")',
+    '"1+1" ~> ({"append": $eval}).append',
+  ])('prevents unchecked interpreter calls through helper aliases: %s', async (source) => {
+    expect(() => validateExpressionSource(source)).toThrow(/protected function|dynamic|cannot be validated/);
+    await expect(evaluateExpressionSource(source, {})).rejects.toThrow(/protected function|dynamic|cannot be validated/);
+  });
+
   it('rejects ~> application of non-allowlisted functions and variables', () => {
     expect(() => validateExpressionSource('payload.x ~> $uppercase')).toThrow('disallowed function');
     expect(() => validateExpressionSource('1 ~> $f')).toThrow('disallowed function');
@@ -47,18 +56,137 @@ describe('expressionEngine guardrails', () => {
     expect(() => validateExpressionSource('payload.name ~> $toString')).not.toThrow();
   });
 
-  it('enforces timeout during evaluation', async () => {
-    const compiled = compileExpression({ $expr: 'payload.value' });
-    vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1026);
+  it('rejects range bombs before allocating their sequences', () => {
+    expectRunInBoundedProcess('range-bomb', /range exceeded max size/i);
+  });
 
-    await expect(
-      compiled.evaluate(
-        {
-          payload: { value: 42 },
-        },
-        25
-      )
-    ).rejects.toThrow('Expression evaluation exceeded 25ms');
+  it('rejects excessive nesting before parsing', () => {
+    expectRunInBoundedProcess('deep-nesting', /nesting exceeded max depth/i);
+  });
+
+  it('rejects expression ASTs with excessive operator chains', () => {
+    expectRunInBoundedProcess('long-chain', /AST exceeded max (size|depth)/i);
+  });
+
+  it('charges dynamic ranges to one aggregate allocation budget', () => {
+    expectRunInBoundedProcess('aggregate-ranges', /aggregate range budget exceeded/i);
+  });
+
+  it('interrupts runtime traversal after its deterministic instruction budget', () => {
+    expectRunInBoundedProcess('runtime-interruption', /execution budget exceeded/i);
+  });
+
+  it('shares the range budget across nested expression frames', async () => {
+    await expect(evaluateExpressionSource(
+      '[[1..payload.n],([1..payload.n]),([1..payload.n]),([1..payload.n]),([1..payload.n])]',
+      { payload: { n: 1000 } }
+    )).rejects.toThrow(/aggregate range budget exceeded/i);
+  });
+
+  it('starts a fresh budget for each use of a compiled expression', async () => {
+    const compiled = compileExpression({ $expr: '[1..payload.n]' });
+    for (let index = 0; index < 3; index += 1) {
+      await expect(compiled.evaluate({ payload: { n: 3000 } })).resolves.toHaveLength(3000);
+    }
+    await expect(compiled.evaluate({ payload: { n: 5000 } })).rejects.toThrow(/range exceeded/i);
+    await expect(compiled.evaluate({ payload: { n: 3000 } })).resolves.toHaveLength(3000);
+  });
+
+  it('isolates concurrent evaluations of a cached expression', async () => {
+    const compiled = compileExpression({ $expr: '([1..payload.n])' });
+    const results = await Promise.allSettled([3000, 5000, 2000, 3000].map((n) => compiled.evaluate({ payload: { n } })));
+    expect(results[0]).toMatchObject({ status: 'fulfilled', value: expect.arrayContaining([1, 3000]) });
+    expect(results[1]).toMatchObject({ status: 'rejected', reason: expect.objectContaining({ message: expect.stringMatching(/range exceeded/) }) });
+    expect(results[2]).toMatchObject({ status: 'fulfilled', value: expect.arrayContaining([1, 2000]) });
+    expect(results[3]).toMatchObject({ status: 'fulfilled', value: expect.arrayContaining([1, 3000]) });
+  });
+
+  it('self-check passes against the real jsonata, proving the budget hooks fire', async () => {
+    await expect(verifyBudgetHooksActive()).resolves.toBeUndefined();
+    // The guard is also exercised transitively by every other evaluation test,
+    // which route through evaluate() -> ensureBudgetHooksActive().
+    await expect(evaluateExpressionSource('1 + 1', {})).resolves.toBe(2);
+  });
+
+  it('fails closed when jsonata stops invoking the evaluate hooks', async () => {
+    // Simulate a future jsonata whose assign() no longer wires the hooks and
+    // whose evaluate() never calls them. The real counters would be silent, so
+    // the self-check must refuse rather than report healthy.
+    const silentFactory = (() => ({
+      assign: () => {},
+      evaluate: async () => 2,
+    })) as unknown as Parameters<typeof verifyBudgetHooksActive>[0];
+    await expect(verifyBudgetHooksActive(silentFactory)).rejects.toThrow(/budget enforcement is inactive/i);
+  });
+
+  it('fails closed when jsonata stops exposing the base execution frame', async () => {
+    // Hooks fire, but with no `base` frame the per-invocation budget cannot be
+    // keyed or shared across frames; treat that as a broken contract too.
+    const framelessFactory = (() => ({
+      assign(_name: unknown, fn: (...a: unknown[]) => void) {
+        this._hooks = this._hooks ?? [];
+        this._hooks.push(fn);
+      },
+      async evaluate() {
+        for (const fn of this._hooks ?? []) fn(null, null, {} /* no base */, 2);
+        return 2;
+      },
+      _hooks: [] as Array<(...a: unknown[]) => void>,
+    })) as unknown as Parameters<typeof verifyBudgetHooksActive>[0];
+    await expect(verifyBudgetHooksActive(framelessFactory)).rejects.toThrow(/budget enforcement is inactive/i);
+  });
+
+  it('accepts repeated object and array references in serializable output', async () => {
+    for (const x of [{ a: 1 }, [{ a: 1 }]]) {
+      await expect(evaluateExpressionSource('{"a": payload.x, "b": payload.x}', { payload: { x } }))
+        .resolves.toEqual({ a: x, b: x });
+    }
+    await expect(evaluateExpressionSource('[payload.x, payload.x]', { payload: { x: { a: 1 } } }))
+      .resolves.toEqual([{ a: 1 }, { a: 1 }]);
+  });
+
+  it('rejects cycles with a controlled error', async () => {
+    const x: Record<string, unknown> = {};
+    x.self = x;
+    await expect(evaluateExpressionSource('payload.x', { payload: { x } })).rejects.toThrow(/cyclic value/);
+  });
+
+  it('counts every alias occurrence before output serialization', async () => {
+    const x = { text: 'x'.repeat(140_000) };
+    await expect(evaluateExpressionSource('[payload.x, payload.x]', { payload: { x } }))
+      .rejects.toThrow(/max output size/);
+  });
+
+  it('bounds deeply shared input before helper coercion', () => {
+    expectRunInBoundedProcess('alias-expansion', /exceeded max (size|depth)/i);
+  });
+
+  it('bounds intermediate alias expansion before a native comparison', () => {
+    expectRunInBoundedProcess('intermediate-expansion', /allocation budget exceeded|exceeded max size/i);
+  });
+
+  it('accounts for JSON escaping at the output limit', async () => {
+    await expect(evaluateExpressionSource('payload.text', { payload: { text: '\ud800'.repeat(44_000) } }))
+      .rejects.toThrow(/max output size/);
+    await expect(evaluateExpressionSource('payload.text', { payload: { text: 'x'.repeat(262_142) } }))
+      .resolves.toHaveLength(262_142);
+  });
+
+  it('bounds source length for validation and evaluation', async () => {
+    const source = '"' + 'x'.repeat(8192) + '"';
+    expect(() => validateExpressionSource(source)).toThrow(/source exceeded max length/);
+    await expect(evaluateExpressionSource(source, {})).rejects.toThrow(/source exceeded max length/);
+  });
+
+  it('checks traversal work even without a helper call', () => {
+    expectRunInBoundedProcess('ast-interruption', /execution budget exceeded/i);
+  });
+
+  it('keeps ordinary range and helper expressions compatible', async () => {
+    await expect(evaluateExpressionSource('notContains(["hello", "world"], "x")', {})).resolves.toBe(true);
+    await expect(evaluateExpressionSource('coalesce(payload.name, "unknown") & "!"', { payload: { name: 'Ada' } }))
+      .resolves.toBe('Ada!');
+    await expect(evaluateExpressionSource('[1..4]', {})).resolves.toEqual([1, 2, 3, 4]);
   });
 
   it('rejects non-serializable undefined results', async () => {
@@ -123,31 +251,27 @@ describe('expressionEngine guardrails', () => {
     });
 
     it('stays linear on large text', async () => {
-      // Guards against quadratic helpers, not the 25ms production budget: a
-      // loaded, coverage-instrumented CI shard overshoots 25ms on linear work,
-      // while a quadratic walk of 200k characters takes seconds.
-      const budgetMs = 1_000;
+      // The input fits the bounded input contract and helper work completes within
+      // the deterministic allocation and traversal budgets.
       const big = 'x'.repeat(200_000);
       await expect(
-        evaluateExpressionSource('len(truncate(payload.big, 1000000))', { payload: { big } }, budgetMs)
+        evaluateExpressionSource('len(truncate(payload.big, 1000000))', { payload: { big } })
       ).resolves.toBe(100_000);
       await expect(
-        evaluateExpressionSource('len(substring(payload.big, -10))', { payload: { big } }, budgetMs)
+        evaluateExpressionSource('len(substring(payload.big, -10))', { payload: { big } })
       ).resolves.toBe(10);
     });
 
     it('stays linear on large text containing emoji', async () => {
-      // Same linearity guard as above, over the code-point walking path: the
-      // default 25ms budget is a production limit, not a CI runner guarantee.
-      const budgetMs = 1_000;
+      // Exercise the code-point path on a large input within the same resource bounds.
       const big = 'x😀'.repeat(100_000);
       const payload = { big };
       // 100,000 characters = 50,000 'x😀' pairs; len() counts UTF-16 units.
       await expect(
-        evaluateExpressionSource('len(truncate(payload.big, 1000000, ""))', { payload }, budgetMs)
+        evaluateExpressionSource('len(truncate(payload.big, 1000000, ""))', { payload })
       ).resolves.toBe(150_000);
-      await expect(evaluateExpressionSource('truncate(payload.big, 4, "")', { payload }, budgetMs)).resolves.toBe('x😀x😀');
-      await expect(evaluateExpressionSource('substring(payload.big, -3)', { payload }, budgetMs)).resolves.toBe('😀x😀');
+      await expect(evaluateExpressionSource('truncate(payload.big, 4, "")', { payload })).resolves.toBe('x😀x😀');
+      await expect(evaluateExpressionSource('substring(payload.big, -3)', { payload })).resolves.toBe('😀x😀');
     });
 
     it('treats a lone surrogate as one character', async () => {
@@ -179,4 +303,17 @@ describe('expressionEngine guardrails', () => {
     });
   });
 });
+
+function expectRunInBoundedProcess(scenario: string, expectedError: RegExp): void {
+  const childPath = fileURLToPath(new URL('./expressionEngine.securityChild.ts', import.meta.url));
+  const child = spawnSync(
+    process.execPath,
+    ['--max-old-space-size=96', '--import', 'tsx/esm', childPath, scenario],
+    { encoding: 'utf8', timeout: 5_000, maxBuffer: 64 * 1024 }
+  );
+  expect(child.error, child.error?.message).toBeUndefined();
+  expect(child.status, child.stderr).toBe(0);
+  const result = JSON.parse(child.stdout) as { error?: string; value?: unknown };
+  expect(result.error).toMatch(expectedError);
+}
 

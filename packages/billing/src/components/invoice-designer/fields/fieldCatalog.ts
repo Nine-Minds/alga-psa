@@ -63,7 +63,19 @@ const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
     path: 'invoice.subtotal',
     label: 'Subtotal',
     category: 'Invoice',
-    description: 'The invoice subtotal before tax and discounts.',
+    description: 'The invoice subtotal after discounts and credits, before tax.',
+  },
+  'invoice.discountTotal': {
+    path: 'invoice.discountTotal',
+    label: 'Discounts',
+    category: 'Invoice',
+    description: 'The total of discount and credit lines, shown as a positive amount.',
+  },
+  'invoice.grossSubtotal': {
+    path: 'invoice.grossSubtotal',
+    label: 'Subtotal Before Discounts',
+    category: 'Invoice',
+    description: 'The invoice subtotal before discounts and credits, and before tax.',
   },
   'invoice.tax': {
     path: 'invoice.tax',

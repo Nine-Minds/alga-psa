@@ -1,0 +1,82 @@
+[
+  {
+    "id": "F001",
+    "description": "Resolve first-purchase discovery for an authenticated internal purchaser in a hosted Pro PSA workspace using its edition, billing mode, account read/update permissions and the existing purchase-surface policy.",
+    "implemented": true,
+    "prdRefs": [
+      "Who can enter"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Contribute exactly one Co-Managed IT link for either an eligible purchaser or an authorized existing participant, with separate eligibility for the archive link.",
+    "implemented": true,
+    "prdRefs": [
+      "Access and implementation"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Let the server root layout, page and metadata accept the eligible purchaser while preserving the product-specific customer home and the existing operational and child-route gates.",
+    "implemented": true,
+    "prdRefs": [
+      "Access and implementation"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Show the eligible purchaser verified zero-seat totals and a Buy co-managed seats action without a client selection, relationship query or co-management grant.",
+    "implemented": true,
+    "prdRefs": [
+      "From navigation to paid seats"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Open the existing pool editor for a positive first target, quote it in the configured currency and submit through the existing confirmed purchase and checkout flow.",
+    "implemented": true,
+    "prdRefs": [
+      "From navigation to paid seats"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Restore an in-flight first purchase and its original target from tenant-scoped state after a return or refresh, including when an unpaid hosted entitlement row exists.",
+    "implemented": true,
+    "prdRefs": [
+      "From navigation to paid seats"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Represent a completed purchase request awaiting paid reconciliation on the overview, keeping its entry reachable and preventing another first charge during verification.",
+    "implemented": true,
+    "prdRefs": [
+      "From navigation to paid seats"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Refresh the sponsor’s verified pool totals and access state after reconciliation, keeping the result accessible to an account-only purchaser and the ordinary admission path available to an authorized MSP administrator.",
+    "implemented": true,
+    "prdRefs": [
+      "Access and implementation"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve account purchase, client-scoped shortfall and allocation behavior, and operational-only and customer reads under their current capability and permission rules.",
+    "implemented": true,
+    "prdRefs": [
+      "Scope and rollout"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Place commercial discovery and its UI in the EE implementation of the existing composition seams and make the CE host inert even when rollout or price settings are populated.",
+    "implemented": true,
+    "prdRefs": [
+      "Access and implementation"
+    ]
+  }
+]

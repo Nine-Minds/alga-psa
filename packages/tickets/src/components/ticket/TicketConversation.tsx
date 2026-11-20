@@ -1,11 +1,13 @@
 'use client';
 
+import { toast } from 'react-hot-toast';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, useDefaultComposerAudience, type ComposerAudience } from './CommentAudienceControl';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -68,6 +70,7 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import {
   CommentEmailRecipientsControl,
   commentEmailRecipientsPayload,
@@ -150,11 +153,6 @@ const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
 const NO_STATUS_CHANGE = '__no_status_change__';
 
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
-
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
   ticket,
@@ -215,10 +213,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   // Shared tickets and co_managed workspaces replace the Internal toggle with a required audience
   // choice, driven by the data source's conversation config (never by a tenant-wide capability).
-  // There is deliberately no default: submit stays blocked until the author picks one.
+  // Unless the data source names a default, there is none: submit stays blocked until the author picks one.
   const configuredAudiences = useComposerAudiences();
   const useAudienceComposer = configuredAudiences != null && !hideInternalTab;
-  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
+  // A data source may name the audience a fresh composer starts on (the seat shape does); otherwise none.
+  const defaultAudience = useDefaultComposerAudience();
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(defaultAudience);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   // A resolution closes the ticket through the native path, so it never offers `shared_it`.
   const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
@@ -249,6 +249,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   }, [isScheduleToggle, scheduledPublishAt]);
   const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
   );
@@ -300,7 +301,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     onNewCommentContentChange(DEFAULT_BLOCK);
     setComposeHasContent(false);
     setShowEditor(false);
-  }, [onNewCommentContentChange]);
+    // Runs only when the discard really happens (not on 'keep editing'), so a host can drop what it staged beside the composer.
+    dataSource.screen.onComposerCancel?.();
+  }, [onNewCommentContentChange, dataSource.screen]);
 
   const composeUploadSession = useTicketRichTextUploadSession({
     commentAttachments: true,
@@ -351,7 +354,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     // Auto-check toggles based on which tab is active
     if (useAudienceComposer) {
       // Opening a fresh composer never carries a previous audience; an open draft keeps its choice.
-      if (!showEditor) { setComposerAudience(null); setIsInternalToggle(false); }
+      if (!showEditor) { setComposerAudience(defaultAudience); setIsInternalToggle(audienceIsInternal(defaultAudience)); }
     } else if (!hideInternalTab) {
       setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
     }
@@ -397,8 +400,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         );
         if (success) {
           emailRecipients.reset();
-          setIsInternalToggle(false);
-          setComposerAudience(null);
+          setIsInternalToggle(audienceIsInternal(defaultAudience));
+          setComposerAudience(defaultAudience);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
@@ -559,7 +562,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     try {
-      const { added } = await toggleCommentReaction(commentId, emoji);
+      const reactionResult = await toggleCommentReaction(commentId, emoji);
+      // A refused write (e.g. read-only workspace) comes back as a returned action error, not `{ added }`.
+      if (isActionMessageError(reactionResult) || isActionPermissionError(reactionResult)) {
+        toast.error(getErrorMessage(reactionResult));
+        return;
+      }
+      const { added } = reactionResult;
       if (added && currentUser?.id && currentUser.name) {
         setReactionUserNames(prev => prev[currentUser.id] ? prev : { ...prev, [currentUser.id]: currentUser.name! });
       }
@@ -618,13 +627,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={readOnly ? undefined : () => onEdit(mergedConversation)}
-          onDelete={readOnly ? undefined : onDelete}
+          onEdit={readOnly || !dataSource.capabilities.commentOwnEdit ? undefined : () => onEdit(mergedConversation)}
+          onDelete={readOnly || !dataSource.capabilities.commentOwnEdit ? undefined : onDelete}
           onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
-          onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
+          onToggleReaction={dataSource.capabilities.reactions && dataSource.capabilities.reactionToggle ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
