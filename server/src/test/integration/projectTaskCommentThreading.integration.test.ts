@@ -57,6 +57,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
+import { claimProjectTaskCommentDraftsForDiscard } from '../../../../packages/projects/src/actions/projectTaskCommentAttachmentDraftActions';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 
 const blockNote = (text: string) => JSON.stringify([
@@ -611,7 +612,7 @@ describe('project task comment threading model', () => {
       });
       await db.table('comment_attachment_drafts').insert({
         tenant: dbRef.tenant, entity_type: 'project_task', entity_id: task.task_id,
-        document_id: documentId, created_by: originalUser!.user_id, state: 'draft',
+        document_id: documentId, file_id: fileId, created_by: originalUser!.user_id, state: 'draft',
         expires_at: new Date(Date.now() + 86_400_000),
       });
 
@@ -634,6 +635,11 @@ describe('project task comment threading model', () => {
         requester(allowedUserId, task.client_id), fileId))
         .toMatchObject({ document_id: documentId });
 
+      permissionRef.deniedProjectTaskReaders.add(allowedUserId);
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant,
+        requester(allowedUserId, task.client_id), fileId)).toBeNull();
+      permissionRef.deniedProjectTaskReaders.delete(allowedUserId);
+
       // This document reader has the coarse task grant but is outside the parent project's client scope.
       expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant,
         requester(deniedUserId, otherClientId), fileId)).toBeNull();
@@ -655,6 +661,69 @@ describe('project task comment threading model', () => {
       await db.table('users').whereIn('user_id', [allowedUserId, deniedUserId]).delete();
       await db.table('contacts').whereIn('contact_name_id', [allowedContactId, deniedContactId]).delete();
       await db.table('clients').where({ client_id: otherClientId }).delete();
+    }
+  });
+
+  it('serializes task comment draft promotion and discard in the database', async () => {
+    const db = scopedDb();
+    const context = await taskContextQuery().select('pt.task_id').first();
+    expect(context).toBeTruthy();
+    const actorId = userRef.user!.user_id;
+    const fixtures: Array<{ documentId: string; fileId: string; commentId?: string; threadId?: string }> = [];
+    const makeDraft = async () => {
+      const documentId = randomUUID(), fileId = randomUUID();
+      fixtures.push({ documentId, fileId });
+      await db.table('external_files').insert({ tenant: dbRef.tenant, file_id: fileId, file_name: 'race.png', original_name: 'race.png', mime_type: 'image/png', file_size: 5, storage_path: `test/${fileId}`, uploaded_by_id: actorId });
+      await db.table('documents').insert({ tenant: dbRef.tenant, document_id: documentId, document_name: 'race.png', file_id: fileId, mime_type: 'image/png', file_size: 5, user_id: actorId, created_by: actorId, is_client_visible: true });
+      await db.table('document_associations').insert({ tenant: dbRef.tenant, document_id: documentId, entity_type: 'project_task', entity_id: context.task_id });
+      await db.table('comment_attachment_drafts').insert({ tenant: dbRef.tenant, entity_type: 'project_task', entity_id: context.task_id, document_id: documentId, file_id: fileId, created_by: actorId, state: 'draft', expires_at: new Date(Date.now() + 86_400_000) });
+      return { documentId, fileId };
+    };
+
+    try {
+      const saveWinner = await makeDraft();
+      const savedCommentId = await createTaskComment({
+        taskId: context.task_id,
+        note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${saveWinner.fileId}` }, children: [] }]),
+      });
+      fixtures.find(row => row.documentId === saveWinner.documentId)!.commentId = savedCommentId;
+      expect(await claimProjectTaskCommentDraftsForDiscard(knex, dbRef.tenant, context.task_id, actorId, [saveWinner.documentId]))
+        .toMatchObject({ claimed: [], failures: [] });
+      expect(await db.table('comment_attachment_drafts').where({ document_id: saveWinner.documentId }).first('state', 'comment_id'))
+        .toMatchObject({ state: 'attached', comment_id: savedCommentId });
+
+      const discardWinner = await makeDraft();
+      expect(await claimProjectTaskCommentDraftsForDiscard(knex, dbRef.tenant, context.task_id, actorId, [discardWinner.documentId]))
+        .toMatchObject({ claimed: [{ document_id: discardWinner.documentId }], failures: [] });
+      await db.table('document_associations').where({ document_id: discardWinner.documentId }).delete();
+      await db.table('documents').where({ document_id: discardWinner.documentId }).delete();
+      await db.table('external_files').where({ file_id: discardWinner.fileId }).delete();
+      await expect(createTaskComment({
+        taskId: context.task_id,
+        note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${discardWinner.fileId}` }, children: [] }]),
+      })).rejects.toThrow(/expired, discarded/);
+      expect(await db.table('comment_attachment_drafts').where({ document_id: discardWinner.documentId }).first('state', 'comment_id'))
+        .toMatchObject({ state: 'removed', comment_id: null });
+
+      const expired = await makeDraft();
+      await db.table('comment_attachment_drafts').where({ document_id: expired.documentId }).update({ expires_at: new Date(0) });
+      await expect(createTaskComment({
+        taskId: context.task_id,
+        note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${expired.fileId}` }, children: [] }]),
+      })).rejects.toThrow(/expired, discarded/);
+      expect(await db.table('project_task_comments').where('note', 'like', `%${expired.fileId}%`)).toHaveLength(0);
+    } finally {
+      for (const fixture of fixtures) {
+        if (fixture.commentId) {
+          const comment = await db.table('project_task_comments').where({ task_comment_id: fixture.commentId }).first('thread_id');
+          await db.table('project_task_comments').where({ task_comment_id: fixture.commentId }).delete();
+          if (comment?.thread_id) await db.table('comment_threads').where({ thread_id: comment.thread_id }).delete();
+        }
+        await db.table('comment_attachment_drafts').where({ document_id: fixture.documentId }).delete();
+        await db.table('document_associations').where({ document_id: fixture.documentId }).delete();
+        await db.table('documents').where({ document_id: fixture.documentId }).delete();
+        await db.table('external_files').where({ file_id: fixture.fileId }).delete();
+      }
     }
   });
 });

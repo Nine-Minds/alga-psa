@@ -98,15 +98,29 @@ async function promoteProjectTaskCommentDrafts(
   commentId: string,
   actorId: string,
   note: string,
+  currentCommentId?: string,
 ): Promise<void> {
   const fileIds = [...new Set(Array.from(note.matchAll(COMMENT_UPLOAD_ID), match => match[1].toLowerCase()))];
   if (!fileIds.length) return;
-  const documents = await tenantScopedTable(trx, 'documents', tenant).whereIn('file_id', fileIds).select('document_id') as Array<{ document_id: string }>;
-  if (!documents.length) return;
-  await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
-    .where({ entity_type: 'project_task', entity_id: taskId, created_by: actorId, state: 'draft' })
-    .whereNull('comment_id').whereIn('document_id', documents.map(row => row.document_id))
-    .update({ state: 'attached', comment_id: commentId });
+  const rows = await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
+    .where({ entity_type: 'project_task' }).whereIn('file_id', fileIds)
+    .orderBy('draft_id').forUpdate();
+  for (const row of rows) {
+    const retainedOnThisComment = row.state === 'attached' && row.comment_id === currentCommentId;
+    if (!retainedOnThisComment && (row.entity_id !== taskId || row.created_by !== actorId || row.state !== 'draft' || row.comment_id ||
+        new Date(row.expires_at).getTime() <= Date.now())) {
+      throw new Error('A pasted image draft is expired, discarded, or belongs to another task or user');
+    }
+    const document = await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: row.document_id, file_id: row.file_id }).first('document_id');
+    const association = await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: row.document_id, entity_type: 'project_task', entity_id: taskId }).first('document_id');
+    if (!document || !association) throw new Error('A pasted image draft no longer has an accessible task document');
+    if (retainedOnThisComment) continue;
+    await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
+      .where({ draft_id: row.draft_id, entity_type: 'project_task', entity_id: taskId, created_by: actorId, state: 'draft' })
+      .whereNull('comment_id').update({ state: 'attached', comment_id: commentId });
+  }
 }
 
 async function loadTaskContext(
@@ -481,7 +495,7 @@ export async function updateTaskCommentWithDb(
       });
 
     if (typeof updates.note === 'string') {
-      await promoteProjectTaskCommentDrafts(trx, tenant, existingComment.task_id, taskCommentId, userId, updates.note);
+      await promoteProjectTaskCommentDrafts(trx, tenant, existingComment.task_id, taskCommentId, userId, updates.note, taskCommentId);
     }
 
     // Get task and project context for notifications

@@ -321,7 +321,7 @@ export async function createDocumentFromCommittedFile(
           : null;
       if (!draftEntity) throw new Error('Comment attachment drafts require a ticket or project task.');
       await tenantDb(trx, tenant).table('comment_attachment_drafts').insert({
-        tenant, ...draftEntity, document_id: document.document_id,
+        tenant, ...draftEntity, document_id: document.document_id, file_id: document.file_id,
         created_by: authenticatedUserId, state: 'draft',
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
