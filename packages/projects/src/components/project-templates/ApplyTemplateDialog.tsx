@@ -26,6 +26,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { TEMPLATE_STATUS_MAPPINGS_UNRESOLVED_MESSAGE } from '../../lib/templateStatusMappingUtils';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface ApplyTemplateDialogProps {
   open: boolean;
@@ -192,6 +193,8 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
         }
         return;
       }
+
+      invalidateReferenceList('projectsWithPhases');
 
       toast({
         title: t('common:actions.create', 'Create'),

@@ -4,6 +4,8 @@ import { resolve } from 'path';
 
 const sharedAuthorizationSource = readFileSync(resolve(__dirname, '../lib/projectReadAuthorization.ts'), 'utf8');
 const source = readFileSync(resolve(__dirname, 'projectActions.ts'), 'utf8');
+// Body of getProjectsWithPhases, shared with the batched reference-list loader.
+const projectsWithPhasesSource = readFileSync(resolve(__dirname, '../lib/projectsWithPhases.ts'), 'utf8');
 
 function sectionBetween(startMarker: string, endMarker: string): string {
   const start = source.indexOf(startMarker);
@@ -25,8 +27,8 @@ describe('project actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");
-    expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings as psm', tenant)");
-    expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss'");
+    expect(projectsWithPhasesSource).toContain("tenantDb(trx, tenant).table('project_status_mappings as psm')");
+    expect(projectsWithPhasesSource).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss'");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_tasks', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_ticket_links', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'email_reply_tokens', tenantId)");

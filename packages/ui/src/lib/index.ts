@@ -11,3 +11,4 @@ export * from './i18n/config';
 export * from './i18n/interpolateFallback';
 export * from './currency/useCurrencyFormat';
 export * from './dateFormat/useDateFormat';
+export * from './referenceData';

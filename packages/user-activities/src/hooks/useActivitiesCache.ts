@@ -22,6 +22,7 @@ const CACHE_TTL = {
 };
 const CACHE_SIZE_LIMIT = 50;
 
+// LEVERAGE: pattern query-cache — hand-rolled TTL cache; the same shape as MyActivityGroupsProvider's store and the shared SWR reference-list layer (@alga-psa/ui/lib/referenceData). Candidate to move onto that layer.
 export function useActivitiesCache() {
   // Shared cache when an ActivitiesCacheProvider is mounted; otherwise a private per-hook
   // cache (the previous behaviour), so the hook never throws without a provider.

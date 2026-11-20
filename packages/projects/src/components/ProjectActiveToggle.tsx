@@ -11,6 +11,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface ProjectActiveToggleProps {
   projectId: string;
@@ -32,6 +33,7 @@ export default function ProjectActiveToggle({ projectId, initialIsInactive }: Pr
         handleError(getErrorMessage(updatedProject));
         return;
       }
+      invalidateReferenceList('projectsWithPhases');
       setIsInactive(updatedProject.is_inactive);
     } catch (error) {
       handleError(error, t('projectEdit.updateError', 'Failed to update project status'));

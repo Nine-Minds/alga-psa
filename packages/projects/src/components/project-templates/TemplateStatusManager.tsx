@@ -38,6 +38,7 @@ import {
   getTemplatePhaseStatusMappings,
   TEMPLATE_DEFAULT_SCOPE,
 } from '../../lib/templateStatusMappingUtils';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface TemplateStatusManagerProps {
   open: boolean;
@@ -133,6 +134,7 @@ export function TemplateStatusManager({
         { status_id: selectedStatusId },
         selectedTemplatePhaseId
       ));
+      invalidateReferenceList('projectsWithPhases');
       onStatusAdded(newMapping);
       setSelectedStatusId('');
       toast.success(t('templates.statuses.added'));
@@ -156,6 +158,7 @@ export function TemplateStatusManager({
     if (!removeConfirmation) return;
     try {
       unwrapTemplateActionResult(await removeTemplateStatusMapping(removeConfirmation.id));
+      invalidateReferenceList('projectsWithPhases');
       onStatusRemoved(removeConfirmation.id, moveToMappingId);
       toast.success(t('templates.statuses.removed'));
     } catch (error) {
@@ -172,6 +175,7 @@ export function TemplateStatusManager({
   const handleReorderCommit = async (orderedIds: string[]) => {
     try {
       unwrapTemplateActionResult(await reorderTemplateStatusMappings(templateId, orderedIds, selectedTemplatePhaseId));
+      invalidateReferenceList('projectsWithPhases');
     } catch (error) {
       handleError(error, 'Failed to reorder status columns');
     }
@@ -194,6 +198,7 @@ export function TemplateStatusManager({
 
     try {
       unwrapTemplateActionResult(await removeTemplatePhaseStatuses(templateId, selectedTemplatePhaseId));
+      invalidateReferenceList('projectsWithPhases');
       onPhaseStatusesRemoved?.(selectedTemplatePhaseId);
       toast.success(t('templates.statuses.reverted'));
     } catch (error) {
@@ -223,6 +228,7 @@ export function TemplateStatusManager({
         { status_id: newStatus.status_id },
         selectedTemplatePhaseId
       ));
+      invalidateReferenceList('projectsWithPhases');
       onStatusAdded(newMapping);
       toast.success(t('templates.statuses.added'));
     } catch (error) {

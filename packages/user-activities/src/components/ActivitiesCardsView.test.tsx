@@ -66,6 +66,7 @@ import { DEFAULT_TABLE_TYPES } from './constants';
 
 const emptyOptions = {
   priorities: [], projects: [], boards: [], ticketStatuses: [], ticketTags: [], projectTaskTags: [],
+  loading: { priorities: false, projects: false, boards: false, ticketStatuses: false, ticketTags: false, projectTaskTags: false },
 };
 
 function Harness({ focus = false, onViewAll = vi.fn() }: { focus?: boolean; onViewAll?: any }) {

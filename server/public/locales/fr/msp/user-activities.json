@@ -371,6 +371,7 @@
     },
     "placeholders": {
       "allBoards": "Tous les tableaux",
+      "loadingOptions": "Chargement…",
       "allStatuses": "Tous les statuts",
       "allProjects": "Tous les projets",
       "allPriorities": "Toutes les priorités",

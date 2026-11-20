@@ -7,6 +7,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
+import { loadStatuses } from '../../lib/referenceListQueries';
 import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { statusActionErrorFrom, type StatusActionError } from './statusActionErrors';
@@ -55,25 +56,7 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, b
     // Get the database connection with tenant
     const {knex: db} = await createTenantKnex();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Build query
-      const query = statusesQuery(trx, tenant)
-        .select('*')
-        .orderBy('order_number');
-
-      // Add type filter if specified
-      if (type) {
-        query.where({ status_type: type });
-        if (type === ('ticket' as ItemType)) {
-          query.whereNotNull('board_id');
-          if (boardId) {
-            query.andWhere({ board_id: boardId });
-          }
-        }
-      }
-
-      return await query;
-    });
+    return await loadStatuses(db, tenant, type, boardId);
   } catch (error) {
     console.error('Error fetching ticket statuses:', error);
     throw error;

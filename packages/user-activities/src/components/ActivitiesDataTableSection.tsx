@@ -148,6 +148,7 @@ function formatActivityPrintDate(dateString?: string): string {
   const viewingOther = canViewOthers && targetUserId !== '';
 
   // Flat vs grouped mode (persisted per user)
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   const { value: savedListViewMode, setValue: setListViewMode } = useUserPreference<ListViewMode>(
     'activitiesListViewMode',
     {
@@ -189,6 +190,7 @@ function formatActivityPrintDate(dateString?: string): string {
   } = useActivitiesCache();
 
   // Ungrouped collapse state (read here for print view, owned by UngroupedSection)
+  // LEVERAGE: friction preference-lane — each useUserPreference runs two serial server actions (getCurrentUser, then getUserPreference) on the one serial server-action lane, so this page's preferences queue behind each other; useUserPreferencesBatch would collapse them.
   const { value: ungroupedCollapsed } = useUserPreference<boolean>(
     'activitiesUngroupedCollapsed',
     { defaultValue: false, localStorageKey: 'activitiesUngroupedCollapsed' }

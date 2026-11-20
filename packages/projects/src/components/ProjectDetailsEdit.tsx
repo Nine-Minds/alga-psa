@@ -41,6 +41,7 @@ import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
@@ -188,6 +189,8 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         handleError(getErrorMessage(updatedProject));
         return;
       }
+
+      invalidateReferenceList('projectsWithPhases');
 
       // Log for debugging
       console.log('Updated project with budgeted hours:', budgetedHours);

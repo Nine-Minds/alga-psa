@@ -92,6 +92,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import checklistDnd from './ChecklistDragDrop.module.css';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -1183,6 +1184,7 @@ export default function TaskForm({
           if (pendingTags.length > 0) {
             try {
               createdTags = await createTagsForEntity(resultTask.task_id, 'project_task', pendingTags);
+              if (createdTags.length > 0) invalidateReferenceList('projectTaskTags');
               if (createdTags.length < pendingTags.length) {
                 toast.error(taskFormT('tagCreationPartialFailure', '{{count}} tag(s) could not be created', {
                   count: pendingTags.length - createdTags.length,

@@ -24,6 +24,11 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
+import type { ReferenceListKey } from '@alga-psa/ui/lib/referenceData';
+
+// Priority edits feed the User Activities priority filter (either item type).
+const PRIORITY_LISTS: ReferenceListKey[] = ['priorities:ticket', 'priorities:project_task'];
 
 interface PrioritySettingsProps {
   onShowConflictDialog?: (conflicts: ImportConflict[], type: 'priorities' | 'statuses', resolutions: Record<string, any>) => void;
@@ -102,6 +107,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         toast.error(getErrorMessage(result));
         return;
       }
+      invalidateReferenceList(PRIORITY_LISTS);
       setPriorities(priorities.map((priority) =>
         'tenant' in priority && priority.priority_id === updatedPriority.priority_id ? updatedPriority : priority
       ));
@@ -155,6 +161,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         return;
       }
 
+      invalidateReferenceList(PRIORITY_LISTS);
       setPriorities(priorities.filter(p => p.priority_id !== priorityToDelete.priority_id));
       toast.success(t('ticketing.priorities.messages.success.deleted'));
       resetDeleteState();
@@ -451,6 +458,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                   toast.error(getErrorMessage(createdPriority));
                   return;
                 }
+                invalidateReferenceList(PRIORITY_LISTS);
               }
 
               // Refresh priorities list

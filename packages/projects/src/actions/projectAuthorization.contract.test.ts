@@ -33,7 +33,9 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
-    expect(projectActionsSource).toContain('async function filterAuthorizedProjects<T extends Partial<IProject>>(');
+    // filterAuthorizedProjects moved with the shared projects-with-phases helpers (alga-2026-0003109).
+    expect(readSource('../lib/projectsWithPhases.ts')).toContain('export async function filterAuthorizedProjects<T extends Partial<IProject>>(');
+    expect(projectActionsSource).toContain("from '../lib/projectsWithPhases'");
     expect(projectActionsSource).toContain('async function assertProjectReadAllowed(');
     expect(projectActionsSource).toContain('async function resolveProjectIdForPhase(');
     expect(projectActionsSource).toContain('async function resolveProjectIdsForStatus(');

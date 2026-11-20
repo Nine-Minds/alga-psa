@@ -1,111 +1,69 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityType,
   IPriority,
   IStatus,
   ITag,
-  ItemType,
   ProjectWithPhases,
-  TaggedEntityType,
 } from '@alga-psa/types';
-import { useActivityCrossFeature } from '@alga-psa/ui/context';
-import { getAllPriorities, getStatuses, getAllBoards } from '@alga-psa/reference-data/actions';
-import { findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useReferenceLists, type ReferenceListKey } from '@alga-psa/ui/lib/referenceData';
+
+type BoardOption = { board_id?: string; board_name?: string };
 
 export interface ActivityFilterOptions {
   priorities: IPriority[];
   projects: ProjectWithPhases[];
-  boards: Array<{ board_id?: string; board_name?: string }>;
+  boards: BoardOption[];
   ticketStatuses: IStatus[];
   ticketTags: ITag[];
   projectTaskTags: ITag[];
+  /** True while that option list has not loaded yet. A loaded empty list is `false`. */
+  loading: Record<Exclude<keyof ActivityFilterOptions, 'loading'>, boolean>;
 }
 
-// The dashboard hosts this hook above any provider-dependent child, so a missing composition
-// provider must degrade to "no project options" instead of crashing the whole screen.
-function useCrossFeatureOrNull(): ReturnType<typeof useActivityCrossFeature> | null {
-  try {
-    return useActivityCrossFeature();
-  } catch {
-    return null;
-  }
+// Stable empties: consumers put these arrays in effect and memo dependencies.
+const NO_PRIORITIES: IPriority[] = [];
+const NO_PROJECTS: ProjectWithPhases[] = [];
+const NO_BOARDS: BoardOption[] = [];
+const NO_STATUSES: IStatus[] = [];
+const NO_TAGS: ITag[] = [];
+
+const LIST_KEYS: ReferenceListKey[] = ['boards', 'ticketStatuses', 'ticketTags', 'projectTaskTags', 'projectsWithPhases'];
+
+/** Priorities are offered only when a single prioritized activity type is selected. */
+function priorityKeyFor(types: ActivityType[] | undefined): ReferenceListKey | null {
+  if (types?.length !== 1) return null;
+  if (types[0] === ActivityType.TICKET) return 'priorities:ticket';
+  if (types[0] === ActivityType.PROJECT_TASK) return 'priorities:project_task';
+  return null;
 }
 
-/** Option data for `ActivitiesTableFilters`. Priorities load only for a single prioritized type. */
+/**
+ * Option data for `ActivitiesTableFilters`, read from the shared reference-list cache: a warm cache
+ * renders on the first pass, a cold one loads every list in one batched server action. This hook
+ * never gates the activities fetch (that waits only for the saved filters, #4217).
+ */
 export function useActivityFilterOptions(types: ActivityType[] | undefined): ActivityFilterOptions {
-  const ctx = useCrossFeatureOrNull();
-  const [priorities, setPriorities] = useState<IPriority[]>([]);
-  const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
-  const [boards, setBoards] = useState<Array<{ board_id?: string; board_name?: string }>>([]);
-  const [ticketStatuses, setTicketStatuses] = useState<IStatus[]>([]);
-  const [ticketTags, setTicketTags] = useState<ITag[]>([]);
-  const [projectTaskTags, setProjectTaskTags] = useState<ITag[]>([]);
+  const priorityKey = priorityKeyFor(types);
+  const keys = useMemo(() => (priorityKey ? [...LIST_KEYS, priorityKey] : LIST_KEYS), [priorityKey]);
+  const { data, loading } = useReferenceLists(keys);
 
-  // Load priorities when a single prioritized activity type is selected
-  useEffect(() => {
-    if (types?.length === 1) {
-      const type = types[0];
-      if (type === ActivityType.TICKET || type === ActivityType.PROJECT_TASK) {
-        const itemType = type === ActivityType.TICKET ? 'ticket' : 'project_task';
-        getAllPriorities(itemType)
-          .then(setPriorities)
-          .catch(err => console.error('Error loading priorities:', err));
-        return;
-      }
-    }
-    setPriorities([]);
-  }, [types]);
-
-  // Load projects with phases + statuses for the filter tree on mount
-  useEffect(() => {
-    if (!ctx) return;
-    ctx.getProjectsWithPhases()
-      .then((data: unknown) => {
-        if (!isActionPermissionError(data)) {
-          setProjects(data as ProjectWithPhases[]);
-        }
-      })
-      .catch((err: unknown) => console.error('Error loading projects with phases:', err));
-  }, [ctx]);
-
-  // Load boards and ticket statuses on mount
-  useEffect(() => {
-    Promise.all([
-      getAllBoards(true),
-      getStatuses('ticket' as ItemType),
-    ])
-      .then(([boardsData, statusesData]) => {
-        setBoards(boardsData || []);
-        setTicketStatuses(statusesData || []);
-      })
-      .catch((err) => console.error('Error loading boards/statuses:', err));
-  }, []);
-
-  // Load tags on mount (for both ticket and project task filters)
-  useEffect(() => {
-    Promise.all([
-      findAllTagsByType('ticket' as TaggedEntityType),
-      findAllTagsByType('project_task' as TaggedEntityType),
-    ])
-      .then(([tt, pt]) => {
-        if (isTagActionError(tt)) {
-          console.error('Error loading ticket tags:', tt);
-          setTicketTags([]);
-        } else {
-          setTicketTags(tt || []);
-        }
-        if (isTagActionError(pt)) {
-          console.error('Error loading project task tags:', pt);
-          setProjectTaskTags([]);
-        } else {
-          setProjectTaskTags(pt || []);
-        }
-      })
-      .catch((err) => console.error('Error loading tags:', err));
-  }, []);
-
-  return { priorities, projects, boards, ticketStatuses, ticketTags, projectTaskTags };
+  return {
+    priorities: (priorityKey ? (data[priorityKey] as IPriority[] | undefined) : undefined) ?? NO_PRIORITIES,
+    projects: (data.projectsWithPhases as ProjectWithPhases[] | undefined) ?? NO_PROJECTS,
+    boards: (data.boards as BoardOption[] | undefined) ?? NO_BOARDS,
+    ticketStatuses: (data.ticketStatuses as IStatus[] | undefined) ?? NO_STATUSES,
+    ticketTags: (data.ticketTags as ITag[] | undefined) ?? NO_TAGS,
+    projectTaskTags: (data.projectTaskTags as ITag[] | undefined) ?? NO_TAGS,
+    loading: {
+      priorities: priorityKey ? loading[priorityKey] : false,
+      projects: loading.projectsWithPhases,
+      boards: loading.boards,
+      ticketStatuses: loading.ticketStatuses,
+      ticketTags: loading.ticketTags,
+      projectTaskTags: loading.projectTaskTags,
+    },
+  };
 }

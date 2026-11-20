@@ -10,6 +10,7 @@ import { createStatus, isStatusActionError, statusActionErrorMessage, updateStat
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { invalidateReferenceList } from '@alga-psa/ui/lib/referenceData';
 
 interface StatusDialogProps {
   open: boolean;
@@ -117,6 +118,8 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
         toast.success(t('statusDialog.created', 'Status created successfully'));
       }
       
+      // Status names feed the activities ticket-status filter and the project status trees.
+      invalidateReferenceList(['ticketStatuses', 'projectsWithPhases']);
       onSuccess();
       onOpenChange(false);
       setStatusName('');
