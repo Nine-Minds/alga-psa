@@ -7,6 +7,7 @@ const runtime = vi.hoisted(() => ({
   initializedSettings: [] as Array<Record<string, any>>,
   sent: [] as Array<{ config: Record<string, any>; message: Record<string, any> }>,
   settingsRow: null as Record<string, any> | null,
+  concurrentSettingsRow: null as Record<string, any> | null,
   sender: null as Record<string, any> | null,
   logged: [] as Array<Record<string, any>>,
   senderUpdates: [] as Array<Record<string, any>>,
@@ -72,7 +73,30 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
     table: (table: string) => {
       if (table === 'tenant_email_settings') {
-        return { first: vi.fn(async () => runtime.settingsRow) };
+        const predicates: Array<[string, unknown]> = [];
+        const query: any = {
+          first: vi.fn(async () => runtime.settingsRow),
+          where: (column: string, value: unknown) => { predicates.push([column, value]); return query; },
+          whereRaw: (_sql: string, bindings: unknown[]) => {
+            predicates.push(['provider_configs', JSON.parse(String(bindings[0]))]);
+            return query;
+          },
+          update: vi.fn(async (changes: Record<string, unknown>) => {
+            const row = runtime.settingsRow;
+            if (runtime.concurrentSettingsRow) {
+              runtime.settingsRow = runtime.concurrentSettingsRow;
+              runtime.concurrentSettingsRow = null;
+              return 0;
+            }
+            if (!row || predicates.some(([column, value]) => column === 'provider_configs'
+              ? JSON.stringify(row.provider_configs) !== JSON.stringify(value)
+              : row[column] !== value)) return 0;
+            Object.assign(row, changes);
+            if (typeof changes.provider_configs === 'string') row.provider_configs = JSON.parse(changes.provider_configs);
+            return 1;
+          }),
+        };
+        return query;
       }
       if (table === 'email_sending_logs') {
         return { insert: vi.fn(async (entry: Record<string, any>) => { runtime.logged.push(entry); return 1; }) };
@@ -207,6 +231,7 @@ describe('TenantEmailService settings freshness', () => {
       from: 'old-notifications@example.test',
       fromName: 'Old Notifications',
     });
+    runtime.concurrentSettingsRow = null;
     runtime.sender = null;
     runtime.logged.length = 0;
     runtime.senderUpdates.length = 0;
@@ -273,6 +298,38 @@ describe('TenantEmailService settings freshness', () => {
       to: 'client@example.test', subject: 'Comment', html: '<p>Comment</p>',
     })).resolves.toMatchObject({ success: true });
     expect(runtime.sent.at(-1)?.message.from).toEqual({ email: 'shared@example.test', name: 'General Support' });
+  });
+
+  it('binds a legacy stored SMTP credential once from its persisted row and sends with it', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
+    delete runtime.settingsRow.provider_configs[0].config.__secretFingerprint;
+    const service = TenantEmailService.getInstance('tenant-settings-freshness');
+
+    await expect(service.sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general',
+      to: 'client@example.test', subject: 'Legacy credential', html: '<p>Sent</p>',
+    })).resolves.toMatchObject({ success: true });
+
+    expect(runtime.settingsRow.provider_configs[0].config.password).toBe('legacy-password');
+    expect(runtime.settingsRow.provider_configs[0].config.__secretFingerprint).toBe(
+      connectionFingerprint(runtime.settingsRow.provider_configs[0].config, 'smtp', 'smtp-provider'),
+    );
+    expect(runtime.sent).toHaveLength(1);
+    expect(runtime.initializedSettings[0].providerConfigs[0].config.password).toBe('legacy-password');
+  });
+
+  it('does not bind a stale endpoint when a settings edit wins the compatibility compare-and-swap', async () => {
+    runtime.settingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
+    delete runtime.settingsRow.provider_configs[0].config.__secretFingerprint;
+    runtime.concurrentSettingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
+    runtime.concurrentSettingsRow.provider_configs[0].config.host = 'smtp.concurrent-change.test';
+    delete runtime.concurrentSettingsRow.provider_configs[0].config.__secretFingerprint;
+
+    const settings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', {} as any);
+
+    expect(settings?.providerConfigs[0].config.host).toBe('smtp.concurrent-change.test');
+    expect(settings?.providerConfigs[0].config.password).toBe('legacy-password');
+    expect(settings?.providerConfigs[0].config.__secretFingerprint).toBeUndefined();
   });
 
   it('keeps a route display name ahead of the ticket board name', async () => {

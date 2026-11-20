@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { bindLegacyProviderSecrets, connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const { createTransportMock } = vi.hoisted(() => ({ createTransportMock: vi.fn() }));
 vi.mock('nodemailer', () => ({ default: { createTransport: createTransportMock } }));
@@ -10,6 +10,8 @@ vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
 import { EmailProviderManager } from '../EmailProviderManager';
 
 describe('EmailProviderManager stored-secret identity gate', () => {
+  beforeEach(() => createTransportMock.mockClear());
+
   it('rejects a database-mutated host before provider creation or socket open', async () => {
     const original = { host: 'smtp.original.test', port: 587, username: 'mailer', password: 'credential-value', secure: false, requireTLS: true, rejectUnauthorized: true };
     const settings: any = {
@@ -31,13 +33,27 @@ describe('EmailProviderManager stored-secret identity gate', () => {
     expect(createTransportMock).not.toHaveBeenCalled();
   });
 
-  it('fails closed for a legacy stored secret with no identity fingerprint', async () => {
+  it('upgrades a legacy persisted credential before strict initialization', async () => {
+    const legacy: any = { providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
+      host: 'smtp.test', port: 587, username: 'mailer', password: 'credential-value', from: 'mailer@example.test',
+    } };
+    const [upgraded] = bindLegacyProviderSecrets([legacy]);
+    expect(upgraded.config.password).toBe('credential-value');
+    expect(upgraded.config.__secretFingerprint).toBe(connectionFingerprint(upgraded.config, 'smtp', 'smtp-1'));
+    expect(bindLegacyProviderSecrets([upgraded])).toEqual([upgraded]);
     const manager = new EmailProviderManager();
-    await expect(manager.initialize({
+    await manager.initialize({
       tenantId: 'tenant-1', emailProvider: 'smtp',
-      providerConfigs: [{ providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: { host: 'smtp.test', port: 587, username: 'mailer', password: 'credential-value' } }],
-    } as any)).rejects.toMatchObject({ errorCode: 'SECRET_IDENTITY_MISMATCH' });
-    expect(createTransportMock).not.toHaveBeenCalled();
+      providerConfigs: [upgraded],
+    } as any);
+    expect(createTransportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not repair an existing mismatched fingerprint during compatibility processing', () => {
+    const legacy: any = { providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
+      host: 'smtp.changed.test', password: 'credential-value', __secretFingerprint: 'stale-fingerprint',
+    } };
+    expect(bindLegacyProviderSecrets([legacy])).toEqual([legacy]);
   });
 
   it('fails closed for an alias-backed Resend credential without a fingerprint', async () => {

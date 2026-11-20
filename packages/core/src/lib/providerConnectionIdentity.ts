@@ -63,6 +63,30 @@ export function providerSecretFingerprintMatches(provider: { providerType: strin
     && config.__secretFingerprint === connectionFingerprint(config, provider.providerType, provider.providerId);
 }
 
+/**
+ * Bind only unbound credentials from a trusted persisted provider snapshot.
+ * Callers must persist this result with a compare-and-swap against the source
+ * snapshot; provider initialization must never call this helper.
+ */
+export function bindLegacyProviderSecrets<T extends { providerType: string; providerId?: string; config?: Record<string, unknown> }>(providers: T[]): T[] {
+  return providers.map((provider) => {
+    let config: Record<string, unknown>;
+    try {
+      config = normalizeProviderSecretAliases(provider.config ?? {}, provider.providerType);
+    } catch {
+      return provider;
+    }
+    if ((!config.password && !config.apiKey) || Object.prototype.hasOwnProperty.call(config, '__secretFingerprint')) return provider;
+    return {
+      ...provider,
+      config: {
+        ...config,
+        __secretFingerprint: connectionFingerprint(config, provider.providerType, provider.providerId),
+      },
+    };
+  });
+}
+
 export const SECRET_IDENTITY_MISMATCH_MESSAGE =
   'Credentials no longer match this server. Re-enter the password for the current connection.';
 

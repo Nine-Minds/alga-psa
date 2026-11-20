@@ -11,6 +11,7 @@ import {
   EmailProviderError,
 } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
+import { bindLegacyProviderSecrets } from '@alga-psa/core/providerConnectionIdentity';
 import {
   ITemplateProcessor
 } from './templateProcessors';
@@ -817,7 +818,7 @@ export class TenantEmailService extends BaseEmailService {
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
     const db = tenantDb(knex, tenantId);
-    const [settings, outboundSenders, outboundRoutes] = await Promise.all([
+    let [settings, outboundSenders, outboundRoutes] = await Promise.all([
       db.table('tenant_email_settings').first(),
       db.table('email_sender_addresses').select('*'),
       db.table('email_sender_routes').select('*'),
@@ -826,6 +827,24 @@ export class TenantEmailService extends BaseEmailService {
     if (!settings) {
       logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
       return null;
+    }
+
+    // Upgrade legacy credentials from this trusted persisted snapshot. The
+    // conditional update prevents a concurrent settings edit from being bound
+    // to the endpoint values read here. A lost race uses the winner's row.
+    const persistedConfigs = TenantEmailService.normalizeProviderConfigs(settings.provider_configs);
+    const boundConfigs = bindLegacyProviderSecrets(persistedConfigs);
+    if (JSON.stringify(boundConfigs) !== JSON.stringify(persistedConfigs)) {
+      const changed = await db.table('tenant_email_settings')
+        .where('tenant', tenantId)
+        .whereRaw('provider_configs::text = (?::json)::text', [JSON.stringify(settings.provider_configs)])
+        .update({ provider_configs: JSON.stringify(boundConfigs) });
+      if (changed) {
+        settings = { ...settings, provider_configs: JSON.stringify(boundConfigs) };
+      } else {
+        settings = await db.table('tenant_email_settings').first();
+      }
+      if (!settings) return null;
     }
 
     return {
