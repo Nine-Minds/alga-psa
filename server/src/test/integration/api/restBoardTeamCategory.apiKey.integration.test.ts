@@ -94,7 +94,7 @@ function request(url: string, method: string, body?: unknown) {
 
 describe('REST routes with real API-key authentication and authorization', () => {
   it('restores team:create for an existing tenant idempotently without changing custom-role assignments', async () => {
-    const migration = await import('../../../../migrations/20261101120000_backfill_rest_api_permissions.cjs');
+    const migration = await import('../../../../migrations/20261120120100_backfill_rest_api_permissions.cjs');
     const trx = connection.db!;
     const existingCreate = await trx('permissions').where({ tenant, resource: 'team', action: 'create', msp: true, client: false }).first<{ permission_id: string }>();
     if (existingCreate) {
@@ -133,7 +133,7 @@ describe('REST routes with real API-key authentication and authorization', () =>
   });
 
   it('creates a team for a full-permission API-key principal and persists supported board update fields', async () => {
-    const migration = await import('../../../../migrations/20261101120000_backfill_rest_api_permissions.cjs');
+    const migration = await import('../../../../migrations/20261120120100_backfill_rest_api_permissions.cjs');
     await migration.up(connection.db!);
     await assignAdminRole();
 
