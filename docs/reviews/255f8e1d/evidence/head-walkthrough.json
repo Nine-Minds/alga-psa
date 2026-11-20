@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "title": "Sponsor notification review at d17622d44f",
+  "paneId": "5713ffd6-4a1d-4d11-926a-d8557f64f677",
+  "startedAt": "2026-11-04T23:26:57.601Z",
+  "finishedAt": "2026-11-04T23:28:59.056Z",
+  "durationMs": 70618,
+  "width": 1920,
+  "height": 1028,
+  "bytes": 2108353,
+  "frames": 242,
+  "marks": [
+    {
+      "t": 0,
+      "label": "Customer author opens the isolated ticket"
+    },
+    {
+      "t": 14.933,
+      "label": "Comment persisted; inspect restricted notification delivery"
+    },
+    {
+      "t": 38.926,
+      "label": "Unrestricted control retains useful comment content"
+    },
+    {
+      "t": 62.287,
+      "label": "SMTP failure: retry must use the current address and tightened policy"
+    }
+  ],
+  "files": {
+    "video": "head-walkthrough.webm",
+    "chapters": "head-walkthrough.vtt"
+  }
+}

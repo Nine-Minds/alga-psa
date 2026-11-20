@@ -1,0 +1,21 @@
+Run from /home/robert/alga-copies/feature-security-2-findings-in-deliveryprovider-ts
+Evidence scripts directory: /home/robert/.alga-review/255f8e1d-085c-568b-8132-6200e4aa1e05/evidence
+
+Baseline verify:
+npm run fixtures:co-managed -- --only notification --verify
+
+To select unrestricted control before posting a second UI comment:
+node <evidence>/db-runner.cjs <evidence>/select-control.js
+
+Normal routing: run routing-normal.js, routing-publish.js, routing-status.js with db-runner.cjs.
+Recovery: run routing-fail.js, routing-publish.js, routing-status.js (confirm failed/attempts=1), routing-tighten.js, routing-publish.js, routing-status.js (confirm sent/attempts=2).
+Always restore after either routing scenario: node <evidence>/db-runner.cjs <evidence>/restore.js
+These scripts overwrite /tmp/delivery-route-backup.json; finish and restore one scenario before beginning another.
+
+Full fixture-owned reset (invalidates fixture sessions and removes demonstration records):
+npm run fixtures:co-managed -- --only notification --reset
+NOTIFICATION_SMTP_PORT=3025 npm run fixtures:co-managed -- --only notification
+npm run fixtures:co-managed -- --only notification --verify
+Do not reset GreenMail globally; other fixture mailboxes share the emulator.
+Board-managed development start only:
+alga-dev workflow-ensure-service --projectId=255f8e1d-085c-568b-8132-6200e4aa1e05 --name=dev-server
