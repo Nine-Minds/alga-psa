@@ -48,6 +48,13 @@ export type DetailedContractLine = IContractLineMapping & {
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 
+export class ContractLineSourceNotFoundError extends Error {
+  constructor(contractLineId: string) {
+    super(`Base contract line ${contractLineId} not found for template snapshot`);
+    this.name = 'ContractLineSourceNotFoundError';
+  }
+}
+
 export class ContractTemplateLineNotFoundError extends Error {
   constructor(templateLineId: string) {
     super(`Template contract line ${templateLineId} not found`);
@@ -288,7 +295,7 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   if (!baseLine) {
-    throw new Error(`Base contract line ${contractLineId} not found for template snapshot`);
+    throw new ContractLineSourceNotFoundError(contractLineId);
   }
   await assertLiveLineMatchesTemplateCurrency(knex as any, tenant, templateId, contractLineId);
 

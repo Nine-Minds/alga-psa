@@ -37,6 +37,8 @@ function tenantRows() {
 async function cleanupTenant(id: string): Promise<void> {
   await tenantTable(id, 'contract_lines').del();
   await tenantTable(id, 'contracts').del();
+  await tenantTable(id, 'contract_template_lines').del();
+  await tenantTable(id, 'contract_templates').del();
   await tenantRows().where({ tenant: id }).del();
 }
 
@@ -117,6 +119,42 @@ describe('POST /api/v1/contracts/{contractId}/contract-lines', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
     expect(body.error.message).toContain(contractLineId);
     expect(body.error.message).toContain('Only contract-template lines can be cloned onto a contract through this endpoint');
+  });
+
+  it('clones a template line that has no corresponding live contract line', async () => {
+    const contractId = await insertContract();
+    const templateId = uuidv4();
+    const templateLineId = uuidv4();
+    await tenantTable(tenantId, 'contract_templates').insert({
+      tenant: tenantId,
+      template_id: templateId,
+      template_name: 'Managed support template',
+      currency_code: 'USD',
+    });
+    await tenantTable(tenantId, 'contract_template_lines').insert({
+      tenant: tenantId,
+      template_id: templateId,
+      template_line_id: templateLineId,
+      template_line_name: 'Managed support',
+      line_type: 'Fixed',
+      billing_frequency: 'monthly',
+    });
+    const request = makeRequest(`http://localhost/api/v1/contracts/${contractId}/contract-lines`, {
+      contract_line_id: templateLineId,
+    });
+
+    const response = await attachContractLine(request as any, { params: Promise.resolve({ contractId }) } as any);
+    expect(response.status).toBe(201);
+    const { data } = await readJson(response);
+    expect(data.contract_line_id).not.toBe(templateLineId);
+    const clone = await tenantTable(tenantId, 'contract_lines')
+      .where({ contract_line_id: data.contract_line_id })
+      .first();
+    expect(clone).toMatchObject({
+      contract_id: contractId,
+      contract_line_name: 'Managed support',
+      contract_line_type: 'Fixed',
+    });
   });
 
   it('preserves 404 for an absent contract line ID', async () => {
