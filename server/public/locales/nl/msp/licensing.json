@@ -711,6 +711,10 @@
       "intro": "Koop hier een pool co-managed plekken. Wijs na de aankoop plekken toe aan klanten via het klantdossier."
     },
     "previewError": "Deze wijziging kon niet worden geprijsd. Vernieuw en probeer het opnieuw.",
+    "billingCustomerUnlinked": "Er kon geen Stripe-factureringsaccount voor deze werkruimte worden geverifieerd. Neem contact op met ondersteuning om het account te koppelen.",
+    "proSubscriptionRequired": "Voor co-managed seats is een lopend Pro-abonnement vereist. Controleer je abonnement in Accountbeheer.",
+    "offerPaused": "Aankopen van nieuwe seats zijn gepauzeerd. Neem contact op met uw accountmanager voor een update.",
+    "offerMisconfigured": "De aanbieding voor co-managed seats is niet goed ingesteld. Neem contact op met support.",
     "purchaseNeedsAdmin": "Een accountbeheerder moet co-managed capaciteit toevoegen.",
     "purchaseProviderUnconfigured": "De betalingsprovider is niet geconfigureerd.",
     "purchaseUnavailable": "Gehoste co-managed aankoop is niet beschikbaar in deze implementatie.",

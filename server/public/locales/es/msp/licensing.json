@@ -711,6 +711,10 @@
       "intro": "Compre aquí un conjunto de puestos de cogestión. Después de la compra, asigne puestos a los clientes desde cada ficha de cliente."
     },
     "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
+    "billingCustomerUnlinked": "No se pudo verificar una cuenta de facturación de Stripe para este espacio de trabajo. Contacte con soporte para vincularla.",
+    "proSubscriptionRequired": "Las plazas de gestión conjunta requieren una suscripción Pro vigente. Revise su suscripción en Gestión de la cuenta.",
+    "offerPaused": "Las compras de nuevas plazas están pausadas. Contacte con su gestor de cuenta para obtener información.",
+    "offerMisconfigured": "La oferta de plazas de TI coadministrada no está configurada correctamente. Contacte con soporte.",
     "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad de cogestión.",
     "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",
     "purchaseUnavailable": "La compra de cogestión alojada no está disponible en esta implementación.",

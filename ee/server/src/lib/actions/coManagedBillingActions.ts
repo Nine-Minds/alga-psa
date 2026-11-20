@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
 import { getStripeService } from '../stripe/StripeService';
+import { coManagedPurchaseBlockedReason } from '../stripe/coManagedPurchaseErrors';
 import '../stripe/offerCatalog/surfaceProbe';
 import { OfferTermsChangedError, OfferUnavailableError } from '../stripe/offerCatalog/types';
 
@@ -31,10 +32,12 @@ async function requirePurchaser(user: { user_type: string }, tenant: string): Pr
 export const previewCoManagedSeatsAction = withAuth(async (user, { tenant }, quantity: number) => {
   await requirePurchaser(user, tenant);
   try {
-    return await getStripeService().previewCoManagedSeats(tenant, quantity);
+    const quote = await getStripeService().previewCoManagedSeats(tenant, quantity);
+    return { kind: 'quote', ...quote } as const;
   } catch (error) {
-    const outcome = offerOutcome(error);
-    if (outcome?.kind === 'unavailable') throw new Error('Co-managed purchasing is temporarily unavailable');
+    // Expected failures cross the server-action boundary as codes. Provider details stay on the server.
+    const reason = coManagedPurchaseBlockedReason(error);
+    if (reason) return { kind: 'blocked', reason } as const;
     throw error;
   }
 });

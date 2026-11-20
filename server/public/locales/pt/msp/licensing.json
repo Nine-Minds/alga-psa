@@ -711,6 +711,10 @@
       "intro": "Compre aqui um conjunto de lugares de cogestão. Após a compra, atribua lugares aos clientes a partir de cada ficha de cliente."
     },
     "previewError": "Não foi possível calcular o preço desta alteração. Atualize e tente novamente.",
+    "billingCustomerUnlinked": "Não foi possível verificar uma conta de faturamento do Stripe para este espaço de trabalho. Entre em contato com o suporte para vinculá-la.",
+    "proSubscriptionRequired": "As vagas cogerenciadas exigem uma assinatura Pro vigente. Verifique sua assinatura em Gerenciamento de contas.",
+    "offerPaused": "A compra de novos lugares está pausada. Contacte o gestor da conta para obter informações.",
+    "offerMisconfigured": "A oferta de lugares co-geridos não está configurada corretamente. Contacte o suporte.",
     "purchaseNeedsAdmin": "Um administrador da conta tem de adicionar capacidade cogerida.",
     "purchaseProviderUnconfigured": "O fornecedor de pagamentos não está configurado.",
     "purchaseUnavailable": "A compra de cogestão alojada não está disponível nesta implementação.",

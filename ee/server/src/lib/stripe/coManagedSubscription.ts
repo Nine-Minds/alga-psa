@@ -10,6 +10,13 @@ export const recognizesPrice = (prices: RecognizedPrices | undefined, priceId: s
 
 export const CO_MANAGED_SUBSCRIPTION_KIND = 'co_managed';
 
+export class CoManagedProSubscriptionRequiredError extends Error {
+  constructor() {
+    super('A current Pro subscription is required');
+    this.name = 'CoManagedProSubscriptionRequiredError';
+  }
+}
+
 /** True when this Stripe subscription is the dedicated co-managed seat pool, never the MSP's own
  * Pro subscription. Identified by metadata, or (defence in depth) by carrying the configured SKU. */
 export function isCoManagedSubscription(subscription: Stripe.Subscription, prices?: RecognizedPrices): boolean {

@@ -31,7 +31,7 @@ const pool = (over: Record<string, unknown> = {}, p: Record<string, unknown> = {
 
 beforeEach(() => {
   actions.state.mockReset().mockResolvedValue(pool());
-  actions.preview.mockReset().mockResolvedValue({ unitAmount: 1149, monthlyTotal: 3447, amountDue: 3447, currency: 'eur' });
+  actions.preview.mockReset().mockResolvedValue({ kind: 'quote', unitAmount: 1149, monthlyTotal: 3447, amountDue: 3447, currency: 'eur', offerRef: 'reviewed-offer' });
   actions.purchase.mockReset(); actions.announce.mockReset();
 });
 afterEach(cleanup);
@@ -53,6 +53,64 @@ describe('pool editor: first co-managed purchase', () => {
     expect(screen.getByText(/coManaged\.monthlyTotal 3 eur 34\.47/)).toBeInTheDocument();
     // Reviewing alone starts nothing.
     expect(actions.purchase).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['customer_unverified', 'We could not verify a Stripe billing account for this workspace. Contact support to have it linked.'],
+    ['no_current_pro', 'Co-managed seats require a current Pro subscription. Check your subscription in Account Management.'],
+    ['offer_paused', 'New seat purchases are paused. Contact your account manager for an update.'],
+    ['misconfigured', 'The co-managed seat offer is not configured correctly. Contact support for help.'],
+  ])('shows the next step for a failed quote (%s)', async (reason, message) => {
+    actions.preview.mockResolvedValue({ kind: 'blocked', reason });
+    render(<CoManagedPoolEditor showTotals />);
+    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(screen.queryByText('coManaged.confirmPurchase')).not.toBeInTheDocument();
+    expect(actions.purchase).not.toHaveBeenCalled();
+  });
+
+  it('shows the quote failure if refreshed terms cannot be priced', async () => {
+    actions.purchase.mockResolvedValue({ kind: 'review_required' });
+    render(<CoManagedPoolEditor showTotals />);
+    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+
+    const confirm = await screen.findByText('coManaged.confirmPurchase');
+    actions.preview.mockResolvedValueOnce({ kind: 'blocked', reason: 'no_current_pro' });
+    fireEvent.click(confirm);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Co-managed seats require a current Pro subscription.');
+    expect(screen.queryByText('coManaged.confirmPurchase')).not.toBeInTheDocument();
+
+    // A later purchase attempt cannot reuse the terms from the successful first review.
+    actions.preview.mockResolvedValueOnce({ kind: 'quote', unitAmount: 1200, monthlyTotal: 3600, amountDue: 3600, currency: 'eur', offerRef: 'fresh-offer' });
+    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(3));
+    expect(await screen.findByText('coManaged.confirmPurchase')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('coManaged.confirmPurchase'));
+    await waitFor(() => expect(actions.purchase).toHaveBeenCalledTimes(2));
+    expect(actions.purchase).toHaveBeenLastCalledWith(expect.objectContaining({ offerRef: 'fresh-offer' }));
+  });
+
+  it('discards reviewed terms when a refresh unexpectedly rejects', async () => {
+    actions.purchase.mockResolvedValue({ kind: 'review_required' });
+    render(<CoManagedPoolEditor showTotals />);
+    fireEvent.click(await screen.findByRole('button', { name: /Buy co-managed seats/ }));
+
+    actions.preview.mockRejectedValueOnce(new Error('private Stripe response detail'));
+    fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(2));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not price this change. Refresh and try again.');
+    expect(screen.queryByText('coManaged.confirmPurchase')).not.toBeInTheDocument();
+
+    actions.preview.mockResolvedValueOnce({ kind: 'quote', unitAmount: 1250, monthlyTotal: 3750, amountDue: 3750, currency: 'eur', offerRef: 'recovered-offer' });
+    fireEvent.click(screen.getByRole('button', { name: /Buy co-managed seats/ }));
+    await waitFor(() => expect(actions.preview).toHaveBeenCalledTimes(3));
+    fireEvent.click(await screen.findByText('coManaged.confirmPurchase'));
+    await waitFor(() => expect(actions.purchase).toHaveBeenCalledTimes(2));
+    expect(actions.purchase).toHaveBeenLastCalledWith(expect.objectContaining({ offerRef: 'recovered-offer' }));
+    expect(actions.purchase).not.toHaveBeenLastCalledWith(expect.objectContaining({ offerRef: 'reviewed-offer' }));
   });
 
   it('dismissing the review starts nothing and leaves the zero pool editable', async () => {

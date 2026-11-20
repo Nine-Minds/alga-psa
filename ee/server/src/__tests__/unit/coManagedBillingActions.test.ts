@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
 import { OfferTermsChangedError, OfferUnavailableError } from '../../lib/stripe/offerCatalog/types';
+import { CoManagedProSubscriptionRequiredError } from '../../lib/stripe/coManagedSubscription';
+import { StripeOwnershipError } from '../../lib/stripe/stripeCustomerOwnership';
+import { CoManagedPurchaseBlockedError } from '../../lib/stripe/coManagedPurchaseErrors';
 
 const mocks = vi.hoisted(() => ({ surface: vi.fn(), permission: vi.fn(), preview: vi.fn(), purchase: vi.fn(), key: vi.fn(),
   user: { user_id: 'actor', tenant: 'authenticated-sponsor', user_type: 'internal' } }));
@@ -51,6 +54,35 @@ describe('co-managed billing authorization', () => {
   });
 });
 
+describe('co-managed quote failures', () => {
+  it('returns a safe billing-account error without exposing Stripe ownership details', async () => {
+    mocks.preview.mockRejectedValue(new StripeOwnershipError('no_candidates', 'tenant', ['cus_private'], 'internal detail'));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'customer_unverified' });
+  });
+
+  it('reports a missing current Pro subscription', async () => {
+    mocks.preview.mockRejectedValue(new CoManagedProSubscriptionRequiredError());
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'no_current_pro' });
+  });
+
+  it('distinguishes paused offers, changed terms, and misconfiguration by typed errors', async () => {
+    mocks.preview.mockRejectedValue(new OfferUnavailableError('no_current_version', 'private pause detail'));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
+    mocks.preview.mockRejectedValue(new OfferTermsChangedError('old', { versionId: 'new', priceId: 'private', terms: { unitAmount: 1, currency: 'usd', interval: 'month', intervalCount: 1 } } as never));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'offer_changed' });
+    mocks.preview.mockRejectedValue(new OfferUnavailableError('not_configured', 'private setup detail'));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
+    mocks.preview.mockRejectedValue(new CoManagedPurchaseBlockedError('misconfigured'));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
+  });
+
+  it('leaves unexpected failures to the server error handler', async () => {
+    const error = new Error('Unexpected provider failure');
+    mocks.preview.mockRejectedValue(error);
+    await expect(previewCoManagedSeatsAction(1)).rejects.toBe(error);
+  });
+});
+
 describe('co-managed offer terms at confirmation', () => {
   const current = { versionId: 'v2', priceId: 'price_new', terms: { unitAmount: 1300, currency: 'eur', interval: 'month', intervalCount: 1 } };
   it('passes the reviewed offer reference to the service', async () => {
@@ -66,6 +98,6 @@ describe('co-managed offer terms at confirmation', () => {
     mocks.purchase.mockRejectedValue(new OfferUnavailableError('no_current_version', 'paused'));
     expect(await purchaseCoManagedSeatsAction({ quantity: 3, operationId: 'operation' })).toEqual({ kind: 'unavailable', reason: 'no_current_version', publishableKey: null });
     mocks.preview.mockRejectedValue(new OfferUnavailableError('stripe_unavailable', 'down'));
-    await expect(previewCoManagedSeatsAction(3)).rejects.toThrow('temporarily unavailable');
+    await expect(previewCoManagedSeatsAction(3)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
   });
 });

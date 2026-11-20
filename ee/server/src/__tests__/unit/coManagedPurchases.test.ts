@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StripeService } from '../../lib/stripe/StripeService';
+import { CoManagedProSubscriptionRequiredError } from '../../lib/stripe/coManagedSubscription';
 import { createOfferCatalog, OfferTermsChangedError, OfferUnavailableError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
 
 const mocks = vi.hoisted(() => ({ connection: vi.fn(), purchase: vi.fn(), reconcile: vi.fn() }));
@@ -73,6 +74,14 @@ describe('dedicated co-managed purchase adapter', () => {
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(mocks.purchase).not.toHaveBeenCalled();
   });
+  it('reports that a current Pro subscription is required when the linked customer only has a canceled plan', async () => {
+    const { service, pro } = fixture();
+    pro.status = 'canceled';
+
+    await expect(service.previewCoManagedSeats(tenant, 1)).rejects.toBeInstanceOf(CoManagedProSubscriptionRequiredError);
+    expect(mocks.purchase).not.toHaveBeenCalled();
+  });
+
   it('creates a recoverable embedded checkout for the customer pool only', async () => {
     const { service } = fixture();
     expect(await service.purchaseCoManagedSeats(tenant, 6, operationId)).toEqual({ kind: 'checkout', sessionId: 'cs_co', clientSecret: 'secret' });

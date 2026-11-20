@@ -24,7 +24,7 @@ import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
 import { stripeApiOverride } from './stripeApiOverride';
 import { countLicensedInternalUsers, reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
-import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry, CoManagedProSubscriptionRequiredError } from './coManagedSubscription';
 import {
   StripeOwnershipError,
   selectOwnedCustomer,
@@ -1827,7 +1827,9 @@ export class StripeService {
     const customer = await this.getOrImportCustomer(tenantId);
     const subscriptions: Stripe.Subscription[] = [];
     for await (const sub of this.stripe.subscriptions.list({ customer: customer.stripe_customer_external_id, status: 'all', limit: 100 })) subscriptions.push(sub);
-    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), recognized)) throw new Error('A current Pro subscription is required');
+    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), recognized)) {
+      throw new CoManagedProSubscriptionRequiredError();
+    }
     const terms = await this.coManagedTerms(subscriptions, recognized);
     const price = terms.kind === 'existing' ? { unit_amount: terms.price.unit_amount!, currency: terms.price.currency } : { unit_amount: terms.offer.terms.unitAmount, currency: terms.offer.terms.currency };
     const monthlyTotal = price.unit_amount * quantity;
