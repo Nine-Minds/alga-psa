@@ -502,7 +502,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the billing DesignerShell rendered with no surface has the viewport calc height and min-h-[480px] on its root"
   },
   {
@@ -511,7 +511,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: inside an unfocused surface the shell root has the same classes as with no surface"
   },
   {
@@ -520,7 +520,7 @@
     "featureIds": [
       "F031"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: inside a focused surface the shell root has flex-1 and min-h-0 and neither the viewport calc height nor min-h-[480px]"
   },
   {
@@ -529,7 +529,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the existing DesignerShell panelScroll, gridLayoutControls, flexItemControls and fieldDisplayControls suites pass unchanged"
   },
   {
@@ -538,7 +538,7 @@
     "featureIds": [
       "F032"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: themeContract.paletteBaseline passes with the billing DesignerShell count unchanged"
   },
   {
@@ -548,7 +548,7 @@
       "F033",
       "F034"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the invoice editor renders #invoice-template-editor-focus-toggle before the Close button, and clicking it focuses the surface and saves designer_focus_mode_invoice_layout as true"
   },
   {
@@ -557,7 +557,7 @@
     "featureIds": [
       "F033"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: with designer_focus_mode_invoice_layout saved as true the invoice editor opens focused; with only designer_focus_mode_quote_layout saved as true it does not"
   },
   {
@@ -566,7 +566,7 @@
     "featureIds": [
       "F035"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode the name input, save status, Close and Save are still rendered"
   },
   {
@@ -575,7 +575,7 @@
     "featureIds": [
       "F038"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the Code editor height effect runs again after a focus toggle"
   },
   {
@@ -584,7 +584,7 @@
     "featureIds": [
       "F039"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: type a new template name, toggle focus mode; the name input keeps the typed value and the active tab is unchanged"
   },
   {
@@ -593,7 +593,7 @@
     "featureIds": [
       "F033"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the InvoiceTemplateEditor authoritativeFlow suite passes with the surface in place"
   },
   {

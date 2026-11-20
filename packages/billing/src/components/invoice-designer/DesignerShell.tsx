@@ -74,6 +74,7 @@ import {
   StretchHorizontal,
   Grid3X3,
 } from 'lucide-react';
+import { useDesignerFocusState } from '@alga-psa/ui/components/designer';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { useStructureCommands, type StructureCommand } from './hooks/useStructureCommands';
 import { planSubtreeRename, resolveInsertionTarget } from './utils/structureEditing';
@@ -907,6 +908,8 @@ export const DesignerShell: React.FC = () => {
   }, [nodes, selectedNode]);
 
 	  useDesignerShortcuts();
+	  // Not a prop: the shell is rendered with none in three hosts and in many tests.
+	  const { isFocused: isFocusedSurface } = useDesignerFocusState();
 	  const structureCommands = useStructureCommands();
 	  const nameBeforeEditRef = useRef('');
 	  const [renameSuggestion, setRenameSuggestion] = useState<{
@@ -2514,7 +2517,14 @@ export const DesignerShell: React.FC = () => {
   return (
     // Sized so the editor page fits the window: the page never scrolls, so nothing
     // shifts under the pointer while editing (panels scroll inside themselves).
-    <div className="relative flex flex-col h-[calc(100vh-24.75rem)] min-h-[480px] border border-slate-200 rounded-lg overflow-hidden">
+    // In focus mode the host has already taken the window, so the shell fills what
+    // it is given instead of budgeting for chrome that is no longer there.
+    <div
+      className={clsx(
+        'relative flex flex-col border border-slate-200 rounded-lg overflow-hidden',
+        isFocusedSurface ? 'flex-1 min-h-0' : 'h-[calc(100vh-24.75rem)] min-h-[480px]'
+      )}
+    >
       <DesignerToolbar
         snapToGrid={snapToGrid}
         showGuides={showGuides}

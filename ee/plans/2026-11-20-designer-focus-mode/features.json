@@ -273,7 +273,7 @@
       "FR-D1",
       "FR-D2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Billing DesignerShell reads useDesignerFocusState(); unfocused, or outside any surface, its root keeps h-[calc(100vh-24.75rem)] min-h-[480px]"
   },
   {
@@ -282,7 +282,7 @@
     "prdRefs": [
       "FR-D1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Focused, the billing DesignerShell root fills its parent (flex-1 min-h-0) with no viewport-based height and no minimum height"
   },
   {
@@ -291,7 +291,7 @@
     "prdRefs": [
       "NFR-3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The billing DesignerShell edit adds no hard-coded palette classes; themeContract.paletteBaseline stays at its pinned count"
   },
   {
@@ -300,7 +300,7 @@
     "prdRefs": [
       "FR-E1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "InvoiceTemplateEditor is wrapped in DesignerFocusSurface, driven by the invoice_layout preference"
   },
   {
@@ -310,7 +310,7 @@
       "FR-E1",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The invoice editor header action group has the focus toggle with id invoice-template-editor-focus-toggle, placed before Close"
   },
   {
@@ -319,7 +319,7 @@
     "prdRefs": [
       "FR-E2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the invoice editor card fills the surface without border, radius or shadow, and the header row stays at the top"
   },
   {
@@ -328,7 +328,7 @@
     "prdRefs": [
       "FR-E2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the card content, the Visual / Code tabs, the designer wrapper and the Design / Transforms / Preview tabs in DesignerVisualWorkspace pass the remaining height down so the Design shell fills the window"
   },
   {
@@ -337,7 +337,7 @@
     "prdRefs": [
       "FR-E3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the Transforms, Preview and Code views scroll inside the surface; the page behind does not scroll"
   },
   {
@@ -346,7 +346,7 @@
     "prdRefs": [
       "FR-E3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The Code editor's computed height is recalculated when focus mode is toggled"
   },
   {
@@ -355,7 +355,7 @@
     "prdRefs": [
       "FR-E2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Toggling focus mode keeps the invoice designer workspace, selection, undo history, template name edits and the active tabs"
   },
   {
