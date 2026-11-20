@@ -239,7 +239,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Unit: the catalog has designer.toggleFocusMode bound to mod+. at page scope with allowInEditable"
   },
   {
@@ -248,7 +248,7 @@
     "featureIds": [
       "F015"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Unit: no other catalog action at page or global scope is bound to mod+."
   },
   {
@@ -257,7 +257,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: pressing mod+. with a surface mounted inside the shortcut provider toggles it on, and again toggles it off"
   },
   {
@@ -266,7 +266,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: after the surface unmounts, mod+. does nothing and does not throw"
   },
   {
@@ -275,7 +275,7 @@
     "featureIds": [
       "F017"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: mod+. toggles the surface while a text input inside it has focus"
   },
   {
@@ -284,7 +284,7 @@
     "featureIds": [
       "F016"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: mod+. toggles the surface while the editor shortcut scope is active (the invoice designer case)"
   },
   {
@@ -293,7 +293,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the keyboard-shortcuts i18n contract test passes with the new action in every production locale"
   },
   {
@@ -302,7 +302,7 @@
     "featureIds": [
       "F018"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the xx and yy pseudo-locales carry the new shortcut keys"
   },
   {
@@ -311,7 +311,7 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: designer.focusMode.enter and designer.focusMode.exit exist in common.json for every production locale and both pseudo-locales"
   },
   {
@@ -320,7 +320,7 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the Spanish strings use the usted register and pass the glossary checks"
   },
   {
@@ -329,7 +329,7 @@
     "featureIds": [
       "F020"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the toggle tooltip includes the displayed binding for designer.toggleFocusMode"
   },
   {

@@ -2316,5 +2316,11 @@
   },
   "entityChip": {
     "moreTags": "Kolejne tagi ({{count}}): {{names}}"
+  },
+  "designer": {
+    "focusMode": {
+      "enter": "Tryb skupienia",
+      "exit": "Zakończ tryb skupienia"
+    }
   }
 }

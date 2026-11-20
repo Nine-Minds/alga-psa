@@ -396,6 +396,12 @@
         "label": "Mostrar sugerencias de vínculos en una pestaña nueva",
         "description": "Mostrar sugerencias de teclado y abrir los vínculos en una pestaña nueva cuando sea posible."
       }
+    },
+    "designer": {
+      "toggleFocusMode": {
+        "label": "Alternar el modo de enfoque",
+        "description": "Amplíe el editor de diseño a toda la ventana o vuelva al diseño normal."
+      }
     }
   },
   "platform": {

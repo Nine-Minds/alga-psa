@@ -10,6 +10,15 @@
  */
 import React, { createContext, useCallback, useContext, useMemo } from 'react';
 
+import { getShortcutCatalogEntry } from '../../keyboard-shortcuts/catalog';
+import {
+  useCatalogShortcut,
+  useResolvedShortcutBindings,
+  useShortcutAction,
+  useShortcutActionDisabled,
+} from '../../keyboard-shortcuts/provider';
+import type { ShortcutAction } from '../../keyboard-shortcuts/types';
+
 export interface DesignerFocusState {
   isFocused: boolean;
   toggle: () => void;
@@ -40,6 +49,48 @@ export function useOptionalDesignerFocusState(): DesignerFocusState | null {
 export const DESIGNER_FOCUS_SURFACE_FOCUSED_CLASSES =
   'fixed inset-0 z-40 flex flex-col overflow-hidden bg-[rgb(var(--color-background))]';
 
+export const DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID = 'designer.toggleFocusMode';
+
+/**
+ * The invoice, quote and document designers push the `editor` scope while their workspace is
+ * mounted, and the dispatcher suppresses page-scope actions under it. The registry is keyed by
+ * action id, so the same binding is registered a second time under an internal id at editor
+ * scope; the two are never eligible at once, and the clone follows the user's own binding.
+ */
+const DESIGNER_FOCUS_MODE_EDITOR_SCOPE_ACTION_ID = 'designer.toggleFocusModeInEditor';
+
+/** Registers `designer.toggleFocusMode` for as long as the surface is mounted. */
+function useDesignerFocusModeShortcut(toggle: () => void): void {
+  const handler = useCallback(() => {
+    toggle();
+  }, [toggle]);
+
+  useCatalogShortcut(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID, handler);
+
+  const bindings = useResolvedShortcutBindings(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID);
+  const isDisabled = useShortcutActionDisabled(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID);
+  const bindingKey = bindings.join('|');
+
+  const editorScopeAction = useMemo<ShortcutAction>(() => {
+    const catalogEntry = getShortcutCatalogEntry(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID);
+    const resolvedBindings = bindingKey.length > 0 ? bindingKey.split('|') : [];
+
+    return {
+      id: DESIGNER_FOCUS_MODE_EDITOR_SCOPE_ACTION_ID,
+      labelKey: catalogEntry?.labelKey ?? '',
+      descriptionKey: catalogEntry?.descriptionKey,
+      groupKey: catalogEntry?.groupKey ?? '',
+      scope: 'editor',
+      allowInEditable: catalogEntry?.allowInEditable,
+      defaultBindings: resolvedBindings,
+      enabled: !isDisabled && resolvedBindings.length > 0,
+      handler,
+    };
+  }, [bindingKey, handler, isDisabled]);
+
+  useShortcutAction(editorScopeAction);
+}
+
 export interface DesignerFocusSurfaceProps {
   /** Element id of the surface itself. */
   id: string;
@@ -62,6 +113,8 @@ export function DesignerFocusSurface({
 }: DesignerFocusSurfaceProps): React.JSX.Element {
   const toggle = useCallback(() => onFocusedChange(!focused), [focused, onFocusedChange]);
   const state = useMemo<DesignerFocusState>(() => ({ isFocused: focused, toggle }), [focused, toggle]);
+
+  useDesignerFocusModeShortcut(toggle);
 
   const classes = focused
     ? `${DESIGNER_FOCUS_SURFACE_FOCUSED_CLASSES} ${focusedClassName ?? ''}`.trim()

@@ -9,7 +9,13 @@ import { Maximize2, Minimize2 } from 'lucide-react';
 
 import { Button } from '../Button';
 import { useTranslation } from '../../lib/i18n/client';
-import { useOptionalDesignerFocusState } from './DesignerFocusSurface';
+import { formatShortcut } from '../../keyboard-shortcuts/display';
+import { useClientPlatform } from '../../keyboard-shortcuts/platform';
+import { useResolvedShortcutBindings } from '../../keyboard-shortcuts/provider';
+import {
+  DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID,
+  useOptionalDesignerFocusState,
+} from './DesignerFocusSurface';
 
 export interface DesignerFocusToggleProps {
   id: string;
@@ -19,6 +25,8 @@ export interface DesignerFocusToggleProps {
 export function DesignerFocusToggle({ id, className }: DesignerFocusToggleProps): React.JSX.Element | null {
   const { t } = useTranslation('common');
   const surface = useOptionalDesignerFocusState();
+  const platform = useClientPlatform('other');
+  const binding = useResolvedShortcutBindings(DESIGNER_FOCUS_MODE_SHORTCUT_ACTION_ID)[0];
 
   if (!surface) {
     return null;
@@ -27,6 +35,8 @@ export function DesignerFocusToggle({ id, className }: DesignerFocusToggleProps)
   const label = surface.isFocused
     ? t('designer.focusMode.exit', { defaultValue: 'Exit focus mode' })
     : t('designer.focusMode.enter', { defaultValue: 'Focus mode' });
+  // The author's own binding, written the way their platform writes it.
+  const tooltip = binding ? `${label} (${formatShortcut(binding, platform)})` : label;
 
   return (
     <Button
@@ -36,7 +46,7 @@ export function DesignerFocusToggle({ id, className }: DesignerFocusToggleProps)
       className={`shrink-0 ${className ?? ''}`.trim()}
       aria-pressed={surface.isFocused}
       aria-label={label}
-      tooltipText={label}
+      tooltipText={tooltip}
       onClick={surface.toggle}
     >
       {surface.isFocused ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
