@@ -101,4 +101,15 @@ describe('ApiKeyServiceForApi client-owner rejection', () => {
     expect(anyTenantKey).toMatchObject({ api_key_id: 'key-1' });
     expect(mocks.updates.some((u) => 'last_used_at' in u.values)).toBe(true);
   });
+
+  it('rejects a service-principal-owned key via both paths without recording use', async () => {
+    mocks.userRow = { is_inactive: false, user_type: 'service' };
+
+    await expect(ApiKeyServiceForApi.validateApiKeyForTenant('plain-key', 'tenant-1')).resolves.toBeNull();
+    expect(mocks.updates.some((u) => 'last_used_at' in u.values)).toBe(false);
+
+    mocks.updates.length = 0;
+    await expect(ApiKeyServiceForApi.validateApiKeyAnyTenant('plain-key')).resolves.toBeNull();
+    expect(mocks.updates.some((u) => 'last_used_at' in u.values)).toBe(false);
+  });
 });

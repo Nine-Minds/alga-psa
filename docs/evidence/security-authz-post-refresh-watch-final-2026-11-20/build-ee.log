@@ -1,0 +1,82 @@
+
+> build:ee
+> npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise
+
+
+> build:assemblyscript
+> node scripts/build-assemblyscript-if-needed.mjs
+
+[build:assemblyscript] outputs up to date — skipping
+
+> server@1.6.17 build:enterprise
+> NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" NODE_ENV=production next build --webpack
+
+▲ Next.js 16.4.2 (webpack)
+- Environments: .env.local
+✓ Running next.config.mjs took 82ms
+- Experiments (use with caution):
+  · cpus: 1
+  ✓ externalDir
+  · proxyClientMaxBodySize: "100mb"
+  · serverActions
+  ⨯ serverSourceMaps
+  ✓ webpackBuildWorker
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+[next.config] edition enterprise {
+  cwd: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  dirname: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  LOG_MODULE_RESOLUTION: undefined
+}
+[WEBPACK ALIAS DEBUG] @product/extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-settings-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/mcp/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-mcp/ee/entry.ts (isEE: true)
+[next.config] aliases {
+  at: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  '@': '/home/robert/alga-copies/feature-security-authz-in-post-3/server/src',
+  '@ee': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  '@enterprise': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  'ee/server/src': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  cePackagesEeAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/packages/ee/src',
+  eeSrcAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src'
+}
+[next.config] edition enterprise {
+  cwd: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  dirname: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  LOG_MODULE_RESOLUTION: undefined
+}
+[WEBPACK ALIAS DEBUG] @product/extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-settings-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/mcp/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-mcp/ee/entry.ts (isEE: true)
+[next.config] aliases {
+  at: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  '@': '/home/robert/alga-copies/feature-security-authz-in-post-3/server/src',
+  '@ee': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  '@enterprise': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  'ee/server/src': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  cePackagesEeAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/packages/ee/src',
+  eeSrcAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src'
+}
+[next.config] edition enterprise {
+  cwd: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  dirname: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  LOG_MODULE_RESOLUTION: undefined
+}
+[WEBPACK ALIAS DEBUG] @product/extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-settings-extensions/ee/entry.tsx (isEE: true)
+[WEBPACK ALIAS DEBUG] @product/mcp/entry -> /home/robert/alga-copies/feature-security-authz-in-post-3/packages/product-mcp/ee/entry.ts (isEE: true)
+[next.config] aliases {
+  at: '/home/robert/alga-copies/feature-security-authz-in-post-3/server',
+  '@': '/home/robert/alga-copies/feature-security-authz-in-post-3/server/src',
+  '@ee': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  '@enterprise': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  'ee/server/src': '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src',
+  cePackagesEeAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/packages/ee/src',
+  eeSrcAbs: '/home/robert/alga-copies/feature-security-authz-in-post-3/ee/server/src'
+}

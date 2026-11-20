@@ -1,0 +1,231 @@
+
+> build:ce
+> npm run build:assemblyscript && npx nx build-deps server && cd server && USE_PREBUILT=true EDITION=community NEXT_PUBLIC_EDITION=community npm run build:turbo
+
+
+> build:assemblyscript
+> node scripts/build-assemblyscript-if-needed.mjs
+
+[build:assemblyscript] outputs up to date — skipping
+
+ NX   Running target build-deps for project server and 63 tasks it depends on:
+
+
+
+> nx run @alga-psa/ui:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/validation:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflow-streams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-stubs:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-schemas:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflows:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/storage:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/scheduling:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/documents:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/predicates:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-host:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/billing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/block-content:build  [existing outputs match the cache, left as is]
+
+
+> nx run sebastian-ee:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/agent-tooling:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/types:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-bus:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-smtp-sink:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-webhook-sink:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-stripe:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/core:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/db:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/formatting:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/licensing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/authorization:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/shared:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/auth:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/user-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/reference-data:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tags:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/list-views:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/teams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-calendar:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tenancy:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/assets:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/surveys:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/email:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/analytics:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/inventory:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/reporting:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tickets:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-microsoft-teams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/users:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/co-managed:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/portal-shared:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/search:build  [existing outputs match the cache, left as is]
+
+
+> nx run email-service:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/clients:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/telephony:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/onboarding:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/notifications:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-threecx:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/projects:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/integrations:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/sla:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/opportunities:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/emulator-msgraph:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/client-portal-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/jobs:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/user-activities:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/marketing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/msp-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/client-portal:build  [existing outputs match the cache, left as is]
+
+
+
+
+ NX   Successfully ran target build-deps for project server and 63 tasks it depends on
+
+Nx read the output from the cache instead of running the command for 63 out of 64 tasks.
+
+
+> server@1.6.17 build:turbo
+> NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=8192}" NODE_ENV=production next build --turbo
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.mjs took 71ms
+- Experiments (use with caution):
+  · cpus: 1
+  ✓ externalDir
+  · proxyClientMaxBodySize: "100mb"
+  · serverActions
+  ⨯ serverSourceMaps
+  ✓ webpackBuildWorker
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...

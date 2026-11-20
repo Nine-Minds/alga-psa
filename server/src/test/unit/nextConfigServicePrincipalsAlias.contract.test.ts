@@ -85,14 +85,17 @@ function createFixture(): { fixtureRoot: string; fixtureServer: string } {
     import path from 'node:path';
     export default {
       distDir: process.env.FIXTURE_DIST_DIR || '.next',
+      experimental: { agentUpgrade: false },
       turbopack: {
         root: process.env.FIXTURE_TURBOPACK_ROOT,
         resolveAlias: {
           '@product/service-principals/entry': process.env.FIXTURE_ENTRY_ALIAS,
           '@product/service-principals/types': '../packages/product-service-principals/types.ts',
+          // Keep the specific EE API-auth target before the broad prefixes;
+          // Turbopack resolves the earlier prefix otherwise.
+          '@ee/lib/service-principals': '../ee/server/src/lib/service-principals',
           '@ee': '../ee/server/src',
           '@ee/': '../ee/server/src/',
-          '@ee/lib/service-principals': '../ee/server/src/lib/service-principals',
         },
       },
     };
