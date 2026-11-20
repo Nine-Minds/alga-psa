@@ -1,5 +1,8 @@
 import type { Knex } from 'knex';
+import type { IUser } from '@alga-psa/types';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/authorization/rbac';
+import { createProjectActionDecider } from '@alga-psa/authorization/projectRecordAuthorization';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
@@ -197,7 +200,7 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
     const thread = await db.table('comment_threads').where({ thread_id: comment.thread_id, project_task_id: scopedDraft.entity_id })
       .whereNull('ticket_id').first('collaboration_audience', 'is_internal');
     if (!thread) return false;
-    const user = await db.table('users').where({ user_id: userId }).first('user_id', 'user_type', 'seat_reader');
+    const user = await db.table('users').where({ user_id: userId }).first();
     if (!user) return false;
     const readerAudience = await admitCommentAudienceReader(conn, tenant, {
       userId,
@@ -209,8 +212,15 @@ export async function canReadCommentAttachment(conn: Connection, tenant: string,
       .where({ 'pt.task_id': scopedDraft.entity_id })
       .modify(query => db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id'))
       .modify(query => db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id'))
-      .first('p.client_id');
+      .first('p.project_id', 'p.client_id', 'p.assigned_to');
     if (!task) return false;
+    const authorizationUser = typeof reader === 'string'
+      ? null
+      : { ...user, ...reader, tenant, user_id: userId, user_type: user.user_type } as IUser;
+    if (!authorizationUser || !await hasPermission(authorizationUser, 'project_task', 'read', conn)) return false;
+    // LEVERAGE: pattern project-record-read — Project task comment reads and document retrieval must make the same parent-project decision.
+    const decideProject = await createProjectActionDecider(conn, tenant, authorizationUser, 'read');
+    if (!(await decideProject(task)).allowed) return false;
     const audience = resolveCommentAudienceForRead(thread);
     return isCommentAudienceVisible(audience, { tenant, clientId: task.client_id }, readerAudience);
   }
@@ -265,7 +275,8 @@ export async function expireCommentAttachmentDrafts(conn: Connection, tenant: st
   const legacyCount = await tenantDb(conn, tenant).table('ticket_comment_attachments')
     .where({ state: 'draft' }).where('expires_at', '<=', new Date()).update({ state: 'removed' });
   await tenantDb(conn, tenant).table('comment_attachment_drafts')
-    .where({ entity_type: 'ticket', state: 'draft' }).where('expires_at', '<=', new Date()).update({ state: 'removed' });
+    .whereIn('entity_type', ['ticket', 'project_task']).where({ state: 'draft' })
+    .where('expires_at', '<=', new Date()).update({ state: 'removed' });
   return legacyCount;
 }
 

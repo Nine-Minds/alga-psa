@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
@@ -13,6 +14,7 @@ const dbRef = vi.hoisted(() => ({
 const userRef = vi.hoisted(() => ({
   user: null as { user_id: string; user_type: 'internal' | 'client'; clientId?: string } | null,
 }));
+const permissionRef = vi.hoisted(() => ({ deniedProjectTaskReaders: new Set<string>() }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@alga-psa/db')>()),
@@ -23,12 +25,23 @@ vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action(userRef.user, { tenant: dbRef.tenant }, ...args),
   hasPermission: vi.fn(async () => true),
+  checkMultiplePermissions: vi.fn(async (_user: unknown, checks: Array<{ resource: string; action: string }>) =>
+    checks.map(check => ({ ...check, granted: true }))),
 }));
 
 // getTaskComments now gates on project_task:read through the rbac entry point.
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
+
+vi.mock('@alga-psa/authorization/rbac', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/authorization/rbac')>();
+  return {
+    ...actual,
+    hasPermission: vi.fn(async (user: { user_id: string }, resource: string) =>
+      resource !== 'project_task' || !permissionRef.deniedProjectTaskReaders.has(user.user_id)),
+  };
+});
 
 const publishEventMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
@@ -44,6 +57,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
+import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 
 const blockNote = (text: string) => JSON.stringify([
   {
@@ -545,6 +559,102 @@ describe('project task comment threading model', () => {
       await scopedDb(context.tenant).table('users')
         .whereIn('user_id', [generated.client_user_id, generated.other_client_user_id])
         .delete();
+    }
+  });
+
+  it('saves an image-only task comment and enforces task and audience access on image retrieval', async () => {
+    const originalUser = userRef.user;
+    const db = scopedDb();
+    const taskQuery = db.table('project_tasks as pt');
+    db.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+    db.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
+    const task = await taskQuery.whereNotNull('p.client_id')
+      .select('pt.task_id', 'p.project_id', 'p.client_id', 'p.assigned_to').first();
+    expect(task).toBeTruthy();
+
+    const otherClientId = randomUUID();
+    const allowedUserId = randomUUID(), deniedUserId = randomUUID();
+    const allowedContactId = randomUUID(), deniedContactId = randomUUID();
+    const fileId = randomUUID();
+    const documentId = randomUUID();
+    let commentId: string | undefined;
+    let threadId: string | undefined;
+    const note = JSON.stringify([{
+      type: 'image',
+      props: { url: `/api/documents/view/${fileId}`, name: 'pasted.png' },
+      children: [],
+    }]);
+    permissionRef.deniedProjectTaskReaders.clear();
+    userRef.user = originalUser;
+
+    try {
+      await db.table('clients').insert({ tenant: dbRef.tenant, client_id: otherClientId, client_name: 'Image retrieval scope test' });
+      await db.table('contacts').insert([
+        { tenant: dbRef.tenant, contact_name_id: allowedContactId, client_id: task.client_id, full_name: 'Allowed image reader', email: `${allowedUserId}@example.test` },
+        { tenant: dbRef.tenant, contact_name_id: deniedContactId, client_id: otherClientId, full_name: 'Out of scope image reader', email: `${deniedUserId}@example.test` },
+      ]);
+      await db.table('users').insert([
+        { tenant: dbRef.tenant, user_id: allowedUserId, contact_id: allowedContactId, user_type: 'client', username: allowedUserId, email: `${allowedUserId}@example.test`, hashed_password: 'unused', is_inactive: false },
+        { tenant: dbRef.tenant, user_id: deniedUserId, contact_id: deniedContactId, user_type: 'client', username: deniedUserId, email: `${deniedUserId}@example.test`, hashed_password: 'unused', is_inactive: false },
+      ]);
+      await db.table('external_files').insert({
+        tenant: dbRef.tenant, file_id: fileId, file_name: 'pasted.png', original_name: 'pasted.png',
+        mime_type: 'image/png', file_size: 7, storage_path: `test/${fileId}`, uploaded_by_id: originalUser!.user_id,
+      });
+      await db.table('documents').insert({
+        tenant: dbRef.tenant, document_id: documentId, document_name: 'pasted.png', file_id: fileId,
+        mime_type: 'image/png', file_size: 7, user_id: originalUser!.user_id,
+        created_by: originalUser!.user_id, is_client_visible: true,
+      });
+      await db.table('document_associations').insert({
+        tenant: dbRef.tenant, document_id: documentId, entity_type: 'project_task', entity_id: task.task_id,
+      });
+      await db.table('comment_attachment_drafts').insert({
+        tenant: dbRef.tenant, entity_type: 'project_task', entity_id: task.task_id,
+        document_id: documentId, created_by: originalUser!.user_id, state: 'draft',
+        expires_at: new Date(Date.now() + 86_400_000),
+      });
+
+      commentId = await createTaskComment({ taskId: task.task_id, note, audience: 'requester' });
+      const saved = await db.table('project_task_comments').where({ task_comment_id: commentId })
+        .select('thread_id', 'note').first();
+      threadId = saved.thread_id;
+      expect(saved.note).toContain(`/api/documents/view/${fileId}`);
+      expect(await db.table('comment_attachment_drafts').where({ document_id: documentId })
+        .first('state', 'comment_id')).toMatchObject({ state: 'attached', comment_id: commentId });
+
+      const reloaded = await getTaskComments(task.task_id);
+      expect(reloaded.find(comment => comment.taskCommentId === commentId)?.note).toContain(`/api/documents/view/${fileId}`);
+
+      const requester = (userId: string, clientId: string) => ({
+        user_id: userId, user_type: 'client' as const, tenant: dbRef.tenant,
+        clientId, is_inactive: false, username: userId, email: `${userId}@example.test`,
+      });
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant,
+        requester(allowedUserId, task.client_id), fileId))
+        .toMatchObject({ document_id: documentId });
+
+      // This document reader has the coarse task grant but is outside the parent project's client scope.
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant,
+        requester(deniedUserId, otherClientId), fileId)).toBeNull();
+
+      // The same record-authorized reader is denied when the owning thread excludes requesters.
+      await db.table('comment_threads').where({ thread_id: threadId })
+        .update({ collaboration_audience: 'organization_private', is_internal: true });
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant,
+        requester(allowedUserId, task.client_id), fileId)).toBeNull();
+    } finally {
+      userRef.user = originalUser;
+      permissionRef.deniedProjectTaskReaders.clear();
+      if (commentId) await db.table('project_task_comments').where({ task_comment_id: commentId }).delete();
+      if (threadId) await db.table('comment_threads').where({ thread_id: threadId }).delete();
+      await db.table('comment_attachment_drafts').where({ document_id: documentId }).delete();
+      await db.table('document_associations').where({ document_id: documentId }).delete();
+      await db.table('documents').where({ document_id: documentId }).delete();
+      await db.table('external_files').where({ file_id: fileId }).delete();
+      await db.table('users').whereIn('user_id', [allowedUserId, deniedUserId]).delete();
+      await db.table('contacts').whereIn('contact_name_id', [allowedContactId, deniedContactId]).delete();
+      await db.table('clients').where({ client_id: otherClientId }).delete();
     }
   });
 });

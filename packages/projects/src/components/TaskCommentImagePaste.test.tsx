@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import '@testing-library/jest-dom/vitest';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TaskCommentForm } from './TaskCommentForm';
@@ -32,6 +32,7 @@ vi.mock('@alga-psa/ui/editor', async importOriginal => {
     RichTextViewer: () => <div data-testid="comment-viewer" />,
     TextEditor: ({ editorRef, initialContent, uploadFile, onContentChange }: any) => {
       const [content, setContent] = useState(initialContent ?? [{ type: 'paragraph', content: [{ type: 'text', text: 'Draft', styles: {} }] }]);
+      const capturedUploadFile = useRef(uploadFile).current;
       if (editorRef) editorRef.current = {
         document: content,
         replaceBlocks: (_old: unknown, next: unknown) => setContent(next),
@@ -41,8 +42,8 @@ vi.mock('@alga-psa/ui/editor', async importOriginal => {
         data-content-count={content.length}
         onPaste={async event => {
           const file = event.clipboardData.files[0];
-          if (!file || !uploadFile) return;
-          const url = await uploadFile(file);
+          if (!file || !capturedUploadFile) return;
+          const url = await capturedUploadFile(file);
           const next = [...content, { type: 'image', props: { url } }];
           setContent(next);
           onContentChange?.(next);
@@ -71,7 +72,7 @@ function pasteImage() {
 
 describe('Project Task comment image paste', () => {
   it('inserts and saves a pasted image in a new comment', async () => {
-    mocks.upload.mockResolvedValue({ success: true, document: { document_id: 'draft-1', file_id: 'file-1', document_name: 'clipboard.png', mime_type: 'image/png' } });
+    mocks.upload.mockResolvedValue({ success: true, document: { document_id: 'draft-1', file_id: '00000000-0000-4000-8000-000000000001', document_name: 'clipboard.png', mime_type: 'image/png' } });
     mocks.create.mockResolvedValue('comment-2');
     const onAdded = vi.fn();
     render(<TaskCommentForm taskId="task-1" projectId="project-1" userId="user-1" onCommentAdded={onAdded} />);
@@ -81,8 +82,21 @@ describe('Project Task comment image paste', () => {
     await waitFor(() => expect(screen.getByTestId('paste-editor')).toHaveAttribute('data-content-count', '2'));
     fireEvent.click(screen.getByRole('button', { name: /add comment/i }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
-    expect(JSON.parse(mocks.create.mock.calls[0][0].note)).toContainEqual({ type: 'image', props: { url: '/api/documents/view/file-1' } });
+    expect(JSON.parse(mocks.create.mock.calls[0][0].note)).toContainEqual({ type: 'image', props: { url: '/api/documents/view/00000000-0000-4000-8000-000000000001' } });
     expect(onAdded).toHaveBeenCalledOnce();
+  });
+
+  it('supports paste when the editor mounted before current-user loading completed', async () => {
+    mocks.upload.mockResolvedValue({ success: true, document: { document_id: 'late-draft', file_id: 'late-file', document_name: 'clipboard.png', mime_type: 'image/png' } });
+    const props = { taskId: 'task-1', projectId: 'project-1', onCommentAdded: vi.fn() };
+    const { rerender, unmount } = render(<TaskCommentForm {...props} />);
+    rerender(<TaskCommentForm {...props} userId="user-1" />);
+
+    pasteImage();
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith(expect.any(FormData), { userId: 'user-1', projectTaskId: 'task-1' }));
+    await waitFor(() => expect(screen.getByTestId('paste-editor')).toHaveAttribute('data-content-count', '2'));
+    unmount();
+    await waitFor(() => expect(mocks.discard).toHaveBeenCalledWith({ projectTaskId: 'task-1', documentIds: ['late-draft'] }));
   });
 
   it('cancels an edit by discarding only the new upload and leaving the saved image in the comment', async () => {
@@ -117,7 +131,7 @@ describe('Project Task comment image paste', () => {
   });
 
   it('saves both the previously saved image and the newly pasted edit image', async () => {
-    mocks.upload.mockResolvedValue({ success: true, document: { document_id: 'draft-4', file_id: 'file-4', document_name: 'clipboard.png', mime_type: 'image/png' } });
+    mocks.upload.mockResolvedValue({ success: true, document: { document_id: 'draft-4', file_id: '00000000-0000-4000-8000-000000000004', document_name: 'clipboard.png', mime_type: 'image/png' } });
     mocks.update.mockResolvedValue(undefined);
     const originalImage = { type: 'image', props: { url: '/api/documents/view/saved-file' } };
     render(<TaskComment comment={comment({ note: JSON.stringify([originalImage]) })} onUpdate={vi.fn()} onDelete={vi.fn()} currentUserId="user-1" />);
@@ -129,6 +143,6 @@ describe('Project Task comment image paste', () => {
     await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
     const saved = JSON.parse(mocks.update.mock.calls[0][1].note);
     expect(saved).toContainEqual(originalImage);
-    expect(saved).toContainEqual({ type: 'image', props: { url: '/api/documents/view/file-4' } });
+    expect(saved).toContainEqual({ type: 'image', props: { url: '/api/documents/view/00000000-0000-4000-8000-000000000004' } });
   });
 });

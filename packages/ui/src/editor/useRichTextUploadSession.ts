@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import {
@@ -70,6 +70,8 @@ export function useRichTextUploadSession({
   const trackedRef = useRef<RichTextDraftClipboardImage[]>([]);
   const pendingRef = useRef(new Set<Promise<string>>());
   const cancellingRef = useRef(false);
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
 
   const resetDraftTracking = useCallback(() => {
     trackedRef.current = [];
@@ -213,14 +215,92 @@ export function useRichTextUploadSession({
     ]
   );
 
+  const performUploadRef = useRef(performUpload);
+  performUploadRef.current = performUpload;
+
   const uploadFile = useCallback(async (file: File) => {
     setPendingUploads(count => count + 1);
     if (cancellingRef.current) { setPendingUploads(count => count - 1); throw new Error('Draft cancellation is in progress'); }
-    const pending = performUpload(file);
+    const pending = performUploadRef.current(file);
     pendingRef.current.add(pending);
     try { return await pending; }
     finally { pendingRef.current.delete(pending); setPendingUploads(count => count - 1); }
-  }, [performUpload]);
+  }, []);
+
+  const cleanupUploads = useCallback(async (uploads: RichTextDraftClipboardImage[], targetScope = scope) => {
+    if (!uploads.length || !targetScope) return { deletedDocumentIds: [], failures: [] };
+    const cleanupAction = commentAttachments && targetScope.entityType === 'ticket'
+      ? discardCommentAttachmentDraftsAction
+      : deleteDraftUploadsAction;
+    if (!cleanupAction) throw new Error('A draft upload cleanup action is required.');
+    return commentAttachments && targetScope.entityType === 'ticket'
+      ? (cleanupAction as NonNullable<typeof discardCommentAttachmentDraftsAction>)(
+          { ticketId: targetScope.entityId, documentIds: uploads.map(image => image.documentId) }
+        )
+      : (cleanupAction as NonNullable<typeof deleteDraftUploadsAction>)(
+          { scope: targetScope, documentIds: uploads.map(image => image.documentId) }
+        );
+  }, [commentAttachments, deleteDraftUploadsAction, discardCommentAttachmentDraftsAction, scope]);
+  const cleanupUploadsRef = useRef(cleanupUploads);
+  cleanupUploadsRef.current = cleanupUploads;
+
+  const reconcileDraftUploads = useCallback(async (savedContent: string) => {
+    const referencedIds = new Set(Array.from(
+      savedContent.matchAll(/(?:\/api\/documents\/(?:view|download)\/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi),
+      match => match[1].toLowerCase()
+    ));
+    const committed = trackedRef.current.filter(image => referencedIds.has(image.fileId.toLowerCase()) || referencedIds.has(image.documentId.toLowerCase()));
+    const abandoned = trackedRef.current.filter(image => !committed.includes(image));
+    try {
+      const result = await cleanupUploads(abandoned);
+      const removed = new Set(result.deletedDocumentIds);
+      const failed = abandoned.filter(image => !removed.has(image.documentId));
+      trackedRef.current = [...committed, ...failed];
+      setDraftClipboardImages([...trackedRef.current]);
+      if (result.failures.length) toastApi.error('Some unused pasted images could not be cleaned up.');
+    } catch (error) {
+      console.error(`[${componentLabel}] Failed reconciling saved draft images`, error);
+      toastApi.error('Some unused pasted images could not be cleaned up.');
+      trackedRef.current = [...committed, ...abandoned];
+      setDraftClipboardImages([...trackedRef.current]);
+    }
+    // The referenced rows were promoted atomically by comment save; they are no longer drafts.
+    trackedRef.current = trackedRef.current.filter(image => !committed.includes(image));
+    setDraftClipboardImages([...trackedRef.current]);
+    clipboardUploadSequenceRef.current = 0;
+  }, [cleanupUploads, componentLabel, toastApi]);
+
+  // A parent can dismiss the editor or change tasks without going through its cancel button.
+  // Wait for in-flight uploads to register, then remove only this scope's still-owned drafts.
+  useEffect(() => {
+    const cleanupScope = scope;
+    cancellingRef.current = false;
+    return () => {
+      cancellingRef.current = true;
+      void Promise.allSettled([...pendingRef.current]).then(async () => {
+        const uploads = [...trackedRef.current];
+        if (!uploads.length) return;
+        try {
+          const result = await cleanupUploadsRef.current(uploads, cleanupScope);
+          if (result.failures.length) console.error(`[${componentLabel}] Failed cleaning drafts after editor dismissal`, result.failures);
+        } catch (error) {
+          console.error(`[${componentLabel}] Failed cleaning drafts after editor dismissal`, error);
+        } finally {
+          const dismissedIds = new Set(uploads.map(image => image.documentId));
+          const currentScope = scopeRef.current;
+          if (currentScope?.entityType !== cleanupScope?.entityType || currentScope?.entityId !== cleanupScope?.entityId) {
+            trackedRef.current = trackedRef.current.filter(image => !dismissedIds.has(image.documentId));
+            setDraftClipboardImages([...trackedRef.current]);
+            cancellingRef.current = false;
+          } else {
+            trackedRef.current = [];
+          }
+        }
+      });
+    };
+  // The callback ref avoids treating an inline server-action adapter as a scope change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope?.entityId, scope?.entityType]);
 
   const requestDiscard = useCallback(() => {
     if (trackDraftUploads && draftClipboardImages.length > 0) {
@@ -329,6 +409,7 @@ export function useRichTextUploadSession({
     keepDraftClipboardImages,
     requestDiscard: commentAttachments ? deleteTrackedDraftClipboardImages : requestDiscard,
     resetDraftTracking,
+    reconcileDraftUploads,
     showDraftCancelDialog,
     setShowDraftCancelDialog,
     // Typed as always-present for existing callers, who only hand it to an

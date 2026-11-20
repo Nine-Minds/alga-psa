@@ -133,17 +133,17 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   }, [comment.deletedAt, comment.userId, comment.canEdit, currentUserId]);
 
   const handleSave = async () => {
+    if (isSaving || uploadSession.isUploading || uploadSession.isDeletingDraftImages) return;
     setIsSaving(true);
     try {
-      const result = await updateTaskComment(comment.taskCommentId, {
-        note: JSON.stringify(editedContent)
-      }, comment.collaborationRevision);
+      const note = JSON.stringify(editedContent);
+      const result = await updateTaskComment(comment.taskCommentId, { note }, comment.collaborationRevision);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
       setIsEditing(false);
-      uploadSession.resetDraftTracking();
+      await uploadSession.reconcileDraftUploads(note);
       onUpdate();
     } catch (error) {
       console.error('Failed to update comment:', error);
@@ -342,7 +342,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 <Button
                   id={`${commentId}-save-btn`}
                   onClick={handleSave}
-                  disabled={isSaving || uploadSession.isUploading}
+                  disabled={isSaving || uploadSession.isUploading || uploadSession.isDeletingDraftImages}
                 >
                   {isSaving ? t('common.saving', 'Saving...') : t('common.save', 'Save')}
                 </Button>

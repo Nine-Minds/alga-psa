@@ -1,7 +1,7 @@
 'use client';
 
 import { useTicketDataSource } from './TicketDataSourceContext';
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRichTextUploadSession, type RichTextDraftClipboardImage } from '@alga-psa/ui/editor';
 import { toast } from 'react-hot-toast';
@@ -64,9 +64,9 @@ export function useTicketRichTextUploadSession(options: UseTicketRichTextUploadS
     translate: (key, params) => String(t(key, params as any)),
     toastApi: options.toastApi,
   });
-  const uploadFile = useCallback(async (file: File) => {
+  const uploadFile = useMemo(() => session.uploadFile ? async (file: File) => {
     if (!options.ticketId) throw new Error('Ticket ID is required for clipboard image upload.');
     return session.uploadFile(file);
-  }, [options.ticketId, session.uploadFile]);
+  } : undefined, [options.ticketId, session.uploadFile]);
   return { ...session, uploadFile };
 }

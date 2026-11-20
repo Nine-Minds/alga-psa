@@ -40,6 +40,7 @@ export function TaskCommentForm({
 }: TaskCommentFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const editorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
   // Present only where the composition layer injects the audience select (a seat technician's screen). A reply takes
   // its thread's audience, so only a new comment asks.
@@ -64,7 +65,7 @@ export function TaskCommentForm({
   });
 
   const handleSubmit = async (): Promise<void> => {
-    if (!editorRef.current || isSubmitting) {
+    if (!editorRef.current || submittingRef.current || isSubmitting || uploadSession.isUploading || uploadSession.isDeletingDraftImages) {
       return;
     }
     // Without a choice nothing is posted: the author names who can read it (the select says so).
@@ -79,6 +80,7 @@ export function TaskCommentForm({
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
@@ -96,7 +98,7 @@ export function TaskCommentForm({
       }
 
       // Clear the editor by replacing content with default empty block
-      uploadSession.resetDraftTracking();
+      await uploadSession.reconcileDraftUploads(note);
       editorRef.current.replaceBlocks(
         editorRef.current.document,
         DEFAULT_BLOCK
@@ -108,11 +110,14 @@ export function TaskCommentForm({
       console.error('Failed to add comment:', error);
       toast.error(t('comments.addFailed', 'Failed to add comment'));
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  useDialogSubmitShortcut(() => { void handleSubmit(); }, { enabled: !isSubmitting });
+  useDialogSubmitShortcut(() => { void handleSubmit(); }, {
+    enabled: !isSubmitting && !uploadSession.isUploading && !uploadSession.isDeletingDraftImages,
+  });
 
   return (
     <div className="space-y-3">
@@ -140,7 +145,7 @@ export function TaskCommentForm({
             e.stopPropagation();
             handleSubmit();
           }}
-          disabled={isSubmitting || uploadSession.isUploading || (asksAudience && audience === null)}
+          disabled={isSubmitting || uploadSession.isUploading || uploadSession.isDeletingDraftImages || (asksAudience && audience === null)}
           variant="default"
         >
           {isSubmitting

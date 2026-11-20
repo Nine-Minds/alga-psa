@@ -2,6 +2,8 @@
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { TicketDataSourceProvider } from './TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../lib/nativeTicketDataSource';
 
 const attachmentDiscard = vi.hoisted(() => vi.fn());
 vi.mock('../../actions/comment-actions/commentAttachmentDraftActions', () => ({ discardCommentAttachmentDrafts: attachmentDiscard }));
@@ -66,6 +68,29 @@ async function loadHook() {
 }
 
 describe('useTicketRichTextUploadSession', () => {
+  it('keeps uploadFile undefined when the ticket editor disallows images', async () => {
+    const { useTicketRichTextUploadSession } = await loadHook();
+    const dataSource = {
+      ...nativeTicketDataSource,
+      conversation: {
+        ...nativeTicketDataSource.conversation,
+        editor: { ...nativeTicketDataSource.conversation.editor, disallowImages: true },
+      },
+    };
+    const { result } = renderHook(() => useTicketRichTextUploadSession({
+      componentLabel: 'TicketComment',
+      ticketId: 'ticket-1',
+      userId: 'user-1',
+      commentAttachments: true,
+      trackDraftUploads: true,
+      onDiscard: vi.fn(),
+    }), {
+      wrapper: ({ children }) => <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider>,
+    });
+
+    expect(result.current.uploadFile).toBeUndefined();
+  });
+
   it('rejects missing ticket or user context before upload', async () => {
     const { useTicketRichTextUploadSession } = await loadHook();
     const uploadDocumentAction = vi.fn();
@@ -83,7 +108,7 @@ describe('useTicketRichTextUploadSession', () => {
       })
     );
 
-    await expect(missingTicket.current.uploadFile(new File(['x'], 'a.png', { type: 'image/png' }))).rejects.toThrow(
+    await expect(missingTicket.current.uploadFile!(new File(['x'], 'a.png', { type: 'image/png' }))).rejects.toThrow(
       'Ticket ID is required for clipboard image upload.'
     );
 
@@ -99,7 +124,7 @@ describe('useTicketRichTextUploadSession', () => {
       })
     );
 
-    await expect(missingUser.current.uploadFile(new File(['x'], 'a.png', { type: 'image/png' }))).rejects.toThrow(
+    await expect(missingUser.current.uploadFile!(new File(['x'], 'a.png', { type: 'image/png' }))).rejects.toThrow(
       'User session is required for clipboard image upload.'
     );
     expect(uploadDocumentAction).not.toHaveBeenCalled();
@@ -121,7 +146,7 @@ describe('useTicketRichTextUploadSession', () => {
       })
     );
 
-    await expect(result.current.uploadFile(new File(['x'], 'a.txt', { type: 'text/plain' }))).rejects.toThrow(
+    await expect(result.current.uploadFile!(new File(['x'], 'a.txt', { type: 'text/plain' }))).rejects.toThrow(
       'Only image clipboard content can be attached to ticket comments.'
     );
     expect(uploadDocumentAction).not.toHaveBeenCalled();
@@ -151,8 +176,8 @@ describe('useTicketRichTextUploadSession', () => {
 
     let firstUrl = '';
     await act(async () => {
-      firstUrl = await result.current.uploadFile(new File(['1'], 'one.png', { type: 'image/png' }));
-      await result.current.uploadFile(new File(['1'], 'one-again.png', { type: 'image/png' }));
+      firstUrl = await result.current.uploadFile!(new File(['1'], 'one.png', { type: 'image/png' }));
+      await result.current.uploadFile!(new File(['1'], 'one-again.png', { type: 'image/png' }));
     });
 
     expect(firstUrl).toBe('/api/documents/view/file-1');
@@ -177,7 +202,7 @@ describe('useTicketRichTextUploadSession', () => {
     );
 
     await act(async () => {
-      await untrackedResult.current.uploadFile(new File(['2'], 'two.png', { type: 'image/png' }));
+      await untrackedResult.current.uploadFile!(new File(['2'], 'two.png', { type: 'image/png' }));
     });
 
     expect(untrackedResult.current.draftClipboardImages).toEqual([]);
@@ -205,7 +230,7 @@ describe('useTicketRichTextUploadSession', () => {
     expect(onDiscard).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await result.current.uploadFile(new File(['1'], 'one.png', { type: 'image/png' }));
+      await result.current.uploadFile!(new File(['1'], 'one.png', { type: 'image/png' }));
     });
 
     act(() => {
@@ -249,8 +274,8 @@ describe('useTicketRichTextUploadSession', () => {
     );
 
     await act(async () => {
-      await result.current.uploadFile(new File(['1'], 'one.png', { type: 'image/png' }));
-      await result.current.uploadFile(new File(['2'], 'two.png', { type: 'image/png' }));
+      await result.current.uploadFile!(new File(['1'], 'one.png', { type: 'image/png' }));
+      await result.current.uploadFile!(new File(['2'], 'two.png', { type: 'image/png' }));
     });
 
     await waitFor(() => expect(result.current.draftClipboardImages).toHaveLength(2));
@@ -290,7 +315,7 @@ describe('useTicketRichTextUploadSession', () => {
 
     let resolvedUrl = '';
     await act(async () => {
-      resolvedUrl = await result.current.uploadFile(new File(['1'], 'one.png', { type: 'image/png' }));
+      resolvedUrl = await result.current.uploadFile!(new File(['1'], 'one.png', { type: 'image/png' }));
     });
 
     expect(resolveDocumentViewUrl).toHaveBeenCalledWith(
@@ -308,7 +333,7 @@ describe('useTicketRichTextUploadSession', () => {
     const {result}=renderHook(()=>useTicketRichTextUploadSession({componentLabel:'reply',commentAttachments:true,
       ticketId:'ticket-1',userId:'user-1',trackDraftUploads:false,onDiscard,uploadDocumentAction,toastApi:{error:vi.fn(),success:vi.fn()}}));
     let upload!: Promise<string>, canceled!: Promise<void>;
-    await act(async()=>{upload=result.current.uploadFile(new File(['%PDF'],'reply.pdf',{type:'application/pdf'}));});
+    await act(async()=>{upload=result.current.uploadFile!(new File(['%PDF'],'reply.pdf',{type:'application/pdf'}));});
     const rejected=expect(upload).rejects.toThrow('canceled');
     await act(async()=>{canceled=Promise.resolve(result.current.requestDiscard());});
     expect(onDiscard).not.toHaveBeenCalled();
@@ -324,7 +349,7 @@ describe('useTicketRichTextUploadSession', () => {
     const {result}=renderHook(()=>useTicketRichTextUploadSession({componentLabel:'edit',commentAttachments:true,
       ticketId:'ticket-1',userId:'user-1',trackDraftUploads:false,onDiscard,
       uploadDocumentAction:async()=>({success:false,error:'unsupported file'}),toastApi:{error:vi.fn(),success:vi.fn()}}));
-    await act(async()=>{await expect(result.current.uploadFile(new File(['bad'],'bad.mp4',{type:'video/mp4'}))).rejects.toThrow('unsupported file');});
+    await act(async()=>{await expect(result.current.uploadFile!(new File(['bad'],'bad.mp4',{type:'video/mp4'}))).rejects.toThrow('unsupported file');});
     await act(async()=>{await result.current.requestDiscard();});
     expect(attachmentDiscard).not.toHaveBeenCalled(); expect(onDiscard).toHaveBeenCalledOnce();
   });

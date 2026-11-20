@@ -9,3 +9,4 @@ export * from './portfolios/service';
 export * from './subject';
 export * from './pagination';
 export * from './readScope';
+export * from './projectRecordAuthorization';
