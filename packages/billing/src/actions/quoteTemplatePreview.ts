@@ -3,6 +3,7 @@
 
 import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { QuoteViewModel } from '@alga-psa/types';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
 import { exportWorkspaceToTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
@@ -59,7 +60,22 @@ type AuthoritativePreviewResult = {
 };
 
 export const runAuthoritativeQuoteTemplatePreview = withAuth(
-  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+  async (user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return {
+        success: false,
+        sourceHash: null,
+        generatedSource: null,
+        compile: {
+          status: 'error',
+          diagnostics: [],
+          error: 'Permission denied: billing read required',
+        },
+        render: { status: 'idle', html: null, css: null, contentHeightPx: null },
+        verification: { status: 'idle', mismatches: [] },
+      };
+    }
+
     const hasWorkspaceNodes =
       Boolean(input?.workspace?.nodesById) &&
       typeof input.workspace.nodesById === 'object' &&
