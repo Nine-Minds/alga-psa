@@ -108,10 +108,13 @@
     "ticketsTemplates": "Ticketsjablonen",
     "assetsCustody": "Apparatuur in bewaring",
     "ticketsCannedResponses": "Standaardantwoorden",
+    "ticketsCustomer": "Klanttickets",
     "profile": "Profiel",
     "signOut": "Afmelden",
     "coManaged": "Gezamenlijk beheerde IT",
-    "coManagedAdministration": "Toegang en beheer"
+    "coManagedArchive": "Archief gezamenlijk beheer",
+    "coManagedAdministration": "Toegang en beheer",
+    "assetsAudits": "Locatieaudits"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -234,6 +237,7 @@
       "descriptionPlaceholder": "Vermeld wat u verwachtte, wat er gebeurde en welke klant of factuur het betreft.",
       "replyTo": "Antwoorden gaan naar {{email}}",
       "success": "Verzonden naar de support van Nine Minds. Antwoorden gaan naar {{email}}.",
+      "successWithTicket": "Verzonden naar de support van Nine Minds als ticket {{ticketNumber}}. Antwoorden gaan naar {{email}}.",
       "submit": "Naar Nine Minds sturen",
       "sending": "Verzenden…",
       "cancel": "Annuleren",

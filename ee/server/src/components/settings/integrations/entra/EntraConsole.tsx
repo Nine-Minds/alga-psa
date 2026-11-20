@@ -58,6 +58,7 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
+import { EntraSyncUserIssueList } from './EntraSyncUserIssueList';
 import { EntraScheduleTab } from './EntraScheduleTab';
 import { EntraDiagnosticsDialog } from './EntraDiagnosticsDialog';
 import { FieldSyncRules } from './FieldSyncRules';
@@ -734,6 +735,12 @@ export function EntraConsole({
               {result.errorMessage}
             </span>
           ) : null}
+          {/* Same rule one level down: which contacts failed and why, not a bare count. */}
+          <EntraSyncUserIssueList
+            failed={result.failed ?? 0}
+            issues={result.userIssues ?? []}
+            idPrefix={`entra-console-last-run-issues-${result.managedTenantId}`}
+          />
         </div>
       ),
     },

@@ -15,13 +15,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   getCredentialsContextMock,
   getCredentialAuditEventsMock,
-  getAllClientsMock,
+  searchClientsMock,
   getAllUsersMock,
   useFeatureFlagMock,
 } = vi.hoisted(() => ({
   getCredentialsContextMock: vi.fn(),
   getCredentialAuditEventsMock: vi.fn(),
-  getAllClientsMock: vi.fn(),
+  searchClientsMock: vi.fn(),
   getAllUsersMock: vi.fn(),
   useFeatureFlagMock: vi.fn(),
 }));
@@ -34,8 +34,8 @@ vi.mock('@ee/lib/actions/credentials/credentialAuditActions', () => ({
   getCredentialAuditEvents: getCredentialAuditEventsMock,
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClients: getAllClientsMock,
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: searchClientsMock,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -183,17 +183,23 @@ vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ id, clients, selectedClientId, onSelect }: {
+  ClientPicker: ({ id, searchClients, selectedClientId, onSelect }: {
     id?: string;
-    clients: Array<{ client_id: string; client_name: string }>;
+    searchClients?: (params: Record<string, unknown>) => Promise<{ clients: Array<{ client_id: string; client_name: string }> }>;
     selectedClientId: string | null;
     onSelect: (id: string | null) => void;
-  }) => (
-    <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
-      <option value="" />
-      {clients.map((client) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
-    </select>
-  ),
+  }) => {
+    const [clients, setClients] = React.useState<Array<{ client_id: string; client_name: string }>>([]);
+    React.useEffect(() => {
+      void searchClients?.({}).then((result) => setClients(result.clients)).catch(() => undefined);
+    }, [searchClients]);
+    return (
+      <select id={id} value={selectedClientId ?? ''} onChange={(event) => onSelect(event.target.value || null)}>
+        <option value="" />
+        {clients.map((client) => <option key={client.client_id} value={client.client_id}>{client.client_name}</option>)}
+      </select>
+    );
+  },
 }));
 
 import { CredentialAuditScreen } from '@ee/components/credentials/CredentialAuditScreen';
@@ -237,7 +243,7 @@ beforeEach(() => {
     flagIrrelevantHere: true,
     canAudit: true,
   });
-  getAllClientsMock.mockResolvedValue([{ client_id: CLIENT_ID, client_name: 'Acme Corp' }]);
+  searchClientsMock.mockResolvedValue({ clients: [{ client_id: CLIENT_ID, client_name: 'Acme Corp' }], total: 1 });
   getAllUsersMock.mockResolvedValue([{ user_id: 'user-1', username: 'alice', first_name: 'Alice', last_name: 'Example' }]);
 });
 

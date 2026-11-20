@@ -19,7 +19,9 @@
  * (credential-bearing) URLs. Only the hostname may be mentioned.
  */
 import dns from 'node:dns/promises';
-import { BlockList, isIP } from 'node:net';
+import { isIP } from 'node:net';
+import { Readable } from 'node:stream';
+import { isGlobalUnicastAddress } from './publicAddress';
 import { domainToASCII } from 'node:url';
 import { Agent, fetch as undiciFetch } from 'undici';
 
@@ -128,81 +130,9 @@ export const SAFE_FETCH_DEFAULTS = {
 // Address policy
 // ---------------------------------------------------------------------------
 
-const blocked = new BlockList();
-for (const [net, prefix] of [
-  ['0.0.0.0', 8],
-  ['10.0.0.0', 8],
-  ['100.64.0.0', 10],
-  ['127.0.0.0', 8],
-  ['169.254.0.0', 16],
-  ['172.16.0.0', 12],
-  ['192.0.0.0', 24],
-  ['192.0.2.0', 24],
-  ['192.168.0.0', 16],
-  ['198.18.0.0', 15],
-  ['198.51.100.0', 24],
-  ['203.0.113.0', 24],
-  ['224.0.0.0', 4],
-  ['240.0.0.0', 4],
-] as const) {
-  blocked.addSubnet(net, prefix, 'ipv4');
-}
-blocked.addAddress('255.255.255.255', 'ipv4');
-blocked.addAddress('::', 'ipv6');
-blocked.addAddress('::1', 'ipv6');
-blocked.addSubnet('fc00::', 7, 'ipv6');
-blocked.addSubnet('fe80::', 10, 'ipv6');
-blocked.addSubnet('ff00::', 8, 'ipv6');
-blocked.addSubnet('64:ff9b::', 96, 'ipv6');
-blocked.addSubnet('2001:db8::', 32, 'ipv6');
-
-/** Expand an IPv6 literal to eight 16-bit groups, or null when malformed. */
-function expandIPv6(input: string): number[] | null {
-  let addr = input.split('%')[0]!;
-  // Trailing dotted IPv4 ("::ffff:127.0.0.1") -> two hex groups.
-  const dotted = /^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/.exec(addr);
-  if (dotted) {
-    const octets = dotted[2]!.split('.').map(Number);
-    if (octets.some((o) => o > 255)) return null;
-    const hi = ((octets[0]! << 8) | octets[1]!).toString(16);
-    const lo = ((octets[2]! << 8) | octets[3]!).toString(16);
-    addr = `${dotted[1]}${hi}:${lo}`;
-  }
-  const halves = addr.split('::');
-  if (halves.length > 2) return null;
-  const parse = (part: string) => (part === '' ? [] : part.split(':'));
-  const head = parse(halves[0]!);
-  const tail = halves.length === 2 ? parse(halves[1]!) : [];
-  const missing = 8 - head.length - tail.length;
-  if (halves.length === 1 ? head.length !== 8 : missing < 1) return null;
-  const groups = [...head, ...Array<string>(halves.length === 2 ? missing : 0).fill('0'), ...tail];
-  const nums = groups.map((g) => (/^[0-9a-f]{1,4}$/i.test(g) ? parseInt(g, 16) : NaN));
-  return nums.length === 8 && nums.every((n) => !Number.isNaN(n)) ? nums : null;
-}
-
-/** If an IPv6 address embeds an IPv4 address (mapped or compatible), return it dotted. */
-function unwrapEmbeddedIPv4(groups: number[]): string | null {
-  const leadingZero = groups.slice(0, 5).every((g) => g === 0);
-  const mapped = leadingZero && groups[5] === 0xffff;
-  const compatible = leadingZero && groups[5] === 0;
-  if (!mapped && !compatible) return null;
-  const hi = groups[6]!;
-  const lo = groups[7]!;
-  return `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
-}
-
-/** True when `address` (a literal IP) is in a range this fetcher must never connect to. */
+/** True when an IP literal or DNS answer is outside globally routable unicast. */
 export function isBlockedAddress(address: string): boolean {
-  const family = isIP(address);
-  if (family === 4) return blocked.check(address, 'ipv4');
-  if (family === 6) {
-    const groups = expandIPv6(address);
-    if (!groups) return true; // unparseable -> fail closed
-    const embedded = unwrapEmbeddedIPv4(groups);
-    if (embedded) return blocked.check(embedded, 'ipv4');
-    return blocked.check(address, 'ipv6');
-  }
-  return true; // not an IP at all -> fail closed
+  return !isGlobalUnicastAddress(address);
 }
 
 // ---------------------------------------------------------------------------
@@ -376,6 +306,13 @@ async function resolveVettedAddress(
   return addresses[0]!;
 }
 
+/** Validate a provider URL and its current DNS answers without opening a connection. */
+export async function assertSafeHttpsUrl(rawUrl: string, deps: Pick<SafeFetchDeps, 'lookup'> = {}): Promise<URL> {
+  const url = parseAndCheckUrl(rawUrl);
+  await resolveVettedAddress(url, deps.lookup ?? defaultLookup);
+  return url;
+}
+
 // ---------------------------------------------------------------------------
 // Fetch
 // ---------------------------------------------------------------------------
@@ -387,11 +324,25 @@ function megabytes(bytes: number): string {
   return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
 }
 
-export async function safeFetch(
+interface OpenedResponse {
+  response: Response;
+  total: AbortController;
+  timedOut: () => boolean;
+  /** Stops the total-budget timer and aborts the request; idempotent. Call when the body is finished or abandoned. */
+  release: () => void;
+  tooLarge: () => UrlFetchError;
+}
+
+/**
+ * Follow redirects (every hop re-validated) to a 2xx response and hand it back with its body
+ * unread. The connect/headers timer is per hop; the total-budget timer keeps running until
+ * the caller calls `release()`, so it also bounds the body transfer.
+ */
+async function openResponse(
   rawUrl: string,
   options: SafeFetchOptions,
-  deps: SafeFetchDeps = {},
-): Promise<SafeFetchResult> {
+  deps: SafeFetchDeps,
+): Promise<OpenedResponse> {
   const lookup = deps.lookup ?? defaultLookup;
   const doFetch = deps.fetch ?? defaultFetch;
   const connectTimeoutMs = options.connectTimeoutMs ?? SAFE_FETCH_DEFAULTS.connectTimeoutMs;
@@ -406,6 +357,10 @@ export async function safeFetch(
     timedOut = true;
     total.abort();
   }, totalTimeoutMs);
+  const release = () => {
+    clearTimeout(totalTimer);
+    total.abort();
+  };
 
   try {
     let url = parseAndCheckUrl(rawUrl, undefined, options.hostPolicy);
@@ -444,6 +399,7 @@ export async function safeFetch(
         clearTimeout(connectTimer);
       }
 
+      let handedOff = false;
       try {
         if (REDIRECT_STATUSES.has(response.status)) {
           await response.body?.cancel().catch(() => undefined);
@@ -469,36 +425,106 @@ export async function safeFetch(
           throw tooLarge();
         }
 
-        const chunks: Buffer[] = [];
-        let received = 0;
-        if (response.body) {
-          const reader = response.body.getReader();
-          try {
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              received += value.byteLength;
-              if (received > options.maxBytes) {
-                await reader.cancel().catch(() => undefined);
-                throw tooLarge();
-              }
-              chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength));
-            }
-          } catch (error) {
-            if (error instanceof UrlFetchError || error instanceof UnsafeUrlError) throw error;
-            if (timedOut || total.signal.aborted) {
-              throw new UrlFetchError('timeout', 'Timed out downloading URL');
-            }
-            throw new UrlFetchError('network', 'Download from URL failed');
-          }
-        }
-        return { bytes: Buffer.concat(chunks, received), status: response.status, headers: response.headers };
+        // The hop's abort listener stays attached: the total budget must still reach the body.
+        handedOff = true;
+        return { response, total, timedOut: () => timedOut, release, tooLarge };
       } finally {
-        total.signal.removeEventListener('abort', onTotalAbort);
+        if (!handedOff) total.signal.removeEventListener('abort', onTotalAbort);
       }
     }
-  } finally {
-    clearTimeout(totalTimer);
-    total.abort();
+  } catch (error) {
+    release();
+    throw error;
   }
+}
+
+export async function safeFetch(
+  rawUrl: string,
+  options: SafeFetchOptions,
+  deps: SafeFetchDeps = {},
+): Promise<SafeFetchResult> {
+  const opened = await openResponse(rawUrl, options, deps);
+  const { response } = opened;
+  try {
+    const chunks: Buffer[] = [];
+    let received = 0;
+    if (response.body) {
+      const reader = response.body.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.byteLength;
+          if (received > options.maxBytes) {
+            await reader.cancel().catch(() => undefined);
+            throw opened.tooLarge();
+          }
+          chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength));
+        }
+      } catch (error) {
+        if (error instanceof UrlFetchError || error instanceof UnsafeUrlError) throw error;
+        if (opened.timedOut() || opened.total.signal.aborted) {
+          throw new UrlFetchError('timeout', 'Timed out downloading URL');
+        }
+        throw new UrlFetchError('network', 'Download from URL failed');
+      }
+    }
+    return { bytes: Buffer.concat(chunks, received), status: response.status, headers: response.headers };
+  } finally {
+    opened.release();
+  }
+}
+
+export interface SafeFetchStreamResult {
+  /**
+   * The response body. Errors with `UrlFetchError('too_large')` the moment more than
+   * `maxBytes` have arrived (Content-Length is only an early out), and with
+   * `UrlFetchError('timeout')` when the total budget runs out mid-transfer. Destroying it
+   * (or reading it to the end) cancels the request and stops the timer.
+   */
+  stream: Readable;
+  status: number;
+  headers: Headers;
+}
+
+/**
+ * `safeFetch` without the buffering: same URL/address/redirect/allowlist policy, same
+ * connect and total timeouts and byte cap, but the body is handed back as a stream so the
+ * caller can pipe it into storage. Pass a `totalTimeoutMs` sized for the largest transfer.
+ */
+export async function safeFetchStream(
+  rawUrl: string,
+  options: SafeFetchOptions,
+  deps: SafeFetchDeps = {},
+): Promise<SafeFetchStreamResult> {
+  const opened = await openResponse(rawUrl, options, deps);
+  const { response } = opened;
+  const body = response.body;
+
+  async function* guarded(): AsyncGenerator<Buffer> {
+    if (!body) return;
+    let received = 0;
+    try {
+      for await (const chunk of Readable.fromWeb(body as any) as AsyncIterable<Uint8Array>) {
+        received += chunk.byteLength;
+        if (received > options.maxBytes) throw opened.tooLarge();
+        yield Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+      }
+    } catch (error) {
+      if (error instanceof UrlFetchError || error instanceof UnsafeUrlError) throw error;
+      if (opened.timedOut() || opened.total.signal.aborted) {
+        throw new UrlFetchError('timeout', 'Timed out downloading URL');
+      }
+      throw new UrlFetchError('network', 'Download from URL failed');
+    } finally {
+      opened.release();
+    }
+  }
+
+  const stream = Readable.from(guarded(), { objectMode: false });
+  // A generator that was never started does not run its `finally`; the timer must still stop.
+  stream.once('close', opened.release);
+  // Abandoning the stream before reading must also cancel the transfer.
+  stream.once('close', () => void body?.cancel().catch(() => undefined));
+  return { stream, status: response.status, headers: response.headers };
 }

@@ -31,13 +31,16 @@ vi.mock('../../lib/ticketRecordAuthorization', () => ({
   }),
 }));
 
-vi.mock('../../lib/validateTicketClosure', () => ({
-  CLOSE_RULE_REQUIRED_FIELDS: ['category', 'subcategory', 'priority', 'assignee'],
-  evaluateTicketCloseRules: vi.fn(async (conn: any) => {
-    state.queries.push({ conn: conn.label, table: 'close-rule-evaluation', op: 'read' });
-    return state.closureFailures;
-  }),
-}));
+vi.mock('../../lib/validateTicketClosure', async () => {
+  const constants = await import('../../lib/closeRuleConstants');
+  return {
+    ...constants,
+    evaluateTicketCloseRules: vi.fn(async (conn: any) => {
+      state.queries.push({ conn: conn.label, table: 'close-rule-evaluation', op: 'read' });
+      return state.closureFailures;
+    }),
+  };
+});
 
 vi.mock('@alga-psa/db', () => {
   const getValue = (table: string, where: Record<string, unknown>) => {

@@ -1,13 +1,12 @@
 import type { IContact } from '@alga-psa/types';
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getAllContacts } from '@alga-psa/clients/actions/queryActions';
 import { getTelephonyOverview } from '@alga-psa/integrations/actions/integrations/telephonyActions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
 
 export async function loadMspInteractionsPageData() {
-  const [contacts, users, clients, telephonyOverview] = await Promise.all([
+  const [contacts, users, telephonyOverview] = await Promise.all([
     getAllContacts('all'),
     getAllUsersBasic(true),
-    getAllClients(true),
     getTelephonyOverview().catch(() => null),
   ]);
 
@@ -18,7 +17,6 @@ export async function loadMspInteractionsPageData() {
   return {
     users,
     contacts: uniqueContacts,
-    clients,
     telephonyOverview,
   };
 }

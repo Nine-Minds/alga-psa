@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
+import { BaseCalendarAdapter, type CalendarEventChange } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
@@ -373,13 +373,13 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     syncToken?: string | null;
     timeMin?: Date;
   }): Promise<{
-    changes: Array<{ id: string; changeType: 'updated' | 'deleted' }>;
+    changes: Array<CalendarEventChange>;
     nextSyncToken?: string;
     resetRequired?: boolean;
   }> {
     await this.ensureValidToken();
 
-    const changes: Array<{ id: string; changeType: 'updated' | 'deleted' }> = [];
+    const changes: Array<CalendarEventChange> = [];
     let nextSyncToken: string | undefined;
     let pageToken: string | undefined;
 
@@ -421,7 +421,16 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
 
         const status = typeof item.status === 'string' ? item.status.toLowerCase() : '';
         const changeType: 'updated' | 'deleted' = status === 'cancelled' ? 'deleted' : 'updated';
-        changes.push({ id: item.id, changeType });
+        // A cancelled instance still carries its series identity; the sync
+        // service needs it to turn the delete into a master exception.
+        changes.push({
+          id: item.id,
+          changeType,
+          ...(item.recurringEventId ? { recurringEventId: item.recurringEventId } : {}),
+          ...(item.originalStartTime?.dateTime || item.originalStartTime?.date
+            ? { originalStart: item.originalStartTime.dateTime || item.originalStartTime.date }
+            : {}),
+        });
       }
 
       pageToken = response.data.nextPageToken || undefined;
@@ -618,6 +627,20 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     }
   }
 
+  /**
+   * Google does not flag exceptions; an instance whose start moved away from
+   * its `originalStartTime` slot is one. Renames/re-times that keep the slot are
+   * detected against the master by CalendarSyncService.
+   */
+  private isMovedGoogleInstance(event: any): boolean {
+    const original = event.originalStartTime?.dateTime || event.originalStartTime?.date;
+    const actual = event.start?.dateTime || event.start?.date;
+    if (!original || !actual) return false;
+    const originalTime = new Date(original).getTime();
+    const actualTime = new Date(actual).getTime();
+    return Number.isFinite(originalTime) && Number.isFinite(actualTime) && originalTime !== actualTime;
+  }
+
   private isSyncTokenInvalidError(error: any): boolean {
     const code = error?.code || error?.response?.status;
     if (code === 410) {
@@ -629,9 +652,27 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
   }
 
   /**
-   * Map Google Calendar event to ExternalCalendarEvent format
+   * Map Google Calendar event to ExternalCalendarEvent format.
+   *
+   * Series identity comes from the API payload (`recurringEventId`,
+   * `originalStartTime`) and never from the `_YYYYMMDD…` id suffix: Google ids
+   * may contain underscores, and a split series produces a legitimately
+   * distinct `<base>_R<timestamp>` master.
    */
   private mapGoogleEventToExternal(event: any): ExternalCalendarEvent {
+    const recurringEventId = event.recurringEventId || undefined;
+    const originalStartTime = event.originalStartTime
+      ? {
+          ...(event.originalStartTime.dateTime ? { dateTime: event.originalStartTime.dateTime } : {}),
+          ...(event.originalStartTime.date ? { date: event.originalStartTime.date } : {}),
+          ...(event.originalStartTime.timeZone ? { timeZone: event.originalStartTime.timeZone } : {}),
+        }
+      : undefined;
+
+    const instanceType: ExternalCalendarEvent['instanceType'] = recurringEventId
+      ? (this.isMovedGoogleInstance(event) ? 'exception' : 'occurrence')
+      : (event.recurrence && event.recurrence.length > 0 ? 'master' : 'single');
+
     return {
       id: event.id,
       provider: 'google',
@@ -639,6 +680,9 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       description: event.description || '',
       start: event.start,
       end: event.end,
+      ...(recurringEventId ? { recurringEventId } : {}),
+      ...(originalStartTime ? { originalStartTime } : {}),
+      instanceType,
       location: event.location || '',
       attendees: event.attendees?.map((a: any) => ({
         email: a.email,

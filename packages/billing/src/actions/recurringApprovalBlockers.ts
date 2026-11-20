@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import type { ISO8601String, IRecurringDueWorkWarning } from '@alga-psa/types';
+import { commercialTimeEntrySql } from '@alga-psa/types';
 
 export type RecurringApprovalBlockerRow = {
   executionIdentityKey: string;
@@ -274,6 +275,7 @@ async function countContractLineUnapprovedTimeEntries(params: {
     .where('time_entries.start_time', '>=', servicePeriodStartExclusive)
     .where('time_entries.end_time', '<', servicePeriodEndExclusive)
     .where('time_entries.invoiced', false)
+    .whereRaw(commercialTimeEntrySql('time_entries'))
     .whereIn('time_entries.service_id', configuredServiceIds)
     .where(function matchContractAssociation(this: Knex.QueryBuilder) {
       this.where('time_entries.contract_line_id', row.contractLineId);
@@ -327,6 +329,7 @@ async function countUnresolvedSelectionUnapprovedTimeEntries(params: {
     .where('time_entries.start_time', '>=', row.servicePeriodStart)
     .where('time_entries.end_time', '<', row.servicePeriodEnd)
     .where('time_entries.invoiced', false)
+    .whereRaw(commercialTimeEntrySql('time_entries'))
     .whereNull('time_entries.contract_line_id')
     .whereNotNull('time_entries.service_id');
 

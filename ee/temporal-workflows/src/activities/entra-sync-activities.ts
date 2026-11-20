@@ -8,6 +8,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
+import { capEntraSyncUserIssues } from '@ee/lib/integrations/entra/sync/types';
 import {
   normalizeWorkspaceProvisioningMode,
   resolveEffectiveDefaultRoleName,
@@ -522,6 +523,9 @@ export async function syncTenantUsersActivity(
     inactivated: syncResult.counters.inactivated + portalDisabledCount,
     warnings: syncResult.warnings || [],
     skipped: syncResult.counters.skipped,
+    failed: syncResult.counters.failed,
+    // failed carries the true count; the list is capped to stay inside Temporal payload limits.
+    userIssues: capEntraSyncUserIssues(syncResult.userIssues),
     errorMessage: null,
   };
 }
@@ -711,6 +715,10 @@ export async function recordSyncTenantResultWithDb(
     updated_count: input.result.updated,
     ambiguous_count: input.result.ambiguous,
     inactivated_count: input.result.inactivated,
+    failed_count: input.result.failed ?? 0,
+    user_issues: knex.raw('?::jsonb', [
+      JSON.stringify(capEntraSyncUserIssues(input.result.userIssues ?? [])),
+    ]),
     error_message: input.result.errorMessage || null,
     started_at: now,
     completed_at: now,

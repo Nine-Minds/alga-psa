@@ -11,6 +11,7 @@ import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
 import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { Service, ITimeEntryWithNew } from './types';
+import { useTimeEntryMode } from '../../../../context/TimeEntryModeContext';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface TimeEntryState {
@@ -120,6 +121,7 @@ const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefin
 export function TimeEntryProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { t } = useTranslation('msp/time-entry');
   const [state, dispatch] = useReducer(timeEntryReducer, initialState);
+  const operational = useTimeEntryMode() === 'operational';
 
   const initializeEntries = useCallback(async ({
     existingEntries,
@@ -132,15 +134,20 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
 
-      const clientId = (workItem.type === 'ticket' || workItem.type === 'project_task')
+      // Operational mode (seat technician): no service catalog, tax, client-billing or contract reads at all.
+      // The server actions are not invoked, so there is nothing to hide. Every other value below is derived
+      // from local state exactly as the commercial path derives it.
+      const clientId = !operational && (workItem.type === 'ticket' || workItem.type === 'project_task')
         ? await getClientIdForWorkItem(workItem.work_item_id, workItem.type)
         : null;
 
-      const [services, taxRegions, client] = await Promise.all([
-        fetchServicesForTimeEntry(workItem.type),
-        fetchTaxRegions(),
-        clientId ? getSchedulingClientById(clientId) : Promise.resolve(null)
-      ]);
+      const [services, taxRegions, client] = operational
+        ? [[] as Service[], [] as TaxRegion[], null]
+        : await Promise.all([
+          fetchServicesForTimeEntry(workItem.type),
+          fetchTaxRegions(),
+          clientId ? getSchedulingClientById(clientId) : Promise.resolve(null)
+        ]);
 
       if (isActionMessageError(services) || isActionPermissionError(services)) {
         throw new Error(getErrorMessage(services));
@@ -159,7 +166,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       // entries and an explicitly supplied service are never overwritten.
       const serviceIds = new Set(services.map((service) => service.id));
       let ticketDefaultServiceId = '';
-      if (workItem.type === 'ticket' && !existingEntries?.length && clientId) {
+      if (!operational && workItem.type === 'ticket' && !existingEntries?.length && clientId) {
         if (workItem.service_id && serviceIds.has(workItem.service_id)) {
           ticketDefaultServiceId = workItem.service_id;
         } else {
@@ -318,7 +325,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [t]);
+  }, [t, operational]);
 
   const updateEntry = useCallback((index: number, entry: ITimeEntryWithNew) => {
     dispatch({ type: 'UPDATE_ENTRY', payload: { index, entry } });

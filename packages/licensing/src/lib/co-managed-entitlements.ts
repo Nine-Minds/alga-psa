@@ -2,8 +2,10 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { verifyLicense } from './verify-license';
 import { isLicenseVerifyFailure } from './license-types';
+import { readCoManagedPoolCapacity } from './co-managed-capacity';
 
-const GRACE_MS = 30 * 86_400_000;
+/** Length of the lapse grace window; the deadline is durable (`read_only_after`), never a wall-clock wait. */
+export const GRACE_MS = 30 * 86_400_000;
 
 export interface CoManagedEntitlementState {
   capacity: number;
@@ -17,12 +19,6 @@ export interface CoManagedEntitlementState {
 async function databaseNow(trx: Knex.Transaction): Promise<Date> {
   const result = await trx.raw('SELECT clock_timestamp() AS now');
   return new Date(result.rows[0].now);
-}
-
-async function allocatedSeats(trx: Knex.Transaction, sponsor: string): Promise<number> {
-  const result = await tenantDb(trx, sponsor).table('co_managed_allocations')
-    .whereNot('state', 'released').sum('seats as used').first();
-  return Number(result?.used ?? 0);
 }
 
 function signedCapacity(row: any, sponsor: string, now: Date): { capacity: number; active: boolean } {
@@ -47,7 +43,6 @@ export function neverActivated(row: { source: string; lapse_started_at?: unknown
 
 export async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
   inactiveSince?: Date, neverActive: boolean = neverActivated(row)): Promise<CoManagedEntitlementState> {
-  const allocated = await allocatedSeats(trx, sponsor);
   const owner = await tenantDb(trx, sponsor).table('tenants').forShare().first('product_code', 'plan', 'suspended_at');
   now = await databaseNow(trx);
   const signed = signedCapacity(row, sponsor, now);
@@ -58,6 +53,7 @@ export async function materializeState(trx: Knex.Transaction, sponsor: string, r
   const eligible = owner?.product_code === 'psa' && !owner.suspended_at && (row.source !== 'hosted' || owner.plan === 'pro');
   const active = eligible && signed.active && expires.getTime() > now.getTime();
   const capacity = active ? signed.capacity : 0;
+  const { allocated, available } = await readCoManagedPoolCapacity(trx, sponsor, capacity);
   // LEVERAGE: friction co-managed-never-active — lapse is derived from row columns, so "never active" must be re-derived from valid_until/verified_at.
   const lapsed = (!active || capacity < allocated) && !(neverActive && allocated === 0);
   let start: Date | null = null;
@@ -75,7 +71,7 @@ export async function materializeState(trx: Knex.Transaction, sponsor: string, r
     });
   }
   return {
-    capacity, allocated, available: Math.max(0, capacity - allocated),
+    capacity, allocated, available,
     canGrow: active && !lapsed && capacity > allocated,
     isReadOnly: deadline !== null && deadline.getTime() <= now.getTime(),
     graceEndsAt: deadline?.toISOString() ?? null,
@@ -86,8 +82,10 @@ export async function materializeState(trx: Knex.Transaction, sponsor: string, r
 export async function getCoManagedEntitlementState(db: Knex, sponsor: string): Promise<CoManagedEntitlementState> {
   return db.transaction(async (trx) => {
     const row = await tenantDb(trx, sponsor).table('co_managed_entitlements').forUpdate().first();
-    if (!row) return { capacity: 0, allocated: await allocatedSeats(trx, sponsor), available: 0,
-      canGrow: false, isReadOnly: true, graceEndsAt: null };
+    if (!row) {
+      const { allocated, available } = await readCoManagedPoolCapacity(trx, sponsor, 0);
+      return { capacity: 0, allocated, available, canGrow: false, isReadOnly: true, graceEndsAt: null };
+    }
     return materializeState(trx, sponsor, row, await databaseNow(trx));
   });
 }

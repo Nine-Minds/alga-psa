@@ -1,0 +1,22 @@
+{
+  "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+  "success": true,
+  "tabs": [
+    {
+      "paneId": "376c175b-b142-46db-b907-5be706188acf",
+      "type": "browser",
+      "active": false
+    },
+    {
+      "paneId": "c8403826-ff91-488f-aa28-8447b4f96c06",
+      "type": "browser",
+      "active": false
+    },
+    {
+      "paneId": "0bc994e8-aab7-4f56-a707-f94f6742349b",
+      "type": "browser",
+      "active": true
+    }
+  ],
+  "scopedTo": "ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
+}

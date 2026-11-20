@@ -6,8 +6,10 @@
  */
 
 import { scheduledHoursForRange, type WorkScheduleDay } from '@alga-psa/core/workSchedule';
+import type { ReportDateRange } from './reportRange';
 
-export type UtilizationRangeDays = 7 | 30 | 90;
+/** Inclusive day count of the reported window: a preset, or a custom span. */
+export type UtilizationRangeDays = number;
 
 /**
  * Where a user's capacity came from, so the UI can explain a denominator
@@ -17,6 +19,8 @@ export type CapacitySource = 'schedule' | 'weekly' | null;
 
 export interface EmployeeUtilizationReport {
   rangeDays: UtilizationRangeDays;
+  /** The custom window that was asked for, or null for a rolling preset. */
+  range: ReportDateRange | null;
   summary: {
     activeUsers: number;
     usersWithoutCapacity: number;
@@ -97,6 +101,7 @@ export function buildEmployeeUtilizationReport(
   rows: EmployeeUtilizationInputRow[],
   rangeDays: UtilizationRangeDays,
   rangeEndDate: string,
+  range: ReportDateRange | null = null,
 ): EmployeeUtilizationReport {
   const byUser = rows.map((row) => {
     const workedHours = minutesToHours(row.workedMinutes);
@@ -136,6 +141,7 @@ export function buildEmployeeUtilizationReport(
 
   return {
     rangeDays,
+    range,
     summary: {
       activeUsers: byUser.length,
       usersWithoutCapacity: byUser.length - withCapacity.length,

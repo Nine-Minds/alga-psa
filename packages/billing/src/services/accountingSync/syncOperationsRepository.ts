@@ -238,6 +238,33 @@ export class SyncOperationsRepository {
     return query.update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
+  /**
+   * Retire queued work that must never reach the provider — the entity was
+   * deliberately unlinked in AlgaPSA only. 'skipped' is the existing terminal
+   * status for work that will not be delivered, and the reason is stored on
+   * `last_error` so the errored-ops list explains itself. Adapter- and
+   * realm-agnostic on purpose: the entity is leaving the integration entirely,
+   * so every pending push for it goes, whichever realm queued it.
+   */
+  async skipPending(
+    tenant: string,
+    operations: SyncOperationType[],
+    algaEntityType: string,
+    algaEntityIds: string[],
+    reason: string
+  ): Promise<number> {
+    if (algaEntityIds.length === 0 || operations.length === 0) {
+      return 0;
+    }
+
+    return this.table(tenant)
+      .whereIn('operation', operations)
+      .where({ alga_entity_type: algaEntityType })
+      .whereIn('alga_entity_id', algaEntityIds)
+      .whereIn('status', ['pending', 'in_progress'])
+      .update({ status: 'skipped', processed_at: this.knex.fn.now(), last_error: reason });
+  }
+
   async countByStatus(
     tenant: string,
     adapterType: string,
@@ -261,5 +288,39 @@ export class SyncOperationsRepository {
       .groupBy('status');
 
     return Object.fromEntries(rows.map((row) => [row.status, Number(row.count)]));
+  }
+
+  /**
+   * Terminal failures ('skipped' + 'failed'), newest first. Scoped exactly like
+   * countByStatus (tenant, adapter type, optional realm) so the list and the
+   * "Errored ops" badge always agree. `limit` follows listPending.
+   */
+  async listErrored(
+    tenant: string,
+    adapterType: string,
+    targetRealm?: string | null,
+    options: { limit?: number } = {}
+  ): Promise<AccountingSyncOperation[]> {
+    const query = this.table<AccountingSyncOperation>(tenant)
+      .where({ adapter_type: adapterType })
+      .whereIn('status', ['skipped', 'failed'])
+      .orderBy('created_at', 'desc');
+
+    if (targetRealm !== undefined) {
+      if (targetRealm === null) {
+        query.whereNull('target_realm');
+      } else {
+        query.andWhere({ target_realm: targetRealm });
+      }
+    }
+    if (options.limit) {
+      query.limit(options.limit);
+    }
+
+    return query;
+  }
+
+  async getById(tenant: string, opId: string): Promise<AccountingSyncOperation | undefined> {
+    return this.table<AccountingSyncOperation>(tenant).where({ op_id: opId }).first();
   }
 }

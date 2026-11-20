@@ -22,7 +22,7 @@ import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker'
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 // Client imports
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions/queryActions';
+import { getAllContacts } from '@alga-psa/clients/actions/queryActions';
 
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
@@ -77,7 +77,6 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         boardOptions={d.options.board}
         priorityOptions={d.options.priority}
         initialCategories={d.categories}
-        initialClients={d.clients}
         initialLocations={d.locations}
         initialAgentSchedules={d.agentSchedules}
         currentUser={props.currentUser}
@@ -210,7 +209,6 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       updateBlockContent,
       getProjects,
       getProjectsWithPhases,
-      getAllClients,
       getAllContacts,
       ...workflowTaskMembers,
     }),

@@ -7,22 +7,39 @@ import { writeAccountingAudit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { findLocalVoidBlocker, voidInvoiceLocally } from '../lib/invoiceVoidCore';
+import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
+import { findLocalVoidBlocker, voidInvoiceLocally, type LocalVoidBlocker } from '../lib/invoiceVoidCore';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
 import { findInvoiceExportInProgress } from '../services/accountingSync/invoiceExportGuards';
+import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
+import { SyncOperationsRepository } from '../services/accountingSync/syncOperationsRepository';
 import { signalAutopayInvoiceSettled } from '../services/autopayBridge';
 
 export type VoidInvoiceResult =
   | { success: true }
-  | { success: false; error: string };
+  | ({ success: false; error: string } & ActionResultMessageKey);
 
 // Single, connection-based denial for every remote-affecting void refused for an
 // actor without accounting_integrations:remote_mutate. Identical for mapped and
 // unmapped invoices (it never names a per-invoice mapping), so the denial event
 // cannot be used to learn whether any given invoice has a remote entity.
 const VOID_REMOTE_MUTATE_DENIAL = 'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
+
+/**
+ * Carries the structured blocker out as a refusal. `messageKey` is the normal
+ * localization seam: withAuth rewrites `error` into the caller's locale on the
+ * way out, so the dialog renders whatever it is handed.
+ */
+function blockerResult(blocker: LocalVoidBlocker): VoidInvoiceResult {
+  return {
+    success: false,
+    error: blocker.message,
+    messageKey: blocker.messageKey,
+    ...(blocker.messageParams ? { messageParams: blocker.messageParams } : {}),
+  };
+}
 
 export const voidInvoice = withAuth(async (
   user,
@@ -95,7 +112,7 @@ export const voidInvoice = withAuth(async (
   // consumed-credit re-check runs under lock inside voidInvoiceLocally.
   const blocker = await findLocalVoidBlocker(knex, tenant, invoice);
   if (blocker) {
-    return { success: false, error: blocker };
+    return blockerResult(blocker);
   }
 
   // Hoisted authoritative remote-mutate capability: starts as the fast-fail
@@ -233,6 +250,197 @@ export const voidInvoice = withAuth(async (
   // Reconcile any still-active Checkout sessions: a voided invoice must never
   // be chargeable through an old email link. Best-effort (isolated handlers),
   // so the void response is unaffected.
+  await notifyInvoiceTerminalStatus({
+    knex,
+    tenantId: tenant,
+    invoiceId,
+    newStatus: 'cancelled',
+  });
+
+  return { success: true };
+});
+
+/**
+ * Voids an invoice in AlgaPSA and leaves the accounting system's copy alone.
+ *
+ * For a document that should never have been linked at all — a test invoice,
+ * or one the onboarding wizard matched to a real QuickBooks invoice with the
+ * same number. The normal void would queue a void of that real remote
+ * document; this one unlinks instead: it tombstones the invoice mapping (and
+ * the mappings of its payments), retires every queued push for the invoice,
+ * and never calls enqueueInvoiceVoid.
+ *
+ * The books will disagree afterwards, deliberately and on the record, so it
+ * takes the same admin-level accounting capability as a remote void. Payments
+ * must already be gone (reverse them first); the local guards are the normal
+ * void's, unchanged.
+ */
+export const voidInvoiceInAlgaOnly = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+  reason: string
+): Promise<VoidInvoiceResult> => {
+  if (user.user_type === 'client') {
+    return { success: false, error: 'Permission denied: operation not available in client portal' };
+  }
+  if (!await hasPermission(user, 'invoice', 'void')) {
+    return { success: false, error: 'Permission denied: invoice void required' };
+  }
+
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason) {
+    return { success: false, error: 'A reason is required to void an invoice.' };
+  }
+
+  const { knex } = await createTenantKnex();
+  const now = new Date().toISOString();
+
+  // Unlinking is the remote-affecting decision here (the remote document is
+  // abandoned, not voided), so it carries the same capability as a remote void.
+  if (!await hasPermission(user, 'accounting_integrations', 'remote_mutate', knex)) {
+    return { success: false, error: VOID_REMOTE_MUTATE_DENIAL };
+  }
+
+  const invoice = await tenantDb(knex, tenant).table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first();
+
+  if (!invoice) {
+    return { success: false, error: 'Invoice not found.' };
+  }
+  if (!invoice.finalized_at) {
+    return { success: false, error: 'Drafts must be deleted, not voided.' };
+  }
+  if (invoice.status === 'cancelled') {
+    return { success: false, error: 'Invoice is already voided.' };
+  }
+
+  // Payments must be reversed first — the same shared guard as the normal
+  // void, so an AlgaPSA-only void can never be the back door around it.
+  const blocker = await findLocalVoidBlocker(knex, tenant, invoice);
+  if (blocker) {
+    return blockerResult(blocker);
+  }
+
+  const outcome = await withTransaction(knex, async (trx: Knex.Transaction): Promise<VoidInvoiceResult> => {
+    // Same lock-order contract as voidInvoice: invoice row FIRST, credit rows
+    // after, so a concurrent credit application queues instead of deadlocking.
+    const lockedInvoice = await tenantDb(trx, tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .forUpdate()
+      .first('status', 'credit_applied');
+
+    if (!lockedInvoice) {
+      return { success: false, error: 'Invoice not found.' };
+    }
+    if (lockedInvoice.status === 'cancelled') {
+      return { success: false, error: 'Invoice is already voided.' };
+    }
+    if (await findInvoiceExportInProgress(trx, tenant, invoiceId)) {
+      return { success: false, error: 'An accounting export is being prepared for this invoice. Wait for it to finish before voiding it.' };
+    }
+
+    // Authoritative re-check under the lock: the capability can be revoked
+    // between the fast-fail above and the commit.
+    if (!await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx)) {
+      return { success: false, error: VOID_REMOTE_MUTATE_DENIAL };
+    }
+
+    const mappings = await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
+      .where({ alga_entity_type: 'invoice', alga_entity_id: invoiceId })
+      .whereNull('deleted_at')
+      .select('id', 'integration_type', 'external_entity_id');
+
+    // Payment mappings whose allocations point at this invoice go too: left
+    // live they would keep claiming payments on a document that is gone here.
+    const paymentMappings = await tenantDb(trx, tenant).table('tenant_external_entity_mappings')
+      .where({ alga_entity_type: 'invoice_payment' })
+      .whereNull('deleted_at')
+      .whereRaw("metadata->'allocations' @> ?::jsonb", [JSON.stringify([{ invoiceId }])])
+      .select('id', 'integration_type', 'alga_entity_id');
+
+    const localVoid = await voidInvoiceLocally(trx, tenant, {
+      invoice,
+      lockedInvoice,
+      reason: trimmedReason,
+      actorUserId: user.user_id,
+      now,
+      transactionMetadata: {
+        source: 'alga_only_void',
+        remote_record_untouched: true,
+        unlinked_external_ids: mappings.map((mapping: any) => mapping.external_entity_id),
+      },
+    });
+    if (!localVoid.ok) {
+      return { success: false, error: localVoid.error };
+    }
+
+    const unlinkMetadata = {
+      locally_voided: true,
+      locally_voided_by: user.user_id,
+      locally_voided_at: now,
+      locally_voided_reason: trimmedReason,
+    };
+    for (const mapping of mappings) {
+      await new SyncMappingLedger(trx, tenant, mapping.integration_type)
+        .tombstone(mapping.id, { syncStatus: 'unlinked', metadata: unlinkMetadata });
+    }
+    for (const mapping of paymentMappings) {
+      await new SyncMappingLedger(trx, tenant, mapping.integration_type)
+        .tombstone(mapping.id, { syncStatus: 'unlinked', metadata: { ...unlinkMetadata, locally_reversed: true } });
+    }
+
+    // Queued work for a document that is leaving the integration must never
+    // reach the provider.
+    const operations = new SyncOperationsRepository(trx);
+    await operations.skipPending(
+      tenant,
+      ['export_invoice', 'void_invoice'],
+      'invoice',
+      [invoiceId],
+      `Invoice voided in AlgaPSA only: ${trimmedReason}`
+    );
+    const paymentIds = paymentMappings.map((mapping: any) => mapping.alga_entity_id);
+    if (paymentIds.length > 0) {
+      await operations.skipPending(
+        tenant,
+        ['record_payment'],
+        'invoice_payment',
+        paymentIds,
+        `Invoice voided in AlgaPSA only: ${trimmedReason}`
+      );
+    }
+
+    for (const mapping of mappings) {
+      await writeAccountingAudit(trx, tenant, 'accounting_alga_only_void', {
+        userId: user.user_id,
+        provider: mapping.integration_type === 'xero' ? 'xero' : 'quickbooks_online',
+        recordId: String(mapping.external_entity_id ?? mapping.id),
+        details: {
+          algaEntityType: 'invoice',
+          algaEntityId: invoiceId,
+          operation: 'void_invoice_alga_only',
+          outcome: 'unlinked',
+          reason: trimmedReason,
+          // The whole point of the record: nothing was asked of the provider.
+          remoteRecordUntouched: true,
+        },
+      }).catch((error) => {
+        console.warn('[voidInvoiceInAlgaOnly] Failed to write the Alga-only void audit entry', error);
+      });
+    }
+
+    return { success: true };
+  });
+
+  if (!outcome.success) {
+    return outcome;
+  }
+
+  // Deliberately NO enqueueInvoiceVoid: the remote document stays as it is.
+  void signalAutopayInvoiceSettled(tenant, invoiceId);
+
   await notifyInvoiceTerminalStatus({
     knex,
     tenantId: tenant,

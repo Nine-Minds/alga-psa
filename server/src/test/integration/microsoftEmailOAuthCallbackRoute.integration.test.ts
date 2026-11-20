@@ -425,6 +425,8 @@ describe('Microsoft email OAuth callback route (DB-backed behavioral)', () => {
 
     it('still serves the unsigned Google initiate (legacy path unaffected)', async () => {
       tenantSecrets.set(`${testTenant}:google_client_id`, 'google-client');
+      // Google initiate resolves the tenant's client as an ID + secret pair.
+      tenantSecrets.set(`${testTenant}:google_client_secret`, 'google-secret');
       const request = new NextRequest('http://localhost:3000/api/email/oauth/initiate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -436,6 +438,7 @@ describe('Microsoft email OAuth callback route (DB-backed behavioral)', () => {
         () => initiatePost(request)
       );
       tenantSecrets.delete(`${testTenant}:google_client_id`);
+      tenantSecrets.delete(`${testTenant}:google_client_secret`);
 
       expect(response.status).toBe(200);
       const body = await response.json();

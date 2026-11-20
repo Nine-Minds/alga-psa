@@ -2,6 +2,7 @@ import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { DocumentTypeHandler } from './DocumentTypeHandler';
 import { CacheFactory } from '../cache/CacheFactory';
 import { renderHtmlToPng } from '../lib/renderHtmlToPng';
+import type { RenderContent } from '../lib/renderHtmlToPng';
 
 async function loadSharp() {
   try {
@@ -87,8 +88,8 @@ export abstract class BaseDocumentHandler implements DocumentTypeHandler {
    * @param height The height of the image
    * @returns A promise that resolves to a Buffer containing the PNG image
    */
-  protected async renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
+  protected async renderHtmlToPng(content: RenderContent, width: number = 400, height: number = 300): Promise<Buffer> {
     // Single shared renderer: network is closed, remote images are inlined via safeFetch.
-    return renderHtmlToPng(htmlContent, { width, height });
+    return renderHtmlToPng(content, { width, height });
   }
 }

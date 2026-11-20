@@ -91,11 +91,28 @@ describe('temporal-worker shared tenant secrets Helm rendering', () => {
     expect(secrets.env).toEqual({ name: 'SECRET_FS_BASE_PATH', value: '/shared-tenant-secrets' });
   });
 
-  it('runs the appliance worker as root so it can write into the root-owned hostPath', () => {
-    const container = renderDeployment(['--values', applianceValuesPath]).spec.template.spec.containers.find(
+  it('runs the appliance worker as the uid that initializes the shared secret store', () => {
+    const deployment = renderDeployment(['--values', applianceValuesPath]);
+    const container = deployment.spec.template.spec.containers.find(
       (candidate: any) => candidate.name === 'temporal-worker'
     );
+    const coreRendered = execFileSync(helmPath, [
+      'template', 'alga-core', path.join(repositoryRoot, 'helm'),
+      '--values', path.join(repositoryRoot, 'ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml'),
+      '--show-only', 'templates/deployment.yaml',
+    ], { cwd: repositoryRoot, encoding: 'utf8' });
+    const corePod = (loadAll(coreRendered).find((doc: any) => doc?.kind === 'Deployment') as any).spec.template.spec;
+    const initializer = corePod.initContainers.find((candidate: any) => candidate.name === 'fix-permissions');
+    const initEnv = Object.fromEntries(initializer.env.map((entry: any) => [entry.name, entry.value]));
 
-    expect(container.securityContext).toEqual({ runAsUser: 0, runAsGroup: 0 });
+    expect(container.securityContext).toEqual({ runAsUser: 1000, runAsGroup: 1000 });
+    expect(Number(initEnv.TARGET_UID)).toBe(container.securityContext.runAsUser);
+    expect(Number(initEnv.TARGET_GID)).toBe(container.securityContext.runAsGroup);
+    expect(initializer.command).toEqual(['/usr/local/bin/alga-runtime-permissions']);
+    expect(initializer.securityContext).toMatchObject({ runAsUser: 0, allowPrivilegeEscalation: false });
+    const initMount = initializer.volumeMounts.find((mount: any) => mount.name === 'shared-tenant-secrets');
+    expect(initEnv.TENANTS_DIR).toBe(initMount.mountPath);
+    expect(corePod.volumes.find((volume: any) => volume.name === initMount.name).hostPath)
+      .toEqual(sharedTenantSecrets(deployment).volume.hostPath);
   });
 });

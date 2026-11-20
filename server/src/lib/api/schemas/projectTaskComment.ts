@@ -29,7 +29,7 @@ const aggregatedReactionSchema = z.object({
 });
 
 export const projectTaskCommentAuthorSchema = z.object({
-  user_id: uuidSchema,
+  user_id: uuidSchema.nullable(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   email: z.string().nullable(),
@@ -41,8 +41,9 @@ export const projectTaskCommentResponseSchema = z.object({
   task_id: uuidSchema,
   thread_id: uuidSchema.nullable(),
   parent_comment_id: uuidSchema.nullable(),
-  user_id: uuidSchema,
-  author_type: z.literal('internal'),
+  /** Null for comments written by a co-managed collaborator or a portal contact (no users row here). */
+  user_id: uuidSchema.nullable(),
+  author_type: z.enum(['internal', 'client']),
   /** BlockNote JSON; "[deleted]" once soft-deleted. */
   note: z.string(),
   markdown_content: z.string().nullable(),
@@ -51,6 +52,11 @@ export const projectTaskCommentResponseSchema = z.object({
   edited_at: z.string().nullable(),
   deleted_at: z.string().nullable(),
   author: projectTaskCommentAuthorSchema.nullable(),
+  /** Co-managed workspaces only; omitted elsewhere. Revision is withheld when the project policy hides it. */
+  organization_name: z.string().nullable().optional(),
+  author_kind: z.enum(['user', 'contact']).optional(),
+  audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
+  collaboration_revision: z.number().int().optional(),
   reactions: z.array(aggregatedReactionSchema),
   reaction_user_names: z.record(z.string(), z.string()),
 });
