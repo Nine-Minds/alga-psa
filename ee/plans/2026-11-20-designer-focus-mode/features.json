@@ -5,7 +5,7 @@
     "prdRefs": [
       "FR-A1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DesignerFocusSurface is controlled: it takes focused and onFocusedChange and holds no storage of its own"
   },
   {
@@ -14,7 +14,7 @@
     "prdRefs": [
       "FR-J1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "useDesignerFocusPreference(designer) in packages/user-composition/src/hooks returns { isFocused, setFocused, toggle }, built on useUserPreference<boolean> with key designer_focus_mode_<designer> and default false"
   },
   {
@@ -23,7 +23,7 @@
     "prdRefs": [
       "FR-J2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The five designers (service_request_form, invoice_layout, quote_layout, document_layout, workflow) are a typed union; each has its own preference key and changing one never changes another"
   },
   {
@@ -32,7 +32,7 @@
     "prdRefs": [
       "FR-J3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Toggling saves the new value to the signed-in user's preferences and to the local cache under the same key, as useUserPreference does for view modes"
   },
   {
@@ -41,7 +41,7 @@
     "prdRefs": [
       "FR-J4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A toggle made before the account value has loaded is kept and saved; the late-arriving value does not overwrite it"
   },
   {
@@ -50,7 +50,7 @@
     "prdRefs": [
       "FR-J5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "If the account value cannot be loaded or saved, the cached or default value is used and the toggle keeps working for the visit"
   },
   {
@@ -59,7 +59,7 @@
     "prdRefs": [
       "FR-J6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The hook is importable as @alga-psa/user-composition/hooks/useDesignerFocusPreference and is also listed in the hooks index"
   },
   {
@@ -68,7 +68,7 @@
     "prdRefs": [
       "FR-A3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DesignerFocusSurface renders one element carrying idPrefix as its id, the host className, and data-focus-mode=\"off\" when unfocused"
   },
   {
@@ -79,7 +79,7 @@
       "NFR-1",
       "NFR-3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "When focused the same element carries fixed inset-0 z-40, the page background token and a flex column, plus the host's focusedClassName, and data-focus-mode=\"on\""
   },
   {
@@ -88,7 +88,7 @@
     "prdRefs": [
       "FR-A3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Changing focused changes classes on the same element; children are not remounted and keep their state"
   },
   {
@@ -97,7 +97,7 @@
     "prdRefs": [
       "FR-A4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The surface provides a context; useDesignerFocusState() returns { isFocused, toggle } inside a surface and { isFocused: false, toggle: no-op } outside one"
   },
   {
@@ -107,7 +107,7 @@
       "FR-A5",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DesignerFocusToggle renders an icon button with the given id, Maximize2 when unfocused and Minimize2 when focused, aria-pressed reflecting the state, and calls toggle on click"
   },
   {
@@ -116,7 +116,7 @@
     "prdRefs": [
       "FR-A5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "DesignerFocusToggle renders nothing when there is no surface above it"
   },
   {
@@ -125,7 +125,7 @@
     "prdRefs": [
       "FR-A7"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The surface, toggle and state hook are exported from @alga-psa/ui/components/designer"
   },
   {

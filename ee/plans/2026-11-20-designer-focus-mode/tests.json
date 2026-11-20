@@ -5,7 +5,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the surface renders focused or not strictly from its focused prop and calls onFocusedChange with the opposite value when its toggle is used"
   },
   {
@@ -14,7 +14,7 @@
     "featureIds": [
       "F001"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: nothing in packages/ui/src/components/designer imports user-composition or reads localStorage for focus mode"
   },
   {
@@ -23,7 +23,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: useDesignerFocusPreference is unfocused when the user has no saved preference"
   },
   {
@@ -32,7 +32,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: it is focused once the user's saved preference loads as true"
   },
   {
@@ -41,7 +41,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: it is focused on mount from the local cache before the account value has loaded"
   },
   {
@@ -50,7 +50,7 @@
     "featureIds": [
       "F002"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: an account value of false overrides a cached true"
   },
   {
@@ -59,7 +59,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: toggle flips isFocused and calls setUserPreference with designer_focus_mode_<designer> and the new value"
   },
   {
@@ -68,7 +68,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: setFocused(false) from focused clears focus and saves false"
   },
   {
@@ -77,7 +77,7 @@
     "featureIds": [
       "F004"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: toggling updates the local cache under the same key"
   },
   {
@@ -86,7 +86,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Unit: each designer name maps to its own designer_focus_mode_<designer> key and no two share one"
   },
   {
@@ -95,7 +95,7 @@
     "featureIds": [
       "F003"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: focusing invoice_layout leaves a hook on quote_layout unfocused and saves nothing under its key"
   },
   {
@@ -104,7 +104,7 @@
     "featureIds": [
       "F005"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: toggle on while the account value is still loading, then let it resolve to false; the hook stays focused and true is saved"
   },
   {
@@ -113,7 +113,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: when loading the account value fails, the hook uses the cached value and toggle still changes isFocused"
   },
   {
@@ -122,7 +122,7 @@
     "featureIds": [
       "F006"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: when saving fails, isFocused keeps the new value for the visit"
   },
   {
@@ -131,7 +131,7 @@
     "featureIds": [
       "F007"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the hook resolves from @alga-psa/user-composition/hooks/useDesignerFocusPreference and from the hooks index"
   },
   {
@@ -140,7 +140,7 @@
     "featureIds": [
       "F008"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: an unfocused surface has the id, the host className, data-focus-mode=\"off\" and no fixed class"
   },
   {
@@ -149,7 +149,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a focused surface has fixed, inset-0 and z-40, the focusedClassName, and data-focus-mode=\"on\""
   },
   {
@@ -158,7 +158,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the focused surface class list uses z-40 and a theme token background, with no hard-coded palette class"
   },
   {
@@ -167,7 +167,7 @@
     "featureIds": [
       "F010"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a child with local state (a typed input value and a mount counter) keeps its value and mounts once across two changes of focused"
   },
   {
@@ -176,7 +176,7 @@
     "featureIds": [
       "F010"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the surface DOM node is the same object before and after focused changes"
   },
   {
@@ -185,7 +185,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: useDesignerFocusState inside a surface reports the surface's state and its toggle changes it"
   },
   {
@@ -194,7 +194,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: useDesignerFocusState outside a surface reports not focused and its toggle is a no-op"
   },
   {
@@ -203,7 +203,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the toggle has the given id, aria-pressed=\"false\" and the enter label when unfocused"
   },
   {
@@ -212,7 +212,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: clicking the toggle focuses the surface; the button then has aria-pressed=\"true\" and the exit label"
   },
   {
@@ -221,7 +221,7 @@
     "featureIds": [
       "F013"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the toggle renders nothing outside a surface"
   },
   {
@@ -230,7 +230,7 @@
     "featureIds": [
       "F014"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: the designer index exports DesignerFocusSurface, DesignerFocusToggle and useDesignerFocusState"
   },
   {
