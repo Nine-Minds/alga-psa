@@ -398,6 +398,48 @@
     "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
   },
   "coManaged": {
+    "trial": {
+      "title": "Teste de 15 dias de um lugar cogerido",
+      "description": "Convide um técnico do cliente para trabalhar nos quadros que escolher. Os 15 dias começam quando o técnico inicia sessão pela primeira vez. O acesso requer uma subscrição base ou um período de teste do plano base ativo.",
+      "terms": "Um lugar pago custa {{amount}} por mês. O teste termina sem cobrança, a menos que confirme a utilização de capacidade paga.",
+      "status": {
+        "active": "Ativo",
+        "pending": "A aguardar o primeiro início de sessão",
+        "base_paused": "Subscrição base em pausa",
+        "expired": "Teste expirado",
+        "paid": "Lugar pago em utilização",
+        "ended": "Teste terminado",
+        "checkout_pending": "A aguardar pagamento"
+      },
+      "purchaseAwaitingVerification": "Compra a aguardar verificação",
+      "conversionFailed": "A mudança para um lugar pago não foi concluída. Consulte a capacidade paga disponível ou tente efetuar a compra novamente.",
+      "deadline": "O teste do lugar termina em {{date}}.",
+      "baseUntil": "O acesso base atual termina em {{date}}.",
+      "openSetup": "Abrir a configuração do lugar do cliente",
+      "invite": "Convidar técnico por 15 dias",
+      "resend": "Reenviar convite",
+      "replace": "Substituir técnico",
+      "cancelInvitation": "Cancelar convite",
+      "restoreBase": "Restaurar o acesso base em Conta",
+      "resumePurchase": "Retomar compra",
+      "cancelConversion": "Cancelar a mudança para um lugar pago",
+      "spareSeatTerms": "Utilize agora um lugar pago disponível. O total de lugares do grupo mantém-se.",
+      "confirmSpareSeat": "Confirmar a utilização de um lugar pago",
+      "keepSeat": "Manter este lugar",
+      "refresh": "Atualizar o estado do teste",
+      "returnToTrial": "Voltar ao teste do lugar do cliente",
+      "notice": {
+        "invitationSaved": "Convite guardado. Tente enviá-lo novamente abaixo.",
+        "deliveryFailed": "O envio falhou. Pode tentar novamente.",
+        "replacementSent": "Convite enviado ao técnico substituto.",
+        "replacementSaved": "Técnico substituto guardado. Tente enviar novamente o convite."
+      },
+      "error": {
+        "boardChoicesFailed": "Não foi possível carregar os quadros disponíveis.",
+        "actionFailed": "Não foi possível concluir esta ação. Atualize o estado do teste e tente novamente.",
+        "paymentFailed": "Não foi possível concluir o pagamento. Verifique o estado do teste."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Este espaço de trabalho não tem um conjunto cogerido. Adicione lugares cogeridos para usar esta função.",

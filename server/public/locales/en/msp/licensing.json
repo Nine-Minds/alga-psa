@@ -398,6 +398,48 @@
     "accountManagementRead": "Permission denied: account_management read required"
   },
   "coManaged": {
+    "trial": {
+      "title": "15-day co-managed Seat trial",
+      "description": "Invite one client technician to work on the boards you choose. The 15 days start at their first sign-in. Access requires an active base subscription or base trial.",
+      "terms": "A paid seat costs {{amount}} per month. The trial ends without a charge unless you confirm paid capacity.",
+      "status": {
+        "active": "Active",
+        "pending": "Waiting for first sign-in",
+        "base_paused": "Base subscription paused",
+        "expired": "Trial expired",
+        "paid": "Using a paid seat",
+        "ended": "Trial ended",
+        "checkout_pending": "Awaiting payment"
+      },
+      "purchaseAwaitingVerification": "Purchase awaiting verification",
+      "conversionFailed": "The seat conversion did not complete. Review available paid capacity or try checkout again.",
+      "deadline": "Seat trial ends {{date}}.",
+      "baseUntil": "Current base access ends {{date}}.",
+      "openSetup": "Open client Seat setup",
+      "invite": "Invite technician for 15 days",
+      "resend": "Resend invitation",
+      "replace": "Replace technician",
+      "cancelInvitation": "Cancel invitation",
+      "restoreBase": "Restore base access in Account",
+      "resumePurchase": "Resume purchase",
+      "cancelConversion": "Cancel seat conversion",
+      "spareSeatTerms": "Use one available paid seat now. Your recurring pool total stays the same.",
+      "confirmSpareSeat": "Confirm use of one paid seat",
+      "keepSeat": "Keep this seat",
+      "refresh": "Refresh trial",
+      "returnToTrial": "Return to client Seat trial",
+      "notice": {
+        "invitationSaved": "Invitation saved. Retry delivery below.",
+        "deliveryFailed": "Delivery failed. You can retry.",
+        "replacementSent": "Replacement invitation sent.",
+        "replacementSaved": "Replacement saved. Retry delivery."
+      },
+      "error": {
+        "boardChoicesFailed": "Board choices could not be loaded.",
+        "actionFailed": "Could not complete this action. Refresh the trial and try again.",
+        "paymentFailed": "Payment could not be completed. Review the trial status."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "This workspace has no co-managed pool. Add co-managed seats to use this.",

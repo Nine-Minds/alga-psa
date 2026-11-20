@@ -14,7 +14,8 @@ import {
   userExportQuerySchema,
   changePasswordSchema,
   userActivityFilterSchema,
-  bulkCreateUsersSchema
+  bulkCreateUsersSchema,
+  bulkDeactivateUsersSchema
 } from '../schemas/userSchemas';
 import { 
   ApiKeyServiceForApi 
@@ -55,34 +56,6 @@ export class ApiUserController extends ApiBaseController {
     });
     
     this.userService = userService;
-  }
-
-  /**
-   * Bulk create users.
-   *
-   * The route used to delegate to the single-user create(), so a bulk payload
-   * failed validation and the documented options were never read. This parses
-   * bulkCreateUsersSchema and returns the bulk summary, including the per-user
-   * errors of a partially successful batch.
-   */
-  bulkCreate() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        const apiRequest = await this.authenticate(req);
-        return await this.runWithApiKeyContext(apiRequest, async () => {
-          await this.checkPermission(apiRequest, 'create');
-          const data = await this.validateData(apiRequest, bulkCreateUsersSchema);
-          const result = await this.userService.bulkCreateUsers(
-            data.users,
-            apiRequest.context!,
-            data.options
-          );
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
   }
 
   /**
@@ -686,6 +659,78 @@ export class ApiUserController extends ApiBaseController {
             message: `Successfully replaced user roles`,
             roles: updatedRoles
           });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk create users
+   */
+  bulkCreate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+
+        // Run as the API-key user within its tenant, so anything downstream
+        // that resolves the caller through getCurrentUser() sees that user.
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'create');
+
+          // Validate the whole batch before any user is created
+          const data = await this.validateData(apiRequest, bulkCreateUsersSchema);
+
+          try {
+            const result = await this.userService.bulkCreateUsers(
+              data.users,
+              apiRequest.context!,
+              data.options ?? {}
+            );
+
+            return createSuccessResponse(result, 201);
+          } catch (error: any) {
+            // skip_invalid: false rethrows the rejected user's error after rolling
+            // the batch back; keep the single-create translation so a duplicate
+            // email stays a 409 with its message instead of an opaque 500.
+            if (error?.message && error.message.includes('already exists')) {
+              throw new ConflictError(error.message);
+            }
+            throw error;
+          }
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Bulk deactivate (or reactivate) users
+   */
+  bulkDeactivate() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+
+        // Run as the API-key user within its tenant, as bulkCreate() does.
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'update');
+
+          const data = await this.validateData(apiRequest, bulkDeactivateUsersSchema);
+
+          const result = await this.userService.bulkDeactivateUsers(
+            data.user_ids,
+            data.deactivate,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(result);
         });
       } catch (error) {
         return handleApiError(error);

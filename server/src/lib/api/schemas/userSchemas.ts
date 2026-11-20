@@ -287,12 +287,10 @@ export const bulkCreateUsersSchema = z.object({
     force_password_reset: z.boolean().optional().default(false),
     skip_invalid: z.boolean().optional().default(true),
     dry_run: z.boolean().optional().default(false)
-  }).default({
-    send_welcome_email: true,
-    force_password_reset: false,
-    skip_invalid: true,
-    dry_run: false
-  })
+  // prefault (not default) so an omitted options object is parsed as `{}` and
+  // picks up the defaults above: skip_invalid must mean the same thing whether
+  // the caller sends `options: {}` or no options at all.
+  }).prefault({})
 });
 
 export const bulkUpdateUsersSchema = z.object({

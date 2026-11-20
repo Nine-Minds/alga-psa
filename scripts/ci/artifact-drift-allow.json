@@ -1017,21 +1017,51 @@
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/extensions/x-route-controller-mismatch",
-    "reason": "Bulk portal invitations card (alga-2026-0003340): the annotation only ever recorded that POST /api/v1/users/bulk/create was wired to ApiUserController.create(). The route now has a real bulk handler, so the defect note is gone with the defect."
+    "reason": "alga-2026-0003355: POST /api/v1/users/bulk/create now has a real bulk handler, so the marker that documented the route delegating to single-user create() is gone. The flag only ever advertised a known defect; it leaves the document because the defect is fixed."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/extensions/x-route-controller-mismatch",
-    "reason": "Bulk portal invitations card (alga-2026-0003340): the annotation only ever recorded that POST /api/v1/users/bulk/create was wired to ApiUserController.create(). The route now has a real bulk handler, so the defect note is gone with the defect."
+    "reason": "alga-2026-0003355: POST /api/v1/users/bulk/create now has a real bulk handler, so the marker that documented the route delegating to single-user create() is gone. The flag only ever advertised a known defect; it leaves the document because the defect is fixed."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/requestBody/content/application~1json/schema/$ref",
-    "reason": "Bulk portal invitations card (alga-2026-0003340): POST /api/v1/users/bulk/create documented the single-user body because the route delegated to ApiUserController.create(). It now parses bulkCreateUsersSchema, so the documented body becomes AccessBulkCreateUsersBodyV1 (users[] plus options). A deliberate break: the single-user shape was the symptom of the mis-wiring, and callers who want one user have POST /api/v1/users."
+    "reason": "alga-2026-0003355: the body is now the batch payload (AccessBulkCreateUsersBodyV1: users[1..100] plus options) instead of the single-user AccessCreateUserBodyV1 the mis-wired route documented. The old shape silently created exactly one user per call and dropped the rest of the caller's batch, so the documented contract never did what its own path said."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/requestBody/content/application~1json/schema/$ref",
-    "reason": "Bulk portal invitations card (alga-2026-0003340): POST /api/v1/users/bulk/create documented the single-user body because the route delegated to ApiUserController.create(). It now parses bulkCreateUsersSchema, so the documented body becomes AccessBulkCreateUsersBodyV1 (users[] plus options). A deliberate break: the single-user shape was the symptom of the mis-wiring, and callers who want one user have POST /api/v1/users."
+    "reason": "alga-2026-0003355: the body is now the batch payload (AccessBulkCreateUsersBodyV1: users[1..100] plus options) instead of the single-user AccessCreateUserBodyV1 the mis-wired route documented. The old shape silently created exactly one user per call and dropped the rest of the caller's batch, so the documented contract never did what its own path said."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/responses/200",
+    "reason": "alga-2026-0003355: bulk create answers 201 with the batch result (total_processed, successful, failed, per-index errors, created users). The 200 was the generic default the mismatch route inherited; the handler behind it returned 201, so no caller ever received a 200 from this path."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/responses/200",
+    "reason": "alga-2026-0003355: bulk create answers 201 with the batch result (total_processed, successful, failed, per-index errors, created users). The 200 was the generic default the mismatch route inherited; the handler behind it returned 201, so no caller ever received a 200 from this path."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/extensions/x-route-controller-mismatch",
+    "reason": "alga-2026-0003355: PUT /api/v1/users/bulk/deactivate now has a real bulk handler instead of delegating to update-by-id, so the defect marker leaves the document along with the defect."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/extensions/x-route-controller-mismatch",
+    "reason": "alga-2026-0003355: PUT /api/v1/users/bulk/deactivate now has a real bulk handler instead of delegating to update-by-id, so the defect marker leaves the document along with the defect."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0003355: the body is now AccessBulkDeactivateUsersBodyV1 (user_ids[1..100] plus deactivate) instead of the single-user AccessUpdateUserBodyV1 the mis-wired route documented. That wiring read the literal path segment 'bulk' as {id} and rejected every request with 'Invalid user ID format' before it looked at the body, so no caller can have depended on the update shape."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1deactivate/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "alga-2026-0003355: the body is now AccessBulkDeactivateUsersBodyV1 (user_ids[1..100] plus deactivate) instead of the single-user AccessUpdateUserBodyV1 the mis-wired route documented. That wiring read the literal path segment 'bulk' as {id} and rejected every request with 'Invalid user ID format' before it looked at the body, so no caller can have depended on the update shape."
   }
 ]

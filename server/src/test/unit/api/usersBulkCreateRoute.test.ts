@@ -81,7 +81,7 @@ beforeEach(() => {
 describe('POST /api/v1/users/bulk/create', () => {
   it('creates the whole batch through bulkCreateUsers, not the single create', async () => {
     const res = await POST(request({ users: [user('a@acme.test'), user('b@acme.test')] }));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     expect(state.createCalls).toBe(0);
     expect(state.bulkCalls).toHaveLength(1);
     expect(state.bulkCalls[0].users).toHaveLength(2);

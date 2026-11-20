@@ -20,6 +20,21 @@ async function hasCitus(knex) {
   return Boolean(r.rows?.[0]?.has_citus);
 }
 
+// Citus cannot propagate objects that depend on coordinator-local tables.
+// Keep the setting transaction-local and restore it before releasing the savepoint.
+async function withCitusCoordinatorDdl(knex, work) {
+  if (!(await hasCitus(knex))) return work(knex);
+  return knex.transaction(async (trx) => {
+    const { rows: [{ previous }] } = await trx.raw(`
+      SELECT current_setting('citus.enable_ddl_propagation') AS previous
+    `);
+    await trx.raw("SET LOCAL citus.enable_ddl_propagation TO off");
+    const result = await work(trx);
+    await trx.raw("SELECT set_config('citus.enable_ddl_propagation', ?, true)", [previous]);
+    return result;
+  });
+}
+
 async function hasConstraint(knex, tableName, constraintName) {
   const r = await knex.raw(
     `SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass) AS present;`,
@@ -257,6 +272,7 @@ module.exports = {
   inLockBoundedTransaction,
   distributeLocalTenantTables,
   hasCitus,
+  withCitusCoordinatorDdl,
   hasConstraint,
   isFkCompatible,
   ensureCompositeFk,

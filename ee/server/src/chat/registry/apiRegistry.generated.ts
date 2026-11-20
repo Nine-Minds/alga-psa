@@ -4002,7 +4002,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/users/bulk/create",
     "displayName": "Bulk create users",
     "summary": "Bulk create users",
-    "description": "Creates up to 100 users from one payload using bulkCreateUsersSchema. Returns the bulk summary (total_processed, successful, failed, per-index errors, created users); with skip_invalid (default true) an invalid entry is reported rather than failing the batch. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates without creating anything.",
+    "description": "Creates up to 100 users in one transaction. Each user is created under its own savepoint: with skip_invalid (the default) a rejected user is reported in errors[] by index and the rest are still created; with skip_invalid false the first failure rolls the whole batch back. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates every user and creates nothing.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -4044,11 +4044,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             "skip_invalid": {
               "type": "boolean",
-              "description": "Default true. Reports an invalid entry in errors[] instead of failing the whole batch."
+              "description": "Default true: a rejected user is reported in errors[] and the rest are still created. Set false to roll the whole batch back on the first failure."
             },
             "dry_run": {
               "type": "boolean",
-              "description": "Default false. Validates every entry and creates nothing."
+              "description": "Validates every user and creates nothing."
             }
           }
         }
@@ -4089,9 +4089,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "put-_api_v1_users_bulk_deactivate",
     "method": "put",
     "path": "/api/v1/users/bulk/deactivate",
-    "displayName": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "summary": "Bulk deactivate users (route currently mapped to update-by-id)",
-    "description": "Route currently delegates to ApiUserController.update(); id extraction reads \"bulk\" from path and fails UUID validation.",
+    "displayName": "Bulk deactivate users",
+    "summary": "Bulk deactivate users",
+    "description": "Deactivates (or, with deactivate false, reactivates) up to 100 users by UUID. Role floors refuse a request that would leave the tenant without an active MSP admin, and reactivation is admitted one user at a time against the seat limit.",
     "tags": [
       "Access Control & Users v1"
     ],
@@ -4112,57 +4112,23 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "username": {
-          "type": "string",
-          "minLength": 3
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "first_name": {
-          "type": "string"
-        },
-        "last_name": {
-          "type": "string"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "timezone": {
-          "type": "string"
-        },
-        "user_type": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "client",
-            "admin",
-            "contractor"
-          ]
-        },
-        "contact_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "two_factor_enabled": {
-          "type": "boolean"
-        },
-        "is_google_user": {
-          "type": "boolean"
-        },
-        "is_inactive": {
-          "type": "boolean"
-        },
-        "role_ids": {
+        "user_ids": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uuid"
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "deactivate": {
+          "type": "boolean",
+          "description": "Default true; false reactivates the listed users (subject to seat limits)."
         }
-      }
+      },
+      "required": [
+        "user_ids"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
