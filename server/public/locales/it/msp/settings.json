@@ -868,7 +868,7 @@
           "assignment": "Assegnazione e SLA",
           "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
           "notifications": "Notifiche",
-          "notificationsHelp": "Avvisa i tecnici dei nuovi ticket e dei cambi di stato e imposta gli osservatori predefiniti",
+          "notificationsHelp": "Avvisa i tecnici dei nuovi ticket, dei cambi di stato e delle risposte dei clienti sui ticket non assegnati e imposta gli osservatori predefiniti",
           "notificationsRulesLabel": "Regole di notifica",
           "notificationsRulesHelp": "I destinatari ricevono una notifica per evento. Non vengono aggiunti come osservatori.",
           "notificationsAddRule": "Aggiungi regola",

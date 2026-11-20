@@ -868,7 +868,7 @@
           "assignment": "Asignación y SLA",
           "assignmentHelp": "Enrutamiento predeterminado, SLA y responsable del tablero",
           "notifications": "Notificaciones",
-          "notificationsHelp": "Avisar a los técnicos de tickets nuevos y cambios de estado, y definir observadores predeterminados",
+          "notificationsHelp": "Avisar a los técnicos de tickets nuevos, cambios de estado y respuestas del cliente en tickets sin asignar, y definir observadores predeterminados",
           "notificationsRulesLabel": "Reglas de notificación",
           "notificationsRulesHelp": "Los destinatarios reciben una notificación por evento. No se añaden como observadores.",
           "notificationsAddRule": "Añadir regla",

@@ -2260,7 +2260,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             id="notifications"
             error={sectionErrors['notifications']}
             title={t('ticketing.boards.editor.sections.notifications', 'Notifications')}
-            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets and status changes, and set default watchers')}
+            description={t('ticketing.boards.editor.sections.notificationsHelp', 'Notify technicians about new tickets, status changes and client replies on unassigned tickets, and set default watchers')}
             icon={<Bell className="h-4 w-4" />}
             open={!collapsedSections.has('notifications')}
             dirty={isSectionDirty('notifications')}

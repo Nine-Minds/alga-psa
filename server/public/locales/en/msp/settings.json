@@ -868,7 +868,7 @@
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
           "notifications": "Notifications",
-          "notificationsHelp": "Notify technicians about new tickets and status changes, and set default watchers",
+          "notificationsHelp": "Notify technicians about new tickets, status changes and client replies on unassigned tickets, and set default watchers",
           "notificationsRulesLabel": "Notification rules",
           "notificationsRulesHelp": "Recipients get one notification per event. They are not added as watchers.",
           "notificationsAddRule": "Add rule",

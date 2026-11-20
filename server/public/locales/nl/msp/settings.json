@@ -868,7 +868,7 @@
           "assignment": "Toewijzing & SLA",
           "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
           "notifications": "Meldingen",
-          "notificationsHelp": "Technici op de hoogte brengen van nieuwe tickets en statuswijzigingen, en standaardvolgers instellen",
+          "notificationsHelp": "Technici op de hoogte brengen van nieuwe tickets, statuswijzigingen en reacties van klanten op niet-toegewezen tickets, en standaardvolgers instellen",
           "notificationsRulesLabel": "Meldingsregels",
           "notificationsRulesHelp": "Ontvangers krijgen één melding per gebeurtenis. Ze worden niet als volger toegevoegd.",
           "notificationsAddRule": "Regel toevoegen",

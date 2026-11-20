@@ -868,7 +868,7 @@
           "assignment": "Attribution et SLA",
           "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
           "notifications": "Notifications",
-          "notificationsHelp": "Avertir les techniciens des nouveaux tickets et des changements de statut, et définir les observateurs par défaut",
+          "notificationsHelp": "Avertir les techniciens des nouveaux tickets, des changements de statut et des réponses client sur les tickets non assignés, et définir les observateurs par défaut",
           "notificationsRulesLabel": "Règles de notification",
           "notificationsRulesHelp": "Les destinataires reçoivent une notification par événement. Ils ne sont pas ajoutés comme observateurs.",
           "notificationsAddRule": "Ajouter une règle",

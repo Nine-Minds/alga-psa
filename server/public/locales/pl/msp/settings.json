@@ -868,7 +868,7 @@
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
           "notifications": "Powiadomienia",
-          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach i zmianach statusu oraz ustaw domyślnych obserwatorów",
+          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach, zmianach statusu i odpowiedziach klientów w nieprzypisanych zgłoszeniach oraz ustaw domyślnych obserwatorów",
           "notificationsRulesLabel": "Reguły powiadomień",
           "notificationsRulesHelp": "Odbiorcy otrzymują jedno powiadomienie na zdarzenie. Nie są dodawani jako obserwatorzy.",
           "notificationsAddRule": "Dodaj regułę",

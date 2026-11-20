@@ -868,7 +868,7 @@
           "assignment": "Zuweisung & SLA",
           "assignmentHelp": "Standard-Routing, SLA und Board-Manager",
           "notifications": "Benachrichtigungen",
-          "notificationsHelp": "Techniker über neue Tickets und Statusänderungen informieren und Standardbeobachter festlegen",
+          "notificationsHelp": "Techniker über neue Tickets, Statusänderungen und Kundenantworten auf nicht zugewiesene Tickets informieren und Standardbeobachter festlegen",
           "notificationsRulesLabel": "Benachrichtigungsregeln",
           "notificationsRulesHelp": "Empfänger erhalten pro Ereignis eine Benachrichtigung. Sie werden nicht als Beobachter hinzugefügt.",
           "notificationsAddRule": "Regel hinzufügen",
