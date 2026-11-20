@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 
@@ -17,6 +17,10 @@ describe('legacy outbound credential binding against PostgreSQL', () => {
   const raceProviderId = randomUUID();
   const password = 'synthetic-legacy-smtp-password';
   const sendMail = vi.fn(async () => ({ messageId: '<legacy-binding@test>', response: '250 accepted' }));
+
+  beforeEach(() => {
+    sendMail.mockClear();
+  });
 
   beforeAll(async () => {
     db = await createTestDbConnection();
