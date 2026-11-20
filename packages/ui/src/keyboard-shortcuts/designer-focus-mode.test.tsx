@@ -9,6 +9,7 @@ import { DesignerFocusSurface } from '../components/designer/DesignerFocusSurfac
 import { DesignerFocusToggle } from '../components/designer/DesignerFocusToggle';
 import { getShortcutCatalogEntry, SHORTCUT_ACTION_CATALOG } from './catalog';
 import { KeyboardShortcutsProvider, useShortcutScope } from './provider';
+import { normalizeDefaultBindings } from './registry';
 import type { ShortcutScope } from './types';
 
 afterEach(() => {
@@ -67,10 +68,8 @@ describe('designer.toggleFocusMode catalog entry', () => {
   it('is the only page- or global-scope action bound to mod+.', () => {
     const owners = SHORTCUT_ACTION_CATALOG.filter((candidate) => {
       if (candidate.scope !== 'page' && candidate.scope !== 'global') return false;
-      const bindings = Array.isArray(candidate.defaultBindings)
-        ? candidate.defaultBindings
-        : [...candidate.defaultBindings.mac, ...candidate.defaultBindings.other];
-      return bindings.includes('mod+.');
+      const bindings = normalizeDefaultBindings(candidate.defaultBindings);
+      return bindings.mac.includes('mod+.') || bindings.other.includes('mod+.');
     });
 
     expect(owners.map((owner) => owner.id)).toEqual(['designer.toggleFocusMode']);
