@@ -2,6 +2,18 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-20 — Attaching a non-template contract line returns `400`, not `500`
+
+**Affected endpoints:** `POST /api/v1/contracts/{contractId}/contract-lines`, and contract creation that passes lines in the same call
+
+The attach endpoint copies a line that belongs to a contract template onto the contract; it does not move an existing line. Passing the id of an ordinary (non-template) contract line used to fail with an opaque `500`.
+
+**Changes:**
+
+- An existing contract line that is not a contract-template line returns `400 VALIDATION_ERROR`, with a message naming the line id.
+- An id that does not exist at all still returns `404`.
+- The same translation applies when lines are supplied while creating a contract.
+
 ## 2026-11-20 — `POST /api/v1/users/bulk/create` and `PUT /api/v1/users/bulk/deactivate` work as documented
 
 **Affected endpoints:** `POST /api/v1/users/bulk/create`, `PUT /api/v1/users/bulk/deactivate`
