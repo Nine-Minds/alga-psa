@@ -113,6 +113,11 @@ export type { UserRoleFloorChange, UserRoleFloorResult, UserRoleFloorViolation }
 // user_roles writer re-derives it in the same transaction as its write.
 export { syncContactClientAdminFlag } from './lib/clientPortalAdminFlag';
 
+// The role-set writes themselves, so the flag sync travels with every one of
+// them instead of being a line each writer has to remember.
+export { addUserRoles, removeUserRoles, setUserRoles } from './lib/userRoleWrites';
+export type { UserRoleWriteRow } from './lib/userRoleWrites';
+
 // A live co-managed seat technician holds only the seat role and joins no MSP team; every
 // user_roles / team_members writer runs this first.
 export {
