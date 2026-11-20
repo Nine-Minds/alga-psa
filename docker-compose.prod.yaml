@@ -17,6 +17,32 @@ services:
       # scripts/export-production-artifacts.sh community (Docker only) first.
       dockerfile: Dockerfile
 
+    # Production server image runs as uid 1000, so it needs no capabilities.
+    # The dev-image `setup` service below runs as root and keeps its defaults, because a
+    # root process without DAC_OVERRIDE cannot read the uid-1000-owned secret files.
+    cap_drop:
+      - ALL
+    depends_on:
+      runtime-permissions:
+        condition: service_completed_successfully
+
+  # Same production image as `server`, so the init container and the app agree on the script.
+  runtime-permissions:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/alga-runtime-permissions"]
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+
   setup:
     environment:
       NODE_ENV: production

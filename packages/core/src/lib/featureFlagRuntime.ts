@@ -1,4 +1,5 @@
 import type { PostHog } from 'posthog-node';
+import type { FeatureFlagEvaluation } from './features';
 import { resolveFlagTargeting } from './featureFlagTargeting';
 
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
@@ -105,7 +106,8 @@ export interface FeatureFlagsOptions {
 export class FeatureFlags {
   private client: PostHog | null = null;
   private clientInitialized = false;
-  private readonly flagCache = new Map<string, { value: boolean | string; timestamp: number }>();
+  private readonly flagCache = new Map<string, { value: FeatureFlagEvaluation | string; timestamp: number }>();
+  private readonly booleanEvaluations = new Map<string, Promise<FeatureFlagEvaluation>>();
   private readonly manualOverrides = new Map<string, boolean | string>();
   private readonly cacheTtlMs: number;
   private readonly anonymizeUserIds: boolean;
@@ -117,33 +119,55 @@ export class FeatureFlags {
     this.anonymizeUserIds = process.env.ANALYTICS_ANONYMIZE_USER_IDS !== 'false';
   }
 
+  /** Existing boolean contract: use the flag's default when evaluation is unavailable.
+   * Admission gates use evaluate() so an unavailable result cannot masquerade as flag-off. */
   async isEnabled(flagKey: string, context: FeatureFlagContext = {}): Promise<boolean> {
+    return (await this.evaluate(flagKey, context)).enabled;
+  }
+
+  /** Detailed form for capability gates that must distinguish an evaluated false from fallback. */
+  async evaluate(flagKey: string, context: FeatureFlagContext = {}): Promise<FeatureFlagEvaluation> {
     // Same targeting source as isFeatureFlagEnabled, so direct callers and the
     // /api/v1/feature-flags route agree with admission and the bootstrap.
     const targeted = resolveFlagTargeting(flagKey, context.tenantId);
-    if (targeted !== null) return targeted;
+    if (targeted !== null) return { status: 'evaluated', enabled: targeted };
 
     if (featureFlagsAreDisabled()) {
-      return true;
+      return { status: 'evaluated', enabled: true };
     }
 
     const override = this.manualOverrides.get(flagKey);
     if (typeof override === 'boolean') {
-      return override;
+      return { status: 'evaluated', enabled: override };
     }
 
     const cacheKey = this.getCacheKey(flagKey, context);
     const cached = this.getCachedValue(cacheKey);
-    if (cached !== null && typeof cached === 'boolean') {
+    if (cached !== null && typeof cached !== 'string') {
       return cached;
     }
 
-    const client = await this.resolveClient();
-    if (!client) {
-      return this.getDefaultValue(flagKey);
-    }
+    const pending = this.booleanEvaluations.get(cacheKey);
+    if (pending) return pending;
 
+    // Keep availability alongside the value: an outage must neither become an
+    // evaluated false nor trigger another slow remote call on every page request.
+    // Concurrent bootstrap/admission callers share the same evaluation, and the
+    // normal cache TTL bounds how long recovery can take to become visible.
+    const evaluation = this.evaluateUncached(flagKey, context).then((result) => {
+      if (this.booleanEvaluations.get(cacheKey) === evaluation) this.setCachedValue(cacheKey, result);
+      return result;
+    }).finally(() => {
+      if (this.booleanEvaluations.get(cacheKey) === evaluation) this.booleanEvaluations.delete(cacheKey);
+    });
+    this.booleanEvaluations.set(cacheKey, evaluation);
+    return evaluation;
+  }
+
+  private async evaluateUncached(flagKey: string, context: FeatureFlagContext): Promise<FeatureFlagEvaluation> {
     try {
+      const client = await this.resolveClient();
+      if (!client) return { status: 'unavailable', enabled: this.getDefaultValue(flagKey) };
       const distinctId = await this.getDistinctId(context);
       const properties = await this.buildProperties(context);
       const personProperties = properties as Record<string, string>;
@@ -151,20 +175,22 @@ export class FeatureFlags {
         personProperties,
         groups: context.tenantId ? { tenant: context.tenantId } : undefined,
       });
+      if (enabled === undefined || enabled === null) {
+        return { status: 'unavailable', enabled: this.getDefaultValue(flagKey) };
+      }
 
-      const flagValue = enabled || false;
-      this.setCachedValue(cacheKey, flagValue);
+      const flagValue = Boolean(enabled);
 
-      await this.options.onBooleanEvaluation?.({
-        flagKey,
-        flagValue,
-        context,
-      });
+      try {
+        await this.options.onBooleanEvaluation?.({ flagKey, flagValue, context });
+      } catch (error) {
+        console.error(`Error recording feature flag evaluation ${flagKey}:`, error);
+      }
 
-      return flagValue;
+      return { status: 'evaluated', enabled: flagValue };
     } catch (error) {
       console.error(`Error evaluating feature flag ${flagKey}:`, error);
-      return this.getDefaultValue(flagKey);
+      return { status: 'unavailable', enabled: this.getDefaultValue(flagKey) };
     }
   }
 
@@ -251,6 +277,7 @@ export class FeatureFlags {
 
   clearCache(): void {
     this.flagCache.clear();
+    this.booleanEvaluations.clear();
   }
 
   private async resolveClient(): Promise<PostHog | null> {
@@ -350,7 +377,7 @@ export class FeatureFlags {
     return properties;
   }
 
-  private getCachedValue(cacheKey: string): boolean | string | null {
+  private getCachedValue(cacheKey: string): FeatureFlagEvaluation | string | null {
     const cached = this.flagCache.get(cacheKey);
     if (!cached) {
       return null;
@@ -364,7 +391,7 @@ export class FeatureFlags {
     return cached.value;
   }
 
-  private setCachedValue(cacheKey: string, value: boolean | string): void {
+  private setCachedValue(cacheKey: string, value: FeatureFlagEvaluation | string): void {
     this.flagCache.set(cacheKey, {
       value,
       timestamp: Date.now(),

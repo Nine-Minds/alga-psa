@@ -20,4 +20,13 @@ describe('withViaPrincipal (F049)', () => {
     });
     expect(row).toEqual({ title: 'x' });
   });
+
+  it('composes with null defaults to replace update provenance and preserve creation provenance', () => {
+    const row = { created_via_principal_id: 'original', updated_via_principal_id: null };
+    expect(withViaPrincipal({}, row, 'updated_via_principal_id')).toEqual(row);
+    expect(withViaPrincipal({ viaPrincipalUserId: 'next' }, row, 'updated_via_principal_id')).toEqual({
+      created_via_principal_id: 'original', updated_via_principal_id: 'next',
+    });
+    expect(row.updated_via_principal_id).toBeNull();
+  });
 });

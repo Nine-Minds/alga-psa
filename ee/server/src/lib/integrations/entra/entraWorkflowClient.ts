@@ -6,6 +6,7 @@ import type {
 } from '../../../../../temporal-workflows/src/types/entra-sync';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import type { EntraSyncUserIssue } from './sync/types';
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
@@ -48,6 +49,8 @@ export interface EntraSyncRunProgressResult {
     updated: number;
     ambiguous: number;
     inactivated: number;
+    failed: number;
+    userIssues: EntraSyncUserIssue[];
     errorMessage: string | null;
     startedAt: string | null;
     completedAt: string | null;
@@ -388,6 +391,10 @@ export async function getEntraSyncRunProgress(
         updated: Number(row.updated_count || 0),
         ambiguous: Number(row.ambiguous_count || 0),
         inactivated: Number(row.inactivated_count || 0),
+        failed: Number(row.failed_count || 0),
+        userIssues: Array.isArray(row.user_issues)
+          ? (row.user_issues as EntraSyncUserIssue[])
+          : [],
         errorMessage: row.error_message ? String(row.error_message) : null,
         startedAt: row.started_at ? String(row.started_at) : null,
         completedAt: row.completed_at ? String(row.completed_at) : null,

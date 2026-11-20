@@ -29,7 +29,6 @@ export const PORTABLE_BASE_EXCLUSIONS: readonly PortableExclusion[] = Object.fre
   { class: 'msp_private', name: 'msp_operator_data', reason: 'MSP-private notes, staff identities and internal comments are not customer-owned' },
   { class: 'commercial', name: 'billing_and_contracts', reason: 'Commercial terms and invoicing are not part of the portable workspace' },
   { class: 'secret', name: 'integration_secrets', reason: 'Tokens, API keys and provider secrets are never exported in plaintext' },
-  { class: 'deferred_domain', name: 'time_schedule_meetings_conversations_documents', reason: 'Delivered by a later portable-export release; references to them are carried as external edges' },
 ]);
 
 const fail: () => never = () => { throw new Error('Invalid portable workspace manifest'); };

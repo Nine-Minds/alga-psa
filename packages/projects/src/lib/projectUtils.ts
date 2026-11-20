@@ -4,15 +4,23 @@ import type { IProject, IProjectTask, ITimeEntry } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { isResolverGovernedUser } from '@alga-psa/authorization/recordCreateAuthorization';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createProjectReadDecider } from './projectReadAuthorization';
 
 export interface ProjectCompletionMetrics {
   taskCompletionPercentage: number;
-  hoursCompletionPercentage: number;
   totalTasks: number;
   completedTasks: number;
-  budgetedHours: number;
-  spentHours: number;
-  remainingHours: number;
+  /**
+   * The hours figures derive from the project's budget (`budgeted_hours`). They are ABSENT, not zero, for a reader the
+   * kernel closes that column to (a seat technician): a budget of 0 would read as "no budget", and the key itself is
+   * commercial. Screens render the hours section only when `budgetedHours` is present.
+   */
+  hoursCompletionPercentage?: number;
+  budgetedHours?: number;
+  spentHours?: number;
+  remainingHours?: number;
 }
 
 /**
@@ -21,13 +29,25 @@ export interface ProjectCompletionMetrics {
  * @returns ProjectCompletionMetrics object with task and hours-based completion percentages
  */
 export const calculateProjectCompletion = withAuth(async (
-  _user,
+  user,
   { tenant },
   projectId: string
 ): Promise<ProjectCompletionMetrics> => {
   const { knex: db } = await createTenantKnex();
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
+
+    // A subject the kernel governs (a seat technician) may compute metrics only for a project it may read, and never
+    // sees the budget-derived hours. Everyone else is unchanged: this returns after the cached tenant probe.
+    // LEVERAGE: pattern resolver-governed-gate — "is this user governed by a built-in resolver?" is answered with the cached tenant probe at
+    // each write/read site that only a seat technician is held to (here, task writes via ProjectReadDecision.governed, time entries, comments).
+    let budgetClosed = false;
+    if (await isResolverGovernedUser(trx, { tenant, user })) {
+      const project = await scopedDb.table('projects').where({ project_id: projectId }).first('project_id', 'client_id', 'assigned_to');
+      const decision = project ? await (await createProjectReadDecider(trx, tenant, user as IUserWithRoles))(project) : null;
+      if (!decision?.allowed) throw new Error('Permission denied: Cannot read project');
+      budgetClosed = decision.redactedFields.includes('budgeted_hours');
+    }
 
     // Get project details
     const project = await scopedDb.table('projects')
@@ -63,6 +83,8 @@ export const calculateProjectCompletion = withAuth(async (
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(task => task.is_closed === true).length;
     const taskCompletionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    if (budgetClosed) return { taskCompletionPercentage, totalTasks, completedTasks };
 
     // Get time entries for the project
     const timeEntriesQuery = scopedDb.table<ITimeEntry>('time_entries');

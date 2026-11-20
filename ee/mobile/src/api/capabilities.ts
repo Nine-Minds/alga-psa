@@ -13,6 +13,23 @@ export type FeatureCapabilities = {
   contactsUpdate: boolean;
   /** Project read access; gates the actionable parts of the task screen. */
   projects: boolean;
+  /** Asset read access; gates the Assets tab. */
+  assets: boolean;
+  /** Asset read + update; gates starting a site audit. */
+  assetAudit: boolean;
+  /** Tenant setting: every "Don't notify the customer" checkbox starts ticked. */
+  dontNotifyCustomerDefault: boolean;
+  /**
+   * The session reaches the operational surface only (a co-managed seat technician): tickets, projects,
+   * assets and their own time. Every CRM, sales, inventory, scheduling and search screen is hidden.
+   */
+  operationalOnly: boolean;
+};
+
+/** Sent with `operationalOnly`: the one client the session works for and the boards it may open tickets on. */
+export type OperationalScope = {
+  client: { clientId: string; clientName: string } | null;
+  creatableBoardIds: string[];
 };
 
 export type DateFieldPart = "day" | "month" | "year";
@@ -33,6 +50,7 @@ export type DateFormatCapability = {
 export type MyCapabilities = {
   features: FeatureCapabilities;
   formatting?: DateFormatCapability;
+  operationalScope?: OperationalScope | null;
   /** Absent on servers older than the tenant-theme release. */
   theme?: MobileTheme;
 };
@@ -46,6 +64,10 @@ export const EMPTY_FEATURE_CAPABILITIES: FeatureCapabilities = {
   contactsCreate: false,
   contactsUpdate: false,
   projects: false,
+  assets: false,
+  assetAudit: false,
+  dontNotifyCustomerDefault: false,
+  operationalOnly: false,
 };
 
 /** Every flag the server did not send is off, so an older server hides the matching UI. */
@@ -55,6 +77,22 @@ export function parseFeatureCapabilities(features: unknown): FeatureCapabilities
     (acc, key) => ({ ...acc, [key]: source[key] === true }),
     { ...EMPTY_FEATURE_CAPABILITIES },
   );
+}
+
+/** Null unless the server sent a well-formed scope. */
+export function parseOperationalScope(scope: unknown): OperationalScope | null {
+  if (!scope || typeof scope !== "object") return null;
+  const source = scope as { client?: unknown; creatableBoardIds?: unknown };
+  const client = source.client as { clientId?: unknown; clientName?: unknown } | null | undefined;
+  return {
+    client:
+      client && typeof client.clientId === "string" && typeof client.clientName === "string"
+        ? { clientId: client.clientId, clientName: client.clientName }
+        : null,
+    creatableBoardIds: Array.isArray(source.creatableBoardIds)
+      ? source.creatableBoardIds.filter((id): id is string => typeof id === "string")
+      : [],
+  };
 }
 
 export function getMyCapabilities(

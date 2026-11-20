@@ -4,9 +4,9 @@ import type { IAssetCustody, IAssetCustodyEvent } from '@alga-psa/types';
 import type { OpenCustodyInput } from '../schemas/assetCustody.schema';
 import { CustodyError } from './errors';
 import { writeCustodyHistory } from './history';
+import { associateAdvanceReturnWithCustody, lockUnlinkedAdvanceReturnsForIntake } from './advanceWarrantyAssociation';
 import {
-  CUSTODY_COLUMNS,
-  FOLLOW_UP_SELECT,
+  CUSTODY_RETURNING,
   loadHolder,
   loadLocation,
   mapCustodyRow,
@@ -61,6 +61,13 @@ export async function openCustody(
     });
   }
 
+  // An advance claim may predate the custody episode (including equipment intake after replacement receipt).
+  // Lock it before creating the episode so later shipment/charge paths share the RMA -> custody lock order.
+  const pendingAdvanceReturns = await lockUnlinkedAdvanceReturnsForIntake(trx, tenant, input.asset_id);
+  if (pendingAdvanceReturns.length > 1) {
+    throw new CustodyError('invalid_transition', 'Multiple active advance warranty claims match this equipment. Resolve the duplicate claims before receiving it.');
+  }
+
   let ticketNumber: string | null = null;
   if (input.ticket_id) {
     const ticket = await db
@@ -111,13 +118,20 @@ export async function openCustody(
         created_at: now,
         updated_at: now,
       })
-      .returning([...CUSTODY_COLUMNS, trx.raw(FOLLOW_UP_SELECT)] as any);
+      .returning(CUSTODY_RETURNING as any);
   } catch (error: any) {
     // Two receivers racing: the partial unique index is the arbiter.
     if (error?.code === '23505' && String(error?.constraint ?? '').includes('asset_custody_one_open_per_asset')) {
       throw new CustodyError('open_episode_exists', 'This item is already in custody.');
     }
     throw error;
+  }
+
+  if (pendingAdvanceReturns[0]) {
+    const associated = await associateAdvanceReturnWithCustody(trx, tenant, pendingAdvanceReturns[0].rma_id, inserted.custody_id);
+    if (!associated) {
+      throw new CustodyError('invalid_transition', 'The advance warranty claim changed while equipment was being received.');
+    }
   }
 
   const [event] = await db

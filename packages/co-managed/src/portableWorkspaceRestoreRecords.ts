@@ -3,6 +3,11 @@ import { CO_MANAGED_PORTABLE_WORK_COLUMNS } from './portableWorkCatalog';
 import { CO_MANAGED_PORTABLE_ASSET_COLUMNS } from './portableAssetCatalog';
 import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } from './portableWorkflowCatalog';
 import { CO_MANAGED_PORTABLE_FILE_COLUMNS } from './portableFileExport';
+import { CO_MANAGED_PORTABLE_SUPPLEMENTAL_COLUMNS } from './portableSupplementalFileExport';
+import { CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS } from './portableConversationExport';
+import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS } from './portableDocumentCatalog';
+import { CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS } from './portableEngagementCatalog';
+import { CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS, CO_MANAGED_PORTABLE_OPERATIONAL_IDENTITIES } from './portableOperationalCatalog';
 import { validatePortableRecordSection, validatePortableRecordReferences,
   type PortableRecordReference, type PortableRecords } from './portableRecordValidation';
 import type { CoManagedPortableWorkspaceManifest } from './portableWorkspaceManifest';
@@ -134,13 +139,36 @@ const fileProfile: PortableRestoreProfile = {
   // Its identity and uploader still participate in the same deterministic record remap.
   identities: { external_files: ['file_id'] },
 };
+const artifactsProfile: PortableRestoreProfile = { id: 'artifacts', identities: { online_meeting_artifacts: ['artifact_id'] } };
+const conversationsProfile: PortableRestoreProfile = { id: 'conversations', identities: { ticket_comment_attachments: ['attachment_id'] } };
+const documentsProfile: PortableRestoreProfile = { id: 'documents', identities: {
+  documents: ['document_id'], document_versions: ['version_id'], document_content: ['id'], document_block_content: ['content_id'],
+  document_associations: ['association_id'], document_folders: ['folder_id'], document_types: ['type_id'],
+  document_default_folders: ['default_folder_id'], kb_articles: ['article_id'], kb_article_relations: ['relation_id'],
+  kb_article_reviewers: ['reviewer_id'], kb_article_templates: ['template_id'],
+} };
+const engagementProfile: PortableRestoreProfile = { id: 'engagement', identities: {
+  interactions: ['interaction_id'], interaction_types: ['type_id'], appointment_requests: ['appointment_request_id'],
+  availability_settings: ['availability_setting_id'], availability_exceptions: ['exception_id'], service_catalog: ['service_id'],
+  service_types: ['id'], service_categories: ['category_id'],
+} };
+const operationalProfile: PortableRestoreProfile = { id: 'operational', identities: {
+  ...Object.fromEntries(Object.entries(CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS).map(([table, columns]) => [table, [columns[0]]])),
+  ...CO_MANAGED_PORTABLE_OPERATIONAL_IDENTITIES,
+} };
 // LEVERAGE: pattern portable-contributor-boilerplate — restore profiles re-declare identities/polymorphic edges the export contributors already know; one declaration per domain would serve both halves.
-export const CORE_PORTABLE_RESTORE_PROFILES: readonly PortableRestoreProfile[] = Object.freeze([coreProfile, workProfile, assetProfile, workflowProfile, fileProfile]);
+export const CORE_PORTABLE_RESTORE_PROFILES: readonly PortableRestoreProfile[] = Object.freeze([
+  coreProfile, workProfile, assetProfile, workflowProfile, fileProfile, artifactsProfile, conversationsProfile,
+  documentsProfile, engagementProfile, operationalProfile,
+]);
 
 /** Columns the shipped contributors project, kept for tests that compare against the live registry. */
 export const CO_MANAGED_PORTABLE_RESTORE_SECTIONS = {
   core: CO_MANAGED_PORTABLE_CORE_COLUMNS, work: CO_MANAGED_PORTABLE_WORK_COLUMNS,
   assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS, files: CO_MANAGED_PORTABLE_FILE_COLUMNS,
+  artifacts: CO_MANAGED_PORTABLE_SUPPLEMENTAL_COLUMNS, conversations: CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS,
+  documents: CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, engagement: CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS,
+  operational: CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS,
 } as const;
 
 export type PortableDestinationCatalogMappings = Record<string, Record<string, string>>;

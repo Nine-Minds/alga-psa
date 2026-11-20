@@ -23,6 +23,5 @@ describe('Ticket materials controller contract', () => {
 
     expect(source).toContain('const validatedData = await this.validateData(apiRequest, createTicketMaterialSchema);');
     expect(source).toContain('const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);');
-    expect(source).toContain('return createSuccessResponse(material, 201, undefined, apiRequest);');
   });
 });

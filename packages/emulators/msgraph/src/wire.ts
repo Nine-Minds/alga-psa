@@ -26,6 +26,18 @@ function decodePath(path: string): string {
   }
 }
 
+/** `$select` as Graph applies it: the named properties, and always `id`. */
+function parseSelect(raw: unknown): Set<string> | null {
+  if (typeof raw !== 'string') return null;
+  const fields = raw.split(',').map((field) => field.trim()).filter(Boolean);
+  return fields.length > 0 ? new Set(fields) : null;
+}
+
+function applySelect(full: Record<string, unknown>, select: Set<string> | null): Record<string, unknown> {
+  if (!select) return full;
+  return Object.fromEntries(Object.entries(full).filter(([key]) => key === 'id' || select.has(key)));
+}
+
 /**
  * Microsoft's token endpoint takes client credentials either in the form body
  * (client_secret_post) or as an HTTP Basic header (client_secret_basic, RFC 6749
@@ -394,13 +406,17 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
   graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
   graph.get('/me/calendarView/delta', (req, res) => {
-    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken']);
+    // $select is how a client asks for type/seriesMasterId/originalStart, which
+    // Graph omits by default — without them an expanded occurrence is
+    // indistinguishable from a standalone event.
+    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken', '$select']);
     const token = req.query.$deltatoken || req.query.$skiptoken;
     if (Object.keys(req.query).some(key => !allowed.has(key)) ||
         (req.query.$deltatoken && req.query.$skiptoken) ||
         (token && (req.query.startDateTime || req.query.endDateTime))) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
     }
+    const select = parseSelect(req.query.$select);
     const prefer = req.get('prefer') ?? '';
     if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
@@ -414,8 +430,14 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     });
     const next = new URL(`${req.protocol}://${req.get('host')}/v1.0/me/calendarView/delta`);
     next.searchParams.set(result.skipToken ? '$skiptoken' : '$deltatoken', result.skipToken ?? result.deltaToken!);
-    res.json({ value: result.value.map(event => '@removed' in event ? event : publicEvent(event)),
-      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString() });
+    // Graph's own next/delta links carry the original $select forward.
+    if (typeof req.query.$select === 'string') next.searchParams.set('$select', req.query.$select);
+    res.json({
+      value: result.value.map(event => '@removed' in event
+        ? event
+        : applySelect(publicEvent(event) as Record<string, unknown>, select)),
+      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString(),
+    });
   });
   const ownedEvent = (id: string) => {
     const event = core.getCalendarEvent(id);
@@ -454,7 +476,11 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     await deliverCalendarNotifications(core, event, 'created', env);
     res.status(201).json(publicEvent(event));
   }));
+  // Both shapes serve the same item: the adapter reads a series master through
+  // /me/events/{seriesMasterId}, and its own calendar events through
+  // /me/calendar/events/{id}. Either way the master carries its recurrence.
   graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.get('/me/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
   graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
     ownedEvent(String(req.params.eventId));
     const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});
@@ -493,15 +519,9 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     }
     const top = Number.parseInt(String(req.query.$top ?? ''), 10);
     if (Number.isFinite(top) && top >= 0) events = events.slice(0, top);
-    const select = typeof req.query.$select === 'string'
-      ? new Set(req.query.$select.split(',').map(field => field.trim()).filter(Boolean))
-      : null;
+    const select = parseSelect(req.query.$select);
     res.json({
-      value: events.map(event => {
-        const full = publicEvent(event) as Record<string, unknown>;
-        if (!select) return full;
-        return Object.fromEntries(Object.entries(full).filter(([key]) => key === 'id' || select.has(key)));
-      }),
+      value: events.map(event => applySelect(publicEvent(event) as Record<string, unknown>, select)),
     });
   });
 

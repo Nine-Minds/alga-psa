@@ -16,6 +16,7 @@ import {
     applyAssetListFilters,
     applyAssetTypeFilter,
     joinAssetListRelations,
+    selectedAssetTypes,
     type AssetListFilterParams,
 } from './assetListFilters';
 
@@ -94,6 +95,20 @@ describe('applyAssetListFilters SQL', () => {
         expect(sql).toContain(`"assets"."status" = 'active'`);
     });
 
+    it('matches any of several selected types with one IN predicate', () => {
+        const sql = build({ asset_types: ['workstation', 'server', 'workstation'] });
+
+        expect(sql).toContain(`"assets"."asset_type" in ('workstation', 'server')`);
+        expect(sql.match(/"assets"\."asset_type"/g)).toHaveLength(1);
+    });
+
+    it('excludes multi-type predicates for facet counts', () => {
+        const sql = build({ asset_types: ['workstation', 'server'], status: 'active' }, 'asset_type');
+
+        expect(sql).not.toContain('"assets"."asset_type"');
+        expect(sql).toContain(`"assets"."status" = 'active'`);
+    });
+
     it('clones the shared facet query before adding the page type filter', () => {
         const trx = compiler();
         const transaction = trx as unknown as Knex.Transaction;
@@ -104,7 +119,7 @@ describe('applyAssetListFilters SQL', () => {
             params: { asset_type: 'workstation', status: 'active', search: 'laptop' },
             exclude: 'asset_type',
         });
-        const listQuery = applyAssetTypeFilter(facetQuery.clone(), 'workstation');
+        const listQuery = applyAssetTypeFilter(facetQuery.clone(), ['workstation']);
         const facetSql = facetQuery.clone()
             .select('assets.asset_type')
             .count('assets.asset_id as count')
@@ -170,6 +185,26 @@ describe('applyAssetListFilters SQL', () => {
 });
 
 describe('AssetListFilterParams shape', () => {
+    it('filters on the last site audit verdict', () => {
+        expect(build({ last_audit_result: 'missing' })).toContain(`"assets"."last_audit_result" = 'missing'`);
+    });
+
+    it('treats "never audited" as a null last_audited_at, not a result value', () => {
+        const sql = build({ last_audit_result: 'never' });
+
+        expect(sql).toContain('"assets"."last_audited_at" is null');
+        expect(sql).not.toContain('"assets"."last_audit_result" =');
+    });
+
+    it('includes never-audited devices in "not audited in N days"', () => {
+        const sql = build({ not_audited_days: 90 });
+
+        // A device no audit has ever looked for is the staler case, not an
+        // exception to it.
+        expect(sql).toContain('"assets"."last_audited_at" is null');
+        expect(sql).toContain('"assets"."last_audited_at" <');
+    });
+
     it('omits paging, sorting and extension flags', () => {
         // Pagination and sorting never affect the filtered result set.
         const allowed = [
@@ -177,6 +212,7 @@ describe('AssetListFilterParams shape', () => {
             'location_id',
             'contact_name_id',
             'asset_type',
+            'asset_types',
             'status',
             'ownership',
             'in_custody',
@@ -186,10 +222,21 @@ describe('AssetListFilterParams shape', () => {
             'search',
             'agent_status',
             'rmm_managed',
+            'last_audit_result',
+            'not_audited_days',
         ];
         const rejected = ['page', 'pageSize', 'limit', 'offset', 'sort_by', 'sort_direction', 'include_extension_data'];
 
-        expect(allowed).toHaveLength(13);
+        expect(allowed).toHaveLength(16);
         expect(rejected.every((key) => !allowed.includes(key))).toBe(true);
+    });
+});
+
+describe('selectedAssetTypes', () => {
+    it('normalizes the single and multi-select params', () => {
+        expect(selectedAssetTypes({})).toEqual([]);
+        expect(selectedAssetTypes({ asset_type: 'server' })).toEqual(['server']);
+        expect(selectedAssetTypes({ asset_types: ['server', 'workstation', 'server'] })).toEqual(['server', 'workstation']);
+        expect(selectedAssetTypes({ asset_types: [] })).toEqual([]);
     });
 });

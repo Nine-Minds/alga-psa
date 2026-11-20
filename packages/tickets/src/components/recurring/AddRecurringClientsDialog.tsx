@@ -60,7 +60,7 @@ export function AddRecurringClientsDialog({
       const lookup = await searchClientsForPicker({ ids: [clientId], status: 'all' }).catch(() => null);
       const client = lookup?.clients.find((candidate) => candidate.client_id === clientId);
       setAddedIds((current) => [...current, clientId]);
-      setAddedNames((current) => [...current, client?.client_name ?? clientId]);
+      setAddedNames((current) => [...current, client?.client_name ?? t('recurring.clients.unnamedClient', 'Client')]);
       onAdded();
     } catch (error) {
       setAddError(error instanceof Error ? error.message : String(error));

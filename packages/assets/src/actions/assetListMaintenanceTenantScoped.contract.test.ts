@@ -34,7 +34,7 @@ describe('asset list and maintenance tenant-scoped query contract', () => {
 
         expect(listSection).toContain('joinAssetListRelations(trx, tenant)');
         expect(listSection).toContain("applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' })");
-        expect(listSection).toContain('applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type)');
+        expect(listSection).toContain('applyAssetTypeFilter(facetQuery.clone(), assetTypeFilter)');
         expect(listSection).not.toContain(".where('assets.tenant', tenant)");
         // The list root and every join carry the tenant predicate structurally.
         expect(listFilterSource).toContain("tenantDb(conn, tenant).table(table)");

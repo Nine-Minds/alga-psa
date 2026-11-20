@@ -1,5 +1,6 @@
 'use server';
 
+import { isDocumentAssociationCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
@@ -17,6 +18,7 @@ import {
   documentActionErrorFrom,
   type DocumentActionError,
 } from './documentActionErrors';
+import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -82,6 +84,9 @@ export const createBlockDocument = withAuth(async (
   if (!await hasPermission(user, 'document', 'create')) {
     return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
   }
+  if (input.entityType === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+    return permissionError('Permission denied: Cannot update assets');
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -92,6 +97,17 @@ export const createBlockDocument = withAuth(async (
 
     // Start transaction to ensure both document and block content are created atomically
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (input.entityId && input.entityType === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, input.entityId);
+        if (assetAuthorization) return assetAuthorization;
+      }
+      if (input.entityId && input.entityType && !await isDocumentAssociationCreateAllowed(trx, {
+        tenant,
+        user,
+        targets: [{ entityType: input.entityType, entityId: input.entityId }],
+      })) {
+        return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
+      }
       const documentId = uuidv4();
 
       // Create the document directly in the transaction
@@ -145,6 +161,8 @@ export const createBlockDocument = withAuth(async (
         block_data: input.block_data
       };
     });
+
+    if ('permissionError' in result) return result;
 
     if (createdAssociation) {
       try {

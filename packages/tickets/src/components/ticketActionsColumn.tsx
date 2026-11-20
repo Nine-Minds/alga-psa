@@ -2,11 +2,13 @@ import React from 'react';
 import type { ColumnDefinition, ITicketListItem } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { MoreVertical, Copy, LayoutTemplate } from 'lucide-react';
+import { MoreVertical, Copy, Users, LayoutTemplate } from 'lucide-react';
 
 interface CreateTicketActionsColumnOptions {
   t: (key: string, defaultValue: string) => string;
   onDuplicate: (ticketId: string) => void;
+  /** Opens the batch dialog (one copy per selected contact). The item is hidden when omitted. */
+  onBatchDuplicate?: (ticketId: string) => void;
   /** "Create template from ticket"; the item is only rendered when `canCreateTemplate` is true. */
   onCreateTemplate?: (ticketId: string) => void;
   canCreateTemplate?: boolean;
@@ -22,6 +24,7 @@ interface CreateTicketActionsColumnOptions {
 export function createTicketActionsColumn({
   t,
   onDuplicate,
+  onBatchDuplicate,
   onCreateTemplate,
   canCreateTemplate = false,
 }: CreateTicketActionsColumnOptions): ColumnDefinition<ITicketListItem> {
@@ -69,6 +72,18 @@ export function createTicketActionsColumn({
                 <Copy className="h-4 w-4 mr-2" />
                 {t('actions.duplicate', 'Duplicate')}
               </DropdownMenuItem>
+              {onBatchDuplicate && (
+                <DropdownMenuItem
+                  id="batch-duplicate-ticket-menu-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onBatchDuplicate(ticketId);
+                  }}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {t('actions.duplicateMultiple', 'Duplicate multiple…')}
+                </DropdownMenuItem>
+              )}
               {canCreateTemplate && onCreateTemplate && (
                 <DropdownMenuItem
                   id="create-template-ticket-menu-item"

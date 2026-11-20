@@ -2162,9 +2162,27 @@
   ],
   "forbiddenTerms": [
     {
+      "term": "auftrag",
+      "preferred": "Reihenfolge",
+      "enWhen": "\\{\\{orders?\\}\\}",
+      "reason": "Wrong sense for a sort position; Auftrag is a sales or work order. Where the English source interpolates {{order}} or {{orders}} the value is a display-order number, so the noun is Reihenfolge. Auftrag stays correct for sales-order copy (documents 'Auftrag Nr.'), whose sources carry no order placeholder, and compounds like Auftragsnummer never match this word-boundary ban."
+    },
+    {
+      "term": "befehl",
+      "preferred": "Reihenfolge",
+      "enWhen": "\\border\\b",
+      "reason": "Wrong sense for sequence/sort order; Befehl means a command. English 'Order' as a list/column header or sort field is Reihenfolge. Befehl remains correct only for Command (Befehlspalette, Sprachbefehle), whose English sources never contain 'order'."
+    },
+    {
       "term": "berufsverlauf",
       "preferred": "Jobverlauf",
       "reason": "False friend in the background-job monitor; Berufsverlauf means employment/career history."
+    },
+    {
+      "term": "bestellungen",
+      "preferred": "Reihenfolgennummern",
+      "enWhen": "\\{\\{orders?\\}\\}",
+      "reason": "Wrong sense when the English source interpolates {{orders}}: that list holds the display-order numbers already taken (Belegte Reihenfolgennummern). Bestellungen remains the domain term for Purchase Orders, whose sources carry no order placeholder."
     },
     {
       "term": "bucket",
@@ -2257,6 +2275,12 @@
       "preferred": "Angebot",
       "enWhen": "\\bquot(e|es|ed|ing)\\b",
       "reason": "Untranslated English leak for sales quotes."
+    },
+    {
+      "term": "reihenfolge anzeigen",
+      "preferred": "Anzeigereihenfolge",
+      "enWhen": "\\bdisplay order\\b",
+      "reason": "Reads as the imperative 'show the order'; the Display Order field label is the noun Anzeigereihenfolge, as used in every other namespace."
     },
     {
       "term": "tenant",
@@ -2378,6 +2402,7 @@
       "Array",
       "Asset",
       "Assets",
+      "Audits",
       "August",
       "Authorization: Bearer abc123\nX-Source: alga-psa",
       "Barcode (UPC/EAN)",
@@ -2427,6 +2452,7 @@
       "Fax",
       "Filter",
       "Firewall",
+      "Firmware",
       "Format",
       "Format: {{value}}",
       "{{size}} GB",
@@ -2475,6 +2501,7 @@
       "MAC (optional)",
       "macOS",
       "Manager",
+      "Markdown",
       "Marketing",
       "Meta",
       "Microsoft",
@@ -2504,6 +2531,7 @@
       "Onboarding",
       "Online",
       "online",
+      "Operator",
       "Option {{index}}",
       "Optional",
       "Optional:",
@@ -2521,6 +2549,7 @@
       "Pipeline",
       "Plan",
       "Port",
+      "Ports",
       "Portal",
       "portal.example.com",
       "primary",
@@ -2532,6 +2561,7 @@
       "QuickBooks CSV",
       "QuickBooks Online",
       "Radius",
+      "RAM",
       "RAM (GB)",
       "Realm",
       "Realm ID: {{id}}",
@@ -2543,6 +2573,7 @@
       "RMAs",
       "Router",
       "Sandbox",
+      "Scan",
       "Schema",
       "September",
       "Server",
@@ -2563,6 +2594,7 @@
       "Start (optional)",
       "Start *",
       "Status",
+      "Status:",
       "Story",
       "Stripe",
       "Support",
@@ -2586,6 +2618,7 @@
       "Test",
       "Text",
       "Ticket",
+      "Ticket {{number}}",
       "Tickets",
       "token",
       "Try/Catch",
@@ -2638,7 +2671,11 @@
       "Barcode",
       "Asset: {{name}}",
       "Ticket: {{number}}",
-      "RMA {{number}} · {{status}}"
+      "RMA {{number}} · {{status}}",
+      "{{actor}} • {{eventType}}",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "api",
