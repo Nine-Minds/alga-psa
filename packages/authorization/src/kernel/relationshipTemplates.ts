@@ -113,6 +113,11 @@ function whereInOrDeny(
   builder.whereIn(column, normalized);
 }
 
+function compileOwnPredicate(builder: Knex.QueryBuilder, ctx: RelationshipSqlContext): void {
+  if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(builder, ctx.subject.userId);
+  else builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+}
+
 interface RelationshipTemplateDef {
   matches(input: AuthorizationEvaluationInput): boolean;
   compileSql(builder: Knex.QueryBuilder, ctx: RelationshipSqlContext): void;
@@ -122,10 +127,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   own: {
     matches: (input) =>
       typeof input.record?.ownerUserId === 'string' && input.record.ownerUserId === input.subject.userId,
-    compileSql: (builder, ctx) => {
-      if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(builder, ctx.subject.userId);
-      else builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
-    },
+    compileSql: compileOwnPredicate,
   },
   assigned: {
     matches: (input) =>
@@ -147,22 +149,26 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.assigned.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orAssigned(this: Knex.QueryBuilder) {
+      builder.andWhere(function ownOrAssigned(this: Knex.QueryBuilder) {
+        this.where(function own(this: Knex.QueryBuilder) {
+          compileOwnPredicate(this, ctx);
+        }).orWhere(function orAssigned(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, [ctx.subject.userId]);
         });
+      });
     },
   },
   own_or_managed: {
     matches: (input) =>
       RELATIONSHIP_TEMPLATES.own.matches(input) || RELATIONSHIP_TEMPLATES.managed.matches(input),
     compileSql: (builder, ctx) => {
-      builder
-        .where(ctx.adapter.ownerColumn, ctx.subject.userId)
-        .orWhere(function orManaged(this: Knex.QueryBuilder) {
+      builder.andWhere(function ownOrManaged(this: Knex.QueryBuilder) {
+        this.where(function own(this: Knex.QueryBuilder) {
+          compileOwnPredicate(this, ctx);
+        }).orWhere(function orManaged(this: Knex.QueryBuilder) {
           ctx.adapter.applyAssignedUsers(this, ctx.subject.managedUserIds ?? []);
         });
+      });
     },
   },
   same_client: {
@@ -310,15 +316,9 @@ function compileBundleRuleSql(
     return { supported: true };
   }
 
-  // Redaction constraints change returned fields, not record eligibility. The
-  // resource search compiles only the read allow/deny predicate, matching the
-  // kernel's authorization decision while leaving label shaping to its caller.
-  if (rule.constraintKey === 'hide_sensitive_fields') {
-    return { supported: true };
-  }
-
-  // `not_self_approver` only constrains mutations; it never denies a read.
-  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver') {
+  // Redaction constraints and mutation-only constraints do not affect read
+  // eligibility. Continue below so a rule's relationship template still runs.
+  if (rule.constraintKey && !['hide_sensitive_fields', 'not_self_approver'].includes(rule.constraintKey)) {
     return { supported: false, reason: `unsupported bundle constraint ${rule.constraintKey}` };
   }
 
