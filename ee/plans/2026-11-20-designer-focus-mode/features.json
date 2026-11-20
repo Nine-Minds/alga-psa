@@ -453,7 +453,7 @@
     "prdRefs": [
       "FR-H7"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In the normal layout the quote editor's Design view fits the window with no page scroll on /msp/billing?tab=quote-templates and on /msp/quote-document-templates"
   },
   {
@@ -587,7 +587,7 @@
     "prdRefs": [
       "FR-I6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In the normal layout the document editor's Design view fits the window with no page scroll, and the header row wraps rather than overflows on a narrow window"
   },
   {

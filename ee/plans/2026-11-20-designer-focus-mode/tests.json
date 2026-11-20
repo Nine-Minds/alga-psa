@@ -1390,5 +1390,44 @@
     ],
     "implemented": true,
     "description": "Component: toggle on while the account value is still loading, then let it resolve to nothing (no saved row); the hook stays focused and true reaches the account"
+  },
+  {
+    "id": "T154",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F049",
+      "F063"
+    ],
+    "implemented": true,
+    "description": "Unit: the fitted designer height shrinks an overflowing area, grows one that leaves room unused, and stops at its floor on a very short window"
+  },
+  {
+    "id": "T155",
+    "commitGroup": "quote-editor-header",
+    "featureIds": [
+      "F049"
+    ],
+    "implemented": true,
+    "description": "Component: in the normal layout the quote editor's Design view carries a measured pixel height and tells the shell to fill it; Transforms and Preview keep their natural height"
+  },
+  {
+    "id": "T156",
+    "commitGroup": "document-editor-header",
+    "featureIds": [
+      "F063"
+    ],
+    "implemented": true,
+    "description": "Component: in the normal layout the document editor's Design view carries a measured pixel height and tells the shell to fill it; Transforms and Preview keep their natural height"
+  },
+  {
+    "id": "T157",
+    "commitGroup": "billing-shell-invoice",
+    "featureIds": [
+      "F030",
+      "F049",
+      "F063"
+    ],
+    "implemented": true,
+    "description": "Component: the billing DesignerShell asked to fill its parent drops the viewport calc height and the 480px minimum, with no surface above it"
   }
 ]
