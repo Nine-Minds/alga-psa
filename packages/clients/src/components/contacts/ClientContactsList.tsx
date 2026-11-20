@@ -334,7 +334,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     {
       title: t('clientContactsList.table.name', { defaultValue: 'Name' }),
       dataIndex: 'full_name',
-      width: '40%',
+      width: '30%',
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
           <ContactAvatar
@@ -418,7 +418,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         defaultValue: 'Phone number'
       }),
       dataIndex: 'default_phone_number',
-      width: '18%',
+      width: '15%',
       render: (value, record): React.ReactNode =>
         <PhoneText value={record.default_phone_number || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number} extension={record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.extension} defaultCountry={client.location_country_code} fallback={t('common.states.na', { defaultValue: 'N/A' })} />,
     },

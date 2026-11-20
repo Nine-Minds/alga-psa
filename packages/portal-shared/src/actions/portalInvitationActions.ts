@@ -1094,7 +1094,8 @@ export const getPortalInvitationStatesForClient = withAuth(async (
       joinOpenInvitations(scopedDb, query, trx);
       query
         .andWhere('c.client_id', normalizedClientId)
-        .groupBy('c.contact_name_id')
+        .groupBy('c.contact_name_id', 'c.full_name')
+        .orderBy('c.full_name', 'asc')
         .select('c.contact_name_id')
         .select(trx.raw('bool_or(u.user_id is not null) as has_portal_user'))
         .select(trx.raw(`${HAS_ACTIVE_INVITATION_SQL} as has_active_invitation`))
