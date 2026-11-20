@@ -288,7 +288,8 @@
     },
     "primary": {
       "title": "Email principal",
-      "description": "Este permanece o endereço padrão armazenado no registro do contato"
+      "description": "Este permanece o endereço padrão armazenado no registro do contato",
+      "keepOldEmail": "Manter {{email}} como email adicional"
     },
     "row": {
       "title": "Email adicional {{number}}",
