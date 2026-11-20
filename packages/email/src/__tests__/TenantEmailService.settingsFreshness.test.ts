@@ -68,7 +68,7 @@ vi.mock('../system/SystemEmailProviderFactory', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
-  getConnection: vi.fn(async () => ({})),
+  getConnection: vi.fn(async () => ({ transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) })),
   isTenantSuspended: vi.fn(async () => false),
   tenantDb: () => ({
     table: (table: string) => {
@@ -76,6 +76,7 @@ vi.mock('@alga-psa/db', () => ({
         const predicates: Array<[string, unknown]> = [];
         const query: any = {
           first: vi.fn(async () => runtime.settingsRow),
+          forUpdate: () => query,
           where: (column: string, value: unknown) => { predicates.push([column, value]); return query; },
           whereRaw: (_sql: string, bindings: unknown[]) => {
             predicates.push(['provider_configs', JSON.parse(String(bindings[0]))]);
@@ -318,18 +319,39 @@ describe('TenantEmailService settings freshness', () => {
     expect(runtime.initializedSettings[0].providerConfigs[0].config.password).toBe('legacy-password');
   });
 
-  it('does not bind a stale endpoint when a settings edit wins the compatibility compare-and-swap', async () => {
+  it('keeps the initial legacy binding across later endpoint changes and permits explicit replacement credentials', async () => {
     runtime.settingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
     delete runtime.settingsRow.provider_configs[0].config.__secretFingerprint;
-    runtime.concurrentSettingsRow = buildSettingsRow({ password: 'legacy-password', from: 'saved@example.test', fromName: '' });
-    runtime.concurrentSettingsRow.provider_configs[0].config.host = 'smtp.concurrent-change.test';
-    delete runtime.concurrentSettingsRow.provider_configs[0].config.__secretFingerprint;
 
-    const settings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', {} as any);
+    const testKnex = { transaction: async (operation: (trx: {}) => Promise<unknown>) => operation({}) } as any;
+    const settings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', testKnex);
+    const originalFingerprint = settings?.providerConfigs[0].config.__secretFingerprint;
+    runtime.settingsRow.provider_configs[0].config.host = 'smtp.concurrent-change.test';
 
-    expect(settings?.providerConfigs[0].config.host).toBe('smtp.concurrent-change.test');
-    expect(settings?.providerConfigs[0].config.password).toBe('legacy-password');
-    expect(settings?.providerConfigs[0].config.__secretFingerprint).toBeUndefined();
+    expect(settings?.providerConfigs[0].config.host).toBe('smtp.example.test');
+    expect(originalFingerprint).toBe(connectionFingerprint(settings!.providerConfigs[0].config, 'smtp', 'smtp-provider'));
+    const repeatedSettings = await TenantEmailService.getTenantEmailSettings('tenant-settings-freshness', testKnex);
+    expect(repeatedSettings?.providerConfigs[0].config.__secretFingerprint).toBe(originalFingerprint);
+
+    const sendResult = await TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general', to: 'client@example.test',
+      subject: 'Changed endpoint', html: '<p>Must reject</p>',
+    });
+    const testResult = await TenantEmailService.testConnection('tenant-settings-freshness');
+    expect(sendResult).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(testResult).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.smtpTransports).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
+
+    const replacement = buildSettingsRow({ password: 'replacement-password', from: 'saved@example.test', fromName: '' });
+    replacement.provider_configs[0].config.host = 'smtp.concurrent-change.test';
+    replacement.provider_configs[0].config.__secretFingerprint = connectionFingerprint(replacement.provider_configs[0].config, 'smtp', 'smtp-provider');
+    runtime.settingsRow = replacement;
+    await expect(TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+      tenantId: 'tenant-settings-freshness', mailClass: 'general', to: 'client@example.test',
+      subject: 'Replacement credential', html: '<p>Can send</p>',
+    })).resolves.toMatchObject({ success: true });
+    expect(runtime.sent.at(-1)?.config.password).toBe('replacement-password');
   });
 
   it('keeps a route display name ahead of the ticket board name', async () => {

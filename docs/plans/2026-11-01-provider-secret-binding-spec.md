@@ -130,10 +130,10 @@ do; the fingerprint stops every *other* path, which is where this class of bug r
   path — test 3 covers the parameterisation so an OAuth config cannot be broken by an SMTP
   rule.
 - **Existing configs have no fingerprint.** On first trusted settings load, the server
-  binds stored credentials to the identity in that persisted row using a compare-and-swap
-  update. Existing credentials remain usable without re-entry. A concurrent settings edit
-  wins the compare-and-swap and is loaded as-is, so the compatibility path cannot bind the
-  new endpoint using a stale row. The initial binding necessarily trusts the persisted
+  binds stored credentials to the identity in that persisted row while holding a transaction
+  row lock. Existing credentials remain usable without re-entry. Concurrent settings edits
+  serialize before or after this transition, so a stale read cannot bind the new endpoint.
+  The initial binding necessarily trusts the persisted
   endpoint/credential association at upgrade time; if it was already changed before this
   revision first loads it, the historical intended association cannot be recovered from
   the database alone.
