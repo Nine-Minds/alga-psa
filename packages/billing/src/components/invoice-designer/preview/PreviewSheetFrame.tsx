@@ -3,15 +3,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PREVIEW_SHEET_CLASS } from '../../../lib/invoice-template-ast/previewSheet';
+import { attachPreviewPan, resolvePreviewPanScroller, type PreviewPan } from './previewPan';
 import {
   computePreviewSheetScale,
+  PREVIEW_SHEET_GUTTER_PX as SHEET_GUTTER_PX,
   readPreviewSheetMetrics,
   type PreviewSheetFit,
   type PreviewZoomMode,
 } from './previewSheetScale';
 
-/** Body padding the server's screen-only sheet CSS puts around the sheet, per side. */
-const SHEET_GUTTER_PX = 24;
 /** Height budget a label is fitted into, and the fixed height of an unframed document preview. */
 const FIT_HEIGHT_PX = 640;
 /** A paginated document sheet carries its page number; a label sheet stands alone. */
@@ -82,14 +82,22 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
       setFrameHeight(contentHeight);
     }
   }, [zoomMode]);
+
+  // A sheet wider than the pane (100% on a narrow screen) is dragged into view rather than chased
+  // with a scrollbar that sits below every page of the document.
+  const panRef = useRef<PreviewPan | null>(null);
+  const relayout = useCallback(() => {
+    layout();
+    panRef.current?.refresh();
+  }, [layout]);
   // Observers outlive renders, so they call the CURRENT layout (current zoom mode), never a stale one.
-  const layoutRef = useRef(layout);
-  layoutRef.current = layout;
+  const layoutRef = useRef(relayout);
+  layoutRef.current = relayout;
 
   // Re-lay out when the zoom mode changes (the iframe document stays loaded).
   useEffect(() => {
-    layout();
-  }, [layout, html]);
+    relayout();
+  }, [relayout, html]);
 
   // Re-fit when the pane resizes.
   useEffect(() => {
@@ -100,12 +108,21 @@ export function PreviewSheetFrame({ html, title, zoomMode, onScaleChange, automa
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => () => {
+    panRef.current?.dispose();
+    panRef.current = null;
+  }, []);
+
   // Each srcdoc load is a fresh document: lay it out, and re-fit when it grows (late images, fonts).
-  // The observer dies with the document it watches.
+  // The observer dies with the document it watches, and so does the pan it is dragged by.
   const handleLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    panRef.current?.dispose();
+    panRef.current = doc ? attachPreviewPan(doc, resolvePreviewPanScroller(iframe)) : null;
     layoutRef.current();
-    const frameWindow = iframeRef.current?.contentWindow as (Window & { ResizeObserver?: typeof ResizeObserver }) | null;
-    const body = iframeRef.current?.contentDocument?.body;
+    const frameWindow = iframe?.contentWindow as (Window & { ResizeObserver?: typeof ResizeObserver }) | null;
+    const body = doc?.body;
     if (frameWindow?.ResizeObserver && body) {
       new frameWindow.ResizeObserver(() => layoutRef.current()).observe(body);
     }
