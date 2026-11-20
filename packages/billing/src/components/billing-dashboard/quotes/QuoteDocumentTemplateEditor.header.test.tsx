@@ -39,7 +39,11 @@ vi.mock('../../../actions/tenantBrandingPreview', () => ({
 }));
 
 vi.mock('../../invoice-designer/DesignerShell', () => ({
-  DesignerShell: () => <div data-automation-id="designer-shell-mock">Designer Shell</div>,
+  DesignerShell: ({ fillParent = false }: { fillParent?: boolean }) => (
+    <div data-automation-id="designer-shell-mock" data-fill-parent={String(fillParent)}>
+      Designer Shell
+    </div>
+  ),
 }));
 
 vi.mock('../../invoice-designer/transforms/TransformsWorkspace', () => ({
@@ -122,6 +126,27 @@ describe('quote layout editor header row', () => {
     expect(card.contains(byId('quote-template-name-input'))).toBe(true);
     expect(card.querySelector('[data-automation-id="quote-template-editor-visual-tab"]')).not.toBeNull();
     expect(card.querySelector('[data-automation-id="quote-template-editor-code-tab"]')).not.toBeNull();
+  });
+
+  it('sizes the Design view to the room left on the page instead of letting it scroll', async () => {
+    await renderEditor();
+
+    const designerArea = byId('quote-template-visual-designer');
+    expect(designerArea.style.height).not.toBe('');
+    expect(designerArea.className).toContain('min-h-0');
+    expect(
+      document.querySelector('[data-automation-id="designer-shell-mock"]')?.getAttribute('data-fill-parent')
+    ).toBe('true');
+  });
+
+  it('leaves the Transforms and Preview views at their natural height', async () => {
+    await renderEditor();
+
+    await userEvent.click(
+      document.querySelector('[data-automation-id="quote-designer-transforms-tab"]') as HTMLElement
+    );
+
+    await waitFor(() => expect(byId('quote-template-visual-designer').style.height).toBe(''));
   });
 
   it('calls onBack from the back navigation when it is given one', async () => {

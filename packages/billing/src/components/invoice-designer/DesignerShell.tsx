@@ -731,7 +731,15 @@ const CustomPageSizeFields: React.FC<{ size: CustomPageSize; onChange: (next: Cu
   );
 };
 
-export const DesignerShell: React.FC = () => {
+export interface DesignerShellProps {
+  /**
+   * Hosts that size the designer area themselves pass this, so the shell fills the box it is
+   * given instead of budgeting for page chrome it cannot see.
+   */
+  fillParent?: boolean;
+}
+
+export const DesignerShell: React.FC<DesignerShellProps> = ({ fillParent = false }) => {
   const { t } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -2517,12 +2525,12 @@ export const DesignerShell: React.FC = () => {
   return (
     // Sized so the editor page fits the window: the page never scrolls, so nothing
     // shifts under the pointer while editing (panels scroll inside themselves).
-    // In focus mode the host has already taken the window, so the shell fills what
-    // it is given instead of budgeting for chrome that is no longer there.
+    // In focus mode, or under a host that measured the room it has, the shell fills
+    // what it is given instead of budgeting for chrome that is no longer there.
     <div
       className={clsx(
         'relative flex flex-col border border-slate-200 rounded-lg overflow-hidden',
-        isFocusedSurface ? 'flex-1 min-h-0' : 'h-[calc(100vh-24.75rem)] min-h-[480px]'
+        isFocusedSurface || fillParent ? 'flex-1 min-h-0' : 'h-[calc(100vh-24.75rem)] min-h-[480px]'
       )}
     >
       <DesignerToolbar

@@ -21,6 +21,7 @@ import { runAuthoritativeQuoteTemplatePreview } from '../../../actions/quoteTemp
 import { getTenantBrandingForDocumentPreview } from '../../../actions/tenantBrandingPreview';
 import { getStandardQuoteTemplateAstByCode } from '../../../lib/quote-template-ast/standardTemplates';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
+import { DESIGNER_AREA_MIN_HEIGHT, useFitToAvailableHeight } from '../../invoice-designer/useFitToAvailableHeight';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import PaperInvoice from '../PaperInvoice';
 import { TemplateRenderer } from '../TemplateRenderer';
@@ -100,6 +101,14 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
   const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<VisualWorkspaceTab>('design');
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState<string | number>('320px');
+  const designerAreaRef = useRef<HTMLDivElement>(null);
+  // In the normal layout the Design view takes the room left under the header instead of
+  // guessing at the page chrome, so it ends where the page ends and nothing scrolls.
+  const designerAreaHeight = useFitToAvailableHeight(designerAreaRef, {
+    enabled: !focus.isFocused && editorTab === 'visual' && visualWorkspaceTab === 'design',
+    minHeight: DESIGNER_AREA_MIN_HEIGHT,
+  });
+  const designerFill = focus.isFocused || designerAreaHeight !== null ? 'flex min-h-0 flex-1 flex-col' : '';
 
   // Designer store
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
@@ -645,14 +654,16 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
 
         <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
           <div
-            className={`border rounded overflow-hidden bg-card ${fillHeight}`.trim()}
+            ref={designerAreaRef}
+            className={`border rounded overflow-hidden bg-card ${designerFill}`.trim()}
+            style={designerAreaHeight === null ? undefined : { height: designerAreaHeight }}
             id="quote-template-visual-designer"
           >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="quote-designer-visual-workspace-tabs"
-              className={fillHeight || undefined}
+              className={designerFill || undefined}
             >
               <TabsList>
                 <TabsTrigger value="design" data-automation-id="quote-designer-design-tab">{t('templateEditor.tabs.design', { defaultValue: 'Design' })}</TabsTrigger>
@@ -660,8 +671,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
                 <TabsTrigger value="preview" data-automation-id="quote-designer-preview-tab">{t('templateEditor.tabs.preview', { defaultValue: 'Preview' })}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className={`pt-3 ${fillHeight}`.trim()}>
-                <DesignerShell />
+              <TabsContent value="design" className={`pt-3 ${designerFill}`.trim()}>
+                <DesignerShell fillParent={designerAreaHeight !== null} />
               </TabsContent>
 
               <TabsContent

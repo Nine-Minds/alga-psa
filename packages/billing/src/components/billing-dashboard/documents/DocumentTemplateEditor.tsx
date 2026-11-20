@@ -43,6 +43,7 @@ import {
   isDocumentType,
 } from '../../../lib/document-templates/registry';
 import { DesignerShell } from '../../invoice-designer/DesignerShell';
+import { DESIGNER_AREA_MIN_HEIGHT, useFitToAvailableHeight } from '../../invoice-designer/useFitToAvailableHeight';
 import TransformsWorkspace from '../../invoice-designer/transforms/TransformsWorkspace';
 import { useInvoiceDesignerStore } from '../../invoice-designer/state/designerStore';
 import {
@@ -168,6 +169,14 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<VisualWorkspaceTab>('design');
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState<string | number>('320px');
+  const designerAreaRef = useRef<HTMLDivElement>(null);
+  // In the normal layout the Design view takes the room left under the header instead of
+  // guessing at the page chrome, so it ends where the page ends and nothing scrolls.
+  const designerAreaHeight = useFitToAvailableHeight(designerAreaRef, {
+    enabled: !focus.isFocused && editorTab === 'visual' && visualWorkspaceTab === 'design',
+    minHeight: DESIGNER_AREA_MIN_HEIGHT,
+  });
+  const designerFill = focus.isFocused || designerAreaHeight !== null ? 'flex min-h-0 flex-1 flex-col' : '';
 
   // Designer store
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
@@ -588,14 +597,16 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
         <TabsContent value="visual" className={`pt-4 space-y-3 ${fillHeight}`.trim()}>
           <div
-            className={`border rounded overflow-hidden bg-card ${fillHeight}`.trim()}
+            ref={designerAreaRef}
+            className={`border rounded overflow-hidden bg-card ${designerFill}`.trim()}
+            style={designerAreaHeight === null ? undefined : { height: designerAreaHeight }}
             id="document-template-visual-designer"
           >
             <Tabs
               value={visualWorkspaceTab}
               onValueChange={(value) => setVisualWorkspaceTab(value as VisualWorkspaceTab)}
               data-automation-id="document-designer-visual-workspace-tabs"
-              className={fillHeight || undefined}
+              className={designerFill || undefined}
             >
               <TabsList>
                 <TabsTrigger
@@ -621,8 +632,8 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="design" className={`pt-3 ${fillHeight}`.trim()}>
-                <DesignerShell />
+              <TabsContent value="design" className={`pt-3 ${designerFill}`.trim()}>
+                <DesignerShell fillParent={designerAreaHeight !== null} />
               </TabsContent>
 
               <TabsContent

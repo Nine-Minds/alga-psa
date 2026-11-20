@@ -63,6 +63,16 @@ describe('DesignerShell focus mode sizing', () => {
     );
   });
 
+  it('fills the box a host measured for it when asked to fill its parent', () => {
+    const { container } = render(<DesignerShell fillParent />);
+
+    const root = shellRoot(container);
+    expect(root.className).toContain('flex-1');
+    expect(root.className).toContain('min-h-0');
+    expect(root.className).not.toContain(VIEWPORT_HEIGHT);
+    expect(root.className).not.toContain('min-h-[480px]');
+  });
+
   it('fills its parent inside a focused surface, with no viewport height and no minimum', () => {
     const { container } = render(
       <DesignerFocusSurface id="designer-focus-surface" focused onFocusedChange={() => undefined}>
