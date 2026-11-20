@@ -17,6 +17,7 @@ const dbMocks = vi.hoisted(() => {
   let tail = Promise.resolve();
   return {
     failUpdate: false,
+    failCommit: false,
     updateHandler: null as null | ((patch: Record<string, any>) => Promise<void>),
     resetLock: () => { tail = Promise.resolve(); },
     transaction: async (callback: (transaction: any) => Promise<unknown>) => {
@@ -25,7 +26,20 @@ const dbMocks = vi.hoisted(() => {
       const previous = tail;
       tail = previous.then(() => held);
       await previous;
-      try { return await callback(fakeKnex); } finally { release(); }
+      const before = store.row;
+      try {
+        const result = await callback(fakeKnex);
+        if (dbMocks.failCommit) {
+          dbMocks.failCommit = false;
+          throw new Error('database rejected COMMIT');
+        }
+        return result;
+      } catch (error) {
+        store.row = before;
+        throw error;
+      } finally {
+        release();
+      }
     },
   };
 });
@@ -81,6 +95,8 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: vi.fn(() => ({
     table: () => ({
       where: () => ({
+        forShare() { return this; },
+        forUpdate() { return this; },
         first: async () => (store.row ? { ...store.row } : undefined),
         update: async (patch: Record<string, any>) => {
           if (dbMocks.updateHandler) await dbMocks.updateHandler(patch);
@@ -143,6 +159,7 @@ describe('connectStripeAction settings preservation', () => {
     stripeMocks.paymentMethodList.mockReset().mockResolvedValue({ data: [] });
     stripeMocks.chargeList.mockReset().mockResolvedValue({ data: [] });
     dbMocks.failUpdate = false;
+    dbMocks.failCommit = false;
     dbMocks.updateHandler = null;
     dbMocks.resetLock();
     store.row = {
@@ -200,7 +217,7 @@ describe('connectStripeAction settings preservation', () => {
     expect(stripeMocks.webhookRetrieve).toHaveBeenCalledWith('we_old');
     expect(stripeMocks.webhookList).toHaveBeenCalledTimes(1); // manifest permission probe only
     expect(stripeMocks.webhookList).toHaveBeenCalledWith({ limit: 1 });
-    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key', 'rk_test_replacement');
+    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate', 'rk_test_replacement');
     expect(secretMocks.set).not.toHaveBeenCalledWith('tenant-1', 'stripe_payment_webhook_secret', expect.anything());
   });
 
@@ -255,13 +272,14 @@ describe('connectStripeAction settings preservation', () => {
     expect(result.data.unavailableCapabilities).toContainEqual({ capability: 'saved-cards-auto-pay', permissionId: 'setup_intent_read' });
   });
 
-  it('restores the active API secret when the database fails after the vault write', async () => {
+  it.each(['failUpdate', 'failCommit'] as const)('keeps the old key active after %s', async (failure) => {
     const priorRow = { ...store.row!, configuration: { ...store.row!.configuration }, settings: { ...store.row!.settings } };
-    dbMocks.failUpdate = true;
+    dbMocks[failure] = true;
     const result = await (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_replacement' });
     expect(result.success).toBe(false);
-    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key', 'rk_test_replacement');
-    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key', 'sk_test_stored');
+    expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate', 'rk_test_replacement');
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('sk_test_stored');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key_alternate')).toBe(false);
     expect(store.row).toEqual(priorRow);
   });
 
@@ -283,13 +301,21 @@ describe('connectStripeAction settings preservation', () => {
     await started;
     const successfulRotation = (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_rotationb' });
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('rk_test_rotationa');
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('sk_test_stored');
     releaseFailedUpdate();
 
     const [failed, succeeded] = await Promise.all([failedRotation, successfulRotation]);
     expect(failed.success).toBe(false);
     expect(succeeded.success).toBe(true);
-    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('rk_test_rotationb');
+    expect(store.row!.credentials_vault_path).toBe('tenant/tenant-1/stripe_payment_secret_key_alternate');
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key_alternate')).toBe('rk_test_rotationb');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key')).toBe(false);
+    secretMocks.get.mockClear();
+    expect((await (testStripeConnectionAction as any)()).success).toBe(true);
+    expect(secretMocks.get).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key_alternate');
+    expect((await (connectStripeAction as any)(credentials)).success).toBe(true);
+    expect(store.row!.credentials_vault_path).toBe('tenant/tenant-1/stripe_payment_secret_key');
+    expect(vaultValues.has('tenant-1|stripe_payment_secret_key_alternate')).toBe(false);
   });
 
   it('preserves standard-key partial success when a non-permission webhook setup error occurs initially', async () => {

@@ -22,11 +22,11 @@ export const STRIPE_PERMISSION_MANIFEST: StripePermissionDefinition[] = [
   { id: 'checkout_session_write', access: 'write', writeImpliesRead: true, operations: ['checkout.sessions.create', 'checkout.sessions.expire'], capabilities: ['core-payments', 'saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'checkout_session_read', access: 'read', operations: ['checkout.sessions.retrieve', 'checkout.sessions.list'], capabilities: ['core-payments'], probe: { kind: 'list', operation: 'checkout.sessions.list' } },
   { id: 'customer_read', access: 'read', operations: ['customers.retrieve', 'customers.list'], capabilities: ['core-payments', 'saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'customers.list' } },
-  { id: 'customer_write', access: 'write', writeImpliesRead: true, operations: ['customers.create', 'customers.update'], capabilities: ['core-payments'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
+  { id: 'customer_write', access: 'write', writeImpliesRead: true, operations: ['customers.create', 'customers.update'], capabilities: ['core-payments', 'customer-import'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'payment_intent_read', access: 'read', operations: ['paymentIntents.retrieve', 'paymentIntents.search', 'paymentIntents.list'], capabilities: ['core-payments', 'saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentIntents.list' } },
   { id: 'payment_intent_write', access: 'write', writeImpliesRead: true, operations: ['paymentIntents.create'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'payment_method_read', access: 'read', operations: ['customers.listPaymentMethods', 'paymentMethods.retrieve', 'paymentMethods.list'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentMethods.list' } },
-  { id: 'payment_method_write', access: 'write', writeImpliesRead: true, operations: ['paymentMethods.detach', 'paymentMethods.update'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
+  { id: 'payment_method_write', access: 'write', writeImpliesRead: true, operations: ['paymentMethods.detach', 'paymentMethods.update'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'setup_intent_read', access: 'read', operations: ['setupIntents.list', 'setupIntents.retrieve'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'setupIntents.list' } },
   { id: 'charge_read', access: 'read', operations: ['charges.retrieve', 'charges.list'], capabilities: ['core-payments'], probe: { kind: 'list', operation: 'charges.list' } },
 ];
@@ -71,6 +71,11 @@ export function withStripePermissionErrors<T extends object>(client: T): T {
       const value = Reflect.get(current, property, current);
       if (typeof value === 'function') {
         const operation = permissionOperation ?? [...path, String(property)].join('.');
+        // Await/then on an SDK list consumes the first page directly.
+        if (permissionOperation && (property === 'then' || property === 'catch' || property === 'finally')) {
+          const firstPage = (current as Promise<unknown>).catch((error) => { throw translate(error, operation); });
+          return firstPage[property].bind(firstPage);
+        }
         return function (this: unknown, ...args: unknown[]) {
           let result: unknown;
           try { result = Reflect.apply(value, current, args); }

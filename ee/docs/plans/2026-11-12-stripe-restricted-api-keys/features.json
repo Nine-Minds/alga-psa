@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "connectStripeAction succeeds with missing saved-cards-auto-pay or customer-import permissions and returns those capabilities as unavailable with the permission names",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Connect outcome"
     ]

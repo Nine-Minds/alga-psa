@@ -74,9 +74,11 @@ The permission names below were checked against Stripe's API permissions referen
 | Saved cards and auto-pay | `payment_intent_read` | Read | `paymentIntents.list`, `paymentIntents.search` |
 | Saved cards and auto-pay | `payment_intent_write` | Write | `paymentIntents.create` (checked on first use) |
 | Saved cards and auto-pay | `payment_method_write` | Write | `paymentMethods.detach`, `paymentMethods.update` (checked on first use) |
+| Saved cards and auto-pay | `setup_intent_read` | Read | `setupIntents.list`, `setupIntents.retrieve` |
+| Customer import | `customer_write` | Write | `customers.update` (checked on first use) |
+| Customer import | `payment_method_write` | Write | `paymentMethods.update` (checked on first use) |
 | Customer import | `customer_read` | Read | `customers.retrieve`, `customers.list` |
 | Customer import | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve`, `paymentMethods.list` |
-| Saved cards and auto-pay | `setup_intent_read` | Read | `setupIntents.list`, `setupIntents.retrieve` |
 | Customer import | `setup_intent_read` | Read | `setupIntents.list`, `setupIntents.retrieve` |
 | Customer import | `payment_intent_read` | Read | `paymentIntents.list` |
 

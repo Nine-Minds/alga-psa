@@ -43,6 +43,17 @@ describe('StripePaymentProvider paginated permission handling', () => {
     expect(requests).toHaveLength(2);
   });
 
+  it('names customer import when Stripe denies a customer or card metadata update', async () => {
+    const provider = providerWithTransport(() => response({ error: { message: 'Forbidden.' } }, 403));
+    await expect(provider.updateCustomerMetadata('cus_1', {}, 'import-row')).rejects.toThrow(/customer-import.*customer_write/);
+    await expect(provider.updateSavedPaymentMethodMetadata('pm_1', {})).rejects.toThrow(/customer-import.*payment_method_write/);
+  });
+
+  it('translates a denied first page when a provider operation awaits the SDK result directly', async () => {
+    const provider = providerWithTransport(() => response({ error: { message: 'Forbidden.' } }, 403));
+    await expect(provider.retrieveAttemptPaymentIntent('attempt_1')).rejects.toThrow('payment_intent_read');
+  });
+
   it('loads a customer import snapshot through SDK pagination', async () => {
     const provider = providerWithTransport((url) => {
       if (url.pathname === '/v1/customers/cus_1') return response(customer);

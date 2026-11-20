@@ -41,7 +41,7 @@
     "featureIds": [
       "F012"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T006",
