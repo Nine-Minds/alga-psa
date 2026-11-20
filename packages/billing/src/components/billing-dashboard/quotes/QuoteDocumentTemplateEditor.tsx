@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Editor } from '@monaco-editor/react';
-import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -525,68 +525,99 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
     }
   };
 
+  // One compact header row (back, title, name, version, saved status, actions) leaves the rest
+  // of the window to the designer, exactly as the invoice layout editor does, so the page never
+  // scrolls while editing and nothing the job needs sits below the fold.
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
+    <Card>
+      <CardHeader className="pb-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button id="quote-template-editor-back" variant="soft" onClick={() => handleBack()}>
+            {t('templateEditor.actions.back', { defaultValue: 'Back to Quote Layouts' })}
+          </Button>
+          <h2 className="min-w-0 max-w-[20rem] truncate text-lg font-semibold">
             {isNewTemplate
               ? t('templateEditor.headings.newLayout', { defaultValue: 'New Quote Layout' })
-              : t('templateEditor.headings.editLayout', { defaultValue: 'Edit Quote Layout' })}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('templateEditor.description', {
-              defaultValue: 'Design the quote layout using the visual editor, then preview with sample data.',
-            })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button id="quote-template-editor-back" variant="outline" onClick={() => handleBack()}>
-            {t('templateEditor.actions.backToLayouts', { defaultValue: 'Back to Layouts' })}
-          </Button>
-          <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
-            {isSaving
-              ? t('common.states.saving', { defaultValue: 'Saving...' })
-              : t('templateEditor.actions.saveLayout', { defaultValue: 'Save Layout' })}
-          </Button>
-        </div>
-      </div>
-
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t('templateEditor.title', { defaultValue: 'Quote Layout Editor' })}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('templateEditor.fields.layoutDetails', { defaultValue: 'Layout Details' })}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+              : t('templateEditor.titles.edit', {
+                defaultValue: 'Edit Layout: {{name}}',
+                name: template?.name || templateId,
+              })}
+          </h2>
+          <div className="flex min-w-[260px] flex-1 items-center gap-2">
+            <label
+              htmlFor="quote-template-name-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('templateEditor.fields.templateName', { defaultValue: 'Template Name' })}
+            </label>
             <Input
+              id="quote-template-name-input"
               value={template?.name || ''}
               onChange={(event) => setTemplate((current) => ({ ...(current ?? {}), name: event.target.value }))}
               placeholder={t('templateEditor.placeholders.templateName', { defaultValue: 'Quote Template' })}
               disabled={isLoading}
+              containerClassName="flex-1"
             />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
-            {t('templateEditor.fields.version', { defaultValue: 'Version' })}
+          </div>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="quote-template-version-input"
+              className="whitespace-nowrap text-sm font-medium text-[rgb(var(--color-text-700))]"
+            >
+              {t('templateEditor.fields.version', { defaultValue: 'Version' })}
+            </label>
             <Input
+              id="quote-template-version-input"
               type="number"
               min="1"
               step="1"
               value={String(template?.version || 1)}
               onChange={(event) => setTemplate((current) => ({ ...(current ?? {}), version: Math.max(1, Number(event.target.value) || 1) }))}
               disabled={isLoading}
+              containerClassName="w-20"
             />
-          </label>
-        </CardContent>
-      </Card>
-
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              id="quote-template-save-status"
+              className="text-xs text-muted-foreground"
+              aria-live="polite"
+              title={template?.created_at
+                ? t('templateEditor.fields.created', {
+                  defaultValue: 'Created {{time}}',
+                  time: formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : undefined}
+            >
+              {template?.updated_at
+                ? t('templateEditor.fields.savedAt', {
+                  defaultValue: 'Saved {{time}}',
+                  time: formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' }),
+                })
+                : t('templateEditor.fields.notSaved', { defaultValue: 'Not saved yet' })}
+            </span>
+            <Button
+              id="quote-template-editor-close"
+              variant="outline"
+              onClick={() => handleBack()}
+              disabled={isLoading}
+            >
+              {t('common.actions.close', { defaultValue: 'Close' })}
+            </Button>
+            <Button id="quote-template-editor-save" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
+              {isSaving
+                ? t('common.states.saving', { defaultValue: 'Saving...' })
+                : t('templateEditor.actions.saveLayout', { defaultValue: 'Save Layout' })}
+            </Button>
+          </div>
+        </div>
+        {error ? (
+          <Alert variant="destructive" className="mt-2" id="quote-template-editor-error-alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardHeader>
+      <CardContent className="pt-0">
       <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as EditorTab)} className="space-y-4">
         <TabsList>
           <TabsTrigger value="visual" data-automation-id="quote-template-editor-visual-tab">{t('templateEditor.tabs.visual', { defaultValue: 'Visual' })}</TabsTrigger>
@@ -844,18 +875,8 @@ const QuoteDocumentTemplateEditor: React.FC<QuoteDocumentTemplateEditorProps> = 
           </div>
         </TabsContent>
       </Tabs>
-
-      <CardFooter className="flex justify-between items-center gap-2 px-0">
-        <div className="text-sm text-muted-foreground">
-          {template?.created_at && (
-            <p>{t('templateEditor.footer.created', { defaultValue: 'Created:' })} {formatDate(template.created_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          )}
-          {template?.updated_at && (
-            <p>{t('templateEditor.footer.lastUpdated', { defaultValue: 'Last Updated:' })} {formatDate(template.updated_at, { dateStyle: 'medium', timeStyle: 'short' })}</p>
-          )}
-        </div>
-      </CardFooter>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Tillbaka till layouter",
+      "back": "Tillbaka till offertlayouter",
       "rerun": "Kör igen",
       "saveLayout": "Spara layout"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Kopia av {{name}}",
       "standardTemplate": "Standardmall"
     },
-    "title": "Offertlayoutredigerare",
-    "description": "Utforma offertlayouten i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
     "errors": {
       "exportAst": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
       "load": "Det gick inte att läsa in redigeraren för offertmallar",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Det gick inte att läsa in offertdetaljerna."
     },
     "fields": {
-      "layoutDetails": "Layoutdetaljer",
+      "created": "Skapad {{time}}",
+      "notSaved": "Inte sparad än",
+      "savedAt": "Sparad {{time}}",
       "templateName": "Mallnamn",
       "version": "Version"
     },
-    "footer": {
-      "created": "Skapad:",
-      "lastUpdated": "Senast uppdaterad:"
-    },
     "headings": {
-      "editLayout": "Redigera offertlayout",
       "newLayout": "Ny offertlayout"
     },
     "placeholders": {
@@ -865,6 +860,9 @@
       "preview": "Förhandsgranskning",
       "transforms": "Transformeringar",
       "visual": "Visuell"
+    },
+    "titles": {
+      "edit": "Redigera layout: {{name}}"
     }
   },
   "templatesPage": {

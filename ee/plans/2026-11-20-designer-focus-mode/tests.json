@@ -648,7 +648,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the quote editor renders no Layout Details heading, no description paragraph and no Created / Last Updated footer"
   },
   {
@@ -657,7 +657,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the header row and the Visual / Code tabs are inside one card"
   },
   {
@@ -666,7 +666,7 @@
     "featureIds": [
       "F041"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: clicking #quote-template-editor-back calls onBack when given"
   },
   {
@@ -675,7 +675,7 @@
     "featureIds": [
       "F041"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: without onBack, clicking #quote-template-editor-back navigates to /msp/billing?tab=quote-templates"
   },
   {
@@ -684,7 +684,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: an existing layout shows 'Edit Layout: <name>' and the title follows the name as it is typed"
   },
   {
@@ -693,7 +693,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a new layout shows 'New Quote Layout'"
   },
   {
@@ -702,7 +702,7 @@
     "featureIds": [
       "F043"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #quote-template-name-input is in the header, shows the loaded name, accepts typing, and is disabled while loading"
   },
   {
@@ -711,7 +711,7 @@
     "featureIds": [
       "F044"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #quote-template-version-input shows the loaded version and clamps 0, negative and non-numeric input to 1"
   },
   {
@@ -720,7 +720,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the saved status shows the formatted updated_at for a saved layout and 'Not saved yet' for a new one"
   },
   {
@@ -729,7 +729,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: after a successful save the saved status shows the new time"
   },
   {
@@ -738,7 +738,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the saved status has aria-live=\"polite\" and the created date in its title"
   },
   {
@@ -747,7 +747,7 @@
     "featureIds": [
       "F046"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #quote-template-editor-close runs the same back behaviour as the back navigation"
   },
   {
@@ -756,7 +756,7 @@
     "featureIds": [
       "F046"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: #quote-template-editor-save is disabled while saving and while loading, and saves the edited name and version"
   },
   {
@@ -765,7 +765,7 @@
     "featureIds": [
       "F047"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: a failed load renders the error alert inside the card header"
   },
   {
@@ -774,7 +774,7 @@
     "featureIds": [
       "F050"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: every header string the quote editor uses resolves in each production locale of msp/quotes and in xx / yy"
   },
   {
@@ -783,7 +783,7 @@
     "featureIds": [
       "F050"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contract: msp/quotes no longer carries the description, layoutDetails and footer keys, and no source file references them"
   },
   {
@@ -792,7 +792,7 @@
     "featureIds": [
       "F051"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the quote editor existingQuote and tenantBranding suites pass against the reorganised editor"
   },
   {
@@ -801,7 +801,7 @@
     "featureIds": [
       "F051"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: opening with a standardCode pre-fills the name from that standard layout in the header input"
   },
   {

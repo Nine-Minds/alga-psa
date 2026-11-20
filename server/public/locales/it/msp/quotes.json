@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Torna ai layout",
+      "back": "Torna ai layout di preventivo",
       "rerun": "Rieseguire",
       "saveLayout": "Salva layout"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Copia di {{name}}",
       "standardTemplate": "Modello standard"
     },
-    "title": "Editor del layout del preventivo",
-    "description": "Progetta il layout del preventivo utilizzando l'editor visivo, quindi visualizza l'anteprima con dati di esempio.",
     "errors": {
       "exportAst": "Impossibile esportare il modello AST dall'area di lavoro visiva: {{message}}",
       "load": "Impossibile caricare l'editor del modello di preventivo",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Caricamento dei dettagli del preventivo non riuscito."
     },
     "fields": {
-      "layoutDetails": "Dettagli della disposizione",
+      "created": "Creato {{time}}",
+      "notSaved": "Non ancora salvato",
+      "savedAt": "Salvato {{time}}",
       "templateName": "Nome del modello",
       "version": "Versione"
     },
-    "footer": {
-      "created": "Creato:",
-      "lastUpdated": "Ultimo aggiornamento:"
-    },
     "headings": {
-      "editLayout": "Modifica layout preventivo",
       "newLayout": "Nuovo layout del preventivo"
     },
     "placeholders": {
@@ -865,6 +860,9 @@
       "preview": "Anteprima",
       "transforms": "Si trasforma",
       "visual": "Visivo"
+    },
+    "titles": {
+      "edit": "Modifica layout: {{name}}"
     }
   },
   "templatesPage": {

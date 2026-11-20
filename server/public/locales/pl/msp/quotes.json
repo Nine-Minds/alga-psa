@@ -796,7 +796,7 @@
   },
   "templateEditor": {
     "actions": {
-      "backToLayouts": "Powrót do układów",
+      "back": "Powrót do układów ofert",
       "rerun": "Ponowne odtworzenie",
       "saveLayout": "Zapisz układ"
     },
@@ -805,8 +805,6 @@
       "copyOf": "Kopia {{name}}",
       "standardTemplate": "Standardowy szablon"
     },
-    "title": "Edytor układu wyceny",
-    "description": "Zaprojektuj układ oferty za pomocą edytora wizualnego, a następnie wyświetl podgląd z przykładowymi danymi.",
     "errors": {
       "exportAst": "Nie udało się wyeksportować szablonu AST z wizualnego obszaru roboczego: {{message}}",
       "load": "Nie udało się załadować edytora szablonów ofert",
@@ -819,16 +817,13 @@
       "quoteDetailLoad": "Nie udało się załadować szczegółów wyceny."
     },
     "fields": {
-      "layoutDetails": "Szczegóły układu",
+      "created": "Utworzono {{time}}",
+      "notSaved": "Jeszcze nie zapisano",
+      "savedAt": "Zapisano {{time}}",
       "templateName": "Nazwa szablonu",
       "version": "Wersja"
     },
-    "footer": {
-      "created": "Stworzony:",
-      "lastUpdated": "Ostatnia aktualizacja:"
-    },
     "headings": {
-      "editLayout": "Edytuj układ oferty",
       "newLayout": "Nowy układ wyceny"
     },
     "placeholders": {
@@ -865,6 +860,9 @@
       "preview": "Zapowiedź",
       "transforms": "Transformuje",
       "visual": "Wizualny"
+    },
+    "titles": {
+      "edit": "Edytuj układ: {{name}}"
     }
   },
   "templatesPage": {

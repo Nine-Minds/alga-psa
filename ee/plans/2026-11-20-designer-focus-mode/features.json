@@ -364,7 +364,7 @@
     "prdRefs": [
       "FR-H1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuoteDocumentTemplateEditor renders as one Card with a compact header row and the Visual / Code tabs in its content; the page title block, description paragraph, Layout Details card and footer are removed"
   },
   {
@@ -375,7 +375,7 @@
       "FR-H3",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The header row starts with back navigation labelled Back to Quote Layouts, keeping id quote-template-editor-back and using the editor's existing back behaviour (onBack, else the quote layouts tab)"
   },
   {
@@ -384,7 +384,7 @@
     "prdRefs": [
       "FR-H2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The title is a compact heading reading 'Edit Layout: <name>' for an existing layout and 'New Quote Layout' for a new one, and truncates instead of wrapping the row"
   },
   {
@@ -395,7 +395,7 @@
       "FR-H4",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The Template Name input sits inline in the header with id quote-template-name-input, takes the spare width, and is disabled while loading"
   },
   {
@@ -406,7 +406,7 @@
       "FR-H4",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The Version input sits inline in the header as a narrow number input with id quote-template-version-input, clamped to integers of at least 1, disabled while loading"
   },
   {
@@ -415,7 +415,7 @@
     "prdRefs": [
       "FR-H5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The saved status shows 'Saved <time>' from updated_at or 'Not saved yet', has aria-live polite, and carries the created date as its tooltip"
   },
   {
@@ -426,7 +426,7 @@
       "FR-H3",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Close (id quote-template-editor-close) and Save Layout (id quote-template-editor-save) sit at the right of the row; Close uses the back behaviour; Save is disabled while saving or loading"
   },
   {
@@ -435,7 +435,7 @@
     "prdRefs": [
       "FR-H6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "A load or save error alert renders inside the card header, under the row"
   },
   {
@@ -444,7 +444,7 @@
     "prdRefs": [
       "FR-H2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "On a narrow window the header row wraps onto further lines; nothing overflows or is clipped"
   },
   {
@@ -462,7 +462,7 @@
     "prdRefs": [
       "NFR-4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "msp/quotes has the new header strings (back to quote layouts, title with name, saved at, not saved yet, close) in every production locale and both pseudo-locales; strings used only by the removed description, details card and footer are deleted"
   },
   {
@@ -471,7 +471,7 @@
     "prdRefs": [
       "FR-H8"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Loading an existing layout, creating one from a standard code, saving, and the sample / existing-quote preview behave as before the reorganisation"
   },
   {
