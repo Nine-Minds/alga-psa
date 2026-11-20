@@ -1267,8 +1267,19 @@ export class UserService extends BaseService<IUser> {
     await this.ensurePermission(context, 'user', 'update');
     
     const { knex } = await this.getKnex();
+    let changedUserIds: string[] = [];
 
-    return withTransaction(knex, async (trx) => {
+    const summary = await withTransaction(knex, async (trx) => {
+      // The users whose state this call actually flips, read before any write:
+      // these are the ones that get the board cleanup and the USER_UPDATED event.
+      const changed: Array<{ user_id: string }> = await this.restrictToInteractiveUsers(
+        this.buildTenantScopedQuery(trx, context), false
+      )
+        .whereIn('user_id', userIds)
+        .where({ is_inactive: !deactivate })
+        .select('user_id');
+      changedUserIds = changed.map((row) => row.user_id);
+
       // Reactivating internal users occupies seats: admit them one at a time
       // under the seat lock (each check sees the previous activation);
       // an over-limit request fails the whole operation (the transaction rolls back).
@@ -1317,6 +1328,14 @@ export class UserService extends BaseService<IUser> {
           updated_at: knex.raw('now()')
         });
 
+      // Same cleanup the settings UI's deactivate does: an inactive user must
+      // not stay a board's default assignee, or new tickets keep landing on them.
+      if (deactivate && changedUserIds.length > 0) {
+        await tenantDb(trx, context.tenant).table('boards')
+          .whereIn('default_assigned_to', changedUserIds)
+          .update({ default_assigned_to: null });
+      }
+
       // Log bulk activity
       for (const userId of userIds) {
         await this.logUserActivity({
@@ -1337,6 +1356,40 @@ export class UserService extends BaseService<IUser> {
         results: []
       };
     });
+
+    // After commit, one USER_UPDATED per user whose state changed, as the
+    // settings UI's deactivate publishes. Best effort: the change is committed.
+    await this.publishBulkActivationEvents(changedUserIds, context);
+
+    return summary;
+  }
+
+  private async publishBulkActivationEvents(userIds: string[], context: ServiceContext): Promise<void> {
+    if (userIds.length === 0) return;
+
+    const { publishNonCatalogWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    const actor = context.userId ? { actorType: 'USER' as const, actorUserId: context.userId } : undefined;
+    for (const userId of userIds) {
+      const occurredAt = new Date().toISOString();
+      try {
+        await publishNonCatalogWorkflowEvent({
+          eventType: 'USER_UPDATED',
+          payload: {
+            userId,
+            changedFields: ['is_inactive'],
+            actorUserId: context.userId,
+            updatedAt: occurredAt,
+          },
+          ctx: { tenantId: context.tenant, occurredAt, actor },
+          idempotencyKey: `user_bulk_activation:${userId}:${occurredAt}`,
+        });
+      } catch (error) {
+        logger.error('Bulk user (de)activation: USER_UPDATED event could not be published', {
+          user_id: userId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
   }
 
   /**
