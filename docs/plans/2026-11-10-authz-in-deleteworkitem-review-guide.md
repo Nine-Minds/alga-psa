@@ -46,6 +46,16 @@ npm run typecheck
 
 The latest implementation checks are recorded as `implement-integration.log` (7 passed), `implement-authz.log` (5 passed), `implement-typecheck.log` (exit 0), and `implement-vulnerable-action.log` (7 expected failures) in the review artifact directory above.
 
+Revalidated on 2026-11-20 against implementation commit `9413447d2377fa9d296c8a5996d15e80954301d3`. All three commands exited 0:
+
+| Working directory | Command | Result | Full output in the review artifact directory |
+| --- | --- | --- | --- |
+| `server` | `TEST_DB_NAME=deleteworkitem_hand3_test DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/timeEntryWorkItemDeletionBilling.integration.test.ts --coverage.enabled=false` | 7 passed; no skipped tests | `hand3-integration.log` |
+| `packages/scheduling` | `npx vitest run tests/timeEntryWorkItemActions.deleteWorkItem.authz.test.ts --coverage.enabled=false` | 5 passed; no skipped tests | `hand3-authz.log` |
+| `packages/scheduling` | `npm run typecheck` | `tsc --noEmit`, exit 0 | `hand3-typecheck.log` |
+
+The isolated database name above keeps this run separate from other checkouts. The existing implementation and behavioral tests required no further changes during revalidation. Browser validation was not repeated in this run.
+
 Implementation references:
 
 - [Action validation, permission, sheet lookup, delegation, locked selection, and core calls](../../packages/scheduling/src/actions/timeEntryWorkItemActions.ts#L250-L315).
