@@ -1,6 +1,14 @@
 import { capabilityFeatureFlag, forcedValue } from '@alga-psa/core/capability';
 import { isFeatureFlagEnabled } from '@alga-psa/core/features';
 
+export type CoManagedPurchaseBlockedReason =
+  | 'customer_unverified'
+  | 'no_current_pro'
+  | 'offer_paused'
+  | 'offer_changed'
+  | 'misconfigured'
+  | 'temporarily_unavailable';
+
 /**
  * Is anything configured to SELL co-managed seats? Platform (EE) code registers a probe backed by
  * the shared Stripe offer catalog. This is NEW-SALE eligibility, not recognition: a managed offer

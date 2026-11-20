@@ -6,7 +6,7 @@ import { isCoManagedPurchaseFeatureEnabled, isCoManagedPurchaseSurfaceOpen } fro
 import { getStripeService } from '../stripe/StripeService';
 import { coManagedPurchaseBlockedReason } from '../stripe/coManagedPurchaseErrors';
 import '../stripe/offerCatalog/surfaceProbe';
-import { OfferTermsChangedError, OfferUnavailableError } from '../stripe/offerCatalog/types';
+import { CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, OfferUnavailableError } from '../stripe/offerCatalog/types';
 
 /** Actionable, browser-safe outcome: the terms changed (show a fresh review) or new sales are paused. */
 export type CoManagedOfferOutcome =
@@ -22,21 +22,18 @@ function offerOutcome(error: unknown): CoManagedOfferOutcome | null {
   return null;
 }
 
-// LEVERAGE: pattern co-managed-purchase-admission — every purchase entry point repeats "internal user + account_management:update + surface open"; a shared guard belongs below.
-async function requirePurchaser(user: { user_type: string }, tenant: string, checkOfferAvailability = true): Promise<void> {
+async function requirePurchaser(user: { user_type: string }): Promise<void> {
   if (user.user_type !== 'internal' || !await hasPermission(user as never, 'account_management', 'update')) throw new Error('Permission denied');
-  // Preview keeps the reason returned by current catalog terms; all purchase attempts still require a sellable offer.
-  const open = checkOfferAvailability
-    ? await isCoManagedPurchaseSurfaceOpen(tenant)
-    : await isCoManagedPurchaseFeatureEnabled(tenant);
-  if (!open) throw new Error('Co-managed purchasing is not available');
 }
 
 export const previewCoManagedSeatsAction = withAuth(async (user, { tenant }, quantity: number) => {
-  // The quote resolver classifies a paused or unavailable offer for an authorized purchaser.
-  await requirePurchaser(user, tenant, false);
+  await requirePurchaser(user);
+  if (!await isCoManagedPurchaseFeatureEnabled(tenant)) throw new Error('Co-managed purchasing is not available');
   try {
-    const quote = await getStripeService().previewCoManagedSeats(tenant, quantity);
+    const service = getStripeService();
+    const catalog = await service.getOfferCatalog();
+    await catalog.requireSellableOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
+    const quote = await service.previewCoManagedSeats(tenant, quantity);
     return { kind: 'quote', ...quote } as const;
   } catch (error) {
     // Expected failures cross the server-action boundary as codes. Provider details stay on the server.
@@ -47,7 +44,8 @@ export const previewCoManagedSeatsAction = withAuth(async (user, { tenant }, qua
 });
 
 export const purchaseCoManagedSeatsAction = withAuth(async (user, { tenant }, input: { quantity: number; operationId: string; offerRef?: string }) => {
-  await requirePurchaser(user, tenant);
+  await requirePurchaser(user);
+  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) throw new Error('Co-managed purchasing is not available');
   const service = getStripeService();
   try {
     const result = await service.purchaseCoManagedSeats(tenant, input.quantity, input.operationId, input.offerRef);

@@ -1,14 +1,7 @@
-import { CoManagedProSubscriptionRequiredError } from './coManagedSubscription';
+import Stripe from 'stripe';
+import type { CoManagedPurchaseBlockedReason } from '@alga-psa/licensing';
 import { OfferTermsChangedError, OfferUnavailableError } from './offerCatalog/types';
 import { StripeOwnershipError } from './stripeCustomerOwnership';
-
-export type CoManagedPurchaseBlockedReason =
-  | 'customer_unverified'
-  | 'no_current_pro'
-  | 'offer_paused'
-  | 'offer_changed'
-  | 'misconfigured'
-  | 'temporarily_unavailable';
 
 /** A server-owned, browser-safe classification for expected quote failures. */
 export class CoManagedPurchaseBlockedError extends Error {
@@ -22,7 +15,8 @@ export class CoManagedPurchaseBlockedError extends Error {
 export function coManagedPurchaseBlockedReason(error: unknown): CoManagedPurchaseBlockedReason | null {
   if (error instanceof CoManagedPurchaseBlockedError) return error.reason;
   if (error instanceof StripeOwnershipError) return 'customer_unverified';
-  if (error instanceof CoManagedProSubscriptionRequiredError) return 'no_current_pro';
+  if (error instanceof Stripe.errors.StripeConnectionError || error instanceof Stripe.errors.StripeAPIError ||
+      error instanceof Stripe.errors.StripeRateLimitError) return 'temporarily_unavailable';
   if (error instanceof OfferTermsChangedError) return 'offer_changed';
   if (error instanceof OfferUnavailableError) {
     if (error.reason === 'no_current_version') return 'offer_paused';

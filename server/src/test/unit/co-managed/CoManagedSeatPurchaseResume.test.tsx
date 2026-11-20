@@ -53,7 +53,7 @@ beforeEach(() => {
   for (const fn of Object.values(actions)) fn.mockReset();
   actions.choices.mockResolvedValue([{ contactId: 'c-dana', name: 'Dana Reyes', email: 'dana@example.test', blocker: null }]);
   actions.options.mockResolvedValue({ boards: [{ boardId: 'b1', name: 'Service desk' }], projects: [], staff: [] });
-  actions.preview.mockImplementation(async (quantity: number) => ({ unitAmount: 1000, monthlyTotal: 1000 * quantity, amountDue: 3000, currency: 'EUR' }));
+  actions.preview.mockImplementation(async (quantity: number) => ({ kind: 'quote', offerRef: 'reviewed-offer', unitAmount: 1000, monthlyTotal: 1000 * quantity, amountDue: 3000, currency: 'EUR' }));
 });
 afterEach(cleanup);
 
@@ -90,7 +90,7 @@ describe('short capacity from the seat setup (F087)', () => {
     expect(localStorage.length).toBe(0);
   });
 
-  it('shows a blocked quote after setup returns to idle, then clears it when the user retries', async () => {
+  it('shows a blocked quote after setup returns to idle, and clears it on retry or cancellation', async () => {
     actions.state.mockResolvedValue(pool(4, 2));
     actions.preview.mockResolvedValue({ kind: 'blocked', reason: 'no_current_pro' });
     mount(2);
@@ -107,6 +107,10 @@ describe('short capacity from the seat setup (F087)', () => {
 
     resolveRetry(pool(4, 2));
     expect(await screen.findByRole('alert')).toHaveTextContent('Co-managed seats require a current Pro subscription.');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(localStorage.getItem('co-managed-seat-intent:c1')).toBeNull();
+    expect(actions.purchase).not.toHaveBeenCalled();
   });
 
   it('a reload after a paid purchase completes the allocation without a second purchase', async () => {

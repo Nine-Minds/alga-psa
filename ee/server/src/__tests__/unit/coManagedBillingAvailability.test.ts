@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createOfferCatalog } from '../../lib/stripe/offerCatalog/catalog';
-import { CO_MANAGED_SEAT_OFFER_KEY, OfferUnavailableError } from '../../lib/stripe/offerCatalog/types';
+import { CO_MANAGED_SEAT_OFFER_KEY } from '../../lib/stripe/offerCatalog/types';
 
 const mocks = vi.hoisted(() => ({
   feature: vi.fn(),
@@ -16,7 +16,7 @@ vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: mocks.feature 
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => mocks.service }));
 
 import { isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
-import { previewCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
+import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
 
 const scope = { stripeAccount: 'acct_test', livemode: false };
 const currentVersion = {
@@ -26,57 +26,45 @@ const currentVersion = {
   published_by: 'operator', created_at: new Date(), retired_at: null,
 };
 
-function catalogWithCurrentVersion(isCurrent: () => boolean) {
-  let criteria: Record<string, unknown> = {};
-  const query = {
-    where(next: Record<string, unknown>) { criteria = next; return this; },
-    async first() { return criteria.is_current ? (isCurrent() ? currentVersion : undefined) : currentVersion; },
-  };
-  const db = (() => query) as never;
-  return createOfferCatalog({
-    db,
-    stripe: { prices: {} } as never,
-    scope: async () => scope,
-    env: {},
-  });
-}
+const reviewedQuote = { unitAmount: 1000, monthlyTotal: 1000, amountDue: 1000, currency: 'usd', offerRef: 'existing-pool-price' };
 
-describe('preview from an already-open purchase screen after the offer is paused', () => {
-  let current = true;
-  let catalog: ReturnType<typeof catalogWithCurrentVersion>;
+describe('quote admission from an already-open purchase screen', () => {
+  let versions: (typeof currentVersion)[];
 
   beforeEach(() => {
     vi.resetAllMocks();
-    current = true;
-    mocks.user.user_type = 'internal';
+    vi.stubEnv('FORCE_CAPABILITIES', 'co-managed:on');
     mocks.permission.mockResolvedValue(true);
-    mocks.feature.mockResolvedValue(true);
-    catalog = catalogWithCurrentVersion(() => current);
-    mocks.service.getOfferCatalog.mockResolvedValue(catalog);
-    mocks.service.previewCoManagedSeats.mockImplementation(async () => {
-      const offer = await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
-      return { unitAmount: offer.terms.unitAmount, monthlyTotal: 1000, amountDue: 1000, currency: 'usd', offerRef: offer.versionId! };
+    versions = [{ ...currentVersion }];
+    const db = () => ({
+      where: (criteria: Partial<typeof currentVersion>) => ({
+        first: async () => versions.find((row) => Object.entries(criteria).every(([key, value]) => row[key as keyof typeof row] === value)),
+      }),
     });
-    // The real licensing surface probe registered by the server action calls this actual catalog method.
-    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    const catalog = createOfferCatalog({ db: db as never, stripe: {} as never, scope: async () => scope, env: {} });
+    mocks.service.getOfferCatalog.mockResolvedValue(catalog);
+    // An existing pool can still be priced from its historical subscription even if new sales close.
+    mocks.service.previewCoManagedSeats.mockResolvedValue(reviewedQuote);
   });
 
-  afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
+  afterEach(() => vi.unstubAllEnvs());
 
-  it('returns offer_paused after the catalog availability decision changes to false', async () => {
-    expect(await isCoManagedPurchaseSurfaceOpen('authenticated-sponsor')).toBe(true);
-    expect(await catalog.isOfferSellable(CO_MANAGED_SEAT_OFFER_KEY, 'month')).toBe(true);
+  it('withholds existing-pool terms after sales pause and keeps confirmation closed', async () => {
+    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(true);
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'quote', ...reviewedQuote });
+    versions[0].is_current = false;
 
-    current = false;
-    expect(await catalog.isOfferSellable(CO_MANAGED_SEAT_OFFER_KEY, 'month')).toBe(false);
-    expect(await isCoManagedPurchaseSurfaceOpen('authenticated-sponsor')).toBe(false);
-
-    mocks.service.previewCoManagedSeats.mockImplementationOnce(async () => {
-      await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
-      throw new OfferUnavailableError('no_current_version', 'private catalog detail');
-    });
+    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(false);
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
-    expect(mocks.service.previewCoManagedSeats).toHaveBeenCalledWith('authenticated-sponsor', 1);
-    expect(mocks.permission).toHaveBeenCalledWith(mocks.user, 'account_management', 'update');
+    expect(mocks.service.previewCoManagedSeats).toHaveBeenCalledTimes(1);
+    await expect(purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'operation', offerRef: reviewedQuote.offerRef })).rejects.toThrow('not available');
+    expect(mocks.service.purchaseCoManagedSeats).not.toHaveBeenCalled();
+  });
+
+  it('reports missing configuration before trying to price a pool', async () => {
+    versions = [];
+    expect(await isCoManagedPurchaseSurfaceOpen(mocks.user.tenant)).toBe(false);
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
+    expect(mocks.service.previewCoManagedSeats).not.toHaveBeenCalled();
   });
 });

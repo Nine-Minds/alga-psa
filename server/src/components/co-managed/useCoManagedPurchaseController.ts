@@ -1,5 +1,6 @@
 'use client';
 
+import type { CoManagedPurchaseBlockedReason } from '@alga-psa/licensing';
 import { useCallback, useRef, useState } from 'react';
 import { getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
@@ -15,9 +16,7 @@ export interface CoManagedPurchaseQuote {
   offerRef?: string;
 }
 
-export type CoManagedPurchaseBlockedReason = 'customer_unverified' | 'no_current_pro' | 'offer_paused' | 'offer_changed' | 'misconfigured' | 'temporarily_unavailable';
 export type CoManagedPreviewProblem = CoManagedPurchaseBlockedReason | 'unexpected';
-type CoManagedPurchaseProblem = CoManagedPurchaseBlockedReason | 'preview' | 'termsChanged' | 'offerUnavailable' | 'checkoutUnavailable' | 'expired' | 'purchase';
 
 /**
  * Shared hosted pool purchase controller. It drives the account pool editor and
@@ -38,7 +37,7 @@ export function useCoManagedPurchaseController(options: {
   /** True once the server answered that the purchase surface is closed (kill switch, flag, price, product). */
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<CoManagedPurchaseProblem | string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const operation = useRef<string | null>(null);
 
   const reload = useCallback(async () => {

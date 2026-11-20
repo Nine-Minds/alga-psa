@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../lib/actions/coManagedBillingActions';
 import { OfferTermsChangedError, OfferUnavailableError } from '../../lib/stripe/offerCatalog/types';
-import { CoManagedProSubscriptionRequiredError } from '../../lib/stripe/coManagedSubscription';
+import Stripe from 'stripe';
 import { StripeOwnershipError } from '../../lib/stripe/stripeCustomerOwnership';
 import { CoManagedPurchaseBlockedError } from '../../lib/stripe/coManagedPurchaseErrors';
 
@@ -13,6 +13,7 @@ vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) 
 vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, isCoManagedPurchaseFeatureEnabled: mocks.featureEnabled, registerCoManagedOfferAvailability: vi.fn() }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
+  getOfferCatalog: async () => ({ requireSellableOffer: vi.fn() }),
   previewCoManagedSeats: mocks.preview, purchaseCoManagedSeats: mocks.purchase, getPublishableKey: mocks.key,
 }) }));
 
@@ -70,7 +71,7 @@ describe('co-managed quote failures', () => {
   });
 
   it('reports a missing current Pro subscription', async () => {
-    mocks.preview.mockRejectedValue(new CoManagedProSubscriptionRequiredError());
+    mocks.preview.mockRejectedValue(new CoManagedPurchaseBlockedError('no_current_pro'));
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'no_current_pro' });
   });
 
@@ -85,6 +86,11 @@ describe('co-managed quote failures', () => {
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'temporarily_unavailable' });
     mocks.preview.mockRejectedValue(new CoManagedPurchaseBlockedError('misconfigured'));
     await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'misconfigured' });
+  });
+
+  it('gives retry guidance when a direct Stripe request loses its connection', async () => {
+    mocks.preview.mockRejectedValue(new Stripe.errors.StripeConnectionError({ type: 'api_error', message: 'private provider detail' }));
+    await expect(previewCoManagedSeatsAction(1)).resolves.toEqual({ kind: 'blocked', reason: 'temporarily_unavailable' });
   });
 
   it('leaves unexpected failures to the server error handler', async () => {

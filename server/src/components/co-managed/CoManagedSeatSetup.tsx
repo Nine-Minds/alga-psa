@@ -216,11 +216,21 @@ export default function CoManagedSeatSetup({ clientId, idPrefix, available, purc
   };
   const purchaseMessage = coManagedPurchaseErrorMessage(controller.error, t);
   const pendingPurchaseBusy = busy || controller.busy;
+  const cancelPurchaseButton = (
+    <Button id={`${idPrefix}-seat-purchase-cancel`} type="button" variant="outline" disabled={pendingPurchaseBusy} onClick={cancelPending}>
+      {t('coManaged.seat.purchase.cancel', { defaultValue: 'Cancel' })}
+    </Button>
+  );
 
   return (
     <form id={`${idPrefix}-seat-setup`} className="space-y-4" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
       {error && <Alert variant="destructive"><AlertDescription id={`${idPrefix}-seat-error`}>{error}</AlertDescription></Alert>}
-      {purchaseMessage && (phase.kind !== 'idle' || controller.previewProblem !== null) && <Alert variant="destructive"><AlertDescription id={`${idPrefix}-purchase-error`}>{purchaseMessage}</AlertDescription></Alert>}
+      {purchaseMessage && (phase.kind !== 'idle' || controller.previewProblem !== null) && (
+        <Alert variant="destructive">
+          <AlertDescription id={`${idPrefix}-purchase-error`}>{purchaseMessage}</AlertDescription>
+          {phase.kind === 'idle' && intent.current && cancelPurchaseButton}
+        </Alert>
+      )}
       {phase.kind !== 'idle' && intent.current && (
         <div id={`${idPrefix}-seat-purchase`} role="status" className="space-y-2 rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm">
           <p>{phase.kind === 'waiting'
@@ -249,9 +259,7 @@ export default function CoManagedSeatSetup({ clientId, idPrefix, available, purc
                 {t('coManaged.reviewPurchase', { defaultValue: 'Review purchase' })}
               </Button>
             )}
-            <Button id={`${idPrefix}-seat-purchase-cancel`} type="button" variant="outline" disabled={pendingPurchaseBusy} onClick={cancelPending}>
-              {t('coManaged.seat.purchase.cancel', { defaultValue: 'Cancel' })}
-            </Button>
+            {cancelPurchaseButton}
           </div>
         </div>
       )}

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StripeService } from '../../lib/stripe/StripeService';
-import { CoManagedProSubscriptionRequiredError } from '../../lib/stripe/coManagedSubscription';
 import { createOfferCatalog, OfferTermsChangedError, OfferUnavailableError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
 
 const mocks = vi.hoisted(() => ({ connection: vi.fn(), purchase: vi.fn(), reconcile: vi.fn() }));
@@ -78,7 +77,7 @@ describe('dedicated co-managed purchase adapter', () => {
     const { service, pro } = fixture();
     pro.status = 'canceled';
 
-    await expect(service.previewCoManagedSeats(tenant, 1)).rejects.toBeInstanceOf(CoManagedProSubscriptionRequiredError);
+    await expect(service.previewCoManagedSeats(tenant, 1)).rejects.toMatchObject({ reason: 'no_current_pro' });
     expect(mocks.purchase).not.toHaveBeenCalled();
   });
 

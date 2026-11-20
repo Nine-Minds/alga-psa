@@ -1,6 +1,6 @@
 'use server';
 
-type CoManagedPurchaseBlockedReason = 'customer_unverified' | 'no_current_pro' | 'offer_paused' | 'offer_changed' | 'misconfigured' | 'temporarily_unavailable';
+import type { CoManagedPurchaseBlockedReason } from '@alga-psa/licensing';
 
 export async function previewCoManagedSeatsAction(_quantity: number): Promise<
   | { kind: 'quote'; unitAmount: number; monthlyTotal: number; amountDue: number; currency: string; offerRef: string }
