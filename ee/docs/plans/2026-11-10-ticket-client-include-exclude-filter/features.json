@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "client.id in the ticket query schema accepts not_in (operators equals, in, not_in); a where clause `client.id not_in [ids]` validates and compiles",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "`client.id not_in` keeps tickets with no client and drops tickets whose client is listed; `client.id in` never matches a ticket with no client",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Bundled view: `client.id not_in [A]` hides a bundle whose master or any child belongs to A; `in [A]` shows a bundle whose master or any child belongs to A",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Checklist-template rule editor's Client field is pinned to equals/in, so a stored not_in Client rule is preserved as non-editable",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "checklistWhereForOwner simplifies `client.id not_in [owner]` to FALSE for an owned template and still throws for a foreign client id",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "TICKET_FILTERS_SCHEMA_VERSION is 3; the v2->v3 migration step moves a string clientId into where as `client.id in [clientId]` and deletes clientId",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "When where already has a client.id in/not_in clause, the v2->v3 step drops clientId and keeps the clause; the step is idempotent at v3 and never throws on odd input",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Named views, board default views and the tenant default view holding clientId all open with the client row applied (via migrateListViewSettings, migrateTicketDefaultView and the ticketViewSettings read path)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "URL entry points (server tickets page, container URL parser, parseReturnFilters) fold a legacy ?clientId= into the client.id where row using the same migration step",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "URL writers (getCurrentFiltersQuery, updateURLWithFilters) no longer emit clientId; the client row round-trips in the where parameter",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "ticketFiltersToPredicates still compiles filters.clientId for server callers but skips it when filters.where has a client.id in/not_in clause",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "WHERE_FILTERS has a Client row (path client.id, server-searched client options source, label fields.client, primary-row placement); chips, chip clear, isFiltered and the active-filter count derive from the table and the dashboard's separate client branches are removed",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Client chips read `Client = <name>` / `Client ≠ <name>`, one per client, each removable on its own; an unresolved id shows a translated 'Unknown client' label, never the raw id",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "The Any of / None of mode button is one shared component used by WhereTagFilter, WhereLocationFilter and WhereClientFilter",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "WhereClientFilter replaces the single ClientPicker in the primary filter row: multi-select async client picker plus the mode button; toggling the mode keeps the selected clients and flips in/not_in",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR11",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "AsyncSearchableSelect supports a multi-select variant (values + onValuesChange): checks on selected rows, popover stays open on select, caller-supplied trigger label, Clear footer action",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "AsyncClientPicker supports multi selection (selectedClientIds, onSelectedClientIdsChange) with the existing status/type/tag header; trigger shows 'All Clients', the single name, or a '{{count}} clients' summary",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR12",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "A shared hook hydrates selected client names via searchClientsForPicker({ ids }) in one batched request per change, chunked at the 100-id lookup cap; used by the picker and the dashboard chips, replacing the single-id lookup",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR13"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Contact filter options: Any of exactly one client -> that client's contacts including inactive; otherwise all active contacts narrowed to clients the row allows",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR14"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Changing the client row clears the contact filter in the same update when the contact's client is not allowed by the new row (contactFilterUpdateForClientChange takes a row selection)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR15"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Location filter options are scoped to the client when the row is Any of exactly one client, tenant-wide otherwise",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR16"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "CSV export and adjacent-ticket navigation apply the client row (export filters carry where and stop setting clientId)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR17"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "A named view (private, shared or per-user default) captured with a client row re-applies the same selection and mode and is not marked dirty",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "A client-portal user's own-client scope is never widened by a client.id where row",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "New UI strings (trigger summary, Unknown client, Clear) exist in every supported locale and pass validate-translations",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  }
+]

@@ -34,10 +34,12 @@ function recurrence(value: unknown) {
   if (endDate && endDate < startDate) return invalid();
   for (const [name, min, max] of [['dayOfMonth', 1, 31], ['monthOfYear', 1, 12], ['count', 1, 2147483647]] as const) if (pattern[name] != null && (!Number.isSafeInteger(pattern[name]) || pattern[name] < min || pattern[name] > max)) return invalid();
   if (pattern.daysOfWeek !== undefined && (!Array.isArray(pattern.daysOfWeek) || !pattern.daysOfWeek.length || !pattern.daysOfWeek.every((day: unknown) => Number.isInteger(day) && Number(day) >= 0 && Number(day) <= 6))) return invalid();
+  if (pattern.weekOfMonth !== undefined && ![1, 2, 3, 4, -1].includes(pattern.weekOfMonth)) return invalid();
+  if (pattern.timeZone !== undefined && (typeof pattern.timeZone !== 'string' || !pattern.timeZone.trim())) return invalid();
   if (pattern.exceptions !== undefined && !Array.isArray(pattern.exceptions)) return invalid();
   if (pattern.workdaysOnly !== undefined && typeof pattern.workdaysOnly !== 'boolean') return invalid();
   return { frequency: pattern.frequency, interval: pattern.interval, startDate, ...(endDate ? { endDate } : {}),
-    ...Object.fromEntries(['dayOfMonth', 'monthOfYear', 'count', 'workdaysOnly'].filter(key => pattern[key] != null).map(key => [key, pattern[key]])),
+    ...Object.fromEntries(['dayOfMonth', 'monthOfYear', 'count', 'workdaysOnly', 'weekOfMonth', 'timeZone'].filter(key => pattern[key] != null).map(key => [key, pattern[key]])),
     ...(pattern.daysOfWeek ? { daysOfWeek: [...new Set(pattern.daysOfWeek)] } : {}),
     ...(pattern.exceptions ? { exceptions: pattern.exceptions.map(instant) } : {}),
   };

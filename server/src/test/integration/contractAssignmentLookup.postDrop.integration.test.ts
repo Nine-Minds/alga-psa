@@ -50,6 +50,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
         {
           user_id: userId,
           tenant: tenantId,
+          user_type: 'internal',
           roles: [{ role_name: 'Admin' }],
         },
         { tenant: tenantId },

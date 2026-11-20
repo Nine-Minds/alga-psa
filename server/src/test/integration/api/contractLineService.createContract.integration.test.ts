@@ -162,7 +162,9 @@ describe('contract line service createContract persistence integration', () => {
     expect(listed).toBeTruthy();
     expect(listed.client_id).toBe(fixture.clientId);
     expect(listed.owner_client_id).toBe(fixture.clientId);
-    expect(new Date(listed.start_date).toISOString()).toBe(START_DATE);
-    expect(new Date(listed.end_date).toISOString()).toBe(END_DATE);
+    expect(new Date(created.start_date).toISOString()).toBe(new Date(listed.start_date).toISOString());
+    expect(new Date(created.end_date).toISOString()).toBe(new Date(listed.end_date).toISOString());
+    expect(new Date(listed.start_date).toISOString()).toBe('2026-08-01T00:00:00.000Z');
+    expect(new Date(listed.end_date).toISOString()).toBe('2027-07-31T00:00:00.000Z');
   });
 });

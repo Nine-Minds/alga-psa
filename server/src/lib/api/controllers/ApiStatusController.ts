@@ -3,6 +3,7 @@
  * Handles status-related API endpoints
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { StatusService } from '../services/StatusService';
 import { statusListQuerySchema, createStatusSchema, updateStatusSchema } from '../schemas/status';
@@ -40,7 +41,7 @@ export class ApiStatusController extends ApiBaseController {
     }
 
     const knex = await getConnection(req.context.tenant);
-    const hasAccess = await hasPermission(req.context.user, 'ticket', action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, 'ticket', action, knex);
 
     if (!hasAccess) {
       const { ForbiddenError } = await import('../middleware/apiMiddleware');

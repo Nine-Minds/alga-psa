@@ -25,7 +25,7 @@ import {
   type MicrosoftOutboundMailboxOption,
 } from '../../../actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
-import type { EmailProvider } from '../types';
+import type { PublicEmailProvider } from '../types';
 import { OutboundEmailDiagnosticsDialog } from './OutboundEmailDiagnosticsDialog';
 import { EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
 import {
@@ -62,7 +62,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const { t } = useTranslation('msp/admin');
   const tenantId = useTenant();
   const [settings, setSettings] = useState<EmailSettingsView | null>(null);
-  const [inboundProviders, setInboundProviders] = useState<EmailProvider[]>([]);
+  const [inboundProviders, setInboundProviders] = useState<PublicEmailProvider[]>([]);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

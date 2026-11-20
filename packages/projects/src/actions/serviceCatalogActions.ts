@@ -3,7 +3,9 @@
 import type { IService } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { assertCommercialReadPermission } from '@alga-psa/auth/lib/commercialAccess';
 import type { Knex } from 'knex';
+import { assertResourceOperationOpen } from '@alga-psa/authorization/recordCreateAuthorization';
 
 export interface PaginatedServicesResponse {
   services: IService[];
@@ -20,8 +22,11 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-export const getServices = withAuth(async (_user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
+export const getServices = withAuth(async (user, { tenant }, page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> => {
+  await assertCommercialReadPermission(user);
   const { knex: db } = await createTenantKnex();
+  // The catalog (names, rates) is closed to a seat technician whatever role they hold (`SEAT_AUTHORITY_PROJECTION.project`).
+  await assertResourceOperationOpen(db, { tenant, user, resourceType: 'project', operation: 'service_catalog' }, 'projects');
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const offset = (page - 1) * pageSize;

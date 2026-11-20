@@ -21,8 +21,11 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useQuickAddClient } from '@alga-psa/ui/context';
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
-import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
+import { lookupClientsByIds, useClientNames } from '@alga-psa/ui/hooks/useClientNames';
+import type { PickerClientOption } from '@alga-psa/ui/components/AsyncClientPicker';
+import type { IContact, ColumnDefinition } from '@alga-psa/types';
 import { Building2, RefreshCw } from 'lucide-react';
 import {
   getHuntressOrganizationMappings,
@@ -53,7 +56,8 @@ function isAutoMatched(mapping: RmmOrganizationMapping): boolean {
 const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMappingChanged }) => {
   const { t } = useTranslation('msp/integrations');
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // The mapped clients, resolved by id in one batch; the row pickers search on the server.
+  const [knownClients, setKnownClients] = useState<PickerClientOption[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,13 +72,16 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     setLoading(true);
     setError(null);
     try {
-      const [mappingsResult, clientsResult, contactsResult] = await Promise.all([
+      const [mappingsResult, contactsResult] = await Promise.all([
         getHuntressOrganizationMappings(),
-        getAllClients(false),
         getAllContacts('active'),
       ]);
+      const mappedClients = await lookupClientsByIds(
+        searchClientsForPicker,
+        mappingsResult.map((m) => m.client_id).filter((id): id is string => !!id),
+      );
       setMappings(mappingsResult);
-      setClients(clientsResult ?? []);
+      setKnownClients(mappedClients);
       setContacts(contactsResult ?? []);
     } catch {
       setError(t('integrations.rmm.huntress.errors.load', { defaultValue: 'Failed to load organization mappings' }));
@@ -173,6 +180,10 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     void handleClientChangeConfirmed(mappingId, clientId);
   };
 
+  const pendingClientId = pendingClientChange?.clientId ?? null;
+  const { clients: pendingClients } = useClientNames(pendingClientId ? [pendingClientId] : [], searchClientsForPicker, knownClients);
+  const pendingClientName = pendingClientId ? pendingClients[pendingClientId]?.client_name ?? null : null;
+
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {
       title: t('integrations.rmm.huntress.columns.organization', { defaultValue: 'Huntress Organization' }),
@@ -186,7 +197,8 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
       render: (_v, mapping) => (
         <ClientPicker
           id={`huntress-client-picker-${mapping.mapping_id}`}
-          clients={clients}
+          searchClients={searchClientsForPicker}
+          knownClients={knownClients}
           selectedClientId={mapping.client_id ?? null}
           onSelect={(clientId) => handleClientChange(mapping.mapping_id, clientId)}
           filterState="active"
@@ -286,7 +298,7 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     <>
     <RmmOrganizationClientChangeDialog
       mappingId={pendingClientChange?.mappingId ?? null}
-      pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+      pendingClientName={pendingClientName}
       isOpen={Boolean(pendingClientChange)}
       onCancel={() => setPendingClientChange(null)}
       onConfirm={() => {
@@ -375,7 +387,6 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
         }
         setQuickAddContactFor(null);
       },
-      clients,
       selectedClientId: quickAddContactFor?.clientId ?? null,
     })}
     </>

@@ -310,6 +310,7 @@ describe("BillingEngine", () => {
     builder.orWhere = vi.fn().mockImplementation(handleWhere);
     builder.whereBetween = vi.fn().mockImplementation(() => builder);
     builder.whereNull = vi.fn().mockImplementation(() => builder);
+    builder.whereRaw = vi.fn().mockImplementation(() => builder);
     builder.whereNotNull = vi.fn().mockImplementation(() => builder);
     builder.whereIn = vi.fn().mockImplementation(() => builder);
     builder.groupBy = vi.fn().mockImplementation(() => builder);

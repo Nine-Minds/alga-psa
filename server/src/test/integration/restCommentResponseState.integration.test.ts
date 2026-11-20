@@ -281,7 +281,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
   let commentHookCreated = false;
   async function ensureCommentHook() {
     if (commentHookCreated) return;
-    const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
+    const webhookService = new WebhookService();
     process.env.WEBHOOK_SSRF_ALLOW_PRIVATE = 'true';
     await webhookService.createWebhook(
       {
@@ -462,7 +462,7 @@ describe('REST comments update response_state + richer ticket webhooks (c219d6bf
     );
     const stub = await startStubServer();
     try {
-      const webhookService = new WebhookService(undefined as any, undefined as any, undefined as any);
+      const webhookService = new WebhookService();
       const created = await webhookService.createWebhook(
         {
           name: 'RS hook',

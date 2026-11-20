@@ -1,20 +1,27 @@
 import type Stripe from 'stripe';
 import type { HostedCoManagedSnapshot } from '@alga-psa/licensing';
+import { UnmappedPriceError } from './offerCatalog/types';
+
+/** RECOGNITION set: every Price the catalog has ever bound to the co-managed offer (retired
+ * included). A lone string is accepted for callers that only know one Price. */
+export type RecognizedPrices = string | Iterable<string>;
+export const recognizesPrice = (prices: RecognizedPrices | undefined, priceId: string): boolean =>
+  typeof prices === 'string' ? prices === priceId : prices ? new Set(prices).has(priceId) : false;
 
 export const CO_MANAGED_SUBSCRIPTION_KIND = 'co_managed';
 
 /** True when this Stripe subscription is the dedicated co-managed seat pool, never the MSP's own
  * Pro subscription. Identified by metadata, or (defence in depth) by carrying the configured SKU. */
-export function isCoManagedSubscription(subscription: Stripe.Subscription, priceId?: string): boolean {
+export function isCoManagedSubscription(subscription: Stripe.Subscription, prices?: RecognizedPrices): boolean {
   return subscription.metadata?.subscription_kind === CO_MANAGED_SUBSCRIPTION_KIND ||
-    Boolean(priceId && subscription.items?.data.some((item) => item.price.id === priceId));
+    Boolean(prices && subscription.items?.data.some((item) => recognizesPrice(prices, item.price.id)));
 }
 
 function customerId(subscription: Stripe.Subscription): string {
   return typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 }
 
-function billingPeriodEnd(subscription: Stripe.Subscription): number {
+export function billingPeriodEnd(subscription: Stripe.Subscription): number {
   // The platform's pinned Stripe API exposes the subscription-level field;
   // newer SDK/API versions expose periods on each subscription item instead.
   const legacy = (subscription as Stripe.Subscription & { current_period_end?: number }).current_period_end;
@@ -24,12 +31,16 @@ function billingPeriodEnd(subscription: Stripe.Subscription): number {
 }
 
 /**
- * The configured Stripe price object is the single source of amount AND currency (R1): nothing
- * here knows a number or a currency code. It only checks that the object is the configured SKU and
- * is shaped like a simple monthly per-seat price, so a quantity maps 1:1 to purchased seats.
+ * RECOGNITION (not new-sale selection): `prices` is the set the catalog has ever bound to the offer,
+ * so a renewal on a retired price still classifies. The Stripe price object stays the single source
+ * of amount AND currency (R1): nothing here knows a number or a currency code. It only checks the
+ * price is a known co-managed Price and is shaped like a simple monthly per-seat price, so a
+ * quantity maps 1:1 to purchased seats. A price the catalog cannot place throws UnmappedPriceError
+ * (actionable; callers leave capacity unchanged). Activity is deliberately not checked.
  */
-export function assertCoManagedPrice(price: Stripe.Price, priceId: string): void {
-  if (!priceId || price.id !== priceId || price.type !== 'recurring' ||
+export function assertCoManagedPrice(price: Stripe.Price, prices: RecognizedPrices): void {
+  if (!recognizesPrice(prices, price.id)) throw new UnmappedPriceError(price.id);
+  if (price.type !== 'recurring' ||
       typeof price.unit_amount !== 'number' || !Number.isInteger(price.unit_amount) || price.unit_amount <= 0 ||
       !price.currency || price.billing_scheme === 'tiered' ||
       price.recurring?.interval !== 'month' || price.recurring.interval_count !== 1 ||
@@ -39,12 +50,15 @@ export function assertCoManagedPrice(price: Stripe.Price, priceId: string): void
 }
 
 export function currentProSubscriptionExpiry(subscriptions: Stripe.Subscription[], customer: string,
-  proPriceIds: string[], coManagedPriceId: string, now = new Date()): Date | null {
+  proPriceIds: string[], coManagedPriceId: RecognizedPrices, now = new Date()): Date | null {
+  const cutoff = (sub: Stripe.Subscription) => Math.min(billingPeriodEnd(sub),
+    sub.cancel_at ? sub.cancel_at * 1000 : Infinity,
+    sub.status === 'trialing' && sub.trial_end ? sub.trial_end * 1000 : Infinity);
   const base = subscriptions.filter((candidate) =>
     customerId(candidate) === customer && !isCoManagedSubscription(candidate, coManagedPriceId) && !candidate.metadata?.addon_key &&
     ['active', 'trialing'].includes(candidate.status) &&
-    candidate.items.data.some((item) => proPriceIds.includes(item.price.id)) && billingPeriodEnd(candidate) > now.getTime());
-  return base.length ? new Date(Math.max(...base.map(billingPeriodEnd))) : null;
+    candidate.items.data.some((item) => proPriceIds.includes(item.price.id)) && cutoff(candidate) > now.getTime());
+  return base.length ? new Date(Math.max(...base.map(cutoff))) : null;
 }
 
 /** Converts live Stripe data to capacity after validating its owner and SKU. The caller obtains
@@ -56,7 +70,7 @@ export function coManagedSnapshotFromStripe(input: {
   baseSubscriptions: Stripe.Subscription[];
   sponsorTenant: string;
   customerId: string;
-  coManagedPriceId: string;
+  coManagedPriceId: RecognizedPrices;
   proPriceIds: string[];
   now?: Date;
 }): HostedCoManagedSnapshot {
@@ -82,6 +96,8 @@ export function coManagedSnapshotFromStripe(input: {
   return {
     capacity: item.quantity!, active,
     validUntil: new Date(Math.min(periodEnd, baseExpiry?.getTime() ?? now.getTime())),
+    ...(subscription.metadata?.seat_trial_id ? { trialId: subscription.metadata.seat_trial_id,
+      terminalFailure: ['canceled', 'incomplete_expired'].includes(subscription.status) } : {}),
     ...(subscription.metadata?.operation_id ? { operationId: subscription.metadata.operation_id } : {}),
     ...(subscription.ended_at ? { lapseSince: new Date(subscription.ended_at * 1000) } : {}),
   };

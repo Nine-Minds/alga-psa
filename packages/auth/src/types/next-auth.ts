@@ -29,6 +29,7 @@ declare module 'next-auth' {
   interface Session {
     session_id?: string;
     login_method?: string;
+    auth_issued_at?: number;
     user: {
       id: string;
       email: string;

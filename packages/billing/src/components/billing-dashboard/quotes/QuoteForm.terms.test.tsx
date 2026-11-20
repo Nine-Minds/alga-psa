@@ -21,7 +21,7 @@ const actionMocks = vi.hoisted(() => ({
   getQuoteDocumentTemplates: vi.fn(),
   getQuoteApprovalSettings: vi.fn(),
   listQuotes: vi.fn(),
-  getAllClientsForBilling: vi.fn(),
+  getClientByIdForBilling: vi.fn(),
   getActiveClientLocationsForBilling: vi.fn(),
   getContactsForPicker: vi.fn(),
   getDefaultBillingSettings: vi.fn(),
@@ -77,7 +77,7 @@ vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: (...args: unknown[]) => actionMocks.getQuoteDocumentTemplates(...args),
 }));
 vi.mock('../../../actions/billingClientsActions', () => ({
-  getAllClientsForBilling: (...args: unknown[]) => actionMocks.getAllClientsForBilling(...args),
+  getClientByIdForBilling: (...args: unknown[]) => actionMocks.getClientByIdForBilling(...args),
 }));
 vi.mock('../../../actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: (...args: unknown[]) => actionMocks.getActiveClientLocationsForBilling(...args),
@@ -157,6 +157,12 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <div>{children}</div>,
 }));
+// The location remove-group confirmation is covered in
+// QuoteForm.locations.test.tsx; stub it here so this suite keeps its minimal
+// Dialog mock (the real component also needs DialogFooter and RadioGroup).
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ id, isOpen }: any) => (isOpen ? <div id={id} /> : null),
+}));
 vi.mock('@alga-psa/ui/context', () => ({
   useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
 }));
@@ -189,7 +195,7 @@ describe('QuoteForm terms authoring', () => {
     vi.clearAllMocks();
 
     actionMocks.getDefaultBillingSettings.mockResolvedValue({ default_currency_code: 'USD' });
-    actionMocks.getAllClientsForBilling.mockResolvedValue([]);
+    actionMocks.getClientByIdForBilling.mockResolvedValue(null);
     actionMocks.getContactsForPicker.mockResolvedValue([]);
     actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
     actionMocks.getQuoteDocumentTemplates.mockResolvedValue([]);

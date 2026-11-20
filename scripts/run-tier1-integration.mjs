@@ -17,8 +17,10 @@ import { fileURLToPath } from 'node:url';
 import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
-import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
+import { isIntegrationTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { collectedTestsFromJournal } from './lib/vitest-progress-reporter.mjs';
+import { readShardDurations } from './lib/server-unit-durations.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,7 +53,7 @@ function collectIntegrationFiles(args) {
       const file = path.relative(serverDir, path.resolve(serverDir, entry.file)).split(path.sep).join('/');
       if (!isIntegrationPath(file)) throw new Error(`Unexpected affected file: ${file}`);
       return file;
-    });
+    }).filter(file => isIntegrationTest(path.relative(repoRoot, path.resolve(serverDir, file)).split(path.sep).join('/')));
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
@@ -139,25 +141,28 @@ const total = Number(process.env.INTEGRATION_SHARD_TOTAL || '1');
 try {
   const complete = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
   allFiles = complete.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();
-  const candidates = repositoryTestFiles(repoRoot).filter(file =>
+  const candidates = repositoryTestFiles(repoRoot).filter(isIntegrationTest).filter(file =>
     coveredByManifest(path.relative(serverDir, path.join(repoRoot, file)).split(path.sep).join('/'), selection));
   const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: complete }] });
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
-  const assigned = partitionTestFiles(allFiles, index, total);
+  // Balanced by the committed main-run durations; the gate reads the same file.
+  const assigned = partitionTestFiles(allFiles, index, total, readShardDurations(repoRoot, 'integration')?.durationsMs ?? null);
   const filters = assigned.map(file => path.join(repoRoot, file));
   const collected = collectIntegrationFiles(filters).map(file => ({ file: path.join(serverDir, file) }));
   const actual = collected.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();
   if (JSON.stringify(actual) !== JSON.stringify(assigned)) throw new Error('Integration filters did not collect the exact assigned shard');
   save('collected', collected);
-  const testPath = path.join(output, 'collected-tests.json');
-  const collection = spawnSync(process.execPath,
-    [path.join(repoRoot, 'node_modules/vitest/vitest.mjs'), 'list', ...filters, `--json=${testPath}`],
-    { cwd: serverDir, stdio: 'inherit' });
-  if (collection.status !== 0) throw new Error('Integration test collection failed');
-  const collectedTests = JSON.parse(readFileSync(testPath, 'utf8'));
-  const args = extraArgs.filter(arg => !/^--outputFile(?:\.json)?=/.test(arg) && arg !== '--reporter=json');
+  // Each file reports its registrations through the progress reporter as its
+  // fork imports it, so the run is the only import of the shard; the inventory
+  // the verifier checks is read back from the journal after the run. The
+  // workflow may pass the reporter and journal path itself; one copy of each.
+  const progressPath = path.join(output, 'progress.jsonl');
+  writeFileSync(progressPath, 'null\n');
+  const args = extraArgs.filter(arg => !/^--outputFile(?:\.json)?=/.test(arg) && arg !== '--reporter=json'
+    && !/vitest-progress-reporter\.mjs$/.test(arg));
   if (!args.some(arg => arg.startsWith('--reporter'))) args.push('--reporter=default');
+  args.push(`--reporter=${path.join(repoRoot, 'scripts/lib/vitest-progress-reporter.mjs')}`);
   // --retry=1 and the flaky reporter live here, never in a shared vitest config:
   // a fail-then-pass stops being an invisible rerun and becomes a recorded
   // flake, judged below by the same policy every other lane uses.
@@ -167,9 +172,11 @@ try {
       '--reporter=json', `--outputFile.json=${reportPath}`,
       `--reporter=${path.join(repoRoot, 'scripts/lib/vitest-flaky-reporter.mjs')}`],
     { cwd: serverDir, stdio: 'inherit',
-      env: { ...process.env, FLAKY_TESTS_PATH: flakyPath, FLAKY_SUITE: 'integration',
+      env: { ...process.env, TEST_PROGRESS_PATH: progressPath, FLAKY_TESTS_PATH: flakyPath, FLAKY_SUITE: 'integration',
         FLAKY_JOB: `integration shard ${index}/${total}`,
         FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total) } });
+  const collectedTests = collectedTestsFromJournal(readFileSync(progressPath, 'utf8'), { root: serverDir });
+  save('collected-tests', collectedTests);
   const report = JSON.parse(readFileSync(reportPath, 'utf8'));
   save('results', report);
   evidence = reconcileExecution({ collected, collectedTests, report, root: repoRoot,

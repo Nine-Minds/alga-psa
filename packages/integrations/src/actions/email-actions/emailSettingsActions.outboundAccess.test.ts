@@ -49,6 +49,8 @@ const liveReport = (status: 'pass' | 'fail', message?: string) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Not a vi.fn, so clearAllMocks leaves it; stale entries break order-shuffled runs.
+  mocks.tableCalls.length = 0;
   mocks.createTenantKnex.mockResolvedValue({ knex: {} });
   mocks.sessionUser.user_type = 'internal';
   mocks.testConnection.mockResolvedValue({ success: true, message: 'SMTP connection verified.' });

@@ -40,3 +40,24 @@ export async function requireOutboundEmailAdmin(
   }
   return { allowed: true };
 }
+
+/**
+ * Read-side sibling of requireOutboundEmailAdmin: MSP users holding
+ * `ticket_settings:read`. Used for listing providers (secret-free read model).
+ */
+export async function requireOutboundEmailReader(
+  user: GuardUser,
+  knex: Knex
+): Promise<OutboundEmailAdminCheck> {
+  if (isClientUser(user)) {
+    return { allowed: false, reason: 'client_user', message: 'Permission denied' };
+  }
+  if (!await hasPermission(user, 'ticket_settings', 'read', knex)) {
+    return {
+      allowed: false,
+      reason: 'missing_permission',
+      message: 'Permission denied: Cannot view email providers',
+    };
+  }
+  return { allowed: true };
+}

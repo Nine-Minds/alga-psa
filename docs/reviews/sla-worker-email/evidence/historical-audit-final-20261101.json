@@ -1,0 +1,52 @@
+[
+  {
+    "ticket_id": "3d5269d8-0000-4000-8000-00000000010a",
+    "ticket_number": "SLA-MAIL-A",
+    "title": "SLA worker email: board A delivered",
+    "escalation_level": 1,
+    "escalated": true,
+    "board_id": "3d5269d8-0000-4000-8000-00000000000a",
+    "log_id": "14253d7f-7f0e-4fda-9a89-f5a90626349c",
+    "event_data": {
+      "level": 1,
+      "manager_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "manager_found": true,
+      "notifications": {
+        "email": "sent",
+        "inApp": true,
+        "emailMessageId": "<651aeeb5-9e6b-f223-cd2f-cc5586d28e89@emeraldcity.oz>"
+      },
+      "resource_added": true
+    }
+  },
+  {
+    "ticket_id": "3d5269d8-0000-4000-8000-00000000010b",
+    "ticket_number": "SLA-MAIL-B",
+    "title": "SLA worker email: board B delivered",
+    "escalation_level": 1,
+    "escalated": true,
+    "board_id": "3d5269d8-0000-4000-8000-00000000000b",
+    "log_id": "da4414f8-dccd-4a7e-8696-3c21fc5fc30a",
+    "event_data": {
+      "level": 1,
+      "manager_id": "20a52aa7-137c-4a42-ab3e-5b75050d54d7",
+      "manager_found": true,
+      "notifications": {
+        "email": "sent",
+        "inApp": true,
+        "emailMessageId": "<5d0b8190-4ecf-015e-bd07-720d503b6e99@emeraldcity.oz>"
+      },
+      "resource_added": true
+    }
+  },
+  {
+    "ticket_id": "3d5269d8-0000-4000-8000-00000000010f",
+    "ticket_number": "SLA-MAIL-FAIL",
+    "title": "SLA worker email: SMTP failure audit",
+    "escalation_level": null,
+    "escalated": false,
+    "board_id": "3d5269d8-0000-4000-8000-00000000000a",
+    "log_id": null,
+    "event_data": null
+  }
+]

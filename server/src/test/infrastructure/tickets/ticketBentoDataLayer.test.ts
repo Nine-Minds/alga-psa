@@ -319,6 +319,7 @@ describeDb('Ticket bento data layer DB integration', () => {
       billableDuration: number;
       invoiced?: boolean;
       notes?: string;
+      billingMode?: 'commercial' | 'operational';
     },
   ): Promise<string> {
     const entryId = uuidv4();
@@ -336,6 +337,7 @@ describeDb('Ticket bento data layer DB integration', () => {
       billable_duration: options.billableDuration,
       invoiced: options.invoiced ?? false,
       notes: options.notes ?? null,
+      ...(options.billingMode ? { billing_mode: options.billingMode } : {}),
     });
     return entryId;
   }
@@ -701,6 +703,32 @@ describeDb('Ticket bento data layer DB integration', () => {
       entryCount: 3,
       uninvoicedBillableMinutes: 30,
       contractName: 'Bento Managed Services',
+    });
+  });
+
+  it('S28: an operational (seat technician) entry counts as logged time but never as billable or not invoiced', async () => {
+    const ticket = await createTicket();
+    await createTimeEntry(ticket, {
+      startTime: '2026-07-01T16:00:00.000Z',
+      endTime: '2026-07-01T17:30:00.000Z',
+      billableDuration: 90,
+    });
+    // Adversarial: an operational row that still carries billable minutes (a real operational write stores 0).
+    await createTimeEntry(ticket, {
+      startTime: '2026-07-01T18:00:00.000Z',
+      endTime: '2026-07-01T19:00:00.000Z',
+      billableDuration: 60,
+      billingMode: 'operational',
+    });
+
+    const rollup = await getTicketBillingRollup(ticket.ticketId);
+
+    expect(rollup).toEqual({
+      totalMinutes: 150,
+      billableMinutes: 90,
+      entryCount: 2,
+      uninvoicedBillableMinutes: 90,
+      contractName: null,
     });
   });
 

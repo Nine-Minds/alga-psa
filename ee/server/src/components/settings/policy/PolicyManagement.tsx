@@ -24,6 +24,9 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useClientPickerSearch } from '@alga-psa/ui/context';
+import { useClientNames } from '@alga-psa/ui/hooks/useClientNames';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import {
@@ -46,6 +49,8 @@ import {
   getAuthorizationBundleDraftEditorAction,
   listAuthorizationBundlesAction,
   listAuthorizationBundleAssignmentsAction,
+  listAuthorizationResourceTypesAction,
+  setAuthorizationBundleDraftBaselineAction,
   listAuthorizationSimulationPrincipalsAction,
   listAuthorizationSimulationRecordsAction,
   publishAuthorizationBundleDraftAction,
@@ -57,17 +62,10 @@ import {
   type AuthorizationBundleDraftEditorPayload,
   type AuthorizationBundleLibraryEntry,
   type AuthorizationBundleSimulationPayload,
+  type AuthorizationSimulationDecision,
   type AuthorizationSimulationOption,
 } from 'ee/server/src/lib/actions/auth/authorizationBundleActions';
-
-const RESOURCE_SECTIONS: Array<{ labelKey: string; resourceType: string }> = [
-  { labelKey: 'policyManagement.resourceSections.tickets', resourceType: 'ticket' },
-  { labelKey: 'policyManagement.resourceSections.documents', resourceType: 'document' },
-  { labelKey: 'policyManagement.resourceSections.time', resourceType: 'time_entry' },
-  { labelKey: 'policyManagement.resourceSections.projects', resourceType: 'project' },
-  { labelKey: 'policyManagement.resourceSections.assets', resourceType: 'asset' },
-  { labelKey: 'policyManagement.resourceSections.billing', resourceType: 'billing' },
-];
+import { buildResourceSections, type ResourceSection } from './policyResourceSections';
 
 const ACTION_OPTIONS = ['read', 'create', 'update', 'delete', 'approve'];
 const ASSIGNMENT_TARGET_TYPES = ['role', 'team', 'user', 'api_key'] as const;
@@ -173,9 +171,10 @@ function buildEmptyRuleDraft(editorData: AuthorizationBundleDraftEditorPayload):
 }
 
 function buildInitialRuleDrafts(
-  editorData: AuthorizationBundleDraftEditorPayload
+  editorData: AuthorizationBundleDraftEditorPayload,
+  resourceSections: readonly ResourceSection[]
 ): Record<string, RuleDraftFormState> {
-  return RESOURCE_SECTIONS.reduce<Record<string, RuleDraftFormState>>((drafts, section) => {
+  return resourceSections.reduce<Record<string, RuleDraftFormState>>((drafts, section) => {
     drafts[section.resourceType] = buildEmptyRuleDraft(editorData);
     return drafts;
   }, {});
@@ -261,7 +260,13 @@ export default function PolicyManagement() {
   const [editorBundleId, setEditorBundleId] = useState<string | null>(null);
   const [editorData, setEditorData] = useState<AuthorizationBundleDraftEditorPayload | null>(null);
   const [editorLoading, setEditorLoading] = useState(false);
+  const [resourceTypes, setResourceTypes] = useState<string[]>([]);
+  const resourceSections = useMemo(() => buildResourceSections(resourceTypes), [resourceTypes]);
+  const [baselineSaving, setBaselineSaving] = useState(false);
   const [ruleDrafts, setRuleDrafts] = useState<Record<string, RuleDraftFormState>>({});
+  // A scope may name an inactive client, so the scope picker searches all clients by default.
+  const [clientScopeFilterState, setClientScopeFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientScopeTypeFilter, setClientScopeTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [publishingBundleId, setPublishingBundleId] = useState<string | null>(null);
   const [assignmentBundleId, setAssignmentBundleId] = useState<string | null>(null);
   const [assignmentData, setAssignmentData] = useState<AuthorizationBundleAssignmentViewerPayload | null>(null);
@@ -302,6 +307,21 @@ export default function PolicyManagement() {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, includeArchived]);
+
+  useEffect(() => {
+    if (!hasBundleLibrary) return;
+    let cancelled = false;
+    void listAuthorizationResourceTypesAction()
+      .then((types) => {
+        if (!cancelled) setResourceTypes(types);
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : t('policyManagement.errors.loadBundles'));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasBundleLibrary, t]);
 
   useEffect(() => {
     const needsPickerData = Boolean(assignmentBundleId || simulatorBundleId);
@@ -351,12 +371,22 @@ export default function PolicyManagement() {
     [entries]
   );
 
-  const clientNameById = useMemo(
+  // Client scopes are picked by server search; only the clients the rules name are looked up, by id.
+  const { searchClients } = useClientPickerSearch();
+  const scopedClientIds = useMemo(
     () =>
-      new Map(
-        (editorData?.availableClients ?? []).map((client) => [client.client_id, client.client_name])
+      Array.from(
+        new Set([
+          ...(editorData?.rules ?? []).flatMap((rule) => rule.selectedClientIds),
+          ...Object.values(ruleDrafts).flatMap((draft) => draft.selectedClientIds),
+        ])
       ),
-    [editorData]
+    [editorData, ruleDrafts]
+  );
+  const { clients: scopedClients } = useClientNames(scopedClientIds, searchClients);
+  const clientNameById = useMemo(
+    () => new Map(Object.values(scopedClients).map((client) => [client.client_id, client.client_name])),
+    [scopedClients]
   );
 
   const boardNameById = useMemo(
@@ -420,14 +450,14 @@ export default function PolicyManagement() {
         createDraftIfMissing: options?.createDraftIfMissing ?? true,
       });
       setEditorData(payload);
-      setRuleDrafts(buildInitialRuleDrafts(payload));
+      setRuleDrafts(buildInitialRuleDrafts(payload, resourceSections));
     } catch (editorError) {
       setError(editorError instanceof Error ? editorError.message : t('policyManagement.errors.loadEditor'));
       setEditorData(null);
     } finally {
       setEditorLoading(false);
     }
-  }, [t]);
+  }, [t, resourceSections]);
 
   const loadAssignments = useCallback(async (bundleId: string) => {
     setAssignmentLoading(true);
@@ -687,6 +717,24 @@ export default function PolicyManagement() {
     }
   };
 
+  const handleSetBaseline = async (baseline: 'open' | 'closed'): Promise<void> => {
+    if (!editorData) {
+      return;
+    }
+
+    const bundleId = editorData.bundle.bundleId;
+    setBaselineSaving(true);
+    setError(null);
+    try {
+      await setAuthorizationBundleDraftBaselineAction({ bundleId, baseline });
+      await loadEditor(bundleId, { createDraftIfMissing: false });
+    } catch (baselineError) {
+      setError(baselineError instanceof Error ? baselineError.message : t('policyManagement.errors.saveBaseline'));
+    } finally {
+      setBaselineSaving(false);
+    }
+  };
+
   const handleEditRule = (resourceType: string, rule: EditorRule): void => {
     updateRuleDraft(resourceType, mapRuleToDraft(rule));
   };
@@ -835,6 +883,7 @@ export default function PolicyManagement() {
         const simulatorErrorKey: Record<string, string> = {
           unsupported_simulation_action: 'policyManagement.errors.simulator.unsupportedAction',
           unsupported_simulation_resource_type: 'policyManagement.errors.simulator.unsupportedResource',
+          synthetic_record_required: 'policyManagement.errors.simulator.syntheticRecordRequired',
           unsupported_ticket_client_principal_simulation:
             'policyManagement.errors.simulator.clientTicketNotSupported',
         };
@@ -848,6 +897,37 @@ export default function PolicyManagement() {
     } finally {
       setSimulatorLoading(false);
     }
+  };
+
+  // Localized plain-language reasons for a denial. The kernel's reason codes map to message keys on the
+  // server (packages/authorization denialExplanations); this only localizes the key and its parameters.
+  const renderExplanations = (decision: AuthorizationSimulationDecision, revision: 'draft' | 'published') => {
+    if (decision.allowed || decision.explanations.length === 0) {
+      return null;
+    }
+    const localizeResource = (resource?: string) =>
+      resource
+        ? t(`policyManagement.resourceTypes.${resource}`, { defaultValue: buildResourceSections([resource])[0].fallbackLabel })
+        : '';
+    const localizeAction = (action?: string) =>
+      action ? t(`policyManagement.actions.${action}`, { defaultValue: action }) : '';
+    // Parameters are lowercased to read naturally mid-sentence; a message that opens with one still starts a sentence.
+    const asSentence = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
+    return (
+      <ul id={`authorization-bundle-simulator-explanations-${revision}`} className="space-y-1 text-sm text-[rgb(var(--color-text-900))]">
+        {decision.explanations.map((explanation) => (
+          <li key={explanation.code} id={`authorization-bundle-simulator-explanation-${revision}-${explanation.kind}`}>
+            {asSentence(
+              t(explanation.messageKey, {
+                resource: localizeResource(explanation.params.resource).toLowerCase(),
+                action: localizeAction(explanation.params.action).toLowerCase(),
+                requiredAction: localizeAction(explanation.params.requiredAction).toLowerCase(),
+              })
+            )}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   const renderNamedIds = (ids: string[], type: 'client' | 'board') => {
@@ -869,12 +949,22 @@ export default function PolicyManagement() {
             <div className="flex flex-wrap items-center gap-2">
               <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.name}</div>
               {entry.isSystem ? <Badge variant="outline">{t('policyManagement.library.badges.starter')}</Badge> : null}
+              {entry.baseline === 'closed' ? (
+                <Badge id={`authorization-bundle-closed-badge-${entry.bundleId}`} variant="warning">
+                  {t('policyManagement.library.badges.closed')}
+                </Badge>
+              ) : null}
             </div>
             <div className="text-xs text-[rgb(var(--color-text-500))]">
               {entry.description || (entry.isSystem
                 ? t('policyManagement.library.descriptions.systemStarter')
                 : t('policyManagement.library.descriptions.customBundle'))}
             </div>
+            {entry.baseline === 'closed' ? (
+              <div className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('policyManagement.library.descriptions.closed')}
+              </div>
+            ) : null}
             <div className="text-xs text-[rgb(var(--color-text-500))]">
               {t('policyManagement.library.effectiveSummary', { status: statusLabel, count: entry.assignmentCount })}
             </div>
@@ -1249,8 +1339,75 @@ export default function PolicyManagement() {
                       {t('policyManagement.editor.revisionSummary', { summary: editorData.revisionChangeSummary })}
                     </div>
 
-                    {RESOURCE_SECTIONS.map((section) => {
-                      const sectionLabel = t(section.labelKey);
+                    <div
+                      id="authorization-bundle-baseline-panel"
+                      className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                            {t('policyManagement.editor.baseline.title')}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{t('policyManagement.editor.baseline.explanation')}</p>
+                        </div>
+                        {editorHasPublishableDraft ? (
+                          <Switch
+                            id="authorization-bundle-baseline-closed"
+                            checked={editorData.draftBaseline === 'closed'}
+                            disabled={baselineSaving || editorLoading}
+                            onCheckedChange={(checked) => void handleSetBaseline(checked ? 'closed' : 'open')}
+                            label={t('policyManagement.editor.baseline.closedToggle')}
+                          />
+                        ) : (
+                          <Badge variant={editorData.draftBaseline === 'closed' ? 'warning' : 'outline'}>
+                            {editorData.draftBaseline === 'closed'
+                              ? t('policyManagement.library.badges.closed')
+                              : t('policyManagement.editor.baseline.openBadge')}
+                          </Badge>
+                        )}
+                      </div>
+                      {editorData.draftBaseline === 'closed' ? (
+                        <div id="authorization-bundle-closed-denial-preview" className="space-y-2 text-sm">
+                          <div className="font-medium text-[rgb(var(--color-text-900))]">
+                            {t('policyManagement.editor.baseline.previewTitle')}
+                          </div>
+                          {editorData.closedDenialPreview.entries.length === 0 ? (
+                            <p className="text-muted-foreground">{t('policyManagement.editor.baseline.previewNothing')}</p>
+                          ) : (
+                            <>
+                              <p className="text-muted-foreground">{t('policyManagement.editor.baseline.previewIntro')}</p>
+                              <ul className="space-y-1">
+                                {editorData.closedDenialPreview.entries.map((entry) => (
+                                  <li
+                                    key={entry.resourceType}
+                                    id={`authorization-bundle-closed-denial-${entry.resourceType}`}
+                                    className="flex flex-wrap items-center gap-2"
+                                  >
+                                    <span className="font-medium">
+                                      {t(`policyManagement.resourceTypes.${entry.resourceType}`, {
+                                        defaultValue: buildResourceSections([entry.resourceType])[0].fallbackLabel,
+                                      })}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      {entry.fullyDenied
+                                        ? t('policyManagement.editor.baseline.deniedAll')
+                                        : t('policyManagement.editor.baseline.deniedActions', {
+                                            actions: entry.deniedActions
+                                              .map((action) => t(`policyManagement.actions.${action}`, { defaultValue: action }))
+                                              .join(', '),
+                                          })}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {resourceSections.map((section) => {
+                      const sectionLabel = t(section.labelKey, { defaultValue: section.fallbackLabel });
                       const sectionRules = editorData.rules.filter(
                         (rule) => rule.resourceType === section.resourceType
                       );
@@ -1265,11 +1422,6 @@ export default function PolicyManagement() {
                       const templateOptions: SelectOption[] = editorData.availableTemplates.map((template) => ({
                         value: template,
                         label: template,
-                      }));
-                      const clientOptions: SelectOption[] = editorData.availableClients.map((client) => ({
-                        value: client.client_id,
-                        label: client.client_name,
-                        is_inactive: client.is_inactive,
                       }));
                       const boardOptions: SelectOption[] = editorData.availableBoards.map((board) => ({
                         value: board.board_id,
@@ -1459,12 +1611,17 @@ export default function PolicyManagement() {
                                 <div className="space-y-3 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
                                   <div className="text-sm font-medium">{t('policyManagement.editor.scopes.clientTitle')}</div>
                                   <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-                                    <CustomSelect
+                                    <ClientPicker
                                       id={`authorization-bundle-rule-client-scope-${section.resourceType}`}
-                                      options={clientOptions}
-                                      value={draft.pendingClientId}
-                                      onValueChange={(value) => updateRuleDraft(section.resourceType, { pendingClientId: value })}
+                                      selectedClientId={draft.pendingClientId || null}
+                                      onSelect={(clientId) => updateRuleDraft(section.resourceType, { pendingClientId: clientId ?? '' })}
+                                      excludeIds={draft.selectedClientIds}
+                                      filterState={clientScopeFilterState}
+                                      onFilterStateChange={setClientScopeFilterState}
+                                      clientTypeFilter={clientScopeTypeFilter}
+                                      onClientTypeFilterChange={setClientScopeTypeFilter}
                                       placeholder={t('policyManagement.editor.scopes.selectClient')}
+                                      className="w-full"
                                     />
                                     <Button
                                       id={`authorization-bundle-add-client-scope-${section.resourceType}`}
@@ -1765,7 +1922,7 @@ export default function PolicyManagement() {
                         <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.resource')}</div>
                         <CustomSelect
                           id="authorization-bundle-simulator-resource"
-                          options={RESOURCE_SECTIONS.map((section) => ({ value: section.resourceType, label: t(section.labelKey) }))}
+                          options={resourceSections.map((section) => ({ value: section.resourceType, label: t(section.labelKey, { defaultValue: section.fallbackLabel }) }))}
                           value={simulatorResourceType}
                           onValueChange={(value) => {
                             setSimulatorResourceType(value);
@@ -1826,11 +1983,11 @@ export default function PolicyManagement() {
                             value={syntheticOwnerUserId}
                             onChange={(event) => setSyntheticOwnerUserId(event.target.value)}
                           />
-                          <Input
+                          <ClientPicker
                             id="authorization-bundle-simulator-synthetic-client"
+                            selectedClientId={syntheticClientId || null}
+                            onSelect={(clientId) => setSyntheticClientId(clientId ?? '')}
                             placeholder={t('policyManagement.simulator.syntheticClientPlaceholder')}
-                            value={syntheticClientId}
-                            onChange={(event) => setSyntheticClientId(event.target.value)}
                           />
                           <Input
                             id="authorization-bundle-simulator-synthetic-board"
@@ -1871,6 +2028,7 @@ export default function PolicyManagement() {
                               {simulationResult.draft.allowed ? t('policyManagement.simulator.allowed') : t('policyManagement.simulator.denied')}
                             </Badge>
                           </div>
+                          {renderExplanations(simulationResult.draft, 'draft')}
                           <div className="space-y-1 text-xs text-muted-foreground">
                             {simulationResult.draft.reasonCodes.map((code) => (
                               <div key={code}>{code}</div>
@@ -1884,6 +2042,7 @@ export default function PolicyManagement() {
                               {simulationResult.published.allowed ? t('policyManagement.simulator.allowed') : t('policyManagement.simulator.denied')}
                             </Badge>
                           </div>
+                          {renderExplanations(simulationResult.published, 'published')}
                           <div className="space-y-1 text-xs text-muted-foreground">
                             {simulationResult.published.reasonCodes.map((code) => (
                               <div key={code}>{code}</div>

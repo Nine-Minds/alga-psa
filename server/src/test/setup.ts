@@ -140,7 +140,7 @@ if (typeof document !== 'undefined') {
 //    restored when the file finishes, so a module-scope setter can't leak its
 //    edition into every later file in the shared fork.
 // Guarded vars: EDITION flips Temporal-vs-PgBoss and CE/EE dispatch; the
-// base-URL trio feeds getEmailWebhookBaseUrl and friends (a leaked
+// base URLs feed getEmailWebhookBaseUrl and friends (a leaked
 // localhost NEXTAUTH_URL makes webhook probes silently enter polling mode);
 // the MICROSOFT_*_BASE_URL overrides swap Graph or the OAuth authority for an emulator —
 // no test file sets those, but server/knexfile.cjs opens with
@@ -155,6 +155,7 @@ const GUARDED_ENV_VARS = [
   'EDITION',
   'NEXT_PUBLIC_EDITION',
   'APPLICATION_URL',
+  'PUBLIC_WEBHOOK_BASE_URL',
   'NEXTAUTH_URL',
   'NEXT_PUBLIC_BASE_URL',
   'MICROSOFT_LOGIN_BASE_URL',
@@ -489,6 +490,18 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
+// The '@alga-psa/auth' facade's hasPermission is published on globalThis so that
+// suites which opt in to the allow-by-default '@alga-psa/auth/rbac' mock
+// (server/src/test/helpers/allowAllRbac.ts) share the very same vi.fn: a
+// per-test override then applies to both specifiers. '@alga-psa/auth/rbac'
+// itself is deliberately NOT mocked globally, so new denial suites hit the real
+// module and cannot silently pass.
+const sharedAuthMocks = vi.hoisted(() => {
+  const hasPermission = vi.fn().mockResolvedValue(true);
+  (globalThis as any).__algaSharedHasPermission = hasPermission;
+  return { hasPermission };
+});
+
 vi.mock('@alga-psa/auth', async () => {
   const { AsyncLocalStorage } = await import('node:async_hooks');
 
@@ -507,7 +520,7 @@ vi.mock('@alga-psa/auth', async () => {
 
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
-  const hasPermission = vi.fn().mockResolvedValue(true);
+  const hasPermission = sharedAuthMocks.hasPermission;
   // Mirrors packages/auth rbac: one PermissionResult per check, in order.
   // Delegates to hasPermission so per-test permission overrides apply to both.
   const checkMultiplePermissions = vi.fn(async (user: any, checks: Array<{ resource: string; action: string }>, knex?: any) =>

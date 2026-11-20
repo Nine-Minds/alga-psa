@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The first test's `await import('./queryActions')` pays this file's
+// module-transform cost against the per-test clock; comfortably sub-second
+// locally, but a loaded CI runner can blow the 5s default (same mechanism as
+// interactionActions.durationReconcile.test.ts, run 44399064673).
+vi.setConfig({ testTimeout: 20_000 });
+
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 

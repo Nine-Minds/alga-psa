@@ -69,7 +69,7 @@ describe('status column edits in the edit drawer refresh the board', () => {
     const fetchAll = detailSource.indexOf('const fetchAllTaskData = async () => {');
     expect(fetchAll).toBeGreaterThan(-1);
     const fetchAllBlock = detailSource.slice(fetchAll);
-    expect(fetchAllBlock).toContain('getProjectStatusesByPhase(project.project_id)');
+    expect(fetchAllBlock).toContain('projectSource.options.statusesByPhase(project.project_id)');
     expect(fetchAllBlock).toMatch(/\}, \[project\.project_id, statusVersion\]\);/);
     // Pin the coupling the assertion above relies on.
     expect(listSource).toContain('const phaseStatuses = statusesByPhase[phase.phase_id] ?? statuses;');

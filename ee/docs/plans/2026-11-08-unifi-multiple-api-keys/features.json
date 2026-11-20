@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration creates unifi_credentials (tenant, credential_id, integration_id, label, mode, local_host_id, status, last_error, last_checked_at, timestamps) with tenant distribution and per-integration unique label",
+    "implemented": true,
+    "prdRefs": ["§3.1", "§8"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration creates unifi_console_routes (tenant, integration_id, host_id, credential_id, console_name, state, last_error, first_seen_at, last_verified_at) keyed by console",
+    "implemented": true,
+    "prdRefs": ["§3.2"]
+  },
+  {
+    "id": "F003",
+    "description": "Backfill creates one 'Default' credential per existing UniFi integration from legacy secrets, copying mode and local base URL; legacy secrets stay readable until verified",
+    "implemented": true,
+    "prdRefs": ["§8"]
+  },
+  {
+    "id": "F004",
+    "description": "Secrets become per-credential: unifi_api_key:<credential_id> and unifi_local_base_url:<credential_id>, with legacy-name fallback only when no credential rows exist",
+    "implemented": true,
+    "prdRefs": ["§3.1", "§8"]
+  },
+  {
+    "id": "F005",
+    "description": "UniFiApiClient stays the single-key client; UniFiFleetClient composes N of them and exposes testConnection, listConsoles, listSites, listSitesForHost, listDevices, getDevice",
+    "implemented": true,
+    "prdRefs": ["§4"]
+  },
+  {
+    "id": "F006",
+    "description": "createUniFiClient returns a fleet client; a tenant with one credential behaves exactly as today and existing call sites are unchanged",
+    "implemented": true,
+    "prdRefs": ["§4"]
+  },
+  {
+    "id": "F007",
+    "description": "Console discovery unions /v1/hosts across active Site Manager credentials and de-duplicates by hostId",
+    "implemented": true,
+    "prdRefs": ["§4.1"]
+  },
+  {
+    "id": "F008",
+    "description": "Ownership resolution probes credentials in stable order (local match, then site_manager by created_at) and persists the first successful owner; console_forbidden falls through",
+    "implemented": true,
+    "prdRefs": ["§4.2", "§10"]
+  },
+  {
+    "id": "F009",
+    "description": "Persisted routes are re-probed only on console_forbidden/401, credential disable/remove/replace, full sync, or manual re-check; routine syncs do not re-probe",
+    "implemented": true,
+    "prdRefs": ["§3.2"]
+  },
+  {
+    "id": "F010",
+    "description": "Local credentials each own one controller; migrated credential keeps host id 'local', new ones get a colon-free generated host id so parseUniFiScopeKey stays valid",
+    "implemented": true,
+    "prdRefs": ["§4.3"]
+  },
+  {
+    "id": "F011",
+    "description": "A console no credential can reach becomes state=unreachable with one actionable 'add a key created under that fabric' warning, surfaced in settings and the sync result",
+    "implemented": true,
+    "prdRefs": ["§4.4", "§9"]
+  },
+  {
+    "id": "F012",
+    "description": "A 401 marks only that credential reconnect_required; its consoles become uncertain failed scopes (no tombstoning, alerts uncertain); integration is reconnect-required only when every credential is",
+    "implemented": true,
+    "prdRefs": ["§5"]
+  },
+  {
+    "id": "F013",
+    "description": "Retry and rate-limit state is per child client so one throttled key does not slow the others",
+    "implemented": true,
+    "prdRefs": ["§5"]
+  },
+  {
+    "id": "F014",
+    "description": "Security: a stored key is only sent to the destination it was saved with; changing mode or local base URL requires re-entering the key, validated before any write",
+    "implemented": true,
+    "prdRefs": ["§6"]
+  },
+  {
+    "id": "F015",
+    "description": "Settings screen lists credentials (label, mode, status, consoles reached, last error) with add, replace key, relabel and remove, using standard components and never showing ids",
+    "implemented": true,
+    "prdRefs": ["§7"]
+  },
+  {
+    "id": "F016",
+    "description": "Site mapping table shows which credential label reaches each site ('Reached by')",
+    "implemented": true,
+    "prdRefs": ["§7"]
+  },
+  {
+    "id": "F017",
+    "description": "Removing a credential re-routes its consoles among remaining credentials, marks the rest unreachable fail-closed, and asks before unmapping affected sites",
+    "implemented": true,
+    "prdRefs": ["§7"]
+  },
+  {
+    "id": "F018",
+    "description": "Sync result reports per-credential status and unreachableConsoles with suggested action; last_error on the row is the UI's source of truth",
+    "implemented": true,
+    "prdRefs": ["§9"]
+  },
+  {
+    "id": "F019",
+    "description": "UniFi simulator models fabric-scoped keys: key A lists all hosts but 403s connector on fabric consoles, key B lists only its fabric",
+    "implemented": true,
+    "prdRefs": ["§11"]
+  },
+  {
+    "id": "F020",
+    "description": "Setup docs and customer-facing release note explain one Independent key plus one key per fabric and thank Ryan at Tom's Help Desk",
+    "implemented": true,
+    "prdRefs": ["§7", "§12"]
+  }
+]

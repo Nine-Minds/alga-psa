@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   download: vi.fn(async (): Promise<any> => ({ success: true, xml: '<Crm/>', filename: 'algapsa-3cx-abc.xml', contentType: 'application/xml' })),
   ok: vi.fn(async (): Promise<any> => ({ success: true })),
   listQueue: vi.fn(async (): Promise<any> => ({ success: true, items: [] })),
-  listTargets: vi.fn(async (): Promise<any> => ({ success: true, targets: [] })),
 }));
 
 vi.mock('next/navigation', () => ({ useSearchParams: () => ({ get: () => null }) }));
@@ -60,7 +59,6 @@ vi.mock('../../../../actions/integrations/telephonyActions', () => ({
   completeThreecxPendingContact: mocks.ok,
   dismissThreecxPendingContact: mocks.ok,
   listThreecxContactQueue: mocks.listQueue,
-  listTelephonyResolutionTargets: mocks.listTargets,
 }));
 
 import { ThreecxIntegrationSettings } from './ThreecxIntegrationSettings';
@@ -301,11 +299,13 @@ describe('ThreecxIntegrationSettings', () => {
     await screen.findByText('3CX');
     await waitFor(() => expect(container.querySelector('#threecx-contact-queue-row-c1')).toBeTruthy());
     expect(container.querySelector('#threecx-contact-queue-row-p1')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    fireEvent.click(await idleButton('Apply'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: 'cl1' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Leave without client' }));
+    // Each queue action stays busy (buttons disabled) until its reload settles;
+    // a click on a disabled button is dropped, so wait for the row to go idle.
+    fireEvent.click(await idleButton('Leave without client'));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'Complete' }));
+    fireEvent.click(await idleButton('Complete'));
     // The dialog mounts at document level, outside the render container.
     await waitFor(() => expect(document.querySelector('#threecx-complete-email')).toBeTruthy());
     expect((screen.getByRole('button', { name: 'Create contact' }) as HTMLButtonElement).disabled).toBe(true);
@@ -313,6 +313,35 @@ describe('ThreecxIntegrationSettings', () => {
     await waitFor(() => expect((screen.getByRole('button', { name: 'Create contact' }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole('button', { name: 'Create contact' }));
     await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith(expect.objectContaining({ pendingId: 'p1', email: 'no.mail@x.com', number: '+15550001111' })));
+  });
+
+  it('a queue action keeps the row locked until its queue reload settles, then frees it', async () => {
+    const queue = {
+      success: true,
+      items: [
+        { kind: 'unmapped', contactId: 'c1', fullName: 'Jane Roe', email: 'jane@x.com', companyName: 'Acme', suggestedClientId: 'cl1', suggestedClientName: 'Acme Inc' },
+      ],
+    };
+    mocks.listQueue.mockResolvedValueOnce(queue);
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    await waitFor(() => expect(container.querySelector('#threecx-contact-queue-row-c1')).toBeTruthy());
+
+    let releaseReload!: () => void;
+    mocks.listQueue.mockImplementationOnce(() => new Promise((resolve) => { releaseReload = () => resolve(queue); }));
+    fireEvent.click(await idleButton('Apply'));
+    await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: 'cl1' }));
+    await waitFor(() => expect(mocks.listQueue).toHaveBeenCalledTimes(2));
+
+    // The mapping call has returned but the reload has not: the row stays locked.
+    const leave = screen.getByRole('button', { name: 'Leave without client' }) as HTMLButtonElement;
+    expect(leave.disabled).toBe(true);
+    fireEvent.click(leave);
+    expect(mocks.ok).toHaveBeenCalledTimes(1);
+
+    await act(async () => { releaseReload(); });
+    fireEvent.click(await idleButton('Leave without client'));
+    await waitFor(() => expect(mocks.ok).toHaveBeenCalledWith({ contactId: 'c1', clientId: null }));
   });
 
   it('T225: the template-stale hint shows when the uploaded version is older than the current one', async () => {
