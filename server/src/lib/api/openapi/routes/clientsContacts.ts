@@ -969,7 +969,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/contacts/{id}',
     summary: 'Update contact',
-    description: 'Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).',
+    description: 'Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients). A different email replaces the primary address and drops the old one unless it is re-sent in additional_email_addresses (sending one of the contact\'s own additional addresses promotes it and keeps the old primary as an additional row); an address already used by another contact is refused.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
