@@ -8,7 +8,7 @@
  * migrated-database purchase-persistence suite; it is not a real Stripe
  * sandbox capture.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import knex, { type Knex } from 'knex';
@@ -383,18 +383,23 @@ describe('co-managed purchase against the Stripe emulator', () => {
     }
     expect((await Page({})).type).toBe(PurchaseOverview);
     const quote = await previewCoManagedSeatsAction(2);
+    assert(quote.kind === 'quote', 'Expected a quote for the current database offer');
     expect(quote).toMatchObject({ unitAmount: 1149, monthlyTotal: 2298, currency: 'eur' });
     const operationId = randomUUID();
     expect(await purchaseCoManagedSeatsAction({ operationId, quantity: 2, offerRef: quote.offerRef })).toMatchObject({ kind: 'checkout' });
-    expect(await operationRow(tenant, operationId)).toMatchObject({ price_id: CO_MANAGED_PRICE_ID, stripe_account: 'acct_algasim' });
+    expect(await operationRow(tenant, operationId)).toMatchObject({
+      offer_version_id: quote.offerRef, price_id: CO_MANAGED_PRICE_ID, stripe_account: 'acct_algasim',
+    });
+    const checkoutCount = (await state('checkout-sessions')).length;
     const key = 'co_managed_technician_seat';
     const actor = { userId: 'operator', tenantId: process.env.MASTER_BILLING_TENANT_ID! };
     await catalog.pauseSales({ actor, offerKey: key, interval: 'month', expectedCurrentVersionId: quote.offerRef });
     await expect(Page({})).rejects.toThrow(/404/);
-    await expect(previewCoManagedSeatsAction(2)).rejects.toThrow('not available');
+    await expect(previewCoManagedSeatsAction(2)).resolves.toEqual({ kind: 'blocked', reason: 'offer_paused' });
     await expect(purchaseCoManagedSeatsAction({ operationId: randomUUID(), quantity: 2, offerRef: quote.offerRef }))
       .rejects.toThrow('not available');
     expect(await tenantDb(db, tenant).table('co_managed_purchase_operations')).toHaveLength(1);
+    expect(await state('checkout-sessions')).toHaveLength(checkoutCount);
     expect(accountRead).not.toHaveBeenCalled();
   }, HOOK_TIMEOUT);
 
