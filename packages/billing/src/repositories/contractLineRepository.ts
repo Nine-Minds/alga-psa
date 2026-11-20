@@ -48,6 +48,13 @@ export type DetailedContractLine = IContractLineMapping & {
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 
+export class ContractTemplateLineNotFoundError extends Error {
+  constructor(templateLineId: string) {
+    super(`Template contract line ${templateLineId} not found`);
+    this.name = 'ContractTemplateLineNotFoundError';
+  }
+}
+
 function tenantScopedTable(knex: TenantScopedKnex, tenant: string, table: string): Knex.QueryBuilder {
   return tenantDb(knex, tenant).table(table);
 }
@@ -526,7 +533,7 @@ export async function cloneTemplateLineToContract(
     .first();
 
   if (!templateLine) {
-    throw new Error(`Template contract line ${templateLineId} not found`);
+    throw new ContractTemplateLineNotFoundError(templateLineId);
   }
 
   const edits = options.edits ?? {};
