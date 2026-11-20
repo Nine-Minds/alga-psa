@@ -20,6 +20,7 @@ const imapLogoutMock = vi.fn();
 const imapCloseMock = vi.fn();
 const imapOnMock = vi.fn();
 const getTenantSecretMock = vi.fn();
+const imapClientOptionsMock: any[] = [];
 
 vi.mock('node:dns/promises', () => ({
   default: { lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]) },
@@ -85,6 +86,7 @@ vi.mock('mailparser', () => ({
 
 vi.mock('imapflow', () => ({
   ImapFlow: class ImapFlow {
+    constructor(options: any) { imapClientOptionsMock.push(options); }
     connect(...args: any[]) {
       return imapConnectMock(...args);
     }
@@ -249,6 +251,7 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     imapCloseMock.mockReset();
     imapOnMock.mockReset();
     getTenantSecretMock.mockReset();
+    imapClientOptionsMock.length = 0;
 
     processInboundEmailInAppMock.mockResolvedValue({
       outcome: 'created',
@@ -711,7 +714,11 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     expect(googleConfigUpdateMock).not.toHaveBeenCalled();
   });
 
-  it('T014: IMAP pointer fetch resolves full email payload before processing', async () => {
+  it.each([
+    ['rollback keeps the old committed generation usable', 'generation-old', 'password-old', true],
+    ['successful scope change selects only the new generation', 'generation-new', 'password-new', true],
+    ['missing committed-generation credentials fail before authentication', 'generation-missing', undefined, false],
+  ])('T014: IMAP pointer fetch uses %s', async (_scenario, generation, password, credentialsPresent) => {
     const { db } = createDbMock({
       imapRow: {
         id: 'provider-imap-1',
@@ -724,9 +731,12 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         auth_type: 'password',
         username: 'imap-user',
         access_token: null,
+        credential_generation: generation,
       },
     });
     getAdminConnectionMock.mockResolvedValue(db);
+    getTenantSecretMock.mockImplementation(async (_tenant: string, key: string) =>
+      key === `imap_password_provider-imap-1_${generation}` ? password : undefined);
 
     imapFetchMock.mockReturnValue(
       (async function* () {
@@ -770,25 +780,35 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       maxAttempts: 5,
     } as UnifiedInboundEmailQueueJob);
 
-    expect(result).toMatchObject({
-      outcome: 'processed',
-      processedCount: 1,
-      dedupedCount: 0,
-    });
-    expect(imapConnectMock).toHaveBeenCalledTimes(1);
-    expect(simpleParserMock).toHaveBeenCalledTimes(1);
-    expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenantId: 'tenant-1',
-        providerId: 'provider-imap-1',
-        emailData: expect.objectContaining({
-          id: '<imap-msg-300@example.com>',
-          subject: 'IMAP Subject',
-          rawMimeBase64: expect.any(String),
+    if (credentialsPresent) {
+      expect(result).toMatchObject({ outcome: 'processed', processedCount: 1, dedupedCount: 0 });
+      expect(imapConnectMock).toHaveBeenCalledTimes(1);
+      expect(imapClientOptionsMock.at(-1).auth.pass).toBe(password);
+      expect(simpleParserMock).toHaveBeenCalledTimes(1);
+    } else {
+      expect(result).toMatchObject({ outcome: 'skipped', reason: 'source_unavailable:imap_credentials_missing' });
+      expect(imapConnectMock).not.toHaveBeenCalled();
+      expect(imapFetchMock).not.toHaveBeenCalled();
+      expect(simpleParserMock).not.toHaveBeenCalled();
+    }
+    expect(getTenantSecretMock).toHaveBeenCalledWith('tenant-1', `imap_password_provider-imap-1_${generation}`);
+    expect(getTenantSecretMock).not.toHaveBeenCalledWith('tenant-1', 'imap_password_provider-imap-1');
+    if (credentialsPresent) {
+      expect(processInboundEmailInAppMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-1',
+          providerId: 'provider-imap-1',
+          emailData: expect.objectContaining({
+            id: '<imap-msg-300@example.com>',
+            subject: 'IMAP Subject',
+            rawMimeBase64: expect.any(String),
+          }),
         }),
-      }),
-      { collectDiagnostics: true }
-    );
+        { collectDiagnostics: true }
+      );
+    } else {
+      expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+    }
   });
 
   it('T015: first consume processes and persists consume-time idempotency marker', async () => {

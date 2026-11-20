@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   rows: [] as any[],
   clients: [] as any[],
   leaseUpdates: 0,
+  secretValues: {} as Record<string, string>,
+  secretReads: [] as string[],
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -36,6 +38,15 @@ vi.mock('@alga-psa/db', () => ({
       return query;
     },
   })),
+}));
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getTenantSecret: async (_tenant: string, key: string) => {
+      mocks.secretReads.push(key);
+      return mocks.secretValues[key];
+    },
+  }),
 }));
 
 vi.mock('@alga-psa/shared/services/net/outboundAddressPolicy', () => ({
@@ -96,6 +107,8 @@ describe('EmailService provider refresh credential generations', () => {
     mocks.rows = [provider()];
     mocks.clients = [];
     mocks.leaseUpdates = 0;
+    mocks.secretReads = [];
+    for (const key of Object.keys(mocks.secretValues)) delete mocks.secretValues[key];
   });
 
   afterEach(() => {
@@ -122,6 +135,30 @@ describe('EmailService provider refresh credential generations', () => {
       user: 'user@example.test',
       accessToken: 'access-token-new',
     }));
+    await service.stop();
+    vi.clearAllTimers();
+  });
+
+  it('uses only committed password generations across rollback and replaces listeners after rotation', async () => {
+    const service = new EmailService();
+    mocks.secretValues['imap_password_provider-1_generation-old'] = 'old-committed-password';
+    // A failed save may leave a staged value, but the committed row still
+    // selects the old generation and the listener must continue using it.
+    mocks.secretValues['imap_password_provider-1_generation-staged'] = 'uncommitted-password';
+    mocks.rows = [provider({ auth_type: 'password', access_token: null })];
+    await (service as any).refreshProviders();
+    await waitForClientCount(1);
+    expect(mocks.clients[0].options.auth.pass).toBe('old-committed-password');
+    expect(mocks.secretReads).toContain('imap_password_provider-1_generation-old');
+    expect(mocks.secretReads).not.toContain('imap_password_provider-1');
+
+    mocks.secretValues['imap_password_provider-1_generation-new'] = 'new-committed-password';
+    mocks.rows = [provider({ auth_type: 'password', access_token: null, credential_generation: 'generation-new' })];
+    await (service as any).refreshProviders();
+    await waitForClientCount(2);
+    expect(mocks.clients[0].logout).toHaveBeenCalled();
+    expect(mocks.clients[1].options.auth.pass).toBe('new-committed-password');
+    expect(mocks.secretReads).toContain('imap_password_provider-1_generation-new');
     await service.stop();
     vi.clearAllTimers();
   });

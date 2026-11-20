@@ -9,6 +9,17 @@ const mocks = vi.hoisted(() => ({
   updates: [] as Array<[string, any]>,
   merges: [] as Array<[string, any]>,
   transaction: vi.fn(),
+  lockTails: new Map<string, Promise<void>>(),
+  acquireRowLock: async (tx: any, key: string) => {
+    if (tx.heldLocks.has(key)) return;
+    const previous = mocks.lockTails.get(key) ?? Promise.resolve();
+    let unlock!: () => void;
+    const held = new Promise<void>((resolve) => { unlock = resolve; });
+    mocks.lockTails.set(key, previous.then(() => held));
+    await previous;
+    tx.heldLocks.add(key);
+    tx.unlocks.push(unlock);
+  },
   deleteProvider: vi.fn(),
   initializeProviderWebhook: vi.fn(),
   renewWebhooks: vi.fn(),
@@ -30,10 +41,11 @@ const mocks = vi.hoisted(() => ({
   sessionUser: { user_id: 'user-1', user_type: 'internal' as 'internal' | 'client', tenant: 'tenant-123' },
 }));
 
-function makeTable(name: string) {
+function makeTable(name: string, transactionState: any = null) {
   mocks.tableCalls.push(name);
   const filters: Record<string, unknown> = {};
-  const seed = () => mocks.tables[name] ?? {};
+  const state = () => transactionState?.tables ?? mocks.tables;
+  const seed = () => state()[name] ?? {};
   const thenable = (value: () => unknown, extra: Record<string, unknown> = {}) => {
     const p: any = Promise.resolve().then(value);
     Object.assign(p, extra);
@@ -44,10 +56,19 @@ function makeTable(name: string) {
       if (values && typeof values === 'object') Object.assign(filters, values);
       return chain;
     },
-    forUpdate: () => chain,
+    forUpdate: () => { chain.requiresRowLock = true; return chain; },
     orderBy: () => chain,
     select: () => thenable(() => seed().rows ?? [], { first: async () => seed().first }),
-    first: async () => seed().first,
+    first: async () => {
+      if (chain.requiresRowLock && transactionState) {
+        const providerId = String(filters.email_provider_id ?? '');
+        await mocks.acquireRowLock(transactionState, `imap:${providerId}`);
+        // READ COMMITTED: after waiting for the row lock, refresh this row
+        // from the latest committed state before deciding the next generation.
+        transactionState.tables[name] = structuredClone(mocks.tables[name] ?? {});
+      }
+      return seed().first;
+    },
     update: (values: any) => {
       mocks.updates.push([name, values]);
       return thenable(() => {
@@ -56,6 +77,8 @@ function makeTable(name: string) {
           const actual = seed().first?.credential_generation ?? null;
           if (actual !== (filters.credential_generation ?? null)) return 0;
         }
+        if (seed().first) Object.assign(seed().first, values);
+        if (transactionState) transactionState.changed.add(name);
         return 1;
       }, { returning: async () => [seed().returned] });
     },
@@ -68,7 +91,15 @@ function makeTable(name: string) {
               if (name === 'imap_email_provider_config' && mocks.failImapMerge) {
                 throw new Error('database write failed');
               }
-              return [seed().returned];
+              const priorRow = { ...(seed().returned ?? {}), ...(seed().first ?? {}) };
+              const row = { ...priorRow, ...values };
+              for (const [key, value] of Object.entries(row)) {
+                if (value && typeof value === 'object' && 'raw' in value) row[key] = priorRow[key];
+              }
+              seed().first = row;
+              seed().returned = row;
+              if (transactionState) transactionState.changed.add(name);
+              return [row];
             },
           };
         },
@@ -84,25 +115,25 @@ vi.mock('@alga-psa/db', () => ({
     knex: {
       transaction: async (fn: any) => {
         mocks.transaction();
-        const result = await fn({ fn: { now: () => 'NOW' }, raw: (sql: string) => ({ raw: sql }) });
-        if (mocks.failCommit) throw new Error('database commit failed');
-        const imapMerge = [...mocks.merges].reverse().find(([table]) => table === 'imap_email_provider_config')?.[1];
-        if (imapMerge && mocks.tables.imap_email_provider_config?.first) {
-          mocks.tables.imap_email_provider_config.first = {
-            ...mocks.tables.imap_email_provider_config.first,
-            credential_generation: imapMerge.credential_generation,
-            host: imapMerge.host,
-            auth_type: imapMerge.auth_type,
-            username: imapMerge.username,
-            oauth_client_secret: imapMerge.oauth_client_secret,
-          };
+        const tx = {
+          tables: structuredClone(mocks.tables),
+          changed: new Set<string>(),
+          heldLocks: new Set<string>(),
+          unlocks: [] as Array<() => void>,
+        };
+        try {
+          const result = await fn({ __transactionState: tx, fn: { now: () => 'NOW' }, raw: (sql: string) => ({ raw: sql }) });
+          if (mocks.failCommit) throw new Error('database commit failed');
+          for (const table of tx.changed) mocks.tables[table] = structuredClone(tx.tables[table]);
+          return result;
+        } finally {
+          for (const unlock of tx.unlocks.reverse()) unlock();
         }
-        return result;
       },
       fn: { now: () => 'NOW' },
     },
   }),
-  tenantDb: () => ({ table: (name: string) => makeTable(name) }),
+  tenantDb: (connection: any) => ({ table: (name: string) => makeTable(name, connection?.__transactionState ?? null) }),
   auditLog: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/auth', () => ({
@@ -608,24 +639,35 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     await started;
     const firstGeneration = mocks.merges[mocks.merges.length - 1]![1].credential_generation;
 
-    const secondSave: any = await updateEmailProvider('prov-1', imapPayload({
+    const deletesAtGeneration: Array<{ key: string; generation: string | null }> = [];
+    mocks.secrets.deleteTenantSecret.mockImplementation(async (_tenant: string, key: string) => {
+      deletesAtGeneration.push({ key, generation: mocks.tables.imap_email_provider_config.first?.credential_generation ?? null });
+      delete mocks.secretValues[key];
+    });
+    let secondSaveSettled = false;
+    const secondSavePromise = updateEmailProvider('prov-1', imapPayload({
       host: 'imap.new-scope.example.test',
       auth_type: 'password',
       password: undefined,
-    }));
-    expect(secondSave.reconnectRequired).toBe(true);
-    const generation = mocks.merges[mocks.merges.length - 1]![1].credential_generation;
-    mocks.tables.imap_email_provider_config.first = {
-      ...row,
-      host: 'imap.new-scope.example.test',
-      credential_generation: generation,
-    };
+    })).then((result: any) => { secondSaveSettled = true; return result; });
+    await vi.waitFor(() => expect(mocks.transaction).toHaveBeenCalledTimes(2));
+    expect(secondSaveSettled).toBe(false);
+    expect(mocks.merges).toHaveLength(1);
+
     resolvePasswordWrite();
     await firstSave;
+    const secondSave: any = await secondSavePromise;
+    expect(secondSave.reconnectRequired).toBe(true);
+    const generation = mocks.tables.imap_email_provider_config.first.credential_generation;
+    expect(generation).not.toBe(firstGeneration);
+    expect(mocks.tables.imap_email_provider_config.first.host).toBe('imap.new-scope.example.test');
+    expect(deletesAtGeneration).not.toContainEqual({ key: `imap_password_prov-1_${generation}`, generation });
+    expect(deletesAtGeneration.every(({ key, generation: selected }) => !key.endsWith(`_${selected}`))).toBe(true);
 
     const tested = await testEmailProviderConnection('prov-1');
     expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
-    expect(mocks.secretValues[`imap_password_prov-1_${firstGeneration}`]).toBe('delayed-old-password');
+    expect(mocks.secretValues[`imap_password_prov-1_${firstGeneration}`]).toBeUndefined();
+    expect(mocks.secrets.getTenantSecret).toHaveBeenCalledWith('tenant-123', `imap_password_prov-1_${generation}`);
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 
@@ -728,6 +770,40 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     expect(mocks.tables.imap_email_provider_config.first.credential_generation).toBe('generation-old');
 
     mocks.failCommit = false;
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested.success).toBe(true);
+    expect(mocks.imapConstructorOptions.at(-1).auth.pass).toBe(oldPassword);
+  });
+
+  it('discards a partially staged replacement when a later secret write fails', async () => {
+    const oldPassword = 'original-password';
+    const oldClientSecret = 'original-client-secret';
+    const oldRow = { ...storedImapRow, auth_type: 'password', credential_generation: 'generation-stable' };
+    mocks.secretValues['imap_password_prov-1_generation-stable'] = oldPassword;
+    mocks.secretValues['imap_oauth_client_secret_prov-1_generation-stable'] = oldClientSecret;
+    seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: oldRow, returned: { ...oldRow } } });
+    const attemptedWrites: string[] = [];
+    mocks.secrets.setTenantSecret.mockImplementation(async (_tenant: string, key: string, value: string) => {
+      attemptedWrites.push(key);
+      if (key.includes('_oauth_client_secret_')) throw new Error('secret store failed mid-write');
+      mocks.secretValues[key] = value;
+    });
+
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const failed: any = await updateEmailProvider('prov-1', imapPayload({
+      auth_type: 'password',
+      password: 'replacement-password',
+      oauth_client_secret: 'replacement-client-secret',
+    }));
+    expect(failed.actionError).toBeTruthy();
+    expect(attemptedWrites).toHaveLength(2);
+    const stagedGeneration = attemptedWrites[0].split('_').at(-1)!;
+    expect(mocks.tables.imap_email_provider_config.first.credential_generation).toBe('generation-stable');
+    expect(mocks.secretValues['imap_password_prov-1_generation-stable']).toBe(oldPassword);
+    expect(mocks.secretValues['imap_oauth_client_secret_prov-1_generation-stable']).toBe(oldClientSecret);
+    expect(mocks.secretValues[`imap_password_prov-1_${stagedGeneration}`]).toBeUndefined();
+
+    mocks.secrets.setTenantSecret.mockImplementation(async (_tenant: string, key: string, value: string) => { mocks.secretValues[key] = value; });
     const tested = await testEmailProviderConnection('prov-1');
     expect(tested.success).toBe(true);
     expect(mocks.imapConstructorOptions.at(-1).auth.pass).toBe(oldPassword);
