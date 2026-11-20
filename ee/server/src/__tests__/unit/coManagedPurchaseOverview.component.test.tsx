@@ -1,15 +1,29 @@
 // @vitest-environment jsdom
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
+import { getNamespacesForRoute } from '@alga-psa/core/i18n/config';
+import { DateFormatProvider } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
+import enCommon from '../../../../../server/public/locales/en/common.json';
+import enLicensing from '../../../../../server/public/locales/en/msp/licensing.json';
+import frCommon from '../../../../../server/public/locales/fr/common.json';
+import frLicensing from '../../../../../server/public/locales/fr/msp/licensing.json';
 
 const mocks = vi.hoisted(() => ({ offer: vi.fn(), reviewSeat: vi.fn(), useSeat: vi.fn(), refresh: vi.fn(), discovery: vi.fn(), editorProps: [] as unknown[],
-  readers: { billing: vi.fn(), overview: vi.fn(), admit: vi.fn(), allocate: vi.fn() } }));
+  hasRecovery: vi.fn(), cancelConversion: vi.fn(), readers: { billing: vi.fn(), overview: vi.fn(), admit: vi.fn(), allocate: vi.fn() } }));
 vi.mock('../../lib/actions/coManagedSeatTrialActions', () => ({
-  getSeatTrialOfferAction: mocks.offer, reviewSeatTrialConversionAction: mocks.reviewSeat, usePaidSeatForTrialAction: mocks.useSeat,
+  getSeatTrialOfferAction: mocks.offer, reviewSeatTrialConversionAction: mocks.reviewSeat, applyPaidSeatToTrialAction: mocks.useSeat,
+  cancelSeatTrialConversionAction: mocks.cancelConversion,
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useFormatters: () => ({ formatCurrency: (amount: number) => String(amount) }), useTranslation: () => ({ t: (k: string, o?: any) => o?.defaultValue ?? k }) }));
+vi.mock('next/navigation', () => {
+  const router = { refresh: mocks.refresh };
+  return { useRouter: () => router };
+});
+vi.mock('i18next-http-backend', () => ({
+  default: { type: 'backend', init() {}, read(_locale: string, _ns: string, done: (error: null, data: object) => void) { done(null, {}); } },
+}));
+vi.mock('@enterprise/lib/actions/coManagedSeatTrialRecovery', () => ({ hasSeatTrialRecoveryAction: mocks.hasRecovery }));
 // The only data this view may read is the purchase state the editor owns; everything operational fails the test.
 vi.mock('@/components/co-managed/CoManagedPoolEditor', () => ({
   default: (props: unknown) => { mocks.editorProps.push(props); return <div id="co-managed-pool-editor">pool</div>; },
@@ -25,6 +39,22 @@ import CoManagedSeatTrial from '../../components/co-managed/CoManagedSeatTrial';
 import CoManagedPurchaseOverview from '../../components/co-managed/CoManagedPurchaseOverview';
 import { useCoManagedPurchaseNavigation } from '../../components/co-managed/useCoManagedPurchaseNavigation';
 import { CO_MANAGED_ACCESS_CHANGED } from '@/components/co-managed/accessRefresh';
+import SeatTrialReturn from '@/components/co-managed/SeatTrialReturn';
+
+function renderOnMspRoute(node: ReactNode, route: string, locale: 'en' | 'fr' = 'en') {
+  const resources = locale === 'fr'
+    ? { common: frCommon, 'msp/licensing': frLicensing }
+    : { common: enCommon, 'msp/licensing': enLicensing };
+  const namespaces = getNamespacesForRoute(route);
+  const preloadedResources = Object.fromEntries(namespaces.map(namespace => [
+    namespace, resources[namespace as keyof typeof resources] ?? {},
+  ]));
+  return render(
+    <I18nProvider initialLocale={locale} namespaces={namespaces} preloadedResources={preloadedResources}>
+      <DateFormatProvider countryCode={locale === 'fr' ? 'FR' : 'US'}>{node}</DateFormatProvider>
+    </I18nProvider>,
+  );
+}
 
 beforeEach(() => {
   mocks.offer.mockReset().mockResolvedValue({ canStart: false, canPurchase: false, pilot: null, price: { unitAmount: 999, currency: 'USD' } });
@@ -33,7 +63,7 @@ afterEach(cleanup);
 
 describe('purchase-only co-managed overview', () => {
   it('shows the pool and its explanation, and nothing operational', async () => {
-    const { container } = render(<CoManagedPurchaseOverview />);
+    const { container } = renderOnMspRoute(<CoManagedPurchaseOverview />, '/msp/co-managed');
     expect(await screen.findByText(/paid seat costs .*9.99 per month/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(container.querySelector('#co-managed-pool-editor')).not.toBeNull();
@@ -45,21 +75,43 @@ describe('purchase-only co-managed overview', () => {
   });
 
   it('shows local cutoffs on a bound client and requires confirmation before taking a spare paid seat', async () => {
-    const base = new Date('2026-11-20T06:00:00Z');
-    const deadline = new Date('2026-11-29T18:00:00Z');
+    const base = new Date('2026-11-20T06:00:00');
+    const deadline = new Date('2026-11-29T18:00:00');
     mocks.offer.mockResolvedValue({ price: { unitAmount: 1149, currency: 'EUR' }, intake: false,
       canStart: false, canPurchase: true, clientId: 'pilot-client', pilot: { trialId: 'pilot', status: 'active',
         deadline: deadline.toISOString(), baseUntil: base.toISOString(), pendingPurchase: null } });
     mocks.reviewSeat.mockResolvedValue({ kind: 'spare' });
-    render(<CoManagedSeatTrial clientId="pilot-client" />);
-    expect(await screen.findByText('Seat trial ends ' + deadline.toLocaleString() + '.')).toBeInTheDocument();
-    expect(screen.getByText('Current base access ends ' + base.toLocaleString() + '.')).toBeInTheDocument();
-    expect(screen.getByText(/paid seat costs .*11.49 per month/)).toBeInTheDocument();
+    renderOnMspRoute(<CoManagedSeatTrial clientId="pilot-client" />, '/msp/clients/pilot-client');
+    expect(await screen.findByText(/Seat trial ends 11\/29\/2026.*\d:\d{2}/)).toBeInTheDocument();
+    expect(screen.getByText(/Current base access ends 11\/20\/2026.*\d:\d{2}/)).toBeInTheDocument();
+    expect(screen.getByText(/paid seat costs .*11\.49 per month/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Keep this seat'));
     const confirm = await screen.findByText('Confirm use of one paid seat');
     expect(mocks.useSeat).not.toHaveBeenCalled();
     fireEvent.click(confirm);
     await waitFor(() => expect(mocks.useSeat).toHaveBeenCalledWith('pilot'));
+  });
+
+  it('shows the French trial terms, status and recovery action on a client record', async () => {
+    const deadline = new Date('2026-11-29T18:00:00');
+    mocks.offer.mockResolvedValue({ price: { unitAmount: 1149, currency: 'EUR' }, intake: false,
+      canStart: false, canPurchase: true, clientId: 'pilot-client', pilot: { trialId: 'pilot', status: 'base_paused',
+        deadline: deadline.toISOString(), baseUntil: null, pendingPurchase: { operationId: 'purchase', quantity: 1 }, conversionFailed: true } });
+    mocks.cancelConversion.mockRejectedValueOnce(new Error('Cancellation unavailable'));
+    renderOnMspRoute(<CoManagedSeatTrial clientId="pilot-client" />, '/msp/clients/pilot-client', 'fr');
+
+    expect(await screen.findByRole('heading', { name: 'Essai de 15 jours pour un poste cogéré' })).toBeInTheDocument();
+    expect(screen.getByText(/Un poste payant coûte 11,49\s€ par mois/)).toBeInTheDocument();
+    expect(screen.getByText('Abonnement de base suspendu')).toBeInTheDocument();
+    expect(screen.getByText('Achat en attente de vérification')).toBeInTheDocument();
+    expect(screen.getByText(/L’essai du poste se termine le 29\/11\/2026.*18:00:00\./)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reprendre l’achat' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Rétablir l’accès de base dans Compte' })).toHaveAttribute(
+      'href', '/msp/account?seatTrialClient=pilot-client',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler le passage à un poste payant' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de terminer cette action. Actualisez l’essai et réessayez.');
+    expect(mocks.cancelConversion).toHaveBeenCalledWith('pilot');
   });
 
   it('re-renders the server root when verified capacity moves (access is re-derived, not inferred)', () => {
@@ -68,6 +120,24 @@ describe('purchase-only co-managed overview', () => {
     act(() => { window.dispatchEvent(new Event(CO_MANAGED_ACCESS_CHANGED)); });
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
+});
+
+it('shows and clears the authorized return link on the French Account page', async () => {
+  const storageKey = 'co-managed-seat-trial-return';
+  sessionStorage.setItem(storageKey, 'pilot-client');
+  mocks.hasRecovery.mockResolvedValue(true);
+  try {
+    renderOnMspRoute(<SeatTrialReturn />, '/msp/account', 'fr');
+
+    const link = await screen.findByRole('link', { name: 'Revenir à l’essai du poste client' });
+    expect(mocks.hasRecovery).toHaveBeenCalledWith('pilot-client');
+    expect(link).toHaveAttribute('href', '/msp/clients/pilot-client?tab=co-managed');
+    link.addEventListener('click', event => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(sessionStorage.getItem(storageKey)).toBeNull();
+  } finally {
+    sessionStorage.removeItem(storageKey);
+  }
 });
 
 function Probe({ onValue }: { onValue: (value: unknown) => void }) { onValue(useCoManagedPurchaseNavigation()); return null; }

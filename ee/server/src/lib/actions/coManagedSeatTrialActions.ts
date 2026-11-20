@@ -154,7 +154,7 @@ export const reviewSeatTrialConversionAction = withAuth(async (user, { tenant },
   return { kind: 'purchase', quantity, ...await getStripeService().previewCoManagedSeats(tenant, quantity) } as const;
 });
 
-export const usePaidSeatForTrialAction = withAuth(async (user, { tenant }, trialId: string) => {
+export const applyPaidSeatToTrialAction = withAuth(async (user, { tenant }, trialId: string) => {
   const { knex, allocationId } = await billingTrial(user, tenant, trialId);
   await usePaidSeatForTrial(knex, tenant, trialId, allocationId);
 });

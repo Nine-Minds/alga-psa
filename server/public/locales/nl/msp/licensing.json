@@ -398,6 +398,48 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "trial": {
+      "title": "Proefperiode van 15 dagen voor een gezamenlijk beheerde plek",
+      "description": "Nodig een technicus van de klant uit om op de door u gekozen borden te werken. De 15 dagen gaan in bij de eerste aanmelding. Toegang vereist een actief basisabonnement of een actieve proefperiode van het basisabonnement.",
+      "terms": "Een betaalde plek kost {{amount}} per maand. De proefperiode eindigt zonder kosten, tenzij u betaalde capaciteit bevestigt.",
+      "status": {
+        "active": "Actief",
+        "pending": "Wacht op eerste aanmelding",
+        "base_paused": "Basisabonnement gepauzeerd",
+        "expired": "Proefperiode verlopen",
+        "paid": "Betaalde plek in gebruik",
+        "ended": "Proefperiode beëindigd",
+        "checkout_pending": "Wacht op betaling"
+      },
+      "purchaseAwaitingVerification": "Aankoop wacht op verificatie",
+      "conversionFailed": "De overstap naar een betaalde plek is niet voltooid. Bekijk de beschikbare betaalde capaciteit of probeer de aankoop opnieuw.",
+      "deadline": "De proefperiode voor de plek eindigt op {{date}}.",
+      "baseUntil": "De huidige basistoegang eindigt op {{date}}.",
+      "openSetup": "Plekinstellingen van de klant openen",
+      "invite": "Technicus voor 15 dagen uitnodigen",
+      "resend": "Uitnodiging opnieuw sturen",
+      "replace": "Technicus vervangen",
+      "cancelInvitation": "Uitnodiging annuleren",
+      "restoreBase": "Basistoegang herstellen in Account",
+      "resumePurchase": "Aankoop hervatten",
+      "cancelConversion": "Omzetting van de plek annuleren",
+      "spareSeatTerms": "Gebruik nu één beschikbare betaalde plek. Het totale aantal plekken in de pool blijft gelijk.",
+      "confirmSpareSeat": "Gebruik van één betaalde plek bevestigen",
+      "keepSeat": "Deze plek behouden",
+      "refresh": "Proefperiode vernieuwen",
+      "returnToTrial": "Terug naar de proefperiode voor de klantplek",
+      "notice": {
+        "invitationSaved": "Uitnodiging opgeslagen. Probeer hieronder opnieuw te verzenden.",
+        "deliveryFailed": "Verzenden mislukt. U kunt het opnieuw proberen.",
+        "replacementSent": "Uitnodiging naar de vervangende technicus verzonden.",
+        "replacementSaved": "Vervangende technicus opgeslagen. Probeer de uitnodiging opnieuw te verzenden."
+      },
+      "error": {
+        "boardChoicesFailed": "De beschikbare borden konden niet worden geladen.",
+        "actionFailed": "Deze actie kon niet worden afgerond. Vernieuw de proefperiode en probeer het opnieuw.",
+        "paymentFailed": "De betaling kon niet worden afgerond. Controleer de status van de proefperiode."
+      }
+    },
     "seat": {
       "blocker": {
         "sponsorNotEligible": "Deze werkruimte heeft geen co-managed pool. Voeg co-managed plekken toe om dit te gebruiken.",

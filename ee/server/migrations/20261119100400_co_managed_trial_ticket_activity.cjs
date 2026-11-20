@@ -21,7 +21,7 @@ exports.up = async function (knex) {
   await ensureTenantDistribution(knex, 'co_managed_trial_ticket_activity');
   // The operational ticket journal records human mutations, with their actor and source. Keep
   // the qualifying scope at event time and merge concurrent contributions in either order.
-  await knex.raw(`CREATE OR REPLACE FUNCTION record_co_managed_trial_ticket_work(uuid, uuid)
+  await knex.raw(`CREATE OR REPLACE FUNCTION record_hosted_co_managed_trial_ticket_work(uuid, uuid)
     RETURNS void LANGUAGE plpgsql AS $$
     DECLARE pilot uuid; technician uuid; shared boolean; activity record;
     BEGIN
@@ -62,8 +62,7 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
-  await knex.raw(`CREATE OR REPLACE FUNCTION record_co_managed_trial_ticket_work(uuid, uuid) RETURNS void
-    LANGUAGE sql AS 'SELECT NULL::void'`);
+  await knex.raw('DROP FUNCTION IF EXISTS record_hosted_co_managed_trial_ticket_work(uuid, uuid)');
   await knex.schema.dropTable('co_managed_trial_ticket_activity');
   await knex.schema.alterTable('co_managed_seat_trial_milestones', table => table.dropColumns('reported_at', 'event_id'));
 };

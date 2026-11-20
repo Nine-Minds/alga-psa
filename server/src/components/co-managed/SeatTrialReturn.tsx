@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { hasSeatTrialRecoveryAction } from '@enterprise/lib/actions/coManagedSeatTrialRecovery';
 
 const storageKey = 'co-managed-seat-trial-return';
@@ -11,6 +12,7 @@ const storageKey = 'co-managed-seat-trial-return';
  * storage only remembers navigation. The sponsor action checks the current binding again. */
 export default function SeatTrialReturn({ afterPurchase = false }: { afterPurchase?: boolean }) {
   const router = useRouter();
+  const { t } = useTranslation('msp/licensing');
   const [href, setHref] = useState<string>();
   useEffect(() => {
     const target = new URLSearchParams(window.location.search).get('seatTrialClient') || sessionStorage.getItem(storageKey);
@@ -31,5 +33,5 @@ export default function SeatTrialReturn({ afterPurchase = false }: { afterPurcha
     return () => { current = false; };
   }, [afterPurchase, router]);
   return href ? <Link id="account-return-to-seat-trial" href={href}
-    onClick={() => sessionStorage.removeItem(storageKey)}>Return to client Seat trial</Link> : null;
+    onClick={() => sessionStorage.removeItem(storageKey)}>{t('coManaged.trial.returnToTrial')}</Link> : null;
 }
