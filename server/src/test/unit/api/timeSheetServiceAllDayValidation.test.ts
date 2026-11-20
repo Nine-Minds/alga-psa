@@ -1,7 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ row: {} as Record<string, unknown>, update: vi.fn(), publish: vi.fn() }));
+const state = vi.hoisted(() => ({
+  row: {} as Record<string, unknown>, update: vi.fn(), publish: vi.fn(),
+  activeTenant: undefined as string | undefined, permissionTenants: [] as Array<string | undefined>,
+}));
 vi.mock('@alga-psa/db', () => ({
+  // hasApiContextPermission reads roles inside runWithTenant(context.tenant); track the active scope.
+  runWithTenant: async (tenant: string, callback: () => unknown) => {
+    const previous = state.activeTenant;
+    state.activeTenant = tenant;
+    try { return await callback(); } finally { state.activeTenant = previous; }
+  },
   BaseService: class { async getKnex() { return { knex: {} }; } },
   withTransaction: async (_knex: unknown, callback: (trx: object) => unknown) => callback({}),
   tenantDb: () => ({ table: (name: string) => {
@@ -27,7 +36,9 @@ vi.mock('@alga-psa/scheduling/lib/calendarAccess', () => ({
   assertEditableGroupCalendar: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/scheduling/models/timePeriod', () => ({ TimePeriod: {} }));
-vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: vi.fn().mockResolvedValue(true) }));
+vi.mock('../../../lib/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => { state.permissionTenants.push(state.activeTenant); return true; }),
+}));
 vi.mock('../../../lib/api/middleware/apiMiddleware', () => ({
   BadRequestError: class extends Error {}, ConflictError: class extends Error {},
   ForbiddenError: class extends Error {}, NotFoundError: class extends Error {},
@@ -38,6 +49,8 @@ import { TimeSheetService } from '../../../lib/api/services/TimeSheetService';
 describe('schedule API all-day update validation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    state.activeTenant = undefined;
+    state.permissionTenants = [];
     state.row = { entry_id: 'entry', tenant: 'tenant', created_by: 'owner', is_private: false,
       is_all_day: true, scheduled_start: new Date('2026-10-25T00:00:00Z'), scheduled_end: new Date('2026-10-26T00:00:00Z') };
   });
@@ -72,5 +85,12 @@ describe('schedule API all-day update validation', () => {
   it('allows a title-only save without dropping all-day provenance', async () => {
     expect(await update({ title: 'Renamed' })).toMatchObject({ title: 'Renamed', is_all_day: true });
     expect(state.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the schedule permission in the API context tenant', async () => {
+    await update({ title: 'Renamed' });
+    expect(state.permissionTenants.length).toBeGreaterThan(0);
+    expect(state.permissionTenants.every((tenant) => tenant === 'tenant')).toBe(true);
+    expect(state.activeTenant).toBeUndefined();
   });
 });

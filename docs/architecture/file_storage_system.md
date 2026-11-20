@@ -140,6 +140,38 @@ Enterprise Edition:
   - Streaming support
   - Metadata management
 
+### Resumable Write Sessions
+Every storage provider (`packages/storage`) implements a resumable multipart write API, and `upload()` is built on top of it, so there is one write path:
+
+- `beginWrite(path, options)` returns a JSON-serialisable handle that carries a provider discriminator. A session can be continued from another pod; passing a handle to the wrong provider fails with `StorageError` `WRITE_HANDLE_PROVIDER_MISMATCH`.
+- `writePart(handle, partNumber, part, size, { final })` writes one part and returns a receipt. Part numbers run 1..10000. Every part except the one marked `final` must be at least 5 MiB (`PART_TOO_SMALL` otherwise).
+- `completeWrite(handle, receipts)` accepts the receipts in any order, requires part numbers 1..N with no gaps, and publishes the object.
+- `abortWrite(handle)` discards the session and is idempotent.
+
+The shared contract is enforced once in `BaseStorageProvider`. `upload()` writes the body as begin + 8 MiB parts + complete (roughly one part in memory) and aborts on failure; a size is no longer required up front.
+
+- **S3** uses native `CreateMultipartUpload` / `UploadPart` / `CompleteMultipartUpload` / `AbortMultipartUpload`. The `packages/storage` `S3StorageProvider` is the single implementation; the EE path `ee/server/src/lib/storage/providers/S3StorageProvider.ts` re-exports it.
+- **Local** writes each part to a sidecar file next to a `<path>.<id>.partial` file (fsynced before the receipt is returned), concatenates the parts on completion, fsyncs, and renames atomically. Handle paths are relative and guarded against traversal.
+
+### Upload Ingestion Pipeline
+`StorageService.uploadFile` streams the request body into a write session instead of buffering it. The stages in `packages/storage/src/ingest/pipeline.ts` are composed by `ingestToWriteSession`:
+
+1. `byteCounter` enforces the provider's maximum file size and fails with `UploadSizeLimitError` (`UPLOAD_SIZE_LIMIT_EXCEEDED`, 413).
+2. `sniffHead` inspects the leading bytes and resolves the stored MIME type (`resolveUploadMime` in `ingest/mime.ts`). It fails with `UploadContentTypeError` (`UPLOAD_CONTENT_TYPE_REJECTED`, 415).
+3. `sha256Stage` hashes the content. The digest is stored in the nullable `external_files.content_sha256` column.
+4. `writeSessionSink` writes parts into a lazily opened write session, so the object's content type matches the stored row.
+
+The `external_files` row and its workflow events are written only after `completeWrite` succeeds. A failed stage aborts the session and leaves no object and no row. Avatar, logo, favicon, and crop uploads still buffer, through the explicit `collect` stage with a 5 MB cap, before image processing.
+
+**MIME rule.** The declared type must first pass the provider allowlist. After that:
+- An empty stream is stored with its declared type.
+- If content detection finds a non-textual type, that type must be allowlisted and is stored. A generic container (zip, CFB) with a declared type from the same family keeps the declared type.
+- If nothing (or only a textual match) is detected, the upload is rejected only when the declared type is one the detector can recognise (for example `image/png`, `video/mp4`, `application/pdf` with non-matching bytes). Otherwise the declared type is kept, so `message/rfc822`, S/MIME, PGP, x509, and vendor types upload as declared.
+- Textual types (`text/*`, `application/xml`, `+xml`, `+json`) are exempt from the mismatch check.
+- `system-artifact` uploads skip sniffing and the allowlist.
+
+In the documents UI, a 415 rejection is shown as the localized `documents:errors.upload.contentMismatch` message. Separately, the document upload component rejects any file larger than `MAX_UPLOAD_BYTES` (99 MiB, `packages/documents/src/lib/uploadLimits.ts`) in the browser before sending it. This is a stopgap that keeps uploads under the 100 MiB Next.js proxy body limit (`experimental.proxyClientMaxBodySize`); other upload entry points do not yet apply this check.
+
 ### Services
 - StorageService: Core business logic
 - File operation coordination
@@ -159,6 +191,52 @@ Enterprise Edition:
 - Progress tracking
 - Error handling
 - File listing and management
+
+## Document Upload Sessions (Chunked, Resumable Uploads)
+
+Document uploads from the web UI no longer send the whole file in one server-action request. `DocumentUpload` (and every surface that mounts it: the Documents page, entity document tabs for tickets, clients, contacts, assets, contracts, opportunities and project tasks, and the client-portal Documents page) uploads through a resumable, tus-style session API so large files survive dropped connections and never have to be buffered in server memory.
+
+### Routes (`server/src/app/api/documents/uploads/`)
+
+| Method and path | Purpose |
+| --- | --- |
+| `POST /api/documents/uploads` | Create a session. Sends file metadata only (name, size, MIME, optional `entityType`/`entityId` pair). Returns the session id and the server `chunkSize`. A file over the provider's size limit is refused here with `413 UPLOAD_TOO_LARGE`, carrying `error.maxFileSize`, so the client learns the limit before any bytes are sent. |
+| `PUT /api/documents/uploads/:id` | Upload one chunk with a `Content-Range` header. Chunks must arrive in order (`409` otherwise); a length mismatch is `400`; a mid-stream limit breach is `413` with nothing committed. |
+| `HEAD` / `GET /api/documents/uploads/:id` | Return the committed offset in `Upload-Offset`, used by the client to resume. |
+| `POST /api/documents/uploads/:id/complete` | Commit the file and create the document, its entity association, the upload event and the preview job. Repeated or raced completes do not create duplicates. |
+| `DELETE /api/documents/uploads/:id` | Abort the session (idempotent). |
+
+The handlers authenticate either a browser session or an API key themselves (the paths are exempted from the API-key-only middleware) and scope every session to tenant plus uploader; another user's session id reads as `404`. Upload permission checks are the same as for `uploadDocument` (`createDocumentFromCommittedFile` and `assertDocumentUploadAllowed` are the shared implementation).
+
+### Server behaviour
+
+- The size limit and MIME allowlist come from the storage provider policy. The first chunk is MIME-sniffed; the sniffed type is stored on the session and file row.
+- Chunks stream straight into the provider's multipart write (`writePart`) with a byte counter and exact-length guard — no full-body buffering or multipart parsing. A failed request body aborts the in-flight part through `WritePartOptions.signal`.
+- `committed_offset` only advances after a durable write. Every status transition is a conditional update, and a 120-second `chunk_claim_token` lease stops two requests writing the same session at once.
+- No content SHA-256 is recorded for chunked uploads, so `external_files.content_sha256` stays `NULL` for them.
+
+### Table and housekeeping
+
+- `document_upload_sessions` (tenant-first PK and indexes, distributed by tenant). `entity_type` and `entity_id` are optional as a pair (a `CHECK` enforces both-or-neither) so uploads into the document library with no association, and pending project-task uploads, are supported.
+- The `expire-document-upload-sessions` maintenance job runs every 15 minutes and aborts expired sessions. The session TTL is 24 hours, sliding on activity.
+- Configuration: `DOCUMENT_UPLOAD_SESSION_TTL_HOURS` (default `24`), `DOCUMENT_UPLOAD_CHUNK_SIZE_BYTES` (default 8 MiB).
+
+### Client resume policy (`packages/documents/src/lib/uploadSessionClient.ts`)
+
+Progress is the committed offset. On a failure the client retries with capped exponential backoff and jitter for a window of about 90 seconds, fetching the committed offset with `HEAD` before each retry and resuming from it. While `navigator.onLine` is false it waits for the `online` event without spending the window. Cancel aborts the request and sends `DELETE`. Errors map to specific, translated messages (over limit, type not allowed, permission denied, network, session expired).
+
+Not yet on the session path: the client-portal project task upload (`uploadClientTaskDocument`) and the remaining `uploadDocument` callers (ticket creation forms, rich-text image paste, clipboard actions).
+
+## Background Document Previews
+
+Image thumbnails, PDF first-page previews and video frames are no longer generated inline during upload from an in-memory buffer:
+
+- After the document row commits, `scheduleDocumentPreviews` enqueues `generate-document-previews` (`{ tenantId, documentId }`, singleton per tenant and document) through the job-runner accessor in `@alga-psa/core/jobRunnerAccessor`.
+- `generatePreviewsForDocument` (`packages/documents/src/lib/documentPreviewGenerator.ts`) reads the source back from storage with `provider.getReadStream` and writes `thumbnail_file_id`, `preview_file_id` and `preview_generated_at` in one update. It is idempotent per document id, so retries upsert the same preview ids.
+- Video: ffmpeg gets a seekable input from `StorageProvider.getSeekableInput` (a local path, or an S3 presigned URL), never stdin. ffmpeg is resolved from `FFMPEG_PATH`, then `ffmpeg-static`, then the system binary.
+- PDF: streamed to a temp file for pdf2pic/Ghostscript. PDFs over `DOCUMENT_PREVIEW_MAX_PDF_BYTES` (default 100 MiB) get no preview and no failure event; rendering is bounded by `DOCUMENT_PREVIEW_PDF_RENDER_TIMEOUT_MS` (default 120 s) and a timeout fails the job retryably.
+- Enterprise Edition: jobs run in the Temporal worker, which cannot load sharp/pdf2pic, so the worker forwards `generate-document-previews` to the server through `MAINTENANCE_JOB_REQUESTED`.
+- UI: while a recent image/PDF/video document has no preview (`isAwaitingPreview` in `documentPreviewPending.ts`), `Documents.tsx` polls with bounded backoff and `DocumentStorageCard` shows a placeholder instead of requesting a legacy preview. Older documents without a stored preview still use the legacy in-request preview path.
 
 ## Usage
 
@@ -343,3 +421,14 @@ PREVIEW_CACHE_MAX_SIZE=5368709120  # 5GB in bytes
 - Corrupted cache detection
 - Automatic recovery
 - Fallback mechanisms
+
+## Upload size limit
+
+There is one per-file limit: the default storage provider's `maxFileSize`, set with `STORAGE_LOCAL_MAX_FILE_SIZE` or `STORAGE_S3_MAX_FILE_SIZE` (default 500 MiB, `DEFAULT_MAX_FILE_SIZE_BYTES` in `packages/storage/src/config/storage.ts`). The server enforces it in upload validation and the ingest pipeline and fails with `UploadSizeLimitError` (413). The browser learns it only from the `maxFileSize` field of the upload-session API.
+
+The Next body caps in `server/next.config.mjs` are transport limits, not file limits:
+
+- `serverActions.bodySizeLimit` (`SERVER_ACTIONS_BODY_LIMIT`, default 26mb): Next answers 413 past it.
+- `proxyClientMaxBodySize` (100mb): Next truncates silently past it, so `server/src/middleware/bodySizeGuard.ts` answers 413 on a declared `Content-Length` over the cap.
+
+A provider's `getCapabilities().maxFileSize` is the backing store's ceiling, clamped to the configured limit.

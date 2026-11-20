@@ -16,3 +16,15 @@ export async function hasCoManagedLocalPermission(db: Knex, actor: { tenant: str
   if (lock) query.forShare();
   return Boolean(await query.first('permissions.permission_id'));
 }
+
+/**
+ * Whether the tenant has this permission row at all (any role), as opposed to whether the actor holds it.
+ * A tenant of a product that does not provision a resource has no row; a missing row is not a denial.
+ * Callers distinguish: provisioned + not held = denied (throw); not provisioned = the domain does not exist here.
+ */
+export async function isCoManagedPermissionProvisioned(db: Knex, tenant: string, resource: string, action: string, lock = false): Promise<boolean> {
+  if (lock && !db.isTransaction) throw new Error('Retaining co-management permission locks requires a transaction');
+  const query = tenantDb(db, tenant).table('permissions').where({ msp: true, resource, action });
+  if (lock) query.forShare();
+  return Boolean(await query.first('permission_id'));
+}

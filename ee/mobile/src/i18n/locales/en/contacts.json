@@ -13,7 +13,8 @@
     "noResults": "No matching contacts",
     "noResultsDescription": "Try a different name, email, or client.",
     "contactAccessibility": "Contact {{name}}",
-    "create": "New contact"
+    "create": "New contact",
+    "remote": "Remote"
   },
   "detail": {
     "phoneExtension": "ext.",
@@ -45,7 +46,12 @@
       "custom": "Custom"
     },
     "edit": "Edit contact",
-    "updated": "Contact updated"
+    "updated": "Contact updated",
+    "locations": "Locations",
+    "locationFallback": "Location",
+    "primaryLocation": "Primary",
+    "remote": "Remote",
+    "openInMaps": "Open in Maps"
   },
   "ticketsFilter": {
     "chip": "Contact: {{name}}",
@@ -87,7 +93,8 @@
       "additionalEmailDuplicate": "Additional email addresses must be unique.",
       "photoFailed": "Unable to update the photo. Try again.",
       "cameraPermission": "Camera access is needed to take a photo.",
-      "photosPermission": "Photo library access is needed to choose a photo."
+      "photosPermission": "Photo library access is needed to choose a photo.",
+      "onePrimaryLocation": "Only one location can be the primary one."
     },
     "additionalEmails": "Additional emails",
     "addEmail": "Add email",
@@ -104,6 +111,18 @@
     "takePhoto": "Take photo",
     "choosePhoto": "Choose from library",
     "photoUpdated": "Photo updated",
-    "photoRemoved": "Photo removed"
+    "photoRemoved": "Photo removed",
+    "locations": "Locations",
+    "workArrangement": "Work arrangement",
+    "selectWorkArrangement": "Select work arrangement",
+    "workArrangementUnset": "Not set",
+    "workArrangementOnSite": "On site",
+    "workArrangementHybrid": "Hybrid",
+    "workArrangementRemote": "Remote",
+    "locationsChooseClient": "Choose a client first to pick its locations.",
+    "locationsLoading": "Loading locations…",
+    "locationsNone": "This client has no locations yet.",
+    "locationsUnavailable": "Unable to load locations.",
+    "primaryLocation": "Primary"
   }
 }

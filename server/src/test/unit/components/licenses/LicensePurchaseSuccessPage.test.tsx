@@ -7,7 +7,10 @@ import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
 
 vi.mock('@/lib/actions/licensingActions', () => ({ getLicenseUsageAction: vi.fn() }));
 vi.mock('@enterprise/lib/actions/license-actions', () => ({ getSubscriptionInfoAction: vi.fn() }));
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: vi.fn() }),
+}));
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));

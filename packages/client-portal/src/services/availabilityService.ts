@@ -718,7 +718,8 @@ export async function getAvailableServicesForClient(
         'st.name as service_type',
         'sc.billing_method as billing_mode',
         'sc.item_kind',
-        'sc.default_rate'
+        'sc.default_rate',
+        'sc.unit_of_measure'
       )
       .distinct();
     scopedDb.tenantJoin(servicesQuery, 'contract_line_services as cls', 'cl.contract_line_id', 'cls.contract_line_id');
@@ -755,6 +756,7 @@ export async function getServicesForPublicBooking(
         'sc.billing_method as billing_mode',
         'sc.item_kind',
         'sc.default_rate',
+        'sc.unit_of_measure',
         'avs.config_json'
       )
       .distinct();
@@ -763,6 +765,43 @@ export async function getServicesForPublicBooking(
     const services = await servicesQuery;
 
     return services;
+  });
+}
+
+export interface PortalBookingConfig {
+  /** Only list services the MSP configured under Service Rules, never contract-derived ones. */
+  hideContractServices: boolean;
+  /** Service preselected for the client so booking needs no service choice. */
+  defaultServiceId: string | null;
+  /** Let clients see a service's price while booking. Opt-out, so it stays on by default. */
+  showServiceRates: boolean;
+}
+
+/**
+ * Read the tenant-wide portal booking curation set by the MSP in the
+ * Service Rules tab of Availability Settings (stored on the general_settings
+ * row, which is tenant-wide rather than per-service).
+ */
+export async function getPortalBookingConfig(
+  tenantId: string
+): Promise<PortalBookingConfig> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const setting = await tenantDb(knex, tenantId).table('availability_settings')
+      .where({ setting_type: 'general_settings' })
+      .select('config_json')
+      .first();
+
+    const config = (setting?.config_json ?? {}) as Record<string, any>;
+    const defaultServiceId = config.default_portal_service_id;
+
+    return {
+      hideContractServices: config.hide_contract_services === true,
+      defaultServiceId: typeof defaultServiceId === 'string' && defaultServiceId.trim() !== ''
+        ? defaultServiceId
+        : null,
+      showServiceRates: config.show_service_rates !== false,
+    };
   });
 }
 

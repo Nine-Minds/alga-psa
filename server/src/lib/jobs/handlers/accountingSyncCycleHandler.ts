@@ -12,6 +12,7 @@ import {
   isProviderDisconnectActive,
   PROVIDER_QBO,
   PROVIDER_XERO,
+  type ProviderType,
 } from '@alga-psa/integrations/lib/providerDisconnect';
 
 export interface AccountingSyncCycleJobData extends BaseJobData {
@@ -42,21 +43,6 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
 
   const knex = await getConnection(tenantId);
 
-  // Explicit early guard (the credential tombstone is the backstop): while a
-  // provider disconnect is pending, no sync cycle may start.
-  const [qboBlocked, xeroBlocked] = await Promise.all([
-    isProviderDisconnectActive(knex, tenantId, PROVIDER_QBO).catch(() => false),
-    isProviderDisconnectActive(knex, tenantId, PROVIDER_XERO).catch(() => false),
-  ]);
-  if (qboBlocked || xeroBlocked) {
-    logger.info('[accountingSync] Cycle skipped: provider disconnect in progress', {
-      tenantId,
-      qboBlocked,
-      xeroBlocked,
-    });
-    return;
-  }
-
   const registry = await AccountingAdapterRegistry.createDefault();
 
   // Scheduled cycles converge EVERY connected target across BOTH providers:
@@ -74,12 +60,12 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
     refreshTokenExpiresAt: string | null;
   }> = [
     ...Object.entries(qboCredentials).map(([targetRealm, credentials]) => ({
-      adapterType: 'quickbooks_online',
+      adapterType: PROVIDER_QBO,
       targetRealm,
       refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null,
     })),
     ...Object.entries(xeroConnections).map(([targetRealm, connection]) => ({
-      adapterType: 'xero',
+      adapterType: PROVIDER_XERO,
       targetRealm,
       refreshTokenExpiresAt: (connection as any)?.refreshTokenExpiresAt ?? null,
     })),
@@ -89,8 +75,34 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
     return;
   }
 
+  // Provider-scoped disconnect eligibility: a non-finalized disconnect blocks
+  // only its own provider's targets (the credential tombstone is the backstop
+  // for that provider). Only providers that actually have targets are checked.
+  const providersWithTargets = Array.from(new Set(targets.map((target) => target.adapterType)));
+  const blockedProviders = new Set<string>(
+    (
+      await Promise.all(
+        providersWithTargets.map(async (provider) =>
+          (await isProviderDisconnectActive(knex, tenantId, provider as ProviderType).catch(() => false))
+            ? provider
+            : null
+        )
+      )
+    ).filter((provider): provider is string => provider !== null)
+  );
+  if (blockedProviders.size > 0) {
+    logger.info('[accountingSync] Skipping providers with a disconnect in progress', {
+      tenantId,
+      blockedProviders: Array.from(blockedProviders),
+    });
+  }
+  const eligibleTargets = targets.filter((target) => !blockedProviders.has(target.adapterType));
+  if (eligibleTargets.length === 0) {
+    return;
+  }
+
   await runWithTenant(tenantId, async () => {
-    for (const target of targets) {
+    for (const target of eligibleTargets) {
       const adapter = registry.get(target.adapterType);
       if (!adapter) {
         logger.warn('[accountingSync] No adapter registered for scheduled target', {

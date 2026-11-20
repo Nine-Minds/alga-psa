@@ -5,7 +5,6 @@ const boundaryNode = <div data-testid="boundary">blocked</div>;
 
 const enforceServerProductRouteMock = vi.fn();
 const getProjectsMock = vi.fn();
-const getAllClientsForProjectsMock = vi.fn();
 const listRequestServiceCatalogGroupsActionMock = vi.fn();
 const listMyRecentServiceRequestsActionMock = vi.fn();
 
@@ -19,7 +18,6 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
 
 vi.mock('@alga-psa/projects/actions/projectActions', () => ({
   getProjects: getProjectsMock,
-  getAllClientsForProjects: getAllClientsForProjectsMock,
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
@@ -48,7 +46,6 @@ describe('server page guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getProjectsMock.mockResolvedValue([]);
-    getAllClientsForProjectsMock.mockResolvedValue([]);
     listRequestServiceCatalogGroupsActionMock.mockResolvedValue([]);
     listMyRecentServiceRequestsActionMock.mockResolvedValue([]);
   });
@@ -61,7 +58,6 @@ describe('server page guards', () => {
 
     expect(result).toBe(boundaryNode);
     expect(getProjectsMock).not.toHaveBeenCalled();
-    expect(getAllClientsForProjectsMock).not.toHaveBeenCalled();
   });
 
   it('blocks AlgaDesk request-services page before portal data actions execute', async () => {

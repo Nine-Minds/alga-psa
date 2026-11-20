@@ -23,8 +23,8 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(helperSection).toContain('tenantDb(trx, ');
     expect(helperSection).toContain(".table('users");
     expect(addUserSection).toContain('tenantDb(trx, ');
-    // Seat limits are owned by the shared guard, which locks per tenant on this trx.
-    expect(addUserSection).toContain('checkInternalUserLicenseLimit(trx, tenant)');
+    // Seat admission is the single shared primitive, run on the insert transaction.
+    expect(addUserSection).toContain('admitInternalUserSeat(trx, tenant');
     expect(addUserSection).not.toContain(".table('tenants");
     expect(addUserSection).toContain(".table('roles");
     expect(addUserSection).toContain(".table('users");
@@ -32,6 +32,7 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(addUserSection).toContain("await tenantDb(trx, tenant).table('user_roles').insert({");
 
     expect(helperSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);
+    expect(addUserSection).not.toContain('checkInternalUserLicenseLimit');
     expect(addUserSection).not.toMatch(/trx\('tenants'\)\s*[\r\n]+\s*\.where\(\{\s*tenant\s*\}\)/);
     expect(addUserSection).not.toMatch(/trx\('roles'\)\s*[\r\n]+\s*\.where/);
     expect(addUserSection).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where/);

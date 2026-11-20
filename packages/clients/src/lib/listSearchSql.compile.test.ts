@@ -109,6 +109,46 @@ describe('client list indexed search', () => {
   });
 });
 
+describe('T002 identifier exact vs prefix bindings', () => {
+  const FULL = 'ALGA-2026-0002826';
+
+  it('client search binds the full number for = and null for the LIKE prefix', () => {
+    const compiled = applyClientListIndexedSearchFilter(
+      trx,
+      tenantDb(trx, TENANT).table('clients as c'),
+      TENANT,
+      { user_id: USER_ID, user_type: 'internal' },
+      `#${FULL} `,
+      ['client:read']
+    ).toSQL();
+
+    expectStructurallyValidSql(compiled.sql, compiled.bindings);
+    expect(compiled.sql).toContain('= q.identifier');
+    expect(compiled.sql).toContain("LIKE q.identifier_prefix || '%'");
+    expect(compiled.sql).not.toMatch(/LIKE q\.identifier \|\|/);
+    expect(compiled.bindings).toContain(FULL.toLowerCase());
+    expect(compiled.bindings).not.toContain('alga-2026');
+    // fuzzy (trigram) clauses are switched off for a complete number
+    expect(compiled.sql).toContain('q.fuzzy_enabled AND si.title % q.raw');
+    expect(compiled.bindings).toContain(false);
+  });
+
+  it('contact search binds exact and prefix separately', () => {
+    const full = buildContactListSearchQuery(trx, TENANT, FULL, ['contact:read'], USER_ID);
+    expectStructurallyValidSql(full.sql, full.bindings);
+    const i = full.bindings.indexOf(FULL.toLowerCase());
+    expect(i).toBeGreaterThan(-1);
+    expect(full.bindings[i + 1]).toBeNull();
+    expect(full.bindings[i + 2]).toBe(false);
+    expect(full.sql).not.toMatch(/LIKE q\.identifier \|\|/);
+
+    const partial = buildContactListSearchQuery(trx, TENANT, 'ALGA-2026', ['contact:read'], USER_ID);
+    const j = partial.bindings.indexOf('alga-2026');
+    expect(partial.bindings[j + 1]).toBe('alga-2026');
+    expect(partial.bindings[j + 2]).toBe(true);
+  });
+});
+
 describe('contact list indexed search', () => {
   it('compiles to structurally valid SQL', () => {
     const { sql, bindings } = buildContactListSearchQuery(

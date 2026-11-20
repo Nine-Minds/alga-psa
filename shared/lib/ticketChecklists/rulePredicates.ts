@@ -56,7 +56,10 @@ export function checklistWhereForOwner(where: PredicateGroup, owner: string | nu
           other
         );
       }
-      return values.length > 0 && values.every((value) => value === owner) ? true : node;
+      if (!(values.length > 0 && values.every((value) => value === owner))) return node;
+      // Every listed id is the owner, so a positive clause is TRUE for the owned template and the
+      // complement (`not_in [owner]`) is FALSE.
+      return node.operator === 'not_in' ? false : true;
     }
     const children = node.clauses.map(simplify);
     const absorbing = node.join === 'and' ? false : true;

@@ -66,7 +66,11 @@
     "fallbackTitle": "Informe",
     "dateRange": {
       "lastDays": "Últimos {{count}} días",
-      "allActiveProjects": "Todos los proyectos activos, desde el inicio"
+      "allActiveProjects": "Todos los proyectos activos, desde el inicio",
+      "customRange": "{{start}} a {{end}}",
+      "customFrom": "Desde",
+      "customTo": "Hasta",
+      "agingSnapshotNote": "Los recuentos y grupos de antigüedad muestran los tickets abiertos ahora mismo. El rango de fechas solo filtra la lista de tickets abiertos más antiguos."
     },
     "units": {
       "daysWithCount": "{{count}} días"
@@ -555,7 +559,22 @@
       "invalidValue": "Uno de los registros de informe seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
       "referenceMissing": "Uno de los registros de informe seleccionados ya no existe. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio del informe.",
-      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del informe: {{field}}.",
+      "clientScopeRefused": {
+        "undeclared_table": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: lee {{table}}, que no tiene una regla de pertenencia a clientes.",
+        "raw_sql": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: está construido con SQL sin procesar.",
+        "unsupported_join": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: une {{table}} de un modo que conserva filas de otros clientes.",
+        "no_client_anchor": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: ninguno de los datos que lee pertenece a un cliente.",
+        "not_client_attributable": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: lee {{table}}, que no se puede atribuir a un cliente.",
+        "unnarrowable_report": "Este informe no está disponible para usted porque no se puede limitar a sus clientes: suma las cuentas de todos los clientes."
+      },
+      "clientOutOfScope": "No tiene acceso a este cliente.",
+      "range": {
+        "malformed": "No se pudo leer el rango de fechas personalizado. Vuelva a elegir ambas fechas.",
+        "backwards": "La fecha de fin es anterior a la fecha de inicio.",
+        "tooLong": "Un rango de fechas personalizado puede abarcar como máximo {{maxDays}} días.",
+        "startsInFuture": "El rango de fechas personalizado empieza después de hoy, así que aún no hay nada que informar."
+      }
     }
   }
 }
