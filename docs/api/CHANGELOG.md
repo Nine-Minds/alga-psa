@@ -2,6 +2,21 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-19 — Bulk client portal invitations
+
+**New endpoints:** `POST /api/v1/clients/{id}/portal-invitations`, `POST /api/v1/portal-invitations/bulk`
+
+Integrations could only invite one contact at a time. Both endpoints send invitations one by one, so a bad address or a contact the caller may not invite never blocks the rest of the batch.
+
+**Changes:**
+
+- `POST /clients/{id}/portal-invitations` takes `contact_ids` (1–500) or `all_eligible: true` (every active contact of the client with no portal user yet). One is required; `all_eligible` is ignored when `contact_ids` is given. Ids that do not belong to the client in the path are skipped.
+- `POST /portal-invitations/bulk` takes `contact_ids` (1–500) across any clients; each contact is authorized against its own client.
+- Both require `user:invite`. Explicit ids are checked against the caller's client scope the same way as "all eligible", and a contact outside that scope is reported as not found.
+- The response is always `200` with `total`, `sent`, `skipped`, `failed` and a per-contact `results` array (`contact_id`, `email`, `status` of `sent`/`skipped`/`failed`, `invitation_id`, `error_code`, `message`). Skips cover missing or invalid email, an existing portal user, a shared mailbox, or a contact outside the client.
+- `400` for an empty target set (`NO_TARGETS_SELECTED`), more than 500 contacts (`BATCH_LIMIT_EXCEEDED`), an invalid payload, or a tenant not configured to send invitations. `403` when the caller lacks `user:invite`.
+- Both routes are marked `x-chat-approval-required`, so the AI assistant and MCP clients must get approval before calling them.
+
 ## 2026-11-19 — `DELETE /api/v1/contacts/{id}` checks dependencies
 
 **Affected endpoint:** `DELETE /api/v1/contacts/{id}`
