@@ -1,5 +1,6 @@
 'use client';
 
+import type { CoManagedPurchaseBlockedReason } from '@alga-psa/licensing';
 import { useCallback, useRef, useState } from 'react';
 import { getCoManagedPurchaseState } from '@/lib/actions/coManagedActions';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
@@ -14,6 +15,8 @@ export interface CoManagedPurchaseQuote {
   /** The offer version the purchaser reviewed; sent back so a rotation forces a fresh review. */
   offerRef?: string;
 }
+
+export type CoManagedPreviewProblem = CoManagedPurchaseBlockedReason | 'unexpected';
 
 /**
  * Shared hosted pool purchase controller. It drives the account pool editor and
@@ -31,6 +34,7 @@ export function useCoManagedPurchaseController(options: {
   const [quantity, setQuantity] = useState(1);
   const [preview, setPreview] = useState<CoManagedPurchaseQuote | null>(null);
   const [checkout, setCheckout] = useState<{ clientSecret: string; publishableKey: string } | null>(null);
+  const [previewProblem, setPreviewProblem] = useState<CoManagedPreviewProblem | null>(null);
   /** True once the server answered that the purchase surface is closed (kill switch, flag, price, product). */
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,18 +52,38 @@ export function useCoManagedPurchaseController(options: {
   }, []);
 
   const review = useCallback(async (nextQuantity: number) => {
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setPreviewProblem(null);
     try {
-      const quote = await previewCoManagedSeatsAction(nextQuantity);
+      const result = await previewCoManagedSeatsAction(nextQuantity);
+      if (result.kind === 'blocked') {
+        setPreview(null);
+        setPreviewProblem(result.reason);
+        setError(result.reason);
+        return false;
+      }
+      const quote = result;
+      setPreviewProblem(null);
       setPreview({ quantity: nextQuantity, monthlyTotal: quote.monthlyTotal, amountDue: quote.amountDue, currency: quote.currency, offerRef: quote.offerRef });
       return true;
     } catch {
+      setPreview(null);
+      setPreviewProblem('unexpected');
       setError('preview');
       return false;
     } finally { setBusy(false); }
   }, []);
 
+  const clearPreviewProblem = useCallback(() => {
+    setPreviewProblem(null);
+    setError(null);
+  }, []);
+
   const purchase = useCallback(async (nextQuantity?: number) => {
+    // A replay already has a durable operation identity. A new purchase must have a live reviewed quote.
+    if (!preview && !operation.current) {
+      setError('preview');
+      return 'review-required' as const;
+    }
     const quantityToBuy = nextQuantity ?? preview?.quantity ?? quantity;
     operation.current ??= newCoManagedOperationId();
     options.onOperation?.({ operationId: operation.current, quantity: quantityToBuy });
@@ -73,8 +97,7 @@ export function useCoManagedPurchaseController(options: {
         // The price changed after review. Nothing was charged; show the new terms for fresh consent.
         operation.current = null;
         setCheckout(null);
-        await review(quantityToBuy);
-        setError('termsChanged');
+        if (await review(quantityToBuy)) setError('termsChanged');
         return 'review-required' as const;
       }
       if (result.kind === 'unavailable') {
@@ -119,5 +142,5 @@ export function useCoManagedPurchaseController(options: {
     operation.current = null;
     setError(null); setCheckout(null); setPreview(quote);
   };
-  return { startNewReview, state, closed, quantity, setQuantity, preview, setPreview, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
+  return { startNewReview, state, closed, quantity, setQuantity, preview, setPreview, previewProblem, clearPreviewProblem, checkout, setCheckout, busy, error, setError, reload, review, purchase, replay };
 }
