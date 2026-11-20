@@ -1,11 +1,12 @@
 /** Shared Stripe offer catalog against the migrated EE integration database (T001, T002, T007-catalog half). */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type Stripe from 'stripe';
 import type { Knex } from 'knex';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { runCatalogCommand, formatTerms } from '../../lib/stripe/offerCatalog/cli';
-import { createOfferCatalog, seedFromLegacyEnv, OfferPublishError, OfferUnavailableError, CO_MANAGED_SEAT_OFFER_KEY, type CatalogScope } from '../../lib/stripe/offerCatalog';
+import { createOfferCatalog, createScopeResolver, seedFromLegacyEnv, OfferPublishError, OfferUnavailableError, CO_MANAGED_SEAT_OFFER_KEY, type CatalogScope } from '../../lib/stripe/offerCatalog';
 
 const MASTER = '00000000-0000-4000-8000-0000000000aa';
 const operator = { tenantId: MASTER, userId: 'op@nineminds.test' };
@@ -141,17 +142,35 @@ describe('stripe offer catalog (postgres)', () => {
   });
 
   it('T011: restricted price-read fixture validates ownership through the Stripe-Account request scope and audits the setting', async () => {
-    const retrieved: Array<{ id: string; options: unknown }> = [];
-    const restricted = createOfferCatalog({ db, scope: async () => ({ stripeAccount: (await db('stripe_offer_catalog_settings').where({ livemode: false }).first())?.stripe_account ?? TEST.stripeAccount, livemode: false }), env: { MASTER_BILLING_TENANT_ID: MASTER },
-      stripe: { prices: { retrieve: async (id: string, options: unknown) => { retrieved.push({ id, options }); return prices[id]; } } } as any });
-    const result = await restricted.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_a',
-      expectedAccount: null, expectedPriceId: null, confirmSwitch: true });
-    expect(retrieved).toEqual([{ id: 'price_a', options: { stripeAccount: 'acct_target' } }]);
+    const env = { MASTER_BILLING_TENANT_ID: MASTER };
+    const accountRead = vi.fn().mockRejectedValue(new Error('account reads denied'));
+    const retrieve = vi.fn(async (id: string, options?: { stripeAccount?: string }) => {
+      if (options?.stripeAccount !== 'acct_target' || !prices[id]) throw new Error('No such price in this account');
+      return prices[id];
+    });
+    const stripe = { accounts: { retrieve: accountRead }, prices: { retrieve } } as unknown as Stripe;
+    const restricted = createOfferCatalog({
+      db, env, stripe, livemode: () => false,
+      scope: createScopeResolver(stripe, 'rk_test_fixture', env, async (livemode, connection = db) =>
+        (await connection('stripe_offer_catalog_settings').where({ livemode }).first())?.stripe_account),
+    });
+    const input = { actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_a',
+      expectedAccount: null, expectedPriceId: null, confirmSwitch: true };
+    await expect(restricted.setAccountSetting({ ...input, stripeAccount: 'acct_other' })).rejects.toMatchObject({ code: 'STRIPE_UNAVAILABLE' });
+    expect(await restricted.inspectAccountSetting(false)).toBeFalsy();
+    expect(await db('stripe_offer_catalog_setting_audit')).toHaveLength(0);
+    const result = await restricted.setAccountSetting(input);
     expect(result).toMatchObject({ changed: true, previousAccount: null, stripeAccount: 'acct_target', priceId: 'price_a' });
     expect(await restricted.inspectAccountSetting(false)).toMatchObject({ stripe_account: 'acct_target', price_id: 'price_a', updated_by: operator.userId });
     expect(await db('stripe_offer_catalog_setting_audit').first()).toMatchObject({ operator: operator.userId,
       previous_account: null, new_account: 'acct_target', new_price_id: 'price_a' });
-    expect((await restricted.resolveCurrentOffer(KEY, 'month')).priceId).toBe('price_a');
+    const first = await restricted.resolveCurrentOffer(KEY, 'month');
+    await restricted.publishBinding({ actor: operator, offerKey: KEY, interval: 'month',
+      priceId: 'price_b', expectedCurrentVersionId: first.versionId });
+    const current = await restricted.resolveCurrentOffer(KEY, 'month');
+    expect(current).toMatchObject({ priceId: 'price_b', scope: { stripeAccount: 'acct_target', livemode: false } });
+    expect(await restricted.classifyPrice(current.scope, first.priceId)).toMatchObject({ versionId: first.versionId, current: false });
+    expect(accountRead).not.toHaveBeenCalled();
   });
 
   it('T011: history without a settings row supplies the expected prior pair and catches an untagged retired-price subscription', async () => {

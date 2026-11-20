@@ -1717,8 +1717,8 @@ export class StripeService {
       this.offerCatalogInstance = createOfferCatalog({
         db, stripe: this.stripe, subscriptions: this.stripe.subscriptions,
         livemode: () => stripeLivemodeFromSecretKey(this.config.secretKey),
-        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, async (livemode) => {
-          return loadConfiguredBillingAccount(db, livemode);
+        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, (livemode, connection = db) => {
+          return loadConfiguredBillingAccount(connection, livemode);
         }),
       });
     }

@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import type Stripe from 'stripe';
 import type { CatalogScope, EnvLike } from './types';
 
@@ -16,11 +17,11 @@ export function createScopeResolver(
   stripe: Pick<Stripe, 'accounts'>,
   secretKey: string,
   env: EnvLike = process.env,
-  loadDatabaseAccount?: (livemode: boolean) => Promise<string | undefined>,
-): () => Promise<CatalogScope> {
-  return async () => {
+  loadDatabaseAccount?: (livemode: boolean, db?: Knex) => Promise<string | undefined>,
+): (db?: Knex) => Promise<CatalogScope> {
+  return async (db) => {
     const livemode = stripeLivemodeFromSecretKey(secretKey);
-    const stripeAccount = await loadDatabaseAccount?.(livemode) || env.STRIPE_ACCOUNT_ID || (await stripe.accounts.retrieve()).id;
+    const stripeAccount = await loadDatabaseAccount?.(livemode, db) || env.STRIPE_ACCOUNT_ID || (await stripe.accounts.retrieve()).id;
     if (!stripeAccount) throw new Error('Stripe account id could not be determined');
     return { stripeAccount, livemode };
   };

@@ -8,7 +8,7 @@
  * migrated-database purchase-persistence suite; it is not a real Stripe
  * sandbox capture.
  */
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import knex, { type Knex } from 'knex';
@@ -25,9 +25,30 @@ import { isCoManagedSeatEligible } from '../../../../packages/co-managed/src/sea
 import { readCoManagedFirstPurchasePhase } from '../../../../packages/licensing/src/lib/co-managed-first-purchase';
 import { admits } from '../../../../packages/core/src/lib/capability';
 import { registerFeatureFlagChecker } from '../../../../packages/core/src/lib/features';
-import { StripeService } from '@ee/lib/stripe/StripeService';
+import React from 'react';
+import { getStripeService, StripeService } from '@ee/lib/stripe/StripeService';
 
-const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable' }));
+const holder = vi.hoisted(() => ({ db: null as unknown as Knex, flag: true as boolean | 'unavailable', user: { tenant: '', user_type: 'internal' } }));
+// The hosted page and its actions share the fixture's signed-in account admin. The catalog,
+// tenant data, surface gate, licensing operations and Stripe adapter all run normally.
+vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: async () => holder.user,
+  getSession: async () => ({ user: holder.user }),
+  withAuth: (work: (...args: any[]) => unknown) => (...args: unknown[]) => work(holder.user, { tenant: holder.user.tenant }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/db', async (original) => ({
+  ...await original<typeof import('@alga-psa/db')>(),
+  createTenantKnex: async () => ({ knex: holder.db }),
+}));
+vi.mock('@alga-psa/licensing', async (original) => ({
+  ...await original<typeof import('@alga-psa/licensing')>(), getLicenseStateRow: async () => null,
+}));
+vi.mock('@enterprise/components/co-managed/CoManagedPurchaseOverview', async () => import('@ee/components/co-managed/CoManagedPurchaseOverview'));
+vi.mock('@enterprise/lib/co-managed/purchaseDiscovery', async () => import('@ee/lib/co-managed/purchaseDiscovery'));
+vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: async () => 'psa' }));
+vi.mock('@/components/co-managed/CoManagedOverview', () => ({ default: () => null }));
+vi.mock('@/components/co-managed/CoManagedCustomerHome', () => ({ default: () => null }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => holder.db,
@@ -170,6 +191,13 @@ beforeAll(async () => {
   process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 }, HOOK_TIMEOUT);
 
+// Tests run in shuffled order. Each starts with its own catalog state in the suite's temporary database.
+beforeEach(async () => {
+  await db('stripe_offer_publications').delete();
+  await db('stripe_offer_catalog_settings').delete();
+  await db('stripe_offer_versions').delete();
+});
+
 afterAll(async () => {
   await host?.stop();
   await db?.destroy();
@@ -208,13 +236,10 @@ async function setStripeQuantity(subscription: any, quantity: number): Promise<v
 }
 
 describe('co-managed purchase against the Stripe emulator', () => {
-  it('buys capacity, raises it only through delivered webhooks, and is admitted by the capability gate', async () => {
+  it('buys capacity, raises it only through delivered webhooks, and is admitted by the capability gate', async ({ onTestFinished }) => {
     holder.flag = true;
     delete process.env.FORCE_CAPABILITIES;
     const { tenant, sponsor } = await sponsorFixture();
-    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
-      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1, price_id: CO_MANAGED_PRICE_ID,
-      product_id: 'prod_co_managed', is_current: true, published_by: 'test-fixture' }).onConflict(['stripe_account', 'livemode', 'price_id']).ignore();
     await control('seed/subscription', { customer: CUSTOMER_ID, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
 
     // Before any purchase the sponsor has no entitlement, so the gate refuses even with the flag on.
@@ -223,15 +248,26 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
 
     const service = new StripeService();
+    // The emulator lacks the Stripe account endpoint. Simulate only that response while
+    // preview, confirmation, the merchant locks and checkout use the real adapters.
+    await service.getOfferCatalog();
+    const accountRead = vi.spyOn(service['stripe'].accounts, 'retrieve').mockResolvedValue({
+      id: 'acct_algasim',
+    } as Awaited<ReturnType<typeof service['stripe']['accounts']['retrieve']>>);
+    vi.stubEnv('STRIPE_ACCOUNT_ID', undefined);
+    onTestFinished(() => { vi.unstubAllEnvs(); accountRead.mockRestore(); });
     const preview = await service.previewCoManagedSeats(tenant, 3);
     // R1: amount and currency are whatever the configured price object says (a non-USD price here).
     expect(preview).toMatchObject({ unitAmount: 1149, monthlyTotal: 3447, amountDue: 3447, currency: 'eur' });
 
     const operationId = randomUUID();
-    const started = await service.purchaseCoManagedSeats(tenant, 3, operationId);
+    const started = await service.purchaseCoManagedSeats(tenant, 3, operationId, preview.offerRef);
+    expect(accountRead).toHaveBeenCalled();
     expect(started.kind).toBe('checkout');
     expect(await operationRow(tenant, operationId)).toMatchObject({ stripe_account: 'acct_algasim', livemode: false, price_id: CO_MANAGED_PRICE_ID });
     expect((await state('checkout-sessions'))[0]).toMatchObject({ mode: 'subscription', status: 'open' });
+
+    vi.unstubAllEnvs();
 
     // Complete the emulator's hosted Checkout. The emulator emits the events; capture them but do not
     // deliver yet: completing a checkout grants nothing.
@@ -308,6 +344,54 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
     await service.handleWebhookEvent(update());
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 5 });
+  }, HOOK_TIMEOUT);
+
+  it('admits the server-rendered first-purchase page and quotes and confirms the database offer with both overrides unset', async ({ onTestFinished }) => {
+    vi.stubEnv('STRIPE_ACCOUNT_ID', undefined);
+    vi.stubEnv('STRIPE_CO_MANAGED_USER_PRICE_ID', undefined);
+    vi.stubGlobal('React', React);
+    onTestFinished(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+    const customerId = 'cus_database_only';
+    const { tenant } = await sponsorFixture(customerId);
+    holder.user.tenant = tenant;
+    await control('seed/customer', { id: customerId, email: 'admin@example.test', name: 'Database Sponsor' });
+    await control('seed/subscription', { customer: customerId, priceId: PRO_PRICE_ID, quantity: 1, status: 'active' });
+
+    const service = getStripeService();
+    const catalog = await service.getOfferCatalog();
+    const accountRead = vi.spyOn(service['stripe'].accounts, 'retrieve').mockRejectedValue(new Error('account reads denied'));
+    onTestFinished(() => accountRead.mockRestore());
+    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1,
+      price_id: CO_MANAGED_PRICE_ID, product_id: 'prod_co_managed', is_current: true, published_by: 'fixture' });
+    await db('stripe_offer_catalog_settings').insert({ stripe_account: 'acct_algasim', livemode: false,
+      price_id: CO_MANAGED_PRICE_ID, updated_by: 'fixture' });
+    const { default: Page } = await import('../../app/msp/co-managed/page');
+    const { default: PurchaseOverview } = await import('@enterprise/components/co-managed/CoManagedPurchaseOverview');
+    const { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } = await import('@ee/lib/actions/coManagedBillingActions');
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 0, allocated: 0 });
+    holder.user.user_type = 'client';
+    try {
+      await expect(Page({})).rejects.toThrow(/404/);
+      await expect(previewCoManagedSeatsAction(1)).rejects.toThrow('Permission denied');
+    } finally {
+      holder.user.user_type = 'internal';
+    }
+    expect((await Page({})).type).toBe(PurchaseOverview);
+    const quote = await previewCoManagedSeatsAction(2);
+    expect(quote).toMatchObject({ unitAmount: 1149, monthlyTotal: 2298, currency: 'eur' });
+    const operationId = randomUUID();
+    expect(await purchaseCoManagedSeatsAction({ operationId, quantity: 2, offerRef: quote.offerRef })).toMatchObject({ kind: 'checkout' });
+    expect(await operationRow(tenant, operationId)).toMatchObject({ price_id: CO_MANAGED_PRICE_ID, stripe_account: 'acct_algasim' });
+    const key = 'co_managed_technician_seat';
+    const actor = { userId: 'operator', tenantId: process.env.MASTER_BILLING_TENANT_ID! };
+    await catalog.pauseSales({ actor, offerKey: key, interval: 'month', expectedCurrentVersionId: quote.offerRef });
+    await expect(Page({})).rejects.toThrow(/404/);
+    await expect(previewCoManagedSeatsAction(2)).rejects.toThrow('not available');
+    await expect(purchaseCoManagedSeatsAction({ operationId: randomUUID(), quantity: 2, offerRef: quote.offerRef }))
+      .rejects.toThrow('not available');
+    expect(await tenantDb(db, tenant).table('co_managed_purchase_operations')).toHaveLength(1);
+    expect(accountRead).not.toHaveBeenCalled();
   }, HOOK_TIMEOUT);
 
   it('recovers a missing merchant pin from the operation Price under the real retry lock and retries in that scope', async () => {

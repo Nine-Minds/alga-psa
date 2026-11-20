@@ -33,7 +33,7 @@ export interface EffectiveCatalogAccountSetting {
   livemode: boolean;
   stripeAccount: string | null;
   priceId: string | null;
-  accountSource: 'database' | 'environment bootstrap' | 'catalog history' | 'unconfigured' | 'ambiguous';
+  accountSource: 'database' | 'environment bootstrap' | 'Stripe key owner' | 'catalog history' | 'unconfigured' | 'ambiguous';
   priceSource: 'database setting' | 'database catalog' | 'environment bootstrap' | 'unconfigured' | 'ambiguous';
   historicalAccounts: string[];
 }
@@ -80,8 +80,8 @@ export function createOfferCatalog(deps: CatalogDeps) {
     });
   }
 
-  async function scopeOrNull(): Promise<CatalogScope | null> {
-    try { return await deps.scope(); } catch { return null; }
+  async function scopeOrNull(db?: Knex): Promise<CatalogScope | null> {
+    try { return await deps.scope(db); } catch { return null; }
   }
 
   /**
@@ -220,6 +220,14 @@ export function createOfferCatalog(deps: CatalogDeps) {
       accountSource = 'catalog history';
     } else if (accounts.length > 1) {
       accountSource = 'ambiguous';
+    } else if (applies && env.STRIPE_CO_MANAGED_USER_PRICE_ID) {
+      // Before the catalog was introduced, a deployment could configure just the Price.
+      // Use the key's merchant for both the review and the locked purchase checks.
+      const scope = await scopeOrNull(db);
+      if (scope && scope.livemode === livemode) {
+        stripeAccount = scope.stripeAccount;
+        accountSource = 'Stripe key owner';
+      }
     }
 
     let priceId: string | null = null;

@@ -1,20 +1,22 @@
+// @vitest-environment jsdom
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // The server workspace transforms its imported page JSX in classic mode.
 (globalThis as any).React = React;
 
 const mocks = vi.hoisted(() => ({
   user: { user_id: 'admin', tenant: 'sponsor', user_type: 'internal' },
-  scope: vi.fn(), setting: vi.fn(), resolve: vi.fn(), preview: vi.fn(), purchase: vi.fn(),
+  resolve: vi.fn(), preview: vi.fn(), purchase: vi.fn(),
   permission: vi.fn(), tenantRow: vi.fn(),
-  pageServed: true, pageOperational: false,
+  pageServed: true,
 }));
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: mocks.user.tenant }, ...args),
   getCurrentUser: async () => mocks.user,
   getSession: async () => ({ user: { tenant: mocks.user.tenant } }) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); } }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }), notFound: () => { throw new Error('NEXT_NOT_FOUND'); } }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: {} }),
   tenantDb: () => ({ table: (name: string) => name === 'tenants' ? { first: mocks.tenantRow } : {
@@ -30,10 +32,24 @@ vi.mock('@alga-psa/core/features', () => ({ isFeatureFlagEnabled: async () => tr
 vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: async () => 'psa' }));
 vi.mock('@/components/co-managed/CoManagedOverview', () => ({ default: () => null }));
 vi.mock('@/components/co-managed/CoManagedCustomerHome', () => ({ default: () => null }));
-vi.mock('@enterprise/components/co-managed/CoManagedPurchaseOverview', () => ({ default: () => null }));
+vi.mock('@enterprise/components/co-managed/CoManagedPurchaseOverview', async () => import('../../../components/co-managed/CoManagedPurchaseOverview'));
+vi.mock('@/components/co-managed/CoManagedPoolEditor', async () => import('../../../../../../server/src/components/co-managed/CoManagedPoolEditor'));
+vi.mock('@/components/co-managed/accessRefresh', async () => import('../../../../../../server/src/components/co-managed/accessRefresh'));
+vi.mock('@/lib/actions/coManagedActions', async () => import('../../../../../../server/src/lib/actions/coManagedActions'));
+vi.mock('@enterprise/lib/actions/coManagedBillingActions', async () => import('../../../lib/actions/coManagedBillingActions'));
+vi.mock('@enterprise/components/co-managed/CoManagedCheckout', () => ({ default: () => null }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  const t = (key: string, options?: { defaultValue?: string; amount?: string }) =>
+    options?.defaultValue ?? (options?.amount ? key + ' ' + options.amount : key);
+  return {
+    useTranslation: () => ({ t }),
+    useFormatters: () => ({ formatCurrency: (amount: number, currency: string) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount) }),
+  };
+});
 vi.mock('@enterprise/components/co-managed/CoManagedPurchasePool', () => ({ default: () => null }));
 vi.mock('../../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
-  getOfferCatalog: async () => ({ scope: mocks.scope, inspectAccountSetting: mocks.setting,
+  getOfferCatalog: async () => ({
     deploymentLivemode: async () => false,
     effectiveAccountSetting: async () => ({ stripeAccount: 'acct_database', priceId: 'price_database', accountSource: 'database', priceSource: 'database setting' }),
     resolveCurrentOffer: mocks.resolve }),
@@ -67,15 +83,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.user.user_type = 'internal';
   mocks.user.tenant = 'sponsor';
-  mocks.pageServed = true; mocks.pageOperational = false;
+  mocks.pageServed = true;
   mocks.permission.mockResolvedValue(true);
   mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'stripe' });
-  mocks.scope.mockResolvedValue({ stripeAccount: 'acct_database', livemode: false });
-  mocks.setting.mockResolvedValue({ stripe_account: 'acct_database', price_id: 'price_database' });
-  mocks.resolve.mockResolvedValue({ source: 'catalog', priceId: 'price_database' });
+  mocks.resolve.mockResolvedValue({ source: 'catalog', priceId: 'price_database', scope: { stripeAccount: 'acct_database', livemode: false } });
   mocks.preview.mockResolvedValue({ unitAmount: 1200, monthlyTotal: 1200, amountDue: 1200, currency: 'eur', offerRef: 'version-1' });
   mocks.purchase.mockResolvedValue({ kind: 'checkout', sessionId: 'cs_test', clientSecret: 'secret' });
 });
+
+afterEach(cleanup);
 
 describe('independent first-purchase entry points', () => {
   it('serves the overview and purchase review for a hosted Pro admin with zero seats', async () => {
@@ -110,9 +126,12 @@ describe('independent first-purchase entry points', () => {
     expect(page.type).toBe(CoManagedPurchaseOverview);
     expect(await loadBillingCatalogContext()).toMatchObject({ stripeAccount: 'acct_database', priceId: 'price_database', source: 'database', sellable: true });
     expect(await getCoManagedPurchaseState()).toMatchObject({ capacity: 0, allocated: 0, purchase: { canPurchase: true } });
-    expect(await previewCoManagedSeatsAction(1)).toMatchObject({ unitAmount: 1200, offerRef: 'version-1' });
-    expect(await purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'purchase-page', offerRef: 'version-1' }))
-      .toMatchObject({ kind: 'checkout' });
+    render(page);
+    fireEvent.click(await screen.findByRole('button', { name: 'Buy co-managed seats' }));
+    await vi.waitFor(() => expect(screen.getByText('coManaged.dueNow €12.00')).toBeInTheDocument());
+    expect(mocks.purchase).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.confirmPurchase' }));
+    await vi.waitFor(() => expect(mocks.purchase).toHaveBeenCalledWith('sponsor-page', 1, expect.any(String), 'version-1'));
 
     mocks.user.user_type = 'client';
     await expect(CoManagedPage({})).rejects.toThrow('NEXT_NOT_FOUND');
