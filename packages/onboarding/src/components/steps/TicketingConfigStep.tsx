@@ -1778,9 +1778,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 )}
 
                 {isLoadingAvailable.boards ? (
-                  <p className="text-sm text-gray-600">{importLoadingText}</p>
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
                 ) : isBoardsImportEmpty ? (
-                  <p id="import-boards-empty-state" className="text-sm text-gray-600">
+                  <p id="import-boards-empty-state" className="text-sm text-muted-foreground">
                     {t('ticketingConfigStep.boards.import.empty', {
                       defaultValue: 'All standard boards are already imported.'
                     })}
@@ -2300,9 +2300,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 </div>
 
                 {isLoadingAvailable.categories ? (
-                  <p className="text-sm text-gray-600">{importLoadingText}</p>
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
                 ) : isCategoriesImportEmpty ? (
-                  <p id="import-categories-empty-state" className="text-sm text-gray-600">
+                  <p id="import-categories-empty-state" className="text-sm text-muted-foreground">
                     {t('ticketingConfigStep.categories.import.empty', {
                       defaultValue: 'This board already has all the standard categories.'
                     })}
@@ -2982,9 +2982,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 )}
 
                 {isLoadingAvailable.statuses ? (
-                  <p className="text-sm text-gray-600">{importLoadingText}</p>
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
                 ) : isStatusesImportEmpty ? (
-                  <p id="import-statuses-empty-state" className="text-sm text-gray-600">
+                  <p id="import-statuses-empty-state" className="text-sm text-muted-foreground">
                     {t('ticketingConfigStep.statuses.import.empty', {
                       defaultValue: 'This board already has all the standard statuses.'
                     })}
@@ -3433,9 +3433,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 )}
 
                 {isLoadingAvailable.priorities ? (
-                  <p className="text-sm text-gray-600">{importLoadingText}</p>
+                  <p className="text-sm text-muted-foreground">{importLoadingText}</p>
                 ) : isPrioritiesImportEmpty ? (
-                  <p id="import-priorities-empty-state" className="text-sm text-gray-600">
+                  <p id="import-priorities-empty-state" className="text-sm text-muted-foreground">
                     {t('ticketingConfigStep.priorities.import.empty', {
                       defaultValue: 'All standard priorities are already imported.'
                     })}
