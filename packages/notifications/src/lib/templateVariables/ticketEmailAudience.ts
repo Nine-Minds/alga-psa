@@ -41,6 +41,7 @@ export const TICKET_EMAIL_VARIABLE_AUDIENCE: Readonly<
   "ticket.description": "client",
   "ticket.descriptionText": "client",
   "ticket.descriptionHtml": "client",
+  "ticket.fromEmail": "client",
   "ticket.createdAt": "client",
   "ticket.createdBy": "client",
   "ticket.createdDetails": "client",
