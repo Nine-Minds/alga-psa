@@ -420,6 +420,12 @@ type RenderTemplateOnServerOptions = {
      * their own. Sample-data previews omit it and stay in the authored labels.
      */
     invoiceId?: string | null;
+    /**
+     * Also return the render as the pages it prints as (`documentHtml`). A surface that
+     * shows the document — rather than the fragment inline — asks for this, so a layout
+     * with page breaks reads as separate sheets instead of one endless roll.
+     */
+    paginate?: boolean;
 };
 
 export const renderTemplateOnServer = withAuth(async (
@@ -479,7 +485,23 @@ export const renderTemplateOnServer = withAuth(async (
         });
 
         console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);
-        return { html, css };
+        if (!options?.paginate) {
+          return { html, css };
+        }
+
+        // The reader sees the pages this invoice prints as, chunked by the engine that prints
+        // them — a template with page breaks is a stack of sheets, not one roll. Images are
+        // inlined first, or the chunker measures a header the reader's frame draws taller.
+        const { buildTemplateHtmlDocument, inlinePreviewDocumentImages } = await import('../lib/invoice-template-ast/server-render');
+        const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
+        const paginated = await paginateDocumentPreviewHtml(
+          await inlinePreviewDocumentImages(
+            buildTemplateHtmlDocument(localized.ast, { html, css, locale: localized.locale }, { title: 'Invoice preview' }),
+          ),
+          localized.ast,
+          { locale: localized.locale ?? undefined },
+        );
+        return { html, css, documentHtml: paginated.html };
 
     } catch (error: any) {
         console.error(`[Server Action] Error rendering template ${templateId}:`, error);

@@ -56,6 +56,9 @@ export default defineConfig({
       'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
       'src/components/billing-dashboard/invoicing/DraftInvoiceAdjustmentsCard.authRecovery.test.tsx',
       'src/components/billing-dashboard/invoicing/InvoicePreviewPanel.test.tsx',
+      // Every surface that reads a document shows it as the pages it prints as.
+      'src/components/billing-dashboard/TemplateRenderer.paginated.test.tsx',
+      'src/components/billing-dashboard/quotes/QuotePreviewPanel.pages.test.tsx',
       'src/components/billing-dashboard/invoicing/DraftInvoiceDetailsCard.billingProfile.test.tsx',
       // Manual invoice total arithmetic must be selected by the billing
       // package's own test command as well as the server's monorepo glob.
