@@ -405,6 +405,8 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       id="document-template-editor-surface"
       focused={focus.isFocused}
       onFocusedChange={focus.setFocused}
+      // The page margin the type's list view also uses; focus mode takes the window instead.
+      className="p-6"
     >
     <Card
       id="document-template-editor-page"
