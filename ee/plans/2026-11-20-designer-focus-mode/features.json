@@ -190,7 +190,7 @@
     "prdRefs": [
       "FR-C1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ServiceRequestFormBuilderPage no longer wraps the builder in a fixed full-window layer; the builder fills the height of the MSP content area with the sidebar and header visible"
   },
   {
@@ -199,7 +199,7 @@
     "prdRefs": [
       "FR-C2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The builder is wrapped in DesignerFocusSurface driven by the service_request_form preference read in the page component; the surface keeps the id service-request-form-builder-surface"
   },
   {
@@ -209,7 +209,7 @@
       "FR-C2",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The builder toolbar has the focus toggle with id service-request-form-builder-focus-toggle, placed before Publish"
   },
   {
@@ -218,7 +218,7 @@
     "prdRefs": [
       "FR-C3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "With no manual palette choice in this visit, the palette is collapsed while the surface is narrower than 1100 px"
   },
   {
@@ -227,7 +227,7 @@
     "prdRefs": [
       "FR-C3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "With no manual palette choice in this visit, the palette expands when the surface reaches 1100 px or wider, including on entering focus mode"
   },
   {
@@ -236,7 +236,7 @@
     "prdRefs": [
       "FR-C3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "After the user collapses or expands the palette by hand, width changes and focus toggles no longer change it for the rest of the visit"
   },
   {
@@ -245,7 +245,7 @@
     "prdRefs": [
       "FR-C4"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The loading text and the load-failed alert render in the normal layout regardless of the saved preference"
   },
   {
@@ -254,7 +254,7 @@
     "prdRefs": [
       "FR-C5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Back link, save status, notice banner, draft restore banner, Try it mode and Publish are inside the surface and work in both modes"
   },
   {
@@ -263,7 +263,7 @@
     "prdRefs": [
       "FR-C5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Toggling focus mode keeps the form document, undo / redo history, selection, inspector width and left tab"
   },
   {

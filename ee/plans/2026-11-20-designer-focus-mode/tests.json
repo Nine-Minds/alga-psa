@@ -338,7 +338,7 @@
     "featureIds": [
       "F021"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: with no saved preference, the form builder page renders its surface with data-focus-mode=\"off\" and no fixed class"
   },
   {
@@ -347,7 +347,7 @@
     "featureIds": [
       "F022"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: with designer_focus_mode_service_request_form saved as true, the page renders the surface focused"
   },
   {
@@ -356,7 +356,7 @@
     "featureIds": [
       "F023"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the toolbar has #service-request-form-builder-focus-toggle and clicking it focuses the surface and saves designer_focus_mode_service_request_form as true"
   },
   {
@@ -365,7 +365,7 @@
     "featureIds": [
       "F023"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: clicking the toggle again returns to the normal layout and saves false"
   },
   {
@@ -374,7 +374,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: at a measured surface width of 1000 px with no manual choice, the palette is collapsed"
   },
   {
@@ -383,7 +383,7 @@
     "featureIds": [
       "F025"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: when the measured width goes from 1000 px to 1400 px with no manual choice, the palette expands"
   },
   {
@@ -392,7 +392,7 @@
     "featureIds": [
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: after the user expands the palette at 1000 px, it stays expanded at 1000 px"
   },
   {
@@ -401,7 +401,7 @@
     "featureIds": [
       "F026"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: after the user collapses the palette at 1400 px, entering focus mode leaves it collapsed"
   },
   {
@@ -410,7 +410,7 @@
     "featureIds": [
       "F027"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: with the preference saved as true, the loading state and the load-failed alert render without a focused surface"
   },
   {
@@ -419,7 +419,7 @@
     "featureIds": [
       "F028"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: back link, undo, redo, save status, Edit / Try it, preview width, settings and Publish are present in both modes"
   },
   {
@@ -428,7 +428,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: add a field, select it, toggle focus mode; the field, the selection and an available undo step are all still there"
   },
   {
@@ -437,7 +437,7 @@
     "featureIds": [
       "F028"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: the existing ServiceRequestFormBuilder test suite passes unchanged in the normal layout"
   },
   {
