@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Knex } from 'knex';
 import { createTenantKnex, runWithTenant, tenantDb, withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { assertApiPrincipal } from '@/lib/api/middleware/apiMiddleware';
+import { resolveDocumentRoutePrincipal } from '@/lib/api/documentRoutePrincipal';
 import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
@@ -45,37 +42,10 @@ export async function GET(
       return NextResponse.json({ error: 'Document ID is required' }, { status: 400 });
     }
 
-    const sessionUser = await getCurrentUser();
-    const apiKey = request.headers.get('x-api-key');
-
-    let tenantId: string | null = null;
-    let currentUser: Awaited<ReturnType<typeof getCurrentUser>> | null = null;
-
-    if (sessionUser?.tenant) {
-      tenantId = sessionUser.tenant;
-      currentUser = sessionUser;
-    } else if (apiKey) {
-      const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-      if (!keyRecord?.tenant) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const apiUser = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-      try {
-        assertApiPrincipal(apiUser);
-      } catch {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      tenantId = keyRecord.tenant;
-      currentUser = apiUser;
-    } else {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!tenantId || !currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const principal = await resolveDocumentRoutePrincipal(request);
+    if (principal.ok === false) return principal.response;
+    const tenantId = principal.tenant;
+    const currentUser = principal.user;
 
     // Session and API-key callers alike: refuse before any permission or
     // document read while the workspace awaits co-managed acceptance.

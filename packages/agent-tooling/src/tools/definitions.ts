@@ -24,6 +24,10 @@ export const SEARCH_API_REGISTRY_TOOL = 'search_api_registry';
 export const SEARCH_BUSINESS_DATA_TOOL = 'search_business_data';
 export const CALL_API_ENDPOINT_TOOL = 'call_api_endpoint';
 export const ATTACH_FILE_TOOL = 'attach_file';
+export const READ_ATTACHMENT_TOOL = 'read_attachment';
+
+/** Entities `GET /api/v1/documents/content` can read (the adapters that implement `listReadableDocuments`; kept equal by a server test). */
+export const READ_ATTACHMENT_ENTITY_TYPES = ['ticket'] as const;
 
 /** Entities `POST /api/v1/documents` accepts (kept equal to the server's ATTACHABLE_ENTITY_TYPES by a server test). */
 export const ATTACH_FILE_ENTITY_TYPES = ['ticket', 'project_task', 'client', 'contact', 'asset'] as const;
@@ -55,7 +59,8 @@ export const MCP_SERVER_INSTRUCTIONS =
   'Never ask the user for an API key. ' +
   'Never base64-encode a file you did not author yourself; content_base64 is only for small text you wrote. ' +
   'call_api_endpoint cannot send multipart/form-data, so do not use it to upload files. ' +
-  'Attach one file per call; for several files make several calls.';
+  'Attach one file per call; for several files make several calls. ' +
+  'To read what is inside a ticket\'s attachments (photos, PDFs, documents), use read_attachment, not call_api_endpoint.';
 
 export interface BuildMetaToolOptions {
   edition: Edition;
@@ -237,6 +242,37 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
         $defs: { OpenAIFile: OPENAI_FILE_SCHEMA },
       },
       _meta: { 'openai/fileParams': ['file'] },
+    },
+    {
+      name: READ_ATTACHMENT_TOOL,
+      description:
+        'Read the content of files attached to a ticket so you can analyse them yourself. ' +
+        'Images come back as images. PDFs come back as the original file plus per-page text, with scanned pages as page images. ' +
+        'Documents and notes come back as text. Omit document_id to read every attachment on the ticket. ' +
+        'Results arrive in parts: if the result header has next_cursor, call again with the same entity and that cursor.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          entity_type: {
+            type: 'string',
+            description: 'Kind of record that owns the attachments.',
+            enum: [...READ_ATTACHMENT_ENTITY_TYPES],
+          },
+          entity_id: {
+            type: 'string',
+            description: 'Ticket UUID, or a ticket number such as SR000674.',
+          },
+          document_id: {
+            type: 'string',
+            description: 'Read only this attachment. Omit to read every attachment of the record in order.',
+          },
+          cursor: {
+            type: 'string',
+            description: 'The next_cursor from a previous read_attachment result; continues where it stopped.',
+          },
+        },
+        required: ['entity_type', 'entity_id'],
+      },
     },
   ];
 }

@@ -144,7 +144,26 @@ export function redactToolArguments(toolName: string, args: Record<string, unkno
 }
 
 /** Per-tool narrowing of an already-redacted result body; empty until a tool's summary needs it. */
-const TOOL_RESULT_REDACTORS: Record<string, (redacted: unknown) => unknown> = {};
+const TOOL_RESULT_REDACTORS: Record<string, (redacted: unknown) => unknown> = {
+  // read_attachment: keep only what was served/omitted (names, counts) and the cursor; never ids, labels or block data.
+  read_attachment: (redacted) => {
+    const h = (redacted && typeof redacted === 'object' ? redacted : {}) as Record<string, unknown>;
+    const names = (list: unknown, key: string) =>
+      Array.isArray(list) ? list.map((e) => (e && typeof e === 'object' ? (e as Record<string, unknown>)[key] : undefined)) : [];
+    const served = Array.isArray(h.served) ? h.served : [];
+    const omitted = Array.isArray(h.omitted) ? h.omitted : [];
+    return {
+      served_count: served.length,
+      served: names(served, 'name'),
+      omitted_count: omitted.length,
+      omitted: omitted.map((e) => {
+        const r = (e && typeof e === 'object' ? e : {}) as Record<string, unknown>;
+        return { name: r.name, reason: r.reason };
+      }),
+      next_cursor: h.next_cursor ?? null,
+    };
+  },
+};
 
 /**
  * Audit-safe copy of a tool result's serialized text, using the same walk as

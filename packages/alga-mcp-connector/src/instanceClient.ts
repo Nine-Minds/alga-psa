@@ -1,8 +1,9 @@
 import {
-  buildRequest,
+  readResponseBody,
   type BuiltRequest,
   type ChatApiRegistryEntry,
-  type CallEndpointArgs,
+  type MetaToolTransport,
+  type UpstreamBody,
 } from '@alga-psa/agent-tooling';
 import type { ConnectorConfig } from './config.js';
 import { describeHttpFailure } from './errors.js';
@@ -10,15 +11,7 @@ import { describeHttpFailure } from './errors.js';
 export interface EndpointResult {
   status: number;
   ok: boolean;
-  data: unknown;
-}
-
-export interface BusinessSearchArgs {
-  query?: unknown;
-  types?: unknown;
-  limit?: unknown;
-  cursor?: unknown;
-  sort?: unknown;
+  body: UpstreamBody;
 }
 
 /**
@@ -85,25 +78,17 @@ export class InstanceClient {
     return entries as ChatApiRegistryEntry[];
   }
 
-  /** Cross-entity business-data search via GET /api/v1/search. */
-  async searchBusinessData(args: BusinessSearchArgs): Promise<EndpointResult> {
-    const url = new URL(`${this.config.instanceUrl}${this.config.searchPath}`);
-    if (typeof args.query === 'string') url.searchParams.set('query', args.query);
-    if (Array.isArray(args.types) && args.types.length > 0) {
-      url.searchParams.set('types', args.types.map(String).join(','));
-    }
-    if (args.limit !== undefined && args.limit !== null) url.searchParams.set('limit', String(args.limit));
-    if (args.cursor) url.searchParams.set('cursor', String(args.cursor));
-    if (args.sort) url.searchParams.set('sort', String(args.sort));
-    return this.send(url.toString(), { method: 'GET', headers: this.authHeaders() });
+  /** Where `search_business_data` goes (operators may override ALGA_SEARCH_PATH). */
+  get searchPath(): string {
+    return this.config.searchPath;
   }
 
-  /** Invoke a registry endpoint, building the request from the entry + args. */
-  async callEndpoint(entry: ChatApiRegistryEntry, args: CallEndpointArgs): Promise<EndpointResult> {
-    return this.sendBuilt(buildRequest(entry, args));
+  /** The transport `dispatchMetaTool` sends every tool's request through. */
+  transport(): MetaToolTransport {
+    return { send: (req) => this.sendBuilt(req) };
   }
 
-  /** Send an already-built request (e.g. the attach_file mapper's output). */
+  /** Send an already-built request (the output of any meta-tool request builder). */
   async sendBuilt(built: BuiltRequest): Promise<EndpointResult> {
     const url = new URL(`${this.config.instanceUrl}${built.path}`);
     for (const [key, value] of Object.entries(built.query)) {
@@ -125,23 +110,20 @@ export class InstanceClient {
     } catch (error) {
       throw new Error(`Request to ${url} failed: ${(error as Error).message}`);
     }
-    const text = await res.text().catch(() => '');
-    let data: unknown = text;
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
-      }
-    }
+    const body = await readResponseBody(res);
     if (!res.ok) {
-      const detail = typeof data === 'string' ? data : JSON.stringify(data);
+      const detail =
+        body.kind === 'binary'
+          ? `[binary ${body.contentType}]`
+          : typeof body.value === 'string'
+            ? body.value
+            : JSON.stringify(body.value);
       return {
         status: res.status,
         ok: false,
-        data: { error: describeHttpFailure(res.status, res.statusText, detail) },
+        body: { kind: 'json', value: { error: describeHttpFailure(res.status, res.statusText, detail) } },
       };
     }
-    return { status: res.status, ok: true, data };
+    return { status: res.status, ok: true, body };
   }
 }

@@ -26,6 +26,7 @@ const CONTROLLERS = [
 ];
 
 const ROUTE_FILES = [
+  resolve(__dirname, '../../../lib/api/documentRoutePrincipal.ts'),
   resolve(__dirname, '../../../app/api/documents/[documentId]/content/route.ts'),
   resolve(__dirname, '../../../app/api/documents/[documentId]/download/route.ts'),
   resolve(__dirname, '../../../app/api/documents/view/[fileId]/route.ts'),
@@ -55,6 +56,17 @@ describe('copied-auth inventory: every API-user load is guarded by assertApiPrin
     // No unguarded null-check fallback may replace the assertion.
     const rawNullChecks = source.match(/const user = await findUserByIdForApi\([\s\S]{0,200}?if \(!user\)/g) ?? [];
     expect(rawNullChecks, `${file} should have no raw if (!user) guards after user load`).toHaveLength(0);
+  });
+
+  it('document routes authenticate through the shared principal, which guards the API-key user', () => {
+    for (const route of [
+      '../../../app/api/documents/download/[fileId]/route.ts',
+      '../../../app/api/documents/[documentId]/content/route.ts',
+      '../../../app/api/documents/[documentId]/download/route.ts',
+    ]) {
+      expect(readFileSync(resolve(__dirname, route), 'utf8')).toContain('resolveDocumentRoutePrincipal(');
+    }
+    expect(readFileSync(ROUTE_FILES[0], 'utf8')).toContain('findUserByIdForApi(');
   });
 
   it('guards API-key user loading in the document routes', () => {

@@ -2,21 +2,14 @@ import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
 import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { StorageService } from '@alga-psa/storage/StorageService';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { assertApiPrincipal } from '@/lib/api/middleware/apiMiddleware';
-import { runWithTenant, tenantDb } from '@alga-psa/db';
+import { resolveDocumentRoutePrincipal } from '@/lib/api/documentRoutePrincipal';
+import { serveDocumentFile } from '@/lib/api/serveDocumentFile';
+import { runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import {
   getAuthorizedDocumentByFileId,
   getAuthorizedDocumentById,
 } from '@alga-psa/documents/actions/documentActions';
-import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownExport';
-
-// LEVERAGE: pattern document-byte-serving
 
 export async function GET(
   _request: NextRequest,
@@ -31,44 +24,17 @@ export async function GET(
       );
     }
 
-    // Support both session auth and API-key auth for document downloads.
-    const sessionUser = await getCurrentUser();
-    const apiKey = _request.headers.get('x-api-key');
-
-    let tenantId: string | null = null;
-    let currentUser: Awaited<ReturnType<typeof getCurrentUser>> | null = null;
-
-    if (sessionUser?.tenant) {
-      tenantId = sessionUser.tenant;
-      currentUser = sessionUser;
-    } else if (apiKey) {
-      const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-      if (!keyRecord?.tenant) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      const apiUser = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-      try {
-        assertApiPrincipal(apiUser);
-      } catch {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      tenantId = keyRecord.tenant;
-      currentUser = apiUser;
-    } else {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!tenantId || !currentUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Session auth or API-key auth (internal users only), through the shared principal.
+    const principal = await resolveDocumentRoutePrincipal(_request);
+    if (principal.ok === false) return principal.response;
+    const tenantId = principal.tenant;
+    const currentUser = principal.user;
 
     const denial = await coManagedWorkspaceDenial(tenantId);
     if (denial) return denial;
 
     return await runWithTenant(tenantId, async () => {
-      const canReadDocuments = await canReadDocument(currentUser as any, documentId);
+      const canReadDocuments = await canReadDocument(currentUser, documentId);
       if (!canReadDocuments) {
         return NextResponse.json(
           { error: 'Forbidden - Cannot read documents' },
@@ -78,58 +44,19 @@ export async function GET(
 
       const { knex } = await createTenantKnex();
       const document = await withTransaction(knex, async (trx) => {
-        const byDocumentId = await getAuthorizedDocumentById(trx, tenantId, currentUser as any, documentId);
+        const byDocumentId = await getAuthorizedDocumentById(trx, tenantId, currentUser, documentId);
         if (byDocumentId) {
           return byDocumentId;
         }
 
-        return getAuthorizedDocumentByFileId(trx, tenantId, currentUser as any, documentId);
+        return getAuthorizedDocumentByFileId(trx, tenantId, currentUser, documentId);
       });
 
       if (!document) {
         return NextResponse.json({ error: 'Document not found' }, { status: 404 });
       }
 
-      const encodedFilename = encodeURIComponent(document.document_name || 'download');
-      const asciiFilename = document.document_name?.replace(/[^\x00-\x7F]/g, '_') || 'download';
-
-      if (!document.file_id) {
-        // Block documents (call and meeting transcripts, notes) have no file:
-        // serve their content as Markdown instead of answering 404.
-        const blockRow = await tenantDb(knex, tenantId)
-          .table('document_block_content')
-          .where({ document_id: document.document_id })
-          .first('block_data');
-        if (!blockRow) {
-          return NextResponse.json({ error: 'Document not found' }, { status: 404 });
-        }
-        const blockData = typeof blockRow.block_data === 'string' ? JSON.parse(blockRow.block_data) : blockRow.block_data;
-        const markdown = buildDocumentMarkdown(blockData, null) ?? '';
-        const body = Buffer.from(markdown, 'utf8');
-        const headers = new Headers();
-        headers.set('Content-Type', 'text/markdown; charset=utf-8');
-        headers.set('Content-Disposition', `attachment; filename="${asciiFilename}.md"; filename*=UTF-8''${encodedFilename}.md`);
-        headers.set('Content-Length', body.length.toString());
-        headers.set('Cache-Control', 'no-cache');
-        return new Response(body as any, { status: 200, headers });
-      }
-
-      const result = await StorageService.downloadFile(document.file_id);
-      if (!result) {
-        return NextResponse.json({ error: 'File not found in storage' }, { status: 404 });
-      }
-
-      const { buffer, metadata } = result;
-      const headers = new Headers();
-      headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-      headers.set(
-        'Content-Disposition',
-        `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,
-      );
-      headers.set('Content-Length', buffer.length.toString());
-      headers.set('Cache-Control', 'no-cache');
-
-      return new Response(buffer as any, { status: 200, headers });
+      return serveDocumentFile(document, { knex, tenant: tenantId });
     });
   } catch (error) {
     console.error('API: Error downloading document:', error);

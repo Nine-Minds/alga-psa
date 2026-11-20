@@ -52,6 +52,7 @@ import {
 } from '@alga-psa/authorization/recordProjectionDescriptors';
 import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
 import { buildTicketRecordContext } from './recordContexts';
+import { assertTicketReadGate, authorizeTicketDocuments, selectTicketDocument } from './ticketDocumentAuthorization';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
@@ -184,25 +185,7 @@ export class ApiTicketController extends ApiBaseController {
     knex?: Awaited<ReturnType<typeof getConnection>>
   ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
-    if (!ticket) {
-      throw new NotFoundError('ticket not found');
-    }
-
-    const projection = await projectApiResourceRead({
-      knex: resolvedKnex,
-      tenant: apiRequest.context.tenant,
-      user: apiRequest.context.user,
-      apiKeyId: apiRequest.context.apiKeyId,
-      kind: 'ticket',
-      record: ticket as Record<string, any>,
-    });
-
-    if (!projection) {
-      throw new NotFoundError('ticket not found');
-    }
-
-    return projection;
+    return assertTicketReadGate(this.ticketService, apiRequest, ticketId, resolvedKnex);
   }
 
   private async assertTicketDocumentReadAllowed(
@@ -213,16 +196,7 @@ export class ApiTicketController extends ApiBaseController {
     source: RedactableRecordSource,
   ): Promise<AuthorizedProjection<Record<string, any>>> {
     const documents = await this.ticketService.getTicketDocuments(ticketId, context);
-    const document = documents.find((item) => item.document_id === documentId);
-    const projection = document
-      ? reprojectUnderDecision(ticketGate, document as Record<string, any>, source)
-      : null;
-
-    if (!projection) {
-      throw new NotFoundError('Document not found');
-    }
-
-    return projection;
+    return selectTicketDocument(ticketGate, documents, documentId, source);
   }
 
   private async assertTicketMutationAllowed(
@@ -1086,12 +1060,14 @@ export class ApiTicketController extends ApiBaseController {
         const apiRequest = await this.authenticate(req);
 
         return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Checked first so a caller without ticket:read still gets 403 (not a 400 for a malformed id);
+          // authorizeTicketDocuments repeats it for the callers that have no controller in front.
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
-          const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
+          // ticket:read, the ticket kernel and the service's document filters: one gate shared with read_attachment.
+          const { ticketGate, documents } = await authorizeTicketDocuments(this.ticketService, apiRequest, ticketId, knex);
           const projectedDocuments = reprojectUnderDecision(ticketGate, documents, TICKET_DOCUMENT_SOURCE);
 
           return createSuccessResponse(projectedDocuments, 200, undefined, apiRequest);

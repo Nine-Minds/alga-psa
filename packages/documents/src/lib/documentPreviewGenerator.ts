@@ -21,7 +21,7 @@
  * (see persistPreviewResult).
  */
 
-import { fromPath } from 'pdf2pic';
+import { renderPdfPages } from './pdfPageRender';
 import type { Knex } from 'knex';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -461,30 +461,17 @@ async function generatePdfPreviews(tenant: string, document: IDocument, declared
     });
     await pipeline(source, cap, createWriteStream(tempPdfPath));
 
-    const converter = fromPath(tempPdfPath, {
-      density: 150,
-      saveFilename: uuidv4(),
-      savePath: tempDir,
-      format: 'png',
+    // The page is stretched to the 1200x1600 box (long-standing preview behaviour); the render
+    // timeout is an ordinary Error, which takes the same failure path (event + rethrow => retry)
+    // as any other render failure.
+    const [rendered] = await renderPdfPages(tempPdfPath, [1], {
+      dpi: 150,
+      saveDir: tempDir,
       width: 1200,
       height: 1600,
+      timeoutMs: PDF_RENDER_TIMEOUT_MS,
     });
-    // pdf2pic cannot be aborted, so the race only frees the job; the timeout is an ordinary Error,
-    // which takes the same failure path (event + rethrow => retry) as any other render failure.
-    let renderTimer: ReturnType<typeof setTimeout> | undefined;
-    const rendered = await Promise.race([
-      converter(1, { responseType: 'buffer' }),
-      new Promise<never>((_resolve, reject) => {
-        renderTimer = setTimeout(
-          () => reject(new Error(`PDF render timed out after ${PDF_RENDER_TIMEOUT_MS}ms`)),
-          PDF_RENDER_TIMEOUT_MS,
-        );
-      }),
-    ]).finally(() => clearTimeout(renderTimer));
-    if (!rendered || !rendered.buffer) {
-      throw new Error('Failed to render PDF page');
-    }
-    return await storeDerivatives(tenant, document, rendered.buffer as Buffer);
+    return await storeDerivatives(tenant, document, rendered.buffer);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true }).catch((cleanupError) => {
       console.error('[generatePdfPreviews] Failed to clean up temp dir:', cleanupError);

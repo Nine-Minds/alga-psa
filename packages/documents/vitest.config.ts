@@ -131,6 +131,8 @@ export default defineConfig({
             'src/lib/uploadSessionClient.test.ts',
             'src/lib/documentPreviewProvenance.test.ts',
             'src/lib/documentPreviewPending.test.ts',
+            'src/lib/pdfPageRender.test.ts',
+            'src/lib/attachmentContent/**/*.test.ts',
             'src/lib/renderHtmlToPng.failure.test.ts',
             'src/handlers/GenericFileDocumentHandler.previewSsrf.test.ts',
           ],

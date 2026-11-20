@@ -18,7 +18,13 @@ large the AlgaPSA API is:
 | `search_business_data` | Find tenant records (tickets, clients, …), ACL-scoped |
 | `call_api_endpoint` | Execute a chosen endpoint by its registry id |
 
-The agent searches, reads the one schema it needs, then calls it.
+The agent searches, reads the one schema it needs, then calls it. Two further tools
+cover files: `attach_file` uploads one file to a record, and `read_attachment` reads a
+ticket's attachments back as native MCP content (images as image blocks, PDFs as the
+original plus per-page text, documents as Markdown). `read_attachment` runs on the
+AlgaPSA server, so the connector needs no image or PDF libraries; it only forwards the
+request and maps the returned blocks. A `call_api_endpoint` response with a binary body
+is reported as `{ "binary": true, ... }` rather than decoded.
 
 ## Configuration
 

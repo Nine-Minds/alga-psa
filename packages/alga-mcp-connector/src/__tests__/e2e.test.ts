@@ -64,13 +64,14 @@ async function connect(token = TOKEN) {
 }
 
 describe('E2E (T009, T012) — real HTTP instance + MCP protocol', () => {
-  it('fetches the registry from the instance and lists the 4 tools', async () => {
+  it('fetches the registry from the instance and lists the 5 tools', async () => {
     const { mcp, registry } = await connect();
     expect(registry.length).toBe(2);
     const { tools } = await mcp.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       'attach_file',
       'call_api_endpoint',
+      'read_attachment',
       'search_api_registry',
       'search_business_data',
     ]);

@@ -3,13 +3,11 @@ import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
-import Document from '@alga-psa/documents/models/document';
 import { marked } from 'marked';
 import { convertBlockContentToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 
 import logger from '@alga-psa/core/logger';
 import {
-  downloadDocument,
   getAuthorizedDocumentByFileId,
   getAuthorizedDocumentById,
 } from '@alga-psa/documents/actions/documentActions';
@@ -17,18 +15,17 @@ import { createPDFGenerationService } from '@alga-psa/billing/services';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getCurrentUser, getSession } from '@alga-psa/auth';
+import { resolveDocumentRoutePrincipal } from '@/lib/api/documentRoutePrincipal';
+import { serveDocumentFile } from '@/lib/api/serveDocumentFile';
 import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownExport';
-
-// LEVERAGE: pattern document-byte-serving
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const resolvedParams = await params;
-  const session = await getSession();
-  // Session check is important for both PDF generation and direct download
-  if (!session || !session.user || !session.user.tenant) {
+  // Session or API-key (internal users only); the same principal gates the export and original-file branches.
+  const principal = await resolveDocumentRoutePrincipal(req);
+  if (principal.ok === false) {
     logger.warn(`Unauthorized attempt to download document/generate PDF for ID: ${resolvedParams.fileId}`);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return principal.response;
   }
 
   // The URL parameter may be either a document_id or file_id
@@ -40,15 +37,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return NextResponse.json({ error: 'Invalid document ID.' }, { status: 400 });
   }
 
-  const tenant = session.user.tenant;
-
-  // Resolve the full user (roles, contact/client linkage) so the export
-  // branches can apply the same authorization as downloadDocument().
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    logger.warn(`Unable to resolve session user for document download/export. ID: ${resolvedParams.fileId}`);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const tenant = principal.tenant;
+  const currentUser = principal.user;
 
   const denial = await coManagedWorkspaceDenial(tenant);
   if (denial) return denial;
@@ -160,12 +150,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         }
 
         // Use the PDF generation service
-        const pdfService = createPDFGenerationService(session.user.tenant!);
+        const pdfService = createPDFGenerationService(tenant);
 
         try {
           const fileRecord = await pdfService.generateAndStore({
             documentId: document.document_id,
-            userId: session.user.id
+            userId: currentUser.user_id
           });
 
           // Download the generated PDF
@@ -196,42 +186,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
       // --- Original File Download Logic ---
       logger.info(`Standard file download requested for document ID: ${lookupId}`);
       try {
-        // First, get the document to find its file_id (lookup by document_id or file_id)
+        // Same kernel-backed gate as the export branches (lookup by document_id or file_id).
         const { knex } = await createTenantKnex();
         const document = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          const db = tenantDb(trx, tenant);
-          const doc = await Document.get(trx, lookupId);
-          if (doc) return doc;
-          return await db.table('documents')
-            .where({ file_id: lookupId })
-            .first();
+          const byDocumentId = await getAuthorizedDocumentById(trx, tenant, currentUser, lookupId);
+          if (byDocumentId) return byDocumentId;
+          return getAuthorizedDocumentByFileId(trx, tenant, currentUser, lookupId);
         });
 
-        if (!document || document.tenant !== tenant) {
-          logger.warn(`Document not found or tenant mismatch. ID: ${lookupId}, Tenant: ${tenant}`);
+        if (!document) {
+          logger.warn(`Document not found or access denied. ID: ${lookupId}, Tenant: ${tenant}`);
           return NextResponse.json({ error: 'Document not found.' }, { status: 404 });
         }
 
-        // If document exists, use its file_id with downloadDocument
         if (!document.file_id) {
           logger.warn(`Document has no associated file. Document ID: ${lookupId}`);
           return NextResponse.json({ error: 'Document has no associated file.' }, { status: 404 });
         }
 
-        // Use the file_id from the document, not the document_id.
-        // downloadDocument returns a typed error object (not a Response) on
-        // expected failures; passing that through crashes the route handler.
-        const download = await downloadDocument(document.file_id);
-        if (download instanceof Response) {
-          return download;
-        }
-        logger.warn(`Document download denied or failed. Document ID: ${lookupId}`, download);
-        const isPermissionError =
-          typeof download === 'object' && download !== null && 'permissionError' in download;
-        return NextResponse.json(
-          { error: isPermissionError ? 'Forbidden' : 'Failed to download document.' },
-          { status: isPermissionError ? 403 : 500 }
-        );
+        return await serveDocumentFile(document, { knex, tenant });
       } catch (error) {
         logger.error(`Error in standard download route for document ${lookupId}:`, error);
         return new Response(JSON.stringify({ error: 'Failed to download document.' }), {

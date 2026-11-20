@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { ChatApiRegistryEntry } from '@alga-psa/agent-tooling';
-import {
-  handleCallApiEndpoint,
-  handleSearchApiRegistry,
-  resolveEntry,
-} from '../tools';
-import type { EndpointResult, InstanceClient } from '../instanceClient';
+import { dispatchMetaTool, type ChatApiRegistryEntry } from '@alga-psa/agent-tooling';
+import type { InstanceClient } from '../instanceClient';
+
+// The connector's tool handlers now live in @alga-psa/agent-tooling's dispatchMetaTool; these tests
+// drive them through the connector's real transport so the behaviour the connector promised is kept.
 
 const REGISTRY: ChatApiRegistryEntry[] = [
   {
@@ -17,84 +15,75 @@ const REGISTRY: ChatApiRegistryEntry[] = [
     approvalRequired: false,
     parameters: [{ name: 'id', in: 'path', required: true }],
   },
-  {
-    id: 'contacts.create',
-    method: 'post',
-    path: '/api/v1/contacts',
-    displayName: 'Create Contact',
-    tags: ['Contacts'],
-    approvalRequired: true,
-    parameters: [],
-    requestBodySchema: {
-      type: 'object',
-      properties: {
-        phone_numbers: { type: 'array', items: { type: 'object', properties: { phone: { type: 'string' } } } },
-      },
-    },
-  },
 ];
 
-function fakeClient(result: EndpointResult): InstanceClient {
-  return {
-    callEndpoint: async () => result,
-    searchBusinessData: async () => result,
-  } as unknown as InstanceClient;
+async function withFetch(response: Response | Error, run: (client: InstanceClient) => Promise<void>) {
+  const { InstanceClient: Real } = await import('../instanceClient');
+  const { loadConfig } = await import('../config');
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    if (response instanceof Error) throw response;
+    return response;
+  }) as typeof fetch;
+  try {
+    await run(new Real(loadConfig({ ALGA_INSTANCE_URL: 'http://alga.test', ALGA_API_TOKEN: 't' } as NodeJS.ProcessEnv)));
+  } finally {
+    globalThis.fetch = original;
+  }
 }
 
-describe('resolveEntry', () => {
-  it('resolves by id, tolerating - / _ variants', () => {
-    expect(resolveEntry(REGISTRY, 'tickets.get')?.id).toBe('tickets.get');
-    expect(resolveEntry(REGISTRY, 'unknown.id')).toBeNull();
-  });
-});
+const call = (client: InstanceClient, args: Record<string, unknown>) =>
+  dispatchMetaTool('call_api_endpoint', args, { registry: REGISTRY, transport: client.transport() });
 
-describe('handleSearchApiRegistry', () => {
-  it('errors when query is missing', async () => {
-    const out = await handleSearchApiRegistry(REGISTRY, {});
-    expect(out.isError).toBe(true);
-  });
+const textOf = (r: { content: Array<{ type: string; text?: string }> }) => JSON.parse(r.content[0].text as string);
 
-  it('returns formatted results with entryId + score for a match', async () => {
-    const out = await handleSearchApiRegistry(REGISTRY, { query: 'get ticket by id' });
-    expect(out.isError).toBe(false);
-    const data = out.data as { results: Array<{ entryId: string; method: string }> };
-    expect(data.results[0].entryId).toBe('tickets.get');
-    expect(data.results[0].method).toBe('GET');
-  });
-
-  it('surfaces requestBodySchema for write endpoints', async () => {
-    const out = await handleSearchApiRegistry(REGISTRY, { query: 'create contact' });
-    expect(out.isError).toBe(false);
-    const data = out.data as { results: Array<{ entryId: string; requestBodySchema?: any }> };
-    const hit = data.results.find((r) => r.entryId === 'contacts.create');
-    expect(hit?.requestBodySchema?.properties.phone_numbers.items.properties.phone).toEqual({ type: 'string' });
-  });
-});
-
-describe('handleCallApiEndpoint (T010 — structured error mapping)', () => {
-  it('requires entryId', async () => {
-    const out = await handleCallApiEndpoint(REGISTRY, fakeClient({ status: 200, ok: true, data: {} }), {});
-    expect(out.isError).toBe(true);
-  });
-
-  it('errors on an unknown entryId', async () => {
-    const out = await handleCallApiEndpoint(REGISTRY, fakeClient({ status: 200, ok: true, data: {} }), {
-      entryId: 'nope',
+describe('connector call_api_endpoint through dispatchMetaTool', () => {
+  it('maps an HTTP failure to isError with the connector\'s described error', async () => {
+    await withFetch(new Response('{"error":"not found"}', { status: 404, headers: { 'content-type': 'application/json' } }), async (client) => {
+      const r = await call(client, { entryId: 'tickets.get', path: { id: '1' } });
+      expect(r.isError).toBe(true);
+      expect(textOf(r).status).toBe(404);
+      expect(typeof textOf(r).data.error).toBe('string');
     });
-    expect(out.isError).toBe(true);
   });
 
-  it('maps an HTTP-failure result to isError without throwing', async () => {
-    const client = fakeClient({ status: 404, ok: false, data: { error: 'not found' } });
-    const out = await handleCallApiEndpoint(REGISTRY, client, { entryId: 'tickets.get', path: { id: '1' } });
-    expect(out.isError).toBe(true);
-    expect((out.data as { status: number }).status).toBe(404);
+  it('returns a successful JSON body as non-error', async () => {
+    await withFetch(new Response('{"id":"1"}', { headers: { 'content-type': 'application/json' } }), async (client) => {
+      const r = await call(client, { entryId: 'tickets.get', path: { id: '1' } });
+      expect(r.isError).toBe(false);
+      expect(textOf(r)).toEqual({ status: 200, ok: true, data: { id: '1' } });
+    });
   });
 
-  it('returns a successful result as non-error', async () => {
-    const client = fakeClient({ status: 200, ok: true, data: { id: '1' } });
-    const out = await handleCallApiEndpoint(REGISTRY, client, { entryId: 'tickets.get', path: { id: '1' } });
-    expect(out.isError).toBe(false);
-    expect((out.data as { ok: boolean }).ok).toBe(true);
+  it('returns the binary:true JSON for a binary response, never garbled text', async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
+    await withFetch(
+      new Response(jpeg, { headers: { 'content-type': 'image/jpeg', 'content-length': String(jpeg.length), 'content-disposition': 'attachment; filename="IMG_1.jpg"' } }),
+      async (client) => {
+        const r = await call(client, { entryId: 'tickets.get', path: { id: '1' } });
+        expect(r.isError).toBe(false);
+        expect(r.content).toHaveLength(1);
+        expect(textOf(r).data).toMatchObject({ binary: true, content_type: 'image/jpeg', byte_length: 8, file_name: 'IMG_1.jpg' });
+        expect(r.content[0].type === 'text' && r.content[0].text).not.toContain('�');
+      },
+    );
+  });
+
+  it('requires entryId and rejects unknown entries', async () => {
+    await withFetch(new Response('{}'), async (client) => {
+      expect((await call(client, {})).isError).toBe(true);
+      expect((await call(client, { entryId: 'nope' })).isError).toBe(true);
+    });
+  });
+});
+
+describe('connector search_api_registry through dispatchMetaTool', () => {
+  const noTransport = { send: async () => { throw new Error('must not send'); } };
+  it('errors when query is missing', async () => {
+    expect((await dispatchMetaTool('search_api_registry', {}, { registry: REGISTRY, transport: noTransport })).isError).toBe(true);
+  });
+  it('returns ranked results for a match', async () => {
+    const r = await dispatchMetaTool('search_api_registry', { query: 'get ticket by id' }, { registry: REGISTRY, transport: noTransport });
+    expect(textOf(r).results[0].entryId).toBe('tickets.get');
   });
 });

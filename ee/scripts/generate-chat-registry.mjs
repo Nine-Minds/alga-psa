@@ -351,6 +351,9 @@ function collectOperations(spec) {
     for (const method of HTTP_METHODS) {
       const operation = pathItem[method];
       if (!operation || typeof operation !== 'object') continue;
+      // x-chat-exclude: the operation exists in the OpenAPI spec but must never be offered to an agent through
+      // call_api_endpoint (e.g. GET /api/v1/documents/content: its base64 blocks are only safe through read_attachment).
+      if (operation['x-chat-exclude'] === true || operation.extensions?.['x-chat-exclude'] === true) continue;
 
       const id = createEntryId(method, pathName, operation.operationId);
       const parameters = collectParameters(spec, pathItem, operation);

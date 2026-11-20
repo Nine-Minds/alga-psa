@@ -12538,6 +12538,65 @@
           "error"
         ]
       },
+      "ReadDocumentContentQuery": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "ticket"
+            ],
+            "description": "Kind of record that owns the attachments."
+          },
+          "entity_id": {
+            "type": "string",
+            "description": "UUID, or a human number such as a ticket number (SR000674)."
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Read only this attachment. Omit to read every readable attachment in a stable order."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "The next_cursor of the previous response; continues where it stopped."
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id"
+        ]
+      },
+      "ReadDocumentContentResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "header": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "entity, served, omitted, limits_applied, remaining, next_cursor, instructions."
+              },
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "description": "MCP content blocks (text, image, resource, resource_link) in reading order."
+              }
+            },
+            "required": [
+              "header",
+              "blocks"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "EmailErrorResponse": {
         "type": "object",
         "properties": {
@@ -56283,13 +56342,16 @@
     "/api/documents/download/{fileId}": {
       "get": {
         "summary": "Download or export document file",
-        "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route requires an Auth.js session cookie and runs within the session tenant. The normal download path uses document read permission and document authorization rules; PDF and Markdown export paths perform tenant-scoped document lookup and generation.",
+        "description": "Downloads a stored document file, or exports the document as PDF or Markdown based on the optional format query parameter. The fileId path value may be either a documents.document_id or an external_files.file_id. The route supports Auth.js session-cookie authentication and x-api-key fallback for machine clients (internal users only; client-portal keys are refused), and runs within the authenticated principal's tenant. Every format uses document read permission and document authorization rules.",
         "tags": [
           "Documents"
         ],
         "security": [
           {
             "SessionCookieAuth": []
+          },
+          {
+            "ApiKeyAuth": []
           }
         ],
         "extensions": {
@@ -56297,6 +56359,10 @@
             "original",
             "pdf",
             "markdown"
+          ],
+          "x-auth-modes": [
+            "session-cookie",
+            "api-key"
           ],
           "x-api-key-auth-skipped": true
         },
@@ -56329,6 +56395,16 @@
             "description": "Optional export format. pdf generates a PDF; markdown or md exports markdown; omitted downloads the original stored file.",
             "name": "format",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present."
+            },
+            "required": false,
+            "description": "Optional API key for machine-to-machine download requests. Used only when no valid Auth.js session cookie is present.",
+            "name": "x-api-key",
+            "in": "header"
           }
         ],
         "responses": {
@@ -56353,7 +56429,7 @@
             }
           },
           "401": {
-            "description": "No valid session is present.",
+            "description": "No valid session or API key was supplied, or the API key belongs to a client-portal user.",
             "content": {
               "application/json": {
                 "schema": {
@@ -56768,6 +56844,147 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/content": {
+      "get": {
+        "summary": "Read an entity's attachments as native MCP content blocks",
+        "description": "Returns the attachments of one entity (today: a ticket, by UUID or ticket number) in the richest form a model can read: images as image blocks (downscaled to 1568 px), PDFs as the original file plus per-page text with scanned pages rendered to images, documents, notes and text files as Markdown, anything else as metadata plus a resource_link. No AI processing happens here. Each call is bounded by a byte budget and image/page caps and returns header.next_cursor when more remains; a cursor goes stale (409 CURSOR_STALE) if any attachment changed. Authorization: the ticket read gate (ticket:read, the ticket kernel, client-portal visibility, comment-attachment audience) and, per document, document:read plus the document kernel. A document either gate refuses is left out of a whole-ticket read and answers 404 when requested by document_id. Used by the read_attachment MCP tool; not exposed through call_api_endpoint because the response carries base64.",
+        "tags": [
+          "Documents"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read",
+          "x-chat-exclude": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ticket"
+              ],
+              "description": "Kind of record that owns the attachments."
+            },
+            "required": true,
+            "description": "Kind of record that owns the attachments.",
+            "name": "entity_type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "UUID, or a human number such as a ticket number (SR000674)."
+            },
+            "required": true,
+            "description": "UUID, or a human number such as a ticket number (SR000674).",
+            "name": "entity_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Read only this attachment. Omit to read every readable attachment in a stable order."
+            },
+            "required": false,
+            "description": "Read only this attachment. Omit to read every readable attachment in a stable order.",
+            "name": "document_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The next_cursor of the previous response; continues where it stopped."
+            },
+            "required": false,
+            "description": "The next_cursor of the previous response; continues where it stopped.",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Header plus content blocks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadDocumentContentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or cursor, or an entity type that cannot be read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (ticket:read).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity or document not found, or not readable by the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CURSOR_STALE: the attachments changed since the cursor was issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
                 }
               }
             }
