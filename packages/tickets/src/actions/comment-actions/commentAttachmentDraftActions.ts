@@ -14,5 +14,8 @@ export const discardCommentAttachmentDrafts = withAuth(async (user, { tenant }, 
     .where({ ticket_id: input.ticketId, created_by: user.user_id, state: 'draft' })
     .whereIn('document_id', input.documentIds).whereNull('comment_id')
     .update({ state: 'removed' }).returning('document_id');
+  await tenantDb(knex, tenant).table('comment_attachment_drafts')
+    .where({ entity_type: 'ticket', entity_id: input.ticketId, created_by: user.user_id, state: 'draft' })
+    .whereNull('comment_id').whereIn('document_id', input.documentIds).update({ state: 'removed' });
   return { deletedDocumentIds: rows.map(row => row.document_id), failures: [] };
 });

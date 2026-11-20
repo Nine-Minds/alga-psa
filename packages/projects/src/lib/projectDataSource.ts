@@ -4,7 +4,8 @@ import type * as ProjectTaskActions from '../actions/projectTaskActions';
 import type * as ProjectTaskStatusActions from '../actions/projectTaskStatusActions';
 import type * as ProjectTaskCommentActions from '../actions/projectTaskCommentActions';
 import type { ReactNode } from 'react';
-import type { IProjectTask } from '@alga-psa/types';
+import type { IDocument, IProjectTask } from '@alga-psa/types';
+import type { ActionPermissionErrorShape } from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * The project screen's data source. The screen (ProjectPage, ProjectDetail, the
@@ -24,6 +25,10 @@ export interface ProjectDataSource {
   readonly kind: ProjectDataSourceKind;
   /** The one project a bound (shared) data source serves; its methods check incoming ids against it. */
   readonly boundProjectId?: string;
+  readonly uploadTaskCommentDocument?: (
+    formData: FormData,
+    scope: { userId: string; projectTaskId: string },
+  ) => Promise<{ success: true; document: IDocument } | { success: false; error: string } | ActionPermissionErrorShape>;
   readonly project: {
     metadata: Fn<typeof ProjectActions, 'getProjectMetadata'>;
     update: Fn<typeof ProjectActions, 'updateProject'>;

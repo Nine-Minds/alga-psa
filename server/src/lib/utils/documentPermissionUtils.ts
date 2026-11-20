@@ -17,7 +17,7 @@ const ENTITY_TO_PERMISSION_MAP: Record<string, string> = {
   'client': 'client',
   'contact': 'contact',
   'asset': 'asset',
-  'project_task': 'project_task',
+  'project_task': 'project',
   'user': 'user',
   'tenant': 'tenant', // Special case - always accessible
 };

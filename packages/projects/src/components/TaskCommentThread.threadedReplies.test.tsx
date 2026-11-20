@@ -4,7 +4,7 @@ import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within, configure, cleanup } from '@testing-library/react';
+import { render, screen, within, configure, cleanup, waitFor } from '@testing-library/react';
 
 // Components under test attach automation ids via the plain
 // `data-automation-id` attribute, so point Testing Library's testId queries
@@ -34,6 +34,8 @@ const taskStore = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
+  hasEditorContent: (blocks: any[]) => blocks.some(block => block.type === 'image' || block.content?.some((item: any) => item.type !== 'text' || item.text?.trim())),
+  useRichTextUploadSession: (options: any) => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), reconcileDraftUploads: vi.fn(), requestDiscard: options.onDiscard, isUploading: false, isDeletingDraftImages: false }),
   DEFAULT_BLOCK: [
     {
       type: 'paragraph',
@@ -41,7 +43,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
     },
   ],
   RichTextViewer: () => <div data-automation-id="rich-text-viewer" />,
-  TextEditor: ({ editorRef }: any) => {
+  TextEditor: ({ editorRef, uploadFile, id, ...props }: any) => {
     if (editorRef) {
       editorRef.current = {
         document: [
@@ -53,7 +55,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
         replaceBlocks: vi.fn(),
       };
     }
-    return <div data-automation-id="task-comment-editor" />;
+    return <div data-automation-id={props['data-automation-id'] ?? id ?? 'task-comment-editor'} data-has-upload-file={String(Boolean(uploadFile))} />;
   },
 }));
 
@@ -206,10 +208,11 @@ describe('TaskCommentThread threaded replies', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByTestId('task-comment-root')).toBeInTheDocument();
     expect(within(dialog).getByTestId('task-comment-reply-1')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('task-task-1-comment-thread-drawer-composer-editor')).toHaveAttribute('data-has-upload-file', 'true');
 
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
   });
 

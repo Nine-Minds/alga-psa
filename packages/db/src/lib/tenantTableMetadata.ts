@@ -176,6 +176,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   company_plan_bundles: { scope: 'tenant' },
   comments: { scope: 'tenant' },
   ticket_comment_attachments: { scope: 'tenant' },
+  comment_attachment_drafts: { scope: 'tenant' },
   ticket_comment_email_deliveries: { scope: 'tenant' },
   ticket_comment_attachment_challenges: { scope: 'tenant' },
 

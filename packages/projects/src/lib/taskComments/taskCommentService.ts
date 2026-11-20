@@ -89,6 +89,40 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+const COMMENT_UPLOAD_ID = /(?:\/api\/documents\/(?:view|download)\/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+async function promoteProjectTaskCommentDrafts(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string,
+  commentId: string,
+  actorId: string,
+  note: string,
+  currentCommentId?: string,
+): Promise<void> {
+  const fileIds = [...new Set(Array.from(note.matchAll(COMMENT_UPLOAD_ID), match => match[1].toLowerCase()))];
+  if (!fileIds.length) return;
+  const rows = await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
+    .where({ entity_type: 'project_task' }).whereIn('file_id', fileIds)
+    .orderBy('draft_id').forUpdate();
+  for (const row of rows) {
+    const retainedOnThisComment = row.state === 'attached' && row.comment_id === currentCommentId;
+    if (!retainedOnThisComment && (row.entity_id !== taskId || row.created_by !== actorId || row.state !== 'draft' || row.comment_id ||
+        new Date(row.expires_at).getTime() <= Date.now())) {
+      throw new Error('A pasted image draft is expired, discarded, or belongs to another task or user');
+    }
+    const document = await tenantScopedTable(trx, 'documents', tenant)
+      .where({ document_id: row.document_id, file_id: row.file_id }).first('document_id');
+    const association = await tenantScopedTable(trx, 'document_associations', tenant)
+      .where({ document_id: row.document_id, entity_type: 'project_task', entity_id: taskId }).first('document_id');
+    if (!document || !association) throw new Error('A pasted image draft no longer has an accessible task document');
+    if (retainedOnThisComment) continue;
+    await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
+      .where({ draft_id: row.draft_id, entity_type: 'project_task', entity_id: taskId, created_by: actorId, state: 'draft' })
+      .whereNull('comment_id').update({ state: 'attached', comment_id: commentId });
+  }
+}
+
 async function loadTaskContext(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -240,6 +274,8 @@ export async function createTaskCommentWithDb(
     if (!taskCommentId || !threadId) {
       throw new Error('Database UUID generation did not return task comment/thread identifiers.');
     }
+
+    await promoteProjectTaskCommentDrafts(trx, tenant, comment.taskId, taskCommentId, userId, comment.note);
 
     // Insert comment (convert camelCase to snake_case for DB)
     const [newComment] = await tenantScopedTable(trx, 'project_task_comments', tenant)
@@ -457,6 +493,10 @@ export async function updateTaskCommentWithDb(
         edited_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
+
+    if (typeof updates.note === 'string') {
+      await promoteProjectTaskCommentDrafts(trx, tenant, existingComment.task_id, taskCommentId, userId, updates.note, taskCommentId);
+    }
 
     // Get task and project context for notifications
     const task = await loadTaskContext(trx, tenant, existingComment.task_id);

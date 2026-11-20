@@ -130,8 +130,12 @@ export async function reconcileScheduledCommentPublications(rearmFutureSchedules
   const scope = (query: any) => { if (tenantId) query.where('tenant', tenantId); };
   const rows = await root('comments').modify(scope).where({ publish_state: 'scheduled' }).whereNull('deleted_at')
     .select('tenant', 'comment_id', 'ticket_id', 'scheduled_publish_at', 'schedule_job_id');
-  const draftTenants = await root('ticket_comment_attachments').modify(scope).distinct('tenant').whereNull('comment_id').whereNull('cleanup_completed_at').where('expires_at', '<=', new Date()).limit(100);
-  for (const row of draftTenants) await cleanupCommentAttachmentDrafts(root, row.tenant);
+  const [ticketDraftTenants, taskDraftTenants] = await Promise.all([
+    root('ticket_comment_attachments').modify(scope).distinct('tenant').whereNull('comment_id').whereNull('cleanup_completed_at').where('expires_at', '<=', new Date()).limit(100),
+    root('comment_attachment_drafts').modify(scope).distinct('tenant').where({ entity_type: 'project_task' }).whereNull('comment_id').whereNull('cleanup_completed_at').where('expires_at', '<=', new Date()).limit(100),
+  ]);
+  const draftTenants = [...new Set([...ticketDraftTenants, ...taskDraftTenants].map(row => row.tenant))];
+  for (const tenant of draftTenants) await cleanupCommentAttachmentDrafts(root, tenant);
   const runner = await getJobRunner();
   for (const row of rows) {
     try {

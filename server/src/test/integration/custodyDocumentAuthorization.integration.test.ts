@@ -151,6 +151,16 @@ describe('asset-associated document authorization', () => {
         entity_type: 'tenant', entity_id: world.tenant, is_entity_logo: true });
       session.user = null;
       expect((await call(world.logoFileId)).status).toBe(200);
+      const draft = { tenant: world.tenant, document_id: logo.document_id };
+      await db('comment_attachment_drafts').insert({
+        ...draft, entity_type: 'project_task', entity_id: randomUUID(), file_id: world.logoFileId,
+        created_by: world.tech.user_id, expires_at: new Date(Date.now() + 86400000),
+      });
+      try {
+        expect((await call(world.logoFileId)).status).toBe(401);
+      } finally {
+        await db('comment_attachment_drafts').where(draft).del();
+      }
       await db('document_associations').where({ tenant: world.tenant, document_id: logo.document_id, entity_type: 'tenant' }).del();
       await db('document_associations').insert({ tenant: world.tenant, document_id: doc.document_id,
         entity_type: 'tenant', entity_id: world.tenant, is_entity_logo: true });

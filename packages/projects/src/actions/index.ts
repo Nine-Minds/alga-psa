@@ -7,6 +7,7 @@
 export * from './projectActions';
 export * from './projectTaskActions';
 export * from './projectTaskCommentActions';
+export * from './projectTaskCommentAttachmentDraftActions';
 export * from './projectTaskCommentReactionActions';
 export * from './projectStatusUpdateActions';
 export * from './projectTemplateActions';

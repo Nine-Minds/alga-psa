@@ -62,12 +62,14 @@ export async function GET(
           })
           .first();
 
-        const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
-        const assetAssociation = await tenantScopedAdminDb.table('document_associations')
-          .where({ document_id: documentRecord.document_id, entity_type: 'asset' }).first();
-        if (tenantLogoAssoc && !commentAttachment && !assetAssociation) {
-          isTenantLogo = true;
-          // Public access granted for tenant logo
+        if (tenantLogoAssoc) {
+          const documentId = documentRecord.document_id;
+          const [ticketAttachment, scopedAttachment, assetAssociation] = await Promise.all([
+            tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentId }).first('document_id'),
+            tenantScopedAdminDb.table('comment_attachment_drafts').where({ document_id: documentId }).first('document_id'),
+            tenantScopedAdminDb.table('document_associations').where({ document_id: documentId, entity_type: 'asset' }).first('document_id'),
+          ]);
+          isTenantLogo = !ticketAttachment && !scopedAttachment && !assetAssociation;
         }
       }
     }

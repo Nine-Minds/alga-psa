@@ -17,6 +17,8 @@ import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
+import { useTaskCommentUploadSession } from './useTaskCommentUploadSession';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -57,6 +59,10 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
+  const [isDrawerReplySubmitting, setIsDrawerReplySubmitting] = useState(false);
+  const drawerUploadSession = useTaskCommentUploadSession(
+    'ProjectTaskCommentDrawerReply', taskId, currentUser?.user_id, () => setOpenPanelCommentId(null),
+  );
   // These loaders await server actions and then set state. Nothing cancelled them
   // on unmount, so a late resolution reached React after teardown -- which surfaced
   // in CI as an unhandled "window is not defined" rejection from setIsLoading in the
@@ -240,17 +246,23 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     parentCommentId: string;
     content: any[];
   }) => {
+    if (isDrawerReplySubmitting || drawerUploadSession.isUploading || drawerUploadSession.isDeletingDraftImages) return;
     if (comments.find(comment => comment.taskCommentId === params.parentCommentId)?.canReply === false) return;
-    const result = await createTaskComment({
-      taskId,
-      note: JSON.stringify(params.content),
-      parent_comment_id: params.parentCommentId,
-    });
-    if (showReturnedActionError(result)) {
-      return;
+    const note = JSON.stringify(params.content);
+    setIsDrawerReplySubmitting(true);
+    try {
+      const result = await createTaskComment({
+        taskId,
+        note,
+        parent_comment_id: params.parentCommentId,
+      });
+      if (showReturnedActionError(result)) return;
+      await drawerUploadSession.reconcileDraftUploads(note);
+      await loadComments();
+      setOpenPanelCommentId(null);
+    } finally {
+      setIsDrawerReplySubmitting(false);
     }
-    await loadComments();
-    setOpenPanelCommentId(null);
   };
 
   const renderTaskComment = (comment: IProjectTaskCommentWithUser) => (
@@ -271,6 +283,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             taskId={taskId}
             projectId={projectId}
             parentCommentId={comment.taskCommentId}
+            userId={currentUser?.user_id}
             onCommentAdded={handleCommentAdded}
             onCancel={() => setReplyingToCommentId(null)}
             autoFocus
@@ -350,6 +363,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
               <TaskCommentForm
                 taskId={taskId}
                 projectId={projectId}
+                userId={currentUser?.user_id}
                 onCommentAdded={handleCommentAdded}
                 onCancel={() => setShowEditor(false)}
                 autoFocus
@@ -440,7 +454,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       <CommentThreadDrawer<IProjectTaskCommentWithUser>
         id={`task-${taskId}-comment-thread-drawer`}
         isOpen={Boolean(openPanelThreadGroup)}
-        onClose={() => setOpenPanelCommentId(null)}
+        onClose={() => { void drawerUploadSession.requestDiscard(); }}
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.taskCommentId}
         renderComment={(comment) => renderTaskComment(comment)}
@@ -449,6 +463,10 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         canReply={openPanelComment?.canReply !== false}
         initialInternal={false}
         showInternalToggle={false}
+        uploadFile={drawerUploadSession.uploadFile}
+        searchMentions={searchUsersForMentions}
+        isSubmitting={isDrawerReplySubmitting}
+        replySubmitDisabled={drawerUploadSession.isUploading || drawerUploadSession.isDeletingDraftImages}
         onSubmitReply={handleDrawerReplySubmit}
       />
     </div>

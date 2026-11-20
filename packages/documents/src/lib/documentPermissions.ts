@@ -1,6 +1,6 @@
 import type { IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
-import { checkMultiplePermissions } from '@alga-psa/auth';
+import { checkMultiplePermissions, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { canAccessAttachmentTicket, canWriteAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
 
@@ -53,24 +53,48 @@ export async function canReadTicketDocuments(user: IUser, ticketId: string): Pro
 
 export async function canReadDocument(user: IUser, identifier: string): Promise<boolean> {
   const grants = await ticketDocumentGrants(user, 'read');
+  const canReadProject = await hasPermission(user, 'project', 'read');
   if (grants.general) return true;
-  if (!grants.scoped) return false;
+  if (!grants.scoped && !canReadProject) return false;
   const { knex } = await createTenantKnex(user.tenant);
   const db = tenantDb(knex, user.tenant);
   const document = await db.table('documents').where(builder => {
     builder.where('document_id', identifier).orWhere('file_id', identifier);
   }).first('document_id');
   if (!document) return false;
-  const associations = await db.table('document_associations')
-    .where({ document_id: document.document_id, entity_type: 'ticket' }).select('entity_id');
-  for (const association of associations) {
-    if (await canAccessAttachmentTicket(knex, user.tenant, user.user_id, association.entity_id)) return true;
+  if (grants.scoped) {
+    const associations = await db.table('document_associations')
+      .where({ document_id: document.document_id, entity_type: 'ticket' }).select('entity_id');
+    for (const association of associations) {
+      if (await canAccessAttachmentTicket(knex, user.tenant, user.user_id, association.entity_id)) return true;
+    }
   }
   // A draft has not acquired a public association yet. Its existing visibility
   // and ownership checks still run in authorizeAndRedactDocuments afterward.
   const draft = await db.table('ticket_comment_attachments')
     .where({ document_id: document.document_id, created_by: user.user_id, state: 'draft' }).first('ticket_id');
-  return Boolean(draft && await canAccessAttachmentTicket(knex, user.tenant, user.user_id, draft.ticket_id));
+  if (draft && grants.scoped && await canAccessAttachmentTicket(knex, user.tenant, user.user_id, draft.ticket_id)) return true;
+
+  // Project Task images use the scope-neutral draft registry. The association is
+  // still checked against this user's project read grant, and an unpromoted
+  // upload remains visible only to its creator.
+  const projectDraft = await db.table('comment_attachment_drafts')
+    .where({ document_id: document.document_id, entity_type: 'project_task' })
+    .first('entity_id', 'created_by', 'state', 'expires_at', 'comment_id');
+  if (!projectDraft || !canReadProject) return false;
+  const taskQuery = db.table('project_tasks as pt');
+  db.tenantJoin(taskQuery, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');
+  const task = await taskQuery.where({ 'pt.task_id': projectDraft.entity_id })
+    .select('pt.task_id', 'pp.project_id').first();
+  if (!task) return false;
+  if (projectDraft.state === 'draft') {
+    return projectDraft.created_by === user.user_id && new Date(projectDraft.expires_at).getTime() > Date.now();
+  }
+  if (projectDraft.state !== 'attached' || !projectDraft.comment_id) return false;
+  const comment = await db.table('project_task_comments')
+    .where({ task_comment_id: projectDraft.comment_id, task_id: task.task_id })
+    .whereNull('deleted_at').first('task_comment_id');
+  return Boolean(comment);
 }
 
 export interface DocumentUploadTarget {

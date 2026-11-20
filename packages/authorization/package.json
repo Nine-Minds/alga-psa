@@ -86,6 +86,10 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./projectRecordAuthorization": {
+      "import": "./dist/projectRecordAuthorization.js",
+      "types": "./src/projectRecordAuthorization.ts"
+    },
     "./clientReadScope": {
       "import": "./dist/clientReadScope.js",
       "types": "./src/clientReadScope.ts"
