@@ -107,16 +107,34 @@ describe('ticket room validation', () => {
   });
 
   it('T017: document room validation still uses tenantId from the request query', () => {
+    const token = jwt.sign({
+      scope: 'document-room', tenantId: 'tenant-1', documentId: 'doc-1', userId: 'user-1',
+    }, 'tenant-validation-secret', { algorithm: 'HS256', audience: 'document-room', issuer: 'alga-psa', expiresIn: '2m' });
     expect(
       validateDocumentRoomAccess(
         'document:tenant-1:doc-1',
-        new Request('http://localhost/hocuspocus?tenantId=tenant-1')
+        new Request(`http://localhost/hocuspocus?tenantId=tenant-1&token=${token}`)
       )
-    ).toEqual({
-      status: 'ok',
-      tenantId: 'tenant-1',
-      documentId: 'doc-1',
-    });
+    ).toMatchObject({ status: 'ok', tenantId: 'tenant-1', documentId: 'doc-1', userId: 'user-1', credential: token });
+  });
+
+  it('refuses tokenless, forged, expired, and document-mismatched document room credentials', () => {
+    const sign = (claims: Record<string, unknown>, secret = 'tenant-validation-secret') => jwt.sign({
+      scope: 'document-room', tenantId: 'tenant-1', documentId: 'doc-1', userId: 'user-1', ...claims,
+    }, secret, { algorithm: 'HS256', audience: 'document-room', issuer: 'alga-psa', expiresIn: '2m' });
+    const room = 'document:tenant-1:doc-1';
+    expect(() => validateDocumentRoomAccess(room, new Request('http://localhost/hocuspocus?tenantId=tenant-1')))
+      .toThrow('missing token');
+    expect(() => validateDocumentRoomAccess(room, new Request(`http://localhost/hocuspocus?tenantId=tenant-1&token=${sign({}, 'wrong')}`)))
+      .toThrow('Document validation failed');
+    const expired = jwt.sign({ scope: 'document-room', tenantId: 'tenant-1', documentId: 'doc-1', userId: 'user-1' },
+      'tenant-validation-secret', { algorithm: 'HS256', audience: 'document-room', issuer: 'alga-psa', expiresIn: -1 });
+    expect(() => validateDocumentRoomAccess(room, new Request(`http://localhost/hocuspocus?tenantId=tenant-1&token=${expired}`)))
+      .toThrow('expired');
+    expect(() => validateDocumentRoomAccess(room, new Request(`http://localhost/hocuspocus?tenantId=tenant-1&token=${sign({ documentId: 'other-doc' })}`)))
+      .toThrow('scope mismatch');
+    expect(() => validateDocumentRoomAccess('document:tenant-2:doc-1', new Request(`http://localhost/hocuspocus?tenantId=tenant-2&token=${sign({ tenantId: 'tenant-1' })}`)))
+      .toThrow('scope mismatch');
   });
 
   it('T021: handshake validation rejects a ticket room when the token targets another tenant', () => {

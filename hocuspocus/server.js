@@ -5,7 +5,7 @@ import { NotificationExtension } from './NotificationExtension.js'
 import { TicketUpdatesExtension } from './TicketUpdatesExtension.js'
 import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { CollabPersistenceExtension } from './CollabPersistenceExtension.js'
-import { validateDocumentRoomAccess } from './tenantValidation.js'
+import { parseDocumentRoom, validateDocumentRoomAccess, validateDocumentRoomToken } from './tenantValidation.js'
 
 // Helper function to get required env var or fail in production
 function getEnvOrFail(key, fallbackValue = null) {
@@ -19,6 +19,13 @@ function getEnvOrFail(key, fallbackValue = null) {
 
     return value || fallbackValue;
 }
+
+const persistenceApiUrl = process.env.COLLAB_PERSIST_API_URL || 'http://localhost:3000/api/internal/collab/persist'
+const persistenceExtension = new CollabPersistenceExtension({
+    apiUrl: persistenceApiUrl,
+    authorizationUrl: process.env.COLLAB_AUTHORIZE_API_URL || persistenceApiUrl.replace(/\/persist(?:\?.*)?$/, '/authorize'),
+    apiKey: process.env.COLLAB_PERSIST_API_KEY || '',
+})
 
 const server = Server.configure({
     port: process.env.PORT || 1234,
@@ -37,10 +44,7 @@ const server = Server.configure({
                 password: getEnvOrFail('REDIS_PASSWORD', 'sebastian123')
             },
         }),
-        new CollabPersistenceExtension({
-            apiUrl: process.env.COLLAB_PERSIST_API_URL || 'http://localhost:3000/api/internal/collab/persist',
-            apiKey: process.env.COLLAB_PERSIST_API_KEY || '',
-        }),
+        persistenceExtension,
         new NotificationExtension({
             redisHost: process.env.REDIS_HOST || 'localhost',
             redisPort: process.env.REDIS_PORT || 6379,
@@ -63,8 +67,19 @@ const server = Server.configure({
             level: 'debug', // Set to 'debug' for maximum verbosity
           }),
     ],
+    async onAuthenticate({ documentName, token }) {
+        if (!parseDocumentRoom(documentName)) return undefined
+        const admission = validateDocumentRoomToken(documentName, token)
+        if (!await persistenceExtension.authorizeWriter(documentName, token)) {
+            throw new Error('Document edit authorization denied')
+        }
+        return { ...admission, documentRoomToken: token }
+    },
     async onConnect(data) {
-        await validateDocumentRoomAccess(data.documentName, data.request);
+        await validateDocumentRoomAccess(data.documentName, data.request, {
+            credential: data.context?.documentRoomToken,
+            allowPendingAuthentication: true,
+        });
     },
     })
 

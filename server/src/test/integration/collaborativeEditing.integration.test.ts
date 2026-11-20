@@ -14,8 +14,10 @@ import { pathToFileURL } from 'node:url';
 import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { POST as persistRoute } from '@/app/api/internal/collab/persist/route';
+import { POST as authorizeRoute } from '@/app/api/internal/collab/authorize/route';
 import { CollabPersistenceExtension } from '../../../../hocuspocus/CollabPersistenceExtension.js';
-import { validateDocumentRoomAccess } from '../../../../hocuspocus/tenantValidation.js';
+import { validateDocumentRoomAccess, validateDocumentRoomToken } from '../../../../hocuspocus/tenantValidation.js';
+import { signDocumentRoomToken } from '@shared/lib/documentRoomToken';
 import type { Hocuspocus } from '../../../../hocuspocus/node_modules/@hocuspocus/server';
 
 /**
@@ -40,6 +42,8 @@ let tenantId: string;
 let userId: string;
 let secondTenantId: string;
 let secondUserId: string;
+let secondSameTenantUserId: string;
+const deniedWriterIds = new Set<string>();
 
 
 function tenantTable(tenant: string, table: string) {
@@ -73,7 +77,7 @@ vi.mock('@alga-psa/auth', async () => {
         return fn(user, ctx, ...args);
       };
     }),
-    hasPermission: vi.fn(() => Promise.resolve(true)),
+    hasPermission: vi.fn((user: any) => Promise.resolve(!deniedWriterIds.has(user.user_id))),
     getSession: vi.fn(() => Promise.resolve({ user: { id: userId, tenant: tenantId } })),
   };
 });
@@ -102,6 +106,11 @@ describe('Collaborative Editing — Integration Tests', () => {
       last_name: 'One',
       email: 'editor1@test.com',
     });
+    secondSameTenantUserId = await createUser(db, tenantId, {
+      first_name: 'Editor',
+      last_name: 'Two',
+      email: 'editor2@test.com',
+    });
 
     secondTenantId = await createTenant(db, 'Other MSP');
     secondUserId = await createUser(db, secondTenantId, {
@@ -109,11 +118,28 @@ describe('Collaborative Editing — Integration Tests', () => {
       last_name: 'Two',
       email: 'editor2@test.com',
     });
+
+    const permissionIds = [uuidv4(), uuidv4()];
+    const roleId = uuidv4();
+    await db('roles').insert({ tenant: tenantId, role_id: roleId, role_name: 'Collab Test Editor', msp: true, client: false });
+    await db('user_roles').insert([
+      { tenant: tenantId, user_id: userId, role_id: roleId },
+      { tenant: tenantId, user_id: secondSameTenantUserId, role_id: roleId },
+    ]);
+    await db('permissions').insert([
+      { tenant: tenantId, permission_id: permissionIds[0], resource: 'document', action: 'read', msp: true, client: false },
+      { tenant: tenantId, permission_id: permissionIds[1], resource: 'document', action: 'update', msp: true, client: false },
+    ]);
+    await db('role_permissions').insert(permissionIds.map(permission_id => ({ tenant: tenantId, role_id: roleId, permission_id })));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
     try {
       // A migrated suite must not hide missing tables or failed cleanup.
+      await db('role_permissions').where({ tenant: tenantId }).del();
+      await db('user_roles').where({ tenant: tenantId }).del();
+      await db('permissions').where({ tenant: tenantId }).del();
+      await db('roles').where({ tenant: tenantId }).del();
       for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
         if (table === 'tenants') {
           await tenantRows().whereIn('tenant', [tenantId, secondTenantId]).del();
@@ -454,13 +480,17 @@ describe('Collaborative Editing — Integration Tests', () => {
     let http: HttpServer;
     let url: string;
     let apiUrl: string;
+    let authApiUrl: string;
     const providers = new Set<HocuspocusProvider>();
     const documents = new Set<Y.Doc>();
-    const requests: Array<{ status: number }> = [];
+    const requests: Array<{ status: number; path: string }> = [];
     const transportErrors: Error[] = [];
     let expectedStatuses: number[];
 
-    beforeEach(() => { expectedStatuses = [200]; });
+    beforeEach(() => {
+      expectedStatuses = [200];
+      deniedWriterIds.clear();
+    });
 
     beforeAll(async () => {
       vi.stubEnv('COLLAB_PERSIST_API_KEY', uuidv4());
@@ -468,13 +498,14 @@ describe('Collaborative Editing — Integration Tests', () => {
         try {
           const chunks: Buffer[] = [];
           for await (const chunk of incoming) chunks.push(Buffer.from(chunk));
-          const request = new NextRequest(apiUrl, {
+          const path = new URL(incoming.url ?? '/', 'http://localhost').pathname;
+          const request = new NextRequest(`http://localhost${path}`, {
             method: 'POST',
             headers: { 'x-api-key': String(incoming.headers['x-api-key'] ?? '') },
             body: Buffer.concat(chunks).toString(),
           });
-          const result = await persistRoute(request);
-          requests.push({ status: result.status });
+          const result = path.endsWith('/authorize') ? await authorizeRoute(request) : await persistRoute(request);
+          requests.push({ status: result.status, path });
           outgoing.writeHead(result.status, Object.fromEntries(result.headers.entries()));
           outgoing.end(await result.text());
         } catch (error) {
@@ -486,16 +517,30 @@ describe('Collaborative Editing — Integration Tests', () => {
         http.once('error', reject);
         http.listen(0, '127.0.0.1', resolve);
       });
-      apiUrl = `http://127.0.0.1:${(http.address() as AddressInfo).port}/api/internal/collab/persist`;
+      const apiBase = `http://127.0.0.1:${(http.address() as AddressInfo).port}/api/internal/collab`;
+      apiUrl = `${apiBase}/persist`;
+      authApiUrl = `${apiBase}/authorize`;
       // Resolve the service's own locked server version, not a test replacement.
       const requireService = createRequire(new URL('../../../../hocuspocus/package.json', import.meta.url));
       const { Hocuspocus } = await import(pathToFileURL(requireService.resolve('@hocuspocus/server')).href);
       service = new Hocuspocus({
         address: '127.0.0.1', port: 0, quiet: true,
         debounce: 20, maxDebounce: 100,
-        extensions: [new CollabPersistenceExtension({ apiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY })],
-        onConnect: ({ documentName, request }: { documentName: string; request: unknown }) => {
-          validateDocumentRoomAccess(documentName, request);
+        extensions: [new CollabPersistenceExtension({ apiUrl, authorizationUrl: authApiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY })],
+        onAuthenticate: async ({ documentName, token }: { documentName: string; token: string }) => {
+          const admission = validateDocumentRoomToken(documentName, token);
+          const authorized = await fetch(authApiUrl, {
+            method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+            body: JSON.stringify({ tenantId: admission.tenantId, documentId: admission.documentId, credential: token }),
+          });
+          if (!authorized.ok) throw new Error('Document update authorization denied');
+          return { ...admission, documentRoomToken: token };
+        },
+        onConnect: ({ documentName, request, context }: { documentName: string; request: unknown; context: any }) => {
+          validateDocumentRoomAccess(documentName, request, {
+            credential: context?.documentRoomToken,
+            allowPendingAuthentication: true,
+          });
         },
       });
       await service.listen();
@@ -521,10 +566,12 @@ describe('Collaborative Editing — Integration Tests', () => {
       vi.unstubAllEnvs();
     });
 
-    function connect(room: string, connectingTenant = tenantId) {
+    function connect(room: string, connectingTenant = tenantId, principal = userId, credentialOverride?: string) {
       const document = new Y.Doc(); documents.add(document);
+      const documentId = room.split(':')[2];
+      const credential = credentialOverride ?? signDocumentRoomToken({ tenantId: connectingTenant, documentId, userId: principal });
       const provider = new HocuspocusProvider({
-        url, name: room, document, parameters: { tenantId: connectingTenant },
+        url, name: room, document, parameters: { tenantId: connectingTenant, userId: principal }, token: credential,
         preserveConnection: false,
       });
       providers.add(provider);
@@ -579,7 +626,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('syncs content between two providers connected to the same room', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const first = connect(room), second = connect(room);
       await Promise.all([synced(first.provider), synced(second.provider)]);
       first.document.getText('test').insert(0, 'Hello from A');
@@ -589,7 +636,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('broadcasts awareness state between providers', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const first = connect(room), second = connect(room);
       await Promise.all([synced(first.provider), synced(second.provider)]);
       first.provider.awareness!.setLocalStateField('user', { id: userId, name: 'Editor One', color: '#ff0000' });
@@ -598,7 +645,7 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('rejects a mismatched tenant before synchronizing room content', async () => {
-      const room = `document:${tenantId}:${uuidv4()}`;
+      const room = `document:${tenantId}:${await seedDocument()}`;
       const owner = connect(room);
       await synced(owner.provider);
       owner.document.getText('test').insert(0, 'Private document');
@@ -624,21 +671,135 @@ describe('Collaborative Editing — Integration Tests', () => {
     });
 
     it('rejects unauthenticated and wrong-tenant persistence without changing stored content', async () => {
-      expectedStatuses = [401, 404];
+      expectedStatuses = [400, 401, 403];
       const documentId = await seedDocument();
       const before = await saved(documentId);
       const document = new Y.Doc(); documents.add(document);
       write(document, 'Must not be saved');
       const update = Buffer.from(Y.encodeStateAsUpdate(document)).toString('base64');
-      const send = (key: string, tenant: string) => fetch(apiUrl, {
+      const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+      const send = (key: string, tenant: string, roomCredential?: string) => fetch(apiUrl, {
         method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key },
-        body: JSON.stringify({ tenantId: tenant, documentId, update }),
+        body: JSON.stringify({ tenantId: tenant, documentId, update, credential: roomCredential }),
       });
-      expect((await send('invalid-test-key', tenantId)).status).toBe(401);
+      expect((await send('invalid-test-key', tenantId, credential)).status).toBe(401);
       expect(await saved(documentId)).toEqual(before);
-      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, secondTenantId)).status).toBe(404);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, secondTenantId, credential)).status).toBe(403);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, tenantId)).status).toBe(400);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, tenantId, 'forged.credential.value')).status).toBe(403);
       expect(await saved(documentId)).toEqual(before);
-      expect(requests.map(request => request.status)).toEqual([401, 404]);
+      expect(requests.map(request => request.status)).toEqual([401, 403, 400, 403]);
+    });
+
+    it('denies unauthorized room writers and forged credentials before they join a shared room', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const owner = connect(room);
+      await synced(owner.provider);
+
+      deniedWriterIds.add(secondSameTenantUserId);
+      const deniedCredential = signDocumentRoomToken({ tenantId, documentId, userId: secondSameTenantUserId });
+      const denied = connect(room, tenantId, userId, deniedCredential);
+      let deniedClosed = false;
+      denied.provider.on('close', () => { deniedClosed = true; });
+      await expect.poll(() => deniedClosed, { timeout: 5000 }).toBe(true);
+      expect(denied.document.getXmlFragment('prosemirror').length).toBe(0);
+
+      const forged = connect(room, tenantId, userId, 'forged.credential.value');
+      let forgedClosed = false;
+      forged.provider.on('close', () => { forgedClosed = true; });
+      await expect.poll(() => forgedClosed, { timeout: 5000 }).toBe(true);
+      expect(forged.document.getXmlFragment('prosemirror').length).toBe(0);
+
+      write(owner.document, 'Only the authorized writer can change this room');
+      await expect.poll(() => owner.provider.hasUnsyncedChanges).toBe(false);
+      owner.provider.destroy(); providers.delete(owner.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      expect((await saved(documentId)).content[0].content[0].text)
+        .toBe('Only the authorized writer can change this room');
+      expect(requests.some(request => request.status === 403)).toBe(true);
+    });
+
+    it('rechecks a connected writer at message and persistence boundaries after access is revoked', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const editor = connect(room);
+      await synced(editor.provider);
+      write(editor.document, 'Authorized first change');
+      await expect.poll(() => editor.provider.hasUnsyncedChanges).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text)
+        .toBe('Authorized first change');
+
+      const storedBeforeDenial = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataBeforeDenial = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      deniedWriterIds.add(userId);
+      let connectionClosed = false;
+      editor.provider.on('close', () => { connectionClosed = true; });
+      write(editor.document, 'Revoked change must not persist');
+      await expect.poll(() => connectionClosed || requests.some(request => request.status === 403), { timeout: 5000 })
+        .toBe(true);
+      editor.provider.destroy(); providers.delete(editor.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+
+      const storedAfterDenial = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataAfterDenial = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      expect(storedAfterDenial.block_data).toEqual(storedBeforeDenial.block_data);
+      expect(storedAfterDenial.updated_at).toEqual(storedBeforeDenial.updated_at);
+      expect(metadataAfterDenial).toEqual(metadataBeforeDenial);
+      expect(requests.some(request => request.status === 403)).toBe(true);
+
+      deniedWriterIds.delete(userId);
+      const recovered = connect(room);
+      await synced(recovered.provider);
+      write(recovered.document, 'Editing recovers after access returns');
+      await expect.poll(() => recovered.provider.hasUnsyncedChanges).toBe(false);
+      recovered.provider.destroy(); providers.delete(recovered.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      expect((await saved(documentId)).content[0].content[0].text)
+        .toBe('Editing recovers after access returns');
+    });
+
+    it('rejects redacted room admission and persistence without changing content or metadata', async () => {
+      expectedStatuses = [200, 403];
+      const documentId = await seedDocument();
+      const storedBefore = await tenantTable(tenantId, 'document_block_content')
+        .where({ document_id: documentId }).first();
+      const metadataBefore = await tenantTable(tenantId, 'documents')
+        .where({ document_id: documentId }).select('updated_at', 'edited_by').first();
+      const bundles = await import('@alga-psa/authorization/bundles/service');
+      const rulesSpy = vi.spyOn(bundles, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+        { id: 'redact-content', resource: 'document', action: 'read', constraintKey: 'hide_content', redactedFields: ['content'] },
+      ] as any);
+      try {
+        const room = `document:${tenantId}:${documentId}`;
+        const denied = connect(room);
+        let closed = false;
+        denied.provider.on('close', () => { closed = true; });
+        await expect.poll(() => closed, { timeout: 5000 }).toBe(true);
+        expect(denied.document.getXmlFragment('prosemirror').length).toBe(0);
+
+        const replacement = new Y.Doc(); documents.add(replacement);
+        write(replacement, 'redacted overwrite');
+        const update = Buffer.from(Y.encodeStateAsUpdate(replacement)).toString('base64');
+        const credential = signDocumentRoomToken({ tenantId, documentId, userId });
+        const response = await fetch(apiUrl, {
+          method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': process.env.COLLAB_PERSIST_API_KEY! },
+          body: JSON.stringify({ tenantId, documentId, update, credential }),
+        });
+        expect(response.status).toBe(403);
+        expect(await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first())
+          .toMatchObject({ block_data: storedBefore.block_data, updated_at: storedBefore.updated_at });
+        expect(await tenantTable(tenantId, 'documents').where({ document_id: documentId })
+          .select('updated_at', 'edited_by').first()).toEqual(metadataBefore);
+      } finally {
+        rulesSpy.mockRestore();
+      }
     });
   });
 });

@@ -114,6 +114,14 @@ function applyDocumentRedactions<T extends object>(document: T, redactedFields: 
   return redacted as T;
 }
 
+/**
+ * Redaction is represented in the authorized document projection by removing
+ * the field. An empty or null field value is still an authorized value.
+ */
+export function isDocumentFieldRedacted(document: object, field: string): boolean {
+  return !Object.prototype.hasOwnProperty.call(document, field);
+}
+
 function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
   if (isMspPrincipalUserType(user.user_type)) {
     return [];

@@ -35,6 +35,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { getDocumentRoomToken } from '../actions/collaborativeEditingActions';
 import { EditorImage } from '../lib/editorImageExtension';
 import {
   editorImageUploadMessage,
@@ -159,6 +160,7 @@ export function CollaborativeEditor({
           tenantId,
           userId,
         },
+        connect: false,
       }),
     [roomName, tenantId, userId]
   );
@@ -356,10 +358,17 @@ export function CollaborativeEditor({
       onUsersChangeRef.current?.(users);
     };
 
+    const handleAuthenticationFailed = ({ reason }: { reason: string }) => {
+      setConnectionStatus('disconnected');
+      onConnectionStatusChangeRef.current?.('disconnected');
+      toast.error(reason);
+    };
+
     provider.on('status', handleStatus);
     provider.on('synced', handleSynced);
     provider.on('unsyncedChanges', handleUnsyncedChanges);
     provider.on('awarenessChange', handleAwarenessChange);
+    provider.on('authenticationFailed', handleAuthenticationFailed);
 
     handleStatus({ status: provider.status as ConnectionStatus });
     handleSynced({ state: provider.synced });
@@ -371,6 +380,7 @@ export function CollaborativeEditor({
       provider.off('synced', handleSynced);
       provider.off('unsyncedChanges', handleUnsyncedChanges);
       provider.off('awarenessChange', handleAwarenessChange);
+      provider.off('authenticationFailed', handleAuthenticationFailed);
       provider.destroy();
       ydoc.destroy();
     };
@@ -379,6 +389,38 @@ export function CollaborativeEditor({
     // Hocuspocus (local edits stop reaching the server) and leaves the room
     // empty for the next snapshot save.
   }, [provider, ydoc, userId, userName, userColor]);
+
+  useEffect(() => {
+    let active = true;
+    const issueToken = async () => {
+      const result = await getDocumentRoomToken(documentId);
+      if (isDocumentActionError(result)) throw new Error(getErrorMessage(result));
+      return result.token;
+    };
+    void issueToken().then((initialToken) => {
+      if (!active) return;
+      let nextToken: string | null = initialToken;
+      provider.setConfiguration({
+        token: async () => {
+          if (nextToken) {
+            const token = nextToken;
+            nextToken = null;
+            return token;
+          }
+          return issueToken();
+        },
+      });
+      return provider.connect();
+    }).catch((error) => {
+      if (!active) return;
+      const message = error instanceof Error ? error.message : 'Permission denied: Cannot edit this document';
+      console.error('[CollaborativeEditor] Failed to authorize document room:', error);
+      setConnectionStatus('disconnected');
+      onConnectionStatusChangeRef.current?.('disconnected');
+      toast.error(message);
+    });
+    return () => { active = false; };
+  }, [documentId, provider]);
 
   useEffect(() => {
     if (!editor || !editorReady) return;

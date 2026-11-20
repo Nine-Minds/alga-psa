@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocument, IDocumentAssociationInput } from '@alga-psa/types';
 import { getAuthorizedDocumentById } from '@alga-psa/documents/actions/documentActions';
-import { canAuthorizeDocumentAssociation } from '@shared/lib/documentAuthorization';
+import { canAuthorizeDocumentAssociation, isDocumentFieldRedacted } from '@shared/lib/documentAuthorization';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -132,7 +132,7 @@ export const getBlockContent = withAuth(async (
   if (!authorizedDocument) {
     return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
   }
-  if (!Object.prototype.hasOwnProperty.call(authorizedDocument, 'content')) {
+  if (isDocumentFieldRedacted(authorizedDocument, 'content')) {
     return null;
   }
 
@@ -165,7 +165,9 @@ export const updateBlockContent = withAuth(async (
     if (!document) {
       return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
     }
-
+    if (isDocumentFieldRedacted(document, 'content')) {
+      return permissionError('Permission denied: Cannot update redacted document content', 'documents:errors.permissions.update');
+    }
     const blockDataValue = typeof input.block_data === 'string'
       ? input.block_data
       : JSON.stringify(input.block_data);

@@ -23,6 +23,7 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
 
 vi.mock('@shared/lib/documentAuthorization', () => ({
   canAuthorizeDocumentAssociation: mocks.authorizeAssociation,
+  isDocumentFieldRedacted: (document: object, field: string) => !Object.prototype.hasOwnProperty.call(document, field),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -127,6 +128,46 @@ describe('block content action authorization', () => {
 
     expect(result).toMatchObject({ permissionError: expect.any(String) });
     expect(mocks.writes).toHaveLength(0);
+  });
+
+  it.each([
+    ['empty', ''],
+    ['nonempty', '{"body":"replacement"}'],
+  ])('denies %s replacement when content is redacted and preserves stored content and metadata', async (_label, block_data) => {
+    const originalContent = structuredClone(mocks.content);
+    mocks.redactedFields = ['content'];
+
+    const result = await invoke(updateBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1', {
+      block_data, user_id: 'spoofed-user',
+    });
+
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
+    expect(mocks.writes).toHaveLength(0);
+    expect(mocks.content).toEqual(originalContent);
+  });
+
+  it('does not create a missing block-content row when content is redacted', async () => {
+    mocks.content = null;
+    mocks.redactedFields = ['content'];
+
+    const result = await invoke(updateBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1', {
+      block_data: { body: 'must not be inserted' }, user_id: 'spoofed-user',
+    });
+
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
+    expect(mocks.writes).toHaveLength(0);
+    expect(mocks.content).toBeNull();
+  });
+
+  it('allows editing when the authorizer permits content, including legitimately empty documents', async () => {
+    mocks.authorizedDocument.mockResolvedValue({ document_id: 'document-1', content: '' });
+
+    const result = await invoke(updateBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1', {
+      block_data: '', user_id: 'spoofed-user',
+    });
+
+    expect(result).toMatchObject({ content_id: 'content-1', block_data: '' });
+    expect(mocks.writes).toContainEqual(expect.objectContaining({ table: 'document_block_content', operation: 'update' }));
   });
 
   it('denies associations the authenticated user cannot read before creating a document or content', async () => {

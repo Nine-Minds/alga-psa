@@ -86,6 +86,7 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
   // The workflow-streams package publishes its runtime entry from dist, which
   // is not built for focused action tests; resolve its source entry instead.
   {

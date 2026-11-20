@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { CollaborativeEditor } from './CollaborativeEditor';
+import { getDocumentRoomToken } from '../actions/collaborativeEditingActions';
 
 const mockOn = vi.fn();
 const mockOff = vi.fn();
@@ -17,6 +18,8 @@ const mockProvider = {
   },
   on: mockOn,
   off: mockOff,
+  setConfiguration: vi.fn(),
+  connect: vi.fn(async () => undefined),
   destroy: mockDestroy,
   status: 'connected',
   synced: true,
@@ -53,8 +56,11 @@ vi.mock('../actions/documentBlockContentActions', () => ({
   getBlockContent: vi.fn(),
   updateBlockContent: vi.fn(),
 }));
+vi.mock('../actions/collaborativeEditingActions', () => ({ getDocumentRoomToken: vi.fn(async () => ({ token: 'signed-token' })) }));
 
 describe('CollaborativeEditor room name', () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it('connects to document:<tenantId>:<documentId> room', () => {
     render(
       <CollaborativeEditor
@@ -70,6 +76,24 @@ describe('CollaborativeEditor room name', () => {
         tenantId: 'tenant-abc',
         userId: 'user-1',
       },
+      connect: false,
     });
+  });
+
+  it('requests a fresh server credential when the provider reconnects', async () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-123"
+        tenantId="tenant-abc"
+        userId="user-1"
+        userName="Test User"
+      />
+    );
+
+    await waitFor(() => expect(mockProvider.setConfiguration).toHaveBeenCalled());
+    const config = mockProvider.setConfiguration.mock.calls[0][0] as { token: () => Promise<string> };
+    expect(await config.token()).toBe('signed-token');
+    expect(await config.token()).toBe('signed-token');
+    expect(getDocumentRoomToken).toHaveBeenCalledTimes(2);
   });
 });
