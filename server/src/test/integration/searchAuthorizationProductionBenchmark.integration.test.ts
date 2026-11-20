@@ -155,12 +155,16 @@ describe('production search authorization PostgreSQL benchmark', () => {
           expect(result.groups.ticket).toBe(scenario.count);
           expect(result.results.map(({ id }) => id), scenario.name).toEqual(scenario.expectedIds);
         }
+        const rawLatencySamples = latencies.map((value) => Number(value.toFixed(2)));
+        const rawStatementSamples = [...statementCounts];
         latencies.sort((a, b) => a - b);
         statementCounts.sort((a, b) => a - b);
         measurements.push({
           scenario: scenario.name,
           p95_ms: Number(latencies[Math.ceil(SAMPLES * 0.95) - 1].toFixed(2)),
           query_count_per_request: statementCounts[Math.floor(SAMPLES / 2)],
+          raw_latency_samples_ms: rawLatencySamples,
+          raw_query_count_samples: rawStatementSamples,
           warmup_requests: WARMUPS,
           measured_requests: SAMPLES,
           fixture_matches: BROAD_MATCHES,
