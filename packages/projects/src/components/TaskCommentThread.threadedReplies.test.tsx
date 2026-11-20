@@ -34,6 +34,8 @@ const taskStore = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
+  hasEditorContent: (blocks: any[]) => blocks.some(block => block.type === 'image' || block.content?.some((item: any) => item.type !== 'text' || item.text?.trim())),
+  useRichTextUploadSession: () => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), requestDiscard: vi.fn(), isUploading: false, isDeletingDraftImages: false }),
   DEFAULT_BLOCK: [
     {
       type: 'paragraph',

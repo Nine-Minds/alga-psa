@@ -17,6 +17,7 @@ vi.mock('../../lib/auth/rbac', () => ({
 vi.mock('../../lib/db', () => ({
   createTenantKnex: vi.fn()
 }));
+vi.mock('@shared/lib/ticketCommentAttachments', () => ({ canReadCommentAttachment: vi.fn().mockResolvedValue(true) }));
 
 import { hasPermission } from '@/lib/auth/rbac';
 import { createTenantKnex } from '@/lib/db';
@@ -36,6 +37,7 @@ const associationBuilder = {
 const staffReaderBuilder: any = { where: () => staffReaderBuilder, first: async () => ({ document_visible: true }) };
 const mockKnexInstance: any = Object.assign(vi.fn((table: string) => table === 'ticket_comment_attachments'
   ? { where: () => ({ where: () => ({ first: async () => undefined }) }) }
+  : table === 'comment_attachment_drafts' ? { where: () => ({ first: async () => undefined }) }
   : table === 'users' ? staffReaderBuilder : associationBuilder), { raw: vi.fn((sql: string) => sql) });
 
 describe('documentPermissionUtils', () => {
@@ -133,6 +135,19 @@ describe('documentPermissionUtils', () => {
 
       expect(result).toBe(true);
       expect(hasPermission).toHaveBeenCalledWith(mockUser, 'ticket', 'read');
+    });
+
+    it('checks the parent project permission for a Project Task document association', async () => {
+      vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) =>
+        resource === 'document' && action === 'read' || resource === 'project' && action === 'read'
+      );
+      mockAssociationRows = [{
+        association_id: 'assoc-task', tenant: 'tenant-123', document_id: 'doc-123',
+        entity_id: 'task-123', entity_type: 'project_task',
+      } as IDocumentAssociation];
+
+      await expect(canAccessDocument(mockUser, mockDocument)).resolves.toBe(true);
+      expect(hasPermission).toHaveBeenCalledWith(mockUser, 'project', 'read');
     });
 
     it('should deny access if user lacks permission for associated entity', async () => {

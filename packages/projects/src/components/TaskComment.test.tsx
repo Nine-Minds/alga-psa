@@ -9,6 +9,7 @@ import TaskComment from './TaskComment';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
 
 vi.mock('@alga-psa/ui/editor', () => ({
+  useRichTextUploadSession: () => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), requestDiscard: vi.fn(), isUploading: false, isDeletingDraftImages: false }),
   RichTextViewer: () => <div data-testid="rich-text-viewer" />,
   TextEditor: () => <div data-testid="text-editor" />,
 }));

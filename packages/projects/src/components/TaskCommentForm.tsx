@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
+import { DEFAULT_BLOCK, hasEditorContent, TextEditor } from '@alga-psa/ui/editor';
 import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -11,6 +11,8 @@ import type { CommentAudience } from '@alga-psa/types';
 import { useTaskCommentAudience } from '../context/TaskCommentAudienceContext';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
+import { useRichTextUploadSession } from '@alga-psa/ui/editor';
+import { discardProjectTaskCommentAttachmentDrafts, uploadProjectTaskCommentDocument } from '../actions/projectTaskCommentAttachmentDraftActions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -24,6 +26,7 @@ interface TaskCommentFormProps {
   onCommentAdded: () => void;
   onCancel?: () => void;
   autoFocus?: boolean;
+  userId?: string;
 }
 
 export function TaskCommentForm({
@@ -33,6 +36,7 @@ export function TaskCommentForm({
   onCommentAdded,
   onCancel,
   autoFocus = false,
+  userId,
 }: TaskCommentFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +46,22 @@ export function TaskCommentForm({
   const audienceSlot = useTaskCommentAudience();
   const asksAudience = audienceSlot !== null && !parentCommentId;
   const [audience, setAudience] = useState<CommentAudience | null>(null);
+  const uploadSession = useRichTextUploadSession({
+    componentLabel: 'ProjectTaskCommentForm',
+    commentAttachments: true,
+    scope: { entityType: 'project_task', entityId: taskId },
+    userId,
+    trackDraftUploads: true,
+    onDiscard: () => onCancel?.(),
+    uploadDocumentAction: (formData, params) => {
+      if (!params.projectTaskId) throw new Error('Project Task upload requires a task scope.');
+      return uploadProjectTaskCommentDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId });
+    },
+    deleteDraftUploadsAction: input => discardProjectTaskCommentAttachmentDrafts({
+      projectTaskId: input.scope.entityId,
+      documentIds: input.documentIds,
+    }),
+  });
 
   const handleSubmit = async (): Promise<void> => {
     if (!editorRef.current || isSubmitting) {
@@ -55,17 +75,7 @@ export function TaskCommentForm({
     const blocks = editorRef.current.document;
 
     // Check if editor has any meaningful content
-    const hasContent = blocks.some((block: any) => {
-      if (!block.content || !Array.isArray(block.content)) return false;
-      return block.content.some((item: any) => {
-        if (item.type === 'text') {
-          return item.text?.trim() !== '';
-        }
-        return true; // Non-text content counts as content
-      });
-    });
-
-    if (!hasContent) {
+    if (!hasEditorContent(blocks as unknown as PartialBlock[])) {
       return;
     }
 
@@ -86,6 +96,7 @@ export function TaskCommentForm({
       }
 
       // Clear the editor by replacing content with default empty block
+      uploadSession.resetDraftTracking();
       editorRef.current.replaceBlocks(
         editorRef.current.document,
         DEFAULT_BLOCK
@@ -111,6 +122,7 @@ export function TaskCommentForm({
         initialContent={DEFAULT_BLOCK}
         searchMentions={searchUsersForMentions}
         autoFocus={autoFocus}
+        uploadFile={uploadSession.uploadFile}
       />
       {asksAudience && audienceSlot.renderSelect({
         id: parentCommentId ? 'task-reply-audience' : 'task-comment-audience',
@@ -128,7 +140,7 @@ export function TaskCommentForm({
             e.stopPropagation();
             handleSubmit();
           }}
-          disabled={isSubmitting || (asksAudience && audience === null)}
+          disabled={isSubmitting || uploadSession.isUploading || (asksAudience && audience === null)}
           variant="default"
         >
           {isSubmitting
@@ -144,9 +156,9 @@ export function TaskCommentForm({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onCancel();
+              uploadSession.requestDiscard();
             }}
-            disabled={isSubmitting}
+            disabled={isSubmitting || uploadSession.isUploading || uploadSession.isDeletingDraftImages}
             variant="outline"
           >
             {t('common:actions.cancel', 'Cancel')}

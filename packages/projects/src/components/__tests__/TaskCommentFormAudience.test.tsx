@@ -18,6 +18,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({ useDialogSubmitShortcut: () 
 vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn() } }));
 vi.mock('@alga-psa/ui/editor', () => ({
   DEFAULT_BLOCK: [{ type: 'paragraph', content: [] }],
+  hasEditorContent: (blocks: any[]) => blocks.some(block => block.type === 'image' || block.content?.some((item: any) => item.type !== 'text' || item.text?.trim())),
+  useRichTextUploadSession: () => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), requestDiscard: vi.fn(), isUploading: false, isDeletingDraftImages: false }),
   TextEditor: ({ editorRef }: { editorRef: { current: unknown } }) => {
     editorRef.current = {
       document: [{ type: 'paragraph', content: [{ type: 'text', text: 'A note', styles: {} }] }],

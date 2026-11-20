@@ -314,7 +314,19 @@ export async function createDocumentFromCommittedFile(
     }
     await tenantScopedTable(trx, 'documents', tenant).insert(document);
     if (options.commentAttachmentDraft) {
-      await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
+      const draftEntity = options.ticketId
+        ? { entity_type: 'ticket', entity_id: options.ticketId }
+        : options.projectTaskId
+          ? { entity_type: 'project_task', entity_id: options.projectTaskId }
+          : null;
+      if (!draftEntity) throw new Error('Comment attachment drafts require a ticket or project task.');
+      await tenantDb(trx, tenant).table('comment_attachment_drafts').insert({
+        tenant, ...draftEntity, document_id: document.document_id,
+        created_by: authenticatedUserId, state: 'draft',
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      // Keep legacy ticket comment attachment consumers in sync while ticket callers migrate.
+      if (options.ticketId) await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
         tenant, ticket_id: options.ticketId, document_id: document.document_id,
         created_by: authenticatedUserId, state: 'draft',
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),

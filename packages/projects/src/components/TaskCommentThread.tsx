@@ -271,6 +271,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             taskId={taskId}
             projectId={projectId}
             parentCommentId={comment.taskCommentId}
+            userId={currentUser?.user_id}
             onCommentAdded={handleCommentAdded}
             onCancel={() => setReplyingToCommentId(null)}
             autoFocus
@@ -350,6 +351,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
               <TaskCommentForm
                 taskId={taskId}
                 projectId={projectId}
+                userId={currentUser?.user_id}
                 onCommentAdded={handleCommentAdded}
                 onCancel={() => setShowEditor(false)}
                 autoFocus

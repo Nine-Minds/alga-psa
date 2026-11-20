@@ -17,6 +17,8 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { useRichTextUploadSession } from '@alga-psa/ui/editor';
+import { discardProjectTaskCommentAttachmentDrafts, uploadProjectTaskCommentDocument } from '../actions/projectTaskCommentAttachmentDraftActions';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -56,6 +58,22 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
+  const uploadSession = useRichTextUploadSession({
+    componentLabel: 'ProjectTaskCommentEdit',
+    commentAttachments: true,
+    scope: { entityType: 'project_task', entityId: comment.taskId },
+    userId: comment.userId,
+    trackDraftUploads: true,
+    onDiscard: () => handleCancelEdit(),
+    uploadDocumentAction: (formData, params) => {
+      if (!params.projectTaskId) throw new Error('Project Task upload requires a task scope.');
+      return uploadProjectTaskCommentDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId });
+    },
+    deleteDraftUploadsAction: input => discardProjectTaskCommentAttachmentDrafts({
+      projectTaskId: input.scope.entityId,
+      documentIds: input.documentIds,
+    }),
+  });
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
     try {
       const parsedContent = JSON.parse(comment.note || '');
@@ -125,6 +143,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
         return;
       }
       setIsEditing(false);
+      uploadSession.resetDraftTracking();
       onUpdate();
     } catch (error) {
       console.error('Failed to update comment:', error);
@@ -175,6 +194,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
       }]);
     }
     setIsEditing(false);
+    uploadSession.resetDraftTracking();
   };
 
   const authorName = [comment.firstName, comment.lastName].filter(Boolean).join(' ') || taskT('comments.authorUnavailable', 'Author unavailable');
@@ -316,20 +336,21 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 initialContent={editedContent}
                 onContentChange={handleContentChange}
                 searchMentions={searchUsersForMentions}
+                uploadFile={uploadSession.uploadFile}
               />
               <div className="flex justify-end space-x-2 mt-1">
                 <Button
                   id={`${commentId}-save-btn`}
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || uploadSession.isUploading}
                 >
                   {isSaving ? t('common.saving', 'Saving...') : t('common.save', 'Save')}
                 </Button>
                 <Button
                   id={`${commentId}-cancel-btn`}
                   variant="outline"
-                  onClick={handleCancelEdit}
-                  disabled={isSaving}
+                  onClick={() => uploadSession.requestDiscard()}
+                  disabled={isSaving || uploadSession.isUploading || uploadSession.isDeletingDraftImages}
                 >
                   {t('common.cancel', 'Cancel')}
                 </Button>

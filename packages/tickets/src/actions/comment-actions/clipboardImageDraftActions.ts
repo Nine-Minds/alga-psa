@@ -239,6 +239,9 @@ export const deleteDraftClipboardImages = withAuth(
       const deleteResult = await input.deleteDocumentFn(candidate.document_id, user.user_id);
       if (deleteResult.success && deleteResult.deleted) {
         deletedDocumentIds.push(candidate.document_id);
+        await tenantDb(knex, tenant).table('comment_attachment_drafts')
+          .where({ entity_type: 'ticket', entity_id: input.ticketId, document_id: candidate.document_id, created_by: user.user_id, state: 'draft' })
+          .whereNull('comment_id').update({ state: 'removed' });
         continue;
       }
 

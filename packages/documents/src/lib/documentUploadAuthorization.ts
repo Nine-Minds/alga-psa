@@ -5,6 +5,7 @@
  * Not part of the `'use server'` action module: it must not become a client-callable action.
  */
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import type { IUser } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -37,9 +38,19 @@ export async function assertDocumentUploadAllowed(
   }
 
   if (options.commentAttachmentDraft) {
-    if (!options.ticketId || !await hasPermission(user, 'ticket', 'update') ||
-        !await canWriteAttachmentTicket(knex, tenant, user.user_id, options.ticketId)) {
-      throw new Error('Permission denied: Cannot attach files to this ticket');
+    if (options.ticketId) {
+      if (!await hasPermission(user, 'ticket', 'update') ||
+          !await canWriteAttachmentTicket(knex, tenant, user.user_id, options.ticketId)) {
+        throw new Error('Permission denied: Cannot attach files to this ticket');
+      }
+    } else if (options.projectTaskId) {
+      const canWriteTaskComment = await hasPermission(user, 'project_task', 'create') ||
+        await hasPermission(user, 'project_task', 'update');
+      const task = await tenantDb(knex, tenant).table('project_tasks')
+        .where({ task_id: options.projectTaskId }).select('task_id').first();
+      if (!canWriteTaskComment || !task) throw new Error('Permission denied: Cannot attach files to this project task');
+    } else {
+      throw new Error('Comment attachment drafts require a ticket or project task');
     }
     await expireCommentAttachmentDrafts(knex, tenant);
   }

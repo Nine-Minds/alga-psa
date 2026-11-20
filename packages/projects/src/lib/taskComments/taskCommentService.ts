@@ -89,6 +89,26 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+const COMMENT_UPLOAD_ID = /(?:\/api\/documents\/(?:view|download)\/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+async function promoteProjectTaskCommentDrafts(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string,
+  commentId: string,
+  actorId: string,
+  note: string,
+): Promise<void> {
+  const fileIds = [...new Set(Array.from(note.matchAll(COMMENT_UPLOAD_ID), match => match[1].toLowerCase()))];
+  if (!fileIds.length) return;
+  const documents = await tenantScopedTable(trx, 'documents', tenant).whereIn('file_id', fileIds).select('document_id') as Array<{ document_id: string }>;
+  if (!documents.length) return;
+  await tenantScopedTable(trx, 'comment_attachment_drafts', tenant)
+    .where({ entity_type: 'project_task', entity_id: taskId, created_by: actorId, state: 'draft' })
+    .whereNull('comment_id').whereIn('document_id', documents.map(row => row.document_id))
+    .update({ state: 'attached', comment_id: commentId });
+}
+
 async function loadTaskContext(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -240,6 +260,8 @@ export async function createTaskCommentWithDb(
     if (!taskCommentId || !threadId) {
       throw new Error('Database UUID generation did not return task comment/thread identifiers.');
     }
+
+    await promoteProjectTaskCommentDrafts(trx, tenant, comment.taskId, taskCommentId, userId, comment.note);
 
     // Insert comment (convert camelCase to snake_case for DB)
     const [newComment] = await tenantScopedTable(trx, 'project_task_comments', tenant)
@@ -457,6 +479,10 @@ export async function updateTaskCommentWithDb(
         edited_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
+
+    if (typeof updates.note === 'string') {
+      await promoteProjectTaskCommentDrafts(trx, tenant, existingComment.task_id, taskCommentId, userId, updates.note);
+    }
 
     // Get task and project context for notifications
     const task = await loadTaskContext(trx, tenant, existingComment.task_id);

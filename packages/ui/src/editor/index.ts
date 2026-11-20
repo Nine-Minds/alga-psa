@@ -13,5 +13,11 @@ export type { MentionSuggestionState, MentionUser as MentionSuggestionUser } fro
 export { AiResponseBlock } from './AiResponseBlock';
 export { SnippetPicker } from './SnippetPicker';
 export type { SnippetPickerProps } from './SnippetPicker';
+export { useRichTextUploadSession } from './useRichTextUploadSession';
+export type { RichTextDraftClipboardImage, RichTextUploadScope } from './useRichTextUploadSession';
+export { hasEditorContent } from './hasEditorContent';
+export { createClipboardImageFilename, extractClipboardImageFiles, fileExtensionForImageMimeType, isClipboardImageMimeType, renameClipboardImageForUpload, validateClipboardImageFile, DEFAULT_MAX_CLIPBOARD_IMAGE_BYTES } from './clipboardImageUtils';
+export { documentViewUrl, resolveDocumentViewUrl } from './documentViewUrl';
+export type { DocumentViewUrlInput, DocumentViewUrlResolverInput } from './documentViewUrl';
 export { buildSnippetSections, filterSnippets, flattenSnippetSections, stripBlockIds } from './snippets';
 export type { EditorSnippet, EditorSnippetLabels, EditorSnippetsConfig, SnippetSection } from './snippets';

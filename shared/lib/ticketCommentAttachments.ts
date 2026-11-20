@@ -3,7 +3,7 @@ import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
 import { canReadTicket, canWriteTicket } from '@alga-psa/authorization/portal/ticketAccess.server';
-import { COMMENT_UPLOAD_URL_PATTERN, admitInternalReaderAudienceSql, isKnownStaffReader } from './commentAudience';
+import { COMMENT_UPLOAD_URL_PATTERN, admitCommentAudienceReader, isCommentAudienceVisible, resolveCommentAudienceForRead, admitInternalReaderAudienceSql, isKnownStaffReader } from './commentAudience';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -162,8 +162,12 @@ export async function reconcileCommentAttachments(trx: Connection, tenant: strin
         throw new Error('Attachment draft is expired or belongs to another user');
       }
       await db.table('ticket_comment_attachments').where({ attachment_id: row.attachment_id }).update({ comment_id: commentId, state: 'attached' });
+      await db.table('comment_attachment_drafts').where({ entity_type: 'ticket', entity_id: row.ticket_id, document_id: row.document_id })
+        .update({ comment_id: commentId, state: 'attached' });
     } else if (row.comment_id === commentId) {
       await db.table('ticket_comment_attachments').where({ attachment_id: row.attachment_id }).update({ state: 'removed' });
+      await db.table('comment_attachment_drafts').where({ entity_type: 'ticket', entity_id: row.ticket_id, document_id: row.document_id })
+        .update({ state: 'removed' });
     }
   }
 }
@@ -179,6 +183,37 @@ export type AttachmentReader = string | { user_id: string; user_type?: string; s
 export async function canReadCommentAttachment(conn: Connection, tenant: string, reader: AttachmentReader, documentId: string, ticketAccess?: Map<string, Promise<boolean>>): Promise<boolean> {
   const userId = typeof reader === 'string' ? reader : reader.user_id;
   const db = tenantDb(conn, tenant);
+  const scopedDraft = await db.table('comment_attachment_drafts').where({ document_id: documentId }).first();
+  if (scopedDraft?.entity_type === 'project_task') {
+    if (scopedDraft.state === 'draft') {
+      return scopedDraft.created_by === userId && new Date(scopedDraft.expires_at).getTime() > Date.now();
+    }
+    if (scopedDraft.state !== 'attached' || !scopedDraft.comment_id) return false;
+    const comment = await db.table('project_task_comments as c')
+      .where({ 'c.task_comment_id': scopedDraft.comment_id, 'c.task_id': scopedDraft.entity_id })
+      .whereNull('c.deleted_at')
+      .first('c.task_comment_id', 'c.thread_id');
+    if (!comment) return false;
+    const thread = await db.table('comment_threads').where({ thread_id: comment.thread_id, project_task_id: scopedDraft.entity_id })
+      .whereNull('ticket_id').first('collaboration_audience', 'is_internal');
+    if (!thread) return false;
+    const user = await db.table('users').where({ user_id: userId }).first('user_id', 'user_type', 'seat_reader');
+    if (!user) return false;
+    const readerAudience = await admitCommentAudienceReader(conn, tenant, {
+      userId,
+      userType: user.user_type,
+      seatReader: user.seat_reader,
+    });
+    if (!readerAudience) return false;
+    const task = await db.table('project_tasks as pt')
+      .where({ 'pt.task_id': scopedDraft.entity_id })
+      .modify(query => db.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id'))
+      .modify(query => db.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id'))
+      .first('p.client_id');
+    if (!task) return false;
+    const audience = resolveCommentAudienceForRead(thread);
+    return isCommentAudienceVisible(audience, { tenant, clientId: task.client_id }, readerAudience);
+  }
   const row = await db.table('ticket_comment_attachments').where({ document_id: documentId }).first();
   if (!row) {
     // No attachment row: an ordinary Documents upload keeps its original policy, except that an
@@ -227,8 +262,11 @@ export async function listPublishedCommentAttachments(conn: Connection, tenant: 
 
 /** Tombstone abandoned uploads; leave documents, associations and shared storage intact. */
 export async function expireCommentAttachmentDrafts(conn: Connection, tenant: string): Promise<number> {
-  return tenantDb(conn, tenant).table('ticket_comment_attachments')
+  const legacyCount = await tenantDb(conn, tenant).table('ticket_comment_attachments')
     .where({ state: 'draft' }).where('expires_at', '<=', new Date()).update({ state: 'removed' });
+  await tenantDb(conn, tenant).table('comment_attachment_drafts')
+    .where({ entity_type: 'ticket', state: 'draft' }).where('expires_at', '<=', new Date()).update({ state: 'removed' });
+  return legacyCount;
 }
 
 export async function filterReadableCommentAttachments<T extends { document_id: string }>(conn: Connection, tenant: string, reader: AttachmentReader, documents: T[]): Promise<T[]> {
@@ -240,4 +278,5 @@ export async function filterReadableCommentAttachments<T extends { document_id: 
 export async function withdrawCommentAttachments(conn: Connection, tenant: string, commentId: string) {
   if (!conn.isTransaction) throw new Error('Attachment withdrawal requires the comment transaction');
   await tenantDb(conn, tenant).table('ticket_comment_attachments').where({ comment_id: commentId }).update({ state: 'removed' });
+  await tenantDb(conn, tenant).table('comment_attachment_drafts').where({ entity_type: 'ticket', comment_id: commentId }).update({ state: 'removed' });
 }
