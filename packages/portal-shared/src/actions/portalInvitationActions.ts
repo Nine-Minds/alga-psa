@@ -1060,17 +1060,21 @@ function normalizeInvitationStates(states: unknown): PortalInvitationStateTarget
  * Every contact of a client with its invitation state, so the rollout can be
  * run from the contact list instead of contact by contact. Tenant-scoped and
  * narrowed by the caller's bundle exactly as the eligible set is.
+ *
+ * `null` means this caller may not read invitation state at all, which is not
+ * the same answer as "nobody has been invited" — a reader who cannot see the
+ * state is shown no column rather than a column of "Not invited".
  */
 export const getPortalInvitationStatesForClient = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   clientId: string
-): Promise<PortalInvitationContactState[]> => {
+): Promise<PortalInvitationContactState[] | null> => {
   try {
     const { knex } = await createTenantKnex();
     const normalizedClientId = clientId?.trim();
     if (!normalizedClientId) {
-      return [];
+      return null;
     }
 
     const scope = await createClientScopeContext(knex, tenant, user);
@@ -1078,7 +1082,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
       await canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)
       && await scope.permits('client', normalizedClientId)
     )) {
-      return [];
+      return null;
     }
 
     const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1130,7 +1134,7 @@ export const getPortalInvitationStatesForClient = withAuth(async (
 
   } catch (error) {
     console.error('Error fetching portal invitation states:', error);
-    return [];
+    return null;
   }
 });
 

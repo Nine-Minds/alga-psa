@@ -65,9 +65,11 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   const [invitationTarget, setInvitationTarget] = useState<BulkPortalInvitationTarget | null>(null);
   // Each contact's standing with the portal, so a rollout can be read off this
   // list: 'all' leaves the list alone, the rest narrow it to who needs chasing.
+  // `null` is "this reader cannot see invitation state", which hides the column
+  // rather than claiming nobody was ever invited.
   const [invitationStates, setInvitationStates] = useState<
-    Map<string, { state: PortalInvitationState; expiresAt: string | null }>
-  >(new Map());
+    Map<string, { state: PortalInvitationState; expiresAt: string | null }> | null
+  >(null);
   const [invitationFilter, setInvitationFilter] = useState<'all' | 'expired' | 'pending' | 'open'>('all');
   // False until the check resolves, so the invite affordances never flash in
   // for a reader who would only meet a server refusal. Same gate the contact's
@@ -120,10 +122,13 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   const refreshInvitationStates = useCallback(() => {
     getPortalInvitationStatesForClient(clientId)
-      .then((rows) => setInvitationStates(new Map(
+      .then((rows) => setInvitationStates(rows === null ? null : new Map(
         rows.map((row) => [row.contactId, { state: row.state, expiresAt: row.expiresAt }]),
       )))
-      .catch((err) => console.error('Error loading portal invitation states:', err));
+      .catch((err) => {
+        console.error('Error loading portal invitation states:', err);
+        setInvitationStates(null);
+      });
   }, [clientId]);
 
   useEffect(() => {
@@ -230,7 +235,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           : filteredContacts.filter((contact) =>
             (contact.locations ?? []).some((location) => location.location_id === locationFilter));
 
-    if (invitationFilter === 'all') return byLocation;
+    if (invitationFilter === 'all' || !invitationStates) return byLocation;
     // Same classification the resend acts on, so what the MSP filtered to is
     // what the batch mails.
     const wanted: PortalInvitationState[] = invitationFilter === 'open'
@@ -250,7 +255,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       : ['expired'];
 
   const invitationStateCell = (contactId: string): React.ReactNode => {
-    const entry = invitationStates.get(contactId);
+    const entry = invitationStates?.get(contactId);
     if (!entry || entry.state === 'none') {
       return <span className="text-gray-400">{t('clientContactsList.invitation.none', { defaultValue: 'Not invited' })}</span>;
     }
@@ -329,6 +334,20 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     },
   ] : [];
 
+  // A rollout is run from this list, so who still owes the portal a visit
+  // belongs on the row rather than inside each contact's Portal tab — but only
+  // for a reader the server actually tells.
+  const invitationColumn: ColumnDefinition<IContact>[] = invitationStates ? [
+    {
+      title: t('clientContactsList.table.portalInvitation', { defaultValue: 'Portal invitation' }),
+      dataIndex: 'contact_name_id',
+      id: 'portal-invitation',
+      width: '15%',
+      sortable: false,
+      render: (value, record): React.ReactNode => invitationStateCell(record.contact_name_id),
+    },
+  ] : [];
+
   const columns: ColumnDefinition<IContact>[] = [
     ...selectColumn,
     {
@@ -378,16 +397,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       render: (value, record): React.ReactNode =>
         record.email || t('common.states.na', { defaultValue: 'N/A' }),
     },
-    {
-      // A rollout is run from this list, so who still owes the portal a visit
-      // belongs on the row rather than inside each contact's Portal tab.
-      title: t('clientContactsList.table.portalInvitation', { defaultValue: 'Portal invitation' }),
-      dataIndex: 'contact_name_id',
-      id: 'portal-invitation',
-      width: '15%',
-      sortable: false,
-      render: (value, record): React.ReactNode => invitationStateCell(record.contact_name_id),
-    },
+    ...invitationColumn,
     {
       title: t('clientContactsList.table.location', { defaultValue: 'Location' }),
       // The nested name, so the table sorts the column by it rather than by the object.
@@ -553,7 +563,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             onValueChange={setLocationFilter}
             options={locationFilterOptions}
           />
-          <CustomSelect
+          {invitationStates && <CustomSelect
             id="contact-invitation-state-filter"
             value={invitationFilter}
             onValueChange={(value) => {
@@ -586,7 +596,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
                 }),
               },
             ]}
-          />
+          />}
           {/* W7 (roast gap): a client with dozens of contacts had no search. */}
           <Input
             id="client-contacts-search"
@@ -610,7 +620,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
               })}
             </Button>
           )}
-          {canInvite && selectedContactIds.size === 0 && (
+          {canInvite && invitationStates && selectedContactIds.size === 0 && (
             <Button
               id="resend-portal-invitations-btn"
               variant="secondary"

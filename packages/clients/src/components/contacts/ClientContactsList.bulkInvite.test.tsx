@@ -226,6 +226,20 @@ describe('ClientContactsList bulk portal invitations', () => {
     });
   });
 
+  it('hides the invitation column when the reader may not see invitation state', async () => {
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue(null);
+
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    await waitFor(() => expect(hoisted.getPortalInvitationStatesForClient).toHaveBeenCalled());
+    // A refusal is not "nobody was invited", so the column, the filter and the
+    // resend affordance all stay away rather than reporting a state we lack.
+    expect(screen.queryByText('Not invited')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('contact-invitation-state-filter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
+  });
+
   it('shows no invitation affordance to a reader without user:invite', async () => {
     hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: false, canUpdateRoles: false, canRead: true });
 

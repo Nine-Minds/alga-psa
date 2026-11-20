@@ -525,19 +525,21 @@ describe('getPortalInvitationStatesForClient', () => {
     ]);
   });
 
-  it('answers with nothing for a client outside the caller\'s scope', async () => {
+  it('refuses a client outside the caller\'s scope instead of claiming nobody was invited', async () => {
     state.scopedClientIds = ['client-b'];
 
     const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
 
-    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([]);
+    // null, not []: "you may not see this" is a different answer from
+    // "nobody here has an invitation", and the list hides the column for it.
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toBeNull();
   });
 
-  it('answers with nothing without user:read', async () => {
+  it('refuses a caller without user:read', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
 
-    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([]);
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toBeNull();
   });
 });

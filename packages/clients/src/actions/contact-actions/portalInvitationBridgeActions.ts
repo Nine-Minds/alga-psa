@@ -39,7 +39,7 @@ export async function getPortalInvitations(contactId: string): Promise<Invitatio
 
 export async function getPortalInvitationStatesForClient(
   clientId: string
-): Promise<PortalInvitationContactState[]> {
+): Promise<PortalInvitationContactState[] | null> {
   return getPortalInvitationStatesForClientAction(clientId);
 }
 
