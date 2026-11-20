@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Låt kunder visa och begära bokningar från kundportalen.",
       "appointmentsEnabled": "Bokningar är nu tillgängliga i kundportalen",
       "appointmentsDisabled": "Bokningar är nu dolda i kundportalen",
-      "updateFailed": "Det gick inte att uppdatera kundportalens funktioner"
+      "updateFailed": "Det gick inte att uppdatera kundportalens funktioner",
+      "invitationValidityLabel": "Inbjudans giltighet",
+      "invitationValidityHelp": "Hur länge en inbjudningslänk till kundportalen går att använda. Gäller inbjudningar som skickas från och med nu; redan skickade inbjudningar behåller den period de skickades med. När en inbjudan skickas igen får den hela perioden på nytt.",
+      "invitationValidityOption_one": "{{count}} dag",
+      "invitationValidityOption_other": "{{count}} dagar",
+      "invitationValidityUpdated_one": "Nya inbjudningar är giltiga i {{count}} dag",
+      "invitationValidityUpdated_other": "Nya inbjudningar är giltiga i {{count}} dagar"
     },
     "branding": {
       "title": "Varumärkesprofil och utseende",

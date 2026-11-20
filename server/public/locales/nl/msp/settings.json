@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Sta klanten toe om afspraken in het klantenportaal te bekijken en aan te vragen.",
       "appointmentsEnabled": "Afspraken zijn nu beschikbaar in het klantenportaal",
       "appointmentsDisabled": "Afspraken zijn nu verborgen in het klantenportaal",
-      "updateFailed": "De functies van het klantenportaal konden niet worden bijgewerkt"
+      "updateFailed": "De functies van het klantenportaal konden niet worden bijgewerkt",
+      "invitationValidityLabel": "Geldigheid van de uitnodiging",
+      "invitationValidityHelp": "Hoe lang een uitnodigingslink voor het klantenportaal bruikbaar blijft. Geldt voor uitnodigingen die vanaf nu worden verzonden; al verzonden uitnodigingen houden de periode waarmee ze zijn verzonden. Bij opnieuw verzenden krijgt een uitnodiging weer de volledige periode.",
+      "invitationValidityOption_one": "{{count}} dag",
+      "invitationValidityOption_other": "{{count}} dagen",
+      "invitationValidityUpdated_one": "Nieuwe uitnodigingen blijven {{count}} dag geldig",
+      "invitationValidityUpdated_other": "Nieuwe uitnodigingen blijven {{count}} dagen geldig"
     },
     "branding": {
       "title": "Huisstijl en uiterlijk",

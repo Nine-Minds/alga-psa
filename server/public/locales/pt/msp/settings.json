@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Permita que os clientes vejam e solicitem agendamentos no portal do cliente.",
       "appointmentsEnabled": "Os agendamentos estão agora disponíveis no portal do cliente",
       "appointmentsDisabled": "Os agendamentos estão agora ocultos no portal do cliente",
-      "updateFailed": "Não foi possível atualizar as funcionalidades do portal do cliente"
+      "updateFailed": "Não foi possível atualizar as funcionalidades do portal do cliente",
+      "invitationValidityLabel": "Validade do convite",
+      "invitationValidityHelp": "Durante quanto tempo um link de convite para o portal do cliente permanece utilizável. Aplica-se aos convites enviados a partir de agora; os convites já enviados mantêm o período com que foram enviados. Reenviar um convite devolve-lhe o período completo.",
+      "invitationValidityOption_one": "{{count}} dia",
+      "invitationValidityOption_other": "{{count}} dias",
+      "invitationValidityUpdated_one": "Os novos convites serão válidos durante {{count}} dia",
+      "invitationValidityUpdated_other": "Os novos convites serão válidos durante {{count}} dias"
     },
     "branding": {
       "title": "Marca e aparência",

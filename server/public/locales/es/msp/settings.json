@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Permita que los clientes vean y soliciten citas desde el portal del cliente.",
       "appointmentsEnabled": "Las citas ya están disponibles en el portal del cliente",
       "appointmentsDisabled": "Las citas ahora están ocultas en el portal del cliente",
-      "updateFailed": "No se pudieron actualizar las funciones del portal del cliente"
+      "updateFailed": "No se pudieron actualizar las funciones del portal del cliente",
+      "invitationValidityLabel": "Validez de la invitación",
+      "invitationValidityHelp": "Cuánto tiempo sigue siendo utilizable un enlace de invitación al portal del cliente. Se aplica a las invitaciones enviadas de ahora en adelante; las invitaciones ya enviadas conservan el período con el que se enviaron. Al reenviar una invitación, esta recibe de nuevo el período completo.",
+      "invitationValidityOption_one": "{{count}} día",
+      "invitationValidityOption_other": "{{count}} días",
+      "invitationValidityUpdated_one": "Las nuevas invitaciones serán válidas durante {{count}} día",
+      "invitationValidityUpdated_other": "Las nuevas invitaciones serán válidas durante {{count}} días"
     },
     "branding": {
       "title": "Marca y apariencia",

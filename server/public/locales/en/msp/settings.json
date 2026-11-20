@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Allow clients to view and request appointments from the client portal.",
       "appointmentsEnabled": "Appointments are now available in the client portal",
       "appointmentsDisabled": "Appointments are now hidden from the client portal",
-      "updateFailed": "Failed to update client portal features"
+      "updateFailed": "Failed to update client portal features",
+      "invitationValidityLabel": "Invitation validity",
+      "invitationValidityHelp": "How long a client portal invitation link stays usable. Applies to invitations sent from now on; invitations already sent keep the period they were sent with. Resending an invitation gives it the full period again.",
+      "invitationValidityOption_one": "{{count}} day",
+      "invitationValidityOption_other": "{{count}} days",
+      "invitationValidityUpdated_one": "New invitations will stay valid for {{count}} day",
+      "invitationValidityUpdated_other": "New invitations will stay valid for {{count}} days"
     },
     "branding": {
       "title": "Branding & Appearance",

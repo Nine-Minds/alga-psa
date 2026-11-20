@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Permettez aux clients de consulter et de demander des rendez-vous depuis le portail client.",
       "appointmentsEnabled": "Les rendez-vous sont désormais disponibles dans le portail client",
       "appointmentsDisabled": "Les rendez-vous sont désormais masqués dans le portail client",
-      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client"
+      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client",
+      "invitationValidityLabel": "Validité de l’invitation",
+      "invitationValidityHelp": "Durée pendant laquelle un lien d’invitation au portail client reste utilisable. S’applique aux invitations envoyées à partir de maintenant ; les invitations déjà envoyées conservent la durée avec laquelle elles ont été envoyées. Un renvoi redonne à l’invitation la durée complète.",
+      "invitationValidityOption_one": "{{count}} jour",
+      "invitationValidityOption_other": "{{count}} jours",
+      "invitationValidityUpdated_one": "Les nouvelles invitations resteront valides pendant {{count}} jour",
+      "invitationValidityUpdated_other": "Les nouvelles invitations resteront valides pendant {{count}} jours"
     },
     "branding": {
       "title": "Image de marque et apparence",

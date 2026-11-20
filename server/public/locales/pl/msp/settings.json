@@ -1432,7 +1432,17 @@
       "appointmentsHelp": "Zezwól klientom na wyświetlanie spotkań i wysyłanie próśb o spotkanie w portalu klienta.",
       "appointmentsEnabled": "Spotkania są teraz dostępne w portalu klienta",
       "appointmentsDisabled": "Spotkania są teraz ukryte w portalu klienta",
-      "updateFailed": "Nie udało się zaktualizować funkcji portalu klienta"
+      "updateFailed": "Nie udało się zaktualizować funkcji portalu klienta",
+      "invitationValidityLabel": "Okres ważności zaproszenia",
+      "invitationValidityHelp": "Jak długo link z zaproszeniem do portalu klienta pozostaje użyteczny. Dotyczy zaproszeń wysyłanych od teraz; już wysłane zaproszenia zachowują okres, z którym zostały wysłane. Ponowne wysłanie zaproszenia przywraca mu pełny okres.",
+      "invitationValidityOption_one": "{{count}} dzień",
+      "invitationValidityOption_few": "{{count}} dni",
+      "invitationValidityOption_many": "{{count}} dni",
+      "invitationValidityOption_other": "{{count}} dnia",
+      "invitationValidityUpdated_one": "Nowe zaproszenia będą ważne {{count}} dzień",
+      "invitationValidityUpdated_few": "Nowe zaproszenia będą ważne {{count}} dni",
+      "invitationValidityUpdated_many": "Nowe zaproszenia będą ważne {{count}} dni",
+      "invitationValidityUpdated_other": "Nowe zaproszenia będą ważne {{count}} dnia"
     },
     "branding": {
       "title": "Branding i wygląd",

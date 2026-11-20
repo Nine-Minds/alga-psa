@@ -1432,7 +1432,13 @@
       "appointmentsHelp": "Consenta ai clienti di visualizzare e richiedere appuntamenti dal portale clienti.",
       "appointmentsEnabled": "Gli appuntamenti sono ora disponibili nel portale clienti",
       "appointmentsDisabled": "Gli appuntamenti sono ora nascosti nel portale clienti",
-      "updateFailed": "Impossibile aggiornare le funzionalità del portale clienti"
+      "updateFailed": "Impossibile aggiornare le funzionalità del portale clienti",
+      "invitationValidityLabel": "Validità dell’invito",
+      "invitationValidityHelp": "Per quanto tempo un link di invito al portale clienti rimane utilizzabile. Si applica agli inviti inviati da ora in poi; gli inviti già inviati mantengono il periodo con cui sono stati inviati. Il reinvio restituisce all’invito il periodo completo.",
+      "invitationValidityOption_one": "{{count}} giorno",
+      "invitationValidityOption_other": "{{count}} giorni",
+      "invitationValidityUpdated_one": "I nuovi inviti rimarranno validi per {{count}} giorno",
+      "invitationValidityUpdated_other": "I nuovi inviti rimarranno validi per {{count}} giorni"
     },
     "branding": {
       "title": "Branding e aspetto",
