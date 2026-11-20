@@ -390,6 +390,8 @@ export const runAuthoritativeTemplatePreview = withAuth(
       return { html };
     }
     const { paginateDocumentPreviewHtml } = await import('../lib/invoice-template-ast/previewPagination.server');
-    return { html: (await paginateDocumentPreviewHtml(html, templateAst, { locale: previewLocale })).html };
+    // No caption locale: the author reading the preview is captioned in their own language, whatever
+    // language they asked to see the document itself in.
+    return { html: (await paginateDocumentPreviewHtml(html, templateAst)).html };
   },
 );

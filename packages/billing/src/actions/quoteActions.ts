@@ -2669,7 +2669,6 @@ export const renderQuotePreview = withAuth(async (
       buildTemplateHtmlDocument(preview.templateAst, { html: preview.html, css: preview.css, locale }, { title: 'Quote preview' }),
     ),
     preview.templateAst,
-    { locale },
   );
   return { html: preview.html, css: preview.css, documentHtml: paginated.html };
   });

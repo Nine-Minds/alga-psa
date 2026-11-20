@@ -185,7 +185,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
           buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Invoice preview' }),
         ),
         validation.ast,
-        { locale: localized.locale },
       );
       const presentationLabels = timePresentationLabels(localized.t);
       // Reuse the document AST's display-only walk for canvas labels. Never

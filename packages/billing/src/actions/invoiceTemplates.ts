@@ -499,7 +499,6 @@ export const renderTemplateOnServer = withAuth(async (
             buildTemplateHtmlDocument(localized.ast, { html, css, locale: localized.locale }, { title: 'Invoice preview' }),
           ),
           localized.ast,
-          { locale: localized.locale ?? undefined },
         );
         return { html, css, documentHtml: paginated.html };
 

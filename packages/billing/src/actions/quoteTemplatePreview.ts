@@ -142,7 +142,6 @@ export const runAuthoritativeQuoteTemplatePreview = withAuth(
           buildTemplateHtmlDocument(validation.ast, { ...rendered, locale: localized.locale }, { title: 'Quote preview' }),
         ),
         validation.ast,
-        { locale: localized.locale },
       );
       return {
         success: true,

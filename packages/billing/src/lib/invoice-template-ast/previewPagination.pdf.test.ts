@@ -127,7 +127,7 @@ const previewPages = async (paginatedHtml: string): Promise<string[]> => {
 const paginateBothWays = async (ast: TemplateAst, model: Record<string, unknown>) => {
   const html = await renderHtml(ast, model);
   const [preview, printed] = await Promise.all([
-    paginateDocumentPreviewHtml(html, ast, { locale: 'en' }),
+    paginateDocumentPreviewHtml(html, ast, { captionLocale: 'en' }),
     printedPages(ast, html),
   ]);
   return { preview, printed, sheets: await previewPages(preview.html) };
@@ -324,7 +324,7 @@ describe('the drawn sheets in a pane narrower than the paper', () => {
     addPageBreak(workspace, 'cover-break', 1);
     const ast = exportWorkspaceToTemplateAst(workspace);
     const { pageCount, html } = await paginateDocumentPreviewHtml(await renderHtml(ast, quoteModel), ast, {
-      locale: 'en',
+      captionLocale: 'en',
     });
     expect(pageCount).toBe(2);
 

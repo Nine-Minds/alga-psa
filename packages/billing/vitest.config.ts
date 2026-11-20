@@ -16,6 +16,8 @@ export default defineConfig({
       'src/lib/invoice-template-ast/previewSheet.test.ts',
       // Preview framing (sheet, guide, page caption) must never reach a PDF.
       'src/lib/invoice-template-ast/previewSeparation.test.ts',
+      // And the caption it does draw speaks the reader's language, not the document's.
+      'src/lib/invoice-template-ast/previewPageCaption.test.ts',
       'src/components/invoice-designer/preview/previewSheetScale.test.ts',
       // A page at 100% is wider than the pane it is read in, so it is dragged into view.
       'src/components/invoice-designer/preview/previewPan.test.ts',

@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { BrowserContext } from 'puppeteer';
 
 import { browserPoolService } from '../../services/browserPoolService';
+import { buildPreviewPageCaptions } from './previewPageCaption';
 import { PREVIEW_SHEET_CLASS, PREVIEW_SHEET_GUIDE_CLASS, previewSheetSizePx } from './previewSheet';
 import {
   DOCUMENT_PRINT_GEOMETRY_RULES,
@@ -66,8 +67,12 @@ const resolvePagedPolyfillPath = (): string => {
 
 export interface PaginatePreviewOptions {
   geometry: DocumentPrintGeometry;
-  /** Locale for the screen-only "Page n of N" caption. */
-  locale?: string;
+  /**
+   * Locale for the screen-only "Page n of N" caption. Left unset it resolves to the locale of
+   * whoever has the preview open, which is almost always what a caller wants: the caption is the
+   * frame's own label, not a line of the document, so it does not follow the document's language.
+   */
+  captionLocale?: string;
 }
 
 export interface PaginatedPreview {
@@ -254,7 +259,7 @@ export const paginateTemplatePreviewHtml = async (
         { page: PREVIEW_PAGE_CLASS },
       );
 
-      const captions = await buildPageCaptions(pageCount, options.locale);
+      const captions = await buildPreviewPageCaptions(pageCount, options.captionLocale);
 
       await page.evaluate(
         (input) => {
@@ -316,22 +321,6 @@ export const paginateTemplatePreviewHtml = async (
     }
     await browserPoolService.releaseBrowser(browser);
   }
-};
-
-const buildPageCaptions = async (pageCount: number, locale: string | undefined): Promise<string[]> => {
-  let translate: (page: number, total: number) => string = (page, total) => `Page ${page} of ${total}`;
-  try {
-    const [{ getServerTranslation }, { normalizeLocale }] = await Promise.all([
-      import('@alga-psa/ui/lib/i18n/serverOnly'),
-      import('@alga-psa/core/i18n/config'),
-    ]);
-    const { t } = await getServerTranslation(normalizeLocale(locale) ?? undefined, 'msp/invoicing');
-    translate = (page, total) =>
-      String(t('designer.workspace.preview.pageCaption', { defaultValue: 'Page {{page}} of {{total}}', page, total }));
-  } catch {
-    // An unlocalized caption still tells the author which sheet they are reading.
-  }
-  return Array.from({ length: pageCount }, (_, index) => translate(index + 1, pageCount));
 };
 
 /** The paginated preview for an AST that prints as a `document`. */
