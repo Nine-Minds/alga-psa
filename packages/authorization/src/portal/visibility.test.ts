@@ -324,52 +324,65 @@ describe('asset and project visibility filters', () => {
   });
 });
 
+// The workspace grants are resolved to id lists by the context builder
+// (visibility.server.ts) rather than correlated in SQL: CitusDB refuses to push
+// down a subquery that correlates on the distribution column, so the predicates
+// below must stay plain `IN (...)` restrictions with no subquery at all.
 describe('applyTicketVisibilityFilter: shared-workspace tickets (FR-E7b)', () => {
   const workspaceColumns = {
     ...allColumns,
     sharedWorkspaceTickets: {
       ticketIdColumn: 't.ticket_id',
-      tenantColumn: 't.tenant',
       closedColumn: 't.is_closed',
     },
   };
+  const withIds = (scope: TicketVisibilityScope, ids = ['tk1', 'tk2']) => ({ ...scope, workspaceTicketIds: ids });
 
   it('T155: admits a colleague\u2019s ticket on a workspace the contact uses', () => {
-    const sql = sqlFor({ ...base, visibleContactIds: ['c1', 'c2'] }, workspaceColumns);
+    const sql = sqlFor(withIds({ ...base, visibleContactIds: ['c1', 'c2'] }), workspaceColumns);
 
-    expect(sql).toContain('asset_group_contacts gc');
-    expect(sql).toContain("g.kind = 'shared_workspace'");
-    expect(sql).toContain("gc.role = 'user'");
-    // Scoped to this contact (and their reports), never the whole client.
-    expect(sql).toContain("gc.contact_name_id IN ('c1', 'c2')");
-    expect(sql).toContain("aa.entity_type = 'ticket'");
-    expect(sql).toContain('aa.entity_id = t.ticket_id');
+    expect(sql).toBe(
+      `select * from "tickets" as "t" where "t"."board_id" in ('b1', 'b2') and ("t"."contact_name_id" in ('c1', 'c2')` +
+        ` or ("t"."ticket_id" in ('tk1', 'tk2') and "t"."is_closed" IS NOT TRUE))`
+    );
+    // Citus-safety is the whole point of the id list: no correlated subquery.
+    expect(sql).not.toContain('exists');
+    expect(sql).not.toContain('select 1');
   });
 
   it('T156: restricts the inclusion to OPEN tickets', () => {
-    const sql = sqlFor(base, workspaceColumns);
+    const sql = sqlFor(withIds(base), workspaceColumns);
 
     // Without this predicate a closed ticket about the hot desk stays visible
     // to whoever occupies it next, which FR-E7b does not grant.
-    expect(sql).toContain('t.is_closed IS NOT TRUE AND EXISTS (');
+    expect(sql).toContain(`("t"."ticket_id" in ('tk1', 'tk2') and "t"."is_closed" IS NOT TRUE)`);
   });
 
   it('T156: omitting the option (the write gate) emits no workspace clause', () => {
-    const writeGate = sqlFor({ ...base, watchGrant: true }, allColumns);
-    const readGate = sqlFor({ ...base, watchGrant: true }, workspaceColumns);
+    const writeGate = sqlFor(withIds({ ...base, watchGrant: true }), allColumns);
+    const readGate = sqlFor(withIds({ ...base, watchGrant: true }), workspaceColumns);
 
-    expect(readGate).toContain('asset_group_contacts gc');
-    expect(writeGate).not.toContain('asset_group_contacts');
+    expect(readGate).toContain(`"t"."ticket_id" in ('tk1', 'tk2')`);
+    expect(writeGate).not.toContain('ticket_id');
     expect(writeGate).not.toContain('is_closed');
     // Requester and watcher still pass, which is what a write gate must allow.
     expect(writeGate).toContain(`"t"."contact_name_id" = 'c1'`);
     expect(writeGate).toContain('watch_list');
   });
 
-  it('T157: client ticket scope is unaffected by the workspace inclusion', () => {
-    const clientScoped = sqlFor({ ...base, effectiveTicketScope: 'client' }, workspaceColumns);
+  it('T155: a context that resolved no workspace tickets narrows', () => {
+    const noGrant = sqlFor(base, workspaceColumns);
+    const emptyGrant = sqlFor(withIds(base, []), workspaceColumns);
+    const plain = sqlFor(base, allColumns);
 
-    expect(clientScoped).not.toContain('asset_group_contacts');
+    expect(noGrant).toBe(plain);
+    expect(emptyGrant).toBe(plain);
+  });
+
+  it('T157: client ticket scope is unaffected by the workspace inclusion', () => {
+    const clientScoped = sqlFor(withIds({ ...base, effectiveTicketScope: 'client' }), workspaceColumns);
+
+    expect(clientScoped).not.toContain('ticket_id');
     expect(clientScoped).not.toContain('contact_name_id');
   });
 });
@@ -378,29 +391,35 @@ describe('applyAssetVisibilityFilter: shared-workspace assets (FR-E7)', () => {
   const workspaceCols = {
     contactColumn: 'assets.contact_name_id',
     clientColumn: 'assets.client_id',
-    sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+    sharedWorkspace: { sharedWorkspaceIdColumn: 'assets.asset_id' },
   };
   const sql = (ctx: Parameters<typeof applyAssetVisibilityFilter>[1], cols = workspaceCols) =>
     applyAssetVisibilityFilter(db('assets').select('*'), ctx, cols).toString();
-  const contactScoped = { contactId: 'c1', clientId: 'cl1', effectiveAssetScope: 'contact' as const };
+  const contactScoped = {
+    contactId: 'c1',
+    clientId: 'cl1',
+    effectiveAssetScope: 'contact' as const,
+    workspaceAssetIds: ['a1', 'a2'],
+  };
 
   it('T118: contact scope admits a workspace asset the contact is a user of', () => {
     const generated = sql(contactScoped);
 
-    expect(generated).toContain('asset_group_contacts gc');
-    expect(generated).toContain("g.kind = 'shared_workspace'");
-    expect(generated).toContain("gc.role = 'user'");
-    expect(generated).toContain("gc.contact_name_id IN ('c1')");
-    // Still bounded by the client and still admits their own assignments.
-    expect(generated).toContain(`"assets"."client_id" = 'cl1'`);
-    expect(generated).toContain(`"assets"."contact_name_id" in ('c1')`);
+    expect(generated).toBe(
+      `select * from "assets" where "assets"."client_id" = 'cl1'` +
+        ` and ("assets"."contact_name_id" in ('c1') or "assets"."asset_id" in ('a1', 'a2'))`
+    );
+    expect(generated).not.toContain('exists');
+    expect(generated).not.toContain('select 1');
   });
 
   it('T119: a manager also sees the workspaces their reports use', () => {
-    const generated = sql({ ...contactScoped, visibleContactIds: ['c1', 'c2'] });
+    // The resolver widens the id list with the reports' workspaces; the
+    // predicate widens the assignment side in step.
+    const generated = sql({ ...contactScoped, visibleContactIds: ['c1', 'c2'], workspaceAssetIds: ['a1', 'a3'] });
 
-    expect(generated).toContain("gc.contact_name_id IN ('c1', 'c2')");
     expect(generated).toContain(`"assets"."contact_name_id" in ('c1', 'c2')`);
+    expect(generated).toContain(`"assets"."asset_id" in ('a1', 'a3')`);
   });
 
   it('T120: client asset scope is unchanged by the workspace extension', () => {
@@ -409,10 +428,47 @@ describe('applyAssetVisibilityFilter: shared-workspace assets (FR-E7)', () => {
     expect(generated).toBe(`select * from "assets" where "assets"."client_id" = 'cl1'`);
   });
 
-  it('T118: a call site that has not been taught about workspaces still narrows', () => {
-    const generated = sql(contactScoped, { contactColumn: 'assets.contact_name_id', clientColumn: 'assets.client_id' } as typeof workspaceCols);
+  it('T118: a call site or context without workspace ids still narrows', () => {
+    const narrowed = `select * from "assets" where "assets"."client_id" = 'cl1' and "assets"."contact_name_id" = 'c1'`;
+    // Call site not taught about workspaces.
+    expect(
+      sql(contactScoped, { contactColumn: 'assets.contact_name_id', clientColumn: 'assets.client_id' } as typeof workspaceCols)
+    ).toBe(narrowed);
+    // Context that resolved no workspace membership.
+    expect(sql({ ...contactScoped, workspaceAssetIds: [] })).toBe(narrowed);
+    expect(sql({ contactId: 'c1', clientId: 'cl1', effectiveAssetScope: 'contact' })).toBe(narrowed);
+  });
+});
 
-    expect(generated).not.toContain('asset_group_contacts');
-    expect(generated).toContain(`"assets"."contact_name_id" = 'c1'`);
+describe('applyProjectVisibilityFilter: shared-workspace projects (FR-E7)', () => {
+  // Nothing populates `workspaceProjectIds` today, but the predicate has to be
+  // as Citus-safe as the asset one the day something does \u2014 and asset ids must
+  // never satisfy the project grant.
+  const workspaceCols = {
+    contactColumn: 'projects.contact_name_id',
+    clientColumn: 'projects.client_id',
+    sharedWorkspace: { sharedWorkspaceIdColumn: 'projects.project_id' },
+  };
+  const sql = (ctx: Parameters<typeof applyProjectVisibilityFilter>[1]) =>
+    applyProjectVisibilityFilter(db('projects').select('*'), ctx, workspaceCols).toString();
+  const contactScoped = { contactId: 'c1', clientId: 'cl1', effectiveProjectScope: 'contact' as const };
+
+  it('emits the same plain id restriction, with no subquery', () => {
+    const generated = sql({ ...contactScoped, workspaceProjectIds: ['p1', 'p2'] });
+
+    expect(generated).toBe(
+      `select * from "projects" where "projects"."client_id" = 'cl1'` +
+        ` and ("projects"."contact_name_id" in ('c1') or "projects"."project_id" in ('p1', 'p2'))`
+    );
+    expect(generated).not.toContain('exists');
+  });
+
+  it('an absent or asset-only grant narrows', () => {
+    const narrowed = `select * from "projects" where "projects"."client_id" = 'cl1' and "projects"."contact_name_id" = 'c1'`;
+
+    expect(sql(contactScoped)).toBe(narrowed);
+    expect(sql({ ...contactScoped, workspaceProjectIds: [] })).toBe(narrowed);
+    // Device membership is not project membership.
+    expect(sql({ ...contactScoped, workspaceAssetIds: ['a1'] })).toBe(narrowed);
   });
 });

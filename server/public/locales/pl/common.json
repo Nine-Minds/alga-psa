@@ -1695,6 +1695,7 @@
       "printing": "Przygotowywanie…",
       "print": "Drukuj",
       "reason": "Powód",
+      "sizeMismatch": "Ten układ jest mniejszy niż etykieta, dla której zaprojektowano ten szablon. Wydrukuj w rozmiarze szablonu.",
       "skipFailures": "Pomiń te i wydrukuj resztę",
       "skipped_one": "Pominięto {{count}} rekord, ponieważ nie udało się go otworzyć.",
       "skipped_few": "Pominięto {{count}} rekordy, ponieważ nie udało się ich otworzyć.",
@@ -1707,6 +1708,9 @@
       "useTemplate": "Użyj szablonu {{template}}",
       "copiesPerAsset": "Kopie na zasób",
       "adjacentCopies": "Kopie każdego zasobu są drukowane razem."
+    },
+    "layout": {
+      "template-preferred": "Użyj rozmiaru szablonu"
     }
   },
   "deleteEntity": {

@@ -1685,6 +1685,7 @@
       "printing": "Preparazione…",
       "print": "Stampa",
       "reason": "Motivo",
+      "sizeMismatch": "Questa disposizione è più piccola dell'etichetta per cui è stato progettato questo modello. Stampa invece nella dimensione del modello.",
       "skipFailures": "Salta questi e stampa il resto",
       "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
       "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
@@ -1695,6 +1696,9 @@
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme."
+    },
+    "layout": {
+      "template-preferred": "Usa la dimensione del modello"
     }
   },
   "deleteEntity": {

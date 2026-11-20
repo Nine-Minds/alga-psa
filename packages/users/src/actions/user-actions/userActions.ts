@@ -11,7 +11,7 @@ import {
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, syncContactClientAdminFlag, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -1652,6 +1652,11 @@ export const updateUserRoles = withAuth(async (
         }));
         await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
       }
+
+      // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
+      // in the same transaction as the role write (client users only).
+      await syncContactClientAdminFlag(trx, tenant, userId);
+
       return null;
     });
 

@@ -18,6 +18,7 @@ import {
 } from './labelLayoutPresets';
 import {
   useLabelPrint,
+  LABEL_TEMPLATE_SIZE_MISMATCH,
   type LabelPrintOutcome,
   type LabelTemplateList,
   type LabelSubject,
@@ -26,6 +27,7 @@ import {
 
 const MAX_OVERRIDE_LENGTH = 120;
 const NO_LINKED_ASSET = '__none__';
+const TEMPLATE_PREFERRED_PRESET: LabelLayoutPresetId = 'template-preferred';
 
 /** Expand physical asset labels in stable adjacent groups: A,A,B,B. */
 export function expandAssetLabelCopies<T>(subjects: readonly T[], copiesPerAsset: number): T[] {
@@ -149,7 +151,7 @@ export function LabelPrintDialog({
   const templateOptions = (templates?.templates ?? []).map((tpl) => ({ value: tpl.id, label: tpl.name }));
 
   const run = useCallback(
-    async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
+    async (skipRecordIds: Set<string>, overrideTemplateCode?: string, layoutPreset: LabelLayoutPresetId = preset) => {
       const selectedLabels: LabelSubject[] = isSingleTicket
         ? buildLabelSubjects(ids[0], linkedAssets, linkedAssetId, batch)
         : ids.filter((id) => !skipRecordIds.has(id)).map((recordId) => ({ recordId }));
@@ -157,11 +159,13 @@ export function LabelPrintDialog({
         ? expandAssetLabelCopies(selectedLabels, copiesPerAsset).map((subject) => ({ ...subject }))
         : selectedLabels;
       if (labels.length === 0) return;
+      const layout = LABEL_LAYOUT_PRESETS[layoutPreset].layout;
       const result = await print({
         labelClass,
         labels,
         templateId: overrideTemplateCode ?? (templateId || undefined),
-        layout: LABEL_LAYOUT_PRESETS[preset].layout,
+        // No layout = print at the template's own size.
+        ...(layout ? { layout } : {}),
         ...(isSingleTicket
           ? {
               overrides: {
@@ -201,12 +205,22 @@ export function LabelPrintDialog({
   }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
+  // The chosen layout is smaller than the template's own label size: point at the preset that fits.
+  const sizeMismatch =
+    outcome?.status === 'failed' &&
+    outcome.code === LABEL_TEMPLATE_SIZE_MISMATCH &&
+    preset !== TEMPLATE_PREFERRED_PRESET;
 
   const skipFailures = () => {
     const next = new Set(excluded);
     failures.forEach((f) => next.add(f.recordId));
     setExcluded(next);
     void run(next);
+  };
+
+  const matchTemplateSize = () => {
+    onPresetChange(TEMPLATE_PREFERRED_PRESET);
+    void run(excluded, undefined, TEMPLATE_PREFERRED_PRESET);
   };
 
   return (
@@ -384,6 +398,19 @@ export function LabelPrintDialog({
                       : outcome.message ||
                         t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })}
                   </p>
+                  {sizeMismatch && (
+                    <p id={`${idPrefix}-size-mismatch`}>
+                      {t('labels.dialog.sizeMismatch', {
+                        defaultValue:
+                          'This layout is smaller than the label this template is designed for. Print at the template’s own size instead.',
+                      })}
+                      <Button id={`${idPrefix}-match-template-size`} variant="link" size="sm" onClick={matchTemplateSize}>
+                        {t(`labels.layout.${TEMPLATE_PREFERRED_PRESET}`, {
+                          defaultValue: LABEL_LAYOUT_PRESETS[TEMPLATE_PREFERRED_PRESET].defaultLabel,
+                        })}
+                      </Button>
+                    </p>
+                  )}
                   {failures.length > 0 && (
                     <>
                       <ul className="list-disc pl-5">
