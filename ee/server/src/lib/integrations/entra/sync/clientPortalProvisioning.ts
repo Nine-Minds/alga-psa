@@ -2,6 +2,7 @@ import type { EntraSyncUser } from './types';
 import { randomBytes } from 'node:crypto';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { addUserRoles } from '@alga-psa/db';
 import {
   OAuthAccountLinkConflictError,
   upsertOAuthAccountLink,
@@ -369,11 +370,11 @@ export async function handleEligibleClientPortalProvisioning(
             .returning(['user_id']);
           userId = String(inserted[0].user_id);
 
-          await trx('user_roles').insert({
-            tenant: context.tenantId,
-            user_id: userId,
-            role_id: String(roleRow.role_id),
-          });
+          // The configured default role decides contacts.is_client_admin from
+          // here on; a contact pre-marked as portal admin does not keep the
+          // flag once its portal user exists with a non-admin role.
+          // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+          await addUserRoles(trx, context.tenantId, userId, [String(roleRow.role_id)]);
         }
 
         await upsertOAuthAccountLink({

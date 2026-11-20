@@ -7,7 +7,7 @@
  */
 
 import { Knex } from 'knex';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, BaseService, ServiceContext, ListResult, isUserRoleFloorRejected, removeUserRoles, setUserRoles, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import type { UserRoleFloorChange, UserRoleFloorViolation } from '@alga-psa/db';
 import {
   IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
@@ -424,14 +424,12 @@ export class UserService extends BaseService<IUser> {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant, admission);
       }
 
-      // Assign roles
+      // Assign roles. For a client-portal user the roles decide
+      // contacts.is_client_admin from here on: the flag the contact carried was
+      // only the invitation pre-seed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
       if (data.role_ids && data.role_ids.length > 0) {
-        const userRoles = data.role_ids.map((roleId: string) => ({
-          user_id: createdUser.user_id,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
+        await addUserRoles(trx, context.tenant, createdUser.user_id, data.role_ids);
       }
 
       // Create default user preferences
@@ -864,20 +862,9 @@ export class UserService extends BaseService<IUser> {
       // A live seat technician holds the seat role and no other.
       await assertSeatTechnicianWrite(trx, context.tenant, [userId], { roleIds });
 
-      // Remove existing roles
-      await tenantDb(trx, context.tenant).table('user_roles')
-        .where({ user_id: userId })
-        .del();
-
-      // Add new roles
-      if (roleIds.length > 0) {
-        const userRoles = roleIds.map(roleId => ({
-          user_id: userId,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
-      }
+      // Replace the role set, re-deriving contacts.is_client_admin from it.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log role change activity
       await this.logUserActivity({
@@ -919,11 +906,9 @@ export class UserService extends BaseService<IUser> {
 
       await enforceUserRoleFloor(trx, context.tenant, { kind: 'remove_roles', userId, roleIds });
 
-      // Remove specified roles
-      await tenantDb(trx, context.tenant).table('user_roles')
-        .where({ user_id: userId })
-        .whereIn('role_id', roleIds)
-        .del();
+      // Remove specified roles, re-deriving contacts.is_client_admin from what is left.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await removeUserRoles(trx, context.tenant, userId, roleIds);
 
       // Log role removal activity
       await this.logUserActivity({

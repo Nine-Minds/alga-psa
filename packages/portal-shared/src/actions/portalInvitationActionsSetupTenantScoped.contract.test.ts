@@ -23,7 +23,13 @@ describe('portal invitation setup tenant-scoped query contract', () => {
     expect(section).toContain("scopedDb.table('users')");
     expect(section).toContain("scopedDb.table('contacts')");
     expect(section).toContain("scopedDb.table('roles')");
-    expect(section).toContain("await scopedDb.table('user_roles').insert({");
+    // user_roles is written through @alga-psa/db, which carries the contact's
+    // portal-admin flag sync and keeps its own tenant-scoping contract
+    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
+    expect(section).toContain('await addUserRoles(trx, tenant, newUser.user_id, [role.role_id]);');
+    // The user row is already committed by then, so the role write opens its own
+    // transaction — the flag sync still commits with the role.
+    expect(section).toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
 
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*user_id: existingUser\.user_id,\s*tenant\s*\}\)/);

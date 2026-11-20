@@ -31,7 +31,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createSystemContext, isUserRoleFloorRejected, tenantDb } from '@alga-psa/db';
+import { assertSeatTechnicianWrite, assertUserRoleFloor, createSystemContext, isUserRoleFloorRejected, setUserRoles, tenantDb } from '@alga-psa/db';
 import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError, withApiKeyAuth, withQueryValidation } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
@@ -620,15 +620,9 @@ export class ApiUserController extends ApiBaseController {
             // A live seat technician holds the seat role and no other.
             await assertSeatTechnicianWrite(trx, apiRequest.context!.tenant, [targetUserId], { roleIds: role_ids });
 
-            // First remove all existing roles
-            await db.table('user_roles')
-              .where('user_id', targetUserId)
-              .delete();
-            
-            // Then assign new roles if any
             if (role_ids.length > 0) {
               // Validate that every role_id belongs to the caller's tenant before
-              // inserting. Without this, the raw insert would attach any UUID the
+              // writing. Without this, the raw write would attach any UUID the
               // caller supplies (e.g. a privileged role) and bypass the tenant
               // checks enforced by UserService.assignRoles().
               const validRoleIds: string[] = await db.table('roles')
@@ -638,14 +632,11 @@ export class ApiUserController extends ApiBaseController {
               if (invalidRoleIds.length > 0) {
                 throw new ValidationError(`Invalid role_ids for this tenant: ${invalidRoleIds.join(', ')}`);
               }
-
-              const userRoles = role_ids.map(roleId => ({
-                tenant: apiRequest.context!.tenant,
-                user_id: targetUserId,
-                role_id: roleId
-              }));
-              await db.table('user_roles').insert(userRoles);
             }
+
+            // Replace the role set, re-deriving contacts.is_client_admin from it.
+            // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+            await setUserRoles(trx, apiRequest.context!.tenant, targetUserId, role_ids);
           });
           
           // Get updated roles

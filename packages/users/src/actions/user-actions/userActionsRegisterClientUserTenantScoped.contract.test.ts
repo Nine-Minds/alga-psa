@@ -33,7 +33,10 @@ describe('user actions register client user tenant-scoped query contract', () =>
     expect(section).toContain("contact_kind: 'contacts.contact_kind'");
     expect(section).toContain("contact.contact_kind === 'shared_mailbox'");
     expect(section).toContain("await tenantDb(trx, contact.tenant).table('users')");
-    expect(section).toContain("await tenantDb(trx, contact.tenant).table('user_roles').insert");
+    // user_roles is written through @alga-psa/db, which carries the contact's
+    // portal-admin flag sync and keeps its own tenant-scoping contract
+    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
+    expect(section).toContain('await addUserRoles(trx, contact.tenant, newUser.user_id, [clientRole.role_id]);');
     expect(section).toContain(".table('roles");
     expect(section).toContain('tenant: contact.tenant');
     expect(section).toContain("whereRaw('LOWER(role_name) = ?', ['user'])");

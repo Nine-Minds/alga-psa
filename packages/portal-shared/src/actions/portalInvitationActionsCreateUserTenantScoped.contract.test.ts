@@ -24,7 +24,10 @@ describe('portal invitation create-user tenant-scoped query contract', () => {
     expect(section).toContain("scopedDb.table('users')");
     expect(section).toContain("scopedDb.table('roles')");
     expect(section).toContain("[created] = await scopedDb.table('users')");
-    expect(section).toContain("await scopedDb.table('user_roles').insert({");
+    // user_roles is written through @alga-psa/db, which carries the contact's
+    // portal-admin flag sync and keeps its own tenant-scoping contract
+    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
+    expect(section).toContain('await addUserRoles(trx, tenant, created.user_id, [targetRoleId]);');
 
     expect(section).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant/);

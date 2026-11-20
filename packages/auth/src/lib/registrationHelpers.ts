@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
+import { addUserRoles, tenantDb, withTransaction, withAdminTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import User from '@alga-psa/db/models/user';
@@ -169,11 +169,11 @@ async function registerContactUser(
         throw new Error('User role not found');
       }
 
-      await tenantDb(trx, contact.tenant).table('user_roles').insert({
-        tenant: contact.tenant,
-        user_id: user.user_id,
-        role_id: userRole.role_id
-      });
+      // The 'User' role is what decides contacts.is_client_admin from now on,
+      // even if the contact was pre-marked as a portal admin before the
+      // account existed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, contact.tenant, user.user_id, [userRole.role_id]);
 
       return { success: true };
     });

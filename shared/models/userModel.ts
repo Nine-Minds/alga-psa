@@ -5,7 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { addUserRoles, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { hashPassword } from '../utils/encryption';
@@ -176,13 +176,11 @@ async function _createPortalUserInDBWithTrx(
         .insert(userData)
         .returning('*');
 
-      // Assign the role
-      await db.table('user_roles')
-        .insert({
-          user_id: user.user_id,
-          role_id: roleToAssign.role_id,
-          tenant: input.tenantId
-        });
+      // Assign the role. The role decides contacts.is_client_admin from here
+      // on; the contact's flag was only the invitation pre-seed this function
+      // reads above to pick the role.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, input.tenantId, user.user_id, [roleToAssign.role_id]);
 
       return {
         success: true,

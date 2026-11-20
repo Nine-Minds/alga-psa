@@ -25,6 +25,21 @@ vi.mock('@alga-psa/db', () => ({
   assertUserRoleFloor: (...args: any[]) => assertUserRoleFloorMock(...args),
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   syncContactClientAdminFlag: (...args: any[]) => syncContactClientAdminFlagMock(...args),
+  // Stand-ins for the shared role writes: the same statements against the
+  // caller's transaction followed by the flag sync, so this suite keeps
+  // asserting the writer's own sequence. The helpers themselves are covered by
+  // packages/db/src/lib/userRoleWrites.test.ts.
+  addUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((role_id: string) => ({ tenant, user_id: userId, role_id }));
+    const written = rows.length > 0 ? await trx('user_roles').insert(rows).returning('*') : [];
+    await syncContactClientAdminFlagMock(trx, tenant, userId);
+    return written;
+  },
+  removeUserRoles: async (trx: any, tenant: string, userId: string, roleIds: string[]) => {
+    const deleted = await trx('user_roles').where({ user_id: userId }).whereIn('role_id', roleIds).del();
+    await syncContactClientAdminFlagMock(trx, tenant, userId);
+    return deleted;
+  },
   // The seat-technician guard has its own suite; these tests pin the writer's own behaviour.
   assertSeatTechnicianWrite: async () => undefined,
   isSeatTechnicianGuardError: () => false,
@@ -77,7 +92,7 @@ function buildAssignTrx(user: any, role: any, insertSpy: (...args: any[]) => any
 function buildRemoveTrx(role: any, delSpy: (...args: any[]) => any) {
   return (table: string) => {
     if (table === 'roles') return { where: () => ({ first: async () => role }) };
-    if (table === 'user_roles') return { where: () => ({ del: delSpy }) };
+    if (table === 'user_roles') return { where: () => ({ del: delSpy, whereIn: () => ({ del: delSpy }) }) };
     throw new Error(`Unexpected table: ${table}`);
   };
 }

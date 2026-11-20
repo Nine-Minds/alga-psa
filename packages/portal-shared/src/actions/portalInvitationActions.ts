@@ -1,7 +1,7 @@
 'use server'
 
 import { randomBytes } from 'node:crypto';
-import { createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
+import { addUserRoles, createTenantKnex, tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
@@ -540,7 +540,10 @@ export const createClientPortalUser = withAuth(async (
           }
         }
         if (targetRoleId) {
-          await scopedDb.table('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
+          // The role wins from here on: contacts.is_client_admin was the
+          // invitation pre-seed, and this write re-derives it from the role.
+          // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+          await addUserRoles(trx, tenant, created.user_id, [targetRoleId]);
         }
       }
 
@@ -1488,11 +1491,15 @@ export async function completePortalSetup(
           .first();
         
         if (role) {
-          // Assign the role to the user
-          await scopedDb.table('user_roles').insert({
-            user_id: newUser.user_id,
-            role_id: role.role_id,
-            tenant
+          // Assign the role to the user. The derivation above is unchanged; the
+          // shared write re-derives contacts.is_client_admin from the role that
+          // was actually assigned, so a lookup that picked a different role (or
+          // none) can never leave a flagged contact disagreeing with it. Its own
+          // transaction, because the user row was committed above — the flag and
+          // the role still land together.
+          // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+          await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await addUserRoles(trx, tenant, newUser.user_id, [role.role_id]);
           });
         } else {
           console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);

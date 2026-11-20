@@ -22,8 +22,11 @@ describe('user service role management tenant-scoped query contract', () => {
     expect(section).toContain('this.buildTenantScopedQuery(trx, context)');
     expect(section).toContain('tenantDb(trx, ');
     expect(section).toContain(".table('roles");
-    expect(section).toContain(".table('user_roles");
-    expect(section).toContain("await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles)");
+    // user_roles is written through @alga-psa/db, which carries the contact's
+    // portal-admin flag sync and keeps its own tenant-scoping contract
+    // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
+    expect(section).toContain('await setUserRoles(trx, context.tenant, userId, roleIds);');
+    expect(section).toContain('await removeUserRoles(trx, context.tenant, userId, roleIds);');
 
     expect(section).not.toMatch(/trx\('users'\)\s*\./);
     expect(section).not.toMatch(/trx\('roles'\)\s*\./);

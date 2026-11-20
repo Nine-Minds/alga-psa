@@ -19,6 +19,12 @@ vi.mock('@alga-psa/db', () => ({
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
   // Covered by packages/db clientPortalAdminFlag.test.ts and the wiring suite.
   syncContactClientAdminFlag: async () => undefined,
+  // Stand-in for the shared role write: the same delete against the caller's
+  // transaction, so the guard-before-delete ordering stays observable here. The
+  // helper itself (and the flag sync it carries) is covered by
+  // packages/db/src/lib/userRoleWrites.test.ts.
+  removeUserRoles: async (trx: any, _tenant: string, userId: string, roleIds: string[]) =>
+    await trx('user_roles').where({ user_id: userId }).whereIn('role_id', roleIds).del(),
 }));
 
 vi.mock('@alga-psa/core/server', () => ({
@@ -55,7 +61,7 @@ function buildRemoveTrx(role: any, delSpy: (...args: any[]) => any, targetUser?:
         }),
       };
     }
-    if (table === 'user_roles') return { where: () => ({ del: delSpy }) };
+    if (table === 'user_roles') return { where: () => ({ del: delSpy, whereIn: () => ({ del: delSpy }) }) };
     throw new Error(`Unexpected table: ${table}`);
   };
   trx.isTransaction = true;

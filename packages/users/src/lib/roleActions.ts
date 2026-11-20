@@ -4,7 +4,7 @@
 // This is a temporary duplication to break the auth <-> users cycle
 
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, syncContactClientAdminFlag, tenantDb, withTransaction } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorRejected, removeUserRoles, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
@@ -130,15 +130,12 @@ export const assignRoleToUser = withAuth(async (
                 throw error;
             }
 
-            const [userRole] = await tenantDb(trx, tenant).table<IUserRole>('user_roles')
-                .insert({ user_id: userId, role_id: roleId, tenant })
-                .returning('*');
+            // The shared write re-derives contacts.is_client_admin from the role set
+            // in this transaction (client users only).
+            // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+            const [userRole] = await addUserRoles(trx, tenant, userId, [roleId]);
 
-            // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-            // in the same transaction as the role write (client users only).
-            await syncContactClientAdminFlag(trx, tenant, userId);
-
-            return userRole;
+            return userRole as IUserRole;
         });
     } catch (error) {
         const expected = userRoleActionErrorFrom(error);
@@ -178,11 +175,10 @@ export const removeRoleFromUser = withAuth(async (
                 return userRoleFloorActionError(floor.violation, floor.message);
             }
 
-            await tenantDb(trx, tenant).table('user_roles').where({ user_id: userId, role_id: roleId }).del();
-
-            // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-            // in the same transaction as the role write (client users only).
-            await syncContactClientAdminFlag(trx, tenant, userId);
+            // The shared write re-derives contacts.is_client_admin from what is left
+            // in this transaction (client users only).
+            // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+            await removeUserRoles(trx, tenant, userId, [roleId]);
         });
     } catch (error) {
         const expected = userRoleActionErrorFrom(error);

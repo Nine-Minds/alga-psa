@@ -4,14 +4,13 @@ import User from '@alga-psa/db/models/user';
 import {
   DeletionValidationResult,
   IUser,
-  IUserRole,
   isClientUserType,
   isInteractiveUserType,
   isLicensedUserType,
   isMspPrincipalUserType,
 } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, syncContactClientAdminFlag, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
+import { addUserRoles, assertSeatTechnicianWrite, assertUserRoleFloor, createTenantKnex, isSeatTechnicianGuardError, isUserRoleFloorError, isUserRoleFloorRejected, recordTicketAssigneeChange, setUserRoles, tenantDb, UserRoleFloorError, type UserRoleFloorViolation } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -630,11 +629,10 @@ export const addUser = withAuth(async (
         await assertInternalUserSeatsWithinLimit(trx, tenant, admission);
       }
 
-      await tenantDb(trx, tenant).table('user_roles').insert({
-        user_id: newUser.user_id,
-        role_id: userData.roleId,
-        tenant: tenant || undefined
-      });
+      // For a client-portal user the role decides contacts.is_client_admin from
+      // here on; the flag the contact carried was only the invitation pre-seed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, tenant, newUser.user_id, [userData.roleId]);
 
       // Mark that the user hasn't reset their initial password
       await UserPreferences.upsert(trx, {
@@ -1638,24 +1636,10 @@ export const updateUserRoles = withAuth(async (
       // A live seat technician holds the seat role and no other.
       await assertSeatTechnicianWrite(trx, tenant, [userId], { roleIds });
 
-      // Delete existing roles
-      await tenantDb(trx, tenant).table('user_roles')
-        .where({ user_id: userId })
-        .del();
-
-      // Insert new roles
-      if (roleIds.length > 0) {
-        const userRoles = roleIds.map((roleId):IUserRole => ({
-          user_id: userId,
-          role_id: roleId,
-          tenant: tenant || undefined
-        }));
-        await tenantDb(trx, tenant).table('user_roles').insert(userRoles);
-      }
-
-      // contacts.is_client_admin mirrors the portal 'Admin' role; re-derive it
-      // in the same transaction as the role write (client users only).
-      await syncContactClientAdminFlag(trx, tenant, userId);
+      // Replace the role set. The shared write re-derives
+      // contacts.is_client_admin from it in this transaction (client users only).
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await setUserRoles(trx, tenant, userId, roleIds);
 
       return null;
     });
@@ -1839,12 +1823,11 @@ export const registerClientUser = withAuth(async (
         throw new Error('Client portal User role not found for tenant');
       }
 
-      // Assign the role to the user
-      await tenantDb(trx, contact.tenant).table('user_roles').insert({
-        user_id: newUser.user_id,
-        role_id: clientRole.role_id,
-        tenant: contact.tenant
-      });
+      // Assign the role to the user. The 'User' role is what decides
+      // contacts.is_client_admin from now on, even if the contact was
+      // pre-marked as a portal admin before the account existed.
+      // LEVERAGE: pattern user-roles-write — every user_roles writer goes through @alga-psa/db
+      await addUserRoles(trx, contact.tenant, newUser.user_id, [clientRole.role_id]);
 
       return { success: true };
     });

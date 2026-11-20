@@ -44,6 +44,22 @@ vi.mock('@alga-psa/db', () => ({
     return state.floor;
   },
   isUserRoleFloorRejected: (result: any) => result?.ok === false,
+  // Stand-ins for the shared role writes, which carry the portal admin flag
+  // sync with the delete/insert (alga-2026-0003347). They record the same
+  // writes, so "the guard runs before the write" stays pinned here; the helpers
+  // themselves are covered by packages/db/src/lib/userRoleWrites.test.ts.
+  setUserRoles: async (_trx: unknown, _tenant: string, _userId: string, roleIds: string[]) => {
+    await buildTable('user_roles').del();
+    if (roleIds.length > 0) await buildTable('user_roles').insert();
+  },
+  addUserRoles: async (_trx: unknown, _tenant: string, _userId: string, roleIds: string[]) => {
+    if (roleIds.length > 0) await buildTable('user_roles').insert();
+    return [];
+  },
+  removeUserRoles: async () => {
+    await buildTable('user_roles').del();
+    return 1;
+  },
 }));
 
 function buildTable(table: string) {

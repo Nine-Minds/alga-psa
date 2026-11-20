@@ -6,6 +6,27 @@ const runWithTenantMock = vi.fn();
 const upsertOAuthAccountLinkMock = vi.fn();
 const hashPasswordMock = vi.fn();
 
+/**
+ * Provisioning assigns the configured default role through addUserRoles
+ * (@alga-psa/db), which carries the linked contact's portal-admin flag sync
+ * with the write — so a contact pre-marked as a portal admin before the account
+ * existed does not keep the flag once it is created with the 'User' role
+ * (alga-2026-0003347). The derivation itself is pinned in
+ * packages/db/src/lib/userRoleWrites.test.ts; here the row the helper is asked
+ * to write is recorded, so this suite keeps checking which role is assigned and
+ * that it travels through the sync-carrying write.
+ */
+const userRoleWrites = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown>> }));
+
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  addUserRoles: vi.fn(async (_trx: unknown, tenant: string, userId: string, roleIds: string[]) => {
+    const rows = roleIds.map((roleId) => ({ tenant, user_id: userId, role_id: roleId }));
+    userRoleWrites.rows.push(...rows);
+    return rows;
+  }),
+}));
+
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
   runWithTenant: runWithTenantMock,
@@ -58,7 +79,8 @@ function setupKnexHarness(params: {
 }) {
   const updates: Array<Record<string, unknown>> = [];
   const inserts: Array<Record<string, unknown>> = [];
-  const userRoleInserts: Array<Record<string, unknown>> = [];
+  const userRoleInserts = userRoleWrites.rows;
+  userRoleInserts.length = 0;
 
   const usersWhereMock = vi.fn(() => {
     const selectOrderByMock = vi.fn(async () => params.existingContactUsers ?? []);
@@ -148,17 +170,11 @@ function setupKnexHarness(params: {
         })),
       };
     }
-    if (table === 'user_roles') {
-      return {
-        insert: vi.fn(async (payload: Record<string, unknown>) => {
-          userRoleInserts.push(payload);
-          return [1];
-        }),
-      };
-    }
     throw new Error(`Unexpected table ${table}`);
   });
 
+  // Stands in for knex.transaction(): the role write refuses to run outside one.
+  trxFn.isTransaction = true;
   trxFn.fn = { now: vi.fn(() => 'db-now') };
   trxFn.raw = vi.fn((value: string) => value);
 
