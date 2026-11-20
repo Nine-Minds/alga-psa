@@ -47,7 +47,7 @@ import * as inventory from '@alga-psa/inventory/lib';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
-  addProjectMaterial, deleteProjectMaterial, getServicePrices,
+  addProjectMaterial, deleteProjectMaterial, getProjectMaterialBillingOptions, getServicePrices,
   listAvailableStockUnitsForMaterial, listProjectMaterials,
   searchServiceCatalogForPicker, updateProjectMaterial,
 } from './materialCatalogActions';
@@ -75,9 +75,10 @@ beforeEach(() => {
     { tenant: 'tenant-a', project_material_id: 'material-a', project_id: 'project-a' },
     { tenant: 'tenant-b', project_material_id: 'material-b', project_id: 'project-a' },
   ];
-  state.trx.mockImplementation(() => ({
+  const tables: Record<string, typeof rows> = { project_materials: rows, project_billing_configs: [] };
+  state.trx.mockImplementation((table: string) => ({
     where: (filter: Record<string, unknown>) => ({
-      first: async () => rows.find(row => Object.entries(filter).every(([key, value]) => row[key as keyof typeof row] === value)),
+      first: async () => tables[table].find(row => Object.entries(filter).every(([key, value]) => row[key as keyof typeof row] === value)),
     }),
   }));
 });
@@ -118,6 +119,18 @@ describe('project material action boundaries', () => {
     const materials = [{ project_material_id: 'material-a', ...input }];
     vi.mocked(inventory.listMaterials).mockResolvedValueOnce(materials as any);
     expect(await listProjectMaterials('project-a')).toEqual(materials);
+  });
+
+  it.each(['coarse permission', 'project scope'])('refuses billing option reads without %s before querying billing data', async restriction => {
+    if (restriction === 'coarse permission') state.permissions.delete('project:read');
+    else state.allowedProjects.clear();
+
+    expect(isActionPermissionError(await getProjectMaterialBillingOptions('project-a'))).toBe(true);
+    expect(state.trx).not.toHaveBeenCalled();
+  });
+
+  it('returns empty billing options for an accessible project without billing configuration', async () => {
+    expect(await getProjectMaterialBillingOptions('project-a')).toEqual({ project_currency: null, entries: [] });
   });
 
   it.each(['tenant-a', 'tenant-b'])('passes authenticated scope through all catalog reads for %s', async tenant => {
