@@ -715,7 +715,7 @@
     "prdRefs": [
       "FR-G1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "WorkflowDesigner's root is wrapped in DesignerFocusSurface, driven by the workflow preference, when it renders in designer mode"
   },
   {
@@ -725,7 +725,7 @@
       "FR-G1",
       "NFR-2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The designer-mode header action group has the focus toggle with id workflow-designer-focus-toggle"
   },
   {
@@ -734,7 +734,7 @@
     "prdRefs": [
       "FR-G1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The workflow list and control panel modes show no toggle and never render focused, whatever the saved preference"
   },
   {
@@ -743,7 +743,7 @@
     "prdRefs": [
       "FR-G2"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "The floating palette and properties panels are positioned correctly after entering and after leaving focus mode"
   },
   {
@@ -752,7 +752,7 @@
     "prdRefs": [
       "FR-G3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the graph view fills the available height instead of the fixed 650 px, with 650 px as its minimum"
   },
   {
@@ -761,7 +761,7 @@
     "prdRefs": [
       "FR-G3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "In focus mode the properties panel's maximum height uses the space freed by the hidden chrome"
   },
   {

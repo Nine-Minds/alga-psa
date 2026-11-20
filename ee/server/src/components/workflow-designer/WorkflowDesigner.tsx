@@ -70,6 +70,8 @@ import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { useDesignerFocusPreference } from '@alga-psa/user-composition/hooks/useDesignerFocusPreference';
+import { DesignerFocusSurface, DesignerFocusToggle } from '@alga-psa/ui/components/designer';
 import {
   useWorkflowCanvasViewOptions,
   useWorkflowOnErrorOptions,
@@ -1391,6 +1393,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 }) => {
   const { t } = useTranslation('msp/workflows');
   const describeWorkflowTrigger = useDescribeWorkflowTrigger();
+  // Focus mode belongs to the designer only: the workflow list and the control panel keep the
+  // app chrome whatever this user saved.
+  const focus = useDesignerFocusPreference('workflow');
+  const isDesignerFocusMode = mode === 'editor-designer' && focus.isFocused;
   const [activeTab, setActiveTab] = useState('Workflows');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
@@ -4132,7 +4138,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {/* Floating Properties (right) */}
           <aside
             id="workflow-designer-sidebar-scroll"
-            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${isDesignerStacked ? 'order-3 mx-4 mb-4 flex-none' : ''} ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto relative ${isDesignerFocusMode ? 'max-h-[calc(100vh-130px)]' : 'max-h-[calc(100vh-220px)]'} bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${isDesignerStacked ? 'order-3 mx-4 mb-4 flex-none' : ''} ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatingLayout?.sidebarStyle}
           >
             <div
@@ -5629,7 +5635,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     </div>
                   </div>
                   {stepsViewMode === 'graph' ? (
-                    <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
+                    <div
+                      id="workflow-designer-graph-container"
+                      className={`${isDesignerFocusMode ? 'h-[calc(100vh-17rem)] min-h-[650px]' : 'h-[650px]'} rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden`}
+                    >
                       <WorkflowGraph
                         key={activeWorkflowId ?? 'none'}
                         steps={(activeDefinition?.steps ?? []) as Step[]}
@@ -5883,8 +5892,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [activeDefinition?.id, activeWorkflowId, requestedNewWorkflow]);
 
   return (
-    <div className="h-full min-h-0 flex flex-col">
-      <div ref={designerHeaderRef} className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
+    <DesignerFocusSurface
+      id="workflow-designer-surface"
+      focused={isDesignerFocusMode}
+      onFocusedChange={isEditorDesignerMode ? focus.setFocused : () => undefined}
+      className="h-full min-h-0 flex flex-col"
+    >
+      <div ref={designerHeaderRef} className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4 shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div>
             {isEditorDesignerMode && (
@@ -5993,6 +6007,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {t('designer.toolbar.newWorkflowShort', { defaultValue: 'New workflow' })}
                 </Button>
               )}
+              <DesignerFocusToggle id="workflow-designer-focus-toggle" />
               {canManage && <WorkflowSaveStatus state={saveState} />}
               {canManage && (
                 <Button
@@ -6176,7 +6191,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           workflowListContent
         )}
       </div>
-    </div>
+    </DesignerFocusSurface>
   );
 };
 

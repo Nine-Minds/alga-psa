@@ -1259,7 +1259,7 @@
       "F077",
       "F078"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in designer mode the header has #workflow-designer-focus-toggle and clicking it focuses the surface and saves designer_focus_mode_workflow as true"
   },
   {
@@ -1268,7 +1268,7 @@
     "featureIds": [
       "F079"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in control panel mode with the preference saved as true, there is no toggle and no focused surface"
   },
   {
@@ -1277,7 +1277,7 @@
     "featureIds": [
       "F081"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Component: in focus mode the graph container has no fixed 650 px height class and keeps a 650 px minimum"
   },
   {
