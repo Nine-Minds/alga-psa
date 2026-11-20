@@ -189,6 +189,22 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     expect(await getAuthorizedDocumentById(trx, tenant, user, document)).toMatchObject({ is_client_visible: true, comment_attachment_is_public: false });
     expect((await table('documents').where({ document_id: document }).first()).is_client_visible).toBe(true);
   });
+  it('withdraws a deleted ticket comment attachment from both registries without withdrawing another draft', async () => {
+    const attached = await upload();
+    const separateDraft = await upload();
+    await table('comment_attachment_drafts').insert([attached, separateDraft].map(file => ({
+      tenant, entity_type: 'ticket', entity_id: ticket, document_id: file.document, file_id: file.file,
+      created_by: actor, expires_at: new Date(Date.now() + 86_400_000),
+    })));
+    await attach(attached.file);
+
+    await Comment.delete(trx, tenant, comment);
+
+    for (const registry of ['ticket_comment_attachments', 'comment_attachment_drafts']) {
+      expect(await table(registry).where({ document_id: attached.document }).first('state')).toEqual({ state: 'removed' });
+      expect(await table(registry).where({ document_id: separateDraft.document }).first('state')).toEqual({ state: 'draft' });
+    }
+  });
   it('claims a public PDF to the exact comment; ticket Documents association remains', async () => {
     const {document,file} = await upload();
     expect(await canReadCommentAttachment(trx,tenant,clientUser,document)).toBe(false);

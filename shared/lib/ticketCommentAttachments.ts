@@ -288,6 +288,11 @@ export async function filterReadableCommentAttachments<T extends { document_id: 
 
 export async function withdrawCommentAttachments(conn: Connection, tenant: string, commentId: string) {
   if (!conn.isTransaction) throw new Error('Attachment withdrawal requires the comment transaction');
-  await tenantDb(conn, tenant).table('ticket_comment_attachments').where({ comment_id: commentId }).update({ state: 'removed' });
-  await tenantDb(conn, tenant).table('comment_attachment_drafts').where({ entity_type: 'ticket', comment_id: commentId }).update({ state: 'removed' });
+  const db = tenantDb(conn, tenant);
+  const withdrawn = await db.table('ticket_comment_attachments').where({ comment_id: commentId })
+    .update({ state: 'removed' }).returning('document_id');
+  if (!withdrawn.length) return;
+
+  await db.table('comment_attachment_drafts').where({ entity_type: 'ticket' })
+    .whereIn('document_id', withdrawn.map(row => row.document_id)).update({ state: 'removed' });
 }
