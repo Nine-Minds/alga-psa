@@ -232,8 +232,8 @@ export const connectStripeAction = withAuth(async (
     const { knex } = await createTenantKnex();
     const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
       .where({ provider_type: 'stripe' }).first();
-    const priorSecret = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
-    const isReplacement = Boolean(existingConfig?.is_enabled && priorSecret);
+    const activeSecret = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+    const isReplacement = Boolean(existingConfig?.is_enabled && activeSecret);
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
@@ -373,9 +373,6 @@ export const connectStripeAction = withAuth(async (
       return { success: false, error: 'Stripe webhook configuration failed. The connection was not saved; verify webhook permissions and retry.' };
     }
 
-    // Commit credentials only after key validation and webhook setup succeeded.
-    await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
-
     const configData = {
       is_enabled: true,
       is_default: true,
@@ -393,19 +390,35 @@ export const connectStripeAction = withAuth(async (
       updated_at: knex.fn.now(),
     };
 
-    try {
-      if (existingConfig) {
-        await tenantDb(knex, tenant).table('payment_provider_configs')
-          .where({ config_id: existingConfig.config_id }).update(configData);
-      } else {
-        await tenantDb(knex, tenant).table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
+    // Serialize vault key replacement with the provider-row commit. The
+    // transaction-scoped advisory lock ensures a failed request cannot restore
+    // a stale key over a later successful rotation on another app instance.
+    await knex.transaction(async (transaction: any) => {
+      await transaction.raw('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [`stripe-connect:${tenant}`]);
+      const priorSecret = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+      try {
+        await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
+        if (existingConfig) {
+          await tenantDb(transaction, tenant).table('payment_provider_configs')
+            .where({ config_id: existingConfig.config_id }).update(configData);
+        } else {
+          await tenantDb(transaction, tenant).table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
+        }
+      } catch (commitError) {
+        // Restore only while holding the tenant lock, and only if this request's
+        // credential is still the current vault value.
+        try {
+          const currentSecret = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+          if (currentSecret === credentials.secretKey) {
+            if (priorSecret) await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', priorSecret);
+            else await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_secret_key');
+          }
+        } catch (restoreError) {
+          logger.error('[PaymentActions] Failed to restore Stripe key after provider configuration failure', { tenantId: tenant, restoreError });
+        }
+        throw commitError;
       }
-    } catch (dbError) {
-      // Restore the active vault credential if the database commit fails.
-      if (priorSecret) await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', priorSecret);
-      else await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_secret_key');
-      throw dbError;
-    }
+    });
 
     logger.info('[PaymentActions] Stripe connected successfully', {
       tenantId: tenant,

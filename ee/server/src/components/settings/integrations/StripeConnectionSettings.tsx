@@ -196,7 +196,7 @@ export const StripeConnectionSettings: React.FC = () => {
         await loadConfig();
       } else {
         console.error('Stripe webhook retry failed:', result.error);
-        toast.error(t('integrations.stripe.errors.configureWebhook', { defaultValue: 'Failed to configure webhook' }));
+        toast.error(result.error || t('integrations.stripe.errors.configureWebhook', { defaultValue: 'Failed to configure webhook' }));
       }
     } catch (error) {
       console.error('Stripe webhook retry error:', error);

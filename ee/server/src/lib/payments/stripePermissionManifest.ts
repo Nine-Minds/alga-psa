@@ -26,8 +26,8 @@ export const STRIPE_PERMISSION_MANIFEST: StripePermissionDefinition[] = [
   { id: 'payment_intent_read', access: 'read', operations: ['paymentIntents.retrieve', 'paymentIntents.search', 'paymentIntents.list'], capabilities: ['core-payments', 'saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentIntents.list' } },
   { id: 'payment_intent_write', access: 'write', writeImpliesRead: true, operations: ['paymentIntents.create'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'payment_method_read', access: 'read', operations: ['customers.listPaymentMethods', 'paymentMethods.retrieve', 'paymentMethods.list'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentMethods.list' } },
-  { id: 'payment_method_write', access: 'write', writeImpliesRead: true, operations: ['paymentMethods.detach'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
-  { id: 'setup_intent_read', access: 'read', operations: ['setupIntents.list'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'setupIntents.list' } },
+  { id: 'payment_method_write', access: 'write', writeImpliesRead: true, operations: ['paymentMethods.detach', 'paymentMethods.update'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
+  { id: 'setup_intent_read', access: 'read', operations: ['setupIntents.list', 'setupIntents.retrieve'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'setupIntents.list' } },
   { id: 'charge_read', access: 'read', operations: ['charges.retrieve', 'charges.list'], capabilities: ['core-payments'], probe: { kind: 'list', operation: 'charges.list' } },
 ];
 
@@ -66,22 +66,28 @@ export function describeStripePermissionFailure(permissionId: string): string {
 
 /** Translate deferred SDK denials at the operation boundary that raised them. */
 export function withStripePermissionErrors<T extends object>(client: T): T {
-  const wrap = (target: object, path: string[]): object => new Proxy(target, {
+  const wrap = (target: object, path: string[], permissionOperation?: string): object => new Proxy(target, {
     get(current, property) {
       const value = Reflect.get(current, property, current);
       if (typeof value === 'function') {
-        const operation = [...path, String(property)].join('.');
+        const operation = permissionOperation ?? [...path, String(property)].join('.');
         return function (this: unknown, ...args: unknown[]) {
           let result: unknown;
           try { result = Reflect.apply(value, current, args); }
           catch (error) { throw translate(error, operation); }
+          // Stripe returns an augmented Promise for list methods. Replacing it
+          // with `.catch()` drops autoPagingToArray/autoPagingEach. Keep a
+          // proxy over the original object and translate errors from paging.
+          if (result && typeof result === 'object' && typeof (result as any).autoPagingToArray === 'function') {
+            return wrap(result, [...path, String(property)], operation);
+          }
           if (result && typeof (result as Promise<unknown>).then === 'function') {
             return (result as Promise<unknown>).catch((error) => { throw translate(error, operation); });
           }
           return result;
         };
       }
-      if (value && typeof value === 'object') return wrap(value, [...path, String(property)]);
+      if (value && typeof value === 'object') return wrap(value, [...path, String(property)], permissionOperation);
       return value;
     },
   });
@@ -103,9 +109,9 @@ export function listStripePermissionsByCapability() {
 export function findUncoveredStripeOperations(source: string): string[] {
   const covered = new Set(STRIPE_PERMISSION_MANIFEST.flatMap(({ operations }) => operations));
   const found = new Set<string>();
-  const call = /stripe\.([A-Za-z]+(?:\.[A-Za-z]+)?)\.([A-Za-z]+)\s*\(/g;
+  const call = /(?:stripe|\(await\s+this\.getStripe\(\)\))\.((?:[A-Za-z]+\.){1,2}[A-Za-z]+)\s*\(/g;
   for (const match of source.matchAll(call)) {
-    const operation = `${match[1]}.${match[2]}`;
+    const operation = match[1];
     // Account retrieval is deliberately best-effort: Stripe's permission
     // reference does not assign GET /v1/account a restricted-key permission.
     if (operation !== 'accounts.retrieve' && !covered.has(operation)) found.add(operation);

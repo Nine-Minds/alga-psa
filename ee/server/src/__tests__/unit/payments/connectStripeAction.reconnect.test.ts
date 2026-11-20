@@ -11,8 +11,24 @@ const stripeMocks = vi.hoisted(() => ({
   webhookRetrieve: vi.fn(), customerList: vi.fn(), setupIntentList: vi.fn(), paymentIntentList: vi.fn(),
   checkoutSessionList: vi.fn(), paymentMethodList: vi.fn(), chargeList: vi.fn(),
 }));
-const secretMocks = vi.hoisted(() => ({ set: vi.fn(), get: vi.fn() }));
-const dbMocks = vi.hoisted(() => ({ failUpdate: false }));
+const vaultValues = vi.hoisted(() => new Map<string, string>());
+const secretMocks = vi.hoisted(() => ({ set: vi.fn(), get: vi.fn(), delete: vi.fn() }));
+const dbMocks = vi.hoisted(() => {
+  let tail = Promise.resolve();
+  return {
+    failUpdate: false,
+    updateHandler: null as null | ((patch: Record<string, any>) => Promise<void>),
+    resetLock: () => { tail = Promise.resolve(); },
+    transaction: async (callback: (transaction: any) => Promise<unknown>) => {
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      const previous = tail;
+      tail = previous.then(() => held);
+      await previous;
+      try { return await callback(fakeKnex); } finally { release(); }
+    },
+  };
+});
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
@@ -24,7 +40,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
     setTenantSecret: secretMocks.set,
     getTenantSecret: secretMocks.get,
-    deleteTenantSecret: vi.fn(),
+    deleteTenantSecret: secretMocks.delete,
   })),
 }));
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
@@ -55,6 +71,7 @@ vi.mock('stripe', () => ({
 const fakeKnex: any = {
   fn: { now: () => 'NOW' },
   raw: (sql: string) => ({ __raw: sql }),
+  transaction: (callback: (transaction: any) => Promise<unknown>) => dbMocks.transaction(callback),
 };
 
 vi.mock('@/lib/db', () => ({
@@ -66,6 +83,7 @@ vi.mock('@alga-psa/db', () => ({
       where: () => ({
         first: async () => (store.row ? { ...store.row } : undefined),
         update: async (patch: Record<string, any>) => {
+          if (dbMocks.updateHandler) await dbMocks.updateHandler(patch);
           if (dbMocks.failUpdate) throw new Error('database unavailable');
           const next: Record<string, any> = { ...store.row, ...patch };
           // disconnect strips webhook_endpoint_id with a raw jsonb expression
@@ -104,7 +122,14 @@ const customised = {
 describe('connectStripeAction settings preservation', () => {
   beforeEach(() => {
     secretMocks.set.mockReset();
-    secretMocks.get.mockReset().mockResolvedValue('sk_test_stored');
+    secretMocks.get.mockReset();
+    secretMocks.delete.mockReset();
+    vaultValues.clear();
+    vaultValues.set('tenant-1|stripe_payment_secret_key', 'sk_test_stored');
+    vaultValues.set('tenant-1|stripe_payment_webhook_secret', 'whsec_test_stored');
+    secretMocks.set.mockImplementation(async (tenant: string, key: string, value: string) => { vaultValues.set(`${tenant}|${key}`, value); });
+    secretMocks.get.mockImplementation(async (tenant: string, key: string) => vaultValues.get(`${tenant}|${key}`) ?? null);
+    secretMocks.delete.mockImplementation(async (tenant: string, key: string) => { vaultValues.delete(`${tenant}|${key}`); });
     stripeMocks.accountRetrieve.mockReset().mockResolvedValue({ id: 'acct_1' });
     stripeMocks.webhookList.mockReset().mockResolvedValue({ data: [] });
     stripeMocks.webhookCreate.mockReset().mockResolvedValue({ id: 'we_1', secret: 'whsec_1' });
@@ -118,6 +143,8 @@ describe('connectStripeAction settings preservation', () => {
     stripeMocks.paymentMethodList.mockReset().mockResolvedValue({ data: [] });
     stripeMocks.chargeList.mockReset().mockResolvedValue({ data: [] });
     dbMocks.failUpdate = false;
+    dbMocks.updateHandler = null;
+    dbMocks.resetLock();
     store.row = {
       config_id: 'cfg-1',
       tenant: 'tenant-1',
@@ -236,6 +263,33 @@ describe('connectStripeAction settings preservation', () => {
     expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key', 'rk_test_replacement');
     expect(secretMocks.set).toHaveBeenCalledWith('tenant-1', 'stripe_payment_secret_key', 'sk_test_stored');
     expect(store.row).toEqual(priorRow);
+  });
+
+  it('serializes overlapping replacements so a failed request cannot roll back a later success', async () => {
+    let updateStarted!: () => void;
+    let releaseFailedUpdate!: () => void;
+    const started = new Promise<void>((resolve) => { updateStarted = resolve; });
+    const hold = new Promise<void>((resolve) => { releaseFailedUpdate = resolve; });
+    let firstUpdate = true;
+    dbMocks.updateHandler = async () => {
+      if (!firstUpdate) return;
+      firstUpdate = false;
+      updateStarted();
+      await hold;
+      throw new Error('first database update failed');
+    };
+
+    const failedRotation = (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_rotationa' });
+    await started;
+    const successfulRotation = (connectStripeAction as any)({ ...credentials, secretKey: 'rk_test_rotationb' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('rk_test_rotationa');
+    releaseFailedUpdate();
+
+    const [failed, succeeded] = await Promise.all([failedRotation, successfulRotation]);
+    expect(failed.success).toBe(false);
+    expect(succeeded.success).toBe(true);
+    expect(vaultValues.get('tenant-1|stripe_payment_secret_key')).toBe('rk_test_rotationb');
   });
 
   it('preserves standard-key partial success when a non-permission webhook setup error occurs initially', async () => {

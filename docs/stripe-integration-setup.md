@@ -73,11 +73,11 @@ The permission names below were checked against Stripe's API permissions referen
 | Saved cards and auto-pay | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve`, `paymentMethods.list` |
 | Saved cards and auto-pay | `payment_intent_read` | Read | `paymentIntents.list`, `paymentIntents.search` |
 | Saved cards and auto-pay | `payment_intent_write` | Write | `paymentIntents.create` (checked on first use) |
-| Saved cards and auto-pay | `payment_method_write` | Write | `paymentMethods.detach` (checked on first use) |
+| Saved cards and auto-pay | `payment_method_write` | Write | `paymentMethods.detach`, `paymentMethods.update` (checked on first use) |
 | Customer import | `customer_read` | Read | `customers.retrieve`, `customers.list` |
 | Customer import | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve`, `paymentMethods.list` |
-| Saved cards and auto-pay | `setup_intent_read` | Read | `setupIntents.list` |
-| Customer import | `setup_intent_read` | Read | `setupIntents.list` |
+| Saved cards and auto-pay | `setup_intent_read` | Read | `setupIntents.list`, `setupIntents.retrieve` |
+| Customer import | `setup_intent_read` | Read | `setupIntents.list`, `setupIntents.retrieve` |
 | Customer import | `payment_intent_read` | Read | `paymentIntents.list` |
 
 To replace a connected key without a webhook gap, open **Settings → Integrations → Stripe Payments → Update API keys**, enter the replacement secret and publishable keys, then connect. When both keys belong to the same Stripe account, reconnect reuses the existing webhook endpoint, signing secret, and payment settings. A failed replacement leaves the active connection in place.

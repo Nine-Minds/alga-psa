@@ -63,6 +63,7 @@ describe('Stripe restricted key manifest', () => {
       expect(findUncoveredStripeOperations(readFileSync(file, 'utf8'))).toEqual([]);
     }
     expect(findUncoveredStripeOperations('await stripe.refunds.create({});')).toEqual(['refunds.create']);
+    expect(findUncoveredStripeOperations('await (await this.getStripe()).coupons.list({ limit: 1 });')).toEqual(['coupons.list']);
   });
 
   it('keeps the repository setup guide permission table in parity with the manifest', () => {

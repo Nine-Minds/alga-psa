@@ -255,6 +255,8 @@ export const PaymentSettings: React.FC = () => {
           toast.error(t('payment.stripe.connectForm.optionalPermissionsMissing', { defaultValue: 'Connected with unavailable capabilities: {{warnings}}', warnings }));
         } else if (result.data.webhookConfigured) {
           toast.success(t('payment.messages.connectSuccess'));
+        } else {
+          toast.success(t('payment.messages.connectPartialSuccess'));
         }
         setShowConnectForm(false);
         setSecretKey('');
