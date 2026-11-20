@@ -466,6 +466,14 @@ export function withQueryValidation(schema: ZodSchema) {
 }
 
 /**
+ * `withAuth` throws AuthenticationError when no session/API-key identity resolves.
+ * Matched by name, not instanceof: packages and tests hold separate copies of the class.
+ */
+function isAuthenticationError(error: any): boolean {
+  return error?.name === 'AuthenticationError';
+}
+
+/**
  * Error handling middleware
  */
 export function handleApiError(rawError: any): NextResponse {
@@ -603,6 +611,16 @@ export function handleApiError(rawError: any): NextResponse {
         details: undefined
       }
     }, { status: 500 });
+  }
+
+  // withAuth could not resolve a caller: that is a 401, not a server fault.
+  if (isAuthenticationError(error)) {
+    return NextResponse.json({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: error.message || 'Unauthorized'
+      }
+    }, { status: 401 });
   }
 
   // Default server error

@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { AuthenticationError, getApiKeyUserOverride } from '@alga-psa/auth';
+import { UnauthorizedError } from '@/lib/api/middleware/apiErrors';
 
 const inboundActions = vi.hoisted(() => ({
   listInboundWebhooks: vi.fn(),
@@ -17,62 +20,8 @@ const inboundActions = vi.hoisted(() => ({
 
 vi.mock('@/lib/actions/inboundWebhookActions', () => inboundActions);
 
-vi.mock('server/src/lib/api/middleware/apiMiddleware', async () => {
-  const { NextResponse } = await import('next/server');
-
-  class NotFoundError extends Error {
-    statusCode = 404;
-    code = 'NOT_FOUND';
-  }
-
-  const isServerActionErrorResult = (value: unknown) => {
-    const candidate = value as Record<string, unknown>;
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      (typeof candidate.permissionError === 'string' || typeof candidate.actionError === 'string')
-    );
-  };
-
-  const createServerActionErrorResponse = (error: { permissionError?: string; actionError?: string }) => {
-    if (error.permissionError) {
-      return NextResponse.json({
-        error: {
-          code: 'FORBIDDEN',
-          message: error.permissionError,
-        },
-      }, { status: 403 });
-    }
-
-    const message = error.actionError ?? 'Bad request';
-    const status = message.toLowerCase().includes('not found')
-      ? 404
-      : message.toLowerCase().includes('already exists')
-        ? 409
-        : 400;
-
-    return NextResponse.json({
-      error: {
-        code: status === 404 ? 'NOT_FOUND' : status === 409 ? 'CONFLICT' : 'BAD_REQUEST',
-        message,
-      },
-    }, { status });
-  };
-
-  const handleApiError = (error: any) => NextResponse.json({
-    error: {
-      code: error.code ?? 'INTERNAL_ERROR',
-      message: error.message ?? 'An unexpected error occurred',
-    },
-  }, { status: error.statusCode ?? 500 });
-
-  return {
-    NotFoundError,
-    createServerActionErrorResponse,
-    handleApiError,
-    isServerActionErrorResult,
-  };
-});
+const authenticateApiKeyRequest = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({ authenticateApiKeyRequest }));
 
 const webhookFixture = {
   inboundWebhookId: 'webhook-1',
@@ -122,6 +71,8 @@ const routeContext = (params: Record<string, string>) => ({
   params: Promise.resolve(params),
 });
 
+const webhooksUrl = 'http://localhost/api/v1/inbound-webhooks';
+
 describe('inbound webhook REST API routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,12 +82,54 @@ describe('inbound webhook REST API routes', () => {
     inboundActions.listInboundWebhooks.mockResolvedValue([webhookFixture]);
 
     const route = await import('@/app/api/v1/inbound-webhooks/route');
-    const response = await route.GET();
+    const response = await route.GET(new NextRequest(webhooksUrl));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: [webhookFixture] });
     expect(inboundActions.listInboundWebhooks).toHaveBeenCalledTimes(1);
     expect(inboundActions.listInboundWebhooks).toHaveBeenCalledWith();
+  });
+
+  it('lists webhooks for an API key without a session', async () => {
+    const keyUser = { user_id: 'key-owner', tenant: webhookFixture.tenant };
+    authenticateApiKeyRequest.mockResolvedValueOnce({ context: { user: keyUser } });
+    inboundActions.listInboundWebhooks.mockImplementationOnce(async () => {
+      if (getApiKeyUserOverride()?.user_id !== keyUser.user_id) {
+        throw new AuthenticationError();
+      }
+      return [webhookFixture];
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/route');
+    const response = await route.GET(new NextRequest(webhooksUrl, {
+      headers: { 'x-api-key': 'test-key' },
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: [webhookFixture] });
+  });
+
+  it('rejects an invalid API key before invoking the server action', async () => {
+    authenticateApiKeyRequest.mockRejectedValueOnce(new UnauthorizedError('Invalid API key'));
+
+    const route = await import('@/app/api/v1/inbound-webhooks/route');
+    const response = await route.GET(new NextRequest(webhooksUrl, {
+      headers: { 'x-api-key': 'invalid-key' },
+    }));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'UNAUTHORIZED' } });
+    expect(inboundActions.listInboundWebhooks).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when the server action cannot resolve a caller', async () => {
+    inboundActions.listInboundWebhooks.mockRejectedValueOnce(new AuthenticationError());
+
+    const route = await import('@/app/api/v1/inbound-webhooks/route');
+    const response = await route.GET(new NextRequest(webhooksUrl));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'UNAUTHORIZED' } });
   });
 
   it('creates an inbound webhook and returns its one-time secret', async () => {
@@ -435,7 +428,7 @@ describe('inbound webhook REST API routes', () => {
     inboundActions.listInboundWebhookActions.mockResolvedValue(actionDefinitions);
 
     const route = await import('@/app/api/v1/inbound-webhooks/actions/route');
-    const response = await route.GET();
+    const response = await route.GET(new NextRequest(`${webhooksUrl}/actions`));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: actionDefinitions });
@@ -462,19 +455,19 @@ describe('inbound webhook REST API routes', () => {
     inboundActions.listInboundWebhookActions.mockResolvedValue(actionDefinitions);
 
     const route = await import('@/app/api/v1/inbound-webhooks/actions/route');
-    const response = await route.GET();
+    const response = await route.GET(new NextRequest(`${webhooksUrl}/actions`));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: actionDefinitions });
   });
 
-  it('returns server-action authorization failures without adding a parallel auth path', async () => {
+  it('returns 403 when the server action denies permission', async () => {
     inboundActions.listInboundWebhooks.mockResolvedValue({
       permissionError: 'Permission denied: inbound_webhook:read permission required',
     });
 
     const route = await import('@/app/api/v1/inbound-webhooks/route');
-    const response = await route.GET();
+    const response = await route.GET(new NextRequest(webhooksUrl));
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
