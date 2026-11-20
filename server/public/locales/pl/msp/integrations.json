@@ -4394,15 +4394,18 @@
         "disconnect": "Odłącz",
         "connect": "Połącz ze Stripe",
         "connecting": "Łączenie...",
-        "cancel": "Anuluj"
+        "cancel": "Anuluj",
+        "updateApiKeys": "Zaktualizuj klucze API"
       },
       "form": {
         "secretKeyLabel": "Klucz tajny",
-        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (lub klucze testowe)",
         "publishableKeyLabel": "Klucz publiczny",
         "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
         "findKeyPrefix": "Znajdziesz go w",
-        "dashboardLink": "Pulpit Stripe → Klucze API"
+        "dashboardLink": "Pulpit Stripe → Klucze API",
+        "permissionHelp": "Klucz z ograniczeniami? Wymagane uprawnienia",
+        "checkedOnFirstUse": "sprawdzane przy pierwszym użyciu"
       },
       "webhook": {
         "heading": "Konfiguracja webhooków",
@@ -4425,7 +4428,8 @@
         "connectedWebhookFailed": "Połączono ze Stripe! Uwaga: automatyczna konfiguracja webhooka nie powiodła się — może być konieczne ręczne skonfigurowanie webhooków w pulpicie Stripe.",
         "disconnected": "Odłączono Stripe",
         "connectionSuccess": "Połączenie powiodło się!",
-        "webhookConfigured": "Pomyślnie skonfigurowano webhook!"
+        "webhookConfigured": "Pomyślnie skonfigurowano webhook!",
+        "optionalPermissionsMissing": "Połączono. Dodaj te uprawnienia Stripe, aby włączyć więcej funkcji: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Nie udało się wczytać konfiguracji Stripe",
@@ -4434,7 +4438,7 @@
         "testConnection": "Test połączenia nie powiódł się",
         "configureWebhook": "Nie udało się skonfigurować webhooka",
         "bothKeysRequired": "Wprowadź zarówno klucz tajny, jak i klucz publiczny",
-        "secretKeyFormat": "Klucz tajny powinien zaczynać się od sk_",
+        "secretKeyFormat": "Klucz musi być prawidłowym kluczem sk_live_, sk_test_, rk_live_ lub rk_test_.",
         "publishableKeyFormat": "Klucz publiczny powinien zaczynać się od pk_"
       }
     },

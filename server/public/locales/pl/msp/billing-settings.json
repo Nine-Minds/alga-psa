@@ -1597,7 +1597,7 @@
     "messages": {
       "loadConfigFailed": "Nie udało się załadować konfiguracji płatności",
       "keysRequired": "Wprowadź zarówno klucz tajny, jak i klucz publikowalny",
-      "invalidSecretKey": "Klucz tajny powinien zaczynać się od sk_",
+      "invalidSecretKey": "Klucz musi być prawidłowym kluczem sk_live_, sk_test_, rk_live_ lub rk_test_.",
       "invalidPublishableKey": "Klucz publikowalny powinien zaczynać się od pk_",
       "connectSuccess": "Stripe połączony, a webhooki zostały skonfigurowane automatycznie!",
       "connectPartialSuccess": "Stripe połączony! Uwaga: automatyczna konfiguracja webhooków nie powiodła się — być może trzeba skonfigurować je ręcznie w panelu Stripe.",
@@ -1678,14 +1678,17 @@
       },
       "connectForm": {
         "secretKeyLabel": "Klucz tajny",
-        "secretKeyPlaceholder": "sk_live_... lub sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (lub klucze testowe)",
         "secretKeyHelpPrefix": "Znajdziesz go w",
         "secretKeyHelpLink": "Pulpit Stripe → Klucze API",
         "publishableKeyLabel": "Klucz publikowalny",
         "publishableKeyPlaceholder": "pk_live_... lub pk_test_...",
         "connecting": "Łączenie...",
         "connect": "Połącz Stripe",
-        "cancel": "Anuluj"
+        "cancel": "Anuluj",
+        "permissionHelp": "Klucz z ograniczeniami? Wymagane uprawnienia",
+        "checkedOnFirstUse": "sprawdzane przy pierwszym użyciu",
+        "optionalPermissionsMissing": "Połączono. Dodaj te uprawnienia Stripe, aby włączyć więcej funkcji: {{warnings}}"
       },
       "empty": {
         "description": "Połącz konto Stripe, aby akceptować płatności online za faktury",

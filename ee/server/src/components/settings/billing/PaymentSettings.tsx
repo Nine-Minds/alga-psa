@@ -25,6 +25,8 @@ import {
   Settings,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { isValidStripeSecretKey } from '../../../lib/payments/stripePermissionManifest';
+import { StripePermissionHelp } from '../StripePermissionHelp';
 import {
   getPaymentConfigAction,
   connectStripeAction,
@@ -230,7 +232,7 @@ export const PaymentSettings: React.FC = () => {
       return;
     }
 
-    if (!secretKey.startsWith('sk_')) {
+    if (!isValidStripeSecretKey(secretKey)) {
       toast.error(t('payment.messages.invalidSecretKey'));
       return;
     }
@@ -248,10 +250,11 @@ export const PaymentSettings: React.FC = () => {
       });
 
       if (result.success && result.data) {
-        if (result.data.webhookConfigured) {
+        if (result.data.unavailableCapabilities?.length) {
+          const warnings = result.data.unavailableCapabilities.map((item) => `${item.capability}: ${item.permissionId}`).join(', ');
+          toast.error(t('payment.stripe.connectForm.optionalPermissionsMissing', { defaultValue: 'Connected with unavailable capabilities: {{warnings}}', warnings }));
+        } else if (result.data.webhookConfigured) {
           toast.success(t('payment.messages.connectSuccess'));
-        } else {
-          toast.success(t('payment.messages.connectPartialSuccess'));
         }
         setShowConnectForm(false);
         setSecretKey('');
@@ -292,7 +295,10 @@ export const PaymentSettings: React.FC = () => {
     try {
       const result = await testStripeConnectionAction();
       if (result.success) {
-        toast.success(result.data?.status || t('payment.messages.connectionSuccess'));
+        const capabilities = result.data?.capabilities?.map(({ capability, status, missingPermissions, uncheckedPermissions }) =>
+          `${capability}: ${status}${missingPermissions.length ? ` (${missingPermissions.join(', ')})` : ''}${uncheckedPermissions.length ? ` (checked on first use: ${uncheckedPermissions.join(', ')})` : ''}`,
+        ).join('; ');
+        toast.success([result.data?.status || t('payment.messages.connectionSuccess'), capabilities].filter(Boolean).join(' — '));
       } else {
         toast.error(result.error || t('payment.messages.connectionTestFailed'));
       }
@@ -384,7 +390,7 @@ export const PaymentSettings: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {config?.is_enabled ? (
+          {config?.is_enabled && !showConnectForm ? (
             <div className="space-y-4">
               {/* Connected Status */}
               <Alert variant="success" showIcon={false}>
@@ -490,6 +496,7 @@ export const PaymentSettings: React.FC = () => {
                   onChange={(e) => setSecretKey(e.target.value)}
                   required
                 />
+                <StripePermissionHelp id="payment-stripe-permission-help" title={t('payment.stripe.connectForm.permissionHelp', { defaultValue: 'Using a restricted key? Required permissions' })} deferredLabel={t('payment.stripe.connectForm.checkedOnFirstUse', { defaultValue: 'checked on first use' })} />
                 <p className="text-sm text-gray-500">
                   {t('payment.stripe.connectForm.secretKeyHelpPrefix')}{' '}
                   <a

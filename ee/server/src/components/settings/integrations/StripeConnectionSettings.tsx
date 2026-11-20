@@ -22,6 +22,8 @@ import {
   Unplug,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { isValidStripeSecretKey } from '../../../lib/payments/stripePermissionManifest';
+import { StripePermissionHelp } from '../StripePermissionHelp';
 import {
   getPaymentConfigAction,
   connectStripeAction,
@@ -96,8 +98,8 @@ export const StripeConnectionSettings: React.FC = () => {
       return;
     }
 
-    if (!secretKey.startsWith('sk_')) {
-      toast.error(t('integrations.stripe.errors.secretKeyFormat', { defaultValue: 'Secret key should start with sk_' }));
+    if (!isValidStripeSecretKey(secretKey)) {
+      toast.error(t('integrations.stripe.errors.secretKeyFormat', { defaultValue: 'Secret key must be a valid sk_live_, sk_test_, rk_live_, or rk_test_ key.' }));
       return;
     }
 
@@ -114,7 +116,10 @@ export const StripeConnectionSettings: React.FC = () => {
       });
 
       if (result.success && result.data) {
-        if (result.data.webhookConfigured) {
+        if (result.data.unavailableCapabilities?.length) {
+          const warnings = result.data.unavailableCapabilities.map((item) => `${item.capability}: ${item.permissionId}`).join(', ');
+          toast.error(t('integrations.stripe.toasts.optionalPermissionsMissing', { defaultValue: 'Connected with unavailable capabilities: {{warnings}}', warnings }));
+        } else if (result.data.webhookConfigured) {
           toast.success(t('integrations.stripe.toasts.connectedWithWebhook', { defaultValue: 'Stripe connected and webhooks configured automatically!' }));
         } else {
           toast.success(t('integrations.stripe.toasts.connectedWebhookFailed', { defaultValue: 'Stripe connected! Note: Webhook auto-configuration failed - you may need to configure webhooks manually in Stripe Dashboard.' }));
@@ -125,7 +130,7 @@ export const StripeConnectionSettings: React.FC = () => {
         await loadConfig();
       } else {
         console.error('Stripe connect failed:', result.error);
-        toast.error(t('integrations.stripe.errors.connect', { defaultValue: 'Failed to connect Stripe' }));
+        toast.error(result.error || t('integrations.stripe.errors.connect', { defaultValue: 'Failed to connect Stripe' }));
       }
     } catch (error) {
       console.error('Stripe connect error:', error);
@@ -162,10 +167,13 @@ export const StripeConnectionSettings: React.FC = () => {
     try {
       const result = await testStripeConnectionAction();
       if (result.success) {
-        toast.success(result.data?.status || t('integrations.stripe.toasts.connectionSuccess', { defaultValue: 'Connection successful!' }));
+        const capabilities = result.data?.capabilities?.map(({ capability, status, missingPermissions, uncheckedPermissions }) =>
+          `${capability}: ${status}${missingPermissions.length ? ` (${missingPermissions.join(', ')})` : ''}${uncheckedPermissions.length ? ` (checked on first use: ${uncheckedPermissions.join(', ')})` : ''}`,
+        ).join('; ');
+        toast.success([result.data?.status || t('integrations.stripe.toasts.connectionSuccess', { defaultValue: 'Connection successful!' }), capabilities].filter(Boolean).join(' — '));
       } else {
         console.error('Stripe test failed:', result.error);
-        toast.error(t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }));
+        toast.error(result.error || t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }));
       }
     } catch (error) {
       console.error('Stripe test error:', error);
@@ -222,7 +230,7 @@ export const StripeConnectionSettings: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {config?.is_enabled ? (
+          {config?.is_enabled && !showConnectForm ? (
             <div className="space-y-4">
               {/* Connected Status */}
               <Alert variant="success" showIcon={false}>
@@ -238,6 +246,9 @@ export const StripeConnectionSettings: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" id="update-stripe-api-keys" onClick={() => setShowConnectForm(true)}>
+                        {t('integrations.stripe.actions.updateApiKeys', { defaultValue: 'Update API keys' })}
+                      </Button>
                       <Button
                         variant="default"
                         size="sm"
@@ -328,7 +339,7 @@ export const StripeConnectionSettings: React.FC = () => {
                 <Input
                   id="secretKey"
                   type="password"
-                  placeholder={t('integrations.stripe.form.secretKeyPlaceholder', { defaultValue: 'sk_live_... or sk_test_...' })}
+                  placeholder={t('integrations.stripe.form.secretKeyPlaceholder', { defaultValue: 'sk_live_... / rk_live_... (or test keys)' })}
                   value={secretKey}
                   onChange={(e) => setSecretKey(e.target.value)}
                   required
@@ -344,6 +355,7 @@ export const StripeConnectionSettings: React.FC = () => {
                     {t('integrations.stripe.form.dashboardLink', { defaultValue: 'Stripe Dashboard → API Keys' })}
                   </a>
                 </p>
+                <StripePermissionHelp id="integrations-stripe-permission-help" title={t('integrations.stripe.form.permissionHelp', { defaultValue: 'Using a restricted key? Required permissions' })} deferredLabel={t('integrations.stripe.form.checkedOnFirstUse', { defaultValue: 'checked on first use' })} />
               </div>
 
               <div className="space-y-2">

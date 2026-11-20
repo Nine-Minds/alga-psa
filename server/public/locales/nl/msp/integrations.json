@@ -4386,15 +4386,18 @@
         "disconnect": "Verbinding verbreken",
         "connect": "Stripe verbinden",
         "connecting": "Verbinden...",
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "updateApiKeys": "API-sleutels bijwerken"
       },
       "form": {
         "secretKeyLabel": "Secret key",
-        "secretKeyPlaceholder": "sk_live_... of sk_test_...",
+        "secretKeyPlaceholder": "sk_live_... / rk_live_... (of testsleutels)",
         "publishableKeyLabel": "Publishable key",
         "publishableKeyPlaceholder": "pk_live_... of pk_test_...",
         "findKeyPrefix": "Vind dit in uw",
-        "dashboardLink": "Stripe-dashboard → API-sleutels"
+        "dashboardLink": "Stripe-dashboard → API-sleutels",
+        "permissionHelp": "Beperkte sleutel? Vereiste machtigingen",
+        "checkedOnFirstUse": "wordt gecontroleerd bij eerste gebruik"
       },
       "webhook": {
         "heading": "Webhook-configuratie",
@@ -4417,7 +4420,8 @@
         "connectedWebhookFailed": "Stripe verbonden! Let op: automatische webhook-configuratie is mislukt - u moet mogelijk webhooks handmatig configureren in het Stripe Dashboard.",
         "disconnected": "Stripe losgekoppeld",
         "connectionSuccess": "Verbinding geslaagd!",
-        "webhookConfigured": "Webhook succesvol geconfigureerd!"
+        "webhookConfigured": "Webhook succesvol geconfigureerd!",
+        "optionalPermissionsMissing": "Verbonden. Voeg deze Stripe-machtigingen toe om meer mogelijkheden in te schakelen: {{warnings}}"
       },
       "errors": {
         "loadConfig": "Kan Stripe-configuratie niet laden",
@@ -4426,7 +4430,7 @@
         "testConnection": "Verbindingstest mislukt",
         "configureWebhook": "Kan webhook niet configureren",
         "bothKeysRequired": "Voer zowel de secret key als de publishable key in",
-        "secretKeyFormat": "Secret key moet beginnen met sk_",
+        "secretKeyFormat": "De sleutel moet een geldige sk_live_-, sk_test_-, rk_live_- of rk_test_-sleutel zijn.",
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
     },

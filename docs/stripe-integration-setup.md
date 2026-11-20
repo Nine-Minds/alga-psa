@@ -52,6 +52,35 @@ This creates 6 tables:
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
    ```
 
+### Tenant payment keys and restricted keys
+
+For tenant invoice payments, AlgaPSA accepts standard secret keys (`sk_live_`, `sk_test_`) and restricted secret keys (`rk_live_`, `rk_test_`). Never enter a publishable `pk_` key in the secret-key field. To create a restricted key, open **Stripe Dashboard → Developers → API keys**, choose **Create restricted key**, select the tenant payment permissions below, and copy the key. Stripe can show the secret only when it is created.
+
+The permission names below were checked against Stripe's API permissions reference on **2026-11-12**. Write access implies read access. Permissions marked “checked on first use” are intentionally not probed during connect because a harmless authorization probe has not been verified.
+
+| Capability | Permission | Access | Covered operations |
+| --- | --- | --- | --- |
+| Webhooks | `webhook_read` | Read | `webhookEndpoints.list`, `webhookEndpoints.retrieve` |
+| Webhooks | `webhook_write` | Write | `webhookEndpoints.create`, `webhookEndpoints.update`, `webhookEndpoints.del` (checked on first use) |
+| Core payments | `checkout_session_write` | Write | `checkout.sessions.create`, `checkout.sessions.expire` (checked on first use) |
+| Core payments | `checkout_session_read` | Read | `checkout.sessions.retrieve` (checked on first use) |
+| Core payments | `customer_read` | Read | `customers.retrieve`, `customers.list` |
+| Core payments | `customer_write` | Write | `customers.create`, `customers.update` (checked on first use) |
+| Core payments | `payment_intent_read` | Read | `paymentIntents.retrieve`, `paymentIntents.search`, `paymentIntents.list` |
+| Core payments | `charge_read` | Read | `charges.retrieve` (checked on first use) |
+| Saved cards and auto-pay | `checkout_session_write` | Write | `checkout.sessions.create` |
+| Saved cards and auto-pay | `customer_read` | Read | `customers.retrieve` |
+| Saved cards and auto-pay | `payment_method_read` | Read | `customers.listPaymentMethods` (checked on first use) |
+| Saved cards and auto-pay | `payment_intent_read` | Read | `paymentIntents.list`, `paymentIntents.search` |
+| Saved cards and auto-pay | `payment_intent_write` | Write | `paymentIntents.create` (checked on first use) |
+| Saved cards and auto-pay | `payment_method_write` | Write | `paymentMethods.detach` (checked on first use) |
+| Customer import | `customer_read` | Read | `customers.retrieve`, `customers.list` |
+| Customer import | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve` (checked on first use) |
+| Customer import | `setup_intent_read` | Read | `setupIntents.list` |
+| Customer import | `payment_intent_read` | Read | `paymentIntents.list` |
+
+To replace a connected key without a webhook gap, open **Settings → Integrations → Stripe Payments → Update API keys**, enter the replacement secret and publishable keys, then connect. When both keys belong to the same Stripe account, reconnect reuses the existing webhook endpoint, signing secret, and payment settings. A failed replacement leaves the active connection in place.
+
 ### 3. Product Configuration
 
 #### 3.1 Create License Product

@@ -1,0 +1,202 @@
+[
+  {
+    "id": "F001",
+    "description": "Spike: with a real rk_test_ key, record whether GET /v1/account (accounts.retrieve) works without extra permissions, and the SDK error type/code/message for a missing permission",
+    "implemented": false,
+    "prdRefs": [
+      "Findings"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Spike: with a real rk_test_ key, record for each Stripe write we use whether a call against a nonexistent object id returns a permission error (denied) or resource-missing (permitted), without creating data",
+    "implemented": false,
+    "prdRefs": [
+      "Permission checks without side effects"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Permission manifest module declaring Stripe permission id, access level, covered operations and capability group (webhooks, core-payments, saved-cards-auto-pay, customer-import)",
+    "implemented": true,
+    "prdRefs": [
+      "One permission manifest"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Manifest marks any permission that cannot be probed safely as checked on first use",
+    "implemented": true,
+    "prdRefs": [
+      "Permission checks without side effects"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Shared secret-key validator accepting sk_ and rk_ keys (live and test) and rejecting pk_ and other values",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "PaymentSettings form uses the shared validator and the updated error string",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "StripeConnectionSettings form uses the shared validator and the updated error string",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "connectStripeAction validates the secret-key format on the server before any Stripe call",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Permission check runs each manifest read probe with limit 1 and each safe write probe against a nonexistent id, returning per-permission granted/denied/unchecked",
+    "implemented": true,
+    "prdRefs": [
+      "Permission checks without side effects"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Permission failures from Stripe are translated into an error naming the capability and the missing permission id",
+    "implemented": true,
+    "prdRefs": [
+      "Findings"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "connectStripeAction runs the permission check before storing anything; missing webhooks or core-payments permission fails the connect and names the permissions",
+    "implemented": true,
+    "prdRefs": [
+      "Connect outcome"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "connectStripeAction succeeds with missing saved-cards-auto-pay or customer-import permissions and returns those capabilities as unavailable with the permission names",
+    "implemented": false,
+    "prdRefs": [
+      "Connect outcome"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "A webhook setup failure caused by a missing permission is reported as that missing permission, not as a generic webhook failure",
+    "implemented": true,
+    "prdRefs": [
+      "Connect outcome"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "sk_ keys pass the permission check and connect exactly as before",
+    "implemented": true,
+    "prdRefs": [
+      "Connect outcome"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "testStripeConnectionAction reports per-capability status from the same permission check",
+    "implemented": true,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "The other StripeAuthenticationError-only error mappings (test connection and the third site) also translate permission errors",
+    "implemented": true,
+    "prdRefs": [
+      "Findings"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Connected state of StripeConnectionSettings offers Update API keys, opening the key form",
+    "implemented": true,
+    "prdRefs": [
+      "Replace key in place"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Update API keys calls the connect path and keeps the webhook endpoint id, the signing secret and all saved payment settings",
+    "implemented": true,
+    "prdRefs": [
+      "Replace key in place"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Key input help lists the manifest permissions grouped by capability, collapsed by default, in both forms",
+    "implemented": true,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Connect success with unavailable capabilities shows a warning listing capability and missing permission",
+    "implemented": true,
+    "prdRefs": [
+      "UX notes"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Update secretKeyPlaceholder, invalidSecretKey and secretKeyFormat in the nine locale files (de, en, es, fr, it, nl, pl, pt, sv) and add the new strings",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance 6"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Drift test scans payment-actions, StripePaymentProvider and stripeWebhookEvents for stripe.<resource>.<method> calls and fails when one is not covered by the manifest",
+    "implemented": true,
+    "prdRefs": [
+      "One permission manifest"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Docs permission table generated from or compared against the manifest by a test",
+    "implemented": true,
+    "prdRefs": [
+      "One permission manifest"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Fix online-payments.md (nm-store): accept sk_ or rk_, remove the contradiction, add the permission table and how to create the restricted key",
+    "implemented": true,
+    "prdRefs": [
+      "Docs"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Add restricted-key setup and the in-place key swap steps to docs/stripe-integration-setup.md",
+    "implemented": true,
+    "prdRefs": [
+      "Docs"
+    ]
+  }
+]

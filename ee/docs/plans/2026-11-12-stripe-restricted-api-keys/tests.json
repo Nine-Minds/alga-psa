@@ -1,0 +1,110 @@
+[
+  {
+    "id": "T001",
+    "description": "Validator unit test: sk_live_, sk_test_, rk_live_, rk_test_ accepted; pk_, empty, whitespace-only, random text rejected",
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "connectStripeAction rejects a bad secret-key format server-side before calling Stripe, even when the form check is bypassed",
+    "featureIds": [
+      "F008"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "connectStripeAction with a fake client where every permission is granted: connects, stores key, creates webhook, sk_ and rk_ behave identically",
+    "featureIds": [
+      "F011",
+      "F014"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "connectStripeAction with webhook_write denied: fails, stores nothing (no secret, no config row change), error names webhook_write and the webhooks capability",
+    "featureIds": [
+      "F011",
+      "F013"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "connectStripeAction with only saved-card/import permissions denied: connects, returns those capabilities unavailable with permission names",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "Permission-error translation unit test using the real SDK error shape recorded by the spike (type, code, message) and a StripeAuthenticationError for an invalid key",
+    "featureIds": [
+      "F001",
+      "F010",
+      "F016"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "Reconnect regression: Update API keys on a connected tenant keeps webhook endpoint id, signing secret and every saved payment setting (extend connectStripeAction.reconnect.test.ts)",
+    "featureIds": [
+      "F017",
+      "F018"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Connection settings render test: connected state shows Update API keys; key help lists manifest permissions",
+    "featureIds": [
+      "F017",
+      "F019"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Drift test: every Stripe SDK call in the three files is covered by the manifest; adding an uncovered call makes it fail",
+    "featureIds": [
+      "F022"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Docs table and manifest agree (test compares the permission ids in the docs file with the manifest)",
+    "featureIds": [
+      "F023",
+      "F024"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Locale test: every locale file has the new strings and none still says the key must start with sk_",
+    "featureIds": [
+      "F021"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T012",
+    "description": "Manual end-to-end against Stripe test mode with an rk_test_ key holding exactly the manifest permissions: connect, pay a Checkout link and see the invoice paid via webhook, save a card, auto-pay charge, import customers; then remove each of webhook_write, checkout_session_write, payment_intent_write, customer_read in turn and see the named error. Results recorded in SCRATCHPAD.md",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F009"
+    ],
+    "implemented": false
+  }
+]

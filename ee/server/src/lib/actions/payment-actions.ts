@@ -14,6 +14,14 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import Stripe from 'stripe';
+import {
+  STRIPE_PERMISSION_MANIFEST,
+  STRIPE_CAPABILITIES,
+  STRIPE_REQUIRED_CAPABILITIES,
+  describeStripePermissionFailure,
+  getStripePermissionId,
+  isValidStripeSecretKey,
+} from '../payments/stripePermissionManifest';
 import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents, stripeWebhookUrls, getStripeBaseUrl } from '../payments/stripeWebhookEvents';
 import {
   IPaymentProviderConfig,
@@ -37,6 +45,60 @@ interface PaymentActionResult<T = void> {
 interface StripeCredentials {
   secretKey: string;
   publishableKey: string;
+}
+
+async function checkStripePermissions(stripe: Stripe) {
+  const statuses = Object.fromEntries(STRIPE_PERMISSION_MANIFEST.map(({ id }) => [id, 'unchecked' as const])) as Record<string, 'granted' | 'denied' | 'unchecked'>;
+  const probes = STRIPE_PERMISSION_MANIFEST.flatMap((permission) => permission.probe.kind === 'list'
+    ? [{ permissionId: permission.id, operation: permission.probe.operation }]
+    : []);
+  for (const probe of probes) {
+    try {
+      const [resourceName, methodName] = probe.operation.split('.');
+      const resource = (stripe as any)[resourceName];
+      await resource[methodName]({ limit: 1 });
+      statuses[probe.permissionId] = 'granted';
+    } catch (error) {
+      const deniedId = getStripePermissionId(error);
+      if (deniedId === probe.permissionId) statuses[probe.permissionId] = 'denied';
+      else throw error;
+    }
+  }
+  return statuses;
+}
+
+function unavailableStripeCapabilities(statuses: Record<string, 'granted' | 'denied' | 'unchecked'>) {
+  return STRIPE_PERMISSION_MANIFEST
+    .filter(({ id }) => statuses[id] === 'denied')
+    .flatMap(({ id, capabilities }) => capabilities.map((capability) => ({ capability, permissionId: id })));
+}
+
+function requiredStripePermissionDenials(statuses: Record<string, 'granted' | 'denied' | 'unchecked'>) {
+  return STRIPE_PERMISSION_MANIFEST.filter(({ id, capabilities }) => statuses[id] === 'denied'
+    && capabilities.some((capability) => STRIPE_REQUIRED_CAPABILITIES.includes(capability)));
+}
+
+function stripeCapabilityStatuses(statuses: Record<string, 'granted' | 'denied' | 'unchecked'>) {
+  return STRIPE_CAPABILITIES.map((capability) => {
+    const permissions = STRIPE_PERMISSION_MANIFEST.filter((permission) => permission.capabilities.includes(capability));
+    const missingPermissions = permissions.filter(({ id }) => statuses[id] === 'denied').map(({ id }) => id);
+    const uncheckedPermissions = permissions.filter(({ id }) => statuses[id] === 'unchecked').map(({ id }) => id);
+    return {
+      capability,
+      status: missingPermissions.length ? 'denied' : uncheckedPermissions.length ? 'unchecked' : 'granted',
+      missingPermissions,
+      uncheckedPermissions,
+    };
+  });
+}
+
+function stripeFailureMessage(error: any, defaultMessage: string) {
+  if (error?.type === 'StripeAuthenticationError') return 'Invalid Stripe secret key';
+  if (error?.type === 'StripeConnectionError') return 'Could not reach Stripe. Check the connection and try again.';
+  if (error?.type === 'StripeRateLimitError') return 'Stripe is rate limiting requests. Try again shortly.';
+  if (error?.type === 'StripeAPIError') return 'Stripe is temporarily unavailable. Try again shortly.';
+  const missingPermission = getStripePermissionId(error);
+  return missingPermission ? describeStripePermissionFailure(missingPermission) : defaultMessage;
 }
 
 /**
@@ -141,35 +203,32 @@ export const connectStripeAction = withAuth(async (
   user,
   { tenant },
   credentials: StripeCredentials
-): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean }>> => {
+): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean; unavailableCapabilities: Array<{ capability: string; permissionId: string }> }>> => {
   try {
+    if (!isValidStripeSecretKey(credentials?.secretKey)) {
+      return { success: false, error: 'Secret key should be a valid sk_live_, sk_test_, rk_live_, or rk_test_ key.' };
+    }
+    if (typeof credentials?.publishableKey !== 'string' || !/^pk_(live|test)_[A-Za-z0-9]+$/.test(credentials.publishableKey)) {
+      return { success: false, error: 'Invalid publishable key format (should start with pk_)' };
+    }
     // Validate credentials by making a test API call
     const stripe = new Stripe(credentials.secretKey, {
       apiVersion: '2024-12-18.acacia' as any,
     });
 
+    const permissionStatuses = await checkStripePermissions(stripe);
+    const requiredDenials = requiredStripePermissionDenials(permissionStatuses);
+    if (requiredDenials.length) {
+      return { success: false, error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' ') };
+    }
+    // GET /v1/account is not in Stripe's restricted-key permission table. The
+    // required manifest list read above validates access; account id is optional.
     try {
-      // Test the API key by fetching account info
       await stripe.accounts.retrieve();
-    } catch (stripeError: any) {
-      if (stripeError.type === 'StripeAuthenticationError') {
-        return { success: false, error: 'Invalid Stripe secret key' };
-      }
-      throw stripeError;
+    } catch (error: any) {
+      if (error?.type === 'StripeAuthenticationError') return { success: false, error: 'Invalid Stripe secret key' };
     }
-
-    // Validate publishable key format
-    if (!credentials.publishableKey.startsWith('pk_')) {
-      return { success: false, error: 'Invalid publishable key format (should start with pk_)' };
-    }
-
-    // Store credentials securely
     const secretProvider = await getSecretProviderInstance();
-    await secretProvider.setTenantSecret(
-      tenant,
-      'stripe_payment_secret_key',
-      credentials.secretKey
-    );
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
@@ -283,8 +342,10 @@ export const connectStripeAction = withAuth(async (
         });
       }
     } catch (webhookError: any) {
-      // Log webhook creation failure but don't fail the connection
-      // User can still use Stripe, just without automatic webhook processing
+      const missingPermission = getStripePermissionId(webhookError);
+      if (missingPermission) {
+        return { success: false, error: describeStripePermissionFailure(missingPermission) };
+      }
       logger.warn('[PaymentActions] Failed to create webhook endpoint', {
         error: webhookError.message,
         tenantId: tenant,
@@ -292,6 +353,13 @@ export const connectStripeAction = withAuth(async (
       });
       // webhookConfigured remains false
     }
+
+    if (!webhookConfigured) {
+      return { success: false, error: 'Stripe webhook configuration failed. The connection was not saved; verify webhook permissions and retry.' };
+    }
+
+    // Commit credentials only after key validation and webhook setup succeeded.
+    await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
 
     // Create or update provider config
     const { knex } = await createTenantKnex();
@@ -307,6 +375,7 @@ export const connectStripeAction = withAuth(async (
       configuration: {
         publishable_key: credentials.publishableKey,
         webhook_endpoint_id: webhookEndpointId,
+        webhook_events: STRIPE_WEBHOOK_EVENTS,
       },
       credentials_vault_path: `tenant/${tenant}/stripe_payment_secret_key`,
       webhook_secret_vault_path: webhookSecret
@@ -334,15 +403,13 @@ export const connectStripeAction = withAuth(async (
       userId: user.user_id,
       webhookConfigured,
     });
-    if (webhookConfigured) await reconcileStripeWebhookEvents(tenant);
-
     return {
       success: true,
-      data: { publishableKey: credentials.publishableKey, webhookConfigured },
+      data: { publishableKey: credentials.publishableKey, webhookConfigured, unavailableCapabilities: unavailableStripeCapabilities(permissionStatuses) },
     };
   } catch (error) {
     logger.error('[PaymentActions] Failed to connect Stripe', { error });
-    return { success: false, error: 'Failed to connect Stripe account' };
+    return { success: false, error: stripeFailureMessage(error, 'Failed to connect Stripe account') };
   }
 });
 
@@ -487,7 +554,7 @@ export const updatePaymentSettingsAction = withAuth(async (
 /**
  * Tests the Stripe connection by making a simple API call.
  */
-export const testStripeConnectionAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ status: string }>> => {
+export const testStripeConnectionAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ status: string; permissions: Record<string, string>; capabilities: ReturnType<typeof stripeCapabilityStatuses>; unavailableCapabilities: Array<{ capability: string; permissionId: string }> }>> => {
   try {
     const secretProvider = await getSecretProviderInstance();
     const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
@@ -500,23 +567,30 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
       apiVersion: '2024-12-18.acacia' as any,
     });
 
-    // Test by fetching account info
-    const account = await stripe.accounts.retrieve();
+    const permissions = await checkStripePermissions(stripe);
+    const requiredDenials = requiredStripePermissionDenials(permissions);
+    if (requiredDenials.length) {
+      return { success: false, error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' ') };
+    }
+    let accountId = 'unknown';
+    try { accountId = (await stripe.accounts.retrieve()).id; } catch (error: any) {
+      if (error?.type === 'StripeAuthenticationError') return { success: false, error: 'Invalid API key - please reconnect' };
+    }
 
     return {
       success: true,
       data: {
-        status: `Connected to Stripe account: ${account.id}`,
+        status: `Connected to Stripe account: ${accountId}`,
+        permissions,
+        capabilities: stripeCapabilityStatuses(permissions),
+        unavailableCapabilities: unavailableStripeCapabilities(permissions),
       },
     };
   } catch (error: any) {
     logger.error('[PaymentActions] Stripe connection test failed', { error });
 
-    if (error.type === 'StripeAuthenticationError') {
-      return { success: false, error: 'Invalid API key - please reconnect' };
-    }
-
-    return { success: false, error: 'Connection test failed' };
+    const errorMessage = stripeFailureMessage(error, 'Connection test failed');
+    return { success: false, error: errorMessage === 'Invalid Stripe secret key' ? 'Invalid API key - please reconnect' : errorMessage };
   }
 });
 
@@ -703,6 +777,8 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     if (error.type === 'StripeAuthenticationError') {
       return { success: false, error: 'Invalid API key - please reconnect Stripe' };
     }
+    const missingPermission = getStripePermissionId(error);
+    if (missingPermission) return { success: false, error: describeStripePermissionFailure(missingPermission) };
 
     return {
       success: false,
