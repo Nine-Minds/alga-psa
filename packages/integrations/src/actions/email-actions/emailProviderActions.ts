@@ -1661,7 +1661,7 @@ export const testEmailProviderConnection = withAuth(async (
           ? vendorConfig.folder_filters[0] || 'Inbox'
           : 'Inbox',
         active: provider.is_active,
-        webhook_notification_url: `${getWebhookBaseUrl()}/api/email/webhooks/microsoft`,
+        webhook_notification_url: `${getWebhookBaseUrl(undefined, 'https://algapsa.com')}/api/email/webhooks/microsoft`,
         webhook_subscription_id: vendorConfig.webhook_subscription_id || undefined,
         webhook_verification_token: vendorConfig.webhook_verification_token || undefined,
         webhook_expires_at: vendorConfig.webhook_expires_at || undefined,
@@ -1872,7 +1872,7 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       .where({ email_provider_id: providerId })
       .first();
 
-    const baseUrl = getWebhookBaseUrl();
+    const baseUrl = getWebhookBaseUrl(undefined, 'https://algapsa.com');
     const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
     const adapterConfig = {

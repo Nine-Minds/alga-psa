@@ -6,6 +6,7 @@ edition: enterprise
 deploymentProfile: appliance
 host: alga.local
 appUrl: https://alga.local
+publicWebhookBaseUrl: "$(NEXT_PUBLIC_BASE_URL)"
 domainSuffix: alga.local
 
 bootstrap:
