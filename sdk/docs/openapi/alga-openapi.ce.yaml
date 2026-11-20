@@ -1442,6 +1442,54 @@ components:
             type: string
             format: uuid
           minItems: 1
+    AccessBulkCreateUsersBodyV1:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessCreateUserBodyV1"
+          minItems: 1
+          maxItems: 100
+        options:
+          type: object
+          properties:
+            send_welcome_email:
+              type: boolean
+              description: Default true. Mails each created user a link to set their own
+                password.
+            force_password_reset:
+              type: boolean
+              description: Default false. Records the must_change_password preference on each
+                account, the same flag an admin-initiated password reset sets.
+                Nothing enforces it at sign-in yet, so pair it with
+                send_welcome_email to make the owner choose their own password.
+            skip_invalid:
+              type: boolean
+              description: "Default true: a rejected user is reported in errors[] and the rest
+                are still created. Set false to roll the whole batch back on the
+                first failure."
+            dry_run:
+              type: boolean
+              description: Validates every user and creates nothing.
+      required:
+        - users
+    AccessBulkDeactivateUsersBodyV1:
+      type: object
+      properties:
+        user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+        deactivate:
+          type: boolean
+          description: Default true; false reactivates the listed users (subject to seat
+            limits).
+      required:
+        - user_ids
     AccessChangePasswordBodyV1:
       type: object
       properties:
@@ -1690,37 +1738,6 @@ components:
       required:
         - team_ids
         - updates
-    AccessBulkCreateUsersBodyV1:
-      type: object
-      properties:
-        users:
-          type: array
-          items:
-            $ref: "#/components/schemas/AccessCreateUserBodyV1"
-          minItems: 1
-          maxItems: 100
-        options:
-          type: object
-          properties:
-            send_welcome_email:
-              type: boolean
-              description: Default true. Mails each created user a link to set their own
-                password.
-            force_password_reset:
-              type: boolean
-              description: Default false. Records the must_change_password preference on each
-                account, the same flag an admin-initiated password reset sets.
-                Nothing enforces it at sign-in yet, so pair it with
-                send_welcome_email to make the owner choose their own password.
-            skip_invalid:
-              type: boolean
-              description: Default true. Reports an invalid entry in errors[] instead of
-                failing the whole batch.
-            dry_run:
-              type: boolean
-              description: Default false. Validates every entry and creates nothing.
-      required:
-        - users
     AccessTeamBulkDeleteBodyV1:
       type: object
       properties:
@@ -29056,15 +29073,15 @@ paths:
   /api/v1/users/bulk/create:
     post:
       summary: Bulk create users
-      description: Creates up to 100 users from one payload using
-        bulkCreateUsersSchema. Returns the bulk summary (total_processed,
-        successful, failed, per-index errors, created users); with skip_invalid
-        (default true) an invalid entry is reported rather than failing the
-        batch. options.force_password_reset records the must_change_password
-        preference on each account (not yet enforced at sign-in),
+      description: "Creates up to 100 users in one transaction. Each user is created
+        under its own savepoint: with skip_invalid (the default) a rejected user
+        is reported in errors[] by index and the rest are still created; with
+        skip_invalid false the first failure rolls the whole batch back.
+        options.force_password_reset records the must_change_password preference
+        on each account (not yet enforced at sign-in),
         options.send_welcome_email (default true) mails each new user a link to
-        set their own password, and options.dry_run validates without creating
-        anything.
+        set their own password, and options.dry_run validates every user and
+        creates nothing."
       tags:
         - Access Control & Users v1
       security:
@@ -29087,8 +29104,9 @@ paths:
             schema:
               $ref: "#/components/schemas/AccessBulkCreateUsersBodyV1"
       responses:
-        "200":
-          description: Operation succeeded.
+        "201":
+          description: Batch processed; body reports total_processed, successful, failed,
+            per-index errors and the created users.
           content:
             application/json:
               schema:
@@ -29111,6 +29129,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessApiErrorV1"
+        "409":
+          description: "Only with skip_invalid false: a user in the batch duplicates an
+            existing email, and the whole batch was rolled back."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessApiErrorV1"
         "500":
           description: Unexpected controller/service failure.
           content:
@@ -29119,9 +29144,11 @@ paths:
                 $ref: "#/components/schemas/AccessApiErrorV1"
   /api/v1/users/bulk/deactivate:
     put:
-      summary: Bulk deactivate users (route currently mapped to update-by-id)
-      description: Route currently delegates to ApiUserController.update(); id
-        extraction reads "bulk" from path and fails UUID validation.
+      summary: Bulk deactivate users
+      description: Deactivates (or, with deactivate false, reactivates) up to 100
+        users by UUID. Role floors refuse a request that would leave the tenant
+        without an active MSP admin, and reactivation is admitted one user at a
+        time against the seat limit.
       tags:
         - Access Control & Users v1
       security:
@@ -29133,8 +29160,7 @@ paths:
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
           equivalent controller-specific auth path
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
-        x-controller-handler: bulkDeactivateUsersRouteMismatch
-        x-route-controller-mismatch: true
+        x-controller-handler: bulkDeactivateUsers
       x-alga-products:
         - psa
         - algadesk
@@ -29143,7 +29169,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessUpdateUserBodyV1"
+              $ref: "#/components/schemas/AccessBulkDeactivateUsersBodyV1"
       responses:
         "200":
           description: Operation succeeded.
@@ -29152,8 +29178,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AccessApiSuccessV1"
         "400":
-          description: Current route fails UUID extraction because
-            ApiBaseController.update() treats path segment "bulk" as {id}.
+          description: Validation failed (payload/query/path parsing).
           content:
             application/json:
               schema:
