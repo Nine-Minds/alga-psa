@@ -63,19 +63,20 @@ The permission names below were checked against Stripe's API permissions referen
 | Webhooks | `webhook_read` | Read | `webhookEndpoints.list`, `webhookEndpoints.retrieve` |
 | Webhooks | `webhook_write` | Write | `webhookEndpoints.create`, `webhookEndpoints.update`, `webhookEndpoints.del` (checked on first use) |
 | Core payments | `checkout_session_write` | Write | `checkout.sessions.create`, `checkout.sessions.expire` (checked on first use) |
-| Core payments | `checkout_session_read` | Read | `checkout.sessions.retrieve` (checked on first use) |
+| Core payments | `checkout_session_read` | Read | `checkout.sessions.retrieve`, `checkout.sessions.list` |
 | Core payments | `customer_read` | Read | `customers.retrieve`, `customers.list` |
 | Core payments | `customer_write` | Write | `customers.create`, `customers.update` (checked on first use) |
 | Core payments | `payment_intent_read` | Read | `paymentIntents.retrieve`, `paymentIntents.search`, `paymentIntents.list` |
-| Core payments | `charge_read` | Read | `charges.retrieve` (checked on first use) |
+| Core payments | `charge_read` | Read | `charges.retrieve`, `charges.list` |
 | Saved cards and auto-pay | `checkout_session_write` | Write | `checkout.sessions.create` |
 | Saved cards and auto-pay | `customer_read` | Read | `customers.retrieve` |
-| Saved cards and auto-pay | `payment_method_read` | Read | `customers.listPaymentMethods` (checked on first use) |
+| Saved cards and auto-pay | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve`, `paymentMethods.list` |
 | Saved cards and auto-pay | `payment_intent_read` | Read | `paymentIntents.list`, `paymentIntents.search` |
 | Saved cards and auto-pay | `payment_intent_write` | Write | `paymentIntents.create` (checked on first use) |
 | Saved cards and auto-pay | `payment_method_write` | Write | `paymentMethods.detach` (checked on first use) |
 | Customer import | `customer_read` | Read | `customers.retrieve`, `customers.list` |
-| Customer import | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve` (checked on first use) |
+| Customer import | `payment_method_read` | Read | `customers.listPaymentMethods`, `paymentMethods.retrieve`, `paymentMethods.list` |
+| Saved cards and auto-pay | `setup_intent_read` | Read | `setupIntents.list` |
 | Customer import | `setup_intent_read` | Read | `setupIntents.list` |
 | Customer import | `payment_intent_read` | Read | `paymentIntents.list` |
 

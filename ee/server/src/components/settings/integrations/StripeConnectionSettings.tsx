@@ -173,7 +173,10 @@ export const StripeConnectionSettings: React.FC = () => {
         toast.success([result.data?.status || t('integrations.stripe.toasts.connectionSuccess', { defaultValue: 'Connection successful!' }), capabilities].filter(Boolean).join(' — '));
       } else {
         console.error('Stripe test failed:', result.error);
-        toast.error(result.error || t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }));
+        const capabilities = result.data?.capabilities?.map(({ capability, status, missingPermissions, uncheckedPermissions }) =>
+          `${capability}: ${status}${missingPermissions.length ? ` (${missingPermissions.join(', ')})` : ''}${uncheckedPermissions.length ? ` (checked on first use: ${uncheckedPermissions.join(', ')})` : ''}`
+        ).join('; ');
+        toast.error([result.error || t('integrations.stripe.errors.testConnection', { defaultValue: 'Connection test failed' }), capabilities].filter(Boolean).join(' — '));
       }
     } catch (error) {
       console.error('Stripe test error:', error);

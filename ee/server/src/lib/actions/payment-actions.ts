@@ -20,6 +20,7 @@ import {
   STRIPE_REQUIRED_CAPABILITIES,
   describeStripePermissionFailure,
   getStripePermissionId,
+  isStripePermissionError,
   isValidStripeSecretKey,
 } from '../payments/stripePermissionManifest';
 import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents, stripeWebhookUrls, getStripeBaseUrl } from '../payments/stripeWebhookEvents';
@@ -54,12 +55,13 @@ async function checkStripePermissions(stripe: Stripe) {
     : []);
   for (const probe of probes) {
     try {
-      const [resourceName, methodName] = probe.operation.split('.');
-      const resource = (stripe as any)[resourceName];
+      const path = probe.operation.split('.');
+      const methodName = path.pop()!;
+      const resource = path.reduce((value: any, key) => value[key], stripe as any);
       await resource[methodName]({ limit: 1 });
       statuses[probe.permissionId] = 'granted';
     } catch (error) {
-      const deniedId = getStripePermissionId(error);
+      const deniedId = getStripePermissionId(error, probe.operation);
       if (deniedId === probe.permissionId) statuses[probe.permissionId] = 'denied';
       else throw error;
     }
@@ -218,9 +220,7 @@ export const connectStripeAction = withAuth(async (
 
     const permissionStatuses = await checkStripePermissions(stripe);
     const requiredDenials = requiredStripePermissionDenials(permissionStatuses);
-    if (requiredDenials.length) {
-      return { success: false, error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' ') };
-    }
+    if (requiredDenials.length) return { success: false, error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' ') };
     // GET /v1/account is not in Stripe's restricted-key permission table. The
     // required manifest list read above validates access; account id is optional.
     try {
@@ -229,6 +229,11 @@ export const connectStripeAction = withAuth(async (
       if (error?.type === 'StripeAuthenticationError') return { success: false, error: 'Invalid Stripe secret key' };
     }
     const secretProvider = await getSecretProviderInstance();
+    const { knex } = await createTenantKnex();
+    const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
+      .where({ provider_type: 'stripe' }).first();
+    const priorSecret = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+    const isReplacement = Boolean(existingConfig?.is_enabled && priorSecret);
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
@@ -238,13 +243,18 @@ export const connectStripeAction = withAuth(async (
     let webhookEndpointId: string | null = null;
     let webhookSecret: string | null = null;
     let webhookConfigured = false;
+    let webhookOperation = 'webhookEndpoints.list';
 
     try {
       // List existing webhooks to check for duplicates
-      const existingWebhooks = await stripe.webhookEndpoints.list({ limit: 100 });
-      const existingEndpoint = existingWebhooks.data.find(
-        (endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl
-      );
+      const savedEndpointId = existingConfig?.is_enabled
+        ? (existingConfig.configuration as any)?.webhook_endpoint_id as string | undefined
+        : undefined;
+      const existingWebhooks = savedEndpointId ? null : await stripe.webhookEndpoints.list({ limit: 100 });
+      webhookOperation = savedEndpointId ? 'webhookEndpoints.retrieve' : 'webhookEndpoints.list';
+      const existingEndpoint = savedEndpointId
+        ? await stripe.webhookEndpoints.retrieve(savedEndpointId)
+        : existingWebhooks?.data.find((endpoint) => endpoint.url === webhookUrl || endpoint.url === legacyUrl);
 
       if (existingEndpoint) {
         // Check if we already have the secret stored in the vault
@@ -260,6 +270,7 @@ export const connectStripeAction = withAuth(async (
             tenantId: tenant,
           });
 
+          webhookOperation = 'webhookEndpoints.update';
           await stripe.webhookEndpoints.update(existingEndpoint.id, {
             url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
@@ -276,8 +287,10 @@ export const connectStripeAction = withAuth(async (
             tenantId: tenant,
           });
 
+          webhookOperation = 'webhookEndpoints.del';
           await stripe.webhookEndpoints.del(existingEndpoint.id);
 
+          webhookOperation = 'webhookEndpoints.create';
           const webhookEndpoint = await stripe.webhookEndpoints.create({
             url: webhookUrl,
             enabled_events: STRIPE_WEBHOOK_EVENTS,
@@ -313,6 +326,7 @@ export const connectStripeAction = withAuth(async (
           tenantId: tenant,
         });
 
+        webhookOperation = 'webhookEndpoints.create';
         const webhookEndpoint = await stripe.webhookEndpoints.create({
           url: webhookUrl,
           enabled_events: STRIPE_WEBHOOK_EVENTS,
@@ -342,10 +356,11 @@ export const connectStripeAction = withAuth(async (
         });
       }
     } catch (webhookError: any) {
-      const missingPermission = getStripePermissionId(webhookError);
+      const missingPermission = getStripePermissionId(webhookError, webhookOperation);
       if (missingPermission) {
         return { success: false, error: describeStripePermissionFailure(missingPermission) };
       }
+      if (isReplacement) return { success: false, error: stripeFailureMessage(webhookError, 'Stripe webhook configuration failed; the active connection remains unchanged.') };
       logger.warn('[PaymentActions] Failed to create webhook endpoint', {
         error: webhookError.message,
         tenantId: tenant,
@@ -354,20 +369,12 @@ export const connectStripeAction = withAuth(async (
       // webhookConfigured remains false
     }
 
-    if (!webhookConfigured) {
+    if (!webhookConfigured && credentials.secretKey.startsWith('rk_')) {
       return { success: false, error: 'Stripe webhook configuration failed. The connection was not saved; verify webhook permissions and retry.' };
     }
 
     // Commit credentials only after key validation and webhook setup succeeded.
     await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
-
-    // Create or update provider config
-    const { knex } = await createTenantKnex();
-    const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
-      .where({
-        provider_type: 'stripe',
-      })
-      .first();
 
     const configData = {
       is_enabled: true,
@@ -386,16 +393,18 @@ export const connectStripeAction = withAuth(async (
       updated_at: knex.fn.now(),
     };
 
-    if (existingConfig) {
-      await tenantDb(knex, tenant).table('payment_provider_configs')
-        .where({ config_id: existingConfig.config_id })
-        .update(configData);
-    } else {
-      await tenantDb(knex, tenant).table('payment_provider_configs').insert({
-        tenant,
-        provider_type: 'stripe',
-        ...configData,
-      });
+    try {
+      if (existingConfig) {
+        await tenantDb(knex, tenant).table('payment_provider_configs')
+          .where({ config_id: existingConfig.config_id }).update(configData);
+      } else {
+        await tenantDb(knex, tenant).table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
+      }
+    } catch (dbError) {
+      // Restore the active vault credential if the database commit fails.
+      if (priorSecret) await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', priorSecret);
+      else await secretProvider.deleteTenantSecret(tenant, 'stripe_payment_secret_key');
+      throw dbError;
     }
 
     logger.info('[PaymentActions] Stripe connected successfully', {
@@ -570,7 +579,16 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
     const permissions = await checkStripePermissions(stripe);
     const requiredDenials = requiredStripePermissionDenials(permissions);
     if (requiredDenials.length) {
-      return { success: false, error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' ') };
+      return {
+        success: false,
+        error: requiredDenials.map(({ id }) => describeStripePermissionFailure(id)).join(' '),
+        data: {
+          status: 'Permission check failed',
+          permissions,
+          capabilities: stripeCapabilityStatuses(permissions),
+          unavailableCapabilities: unavailableStripeCapabilities(permissions),
+        },
+      };
     }
     let accountId = 'unknown';
     try { accountId = (await stripe.accounts.retrieve()).id; } catch (error: any) {
@@ -673,6 +691,7 @@ export const saveStripeWebhookSecretAction = withAuth(async (
  * Used when initial webhook configuration failed and user wants to retry.
  */
 export const retryStripeWebhookConfigurationAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ webhookConfigured: boolean }>> => {
+  let operation = 'webhookEndpoints.list';
   try {
     const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
@@ -717,6 +736,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
         endpointId: existingEndpoint.id,
         tenantId: tenant,
       });
+      operation = 'webhookEndpoints.del';
       await stripe.webhookEndpoints.del(existingEndpoint.id);
     }
 
@@ -726,6 +746,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
       tenantId: tenant,
     });
 
+    operation = 'webhookEndpoints.create';
     const webhookEndpoint = await stripe.webhookEndpoints.create({
       url: webhookUrl,
       enabled_events: STRIPE_WEBHOOK_EVENTS,
@@ -777,7 +798,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     if (error.type === 'StripeAuthenticationError') {
       return { success: false, error: 'Invalid API key - please reconnect Stripe' };
     }
-    const missingPermission = getStripePermissionId(error);
+    const missingPermission = getStripePermissionId(error, operation);
     if (missingPermission) return { success: false, error: describeStripePermissionFailure(missingPermission) };
 
     return {

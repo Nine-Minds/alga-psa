@@ -6,6 +6,7 @@ import {
   findUncoveredStripeOperations,
   getStripePermissionId,
   isValidStripeSecretKey,
+  withStripePermissionErrors,
 } from '../../../lib/payments/stripePermissionManifest';
 
 function assertManifestTableParity(document: string) {
@@ -39,6 +40,17 @@ describe('Stripe restricted key manifest', () => {
     })).toBe('webhook_write');
     expect(getStripePermissionId({ type: 'StripeAuthenticationError', message: 'Invalid key' })).toBeNull();
     expect(getStripePermissionId({ type: 'StripeConnectionError', message: 'timeout' })).toBeNull();
+    expect(getStripePermissionId({ type: 'StripePermissionError', statusCode: 403, message: 'Permission denied' }, 'setupIntents.list')).toBe('setup_intent_read');
+    expect(STRIPE_PERMISSION_MANIFEST.find(({ id }) => id === 'setup_intent_read')?.capabilities).toEqual(['saved-cards-auto-pay', 'customer-import']);
+  });
+
+  it('translates permission errors at deferred nested SDK operations while preserving auth errors', async () => {
+    const client = withStripePermissionErrors({
+      checkout: { sessions: { create: async () => { throw { type: 'StripePermissionError', statusCode: 403, message: 'Forbidden.' }; } } },
+      accounts: { retrieve: async () => { throw { type: 'StripeAuthenticationError', message: 'Bad key' }; } },
+    });
+    await expect(client.checkout.sessions.create()).rejects.toThrow('core-payments');
+    await expect(client.accounts.retrieve()).rejects.toMatchObject({ type: 'StripeAuthenticationError' });
   });
 
   it('covers Stripe operations in each tenant-key SDK file and detects an uncovered call', () => {

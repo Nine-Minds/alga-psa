@@ -300,7 +300,10 @@ export const PaymentSettings: React.FC = () => {
         ).join('; ');
         toast.success([result.data?.status || t('payment.messages.connectionSuccess'), capabilities].filter(Boolean).join(' — '));
       } else {
-        toast.error(result.error || t('payment.messages.connectionTestFailed'));
+        const capabilities = result.data?.capabilities?.map(({ capability, status, missingPermissions, uncheckedPermissions }) =>
+          `${capability}: ${status}${missingPermissions.length ? ` (${missingPermissions.join(', ')})` : ''}${uncheckedPermissions.length ? ` (checked on first use: ${uncheckedPermissions.join(', ')})` : ''}`
+        ).join('; ');
+        toast.error([result.error || t('payment.messages.connectionTestFailed'), capabilities].filter(Boolean).join(' — '));
       }
     } catch (error) {
       toast.error(t('payment.messages.connectionTestFailed'));

@@ -20,15 +20,15 @@ export const STRIPE_PERMISSION_MANIFEST: StripePermissionDefinition[] = [
   { id: 'webhook_read', access: 'read', operations: ['webhookEndpoints.list', 'webhookEndpoints.retrieve'], capabilities: ['webhooks'], probe: { kind: 'list', operation: 'webhookEndpoints.list' } },
   { id: 'webhook_write', access: 'write', writeImpliesRead: true, operations: ['webhookEndpoints.create', 'webhookEndpoints.update', 'webhookEndpoints.del'], capabilities: ['webhooks'], probe: { kind: 'first-use', reason: 'Stripe authorization-before-resource-existence behavior has not been verified live.' } },
   { id: 'checkout_session_write', access: 'write', writeImpliesRead: true, operations: ['checkout.sessions.create', 'checkout.sessions.expire'], capabilities: ['core-payments', 'saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
-  { id: 'checkout_session_read', access: 'read', operations: ['checkout.sessions.retrieve'], capabilities: ['core-payments'], probe: { kind: 'first-use', reason: 'No harmless list probe exists for this operation.' } },
+  { id: 'checkout_session_read', access: 'read', operations: ['checkout.sessions.retrieve', 'checkout.sessions.list'], capabilities: ['core-payments'], probe: { kind: 'list', operation: 'checkout.sessions.list' } },
   { id: 'customer_read', access: 'read', operations: ['customers.retrieve', 'customers.list'], capabilities: ['core-payments', 'saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'customers.list' } },
   { id: 'customer_write', access: 'write', writeImpliesRead: true, operations: ['customers.create', 'customers.update'], capabilities: ['core-payments'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
   { id: 'payment_intent_read', access: 'read', operations: ['paymentIntents.retrieve', 'paymentIntents.search', 'paymentIntents.list'], capabilities: ['core-payments', 'saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentIntents.list' } },
   { id: 'payment_intent_write', access: 'write', writeImpliesRead: true, operations: ['paymentIntents.create'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
-  { id: 'payment_method_read', access: 'read', operations: ['customers.listPaymentMethods', 'paymentMethods.retrieve'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'first-use', reason: 'No harmless list probe exists for this operation.' } },
+  { id: 'payment_method_read', access: 'read', operations: ['customers.listPaymentMethods', 'paymentMethods.retrieve', 'paymentMethods.list'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'paymentMethods.list' } },
   { id: 'payment_method_write', access: 'write', writeImpliesRead: true, operations: ['paymentMethods.detach'], capabilities: ['saved-cards-auto-pay'], probe: { kind: 'first-use', reason: 'A safe write probe has not been verified live.' } },
-  { id: 'setup_intent_read', access: 'read', operations: ['setupIntents.list'], capabilities: ['customer-import'], probe: { kind: 'list', operation: 'setupIntents.list' } },
-  { id: 'charge_read', access: 'read', operations: ['charges.retrieve'], capabilities: ['core-payments'], probe: { kind: 'first-use', reason: 'No harmless list probe exists for this operation.' } },
+  { id: 'setup_intent_read', access: 'read', operations: ['setupIntents.list'], capabilities: ['saved-cards-auto-pay', 'customer-import'], probe: { kind: 'list', operation: 'setupIntents.list' } },
+  { id: 'charge_read', access: 'read', operations: ['charges.retrieve', 'charges.list'], capabilities: ['core-payments'], probe: { kind: 'list', operation: 'charges.list' } },
 ];
 
 export const STRIPE_CAPABILITIES: StripeCapability[] = ['webhooks', 'core-payments', 'saved-cards-auto-pay', 'customer-import'];
@@ -38,21 +38,59 @@ export function isValidStripeSecretKey(value: unknown): value is string {
   return typeof value === 'string' && /^(sk|rk)_(live|test)_[A-Za-z0-9]+$/.test(value);
 }
 
-export function getStripePermissionId(error: unknown): string | null {
+export function isStripePermissionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { type?: unknown; name?: unknown; statusCode?: unknown; status?: unknown };
+  return candidate.type === 'StripePermissionError' || candidate.name === 'StripePermissionError';
+}
+
+export function getStripePermissionId(error: unknown, operation?: string): string | null {
   if (!error || typeof error !== 'object') return null;
   const candidate = error as { type?: unknown; code?: unknown; raw?: { message?: unknown }; message?: unknown };
   // Stripe reports restricted-key failures as InvalidRequestError. Keep the
   // parser narrow so authentication and transient errors retain their meaning.
-  if (candidate.type !== 'StripeInvalidRequestError' && candidate.type !== 'invalid_request_error') return null;
+  const permissionError = isStripePermissionError(error);
+  if (!permissionError && candidate.type !== 'StripeInvalidRequestError' && candidate.type !== 'invalid_request_error') return null;
   const message = [candidate.message, candidate.raw?.message].filter((v): v is string => typeof v === 'string').join(' ');
   const match = message.match(/\b([a-z]+(?:_[a-z]+)*_(?:read|write))\b/i);
-  return match?.[1] ?? null;
+  if (match) return match[1];
+  if (!permissionError) return null;
+  return STRIPE_PERMISSION_MANIFEST.find((permission) => permission.operations.includes(operation ?? ''))?.id ?? null;
 }
 
 export function describeStripePermissionFailure(permissionId: string): string {
   const definition = STRIPE_PERMISSION_MANIFEST.find((permission) => permission.id === permissionId);
   if (!definition) return `Stripe permission ${permissionId} is missing.`;
   return `Stripe capability ${definition.capabilities.join(', ')} is unavailable: missing permission ${permissionId}.`;
+}
+
+/** Translate deferred SDK denials at the operation boundary that raised them. */
+export function withStripePermissionErrors<T extends object>(client: T): T {
+  const wrap = (target: object, path: string[]): object => new Proxy(target, {
+    get(current, property) {
+      const value = Reflect.get(current, property, current);
+      if (typeof value === 'function') {
+        const operation = [...path, String(property)].join('.');
+        return function (this: unknown, ...args: unknown[]) {
+          let result: unknown;
+          try { result = Reflect.apply(value, current, args); }
+          catch (error) { throw translate(error, operation); }
+          if (result && typeof (result as Promise<unknown>).then === 'function') {
+            return (result as Promise<unknown>).catch((error) => { throw translate(error, operation); });
+          }
+          return result;
+        };
+      }
+      if (value && typeof value === 'object') return wrap(value, [...path, String(property)]);
+      return value;
+    },
+  });
+  const translate = (error: unknown, operation: string): unknown => {
+    const permissionId = getStripePermissionId(error, operation);
+    if (!permissionId) return error;
+    return new Error(describeStripePermissionFailure(permissionId), { cause: error });
+  };
+  return wrap(client, []) as T;
 }
 
 export function listStripePermissionsByCapability() {

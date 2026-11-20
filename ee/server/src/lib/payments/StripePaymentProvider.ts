@@ -21,6 +21,7 @@ import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/
 import { offSessionEvidence, toCustomerSnapshot } from './stripeImportSnapshot';
 import type { StripeCustomerSnapshot } from './stripeImportClassifier';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';
+import { withStripePermissionErrors } from './stripePermissionManifest';
 import {
   PaymentProvider,
   PaymentProviderCapabilities,
@@ -176,7 +177,7 @@ export class StripePaymentProvider implements PaymentProvider {
     if (!this.stripe) {
       throw new Error('Stripe client not initialized');
     }
-    return this.stripe;
+    return withStripePermissionErrors(this.stripe);
   }
 
   /**
