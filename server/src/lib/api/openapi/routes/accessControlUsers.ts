@@ -361,6 +361,19 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const BulkCreateUsersBody = registry.registerSchema(
+    'AccessBulkCreateUsersBodyV1',
+    zOpenApi.object({
+      users: zOpenApi.array(CreateUserBody).min(1).max(100),
+      options: zOpenApi.object({
+        send_welcome_email: zOpenApi.boolean().optional().describe('Default true. Mails each created user a link to set their own password.'),
+        force_password_reset: zOpenApi.boolean().optional().describe('Default false. Records the must_change_password preference on each account, the same flag an admin-initiated password reset sets. Nothing enforces it at sign-in yet, so pair it with send_welcome_email to make the owner choose their own password.'),
+        skip_invalid: zOpenApi.boolean().optional().describe('Default true. Reports an invalid entry in errors[] instead of failing the whole batch.'),
+        dry_run: zOpenApi.boolean().optional().describe('Default false. Validates every entry and creates nothing.'),
+      }).optional(),
+    }),
+  );
+
   const TeamBulkDeleteBody = registry.registerSchema(
     'AccessTeamBulkDeleteBodyV1',
     zOpenApi.object({
@@ -470,7 +483,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/users', summary: 'List users', description: 'Lists users using base list behavior and user query filters.', action: 'read', resource: 'user', handler: 'listUsers' },
     { method: 'post', path: '/api/v1/users', summary: 'Create user', description: 'Creates one user using createUserSchema validation.', action: 'create', resource: 'user', handler: 'createUser' },
     { method: 'get', path: '/api/v1/users/activity', summary: 'List global user activity', description: 'Returns paginated activity feed across users.', action: 'read', resource: 'user', handler: 'listUserActivity' },
-    { method: 'post', path: '/api/v1/users/bulk/create', summary: 'Bulk create users (route currently mapped to single create)', description: 'Route currently delegates to ApiUserController.create(), so behavior is single-user create schema rather than bulk payload handling.', action: 'create', resource: 'user', handler: 'bulkCreateUsersRouteMismatch' },
+    { method: 'post', path: '/api/v1/users/bulk/create', summary: 'Bulk create users', description: 'Creates up to 100 users from one payload using bulkCreateUsersSchema. Returns the bulk summary (total_processed, successful, failed, per-index errors, created users); with skip_invalid (default true) an invalid entry is reported rather than failing the batch. options.force_password_reset records the must_change_password preference on each account (not yet enforced at sign-in), options.send_welcome_email (default true) mails each new user a link to set their own password, and options.dry_run validates without creating anything.', action: 'create', resource: 'user', handler: 'bulkCreateUsers' },
     { method: 'put', path: '/api/v1/users/bulk/deactivate', summary: 'Bulk deactivate users (route currently mapped to update-by-id)', description: 'Route currently delegates to ApiUserController.update(); id extraction reads "bulk" from path and fails UUID validation.', action: 'update', resource: 'user', handler: 'bulkDeactivateUsersRouteMismatch' },
     { method: 'get', path: '/api/v1/users/search', summary: 'Search users', description: 'Searches users with optional NM-store system context support and query validation.', action: 'read', resource: 'user', handler: 'searchUsers' },
     { method: 'get', path: '/api/v1/users/stats', summary: 'Get user stats', description: 'Returns aggregate user statistics.', action: 'read', resource: 'user', handler: 'getUserStats' },
@@ -516,7 +529,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     if (def.handler === 'searchTeams') req.query = TeamSearchQuery;
     if (def.handler === 'getTeamAnalytics') req.query = TeamAnalyticsQuery;
 
-    if (def.handler === 'createUser' || def.handler === 'bulkCreateUsersRouteMismatch' || def.handler === 'userTeamsCreateRouteMismatch') req.body = { schema: CreateUserBody };
+    if (def.handler === 'createUser' || def.handler === 'userTeamsCreateRouteMismatch') req.body = { schema: CreateUserBody };
+    if (def.handler === 'bulkCreateUsers') req.body = { schema: BulkCreateUsersBody };
     if (def.handler === 'updateUser' || def.handler === 'bulkDeactivateUsersRouteMismatch') req.body = { schema: UpdateUserBody };
     if (def.handler === 'changeUserPassword') req.body = { schema: ChangePasswordBody };
     if (['assignUserRoles', 'removeUserRoles', 'replaceUserRoles'].includes(def.handler)) req.body = { schema: UserRoleIdsBody };
@@ -631,7 +645,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       extensions['x-implementation-status'] = 'not-implemented';
     }
 
-    if (['bulkCreateUsersRouteMismatch', 'bulkDeactivateUsersRouteMismatch', 'userTeamsCreateRouteMismatch', 'userTeamsDeleteRouteMismatch', 'getTeamHierarchyRoot'].includes(def.handler)) {
+    if (['bulkDeactivateUsersRouteMismatch', 'userTeamsCreateRouteMismatch', 'userTeamsDeleteRouteMismatch', 'getTeamHierarchyRoot'].includes(def.handler)) {
       extensions['x-route-controller-mismatch'] = true;
     }
 

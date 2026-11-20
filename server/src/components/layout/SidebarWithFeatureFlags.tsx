@@ -183,7 +183,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
   const { enabled: coManagedServed } = useCapability('co-managed');
   const servedCapabilities = useServedCapabilities();
-  // Server-authoritative commercial eligibility (EE only; the community stub is always null). No Stripe call.
+  // Server-authoritative commercial eligibility (EE only; the community stub is always null).
   const purchaseNavigation = useCoManagedPurchaseNavigation();
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =

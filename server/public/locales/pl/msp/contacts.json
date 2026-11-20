@@ -654,12 +654,43 @@
     "actions": {
       "openMenu": "Otwórz menu",
       "quickView": "Szybki podgląd",
-      "addNewContact": "Dodaj nowy kontakt"
+      "addNewContact": "Dodaj nowy kontakt",
+      "selectAll": "Zaznacz wszystkie kontakty",
+      "selectContact": "Zaznacz {{name}}",
+      "inviteSelected": "Zaproś do portalu ({{selected}})",
+      "inviteAllEligible": "Zaproś wszystkich uprawnionych"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować kontaktów.",
       "loadingTitle": "Błąd podczas ładowania kontaktów",
       "retryFailed": "Nie udało się załadować kontaktów. Spróbuj ponownie."
+    }
+  },
+  "bulkPortalInvitation": {
+    "title": "Zaproś kontakty do portalu klienta",
+    "description": "Potwierdzenie zbiorczych zaproszeń do portalu z podglądem uprawnionych i wynikami dla każdego kontaktu",
+    "loading": "Sprawdzanie, kogo można zaprosić...",
+    "inviteCount": "{{total}} kontaktów zostanie zaproszonych do portalu klienta.",
+    "skipCount": "{{total}} zostanie pominiętych:",
+    "visibilityNote": "Każde zaproszenie przyznaje dostęp, który kontakt już posiada: {{grouped}} jest ograniczonych do grupy widoczności portalu, a {{full}} otrzymuje pełny dostęp do danych portalu swojego klienta.",
+    "skipReasons": {
+      "alreadyHasPortalAccess": "ma już dostęp do portalu",
+      "missingEmail": "brak użytecznego adresu e-mail",
+      "sharedMailbox": "skrzynka współdzielona"
+    },
+    "actions": {
+      "send": "Wyślij {{total}} zaproszeń",
+      "sending": "Wysyłanie..."
+    },
+    "results": {
+      "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
+      "sent": "Wysłano",
+      "skipped": "Pominięto",
+      "failed": "Niepowodzenie"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
+      "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
     }
   },
   "contactsLayout": {

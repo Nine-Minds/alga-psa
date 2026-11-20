@@ -694,6 +694,8 @@
     "proRequired": "En Pro PSA-prenumeration krävs för att sponsra kunders arbetsytor.",
     "loadError": "Det gick inte att läsa in kapaciteten för kundplatser. Försök igen.",
     "purchaseError": "Det gick inte att slutföra platsköpet. Du kan säkert återuppta det.",
+    "termsChanged": "Priset har ändrats sedan du granskade köpet. Granska de uppdaterade villkoren innan du bekräftar.",
+    "offerUnavailable": "Det går tillfälligt inte att köpa nya platser. Inget belopp har debiterats.",
     "checkoutExpired": "Den här betalningen har gått ut. Starta ett nytt köp för att fortsätta.",
     "grace": "Förnya din licens eller åtgärda kapacitetsbristen före {{date}} för att hålla kunders arbetsytor skrivbara.",
     "readOnly": "Anståndet tog slut den {{date}}. Återställ den licensierade kapaciteten för att återuppta ändringar i kunders arbetsytor.",

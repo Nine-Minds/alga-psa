@@ -1013,5 +1013,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1webhooks~1templates~1{id}",
     "reason": "Admin API key 403 card (alga-2026-0003307): GET/PUT/DELETE /api/v1/webhooks/templates/{id} were documented as the webhook getById/update/delete wiring (x-route-to-controller-mismatch) but never reached a webhook: the shared id extractor parsed the literal 'templates' as the id, so every call returned 400. Webhook templates have no storage, so the routes now have their own handlers: GET returns 404, PUT/DELETE return 501 NOT_IMPLEMENTED. The removed webhook request/response shapes and 404s describe behaviour no caller could ever have received."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/extensions/x-route-controller-mismatch",
+    "reason": "Bulk portal invitations card (alga-2026-0003340): the annotation only ever recorded that POST /api/v1/users/bulk/create was wired to ApiUserController.create(). The route now has a real bulk handler, so the defect note is gone with the defect."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/extensions/x-route-controller-mismatch",
+    "reason": "Bulk portal invitations card (alga-2026-0003340): the annotation only ever recorded that POST /api/v1/users/bulk/create was wired to ApiUserController.create(). The route now has a real bulk handler, so the defect note is gone with the defect."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/requestBody/content/application~1json/schema/$ref",
+    "reason": "Bulk portal invitations card (alga-2026-0003340): POST /api/v1/users/bulk/create documented the single-user body because the route delegated to ApiUserController.create(). It now parses bulkCreateUsersSchema, so the documented body becomes AccessBulkCreateUsersBodyV1 (users[] plus options). A deliberate break: the single-user shape was the symptom of the mis-wiring, and callers who want one user have POST /api/v1/users."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1users~1bulk~1create/post/requestBody/content/application~1json/schema/$ref",
+    "reason": "Bulk portal invitations card (alga-2026-0003340): POST /api/v1/users/bulk/create documented the single-user body because the route delegated to ApiUserController.create(). It now parses bulkCreateUsersSchema, so the documented body becomes AccessBulkCreateUsersBodyV1 (users[] plus options). A deliberate break: the single-user shape was the symptom of the mis-wiring, and callers who want one user have POST /api/v1/users."
   }
 ]

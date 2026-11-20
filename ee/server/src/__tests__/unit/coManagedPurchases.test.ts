@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StripeService } from '../../lib/stripe/StripeService';
+import { createOfferCatalog, OfferTermsChangedError, OfferUnavailableError, UnmappedPriceError } from '../../lib/stripe/offerCatalog';
 
 const mocks = vi.hoisted(() => ({ connection: vi.fn(), purchase: vi.fn(), reconcile: vi.fn() }));
 vi.mock('@/lib/db/db', () => ({ getConnection: mocks.connection }));
@@ -8,7 +9,7 @@ vi.mock('@alga-psa/db', () => ({ tenantDb: (db: any, tenant: string) => ({ table
 
 const tenant = 'a0000000-0000-4000-8000-000000000001';
 const operationId = 'b0000000-0000-4000-8000-000000000001';
-const price = { id: 'price_co', type: 'recurring', billing_scheme: 'per_unit', currency: 'usd', unit_amount: 1149,
+const price = { id: 'price_co', active: true, livemode: false, product: 'prod_co', type: 'recurring', billing_scheme: 'per_unit', currency: 'usd', unit_amount: 1149,
   recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } };
 const metadata = { tenant_id: tenant, subscription_kind: 'co_managed', operation_id: operationId };
 const list = (items: any[]) => async function* () { yield* items; };
@@ -40,6 +41,11 @@ function fixture() {
   service.config = { proPriceId: 'price_pro' };
   service.getOrImportCustomer = vi.fn().mockResolvedValue(rows.stripe_customers[0]);
   service.syncCoManagedSubscription = vi.fn().mockResolvedValue(undefined);
+  // Catalog not migrated: the offer is unmanaged, so the legacy environment binding serves it.
+  const unmigrated: any = () => ({ where: () => ({ first: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); },
+    select: async () => { throw Object.assign(new Error('no such table'), { code: '42P01' }); } }) });
+  service.offerCatalogInstance = createOfferCatalog({ db: unmigrated, scope: async () => ({ stripeAccount: 'acct_test', livemode: false }),
+    stripe: { prices: { retrieve: (id: string) => service.stripe.prices.retrieve(id) } } as any, env: { STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_co' } });
   service.stripe = {
     prices: { retrieve: vi.fn().mockResolvedValue(price) },
     subscriptions: { list: list(subscriptions), update: vi.fn().mockResolvedValue(co()), cancel: vi.fn().mockResolvedValue(co()),
@@ -60,7 +66,7 @@ describe('dedicated co-managed purchase adapter', () => {
   it('previews the dedicated pool in minor units without mutating subscriptions', async () => {
     const { service, subscriptions } = fixture();
     subscriptions.push(co());
-    expect(await service.previewCoManagedSeats(tenant, 6)).toEqual({ unitAmount: 1149, monthlyTotal: 6894, amountDue: 1700, currency: 'usd' });
+    expect(await service.previewCoManagedSeats(tenant, 6)).toEqual({ unitAmount: 1149, monthlyTotal: 6894, amountDue: 1700, currency: 'usd', offerRef: 'price:price_co' });
     expect(service.stripe.invoices.createPreview).toHaveBeenCalledWith(expect.objectContaining({
       subscription: 'sub_co', subscription_details: { items: [{ id: 'si_co', quantity: 6 }], proration_behavior: 'always_invoice' },
     }));
@@ -147,5 +153,94 @@ describe('dedicated co-managed purchase adapter', () => {
     await expect(service.finalizeCoManagedCheckout(checkout({ mode: 'subscription', subscription: 'sub_co' }), tenant, db)).rejects.toThrow('authorized purchase');
     expect(mocks.purchase).not.toHaveBeenCalled();
     expect(service.syncCoManagedSubscription).not.toHaveBeenCalled();
+  });
+});
+
+/** T004: a rotation changes new purchases only. The catalog here is MANAGED (no env fallback). */
+describe('shared offer catalog rotation', () => {
+  const scope = { stripeAccount: 'acct_test', livemode: false };
+  const oldPrice = { ...price, id: 'price_old', unit_amount: 1149 };
+  const newTerms = { unitAmount: 1300, currency: 'usd', interval: 'month', intervalCount: 1 };
+  /** Current version v2 is price_new; price_old (v1) is retired but recognised. */
+  const managed = (current: any = 'ok') => ({
+    scope: async () => scope,
+    recognizedPriceIds: async () => new Set(['price_old', 'price_new']),
+    classifyPrice: vi.fn(async (_s: any, id: string) => ({ source: 'catalog', offerKey: 'co_managed_technician_seat', interval: 'month',
+      versionId: id === 'price_old' ? 'v1' : 'v2', current: id === 'price_new' })),
+    resolveCurrentOffer: vi.fn(async () => {
+      if (current !== 'ok') throw current;
+      return { source: 'catalog', offerKey: 'co_managed_technician_seat', interval: 'month', versionId: 'v2', versionNumber: 2, priceId: 'price_new', productId: 'prod_co', terms: newTerms, scope };
+    }),
+  });
+  const rotated = (catalog = managed()) => {
+    const fx = fixture();
+    fx.service.offerCatalogInstance = catalog;
+    fx.service.stripe.prices.retrieve.mockImplementation(async (id: string) => (id === 'price_old' ? oldPrice : { ...price, id }));
+    return { ...fx, catalog };
+  };
+  const onOldPrice = () => ({ ...co(), items: { data: [{ id: 'si_co', quantity: 4, price: oldPrice }] } });
+
+  it('quantity change and preview bill the existing item on its own (old) price, never the replacement', async () => {
+    const { service, subscriptions, catalog } = rotated();
+    subscriptions.push(onOldPrice());
+    expect(await service.previewCoManagedSeats(tenant, 6)).toMatchObject({ unitAmount: 1149, monthlyTotal: 6894, offerRef: 'v1' });
+    expect(catalog.resolveCurrentOffer).not.toHaveBeenCalled();
+    await service.purchaseCoManagedSeats(tenant, 6, operationId);
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledExactlyOnceWith('sub_co', expect.objectContaining({ items: [{ id: 'si_co', quantity: 6 }] }), expect.anything());
+    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v1', priceId: 'price_old' });
+  });
+
+  it('a brand-new purchase uses the replacement and pins its version and price on the operation', async () => {
+    const { service } = rotated();
+    expect(await service.previewCoManagedSeats(tenant, 6)).toMatchObject({ unitAmount: 1300, currency: 'usd', offerRef: 'v2' });
+    await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v2');
+    expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v2', priceId: 'price_new' });
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_new', quantity: 6 }] }), expect.anything());
+  });
+
+  it('requires a fresh review, with nothing persisted or charged, when the terms changed before confirmation', async () => {
+    const { service } = rotated();
+    const failure = await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v1').catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(OfferTermsChangedError);
+    expect(failure.current).toMatchObject({ priceId: 'price_new', versionId: 'v2' });
+    expect(mocks.purchase).not.toHaveBeenCalled();
+    expect(service.stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('resume after a rotation uses the recorded terms, not the catalog', async () => {
+    const { service, rows, catalog } = rotated();
+    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 6, state: 'preparing', offer_version_id: 'v1', price_id: 'price_old' }];
+    mocks.purchase.mockImplementation(async (_db, input, provider) => provider({ operation_id: input.operationId, quantity: 6, state: 'preparing', provider_reference: null,
+      offer_version_id: 'v1', price_id: 'price_old' }));
+    await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v2'); // even a stale/newer reviewed ref cannot move a recorded operation
+    expect(catalog.resolveCurrentOffer).not.toHaveBeenCalled();
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_old', quantity: 6 }] }), expect.anything());
+  });
+
+  it('fails closed for a new sale when the managed offer is paused, but existing pools can still change', async () => {
+    const paused = managed(new OfferUnavailableError('no_current_version', 'paused'));
+    const { service, subscriptions } = rotated(paused);
+    await expect(service.purchaseCoManagedSeats(tenant, 6, operationId)).rejects.toMatchObject({ reason: 'no_current_version' });
+    await expect(service.previewCoManagedSeats(tenant, 6)).rejects.toBeInstanceOf(OfferUnavailableError);
+    expect(mocks.purchase).not.toHaveBeenCalled();
+    subscriptions.push(onOldPrice());
+    await expect(service.previewCoManagedSeats(tenant, 6)).resolves.toMatchObject({ unitAmount: 1149 });
+    await service.purchaseCoManagedSeats(tenant, 6, operationId);
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('finalizing a pinned operation accepts only its recorded price; an unmapped or other price changes nothing', async () => {
+    const { service, rows, db } = rotated();
+    rows.co_managed_purchase_operations = [{ tenant, operation_id: operationId, quantity: 4, state: 'checkout', offer_version_id: 'v1', price_id: 'price_old' }];
+    const session = { mode: 'subscription', subscription: 'sub_co', metadata };
+    const sub = (priceObject: any) => ({ ...co(), metadata, items: { data: [{ id: 'si_co', quantity: 4, price: priceObject }] } });
+    service.stripe.subscriptions.retrieve.mockResolvedValue(sub(price));
+    await expect(service.finalizeCoManagedCheckout(session, tenant, db)).rejects.toBeInstanceOf(UnmappedPriceError);
+    service.stripe.subscriptions.retrieve.mockResolvedValue(sub({ ...price, id: 'price_unknown' }));
+    await expect(service.finalizeCoManagedCheckout(session, tenant, db)).rejects.toBeInstanceOf(UnmappedPriceError);
+    expect(service.syncCoManagedSubscription).not.toHaveBeenCalled();
+    service.stripe.subscriptions.retrieve.mockResolvedValue(sub(oldPrice));
+    await service.finalizeCoManagedCheckout(session, tenant, db);
+    expect(service.syncCoManagedSubscription).toHaveBeenCalledWith(tenant, 'sub_co', db);
   });
 });

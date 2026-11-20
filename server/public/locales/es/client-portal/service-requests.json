@@ -17,7 +17,19 @@
     "datePlaceholder": "Seleccione una fecha",
     "optionLabel": "Opción {{index}}",
     "submit": "Enviar solicitud",
-    "requiredField": "Este campo es obligatorio."
+    "requiredField": "Este campo es obligatorio.",
+    "validation": {
+      "type": "Esta respuesta no tiene el formato esperado.",
+      "pattern": "Esta respuesta no tiene el formato esperado.",
+      "minLength": "Use al menos {{minLength}} caracteres.",
+      "maxLength": "Use {{maxLength}} caracteres o menos.",
+      "min": "Introduzca {{min}} o más.",
+      "max": "Introduzca {{max}} o menos.",
+      "minDate": "Elija {{minDate}} o posterior.",
+      "maxDate": "Elija {{maxDate}} o anterior.",
+      "minSelected": "Elija al menos {{minSelected}}.",
+      "maxSelected": "Elija {{maxSelected}} como máximo."
+    }
   },
   "myRequests": {
     "title": "Mis solicitudes",

@@ -9,6 +9,8 @@ export default defineConfig({
     'keyboard-shortcuts/index': 'src/keyboard-shortcuts/index.ts',
     'lib/index': 'src/lib/index.ts',
     'hooks/index': 'src/hooks/index.ts',
+    'form-fields/index': 'src/form-fields/index.ts',
+    'components/designer/index': 'src/components/designer/index.ts',
   },
   format: ['esm'],
   dts: false,

@@ -49,6 +49,7 @@ const require = createRequire(import.meta.url);
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const foundationMigration = require('../../../migrations/20261028130000_create_co_management_foundation.cjs');
 const purchaseMigration = require('../../../migrations/20261029120000_create_co_managed_purchase_operations.cjs');
+const pinMigration = require('../../../migrations/20261118090100_pin_co_managed_purchase_offer_terms.cjs');
 const allocationKindMigration = require('../../../migrations/20261111100000_add_co_managed_allocation_kind.cjs');
 const subscriptionItemMigration = require('../../../migrations/20261027090100_add_stripe_subscription_item_id.cjs');
 const stripeMigrations = [
@@ -144,6 +145,7 @@ beforeAll(async () => {
   }
   await foundationMigration.up(db);
   await purchaseMigration.up(db);
+  await pinMigration.up(db); // reviewed offer version and price pinned on the operation
   // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
   await allocationKindMigration.up(db);
   await require('../../../migrations/20261119100000_add_co_managed_allocation_funding_source.cjs').up(db);
@@ -157,7 +159,8 @@ beforeAll(async () => {
   process.env.STRIPE_SECRET_KEY = 'sk_test_algasim';
   process.env.STRIPE_WEBHOOK_SECRET = 'whsec_algasim';
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_algasim';
-  process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID;
+  process.env.STRIPE_CO_MANAGED_USER_PRICE_ID = CO_MANAGED_PRICE_ID; // legacy binding: the offer is unmanaged here
+  process.env.STRIPE_ACCOUNT_ID = 'acct_algasim'; // catalog scope; the emulator has no accounts endpoint
   process.env.STRIPE_PRO_PRICE_ID = PRO_PRICE_ID;
   process.env.MASTER_BILLING_TENANT_ID = randomUUID();
   process.env.CAPABILITY_CACHE_TTL_MS = '0';

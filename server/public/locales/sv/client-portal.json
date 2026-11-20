@@ -304,7 +304,9 @@
         "noLocationEmail": "Ingen e-postadress för kontakt har konfigurerats för kundplatsen.",
         "baseUrlNotConfigured": "Programmets bas-URL är inte konfigurerad.",
         "invitationNotFound": "Inbjudan hittades inte.",
-        "revokeFailed": "Det gick inte att återkalla inbjudan. Försök igen."
+        "revokeFailed": "Det gick inte att återkalla inbjudan. Försök igen.",
+        "batchLimitExceeded": "För många kontakter i en begäran. Bjud in färre kontakter åt gången.",
+        "noTargetsSelected": "Välj minst en kontakt att bjuda in."
       }
     },
     "features": {
