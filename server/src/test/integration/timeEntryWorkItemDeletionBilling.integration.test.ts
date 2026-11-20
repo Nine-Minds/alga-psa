@@ -19,6 +19,8 @@ import { allocateTimeEntry } from '@alga-psa/shared/billingClients/hourBlockServ
 let db: Knex;
 let tenantId: string;
 let ownerId: string;
+let coworkerId: string;
+let canDelegateTenantWide = false;
 let clientId: string;
 let serviceId: string;
 let contractLineId: string;
@@ -29,7 +31,8 @@ let otherTicketId: string;
 let periodId: string;
 let sheetId: string;
 let otherSheetId: string;
-let deleteWorkItem: (workItemId: string, targetSheetId: string, type: string) => Promise<any>;
+let coworkerSheetId: string;
+let deleteWorkItem: typeof import('@alga-psa/scheduling/actions/timeEntryActions').deleteWorkItem;
 
 vi.mock('@alga-psa/auth', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/auth')>('@alga-psa/auth');
@@ -40,7 +43,9 @@ vi.mock('@alga-psa/auth', async () => {
       { tenant: tenantId },
       ...args,
     ),
-    hasPermission: vi.fn(async () => true),
+    hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+      (resource === 'time_entry' && action === 'delete') ||
+      (canDelegateTenantWide && resource === 'time_sheet' && ['approve', 'read_all'].includes(action))),
   };
 });
 
@@ -78,9 +83,14 @@ async function cleanupTenant(): Promise<void> {
 }
 
 async function seedLedger(): Promise<void> {
+  canDelegateTenantWide = false;
   tenantId = await createTenant(db, `Delete billing ${randomUUID().slice(0, 8)}`);
   ownerId = await createUser(db, tenantId, {
     email: `delete-billing-${randomUUID().slice(0, 8)}@example.com`,
+    user_type: 'internal',
+  });
+  coworkerId = await createUser(db, tenantId, {
+    email: `delete-coworker-${randomUUID().slice(0, 8)}@example.com`,
     user_type: 'internal',
   });
   clientId = await createClient(db, tenantId, `Delete billing client ${randomUUID().slice(0, 6)}`);
@@ -93,6 +103,7 @@ async function seedLedger(): Promise<void> {
   periodId = randomUUID();
   sheetId = randomUUID();
   otherSheetId = randomUUID();
+  coworkerSheetId = randomUUID();
 
   const scoped = tenantDb(db, tenantId);
   const serviceTypeId = randomUUID();
@@ -147,6 +158,7 @@ async function seedLedger(): Promise<void> {
   await scoped.table('time_sheets').insert([
     { tenant: tenantId, id: sheetId, period_id: periodId, user_id: ownerId, approval_status: 'DRAFT' },
     { tenant: tenantId, id: otherSheetId, period_id: periodId, user_id: ownerId, approval_status: 'DRAFT' },
+    { tenant: tenantId, id: coworkerSheetId, period_id: periodId, user_id: coworkerId, approval_status: 'DRAFT' },
   ]);
 }
 
@@ -154,6 +166,7 @@ async function seedAllocatedEntry(params: {
   entryId?: string;
   workItemId?: string;
   timeSheetId?: string;
+  userId?: string;
   invoiced?: boolean;
 } = {}): Promise<SeededEntry> {
   const entryId = params.entryId ?? randomUUID();
@@ -162,7 +175,7 @@ async function seedAllocatedEntry(params: {
   const start = '2026-03-10T10:00:00.000Z';
   const end = '2026-03-10T11:00:00.000Z';
   await tenantDb(db, tenantId).table('time_entries').insert({
-    tenant: tenantId, entry_id: entryId, user_id: ownerId, time_sheet_id: timeSheetId,
+    tenant: tenantId, entry_id: entryId, user_id: params.userId ?? ownerId, time_sheet_id: timeSheetId,
     work_item_id: workItemId, work_item_type: 'ticket', service_id: serviceId,
     contract_line_id: contractLineId, start_time: start, end_time: end,
     work_date: '2026-03-10', work_timezone: 'UTC', billable_duration: 60,
@@ -201,7 +214,7 @@ async function blockState() {
   return { remainingMinutes: Number(block.remaining_minutes), allocations };
 }
 
-describe('deleteWorkItem billing reversal through deleteTimeEntryCore (real DB)', () => {
+describe('deleteWorkItem authorization and billing reversal through deleteTimeEntryCore (real DB)', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
     ({ deleteWorkItem } = await import('@alga-psa/scheduling/actions/timeEntryActions'));
@@ -216,31 +229,84 @@ describe('deleteWorkItem billing reversal through deleteTimeEntryCore (real DB)'
     tenantId = '';
   });
 
-  it('reverses both billing ledgers for scoped rows and preserves unrelated allocated entries', async () => {
+  it('deletes only the selected owner, sheet and item and reverses only their billing allocations', async () => {
     await seedLedger();
     const first = await seedAllocatedEntry({ entryId: '00000000-0000-4000-8000-000000000001' });
     const second = await seedAllocatedEntry({ entryId: '00000000-0000-4000-8000-000000000002' });
     const otherSheet = await seedAllocatedEntry({ timeSheetId: otherSheetId });
     const otherItem = await seedAllocatedEntry({ workItemId: otherTicketId });
-    expect(await usageMinutes()).toBe(240);
-    expect((await blockState()).remainingMinutes).toBe(360);
+    const coworker = await seedAllocatedEntry({ timeSheetId: coworkerSheetId, userId: coworkerId });
+    expect(await usageMinutes()).toBe(300);
+    expect((await blockState()).remainingMinutes).toBe(300);
 
-    await deleteWorkItem(ticketId, sheetId, 'ticket');
+    await expect(deleteWorkItem(ticketId, sheetId, 'ticket')).resolves.toBeUndefined();
 
     const survivingEntries = await tenantDb(db, tenantId).table('time_entries')
       .where({ tenant: tenantId }).select('entry_id').orderBy('entry_id');
-    expect(survivingEntries.map((row) => row.entry_id)).toEqual([otherSheet.entryId, otherItem.entryId].sort());
+    expect(survivingEntries.map((row) => row.entry_id)).toEqual([otherSheet.entryId, otherItem.entryId, coworker.entryId].sort());
     expect(await tenantDb(db, tenantId).table('time_entries')
       .where({ tenant: tenantId }).whereIn('entry_id', [first.entryId, second.entryId])).toHaveLength(0);
-    expect(await usageMinutes()).toBe(120);
+    expect(await usageMinutes()).toBe(180);
     expect(await blockState()).toEqual({
-      remainingMinutes: 480,
+      remainingMinutes: 420,
       allocations: [
         { time_entry_id: otherSheet.entryId, minutes: 60 },
         { time_entry_id: otherItem.entryId, minutes: 60 },
+        { time_entry_id: coworker.entryId, minutes: 60 },
       ].sort((a, b) => a.time_entry_id.localeCompare(b.time_entry_id)),
     });
-    expect([first.entryId, second.entryId]).not.toContain(survivingEntries[0].entry_id);
+  });
+
+  it('denies a delete-only caller targeting a coworker sheet and preserves both billing ledgers', async () => {
+    await seedLedger();
+    const coworker = await seedAllocatedEntry({ timeSheetId: coworkerSheetId, userId: coworkerId });
+    const beforeBlock = await blockState();
+
+    await expect(deleteWorkItem(ticketId, coworkerSheetId, 'ticket')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot access other users time sheets',
+    });
+
+    expect(await tenantDb(db, tenantId).table('time_entries')
+      .where({ tenant: tenantId, entry_id: coworker.entryId }).first()).toBeDefined();
+    expect(await usageMinutes()).toBe(60);
+    expect(await blockState()).toEqual(beforeBlock);
+  });
+
+  it('checks each entry owner and rolls back earlier reversals when a coworker entry is on the selected sheet', async () => {
+    await seedLedger();
+    const own = await seedAllocatedEntry({ entryId: '00000000-0000-4000-8000-000000000001' });
+    const coworker = await seedAllocatedEntry({
+      entryId: '00000000-0000-4000-8000-000000000002', userId: coworkerId,
+    });
+    const beforeBlock = await blockState();
+
+    await expect(deleteWorkItem(ticketId, sheetId, 'ticket')).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot access other users time sheets',
+    });
+
+    const surviving = await tenantDb(db, tenantId).table('time_entries')
+      .where({ tenant: tenantId }).select('entry_id').orderBy('entry_id');
+    expect(surviving.map((row) => row.entry_id)).toEqual([own.entryId, coworker.entryId]);
+    expect(await usageMinutes()).toBe(120);
+    expect(await blockState()).toEqual(beforeBlock);
+  });
+
+  it('allows tenant-wide delegation with approve and read_all while preserving the unselected owner sheet', async () => {
+    await seedLedger();
+    canDelegateTenantWide = true;
+    const own = await seedAllocatedEntry();
+    await seedAllocatedEntry({ timeSheetId: coworkerSheetId, userId: coworkerId });
+
+    await expect(deleteWorkItem(ticketId, coworkerSheetId, 'ticket')).resolves.toBeUndefined();
+
+    const surviving = await tenantDb(db, tenantId).table('time_entries')
+      .where({ tenant: tenantId }).select('entry_id');
+    expect(surviving.map((row) => row.entry_id)).toEqual([own.entryId]);
+    expect(await usageMinutes()).toBe(60);
+    expect(await blockState()).toEqual({
+      remainingMinutes: 540,
+      allocations: [{ time_entry_id: own.entryId, minutes: 60 }],
+    });
   });
 
   it('does not reverse either ledger again when the same deletion is repeated', async () => {

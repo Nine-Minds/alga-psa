@@ -10,10 +10,12 @@ The repair keeps authorization and billing protections in the shared delete core
 
 Review [`timeEntryWorkItemDeletionBilling.integration.test.ts`](../../server/src/test/integration/timeEntryWorkItemDeletionBilling.integration.test.ts) first. It uses a migrated PostgreSQL database and the real action, transaction, deletion core, bucket draw service, and hour-block reversal service. It does not mock the deletion core or billing effects.
 
-The four persisted-state cases establish that:
+The seven persisted-state cases establish that:
 
 - selected entries are deleted, their bucket usage returns to zero, their hour-block allocation rows disappear, and the block balance is restored;
-- entries on another sheet or work item survive with their allocations and billing balances unchanged;
+- coworkers' entries sharing the same work item, entries on another sheet, and entries for another work item survive with their allocations and billing balances unchanged;
+- a caller with only `time_entry:delete` cannot delete a coworker's sheet, and an unauthorized entry owner on the selected sheet rolls back the whole group, including earlier billing reversals;
+- a caller with `time_entry:delete`, `time_sheet:approve`, and `time_sheet:read_all` can delete the selected coworker's entries while preserving the unselected sheet;
 - repeating or concurrently racing the same delete reverses each allocation only once;
 - when an invoiced row stops a grouped deletion after an earlier row was processed, both entries and both billing ledgers return to their original state.
 
@@ -22,15 +24,27 @@ The check logs and controlled mutations are in `/home/robert/.alga-xo/reviews/3c
 Run the suite from `server` against the isolated integration database:
 
 ```sh
-DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user \
+TEST_DB_NAME=deleteworkitem_authz_test \
+  DB_HOST=127.0.0.1 DB_PORT=5472 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user \
   npx vitest run src/test/integration/timeEntryWorkItemDeletionBilling.integration.test.ts --coverage.enabled=false
 ```
+
+The expanded suite passes 7/7. Temporarily restoring only `timeEntryWorkItemActions.ts` from merge `e75baf12b5` makes all seven cases fail on runtime assertions: unauthorized deletes succeed, unrelated entries disappear, and bucket usage remains drawn. The fixed action was restored after the check. The authentication wrapper and permission lookup are controlled test inputs; sheet lookup, entry-owner delegation checks, authorization bundle evaluation, transactions, deletion, and billing services run without mocks.
 
 ## Security and type evidence
 
 [`timeEntryWorkItemActions.deleteWorkItem.authz.test.ts`](../../packages/scheduling/tests/timeEntryWorkItemActions.deleteWorkItem.authz.test.ts) retains the focused owner/delegation, sheet/item/type scope, invoiced rejection, coarse permission, and allowed-delete cases. It passes 5/5. Its database, event, and deletion-core boundaries are mocked; use the real-core integration suite above for billing behavior.
 
 The required scheduling typecheck passes with `npm run typecheck` from `packages/scheduling`. The Nx scheduling build target passes; the package's direct `npm run build` script is not configured with tsup inputs and exits with “No input files,” so it is not the package build target. Logs are saved in the same review artifact directory as `scheduling-typecheck-repair.log` and `scheduling-nx-build-repair.log`.
+
+Repeat the focused authorization suite from `packages/scheduling` with:
+
+```sh
+npx vitest run tests/timeEntryWorkItemActions.deleteWorkItem.authz.test.ts --coverage.enabled=false
+npm run typecheck
+```
+
+The latest implementation checks are recorded as `implement-integration.log` (7 passed), `implement-authz.log` (5 passed), `implement-typecheck.log` (exit 0), and `implement-vulnerable-action.log` (7 expected failures) in the review artifact directory above.
 
 Implementation references:
 
