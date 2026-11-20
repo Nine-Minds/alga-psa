@@ -76,6 +76,12 @@ export interface RelationshipSqlAdapter {
    * when `userIds` is empty.
    */
   applyAssignedUsers(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Override when team membership is represented by a relation instead of a column. */
+  applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
+  /** Override when ownership is represented by a relation instead of a column. */
+  applyOwner?(builder: Knex.QueryBuilder, userId: string): void;
+  /** Override when the resource has no board field or stores board membership relationally. */
+  applyBoards?(builder: Knex.QueryBuilder, boardIds: string[]): void;
 }
 
 export interface RelationshipSqlContext {
@@ -117,7 +123,8 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       typeof input.record?.ownerUserId === 'string' && input.record.ownerUserId === input.subject.userId,
     compileSql: (builder, ctx) => {
-      builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
+      if (ctx.adapter.applyOwner) ctx.adapter.applyOwner(builder, ctx.subject.userId);
+      else builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
     },
   },
   assigned: {
@@ -190,7 +197,12 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   same_team: {
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      if (ctx.adapter.applyTeams) {
+        if (!ctx.subject.teamIds?.length) deny(builder);
+        else ctx.adapter.applyTeams(builder, ctx.subject.teamIds);
+      } else {
+        whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
+      }
     },
   },
   // One rule intersects client, board, and contact restrictions. Built-in rules
@@ -229,7 +241,12 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
     matches: (input) =>
       Boolean(input.record?.boardId && input.selectedBoardIds?.includes(input.record.boardId)),
     compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      if (ctx.adapter.applyBoards) {
+        if (!ctx.selectedBoardIds?.length) deny(builder);
+        else ctx.adapter.applyBoards(builder, ctx.selectedBoardIds);
+      } else {
+        whereInOrDeny(builder, ctx.adapter.boardColumn, ctx.selectedBoardIds);
+      }
     },
   },
 };
@@ -290,6 +307,13 @@ function compileBundleRuleSql(
     } else {
       deny(builder);
     }
+    return { supported: true };
+  }
+
+  // Redaction constraints change returned fields, not record eligibility. The
+  // resource search compiles only the read allow/deny predicate, matching the
+  // kernel's authorization decision while leaving label shaping to its caller.
+  if (rule.constraintKey === 'hide_sensitive_fields') {
     return { supported: true };
   }
 

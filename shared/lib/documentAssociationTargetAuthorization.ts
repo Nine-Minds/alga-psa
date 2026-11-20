@@ -2,7 +2,9 @@ import type { Knex } from 'knex';
 import type { IUser, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
-import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authorization/assetReadAuthorization';
+import { createAssetReadContext, filterReadableAssets, resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
+import { compileResourceReadAuthorizationSql, type BundleNarrowingRule, type RelationshipSqlAdapter } from '@alga-psa/authorization/kernel';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createProjectReadAuthorizer } from '../../packages/projects/src/lib/projectReadAuthorization';
 import { canAccessAttachmentTicket } from './ticketCommentAttachments';
 import { authorizeAndRedactDocuments } from './documentAuthorization';
@@ -118,34 +120,92 @@ async function ticketScope(query: Knex.QueryBuilder, conn: Knex.Transaction, ten
   }
 }
 
-async function taskScope(query: Knex.QueryBuilder, _conn: Knex.Transaction, _tenant: string, user: IUser): Promise<void> {
-  if (user.user_type === 'client') query.where('p.client_id', user.clientId ?? '__no_client_scope__');
+async function applyKernelReadScope(
+  query: Knex.QueryBuilder,
+  conn: Knex.Transaction,
+  tenant: string,
+  user: IUser,
+  resourceType: 'project' | 'asset',
+  sqlAdapter: RelationshipSqlAdapter,
+): Promise<void> {
+  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user as IUserWithRoles);
+  const input = { subject, resource: { type: resourceType, action: 'read' } };
+  let bundleRules: BundleNarrowingRule[];
+  try {
+    bundleRules = await resolveBundleNarrowingRulesForEvaluation(conn, input);
+  } catch {
+    // Match the existing record authorizers: bundle resolution failures do not
+    // invent a new denial policy for association search.
+    bundleRules = [];
+  }
+  const result = compileResourceReadAuthorizationSql(query, {
+    resourceType,
+    action: 'read',
+    builtinRules: user.user_type === 'client' ? [{ template: 'same_client' }] : [],
+    bundleRules,
+    ctx: { subject, adapter: sqlAdapter },
+  });
+  if (!result.supported) query.whereRaw('1 = 0');
 }
 
-async function projectTaskSearchScope(query: Knex.QueryBuilder, conn: Knex.Transaction, tenant: string, user: IUser, alias: string): Promise<void> {
-  await taskScope(query, conn, tenant, user);
-  const candidates = await query.clone().clearSelect().clearOrder()
-    .select<{ task_id: string; project_id: string; client_id: string | null; assigned_to: string | null }[]>(
-      `${alias}.task_id`, 'p.project_id', 'p.client_id', 'p.assigned_to',
-    );
-  const authorizeProject = await createProjectReadAuthorizer(conn, tenant, user as IUserWithRoles, 'read');
-  const allowedTaskIds: string[] = [];
-  for (const candidate of candidates) {
-    if (await authorizeProject(candidate)) allowedTaskIds.push(candidate.task_id);
-  }
-  if (allowedTaskIds.length === 0) query.whereRaw('1 = 0');
-  else query.whereIn(`${alias}.task_id`, allowedTaskIds);
+async function projectTaskSearchScope(query: Knex.QueryBuilder, conn: Knex.Transaction, tenant: string, _user: IUser, _alias: string): Promise<void> {
+  // Project task authorization is project authorization, evaluated against the
+  // owning project record. Keep that predicate in SQL before both count and page.
+  query.whereNotNull('p.project_id');
+  const adapter: RelationshipSqlAdapter = {
+    ownerColumn: 'p.assigned_to',
+    clientColumn: 'p.client_id',
+    boardColumn: 'p.project_id',
+    teamColumn: 'p.project_id',
+    applyAssignedUsers: (builder, userIds) => builder.whereIn('p.assigned_to', userIds),
+    applyOwner: (builder, userId) => builder.where('p.assigned_to', userId),
+    // Project authorization records currently contain no teamIds; the kernel
+    // therefore denies same_team rules for projects.
+    applyTeams: (builder) => builder.whereRaw('1 = 0'),
+    // Project records do not carry a board id, so selected_boards also denies.
+    applyBoards: (builder) => builder.whereRaw('1 = 0'),
+  };
+  await applyKernelReadScope(query, conn, tenant, _user, 'project', adapter);
 }
 
 async function assetSearchScope(query: Knex.QueryBuilder, conn: Knex.Transaction, tenant: string, user: IUser, alias: string): Promise<void> {
-  if (user.user_type === 'client') query.where(`${alias}.client_id`, user.clientId ?? '__no_client_scope__');
-  const candidates = await query.clone().clearSelect().clearOrder()
-    .select<{ asset_id: string; client_id: string | null }[]>(`${alias}.asset_id`, `${alias}.client_id`);
-  const context = await createAssetReadContext(conn, tenant, user);
-  const readable = await filterReadableAssets(conn, tenant, context, candidates);
-  const readableIds = readable.map((asset) => asset.asset_id);
-  if (readableIds.length === 0) query.whereRaw('1 = 0');
-  else query.whereIn(`${alias}.asset_id`, readableIds);
+  const associationsFor = (builder: Knex.QueryBuilder, entityType: 'user' | 'team', ids: string[]) => {
+    const associations = dbTable(conn, tenant, 'asset_associations as aa')
+      .whereRaw('?? = ??', ['aa.tenant', `${alias}.tenant`])
+      .whereRaw('?? = ??', ['aa.asset_id', `${alias}.asset_id`])
+      .where('aa.entity_type', entityType)
+      .whereIn('aa.entity_id', ids);
+    builder.whereExists(associations.select(conn.raw('1')));
+  };
+  const ownerAssociation = dbTable(conn, tenant, 'asset_associations as owner')
+    .whereRaw('?? = ??', ['owner.tenant', `${alias}.tenant`])
+    .whereRaw('?? = ??', ['owner.asset_id', `${alias}.asset_id`])
+    .where('owner.entity_type', 'user')
+    .select('owner.entity_id')
+    .orderBy('owner.entity_id', 'asc')
+    .limit(1);
+  const applyOwner = (builder: Knex.QueryBuilder, userId: string) => {
+    const owner = dbTable(conn, tenant, 'asset_associations as aa')
+      .whereRaw('?? = ??', ['aa.tenant', `${alias}.tenant`])
+      .whereRaw('?? = ??', ['aa.asset_id', `${alias}.asset_id`])
+      .where('aa.entity_type', 'user')
+      .where('aa.entity_id', userId)
+      .whereIn('aa.entity_id', ownerAssociation)
+      .select(conn.raw('1'));
+    builder.whereExists(owner);
+  };
+  const adapter: RelationshipSqlAdapter = {
+    ownerColumn: `${alias}.asset_id`,
+    clientColumn: `${alias}.client_id`,
+    boardColumn: `${alias}.asset_id`,
+    teamColumn: `${alias}.asset_id`,
+    applyAssignedUsers: (builder, ids) => associationsFor(builder, 'user', ids),
+    applyOwner,
+    applyTeams: (builder, ids) => associationsFor(builder, 'team', ids),
+    // Asset authorization records do not carry a board id.
+    applyBoards: (builder) => builder.whereRaw('1 = 0'),
+  };
+  await applyKernelReadScope(query, conn, tenant, user, 'asset', adapter);
 }
 
 async function assertOwnedRecord(

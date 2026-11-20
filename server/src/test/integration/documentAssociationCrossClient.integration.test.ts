@@ -14,7 +14,9 @@ let clientBId: string;
 let clientAUserId: string;
 let clientBUserId: string;
 let taskAId: string;
+let taskASecondId: string;
 let taskBId: string;
+let searchAssetIds: string[] = [];
 let ticketBId: string;
 let ticketAVisibleId: string;
 let ticketAVisibleSecondId: string;
@@ -159,7 +161,15 @@ describe('document association cross-client authorization', () => {
       first_name: 'Client', last_name: 'B', is_inactive: false,
     });
     taskAId = await seedProjectTask(clientAId, 'Client A task');
+    taskASecondId = await seedProjectTask(clientAId, 'Client A task page two');
     taskBId = await seedProjectTask(clientBId, 'Client B secret task');
+    searchAssetIds = [uuidv4(), uuidv4(), uuidv4()];
+    await table('assets').insert(searchAssetIds.map((assetId, index) => ({
+      tenant: tenantId, asset_id: assetId, asset_type: 'workstation',
+      client_id: index === 2 ? clientBId : clientAId,
+      asset_tag: `SEARCH-${assetId.slice(0, 8)}`, name: 'Association search asset',
+      serial_number: 'ASSOCIATION-SEARCH', status: 'active',
+    })));
     visibleBoardId = uuidv4();
     hiddenBoardId = uuidv4();
     visibilityGroupId = uuidv4();
@@ -254,6 +264,8 @@ describe('document association cross-client authorization', () => {
         await table('asset_associations').where({ asset_id: assetDeniedByPolicyId }).del();
         await table('assets').where({ asset_id: assetDeniedByPolicyId }).del();
       }
+      await table('asset_associations').whereIn('asset_id', searchAssetIds).del();
+      await table('assets').whereIn('asset_id', searchAssetIds).del();
       await table('boards').whereIn('board_id', [visibleBoardId, hiddenBoardId]).del();
       const projects = await table('projects').whereIn('client_id', [clientAId, clientBId]).pluck('project_id');
       const phases = projects.length ? await table('project_phases').whereIn('project_id', projects).select('phase_id') : [];
@@ -272,6 +284,8 @@ describe('document association cross-client authorization', () => {
 
   afterEach(async () => {
     if (!db || !tenantId) return;
+    await table('assets').where('asset_tag', 'like', 'SCALE-%').del();
+    await table('project_tasks').where('task_name', 'like', 'scale-%').del();
     await table('document_associations').where({ document_id: documentAId }).del();
     await table('document_associations').insert({
       tenant: tenantId, association_id: uuidv4(), document_id: documentAId,
@@ -317,10 +331,50 @@ describe('document association cross-client authorization', () => {
     setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser, permissionCheck: (_user, resource, action) => clientPermissions.has(`${resource}:${action}`) });
 
 
-    const hiddenTask = await searchDocumentAssociationEntities('project_task', 'Client B secret task', 1, 50);
-    expect(hiddenTask).toEqual({ options: [], total: 0 });
-    const ownTask = await searchDocumentAssociationEntities('project_task', 'Client A task', 1, 50);
-    expect(ownTask.options.map((item: { value: string }) => item.value)).toContain(taskAId);
+    const ownTaskRows = await table('project_tasks').whereIn('task_id', [taskAId, taskASecondId]).select('phase_id');
+    const ownProjectIds = await table('project_phases').whereIn('phase_id', ownTaskRows.map((row: { phase_id: string }) => row.phase_id)).pluck('project_id');
+    await table('projects').whereIn('project_id', ownProjectIds).update({ assigned_to: clientAUserId });
+    const bundleService = await import('@alga-psa/authorization/bundles/service');
+    const projectReadRule = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockImplementation(async (_trx, input) =>
+      input.resource.type === 'project' && input.resource.action === 'read'
+        ? [{ id: 'own-projects', resource: 'project', action: 'read', templateKey: 'own' }]
+        : []
+    );
+    try {
+      const hiddenTask = await searchDocumentAssociationEntities('project_task', 'Client B secret task', 1, 50);
+      expect(hiddenTask).toEqual({ options: [], total: 0 });
+      const ownTask = await searchDocumentAssociationEntities('project_task', 'Client A task', 1, 50);
+      expect(ownTask.options.map((item: { value: string }) => item.value)).toContain(taskAId);
+      const taskPage1 = await searchDocumentAssociationEntities('project_task', 'Client A task', 1, 1);
+      const taskPage2 = await searchDocumentAssociationEntities('project_task', 'Client A task', 2, 1);
+      expect(taskPage1.total).toBe(2);
+      expect(taskPage2.total).toBe(2);
+      expect([taskPage1.options[0].value, taskPage2.options[0].value].sort()).toEqual([taskAId, taskASecondId].sort());
+    } finally {
+      projectReadRule.mockRestore();
+      await table('projects').whereIn('project_id', ownProjectIds).update({ assigned_to: null });
+    }
+    const assetMatches = await searchDocumentAssociationEntities('asset', 'Association search asset', 1, 50);
+    expect(assetMatches.total).toBe(2);
+    expect(assetMatches.options.map((item: { value: string }) => item.value).sort()).toEqual(searchAssetIds.slice(0, 2).sort());
+    expect(await searchDocumentAssociationEntities('asset', 'Association search asset', 1, 1)).toMatchObject({ total: 2 });
+    expect(await searchDocumentAssociationEntities('asset', 'Association search asset', 2, 1)).toMatchObject({ total: 2 });
+    expect(await searchDocumentAssociationEntities('asset', 'Association search asset', 1, 10)).toMatchObject({ total: 2 });
+    await table('asset_associations').insert([
+      { tenant: tenantId, asset_id: searchAssetIds[0], entity_type: 'user', entity_id: '00000000-0000-4000-8000-000000000001', created_by: mspUserId },
+      { tenant: tenantId, asset_id: searchAssetIds[0], entity_type: 'user', entity_id: clientAUserId, created_by: mspUserId },
+    ]);
+    const assetOwnerRule = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockImplementation(async (_trx, input) =>
+      input.resource.type === 'asset' && input.resource.action === 'read'
+        ? [{ id: 'owned-assets', resource: 'asset', action: 'read', templateKey: 'own' }]
+        : []
+    );
+    try {
+      expect(await searchDocumentAssociationEntities('asset', 'Association search asset', 1, 10)).toEqual({ options: [], total: 0 });
+    } finally {
+      assetOwnerRule.mockRestore();
+      await table('asset_associations').whereIn('asset_id', searchAssetIds).del();
+    }
     const hiddenClient = await searchDocumentAssociationEntities('client', 'Association Client B', 1, 50);
     expect(hiddenClient).toEqual({ options: [], total: 0 });
     const hiddenTicket = await searchDocumentAssociationEntities('ticket', 'Client B secret ticket', 1, 50);
@@ -589,7 +643,7 @@ describe('document association cross-client authorization', () => {
     });
 
     const mspUser = createMockUser('internal', { user_id: mspUserId, tenant: tenantId });
-    const grants = new Set(['document:update', 'asset:update']);
+    const grants = new Set(['document:read', 'document:update', 'asset:read', 'asset:update']);
     const checkedPermissions: string[] = [];
     setMockUser(mspUser, [...grants]);
     setupCommonMocks({
@@ -607,6 +661,7 @@ describe('document association cross-client authorization', () => {
         : []
     );
     try {
+      expect(await searchDocumentAssociationEntities('asset', 'Policy restricted asset', 1, 10)).toEqual({ options: [], total: 0 });
       expect(await createDocumentAssociations(assetDeniedByPolicyId, 'asset', [documentAId])).toHaveProperty('permissionError');
       const beforeRemoval = await table('document_associations')
         .where({ document_id: documentAId, entity_type: 'asset', entity_id: assetDeniedByPolicyId }).select('association_id');
@@ -763,4 +818,131 @@ describe('document association cross-client authorization', () => {
     expect(await table('external_files').whereIn('file_id', uploaded.map((row: { file_id: string }) => row.file_id))).toHaveLength(2);
     expect(storageMocks.deleteFile).not.toHaveBeenCalled();
   });
+
+  it('keeps task and asset search authorization in SQL at representative scale', async () => {
+    const taskA = await table('project_tasks').where({ task_id: taskAId }).select('phase_id').first();
+    const taskB = await table('project_tasks').where({ task_id: taskBId }).select('phase_id').first();
+    const taskRows: Array<Record<string, unknown>> = [];
+    const assetRows: Array<Record<string, unknown>> = [];
+    const authorizedTaskIds: string[] = [];
+    const authorizedAssetIds: string[] = [];
+    const taskMatchIds: string[] = [];
+    const assetMatchIds: string[] = [];
+    const timestamp = new Date('2026-01-01T00:00:00.000Z');
+    const scaleId = (index: number) => `ffffffff-ffff-4fff-bfff-${index.toString(16).padStart(12, '0')}`;
+    for (let index = 0; index < 20_000; index++) {
+      const clientIndex = index % 2;
+      const taskId = scaleId(index);
+      const assetId = scaleId(index);
+      const isSparseMatch = index >= 19_984;
+      const taskName = isSparseMatch ? `scale-needle-task-${index}` : `scale-background-task-${index}`;
+      const assetName = isSparseMatch ? `scale-needle-asset-${index}` : `scale-background-asset-${index}`;
+      taskRows.push({
+        tenant: tenantId, task_id: taskId, phase_id: clientIndex === 0 ? taskA.phase_id : taskB.phase_id,
+        task_name: taskName, wbs_code: `scale-${index}`, updated_at: timestamp,
+      });
+      assetRows.push({
+        tenant: tenantId, asset_id: assetId, asset_type: 'workstation',
+        client_id: clientIndex === 0 ? clientAId : clientBId,
+        asset_tag: `SCALE-${index}`, name: assetName, serial_number: `SCALE-SERIAL-${index}`, status: 'active',
+      });
+      if (clientIndex === 0) {
+        authorizedTaskIds.push(taskId);
+        authorizedAssetIds.push(assetId);
+      }
+      if (isSparseMatch && clientIndex === 0) {
+        taskMatchIds.push(taskId);
+        assetMatchIds.push(assetId);
+      }
+    }
+    for (let index = 0; index < taskRows.length; index += 500) {
+      await table('project_tasks').insert(taskRows.slice(index, index + 500));
+      await table('assets').insert(assetRows.slice(index, index + 500));
+    }
+
+    const clientUser = createMockUser('client', {
+      user_id: clientAUserId, tenant: tenantId, clientId: clientAId, contact_id: clientAContactId,
+    });
+    const permissions = new Set(['document:read', 'project:read', 'asset:read']);
+    setMockUser(clientUser, [...permissions]);
+    setupCommonMocks({ tenantId, userId: clientAUserId, user: clientUser,
+      permissionCheck: (_user, resource, action) => permissions.has(`${resource}:${action}`) });
+
+    const captured: Array<{ sql: string; bindings: unknown[] }> = [];
+    const transferredRootRows: number[] = [];
+    const searchTimings: Array<{ entityType: string; search: string; page: number; milliseconds: number }> = [];
+    const onQuery = (query: { sql: string; bindings: unknown[] }) => {
+      if (/from\s+"(?:project_tasks|assets)"/i.test(query.sql)) captured.push(query);
+    };
+    const onQueryResponse = (response: unknown, query: { sql: string }) => {
+      if (!/from\s+"(?:project_tasks|assets)"/i.test(query.sql)) return;
+      transferredRootRows.push(Array.isArray(response) ? response.length : response ? 1 : 0);
+    };
+    db.on('query', onQuery);
+    db.on('query-response', onQueryResponse);
+    const startedAt = Date.now();
+    try {
+      for (const entityType of ['project_task', 'asset'] as const) {
+        let queryStarted = Date.now();
+        const needle = await searchDocumentAssociationEntities(entityType, 'scale-needle', 1, 10);
+        searchTimings.push({ entityType, search: 'scale-needle', page: 1, milliseconds: Date.now() - queryStarted });
+        queryStarted = Date.now();
+        const firstPage = await searchDocumentAssociationEntities(entityType, 'scale-', 1, 5);
+        searchTimings.push({ entityType, search: 'scale-', page: 1, milliseconds: Date.now() - queryStarted });
+        queryStarted = Date.now();
+        const laterPage = await searchDocumentAssociationEntities(entityType, 'scale-', 2, 5);
+        searchTimings.push({ entityType, search: 'scale-', page: 2, milliseconds: Date.now() - queryStarted });
+        const expected = entityType === 'project_task' ? taskMatchIds : assetMatchIds;
+        expect(needle.total).toBe(8);
+        expect(needle.options.map((item: { value: string }) => item.value).sort()).toEqual(expected.sort());
+        expect(firstPage.total).toBe(10_000);
+        expect(firstPage.options).toHaveLength(5);
+        expect(laterPage.total).toBe(10_000);
+        expect(laterPage.options).toHaveLength(5);
+        const authorizedIds = entityType === 'project_task' ? authorizedTaskIds : authorizedAssetIds;
+        expect([...firstPage.options, ...laterPage.options].every((item: { value: string }) => authorizedIds.includes(item.value))).toBe(true);
+      }
+    } finally {
+      db.removeListener('query', onQuery);
+      db.removeListener('query-response', onQueryResponse);
+    }
+
+    const searchQueries = captured.filter((query) => /count\s*\(distinct|limit/i.test(query.sql));
+    const parameterCounts = searchQueries.map((query) => query.bindings.length);
+    const plans = [];
+    const connection = await db.client.acquireConnection();
+    try {
+      for (const entityType of ['project_tasks', 'assets']) {
+        const candidate = searchQueries.find((query) => query.sql.includes(`"${entityType}"`) &&
+          /count\s*\(distinct/i.test(query.sql) && query.bindings.includes('%scale-%'));
+        if (candidate) {
+          await connection.query("SELECT set_config('app.current_tenant', $1, false)", [tenantId]);
+          const explained = await connection.query(`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${candidate.sql}`, candidate.bindings);
+          plans.push({ entityType, plan: explained.rows.map((row: { 'QUERY PLAN': string }) => row['QUERY PLAN']) });
+        }
+      }
+    } finally {
+      await connection.query('RESET app.current_tenant');
+      await db.client.releaseConnection(connection);
+    }
+    console.info('DOCUMENT_ASSOCIATION_SEARCH_SCALE', JSON.stringify({
+      tasks: { total: 20_000, perClient: 10_000, authorizedNeedleMatches: 8 },
+      assets: { total: 20_000, perClient: 10_000, authorizedNeedleMatches: 8 },
+      capturedSearchStatements: searchQueries.length,
+      maxSqlParameters: Math.max(0, ...parameterCounts),
+      databaseRowsTransferred: { maxPerSearchStatement: Math.max(0, ...transferredRootRows), statements: transferredRootRows.length },
+      applicationResultSizes: { selectivePage: 8, broadCount: 10_000, firstPage: 5, laterPage: 5 },
+      searchTimings,
+      elapsedMilliseconds: Date.now() - startedAt,
+      plans,
+    }));
+    expect(searchQueries.length).toBeGreaterThanOrEqual(12);
+    expect(Math.max(...parameterCounts)).toBeLessThan(20);
+    expect(transferredRootRows.length).toBe(searchQueries.length);
+    expect(Math.max(...transferredRootRows)).toBeLessThanOrEqual(8);
+
+    await table('assets').where('asset_tag', 'like', 'SCALE-%').del();
+    await table('project_tasks').where('task_name', 'like', 'scale-%').del();
+
+  }, 120_000);
 });

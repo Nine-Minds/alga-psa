@@ -10,6 +10,31 @@ Plan followed: [2026-11-10 fix plan](./2026-11-10-2-findings-in-documentactions-
 
 **Behavioral regression and observed result.** `server/src/test/integration/documentAssociationCrossClient.integration.test.ts` seeds two clients, records across the affected search branches, and a visibility group with allowed and blocked ticket boards. Faithful permission grant sets exercise entity RBAC. The DB-backed cases assert cross-client records and counts are hidden, blocked-board tickets do not affect results or counts, and visible-board pagination keeps the scoped total. An MSP granted `billing` and `opportunities` permissions can search contracts, quotes, and opportunities.
 
+### Task and asset query performance repair
+
+Task and asset searches now apply record authorization through the authorization kernel's SQL relationship-template compiler. `project_task` applies the `project:read` bundle rules and the client `same_client` predicate to the owning project join. A task with no owning project is excluded, matching the project authorizer. Asset search applies `asset:read` bundle rules and client scope to the asset query. Asset `assigned`, `own`, and `same_team` rules use correlated `EXISTS` predicates over tenant-scoped `asset_associations`. `own` and the asset record resolver both use the first user association ordered by entity ID, so owner checks are deterministic. The same scoped query is cloned for the distinct count and the paged result, so the database filters before either operation. Search terms, ordering, and offsets remain on the original entity queries.
+
+The database-backed regression covers authorized and unauthorized tasks and assets with matching search terms, scoped counts, and first and later pages. The task search also runs with an `own` project bundle rule, and the asset search exercises a denying `same_team` rule. Its scale case inserts 20,000 tasks and 20,000 assets. Each population is split evenly between two clients. Eight authorized and eight unauthorized rows match the selective term, and those rows occupy the final fixture IDs and insert batch. It checks the authorized eight-result selective search, the broad scoped count of 10,000, and two five-row pages for each entity type.
+
+Run the database-backed regressions and collect scale output with an isolated database:
+
+```bash
+cd server
+TEST_DB_NAME=test_document_actions_authz_4477 DB_NAME_SERVER=test_document_actions_authz_4477 \
+  node ../node_modules/vitest/vitest.mjs run \
+  src/test/integration/documentAssociationCrossClient.integration.test.ts \
+  ../packages/documents/tests/documentActions.authorization.contract.test.ts \
+  ../packages/documents/tests/documentActionsUploadAssociationsTenantScoped.contract.test.ts \
+  ../packages/documents/tests/documentActionsAssociationSearchTenantScoped.contract.test.ts \
+  --coverage.enabled=false --reporter=verbose --silent=false
+```
+
+On the recorded local run, all 18 tests passed: the original 7 association integration tests, the new scale integration test, and 10 authorization contract tests. The scale test captured 12 entity-search statements. The maximum was 7 SQL parameters across counts and pages, independent of the 20,000-row candidate population. Query-response instrumentation observed at most 8 rows transferred for any entity-search statement. Counts transferred one scalar row, and page queries transferred at most 8 matches. The application received an eight-row selective result, a scalar count of 10,000, and pages of five rows; it did not receive candidate IDs. Search calls took 15–37 ms each in this run. The broad scoped count plans completed in 5.947 ms for tasks and 11.747 ms for assets, with 389 and 20,492 shared buffer hits respectively.
+
+`EXPLAIN ANALYZE` used the existing `project_tasks_tenant_phase_id_project_status_mapping_id_order_k` index for task-to-phase scans and `idx_assets_tenant_client_contact` for tenant/client asset scans. Client lookups used `clients_client_id_unique`. The asset plan performed one indexed client lookup per matching asset row; it completed in 11.747 ms on this fixture. These plans did not demonstrate a need for another index, so this repair adds no migration. Timings and plans describe this local database run and are not production performance guarantees.
+
+The scale test emits exact timings, parameter counts, result sizes, and query plans under the `DOCUMENT_ASSOCIATION_SEARCH_SCALE` label. It also verifies that task and asset results from the first two broad pages belong to Client A, and checks selective matches whose IDs are beyond the initial fixture range.
+
 ## Finding 2 — association writes accepted unauthorized targets
 
 **Confirmed vulnerable path.** `uploadDocument` accepted caller-supplied target IDs after a general `document:create` grant, while `createDocumentAssociations` and `removeDocumentAssociations` authorized only the document set. A client could attach to or detach from another client's entity; client uploads are client-visible, so the new association could expose the file to the target client's portal.
@@ -35,17 +60,7 @@ Asset targets also require the existing asset record-read policy after coarse `a
 - Client A can create and remove associations on its exclusive contract, but cannot create, upload, or remove documents on a contract assigned to both A and B. Denied operations leave associations and folders unchanged and do not upload storage. Client B cannot read the attempted injection. An MSP can deliberately share the document through that contract, after which Client B can read it; client removal remains denied. This regression failed on `9103399b93` because client association creation returned `{ success: true }`.
 - Two first uploads contend with an uncommitted folder initializer. The test observes both uploads blocked on the initializer's unique folder keys in PostgreSQL before releasing it, guaranteeing a real insert conflict. Both uploads complete; their documents, task associations, four default folders, and external storage rows persist, and uploaded files are not cleaned up on success.
 
-From `server/`, the following isolated run passed all 7 integration tests and 10 existing authorization contract tests:
-
-```bash
-TEST_DB_NAME=takeover_doc_assoc_final DB_NAME_SERVER=takeover_doc_assoc_final \
-  node ../node_modules/vitest/vitest.mjs run \
-  src/test/integration/documentAssociationCrossClient.integration.test.ts \
-  ../packages/documents/tests/documentActions.authorization.contract.test.ts \
-  ../packages/documents/tests/documentActionsUploadAssociationsTenantScoped.contract.test.ts \
-  ../packages/documents/tests/documentActionsAssociationSearchTenantScoped.contract.test.ts \
-  --coverage.enabled=false
-```
+The isolated command above passed all 8 association integration tests and 10 existing authorization contract tests (18 total).
 
 `npm run typecheck --workspace=@alga-psa/documents`, `npm run typecheck --workspace=@alga-psa/shared`, and `npm run build --workspace=@alga-psa/documents` passed. `git diff --check` passed. The app server was not started.
 
