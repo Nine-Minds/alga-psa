@@ -201,6 +201,7 @@ Opening a client needs both `client:read` and `contact:read`. A client's billing
 | See the contact's portal user and invitation history | `user:read` | They do not show |
 | See or change the contact's visibility groups | `contact:update` | Errors when the portal dialog opens |
 | Send, resend or revoke a portal invitation | `user:invite` | The button is disabled |
+| Invite several contacts at once from the client's contacts list (selection column, **Invite to portal (N)**, **Invite all eligible**) | `user:invite` | The selection column and buttons are hidden |
 | Make a portal user an admin, or activate or deactivate them | `user:update` | The change is refused |
 | Assign a portal role | `user:update` or `client:update` | The change is refused |
 
