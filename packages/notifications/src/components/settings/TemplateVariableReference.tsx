@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { Button } from "@alga-psa/ui/components/Button";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
@@ -61,11 +61,29 @@ function VariableRow({
 }) {
   const { t } = useTranslation("msp/settings");
   const [copied, setCopied] = useState(false);
+  const copyFeedback = useRef<{ timeoutId?: number } | null>(null);
+
+  useEffect(() => {
+    copyFeedback.current = {};
+    const feedback = copyFeedback.current;
+    return () => {
+      copyFeedback.current = null;
+      window.clearTimeout(feedback.timeoutId);
+    };
+  }, []);
+
   const token = tokenFor(variable);
   const copy = async () => {
+    const feedback = copyFeedback.current;
     await navigator.clipboard.writeText(token);
+    if (!feedback || copyFeedback.current !== feedback) return;
+
+    window.clearTimeout(feedback.timeoutId);
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    feedback.timeoutId = window.setTimeout(() => {
+      feedback.timeoutId = undefined;
+      setCopied(false);
+    }, 1200);
   };
 
   return (

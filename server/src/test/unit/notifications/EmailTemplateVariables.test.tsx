@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import React from 'react';
 import Handlebars from 'handlebars';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmailTemplates } from '../../../../../packages/notifications/src/components/settings/EmailTemplates';
-import { getTemplateVariableToken } from '../../../../../packages/notifications/src/components/settings/TemplateVariableReference';
+import {
+  getTemplateVariableToken,
+  TemplateVariablePanel,
+} from '../../../../../packages/notifications/src/components/settings/TemplateVariableReference';
 import { replaceTemplateVariables } from '../../../../../packages/notifications/src/components/settings/EmailTemplatePreview';
 import { getSampleDataForPreview } from '../../../../../packages/notifications/src/lib/templateSampleData';
 import { getNestedTemplateExampleData, templateVariableRegistry } from '../../../../../packages/notifications/src/lib/templateVariables';
@@ -118,6 +121,65 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe('template variable copy feedback', () => {
+  beforeEach(() => {
+    userEvent.setup();
+    vi.useFakeTimers();
+  });
+
+  it('cancels copy feedback when the panel is closed', async () => {
+    const write = vi.spyOn(navigator.clipboard, 'writeText');
+    const panel = render(<TemplateVariablePanel templateName="ticket-closed" />);
+    const copyButton = buttonById('template-variable-ticket-closed-ticket-title-copy');
+
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    expect(write).toHaveBeenCalledWith('{{ticket.title}}');
+
+    panel.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not start copy feedback when the clipboard write finishes after closing', async () => {
+    const write = vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(
+      () => new Promise<void>((resolve) => window.setTimeout(resolve, 100)),
+    );
+    const panel = render(<TemplateVariablePanel templateName="ticket-closed" />);
+
+    fireEvent.click(buttonById('template-variable-ticket-closed-ticket-title-copy'));
+    expect(write).toHaveBeenCalledWith('{{ticket.title}}');
+    panel.unmount();
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps the confirmation visible for 1.2 seconds after the latest copy', async () => {
+    render(<TemplateVariablePanel templateName="ticket-closed" />);
+    const copyButton = buttonById('template-variable-ticket-closed-ticket-title-copy');
+
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1199);
+    });
+    expect(copyButton.querySelector('.lucide-check')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(copyButton.querySelector('.lucide-check')).not.toBeInTheDocument();
+  });
+});
 
 describe('ticket detail variable insertion', () => {
   it.each([
