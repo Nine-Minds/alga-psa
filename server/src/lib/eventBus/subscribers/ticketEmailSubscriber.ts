@@ -3728,6 +3728,81 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
     }
 
+    // Board notification rules (trigger: client replied on an unassigned ticket). The reply flips
+    // the response state to "waiting on internal" but reaches nobody when the ticket has no
+    // assignee, so the rule's users and teams are mailed. `author_type` (already read from the
+    // comment row above) is the single author classification: 'client' is a portal user or an
+    // inbound email from a contact. Deliberately NOT deduped against watchers the way the
+    // created/status triggers are: a client-authored comment sends watchers no standard email, so
+    // excluding them would silence a watcher who is a rule recipient. `sentEmails` already keeps
+    // every recipient to one message.
+    if (
+      isPublicComment &&
+      commentAuthorType === 'client' &&
+      !ticket.assigned_to &&
+      !ticket.is_closed &&
+      ticket.board_id &&
+      shouldSendTicketCommentNotification(suppression, 'internal')
+    ) {
+      const { users: ruleUsers, addresses: ruleAddresses } = await resolveBoardNotificationAudience(
+        db,
+        tenantId,
+        { kind: 'client_reply_unassigned', boardId: ticket.board_id },
+        { excludeUserIds: [commentAuthorUserId] }
+      );
+      // Only principals go through the visibility filter. Plain addresses have no principal.
+      const ruleRecipients = ruleUsers.length > 0
+        ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, ruleUsers)
+        : [];
+      const boardReplySubject = `Client Reply, Unassigned on ${boardName} • ${ticket.title}`;
+      const boardReplyReplyContext = {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        commentId: payload.comment?.id,
+        threadId: ticket.email_metadata?.threadId,
+      };
+      for (const recipient of ruleRecipients) {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: recipient.email,
+          addressedAs: 'msp',
+          subject: boardReplySubject,
+          template: 'ticket-board-client-reply-unassigned',
+          context: buildContext(internalUrl),
+          replyContext: boardReplyReplyContext,
+          attachments: inlineCommentImageAttachments,
+        }, 'Board Client Reply Unassigned', recipient.userId);
+      }
+
+      // Address recipients: same template and subtype as users, no recipientUserId (no principal,
+      // so no per-user preference). `issueReplyToken: false` keeps the thread headers but mints no
+      // reply token, so a reply is matched by thread headers, which check the sender.
+      let addressesSent = 0;
+      for (const address of ruleAddresses) {
+        const sentToAddress = await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: address.email,
+          addressedAs: 'msp',
+          subject: boardReplySubject,
+          template: 'ticket-board-client-reply-unassigned',
+          context: buildContext(internalUrl),
+          replyContext: { ...boardReplyReplyContext, issueReplyToken: false },
+          attachments: inlineCommentImageAttachments,
+        }, 'Board Client Reply Unassigned');
+        if (sentToAddress) addressesSent += 1;
+      }
+      if (addressesSent > 0) {
+        // Never log the addresses themselves.
+        logger.info('[TicketEmailSubscriber] Sent board notification rule emails to address recipients (client reply on unassigned ticket)', {
+          eventId: event.id,
+          ticketId: payload.ticketId,
+          boardId: ticket.board_id,
+          addressCount: addressesSent,
+        });
+      }
+    }
+
   } catch (error) {
     logger.error('Error handling ticket comment added event:', {
       error,
