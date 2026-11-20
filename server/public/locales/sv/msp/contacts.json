@@ -640,7 +640,8 @@
       "phoneNumber": "Telefonnummer",
       "actions": "Åtgärder",
       "role": "Roll",
-      "location": "Plats"
+      "location": "Plats",
+      "portalInvitation": "Portalinbjudan"
     },
     "filter": {
       "show": "Visa:",
@@ -649,7 +650,11 @@
       "all": "Alla kontakter",
       "searchPlaceholder": "Sök kontakter…",
       "allLocations": "Alla platser",
-      "noLocation": "Ingen plats"
+      "noLocation": "Ingen plats",
+      "allInvitationStates": "Alla inbjudningsstatusar",
+      "invitationExpired": "Utgångna inbjudningar",
+      "invitationPending": "Väntande inbjudningar",
+      "invitationExpiredOrPending": "Utgångna eller väntande"
     },
     "actions": {
       "openMenu": "Öppna meny",
@@ -658,12 +663,21 @@
       "selectAll": "Markera alla kontakter",
       "selectContact": "Markera {{name}}",
       "inviteSelected": "Bjud in till portalen ({{selected}})",
-      "inviteAllEligible": "Bjud in alla behöriga"
+      "inviteAllEligible": "Bjud in alla behöriga",
+      "resendExpired": "Skicka utgångna igen",
+      "resendPending": "Skicka väntande igen",
+      "resendOpen": "Skicka utgångna eller väntande igen"
     },
     "errors": {
       "loadFailed": "Det gick inte att läsa in kontakterna.",
       "loadingTitle": "Fel vid inläsning av kontakter",
       "retryFailed": "Det gick inte att läsa in kontakterna. Försök igen."
+    },
+    "invitation": {
+      "none": "Inte inbjuden",
+      "pendingUntil": "Väntande till {{date}}",
+      "expired": "Inbjudan har gått ut",
+      "activeUser": "Aktiv portalanvändare"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Skicka {{total}} inbjudningar",
-      "sending": "Skickar…"
+      "sending": "Skickar…",
+      "resendExpired": "Skicka {{total}} utgångna inbjudningar igen",
+      "resendPending": "Skicka {{total}} väntande inbjudningar igen",
+      "resendOpen": "Skicka {{total}} utgångna eller väntande inbjudningar igen"
     },
     "results": {
       "summary": "{{sent}} skickade, {{skipped}} överhoppade, {{failed}} misslyckade.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Kunde inte avgöra vilka som kan bjudas in. Försök igen.",
       "sendFailed": "Kunde inte skicka inbjudningarna. Försök igen."
-    }
+    },
+    "resendTitle": "Skicka inbjudningar till kundportalen igen",
+    "resendCount": "{{total}} kontakter får sin inbjudan igen, med hela giltighetsperioden."
   },
   "contactsLayout": {
     "title": "Kontaktlayout",

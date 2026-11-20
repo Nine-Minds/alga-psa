@@ -640,7 +640,8 @@
       "phoneNumber": "Número de teléfono",
       "actions": "Acciones",
       "role": "Rol",
-      "location": "Ubicación"
+      "location": "Ubicación",
+      "portalInvitation": "Invitación al portal"
     },
     "filter": {
       "show": "Mostrar:",
@@ -649,7 +650,11 @@
       "all": "Todos los contactos",
       "searchPlaceholder": "Buscar contactos...",
       "allLocations": "Todas las ubicaciones",
-      "noLocation": "Sin ubicación"
+      "noLocation": "Sin ubicación",
+      "allInvitationStates": "Cualquier estado de invitación",
+      "invitationExpired": "Invitaciones vencidas",
+      "invitationPending": "Invitaciones pendientes",
+      "invitationExpiredOrPending": "Vencidas o pendientes"
     },
     "actions": {
       "openMenu": "Abrir menú",
@@ -658,12 +663,21 @@
       "selectAll": "Seleccionar todos los contactos",
       "selectContact": "Seleccionar a {{name}}",
       "inviteSelected": "Invitar al portal ({{selected}})",
-      "inviteAllEligible": "Invitar a todos los elegibles"
+      "inviteAllEligible": "Invitar a todos los elegibles",
+      "resendExpired": "Reenviar vencidas",
+      "resendPending": "Reenviar pendientes",
+      "resendOpen": "Reenviar vencidas o pendientes"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los contactos.",
       "loadingTitle": "Error al cargar los contactos",
       "retryFailed": "No se pudieron cargar los contactos. Inténtelo de nuevo."
+    },
+    "invitation": {
+      "none": "Sin invitar",
+      "pendingUntil": "Pendiente hasta el {{date}}",
+      "expired": "Invitación vencida",
+      "activeUser": "Usuario activo del portal"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Enviar {{total}} invitaciones",
-      "sending": "Enviando..."
+      "sending": "Enviando...",
+      "resendExpired": "Reenviar {{total}} invitaciones vencidas",
+      "resendPending": "Reenviar {{total}} invitaciones pendientes",
+      "resendOpen": "Reenviar {{total}} invitaciones vencidas o pendientes"
     },
     "results": {
       "summary": "{{sent}} enviadas, {{skipped}} omitidas, {{failed}} fallidas.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "No se pudo determinar a quién invitar. Vuelva a intentarlo.",
       "sendFailed": "No se pudieron enviar las invitaciones. Vuelva a intentarlo."
-    }
+    },
+    "resendTitle": "Reenviar invitaciones al portal del cliente",
+    "resendCount": "{{total}} contactos recibirán su invitación de nuevo, con el período de validez completo."
   },
   "contactsLayout": {
     "title": "Diseño de contactos",

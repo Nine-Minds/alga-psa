@@ -17,7 +17,23 @@ type ContactRow = {
   full_name: string;
   email: string | null;
   is_inactive?: boolean;
+  /** Latest unused invitation, as the state rule classifies it. */
+  invitationState?: 'none' | 'pending' | 'expired';
 };
+
+const PENDING_EXPIRES_AT = '2099-01-02T03:04:05.000Z';
+
+/**
+ * The HAVING predicates the action builds, read back the way Postgres would
+ * evaluate them against one contact's open invitations.
+ */
+function matchesInvitationHaving(having: string | null, invitationState: ContactRow['invitationState']) {
+  if (!having) return true;
+  const state = invitationState ?? 'none';
+  if (having.includes('and not')) return state === 'expired';
+  if (having.startsWith('count(')) return state === 'pending' || state === 'expired';
+  return state === 'pending';
+}
 
 const state: {
   contacts: ContactRow[];
@@ -41,6 +57,8 @@ function contactsBuilder() {
   let filterClientId: string | undefined;
   let singleId: string | undefined;
   let scopeIds: string[] | null = null;
+  let havingSql: string | null = null;
+  const selectedExpressions: string[] = [];
 
   const builder: any = {
     where(filters: Record<string, unknown>) {
@@ -69,21 +87,40 @@ function contactsBuilder() {
       fn(builder);
       return builder;
     },
-    select() {
+    groupBy() {
+      return builder;
+    },
+    havingRaw(sql: string) {
+      havingSql = sql;
+      return builder;
+    },
+    select(...expressions: unknown[]) {
+      for (const expression of expressions) {
+        if (typeof expression === 'string') selectedExpressions.push(expression);
+      }
       return builder;
     },
     first() {
       return Promise.resolve(state.contacts.find((contact) => contact.contact_name_id === singleId));
     },
     then(resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) {
-      const rows = state.contacts
-        .filter(
-          (contact) =>
-            (!selectedIds || selectedIds.includes(contact.contact_name_id)) &&
-            (filterClientId === undefined || contact.client_id === filterClientId) &&
-            (scopeIds === null || scopeIds.includes(contact.contact_name_id)),
-        )
-        .map((contact) => ({ contact_name_id: contact.contact_name_id }));
+      const visible = state.contacts.filter(
+        (contact) =>
+          (!selectedIds || selectedIds.includes(contact.contact_name_id)) &&
+          (filterClientId === undefined || contact.client_id === filterClientId) &&
+          (scopeIds === null || scopeIds.includes(contact.contact_name_id)) &&
+          matchesInvitationHaving(havingSql, contact.invitationState),
+      );
+      // The invitation-state read selects aggregates; everything else selects ids.
+      const rows = selectedExpressions.some((expression) => expression.includes('bool_or'))
+        ? visible.map((contact) => ({
+          contact_name_id: contact.contact_name_id,
+          has_portal_user: state.portalUserContactIds.has(contact.contact_name_id),
+          has_active_invitation: contact.invitationState === 'pending',
+          has_open_invitation: contact.invitationState === 'pending' || contact.invitationState === 'expired',
+          latest_expires_at: contact.invitationState === 'pending' ? PENDING_EXPIRES_AT : null,
+        }))
+        : visible.map((contact) => ({ contact_name_id: contact.contact_name_id }));
       return Promise.resolve(rows).then(resolve, reject);
     },
   };
@@ -379,5 +416,128 @@ describe('sendBulkPortalInvitations', () => {
 
     expect(result).toMatchObject({ success: false, errorCode: 'NO_TARGETS_SELECTED' });
     expect(sendPortalInvitationEmailMock).not.toHaveBeenCalled();
+  });
+
+  describe('invitation-state targeting', () => {
+    beforeEach(() => {
+      state.contacts = [
+        { contact_name_id: 'contact-expired', client_id: 'client-a', full_name: 'Lapsed', email: 'lapsed@acme.test', invitationState: 'expired' },
+        { contact_name_id: 'contact-pending', client_id: 'client-a', full_name: 'Waiting', email: 'waiting@acme.test', invitationState: 'pending' },
+        { contact_name_id: 'contact-never', client_id: 'client-a', full_name: 'Never Invited', email: 'never@acme.test', invitationState: 'none' },
+      ];
+      state.portalUserContactIds = new Set();
+    });
+
+    it('resends only to the contacts whose invitation expired', async () => {
+      const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+      const result = await sendBulkPortalInvitations({
+        clientId: 'client-a',
+        invitationStates: ['expired'],
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.sent).toBe(1);
+      expect(sendPortalInvitationEmailMock).toHaveBeenCalledTimes(1);
+      expect(sendPortalInvitationEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'lapsed@acme.test' }),
+      );
+    });
+
+    it('covers both open states when asked for expired and pending', async () => {
+      const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+      const result = await sendBulkPortalInvitations({
+        clientId: 'client-a',
+        invitationStates: ['expired', 'pending'],
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.sent).toBe(2);
+    });
+
+    it('narrows rather than widens when a caller also asks for all eligible', async () => {
+      const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+      const result = await sendBulkPortalInvitations({
+        clientId: 'client-a',
+        allEligible: true,
+        invitationStates: ['pending'],
+      });
+
+      expect(result.total).toBe(1);
+      expect(sendPortalInvitationEmailMock).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'waiting@acme.test' }),
+      );
+    });
+
+    it('ignores a state selection that names no state the batch understands', async () => {
+      const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+      const result = await sendBulkPortalInvitations({
+        clientId: 'client-a',
+        invitationStates: ['whenever' as never],
+      });
+
+      expect(result).toMatchObject({ success: false, errorCode: 'NO_TARGETS_SELECTED' });
+      expect(sendPortalInvitationEmailMock).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('getPortalInvitationStatesForClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hasPermissionMock.mockResolvedValue(true);
+    state.contacts = [
+      { contact_name_id: 'contact-expired', client_id: 'client-a', full_name: 'Lapsed', email: 'lapsed@acme.test', invitationState: 'expired' },
+      { contact_name_id: 'contact-pending', client_id: 'client-a', full_name: 'Waiting', email: 'waiting@acme.test', invitationState: 'pending' },
+      { contact_name_id: 'contact-never', client_id: 'client-a', full_name: 'Never Invited', email: 'never@acme.test', invitationState: 'none' },
+      { contact_name_id: 'contact-user', client_id: 'client-a', full_name: 'Has Portal', email: 'portal@acme.test', invitationState: 'none' },
+      { contact_name_id: 'contact-elsewhere', client_id: 'client-b', full_name: 'Elsewhere', email: 'else@other.test', invitationState: 'expired' },
+    ];
+    state.portalUserContactIds = new Set(['contact-user']);
+    state.scopedContactIds = null;
+    state.scopedClientIds = null;
+    state.tenantSettings = {};
+  });
+
+  it('classifies every contact of the client and nobody else', async () => {
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    const states = await getPortalInvitationStatesForClient('client-a');
+
+    expect(states).toEqual([
+      { contactId: 'contact-expired', state: 'expired', expiresAt: null },
+      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT },
+      { contactId: 'contact-never', state: 'none', expiresAt: null },
+      { contactId: 'contact-user', state: 'active_user', expiresAt: null },
+    ]);
+  });
+
+  it('respects the caller\'s bundle narrowing, like the eligible set does', async () => {
+    state.scopedContactIds = ['contact-pending'];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([
+      { contactId: 'contact-pending', state: 'pending', expiresAt: PENDING_EXPIRES_AT },
+    ]);
+  });
+
+  it('answers with nothing for a client outside the caller\'s scope', async () => {
+    state.scopedClientIds = ['client-b'];
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([]);
+  });
+
+  it('answers with nothing without user:read', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { getPortalInvitationStatesForClient } = await import('./portalInvitationActions');
+
+    await expect(getPortalInvitationStatesForClient('client-a')).resolves.toEqual([]);
   });
 });

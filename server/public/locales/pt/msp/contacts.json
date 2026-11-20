@@ -640,7 +640,8 @@
       "phoneNumber": "Número de telefone",
       "actions": "Ações",
       "role": "Função",
-      "location": "Localização"
+      "location": "Localização",
+      "portalInvitation": "Convite para o portal"
     },
     "filter": {
       "show": "Mostrar:",
@@ -649,7 +650,11 @@
       "all": "Todos os contatos",
       "searchPlaceholder": "Pesquisar contatos...",
       "allLocations": "Todas as localizações",
-      "noLocation": "Sem localização"
+      "noLocation": "Sem localização",
+      "allInvitationStates": "Qualquer estado do convite",
+      "invitationExpired": "Convites expirados",
+      "invitationPending": "Convites pendentes",
+      "invitationExpiredOrPending": "Expirados ou pendentes"
     },
     "actions": {
       "openMenu": "Abrir menu",
@@ -658,12 +663,21 @@
       "selectAll": "Selecionar todos os contatos",
       "selectContact": "Selecionar {{name}}",
       "inviteSelected": "Convidar para o portal ({{selected}})",
-      "inviteAllEligible": "Convidar todos os elegíveis"
+      "inviteAllEligible": "Convidar todos os elegíveis",
+      "resendExpired": "Reenviar expirados",
+      "resendPending": "Reenviar pendentes",
+      "resendOpen": "Reenviar expirados ou pendentes"
     },
     "errors": {
       "loadFailed": "Falha ao carregar contatos.",
       "loadingTitle": "Erro ao carregar contatos",
       "retryFailed": "Falha ao carregar contatos. Por favor, tente novamente."
+    },
+    "invitation": {
+      "none": "Sem convite",
+      "pendingUntil": "Pendente até {{date}}",
+      "expired": "Convite expirado",
+      "activeUser": "Usuário ativo do portal"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Enviar {{total}} convites",
-      "sending": "Enviando..."
+      "sending": "Enviando...",
+      "resendExpired": "Reenviar {{total}} convites expirados",
+      "resendPending": "Reenviar {{total}} convites pendentes",
+      "resendOpen": "Reenviar {{total}} convites expirados ou pendentes"
     },
     "results": {
       "summary": "{{sent}} enviados, {{skipped}} ignorados, {{failed}} com falha.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Não foi possível determinar quem pode ser convidado. Tente novamente.",
       "sendFailed": "Não foi possível enviar os convites. Tente novamente."
-    }
+    },
+    "resendTitle": "Reenviar convites para o portal do cliente",
+    "resendCount": "{{total}} contatos receberão o convite novamente, com o período de validade completo."
   },
   "contactsLayout": {
     "title": "Layout de contatos",

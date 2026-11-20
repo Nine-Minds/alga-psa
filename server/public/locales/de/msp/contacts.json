@@ -636,7 +636,8 @@
       "phoneNumber": "Telefonnummer",
       "actions": "Aktionen",
       "role": "Rolle",
-      "location": "Standort"
+      "location": "Standort",
+      "portalInvitation": "Portal-Einladung"
     },
     "filter": {
       "show": "Anzeigen:",
@@ -645,7 +646,11 @@
       "all": "Alle Kontakte",
       "searchPlaceholder": "Kontakte suchen...",
       "allLocations": "Alle Standorte",
-      "noLocation": "Kein Standort"
+      "noLocation": "Kein Standort",
+      "allInvitationStates": "Beliebiger Einladungsstatus",
+      "invitationExpired": "Abgelaufene Einladungen",
+      "invitationPending": "Ausstehende Einladungen",
+      "invitationExpiredOrPending": "Abgelaufen oder ausstehend"
     },
     "actions": {
       "openMenu": "Menü öffnen",
@@ -654,12 +659,21 @@
       "selectAll": "Alle Kontakte auswählen",
       "selectContact": "{{name}} auswählen",
       "inviteSelected": "Zum Portal einladen ({{selected}})",
-      "inviteAllEligible": "Alle berechtigten einladen"
+      "inviteAllEligible": "Alle berechtigten einladen",
+      "resendExpired": "Abgelaufene erneut senden",
+      "resendPending": "Ausstehende erneut senden",
+      "resendOpen": "Abgelaufene oder ausstehende erneut senden"
     },
     "errors": {
       "loadFailed": "Kontakte konnten nicht geladen werden.",
       "loadingTitle": "Fehler beim Laden der Kontakte",
       "retryFailed": "Kontakte konnten nicht geladen werden. Bitte erneut versuchen."
+    },
+    "invitation": {
+      "none": "Nicht eingeladen",
+      "pendingUntil": "Ausstehend bis {{date}}",
+      "expired": "Einladung abgelaufen",
+      "activeUser": "Aktiver Portalbenutzer"
     }
   },
   "bulkPortalInvitation": {
@@ -676,7 +690,10 @@
     },
     "actions": {
       "send": "{{total}} Einladungen senden",
-      "sending": "Wird gesendet..."
+      "sending": "Wird gesendet...",
+      "resendExpired": "{{total}} abgelaufene Einladungen erneut senden",
+      "resendPending": "{{total}} ausstehende Einladungen erneut senden",
+      "resendOpen": "{{total}} abgelaufene oder ausstehende Einladungen erneut senden"
     },
     "results": {
       "summary": "{{sent}} gesendet, {{skipped}} übersprungen, {{failed}} fehlgeschlagen.",
@@ -687,7 +704,9 @@
     "errors": {
       "loadFailed": "Es konnte nicht ermittelt werden, wer eingeladen werden kann. Bitte erneut versuchen.",
       "sendFailed": "Die Einladungen konnten nicht gesendet werden. Bitte erneut versuchen."
-    }
+    },
+    "resendTitle": "Einladungen zum Kundenportal erneut senden",
+    "resendCount": "{{total}} Kontakte erhalten ihre Einladung erneut, mit dem vollen Gültigkeitszeitraum."
   },
   "contactsLayout": {
     "title": "Kontaktroute",

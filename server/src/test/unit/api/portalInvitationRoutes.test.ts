@@ -100,8 +100,30 @@ describe('POST /api/v1/clients/{id}/portal-invitations', () => {
     expect(state.calls[0]).toEqual({ clientId: CLIENT, contactIds: [CONTACT_A], allEligible: false });
   });
 
-  it('rejects a body that names neither contacts nor all_eligible', async () => {
+  it('passes an invitation-state resend through to the same action', async () => {
+    await postForClient(request(clientUrl, { invitation_states: ['expired'] }));
+    expect(state.calls[0]).toEqual({
+      clientId: CLIENT,
+      contactIds: undefined,
+      allEligible: false,
+      invitationStates: ['expired'],
+    });
+  });
+
+  it('rejects a body that names neither contacts, all_eligible nor invitation states', async () => {
     const res = await postForClient(request(clientUrl, {}));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it('rejects an invitation state the batch does not understand', async () => {
+    const res = await postForClient(request(clientUrl, { invitation_states: ['whenever'] }));
+    expect(res.status).toBe(400);
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it('rejects an empty invitation-state list rather than inviting everyone', async () => {
+    const res = await postForClient(request(clientUrl, { invitation_states: [] }));
     expect(res.status).toBe(400);
     expect(state.calls).toHaveLength(0);
   });

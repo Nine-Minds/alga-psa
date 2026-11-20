@@ -640,7 +640,8 @@
       "phoneNumber": "Numer telefonu",
       "actions": "Akcje",
       "role": "Rola",
-      "location": "Lokalizacja"
+      "location": "Lokalizacja",
+      "portalInvitation": "Zaproszenie do portalu"
     },
     "filter": {
       "show": "Pokaż:",
@@ -649,7 +650,11 @@
       "all": "Wszystkie kontakty",
       "searchPlaceholder": "Szukaj kontaktów...",
       "allLocations": "Wszystkie lokalizacje",
-      "noLocation": "Brak lokalizacji"
+      "noLocation": "Brak lokalizacji",
+      "allInvitationStates": "Dowolny stan zaproszenia",
+      "invitationExpired": "Wygasłe zaproszenia",
+      "invitationPending": "Oczekujące zaproszenia",
+      "invitationExpiredOrPending": "Wygasłe lub oczekujące"
     },
     "actions": {
       "openMenu": "Otwórz menu",
@@ -658,12 +663,21 @@
       "selectAll": "Zaznacz wszystkie kontakty",
       "selectContact": "Zaznacz {{name}}",
       "inviteSelected": "Zaproś do portalu ({{selected}})",
-      "inviteAllEligible": "Zaproś wszystkich uprawnionych"
+      "inviteAllEligible": "Zaproś wszystkich uprawnionych",
+      "resendExpired": "Wyślij ponownie wygasłe",
+      "resendPending": "Wyślij ponownie oczekujące",
+      "resendOpen": "Wyślij ponownie wygasłe lub oczekujące"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować kontaktów.",
       "loadingTitle": "Błąd podczas ładowania kontaktów",
       "retryFailed": "Nie udało się załadować kontaktów. Spróbuj ponownie."
+    },
+    "invitation": {
+      "none": "Bez zaproszenia",
+      "pendingUntil": "Oczekuje do {{date}}",
+      "expired": "Zaproszenie wygasło",
+      "activeUser": "Aktywny użytkownik portalu"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Wyślij {{total}} zaproszeń",
-      "sending": "Wysyłanie..."
+      "sending": "Wysyłanie...",
+      "resendExpired": "Wyślij ponownie {{total}} wygasłych zaproszeń",
+      "resendPending": "Wyślij ponownie {{total}} oczekujących zaproszeń",
+      "resendOpen": "Wyślij ponownie {{total}} wygasłych lub oczekujących zaproszeń"
     },
     "results": {
       "summary": "Wysłano {{sent}}, pominięto {{skipped}}, niepowodzenia: {{failed}}.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Nie udało się ustalić, kogo można zaprosić. Spróbuj ponownie.",
       "sendFailed": "Nie udało się wysłać zaproszeń. Spróbuj ponownie."
-    }
+    },
+    "resendTitle": "Ponowne wysłanie zaproszeń do portalu klienta",
+    "resendCount": "{{total}} kontaktów otrzyma zaproszenie ponownie, z pełnym okresem ważności."
   },
   "contactsLayout": {
     "title": "Układ kontaktów",

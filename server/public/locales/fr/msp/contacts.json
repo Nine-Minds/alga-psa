@@ -640,7 +640,8 @@
       "phoneNumber": "Numéro de téléphone",
       "actions": "Actions",
       "role": "Rôle",
-      "location": "Site"
+      "location": "Site",
+      "portalInvitation": "Invitation au portail"
     },
     "filter": {
       "show": "Afficher :",
@@ -649,7 +650,11 @@
       "all": "Tous les contacts",
       "searchPlaceholder": "Rechercher des contacts...",
       "allLocations": "Tous les sites",
-      "noLocation": "Aucun site"
+      "noLocation": "Aucun site",
+      "allInvitationStates": "Tout état d’invitation",
+      "invitationExpired": "Invitations expirées",
+      "invitationPending": "Invitations en attente",
+      "invitationExpiredOrPending": "Expirées ou en attente"
     },
     "actions": {
       "openMenu": "Ouvrir le menu",
@@ -658,12 +663,21 @@
       "selectAll": "Sélectionner tous les contacts",
       "selectContact": "Sélectionner {{name}}",
       "inviteSelected": "Inviter au portail ({{selected}})",
-      "inviteAllEligible": "Inviter tous les éligibles"
+      "inviteAllEligible": "Inviter tous les éligibles",
+      "resendExpired": "Renvoyer les expirées",
+      "resendPending": "Renvoyer les invitations en attente",
+      "resendOpen": "Renvoyer les expirées ou en attente"
     },
     "errors": {
       "loadFailed": "Impossible de charger les contacts.",
       "loadingTitle": "Erreur lors du chargement des contacts",
       "retryFailed": "Impossible de charger les contacts. Veuillez réessayer."
+    },
+    "invitation": {
+      "none": "Non invité",
+      "pendingUntil": "En attente jusqu’au {{date}}",
+      "expired": "Invitation expirée",
+      "activeUser": "Utilisateur actif du portail"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Envoyer {{total}} invitations",
-      "sending": "Envoi..."
+      "sending": "Envoi...",
+      "resendExpired": "Renvoyer {{total}} invitations expirées",
+      "resendPending": "Renvoyer {{total}} invitations en attente",
+      "resendOpen": "Renvoyer {{total}} invitations expirées ou en attente"
     },
     "results": {
       "summary": "{{sent}} envoyées, {{skipped}} ignorées, {{failed}} en échec.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Impossible de déterminer qui peut être invité. Veuillez réessayer.",
       "sendFailed": "Impossible d’envoyer les invitations. Veuillez réessayer."
-    }
+    },
+    "resendTitle": "Renvoyer les invitations au portail client",
+    "resendCount": "{{total}} contacts recevront à nouveau leur invitation, avec la durée de validité complète."
   },
   "contactsLayout": {
     "title": "Mise en page des contacts",

@@ -640,7 +640,8 @@
       "phoneNumber": "Phone Number",
       "actions": "Actions",
       "role": "Role",
-      "location": "Location"
+      "location": "Location",
+      "portalInvitation": "Portal invitation"
     },
     "filter": {
       "show": "Show:",
@@ -649,7 +650,11 @@
       "all": "All Contacts",
       "searchPlaceholder": "Search contacts...",
       "allLocations": "All locations",
-      "noLocation": "No location"
+      "noLocation": "No location",
+      "allInvitationStates": "Any invitation state",
+      "invitationExpired": "Expired invitations",
+      "invitationPending": "Pending invitations",
+      "invitationExpiredOrPending": "Expired or pending"
     },
     "actions": {
       "openMenu": "Open menu",
@@ -658,12 +663,21 @@
       "selectAll": "Select all contacts",
       "selectContact": "Select {{name}}",
       "inviteSelected": "Invite to portal ({{selected}})",
-      "inviteAllEligible": "Invite all eligible"
+      "inviteAllEligible": "Invite all eligible",
+      "resendExpired": "Resend expired",
+      "resendPending": "Resend pending",
+      "resendOpen": "Resend expired or pending"
     },
     "errors": {
       "loadFailed": "Failed to load contacts.",
       "loadingTitle": "Error loading contacts",
       "retryFailed": "Failed to load contacts. Please try again."
+    },
+    "invitation": {
+      "none": "Not invited",
+      "pendingUntil": "Pending until {{date}}",
+      "expired": "Invitation expired",
+      "activeUser": "Active portal user"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Send {{total}} invitations",
-      "sending": "Sending..."
+      "sending": "Sending...",
+      "resendExpired": "Resend {{total}} expired invitations",
+      "resendPending": "Resend {{total}} pending invitations",
+      "resendOpen": "Resend {{total}} expired or pending invitations"
     },
     "results": {
       "summary": "Sent {{sent}}, skipped {{skipped}}, failed {{failed}}.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Could not work out who can be invited. Please try again.",
       "sendFailed": "Could not send the invitations. Please try again."
-    }
+    },
+    "resendTitle": "Resend client portal invitations",
+    "resendCount": "{{total}} contacts will get their invitation again, with the full validity period."
   },
   "contactsLayout": {
     "title": "Contacts Layout",

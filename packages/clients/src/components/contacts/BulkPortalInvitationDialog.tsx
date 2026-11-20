@@ -10,12 +10,21 @@ import { isValidEmail } from '@alga-psa/validation';
 // Through the package entry, like the list that owns this dialog: the relative
 // path would pull the server-action graph into every component test that
 // renders the Contacts tab.
-import { getContactsEligibleForInvitation, sendBulkPortalInvitations } from '@alga-psa/clients/actions';
-import type { BulkSendInvitationResult } from '@alga-psa/portal-shared/types';
+import {
+  getContactsEligibleForInvitation,
+  getPortalInvitationStatesForClient,
+  sendBulkPortalInvitations,
+} from '@alga-psa/clients/actions';
+import type {
+  BulkSendInvitationResult,
+  PortalInvitationStateTarget,
+} from '@alga-psa/portal-shared/types';
 
 export type BulkPortalInvitationTarget =
   | { mode: 'selected'; contactIds: string[] }
-  | { mode: 'allEligible' };
+  | { mode: 'allEligible' }
+  /** The chase-up case: everyone whose invitation expired or is still pending. */
+  | { mode: 'invitationState'; states: PortalInvitationStateTarget[] };
 
 interface BulkPortalInvitationDialogProps {
   isOpen: boolean;
@@ -49,20 +58,27 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 }) => {
   const { t } = useTranslation('msp/contacts');
   const [eligibleContacts, setEligibleContacts] = useState<IContact[] | null>(null);
+  const [stateContactIds, setStateContactIds] = useState<Set<string> | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<BulkSendInvitationResult | null>(null);
 
-  const targetKey = target.mode === 'selected' ? target.contactIds.join(',') : 'all';
-  // "Invite all eligible" is the server's own set, which is active contacts
-  // only. A named selection is whatever the list was showing, so an inactive
-  // contact the user ticked is previewed as invitable rather than reported
-  // under the wrong reason.
-  const previewStatus = target.mode === 'allEligible' ? 'active' : statusFilter;
+  const targetStates = target.mode === 'invitationState' ? target.states : [];
+  const targetKey = target.mode === 'selected'
+    ? target.contactIds.join(',')
+    : target.mode === 'invitationState'
+      ? `state:${targetStates.join(',')}`
+      : 'all';
+  // "Invite all eligible" and an invitation-state resend are the server's own
+  // sets, which are active contacts only. A named selection is whatever the
+  // list was showing, so an inactive contact the user ticked is previewed as
+  // invitable rather than reported under the wrong reason.
+  const previewStatus = target.mode === 'selected' ? statusFilter : 'active';
 
   useEffect(() => {
     if (!isOpen) {
       setEligibleContacts(null);
+      setStateContactIds(null);
       setLoadError(null);
       setSendResult(null);
       return;
@@ -70,10 +86,25 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 
     let isCancelled = false;
     setEligibleContacts(null);
+    setStateContactIds(null);
     setLoadError(null);
-    getContactsEligibleForInvitation(clientId, previewStatus)
-      .then((rows) => {
-        if (!isCancelled) setEligibleContacts(rows);
+    // The same two rules the send runs: who is invitable, and whose invitation
+    // is in the asked-for state. So the count on the button is the number of
+    // emails that go out.
+    Promise.all([
+      getContactsEligibleForInvitation(clientId, previewStatus),
+      target.mode === 'invitationState'
+        ? getPortalInvitationStatesForClient(clientId)
+        : Promise.resolve(null),
+    ])
+      .then(([rows, states]) => {
+        if (isCancelled) return;
+        setEligibleContacts(rows);
+        setStateContactIds(states === null
+          ? null
+          : new Set(states
+            .filter((entry) => (targetStates as string[]).includes(entry.state))
+            .map((entry) => entry.contactId)));
       })
       .catch((err) => {
         console.error('Error loading contacts eligible for portal invitation:', err);
@@ -91,11 +122,14 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
 
   const preview = useMemo(() => {
     if (!eligibleContacts) return null;
+    if (target.mode === 'invitationState' && !stateContactIds) return null;
 
     const eligibleById = new Map(eligibleContacts.map((contact) => [contact.contact_name_id, contact]));
     const chosen = target.mode === 'selected'
       ? target.contactIds
-      : eligibleContacts.map((contact) => contact.contact_name_id);
+      : eligibleContacts
+        .filter((contact) => !stateContactIds || stateContactIds.has(contact.contact_name_id))
+        .map((contact) => contact.contact_name_id);
 
     const invitable: IContact[] = [];
     const skipped: Array<{ contactId: string; reason: SkipReason }> = [];
@@ -133,7 +167,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       groupScoped: invitable.filter((contact) => Boolean(contact.portal_visibility_group_id)).length,
       fullAccess: invitable.filter((contact) => !contact.portal_visibility_group_id).length,
     };
-  }, [eligibleContacts, target]);
+  }, [eligibleContacts, stateContactIds, target]);
 
   const nameOf = useCallback(
     (contactId: string) =>
@@ -155,7 +189,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
         clientId,
         ...(target.mode === 'selected'
           ? { contactIds: target.contactIds }
-          : { allEligible: true }),
+          : target.mode === 'invitationState'
+            ? { invitationStates: target.states }
+            : { allEligible: true }),
       });
       setSendResult(result);
       if (result.sent > 0) onSent();
@@ -188,6 +224,29 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       defaultValue: 'shared mailbox',
     }),
   };
+
+  // A resend names the exact set it will mail, so the MSP reads the same thing
+  // on the button that it chose in the filter.
+  const invitationCount = preview?.invitable.length ?? 0;
+  const sendLabel = target.mode !== 'invitationState'
+    ? t('bulkPortalInvitation.actions.send', {
+      defaultValue: 'Send {{total}} invitations',
+      total: invitationCount,
+    })
+    : targetStates.length > 1
+      ? t('bulkPortalInvitation.actions.resendOpen', {
+        defaultValue: 'Resend {{total}} expired or pending invitations',
+        total: invitationCount,
+      })
+      : targetStates[0] === 'pending'
+        ? t('bulkPortalInvitation.actions.resendPending', {
+          defaultValue: 'Resend {{total}} pending invitations',
+          total: invitationCount,
+        })
+        : t('bulkPortalInvitation.actions.resendExpired', {
+          defaultValue: 'Resend {{total}} expired invitations',
+          total: invitationCount,
+        });
 
   const body = () => {
     if (sendResult) {
@@ -246,10 +305,16 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
     return (
       <div className="space-y-3">
         <p className="text-sm">
-          {t('bulkPortalInvitation.inviteCount', {
-            defaultValue: '{{total}} contacts will be invited to the client portal.',
-            total: preview.invitable.length,
-          })}
+          {target.mode === 'invitationState'
+            ? t('bulkPortalInvitation.resendCount', {
+              defaultValue:
+                '{{total}} contacts will get their invitation again, with the full validity period.',
+              total: preview.invitable.length,
+            })
+            : t('bulkPortalInvitation.inviteCount', {
+              defaultValue: '{{total}} contacts will be invited to the client portal.',
+              total: preview.invitable.length,
+            })}
         </p>
         {preview.skipped.length > 0 && (
           <div className="text-sm text-[rgb(var(--color-text-600))]">
@@ -285,7 +350,9 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       id="bulk-portal-invitation-dialog"
-      title={t('bulkPortalInvitation.title', { defaultValue: 'Invite contacts to the client portal' })}
+      title={target.mode === 'invitationState'
+        ? t('bulkPortalInvitation.resendTitle', { defaultValue: 'Resend client portal invitations' })
+        : t('bulkPortalInvitation.title', { defaultValue: 'Invite contacts to the client portal' })}
       className="max-w-xl"
     >
       <DialogContent>{body()}</DialogContent>
@@ -303,10 +370,7 @@ const BulkPortalInvitationDialog: React.FC<BulkPortalInvitationDialogProps> = ({
             >
               {isSending
                 ? t('bulkPortalInvitation.actions.sending', { defaultValue: 'Sending...' })
-                : t('bulkPortalInvitation.actions.send', {
-                  defaultValue: 'Send {{total}} invitations',
-                  total: preview?.invitable.length ?? 0,
-                })}
+                : sendLabel}
             </Button>
             <Button id="bulk-portal-invitation-cancel" variant="secondary" onClick={onClose} disabled={isSending}>
               {t('common.actions.cancel', { defaultValue: 'Cancel' })}

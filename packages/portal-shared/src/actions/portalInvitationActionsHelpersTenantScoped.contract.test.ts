@@ -39,4 +39,35 @@ describe('portal invitation action helper tenant-scoped query contract', () => {
     expect(invitationTarget).not.toContain("'pi.tenant': tenant");
     expect(clientUserTarget).not.toContain("'u.tenant': tenant");
   });
+
+  it('reads invitation state tenant-scoped, through the caller\'s own narrowing', () => {
+    const stateQuery = sectionBetween(
+      'export const getPortalInvitationStatesForClient',
+      'export const sendBulkPortalInvitations'
+    );
+
+    expect(stateQuery).toContain('const scopedDb = tenantDb(trx, tenant);');
+    expect(stateQuery).toContain("scopedDb.table('contacts as c')");
+    expect(stateQuery).toContain("(await scope.narrowing('contact', 'c')).apply(query)");
+    expect(stateQuery).toContain('joinOpenInvitations(scopedDb, query, trx)');
+    expect(stateQuery).toContain("canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)");
+    expect(stateQuery).toContain("scope.permits('client', normalizedClientId)");
+
+    expect(stateQuery).not.toMatch(/\btrx\('contacts'\)/);
+    expect(stateQuery).not.toContain("'pi.tenant': tenant");
+  });
+
+  it('builds the invitation-state filter and the state read from one predicate', () => {
+    // The rule the MSP filtered on has to be the rule the batch acts on.
+    expect(source).toContain("const HAS_OPEN_INVITATION_SQL = 'count(pi.invitation_id) > 0';");
+    expect(source).toContain(
+      "const HAS_ACTIVE_INVITATION_SQL = 'coalesce(bool_or(pi.expires_at > now()), false)';"
+    );
+    expect(source).toContain('.havingRaw(invitationStateHavingSql(invitationStates))');
+    expect(source).toContain('${HAS_ACTIVE_INVITATION_SQL} as has_active_invitation');
+    expect(source).toContain('${HAS_OPEN_INVITATION_SQL} as has_open_invitation');
+
+    const joins = source.match(/joinOpenInvitations\(scopedDb, query, trx\)/g) ?? [];
+    expect(joins).toHaveLength(2);
+  });
 });

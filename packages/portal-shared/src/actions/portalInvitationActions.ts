@@ -33,6 +33,9 @@ import type {
   BulkSendInvitationItemResult,
   BulkSendInvitationResult,
   SendBulkPortalInvitationsParams,
+  PortalInvitationContactState,
+  PortalInvitationState,
+  PortalInvitationStateTarget,
 } from '../types';
 
 /** One batch never fans out further than this, however many contacts were asked for. */
@@ -962,15 +965,53 @@ async function sendPortalInvitationForContact(
 }
 
 /**
+ * One rule for a contact's invitation state, used by the state the MSP reads on
+ * the client's contact list and by the state a batch is aimed at: the
+ * invitations that were never used or revoked (`used_at is null`), classified
+ * against database time. `bool_or(pi.expires_at > now())` is "still usable",
+ * `count(pi.invitation_id) > 0` is "was invited at some point".
+ */
+function joinOpenInvitations(
+  scopedDb: ReturnType<typeof tenantDb>,
+  query: Knex.QueryBuilder,
+  trx: Knex.Transaction
+): void {
+  scopedDb.tenantJoin(query, 'portal_invitations as pi', 'pi.contact_id', 'c.contact_name_id', {
+    type: 'left',
+    on(join) {
+      join.andOn(trx.raw('pi.used_at is null'));
+    },
+  });
+}
+const HAS_OPEN_INVITATION_SQL = 'count(pi.invitation_id) > 0';
+const HAS_ACTIVE_INVITATION_SQL = 'coalesce(bool_or(pi.expires_at > now()), false)';
+
+/** The HAVING predicate that selects the asked-for invitation states. */
+function invitationStateHavingSql(states: PortalInvitationStateTarget[]): string {
+  const wantsPending = states.includes('pending');
+  const wantsExpired = states.includes('expired');
+
+  if (wantsPending && wantsExpired) {
+    return HAS_OPEN_INVITATION_SQL;
+  }
+  if (wantsPending) {
+    return HAS_ACTIVE_INVITATION_SQL;
+  }
+  return `${HAS_OPEN_INVITATION_SQL} and not ${HAS_ACTIVE_INVITATION_SQL}`;
+}
+
+/**
  * Contacts without a portal user, narrowed to what this caller may read.
  * Same query shape as getContactsEligibleForInvitation, so "invite all eligible"
  * and the count the confirmation dialog shows come from the same rule.
+ * `invitationStates` narrows that set to the chase-up case.
  */
 async function resolveEligibleContactIdsForInvitation(
   scope: ClientScopeContext,
   tenant: string,
   knex: Knex,
-  clientId: string | null
+  clientId: string | null,
+  invitationStates: PortalInvitationStateTarget[] = []
 ): Promise<string[]> {
   const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
@@ -982,11 +1023,18 @@ async function resolveEligibleContactIdsForInvitation(
         join.andOn(trx.raw('u.user_type = ?', ['client']));
       },
     });
+    if (invitationStates.length > 0) {
+      joinOpenInvitations(scopedDb, query, trx);
+    }
     query
       .whereNull('u.user_id')
       .andWhere('c.is_inactive', false)
       .modify((qb: Knex.QueryBuilder) => {
         if (clientId) qb.andWhere('c.client_id', clientId);
+        if (invitationStates.length > 0) {
+          qb.groupBy('c.contact_name_id', 'c.full_name')
+            .havingRaw(invitationStateHavingSql(invitationStates));
+        }
       })
       .select('c.contact_name_id')
       .orderBy('c.full_name', 'asc');
@@ -995,6 +1043,95 @@ async function resolveEligibleContactIdsForInvitation(
 
   return rows.map((row) => row.contact_name_id);
 }
+
+/** Only the states a batch can be aimed at, de-duplicated. */
+function normalizeInvitationStates(states: unknown): PortalInvitationStateTarget[] {
+  if (!Array.isArray(states)) {
+    return [];
+  }
+
+  return Array.from(new Set(
+    states.filter((state): state is PortalInvitationStateTarget =>
+      state === 'pending' || state === 'expired')
+  ));
+}
+
+/**
+ * Every contact of a client with its invitation state, so the rollout can be
+ * run from the contact list instead of contact by contact. Tenant-scoped and
+ * narrowed by the caller's bundle exactly as the eligible set is.
+ */
+export const getPortalInvitationStatesForClient = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  clientId: string
+): Promise<PortalInvitationContactState[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const normalizedClientId = clientId?.trim();
+    if (!normalizedClientId) {
+      return [];
+    }
+
+    const scope = await createClientScopeContext(knex, tenant, user);
+    if (!(
+      await canManageClientPortalTargetClient(user, tenant, knex, 'read', normalizedClientId)
+      && await scope.permits('client', normalizedClientId)
+    )) {
+      return [];
+    }
+
+    const rows = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('contacts as c');
+      (await scope.narrowing('contact', 'c')).apply(query);
+      scopedDb.tenantJoin(query, 'users as u', 'u.contact_id', 'c.contact_name_id', {
+        type: 'left',
+        on(join) {
+          join.andOn(trx.raw('u.user_type = ?', ['client']));
+        },
+      });
+      joinOpenInvitations(scopedDb, query, trx);
+      query
+        .andWhere('c.client_id', normalizedClientId)
+        .groupBy('c.contact_name_id')
+        .select('c.contact_name_id')
+        .select(trx.raw('bool_or(u.user_id is not null) as has_portal_user'))
+        .select(trx.raw(`${HAS_ACTIVE_INVITATION_SQL} as has_active_invitation`))
+        .select(trx.raw(`${HAS_OPEN_INVITATION_SQL} as has_open_invitation`))
+        .select(trx.raw('max(pi.expires_at) as latest_expires_at'));
+      return query as unknown as Promise<Array<{
+        contact_name_id: string;
+        has_portal_user: boolean | null;
+        has_active_invitation: boolean | null;
+        has_open_invitation: boolean | null;
+        latest_expires_at: Date | string | null;
+      }>>;
+    });
+
+    return rows.map((row) => {
+      const state: PortalInvitationState = row.has_portal_user
+        ? 'active_user'
+        : row.has_active_invitation
+          ? 'pending'
+          : row.has_open_invitation
+            ? 'expired'
+            : 'none';
+
+      return {
+        contactId: row.contact_name_id,
+        state,
+        expiresAt: state === 'pending' && row.latest_expires_at
+          ? new Date(row.latest_expires_at).toISOString()
+          : null,
+      };
+    });
+
+  } catch (error) {
+    console.error('Error fetching portal invitation states:', error);
+    return [];
+  }
+});
 
 /**
  * Invite many contacts in one request. Sends sequentially so each contact keeps
@@ -1029,7 +1166,9 @@ export const sendBulkPortalInvitations = withAuth(async (
       (params?.contactIds ?? []).filter((id): id is string => typeof id === 'string' && id.trim() !== '')
     ));
 
-    if (requestedContactIds.length === 0 && !params?.allEligible) {
+    const invitationStates = normalizeInvitationStates(params?.invitationStates);
+
+    if (requestedContactIds.length === 0 && !params?.allEligible && invitationStates.length === 0) {
       return refusal('Select at least one contact to invite', 'NO_TARGETS_SELECTED');
     }
 
@@ -1081,7 +1220,15 @@ export const sendBulkPortalInvitations = withAuth(async (
         });
       }
     } else {
-      targetContactIds = await resolveEligibleContactIdsForInvitation(scope, tenant, knex, clientId);
+      // An invitation-state selection is the chase-up case and is narrower than
+      // "all eligible", so it wins when a caller asks for both.
+      targetContactIds = await resolveEligibleContactIdsForInvitation(
+        scope,
+        tenant,
+        knex,
+        clientId,
+        invitationStates
+      );
       if (targetContactIds.length > BULK_PORTAL_INVITATION_LIMIT) {
         return refusal(
           `Too many eligible contacts (${targetContactIds.length}). Invite at most ${BULK_PORTAL_INVITATION_LIMIT} contacts at a time.`,

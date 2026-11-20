@@ -636,7 +636,8 @@
       "phoneNumber": "Telefoonnummer",
       "actions": "Acties",
       "role": "Rol",
-      "location": "Locatie"
+      "location": "Locatie",
+      "portalInvitation": "Portaaluitnodiging"
     },
     "filter": {
       "show": "Toon:",
@@ -645,7 +646,11 @@
       "all": "Alle contacten",
       "searchPlaceholder": "Contacten zoeken...",
       "allLocations": "Alle locaties",
-      "noLocation": "Geen locatie"
+      "noLocation": "Geen locatie",
+      "allInvitationStates": "Elke uitnodigingsstatus",
+      "invitationExpired": "Verlopen uitnodigingen",
+      "invitationPending": "Openstaande uitnodigingen",
+      "invitationExpiredOrPending": "Verlopen of openstaand"
     },
     "actions": {
       "openMenu": "Menu openen",
@@ -654,12 +659,21 @@
       "selectAll": "Alle contactpersonen selecteren",
       "selectContact": "{{name}} selecteren",
       "inviteSelected": "Uitnodigen voor portaal ({{selected}})",
-      "inviteAllEligible": "Alle in aanmerking komende uitnodigen"
+      "inviteAllEligible": "Alle in aanmerking komende uitnodigen",
+      "resendExpired": "Verlopen opnieuw verzenden",
+      "resendPending": "Openstaande opnieuw verzenden",
+      "resendOpen": "Verlopen of openstaande opnieuw verzenden"
     },
     "errors": {
       "loadFailed": "Contacten konden niet worden geladen.",
       "loadingTitle": "Fout bij laden van contacten",
       "retryFailed": "Contacten konden niet worden geladen. Probeer het opnieuw."
+    },
+    "invitation": {
+      "none": "Niet uitgenodigd",
+      "pendingUntil": "Openstaand tot {{date}}",
+      "expired": "Uitnodiging verlopen",
+      "activeUser": "Actieve portaalgebruiker"
     }
   },
   "bulkPortalInvitation": {
@@ -676,7 +690,10 @@
     },
     "actions": {
       "send": "{{total}} uitnodigingen verzenden",
-      "sending": "Verzenden..."
+      "sending": "Verzenden...",
+      "resendExpired": "{{total}} verlopen uitnodigingen opnieuw verzenden",
+      "resendPending": "{{total}} openstaande uitnodigingen opnieuw verzenden",
+      "resendOpen": "{{total}} verlopen of openstaande uitnodigingen opnieuw verzenden"
     },
     "results": {
       "summary": "{{sent}} verzonden, {{skipped}} overgeslagen, {{failed}} mislukt.",
@@ -687,7 +704,9 @@
     "errors": {
       "loadFailed": "Kon niet bepalen wie kan worden uitgenodigd. Probeer het opnieuw.",
       "sendFailed": "Kon de uitnodigingen niet verzenden. Probeer het opnieuw."
-    }
+    },
+    "resendTitle": "Uitnodigingen voor het klantenportaal opnieuw verzenden",
+    "resendCount": "{{total}} contactpersonen krijgen hun uitnodiging opnieuw, met de volledige geldigheidsperiode."
   },
   "contactsLayout": {
     "title": "Contactenlay-out",

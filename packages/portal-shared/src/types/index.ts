@@ -72,6 +72,23 @@ export interface BulkSendInvitationResult {
   errorCode?: PortalInvitationErrorCode;
 }
 
+/**
+ * A contact's standing with the client portal, as the MSP running a rollout
+ * needs to see it: no portal user and no open invitation, an invitation that is
+ * still usable, an invitation that lapsed unused, or a live portal user.
+ */
+export type PortalInvitationState = 'none' | 'pending' | 'expired' | 'active_user';
+
+/** The invitation states a batch can be aimed at. */
+export type PortalInvitationStateTarget = Extract<PortalInvitationState, 'pending' | 'expired'>;
+
+export interface PortalInvitationContactState {
+  contactId: string;
+  state: PortalInvitationState;
+  /** When a pending invitation lapses; null in every other state. */
+  expiresAt: string | null;
+}
+
 export interface SendBulkPortalInvitationsParams {
   /** Restricts the batch to one client, and validates every explicit contact against it. */
   clientId?: string;
@@ -79,6 +96,12 @@ export interface SendBulkPortalInvitationsParams {
   contactIds?: string[];
   /** Invite every contact without a portal user (optionally within `clientId`). */
   allEligible?: boolean;
+  /**
+   * Narrows the eligible set to contacts whose invitation is in one of these
+   * states — the chase-up case ("resend everything that expired"). Ignored when
+   * `contactIds` is given, and narrower than `allEligible` when both are set.
+   */
+  invitationStates?: PortalInvitationStateTarget[];
 }
 
 export interface PortalInvitationEntraPrelink {

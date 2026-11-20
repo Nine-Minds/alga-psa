@@ -640,7 +640,8 @@
       "phoneNumber": "Numero di telefono",
       "actions": "Azioni",
       "role": "Ruolo",
-      "location": "Sede"
+      "location": "Sede",
+      "portalInvitation": "Invito al portale"
     },
     "filter": {
       "show": "Mostra:",
@@ -649,7 +650,11 @@
       "all": "Tutti i contatti",
       "searchPlaceholder": "Cerca contatti...",
       "allLocations": "Tutte le sedi",
-      "noLocation": "Nessuna sede"
+      "noLocation": "Nessuna sede",
+      "allInvitationStates": "Qualsiasi stato dell’invito",
+      "invitationExpired": "Inviti scaduti",
+      "invitationPending": "Inviti in attesa",
+      "invitationExpiredOrPending": "Scaduti o in attesa"
     },
     "actions": {
       "openMenu": "Apri menu",
@@ -658,12 +663,21 @@
       "selectAll": "Seleziona tutti i contatti",
       "selectContact": "Seleziona {{name}}",
       "inviteSelected": "Invita al portale ({{selected}})",
-      "inviteAllEligible": "Invita tutti gli idonei"
+      "inviteAllEligible": "Invita tutti gli idonei",
+      "resendExpired": "Invia di nuovo gli scaduti",
+      "resendPending": "Invia di nuovo quelli in attesa",
+      "resendOpen": "Invia di nuovo scaduti o in attesa"
     },
     "errors": {
       "loadFailed": "Impossibile caricare i contatti.",
       "loadingTitle": "Errore durante il caricamento dei contatti",
       "retryFailed": "Impossibile caricare i contatti. Riprova."
+    },
+    "invitation": {
+      "none": "Non invitato",
+      "pendingUntil": "In attesa fino al {{date}}",
+      "expired": "Invito scaduto",
+      "activeUser": "Utente attivo del portale"
     }
   },
   "bulkPortalInvitation": {
@@ -680,7 +694,10 @@
     },
     "actions": {
       "send": "Invia {{total}} inviti",
-      "sending": "Invio..."
+      "sending": "Invio...",
+      "resendExpired": "Invia di nuovo {{total}} inviti scaduti",
+      "resendPending": "Invia di nuovo {{total}} inviti in attesa",
+      "resendOpen": "Invia di nuovo {{total}} inviti scaduti o in attesa"
     },
     "results": {
       "summary": "{{sent}} inviati, {{skipped}} ignorati, {{failed}} non riusciti.",
@@ -691,7 +708,9 @@
     "errors": {
       "loadFailed": "Non è stato possibile determinare chi invitare. Riprovare.",
       "sendFailed": "Non è stato possibile inviare gli inviti. Riprovare."
-    }
+    },
+    "resendTitle": "Invia di nuovo gli inviti al portale clienti",
+    "resendCount": "{{total}} contatti riceveranno di nuovo il loro invito, con il periodo di validità completo."
   },
   "contactsLayout": {
     "title": "Layout contatti",

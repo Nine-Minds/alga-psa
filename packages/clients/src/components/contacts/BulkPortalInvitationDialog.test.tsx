@@ -13,6 +13,7 @@ import BulkPortalInvitationDialog from './BulkPortalInvitationDialog';
 
 const hoisted = vi.hoisted(() => ({
   getContactsEligibleForInvitation: vi.fn(),
+  getPortalInvitationStatesForClient: vi.fn(),
   sendBulkPortalInvitations: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 vi.mock('@alga-psa/clients/actions', () => ({
   getContactsEligibleForInvitation: hoisted.getContactsEligibleForInvitation,
+  getPortalInvitationStatesForClient: hoisted.getPortalInvitationStatesForClient,
   sendBulkPortalInvitations: hoisted.sendBulkPortalInvitations,
 }));
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -59,6 +61,7 @@ beforeEach(() => {
     eligible('no-email', null),
     eligible('shared', 'shared@acme.com', { contact_kind: 'shared_mailbox' }),
   ]);
+  hoisted.getPortalInvitationStatesForClient.mockResolvedValue([]);
 });
 
 describe('BulkPortalInvitationDialog', () => {
@@ -159,5 +162,76 @@ describe('BulkPortalInvitationDialog', () => {
       allEligible: true,
     }));
     expect(await screen.findByText('Sent 1, skipped 2, failed 0.')).toBeInTheDocument();
+  });
+
+  it('counts a resend from the invitation state, and names the set on the button', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('lapsed', 'lapsed@acme.com'),
+      eligible('waiting', 'waiting@acme.com'),
+      eligible('never', 'never@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'lapsed', state: 'expired', expiresAt: null },
+      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z' },
+      { contactId: 'never', state: 'none', expiresAt: null },
+    ]);
+    hoisted.sendBulkPortalInvitations.mockResolvedValue({
+      success: true, total: 1, sent: 1, skipped: 0, failed: 0,
+      results: [{ contactId: 'lapsed', email: 'lapsed@acme.com', status: 'sent' }],
+    });
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'invitationState', states: ['expired'] }}
+        statusFilter="all"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    // Only the expired contact: the eligible rule and the state rule agree, so
+    // the count on the button is the number of emails that go out.
+    await screen.findByText(
+      '1 contacts will get their invitation again, with the full validity period.',
+    );
+    fireEvent.click(screen.getByText('Resend 1 expired invitations'));
+
+    await waitFor(() => expect(hoisted.sendBulkPortalInvitations).toHaveBeenCalledWith({
+      clientId: 'acme',
+      invitationStates: ['expired'],
+    }));
+    expect(await screen.findByText('Sent 1, skipped 0, failed 0.')).toBeInTheDocument();
+  });
+
+  it('covers both open states when the filter asked for expired and pending', async () => {
+    hoisted.getContactsEligibleForInvitation.mockResolvedValue([
+      eligible('lapsed', 'lapsed@acme.com'),
+      eligible('waiting', 'waiting@acme.com'),
+      eligible('never', 'never@acme.com'),
+    ]);
+    hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+      { contactId: 'lapsed', state: 'expired', expiresAt: null },
+      { contactId: 'waiting', state: 'pending', expiresAt: '2099-01-01T00:00:00.000Z' },
+      { contactId: 'never', state: 'none', expiresAt: null },
+    ]);
+
+    render(
+      <BulkPortalInvitationDialog
+        isOpen
+        clientId="acme"
+        target={{ mode: 'invitationState', states: ['expired', 'pending'] }}
+        statusFilter="all"
+        contacts={[]}
+        onClose={vi.fn()}
+        onSent={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('Resend 2 expired or pending invitations')).toBeInTheDocument();
+    // An invitation-state resend is the server's own set: active contacts only.
+    expect(hoisted.getContactsEligibleForInvitation).toHaveBeenCalledWith('acme', 'active');
   });
 });

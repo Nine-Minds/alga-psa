@@ -21,6 +21,7 @@ const hoisted = vi.hoisted(() => ({
   searchContactListIds: vi.fn(),
   getCurrentUserAsync: vi.fn(),
   getContactPortalPermissions: vi.fn(),
+  getPortalInvitationStatesForClient: vi.fn(),
   dialogTarget: vi.fn(),
 }));
 
@@ -48,6 +49,7 @@ vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: hoisted.getContactByContactNameId,
   getAllClients: hoisted.getAllClients,
   searchContactListIds: hoisted.searchContactListIds,
+  getPortalInvitationStatesForClient: hoisted.getPortalInvitationStatesForClient,
 }));
 vi.mock('@alga-psa/auth/actions', () => ({
   getContactPortalPermissions: () => hoisted.getContactPortalPermissions(),
@@ -137,6 +139,10 @@ beforeEach(() => {
   hoisted.getAllClients.mockResolvedValue([client]);
   hoisted.getCurrentUserAsync.mockResolvedValue({ user_id: 'user-1' });
   hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
+  hoisted.getPortalInvitationStatesForClient.mockResolvedValue([
+    { contactId: 'contact-a', state: 'expired', expiresAt: null },
+    { contactId: 'contact-b', state: 'pending', expiresAt: '2099-01-02T00:00:00.000Z' },
+  ]);
 });
 
 describe('ClientContactsList bulk portal invitations', () => {
@@ -176,6 +182,50 @@ describe('ClientContactsList bulk portal invitations', () => {
     expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({ mode: 'allEligible' });
   });
 
+  it('shows each contact\'s invitation state on the row', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+
+    expect(await screen.findByText('Invitation expired')).toBeInTheDocument();
+    expect(screen.getByText(/^Pending until /)).toBeInTheDocument();
+  });
+
+  it('filters to the contacts that need chasing and resends to exactly those', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Invitation expired');
+
+    fireEvent.change(screen.getByLabelText('contact-invitation-state-filter'), {
+      target: { value: 'expired' },
+    });
+    await waitFor(() => expect(screen.queryByTestId('row-contact-b')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Resend expired'));
+
+    // The filter and the batch are the same rule, so the dialog is aimed at the
+    // state the MSP just narrowed to.
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired'],
+    });
+  });
+
+  it('names the pending set when the filter asks for it', async () => {
+    render(<ClientContactsList clientId="acme" client={client} />);
+    await screen.findByTestId('row-contact-a');
+    await screen.findByText('Invitation expired');
+
+    fireEvent.change(screen.getByLabelText('contact-invitation-state-filter'), {
+      target: { value: 'open' },
+    });
+    fireEvent.click(await screen.findByText('Resend expired or pending'));
+
+    expect(hoisted.dialogTarget).toHaveBeenLastCalledWith({
+      mode: 'invitationState',
+      states: ['expired', 'pending'],
+    });
+  });
+
   it('shows no invitation affordance to a reader without user:invite', async () => {
     hoisted.getContactPortalPermissions.mockResolvedValue({ canInvite: false, canUpdateRoles: false, canRead: true });
 
@@ -184,6 +234,7 @@ describe('ClientContactsList bulk portal invitations', () => {
 
     await waitFor(() => expect(hoisted.getContactPortalPermissions).toHaveBeenCalled());
     expect(screen.queryByText('Invite all eligible')).not.toBeInTheDocument();
+    expect(screen.queryByText('Resend expired')).not.toBeInTheDocument();
     // No checkbox either: a selection with nothing to do with it is a dead end.
     expect(screen.queryByLabelText('Select all contacts')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Select Ada Lovelace')).not.toBeInTheDocument();

@@ -8157,7 +8157,21 @@ components:
           type: boolean
           description: Invite every active contact of the client that has no client portal
             user yet. Ignored when contact_ids is given.
-      description: Supply contact_ids, or all_eligible=true. One of the two is required.
+        invitation_states:
+          type: array
+          items:
+            type: string
+            enum:
+              - expired
+              - pending
+          minItems: 1
+          description: Narrows the eligible contacts to those whose latest unused
+            invitation is expired and/or still pending — the chase-up case. A
+            resend renews the link for the tenant's full invitation validity.
+            Ignored when contact_ids is given; narrower than all_eligible when
+            both are set.
+      description: Supply contact_ids, all_eligible=true, or invitation_states. One of
+        the three is required.
     BulkPortalInvitationRequest:
       type: object
       properties:
@@ -38166,12 +38180,13 @@ paths:
   /api/v1/clients/{id}/portal-invitations:
     post:
       summary: Invite a client's contacts to the client portal
-      description: "Sends client portal invitations for one client: either every
-        eligible contact (all_eligible) or a named subset (contact_ids)
-        validated against the client in the path. Invitations go out one at a
-        time, so a contact that cannot be invited never costs the rest of the
-        batch theirs; the response reports each contact's outcome and the
-        request is a 200 even when some were skipped or failed."
+      description: "Sends client portal invitations for one client: every eligible
+        contact (all_eligible), only those whose invitation expired or is still
+        pending (invitation_states), or a named subset (contact_ids) validated
+        against the client in the path. Invitations go out one at a time, so a
+        contact that cannot be invited never costs the rest of the batch theirs;
+        the response reports each contact's outcome and the request is a 200
+        even when some were skipped or failed."
       tags:
         - Portal Invitations
       security:
