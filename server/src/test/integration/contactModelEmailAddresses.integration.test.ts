@@ -378,6 +378,11 @@ describe('contact model email addresses integration', () => {
             canonical_type: 'billing',
             display_order: 0,
           },
+          {
+            email_address: `escalations-${tenantId}@example.com`,
+            canonical_type: 'other',
+            display_order: 1,
+          },
         ],
       }, tenantId, trx);
 
@@ -387,9 +392,49 @@ describe('contact model email addresses integration', () => {
 
       expect(updated.email).toBe(`billing-${tenantId}@example.com`);
       expect(updated.primary_email_canonical_type).toBe('billing');
-      expect(updated.additional_email_addresses).toHaveLength(1);
-      expect(updated.additional_email_addresses[0].email_address).toBe(`primary-${tenantId}@example.com`);
-      expect(updated.additional_email_addresses[0].canonical_type).toBe('work');
+      // The caller sent no rows, so the contact's other stored addresses survive the swap.
+      expect(updated.additional_email_addresses).toHaveLength(2);
+      expect(
+        updated.additional_email_addresses.find((row) => row.email_address === `escalations-${tenantId}@example.com`)?.canonical_type
+      ).toBe('other');
+      expect(
+        updated.additional_email_addresses.find((row) => row.email_address === `primary-${tenantId}@example.com`)?.canonical_type
+      ).toBe('work');
+    });
+  });
+
+  it('drops the old primary when the new one is an own additional address the caller no longer sends', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+
+    await db.transaction(async (trx) => {
+      const created = await ContactModel.createContact({
+        full_name: 'Replace With Own Additional Contact',
+        email: `old-${tenantId}@example.com`,
+        client_id: clientId,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [
+          {
+            email_address: `corrected-${tenantId}@example.com`,
+            canonical_type: 'billing',
+            display_order: 0,
+          },
+        ],
+      }, tenantId, trx);
+
+      // The editor's shape when the user corrects the primary to an address already listed and
+      // leaves "keep the old address" unchecked: the duplicate row is gone from the payload.
+      const updated = await ContactModel.updateContact(created.contact_name_id, {
+        email: `corrected-${tenantId}@example.com`,
+        primary_email_canonical_type: 'work',
+        additional_email_addresses: [],
+      }, tenantId, trx);
+
+      expect(updated.email).toBe(`corrected-${tenantId}@example.com`);
+      expect(updated.primary_email_canonical_type).toBe('work');
+      expect(updated.additional_email_addresses).toHaveLength(0);
     });
   });
 

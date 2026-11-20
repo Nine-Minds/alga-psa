@@ -1072,12 +1072,16 @@ export class ContactModel {
     }
 
     let promotedEmailRow: PreparedEmailAddressInput | null = null;
+    // Set only for a bare promotion, where the caller sent no rows at all and the contact's
+    // stored rows therefore have to be carried over instead of being wiped.
+    let promotionBaseRows: PreparedEmailAddressInput[] | null = null;
     let primaryEmailChanged = false;
 
     if (updateData.email?.trim()) {
       const normalizedEmail = updateData.email.trim().toLowerCase();
       if (normalizedEmail !== existingContact.email?.toLowerCase()) {
         primaryEmailChanged = true;
+        const incomingRowsOmitted = updateData.additional_email_addresses === undefined;
         const incomingAdditionalRows = updateData.additional_email_addresses ?? [];
         const normalizedExistingPrimaryEmail = normalizeEmailAddress(existingContact.email || '');
         const hasDemotedPrimaryRow = incomingAdditionalRows.some((row) => {
@@ -1103,10 +1107,16 @@ export class ContactModel {
           const existingAdditionalRows = await this.getAdditionalEmailAddressesForContact(contactId, tenant, trx);
           const existingPromotedRow = existingAdditionalRows.find((row) => row.normalized_email_address === normalizedEmail);
 
-          if (existingPromotedRow) {
-            // One of this contact's own stored addresses becomes the default: a promotion,
-            // whether or not the caller also sent the old primary back as an additional row.
+          if (existingPromotedRow && (incomingRowsOmitted || hasDemotedPrimaryRow)) {
+            // One of this contact's own stored addresses becomes the default. A caller that sent
+            // no rows at all (`{ email: <own additional address> }`) means exactly that, so the
+            // contact's other stored rows are carried over. When rows *are* sent they are the
+            // caller's full intent: without the old primary among them this is a replace, and
+            // the old address must not be re-added behind the caller's back.
             promotedEmailRow = toPreparedEmailAddressInput(existingPromotedRow);
+            if (incomingRowsOmitted) {
+              promotionBaseRows = existingAdditionalRows.map(toPreparedEmailAddressInput);
+            }
           } else if (hasDemotedPrimaryRow && hasIncomingPrimaryType) {
             const customType = updateData.primary_email_custom_type?.trim() || null;
             promotedEmailRow = {
@@ -1131,10 +1141,12 @@ export class ContactModel {
         updateData.primary_email_custom_type = promotedEmailRow.custom_type ?? null;
         updateData.primary_email_custom_type_id = promotedEmailRow.custom_email_type_id ?? null;
 
-        const remainingRows = (updateData.additional_email_addresses ?? []).filter((row) => {
-          const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
-          return normalizedRowEmail !== normalizedEmail;
-        });
+        const remainingRows = (promotionBaseRows ?? updateData.additional_email_addresses ?? [])
+          .filter((row) => {
+            const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
+            return normalizedRowEmail !== normalizedEmail;
+          })
+          .map((row, index) => ({ ...row, display_order: index }));
 
         const hasDemotedPrimaryRow = remainingRows.some((row) => {
           const normalizedRowEmail = row.normalized_email_address ?? normalizeEmailAddress(row.email_address || '');
@@ -1153,10 +1165,7 @@ export class ContactModel {
           };
           updateData.additional_email_addresses = [...remainingRows, demotedPrimaryRow];
         } else {
-          updateData.additional_email_addresses = remainingRows.map((row, index) => ({
-            ...row,
-            display_order: index,
-          }));
+          updateData.additional_email_addresses = remainingRows;
         }
       }
     } else if (updateData.email === null) {
