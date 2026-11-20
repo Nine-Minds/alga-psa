@@ -60,6 +60,37 @@ export async function runCatalogCommand(command: string, args: string[], deps: C
     return 0;
   }
 
+  if (command === 'inspect-account') {
+    const scope = await catalog.scope();
+    const setting = await catalog.inspectAccountSetting(scope.livemode);
+    const offer = await catalog.inspect(CO_MANAGED_SEAT_OFFER_KEY, 'month');
+    const account = setting?.stripe_account ?? deps.env?.STRIPE_ACCOUNT_ID ?? 'unconfigured';
+    const priceId = setting?.price_id ?? offer.current?.price_id ?? deps.env?.STRIPE_CO_MANAGED_USER_PRICE_ID ?? 'unconfigured';
+    out(`Effective ${scope.livemode ? 'live' : 'test'} catalog account: ${account}`);
+    out(`Current co-managed price: ${priceId}`);
+    out(`Account source: ${setting ? 'database' : account === 'unconfigured' ? 'unconfigured' : 'environment bootstrap'}`);
+    out(`Price source: ${setting ? 'database setting' : offer.current ? 'database offer catalog' : priceId === 'unconfigured' ? 'unconfigured' : 'environment bootstrap'}`);
+    out('Test and live settings are independent; set each from a deployment using a restricted key for that mode.');
+    return 0;
+  }
+
+  if (command === 'set-account') {
+    const mode = await catalog.scope();
+    const expectedAccountValue = flag(args, 'expect-account');
+    const expectedPriceValue = flag(args, 'expect-price');
+    if (expectedAccountValue === undefined || expectedPriceValue === undefined) {
+      throw new OfferPublishError('INVALID_CANDIDATE', 'set-account needs --expect-account=<value|none> and --expect-price=<value|none>.');
+    }
+    const result = await catalog.setAccountSetting({ actor, livemode: mode.livemode,
+      stripeAccount: flag(args, 'account') ?? '', priceId: flag(args, 'price') ?? '',
+      expectedAccount: expectedAccountValue === 'none' ? null : expectedAccountValue,
+      expectedPriceId: expectedPriceValue === 'none' ? null : expectedPriceValue,
+      confirmSwitch: has(args, 'confirm-switch') });
+    out(result.changed ? `Set ${mode.livemode ? 'live' : 'test'} catalog account ${result.stripeAccount} and price ${result.priceId}; previous setting ${result.previousAccount ?? 'none'} / ${result.previousPriceId ?? 'none'}.`
+      : `Already configured: ${result.stripeAccount} / ${result.priceId}.`);
+    return 0;
+  }
+
   if (command === 'publish' || command === 'restore') {
     let priceId = flag(args, 'price');
     if (command === 'restore') {

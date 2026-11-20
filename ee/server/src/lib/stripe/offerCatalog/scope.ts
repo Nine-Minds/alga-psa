@@ -6,15 +6,17 @@ import type { CatalogScope, EnvLike } from './types';
  * is `STRIPE_ACCOUNT_ID` when configured, otherwise the account the key belongs to. Nothing here
  * accepts browser input. Failures throw; callers decide whether that fails closed.
  */
-export function createScopeResolver(stripe: Pick<Stripe, 'accounts'>, secretKey: string, env: EnvLike = process.env): () => Promise<CatalogScope> {
-  let cached: CatalogScope | undefined;
+export function createScopeResolver(
+  stripe: Pick<Stripe, 'accounts'>,
+  secretKey: string,
+  env: EnvLike = process.env,
+  loadDatabaseAccount?: (livemode: boolean) => Promise<string | undefined>,
+): () => Promise<CatalogScope> {
   return async () => {
-    if (cached) return cached;
     const livemode = /^(sk|rk)_live_/.test(secretKey);
     if (!livemode && !/^(sk|rk)_test_/.test(secretKey)) throw new Error('Stripe secret key has no recognisable test/live prefix');
-    const stripeAccount = env.STRIPE_ACCOUNT_ID || (await stripe.accounts.retrieve()).id;
+    const stripeAccount = await loadDatabaseAccount?.(livemode) || env.STRIPE_ACCOUNT_ID || (await stripe.accounts.retrieve()).id;
     if (!stripeAccount) throw new Error('Stripe account id could not be determined');
-    cached = { stripeAccount, livemode };
-    return cached;
+    return { stripeAccount, livemode };
   };
 }

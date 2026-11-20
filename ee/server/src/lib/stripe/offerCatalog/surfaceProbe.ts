@@ -1,13 +1,27 @@
-/**
- * Registers the catalog-backed "is anything sellable" probe with the licensing purchase surface.
- * Import for its side effect from every entry point that asks `isCoManagedPurchaseSurfaceOpen`.
- * Fail closed: any error reads as "not sellable".
- */
-import { registerCoManagedOfferAvailability } from '@alga-psa/licensing';
+import { runWithBillingCatalogContext, type BillingCatalogContext } from '@alga-psa/licensing';
 import { getStripeService } from '../StripeService';
 import { CO_MANAGED_SEAT_OFFER_KEY } from './types';
 
-registerCoManagedOfferAvailability(async () => {
-  const catalog = await getStripeService().getOfferCatalog();
-  return catalog.isOfferSellable(CO_MANAGED_SEAT_OFFER_KEY, 'month');
-});
+/** Load request-current platform catalog settings; no module registration or process cache. */
+export async function loadBillingCatalogContext(): Promise<BillingCatalogContext> {
+  const service = getStripeService();
+  const catalog = await service.getOfferCatalog();
+  const scope = await catalog.scope();
+  const livemode = scope.livemode;
+  const setting = await catalog.inspectAccountSetting(livemode);
+  try {
+    const offer = await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
+    if (setting && setting.price_id !== offer.priceId) throw new Error('Configured account price does not match the current catalog version');
+    return { mode: livemode ? 'live' : 'test', stripeAccount: scope.stripeAccount, priceId: offer.priceId,
+      source: setting ? 'database' : 'environment', sellable: true };
+  } catch {
+    return { mode: livemode ? 'live' : 'test', stripeAccount: scope.stripeAccount,
+      priceId: (setting?.price_id ?? process.env.STRIPE_CO_MANAGED_USER_PRICE_ID) || null,
+      source: setting ? 'database' : process.env.STRIPE_CO_MANAGED_USER_PRICE_ID ? 'environment' : 'unconfigured', sellable: false };
+  }
+}
+
+export async function withBillingCatalogContext<T>(work: () => T | Promise<T>): Promise<T> {
+  const context = await loadBillingCatalogContext();
+  return runWithBillingCatalogContext(context, work);
+}

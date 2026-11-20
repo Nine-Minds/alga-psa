@@ -13,7 +13,7 @@
  */
 import type { Knex } from 'knex';
 import {
-  LEGACY_ENV_BINDINGS, OfferPublishError, OfferUnavailableError,
+  CO_MANAGED_SEAT_OFFER_KEY, LEGACY_ENV_BINDINGS, OfferPublishError, OfferUnavailableError,
   type BillingInterval, type CatalogDeps, type EnvLike, type CatalogOperator, type CatalogScope, type ClassifiedPrice,
   type OfferVersionRow, type PublishAction, type PublishResult, type ResolvedOffer,
 } from './types';
@@ -60,6 +60,17 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return db(VERSIONS).where({ ...identity(scope, offerKey, interval), is_current: true }).first();
   }
 
+  async function syncConfiguredPrice(trx: Knex.Transaction, scope: CatalogScope, actor: string, priceId: string): Promise<void> {
+    if (!(await trx.schema.hasTable('stripe_offer_catalog_settings'))) return;
+    const setting = await trx('stripe_offer_catalog_settings').where({ livemode: scope.livemode }).forUpdate().first();
+    if (!setting || setting.stripe_account !== scope.stripeAccount || setting.price_id === priceId) return;
+    await trx('stripe_offer_catalog_settings').where({ livemode: scope.livemode }).update({ price_id: priceId, updated_by: actor, updated_at: trx.fn.now() });
+    if (await trx.schema.hasTable('stripe_offer_catalog_setting_audit')) await trx('stripe_offer_catalog_setting_audit').insert({
+      livemode: scope.livemode, operator: actor, previous_account: setting.stripe_account, previous_price_id: setting.price_id,
+      new_account: scope.stripeAccount, new_price_id: priceId,
+    });
+  }
+
   async function scopeOrNull(): Promise<CatalogScope | null> {
     try { return await deps.scope(); } catch { return null; }
   }
@@ -86,7 +97,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
     const version = await guarded(() => currentVersion(scope, offerKey, interval), undefined);
     if (!version) throw new OfferUnavailableError('no_current_version', 'New purchases of this offer are paused: no current price is published.');
     let price;
-    try { price = await deps.stripe.prices.retrieve(version.price_id); } catch (error) {
+    try { price = await deps.stripe.prices.retrieve(version.price_id, { stripeAccount: scope.stripeAccount }); } catch (error) {
       throw new OfferUnavailableError('stripe_unavailable', 'The current price could not be validated with Stripe.', error);
     }
     const problems = price.id === version.price_id ? priceProblems(price, { interval, livemode: scope.livemode, productId: version.product_id, requireActive: true }) : ['Stripe returned a different price'];
@@ -97,7 +108,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
 
   async function legacyOffer(offerKey: string, interval: BillingInterval, priceId: string, scope: CatalogScope | null): Promise<ResolvedOffer> {
     let price;
-    try { price = await deps.stripe.prices.retrieve(priceId); } catch (error) {
+    try { price = await deps.stripe.prices.retrieve(priceId, scope ? { stripeAccount: scope.stripeAccount } : undefined); } catch (error) {
       throw new OfferUnavailableError('stripe_unavailable', 'The configured price could not be validated with Stripe.', error);
     }
     const problems = priceProblems(price, { interval, livemode: scope?.livemode ?? price.livemode, requireActive: true });
@@ -162,10 +173,103 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return { scope, versions, current: versions.find((version) => version.is_current) ?? null, legacyEnvPriceId: legacyEnvPriceId(offerKey, interval, env) ?? null };
   }
 
+  async function inspectAccountSetting(livemode: boolean) {
+    return guarded(async () => deps.db('stripe_offer_catalog_settings').where({ livemode }).first(), null);
+  }
+
+  async function setAccountSetting(input: { actor: CatalogOperator | null | undefined; livemode: boolean; stripeAccount: string;
+    priceId: string; expectedAccount: string | null; expectedPriceId: string | null; confirmSwitch: boolean }) {
+    const actor = assertCatalogOperator(input.actor, env);
+    if (!/^acct_[A-Za-z0-9]+$/.test(input.stripeAccount) || !/^price_[A-Za-z0-9]+$/.test(input.priceId)) {
+      throw new OfferPublishError('INVALID_CANDIDATE', 'A valid Stripe account ID and Price ID are required.');
+    }
+    const currentMode = await deps.scope();
+    if (currentMode.livemode !== input.livemode) throw new OfferPublishError('WRONG_MODE', 'Use a deployment whose restricted Stripe key matches the mode being configured.');
+    let price;
+    try { price = await deps.stripe.prices.retrieve(input.priceId, { stripeAccount: input.stripeAccount }); }
+    catch (error) { throw new OfferPublishError('STRIPE_UNAVAILABLE', `Stripe could not retrieve the candidate Price in the requested account: ${error instanceof Error ? error.message : String(error)}`); }
+    if (price.id !== input.priceId || price.livemode !== input.livemode) throw new OfferPublishError('WRONG_MODE', 'The scoped Stripe response did not match the requested Price and mode.');
+    const responseAccount = (price as unknown as { account?: string | { id?: string } }).account;
+    const responseAccountId = typeof responseAccount === 'string' ? responseAccount : responseAccount?.id;
+    if (responseAccountId && responseAccountId !== input.stripeAccount) throw new OfferPublishError('INVALID_CANDIDATE', 'Stripe returned a Price owned by a different account.');
+    const problems = priceProblems(price, { interval: 'month', livemode: input.livemode, requireActive: true });
+    if (problems.length) throw new OfferPublishError('INVALID_CANDIDATE', `Price ${input.priceId} cannot back this offer: ${problems.join('; ')}.`, problems);
+    const id = { stripe_account: input.stripeAccount, livemode: input.livemode, offer_key: CO_MANAGED_SEAT_OFFER_KEY, billing_interval: 'month' };
+    const knownProducts: Array<{ product_id: string }> = await deps.db('stripe_offer_versions').where(id).distinct('product_id');
+    if (knownProducts.length > 1 || (knownProducts[0] && knownProducts[0].product_id !== priceProductId(price))) {
+      throw new OfferPublishError('INVALID_CANDIDATE', 'The candidate product does not match the offer’s existing account-scoped price history.');
+    }
+    if (!input.confirmSwitch) throw new OfferPublishError('INVALID_CANDIDATE', 'Review the account and price, then retry with explicit switch confirmation.');
+
+    const result = await deps.db.transaction(async (trx) => {
+      await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`stripe-billing-catalog:${input.livemode ? 'live' : 'test'}`]);
+      const current = await trx('stripe_offer_catalog_settings').where({ livemode: input.livemode }).forUpdate().first();
+      const bootstrapApplies = currentMode.livemode === input.livemode;
+      const previousAccount = current?.stripe_account ?? (bootstrapApplies ? env.STRIPE_ACCOUNT_ID ?? null : null);
+      const previousPriceId = current?.price_id ?? (bootstrapApplies ? env.STRIPE_CO_MANAGED_USER_PRICE_ID ?? null : null);
+      if (previousAccount !== input.expectedAccount || previousPriceId !== input.expectedPriceId) {
+        throw new OfferPublishError('STALE_EXPECTED_VERSION', 'The account setting changed since it was reviewed. Inspect it again.');
+      }
+      if (previousAccount && (previousAccount !== input.stripeAccount || previousPriceId !== input.priceId)) {
+        const pending = await trx('co_managed_portal_purchases').where({ stripe_account: previousAccount, livemode: input.livemode, state: 'pending' }).first('purchase_id');
+        if (pending) throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has a pending checkout. Resolve it before switching.');
+        if (await trx.schema.hasTable('co_managed_purchase_operations')) {
+          const hostedPending = await trx('co_managed_purchase_operations').whereIn('state', ['preparing', 'checkout', 'payment_failed'])
+            .andWhere((q) => q.where({ stripe_account: previousAccount, livemode: input.livemode }).orWhereNull('stripe_account'))
+            .first('operation_id');
+          if (hostedPending) throw new OfferPublishError('INVALID_CANDIDATE', 'A pending hosted checkout is pinned to the previous or an unresolved account. Resolve it before switching.');
+        }
+        if (await trx.schema.hasTable('stripe_subscriptions')) {
+          const active = trx('stripe_subscriptions').whereNotIn('status', ['canceled', 'incomplete_expired'])
+            .where((q) => q.whereRaw("metadata->>'subscription_kind' = 'co_managed'").orWhereRaw("metadata->>'portal_purchase_id' IS NOT NULL"));
+          if (await active.clone().where({ stripe_account: previousAccount, livemode: input.livemode }).first('stripe_subscription_id')) {
+            throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has an active co-managed subscription; finish or migrate it before switching.');
+          }
+          if (await active.clone().whereNull('stripe_account').first('stripe_subscription_id')) {
+            throw new OfferPublishError('INVALID_CANDIDATE', 'An active co-managed subscription has no persisted account identity; inventory it before switching.');
+          }
+        }
+        if (deps.subscriptions) {
+          for await (const subscription of deps.subscriptions.list({ status: 'all', limit: 100 }, { stripeAccount: previousAccount })) {
+            const coManaged = subscription.metadata?.subscription_kind === 'co_managed' || Boolean(subscription.metadata?.portal_purchase_id);
+            if (coManaged && !['canceled', 'incomplete_expired'].includes(subscription.status)) {
+              const mapped = await trx('stripe_offer_versions').where({ stripe_account: previousAccount, livemode: input.livemode }).pluck('price_id');
+              const allowed = new Set(mapped);
+              if (subscription.items.data.some((item) => !allowed.has(item.price.id))) throw new OfferPublishError('INVALID_CANDIDATE', 'An active subscription on the previous account has an unresolved historical price.');
+              throw new OfferPublishError('INVALID_CANDIDATE', 'The previous account still has an active co-managed subscription; finish or migrate it before switching.');
+            }
+          }
+        }
+      }
+      const bound = await trx('stripe_offer_versions').where({ stripe_account: input.stripeAccount, livemode: input.livemode, price_id: input.priceId }).first();
+      if (bound && (bound.offer_key !== CO_MANAGED_SEAT_OFFER_KEY || bound.billing_interval !== 'month')) throw new OfferPublishError('BOUND_TO_OTHER_OFFER', 'The Price is already bound to a different offer.');
+      const previous = await trx('stripe_offer_versions').where({ ...id, is_current: true }).forUpdate().first();
+      if (previous && previous.price_id !== input.priceId) await trx('stripe_offer_versions').where({ version_id: previous.version_id }).update({ is_current: false, retired_at: trx.fn.now() });
+      let version = bound;
+      if (!bound) {
+        const number = Number((await trx('stripe_offer_versions').where(id).max('version_number as n').first())?.n ?? 0) + 1;
+        [version] = await trx('stripe_offer_versions').insert({ ...id, version_number: number, price_id: input.priceId, product_id: priceProductId(price),
+          is_current: true, published_by: actor.userId }).returning('*');
+      } else if (!bound.is_current) {
+        [version] = await trx('stripe_offer_versions').where({ version_id: bound.version_id }).update({ is_current: true, retired_at: null }).returning('*');
+      }
+      if (previous?.version_id !== version?.version_id) await trx('stripe_offer_publications').insert({ ...id,
+        action: bound ? 'restore' : 'publish', from_version_id: previous?.version_id ?? null, to_version_id: version?.version_id ?? null, actor: actor.userId });
+      await trx('stripe_offer_catalog_settings').insert({ livemode: input.livemode, stripe_account: input.stripeAccount,
+        price_id: input.priceId, updated_by: actor.userId, updated_at: trx.fn.now() }).onConflict('livemode').merge();
+      await trx('stripe_offer_catalog_setting_audit').insert({ livemode: input.livemode, operator: actor.userId,
+        previous_account: previousAccount, previous_price_id: previousPriceId,
+        new_account: input.stripeAccount, new_price_id: input.priceId });
+      return { changed: previousAccount !== input.stripeAccount || previousPriceId !== input.priceId,
+        previousAccount, previousPriceId };
+    });
+    return { ...result, livemode: input.livemode, stripeAccount: input.stripeAccount, priceId: input.priceId };
+  }
+
   /** Validate a candidate against Stripe in this scope; returns what the operator reviews. */
   async function reviewCandidate(scope: CatalogScope, offerKey: string, interval: BillingInterval, priceId: string, opts: { productId?: string; requireActive: boolean }) {
     let price;
-    try { price = await deps.stripe.prices.retrieve(priceId); } catch (error) {
+    try { price = await deps.stripe.prices.retrieve(priceId, { stripeAccount: scope.stripeAccount }); } catch (error) {
       throw new OfferPublishError('STRIPE_UNAVAILABLE', `Stripe could not retrieve ${priceId} in this account and mode: ${error instanceof Error ? error.message : String(error)}`);
     }
     if (price.livemode !== scope.livemode) throw new OfferPublishError('WRONG_MODE', `Price ${priceId} is ${price.livemode ? 'live' : 'test'} mode; this catalog scope is ${scope.livemode ? 'live' : 'test'} mode.`);
@@ -229,6 +333,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
         action = mode === 'seed' ? 'seed' : 'publish';
       }
       await trx(PUBLICATIONS).insert({ ...id, action, from_version_id: current?.version_id ?? null, to_version_id: version.version_id, actor: actor.userId });
+      await syncConfiguredPrice(trx, scope, actor.userId, version.price_id);
       return { changed: true, action, version, previousVersionId: current?.version_id ?? null, terms };
     });
 
@@ -277,7 +382,7 @@ export function createOfferCatalog(deps: CatalogDeps) {
     return reviewCandidate(await deps.scope(), offerKey, interval, priceId, { productId, requireActive: true });
   }
 
-  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect, publishBinding, pauseSales, scope: deps.scope };
+  return { resolveCurrentOffer, classifyPrice, reviewCandidateTerms, recognizedPriceIds, isOfferSellable, getVersion, inspect, inspectAccountSetting, setAccountSetting, publishBinding, pauseSales, scope: deps.scope };
 }
 
 export type OfferCatalog = ReturnType<typeof createOfferCatalog>;

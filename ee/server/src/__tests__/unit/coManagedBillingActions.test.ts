@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => ({ surface: vi.fn(), permission: vi.fn(), preview
   user: { user_id: 'actor', tenant: 'authenticated-sponsor', user_type: 'internal' } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) =>
   handler(mocks.user, { tenant: mocks.user.tenant }, ...args) }));
-vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, registerCoManagedOfferAvailability: vi.fn() }));
+vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface }));
+vi.mock('../../lib/stripe/offerCatalog/surfaceProbe', () => ({ withBillingCatalogContext: (work: () => unknown) => work() }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
   previewCoManagedSeats: mocks.preview, purchaseCoManagedSeats: mocks.purchase, getPublishableKey: mocks.key,

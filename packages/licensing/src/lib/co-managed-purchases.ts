@@ -12,6 +12,8 @@ export interface CoManagedPurchaseOperation {
   /** Catalog terms pinned when the purchase was first confirmed; null for pre-catalog operations. */
   offer_version_id?: string | null;
   price_id?: string | null;
+  stripe_account?: string | null;
+  livemode?: boolean | null;
 }
 
 export type CoManagedPurchaseResult =
@@ -62,8 +64,10 @@ export async function runCoManagedPurchase(db: Knex, input: {
   quantity: number;
   /** Reviewed terms to record with a NEW operation. Resume and retry read them back from the row;
    * they are never re-resolved, so a price rotation cannot reprice a confirmed purchase. */
-  pinned?: { offerVersionId: string | null; priceId: string };
-}, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>): Promise<CoManagedPurchaseResult> {
+  pinned?: { offerVersionId: string | null; priceId: string; stripeAccount?: string; livemode?: boolean };
+}, provider: (operation: CoManagedPurchaseOperation) => Promise<CoManagedPurchaseResult>,
+  beforeProvider?: (trx: Knex.Transaction, operation: CoManagedPurchaseOperation) => Promise<void>,
+  beforeIntent?: (trx: Knex.Transaction) => Promise<void>): Promise<CoManagedPurchaseResult> {
   if (!Number.isInteger(input.quantity) || input.quantity < 0 || input.quantity > 100000 ||
       !UUID.test(input.operationId) || !UUID.test(input.sponsorTenant)) {
     throw new CoManagedPurchaseError('INVALID_PURCHASE');
@@ -84,6 +88,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {
         throw new CoManagedPurchaseError('PURCHASE_IN_PROGRESS');
       }
+      if (beforeIntent) await beforeIntent(trx);
       // A first purchase needs a positive pool and cannot start while another one awaits verification.
       const first = await readCoManagedFirstPurchasePhase(trx, input.sponsorTenant);
       if (first.phase !== 'established') {
@@ -100,7 +105,8 @@ export async function runCoManagedPurchase(db: Knex, input: {
       // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
         operation_id: input.operationId, quantity: input.quantity, state: 'preparing',
-        ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId } : {}) });
+        ...(input.pinned ? { offer_version_id: input.pinned.offerVersionId, price_id: input.pinned.priceId,
+          stripe_account: input.pinned.stripeAccount ?? null, livemode: input.pinned.livemode ?? null } : {}) });
     });
   } catch (error) {
     // The partial unique index is the backstop for two concurrent first writers.
@@ -122,6 +128,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
     if (!await holdsAllocations(trx, input.sponsorTenant, input.quantity)) {
       throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
     }
+    if (beforeProvider) await beforeProvider(trx, operation);
     const result = await provider(operation);
     if (result.kind === 'updated' && entitlement?.source === 'hosted') {
       if (result.subscriptionId && result.subscriptionId !== entitlement.source_reference) {

@@ -106,20 +106,20 @@ export async function reconcilePortalPurchase(deps: FulfillmentDeps, purchaseId:
 
   let subscriptionId = purchase.stripe_subscription_id;
   if (!subscriptionId) {
-    const session = await deps.stripe.checkout.sessions.retrieve(purchase.checkout_session_id);
+    const session = await deps.stripe.checkout.sessions.retrieve(purchase.checkout_session_id, {}, { stripeAccount: purchase.stripe_account });
     if (session.id !== purchase.checkout_session_id || session.metadata?.portal_purchase_id !== purchase.purchase_id ||
         session.metadata?.entitlement_id !== purchase.entitlement_id) throw new PortalPurchaseOwnershipError('checkout metadata names a different purchase or entitlement');
     if (session.status !== 'complete' || !session.subscription) return { kind: 'noop', reason: 'checkout_incomplete' };
     subscriptionId = idOf(session.subscription)!;
   }
-  const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+  const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] }, { stripeAccount: purchase.stripe_account });
   if (subscription.metadata?.portal_purchase_id !== purchase.purchase_id || subscription.metadata?.entitlement_id !== purchase.entitlement_id) {
     throw new PortalPurchaseOwnershipError('subscription metadata names a different purchase or entitlement');
   }
   if (subscription.items.data.length !== 1) throw new PortalPurchaseOwnershipError('subscription does not have exactly one seat item');
   const item = subscription.items.data[0];
   // RECOGNITION: the billed price must be an offer version of the purchase's own offer (retired included).
-  const scope = await deps.catalog.scope();
+  const scope = { stripeAccount: purchase.stripe_account, livemode: purchase.livemode };
   const classified = await deps.catalog.classifyPrice(scope, item.price.id);
   if (!classified) throw new UnmappedPriceError(item.price.id);
   if (classified.offerKey !== purchase.offer_key || classified.interval !== purchase.billing_interval) throw new PortalPurchaseOwnershipError(`price ${item.price.id} belongs to ${classified.offerKey}/${classified.interval}`);

@@ -20,19 +20,23 @@ const price = (id: string, over: Record<string, unknown> = {}) => ({
 describe('stripe offer catalog (postgres)', () => {
   let db: Knex;
   let prices: Record<string, any>;
-  const catalog = (scope: CatalogScope = TEST, env: Record<string, string | undefined> = {}, stripeFails = false) => createOfferCatalog({
+  const catalog = (scope: CatalogScope = TEST, env: Record<string, string | undefined> = {}, stripeFails = false,
+    subscriptions?: any) => createOfferCatalog({
     db, scope: async () => scope, env: { MASTER_BILLING_TENANT_ID: MASTER, ...env },
     stripe: { prices: { retrieve: async (id: string) => { if (stripeFails) throw new Error('stripe down'); if (!prices[id]) throw new Error('no such price'); return prices[id]; } } } as any,
+    subscriptions,
   });
 
   beforeAll(async () => {
     db = await createTestDbConnection({ databaseName: 'stripe_offer_catalog_test', runSeeds: false });
     const migration = createRequire(import.meta.url)(path.resolve(__dirname, '../../../migrations/20261118090000_create_stripe_offer_catalog.cjs'));
     await migration.up(db); // re-running the migration changes nothing
+    const settingsMigration = createRequire(import.meta.url)(path.resolve(__dirname, '../../../migrations/20261120120000_add_stripe_catalog_account_settings.cjs'));
+    await settingsMigration.up(db);
   });
   afterAll(async () => { await db?.destroy(); });
   beforeEach(async () => {
-    await db.raw('TRUNCATE stripe_offer_publications, stripe_offer_versions CASCADE');
+    await db.raw('TRUNCATE stripe_offer_catalog_setting_audit, stripe_offer_catalog_settings, stripe_offer_publications, stripe_offer_versions CASCADE');
     prices = { price_a: price('price_a'), price_b: price('price_b'), price_c: price('price_c') };
   });
 
@@ -122,6 +126,56 @@ describe('stripe offer catalog (postgres)', () => {
     expect(await live.classifyPrice({ stripeAccount: 'acct_1', livemode: true }, 'price_a')).toBeNull();
     expect(await catalog(TEST).classifyPrice(TEST, 'live_a')).toBeNull();
     expect((await catalog({ stripeAccount: 'acct_2', livemode: false }).inspect(KEY, 'month')).current).toBeNull();
+  });
+
+  it('T011: restricted price-read fixture validates ownership through the Stripe-Account request scope and audits the setting', async () => {
+    const retrieved: Array<{ id: string; options: unknown }> = [];
+    const restricted = createOfferCatalog({ db, scope: async () => ({ stripeAccount: (await db('stripe_offer_catalog_settings').where({ livemode: false }).first())?.stripe_account ?? TEST.stripeAccount, livemode: false }), env: { MASTER_BILLING_TENANT_ID: MASTER },
+      stripe: { prices: { retrieve: async (id: string, options: unknown) => { retrieved.push({ id, options }); return prices[id]; } } } as any });
+    const result = await restricted.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_a',
+      expectedAccount: null, expectedPriceId: null, confirmSwitch: true });
+    expect(retrieved).toEqual([{ id: 'price_a', options: { stripeAccount: 'acct_target' } }]);
+    expect(result).toMatchObject({ changed: true, previousAccount: null, stripeAccount: 'acct_target', priceId: 'price_a' });
+    expect(await restricted.inspectAccountSetting(false)).toMatchObject({ stripe_account: 'acct_target', price_id: 'price_a', updated_by: operator.userId });
+    expect(await db('stripe_offer_catalog_setting_audit').first()).toMatchObject({ operator: operator.userId,
+      previous_account: null, new_account: 'acct_target', new_price_id: 'price_a' });
+    expect((await restricted.resolveCurrentOffer(KEY, 'month')).priceId).toBe('price_a');
+  });
+
+  it('T011: rejects unauthorized, mismatched-mode, unconfirmed, and pending-reference switches without changing effective settings', async () => {
+    const c = catalog(TEST, { STRIPE_ACCOUNT_ID: 'acct_bootstrap', STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_a' });
+    await catalog({ stripeAccount: 'acct_bootstrap', livemode: false }).publishBinding({ actor: operator, offerKey: KEY, interval: 'month',
+      priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });
+    const write = (overrides: Record<string, unknown> = {}) => c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target',
+      priceId: 'price_b', expectedAccount: 'acct_bootstrap', expectedPriceId: 'price_a', confirmSwitch: true, ...overrides } as any);
+    await expect(write({ actor: tenantAdmin })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    prices.price_live = price('price_live', { livemode: true });
+    await expect(c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_live',
+      expectedAccount: 'acct_bootstrap', expectedPriceId: 'price_a', confirmSwitch: true })).rejects.toMatchObject({ code: 'WRONG_MODE' });
+    await expect(write({ confirmSwitch: false })).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
+    await c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_bootstrap', priceId: 'price_a',
+      expectedAccount: 'acct_bootstrap', expectedPriceId: 'price_a', confirmSwitch: true });
+    const oldCatalog = catalog({ stripeAccount: 'acct_bootstrap', livemode: false });
+    await db('co_managed_portal_purchases').insert({ stripe_account: 'acct_bootstrap', livemode: false, entitlement_id: 'entitlement',
+      license_tenant_id: 'tenant', offer_key: KEY, billing_interval: 'month', offer_version_id: (await oldCatalog.inspect(KEY, 'month')).current!.version_id,
+      price_id: 'price_a', quantity: 1, checkout_session_id: 'cs_pending', state: 'pending' });
+    await expect(write()).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
+    expect(await c.inspectAccountSetting(false)).toMatchObject({ stripe_account: 'acct_bootstrap', price_id: 'price_a' });
+    expect(await db('stripe_offer_catalog_setting_audit')).toHaveLength(1);
+  });
+
+  it('T011: refuses a switch while an active historical subscription still depends on the old account', async () => {
+    const c = catalog(TEST, { STRIPE_ACCOUNT_ID: 'acct_bootstrap', STRIPE_CO_MANAGED_USER_PRICE_ID: 'price_a' });
+    await c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_bootstrap', priceId: 'price_a',
+      expectedAccount: 'acct_bootstrap', expectedPriceId: 'price_a', confirmSwitch: true });
+    const subscriptions = { list: async function* () { yield { status: 'active', metadata: { subscription_kind: 'co_managed' },
+      items: { data: [{ price: { id: 'price_a' } }] } }; } } as any;
+    const withActiveReference = catalog({ stripeAccount: 'acct_bootstrap', livemode: false }, { STRIPE_ACCOUNT_ID: 'acct_bootstrap' }, false, subscriptions);
+    await expect(withActiveReference.setAccountSetting({ actor: operator, livemode: false, stripeAccount: 'acct_target', priceId: 'price_b',
+      expectedAccount: 'acct_bootstrap', expectedPriceId: 'price_a', confirmSwitch: true })).rejects.toMatchObject({ code: 'INVALID_CANDIDATE' });
+    expect(await withActiveReference.inspectAccountSetting(false)).toMatchObject({ stripe_account: 'acct_bootstrap', price_id: 'price_a' });
+    expect((await withActiveReference.classifyPrice({ stripeAccount: 'acct_bootstrap', livemode: false }, 'price_a'))?.current).toBe(true);
+    expect(await db('stripe_offer_catalog_setting_audit')).toHaveLength(1);
   });
 
   it('skips Stripe scope resolution for an unconfigured offer', async () => {
@@ -284,7 +338,7 @@ describe('stripe offer catalog (postgres)', () => {
       await db.raw('CREATE TABLE IF NOT EXISTS co_managed_purchase_operations (tenant uuid, operation_id uuid, state text, price_id text, quantity int)');
       await db('co_managed_purchase_operations').del();
       await db('co_managed_purchase_operations').insert([{ tenant: MASTER, operation_id: '22222222-2222-4222-8222-222222222222', state: 'checkout', price_id: 'price_mystery', quantity: 3 },
-        { tenant: MASTER, operation_id: '33333333-3333-4333-8333-333333333333', state: 'preparing', price_id: null, quantity: 1 }]);
+        { tenant: '11111111-1111-4111-8111-111111111112', operation_id: '33333333-3333-4333-8333-333333333333', state: 'preparing', price_id: null, quantity: 1 }]);
       const result = await run('inventory', [], operator, [co('price_a'), co('price_ghost'), co('price_gone', 'canceled'), { id: 'sub_other', status: 'active', metadata: {}, items: { data: [{ price: { id: 'price_pro' } }] } }]);
       expect(result.code).toBe(2);
       expect(result.text).toContain('mapped co_managed_technician_seat/month current  price_a');

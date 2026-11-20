@@ -41,6 +41,16 @@ import {
 
 /** The one supported co-managed seat cadence. A new cadence is a new catalog identity, not a flag. */
 const CO_MANAGED_SEAT_INTERVAL = 'month' as const;
+
+async function loadConfiguredBillingAccount(db: Knex, livemode: boolean): Promise<string | undefined> {
+  try {
+    const row = await db('stripe_offer_catalog_settings').where({ livemode }).first('stripe_account');
+    return row?.stripe_account;
+  } catch (error) {
+    if ((error as { code?: string }).code === '42P01') return undefined;
+    throw error;
+  }
+}
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -1675,8 +1685,12 @@ export class StripeService {
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const lines: string[] = [];
     const code = await runCatalogCommand(command, args, { catalog: await this.getOfferCatalog(), db: await getAdminConnection(),
-      stripe: this.stripe, actor, locale, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
+      stripe: this.stripe, actor, locale, env: process.env, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
     return { code, lines };
+  }
+
+  async setBillingCatalogAccount(actor: CatalogOperator, input: Omit<Parameters<OfferCatalog['setAccountSetting']>[0], 'actor'>) {
+    return (await this.getOfferCatalog()).setAccountSetting({ ...input, actor });
   }
 
   /** Persist a portal checkout -> appliance entitlement association before payment (F010). */
@@ -1699,8 +1713,12 @@ export class StripeService {
     await this.ensureInitialized();
     if (!this.offerCatalogInstance) {
       const { getAdminConnection } = await import('@alga-psa/db/admin');
+      const db = await getAdminConnection();
       this.offerCatalogInstance = createOfferCatalog({
-        db: await getAdminConnection(), stripe: this.stripe, scope: createScopeResolver(this.stripe, this.config.secretKey),
+        db, stripe: this.stripe, subscriptions: this.stripe.subscriptions,
+        scope: createScopeResolver(this.stripe, this.config.secretKey, process.env, async (livemode) => {
+          return loadConfiguredBillingAccount(db, livemode);
+        }),
       });
     }
     return this.offerCatalogInstance;
@@ -1732,6 +1750,14 @@ export class StripeService {
    * RECOGNITION path: a subscription on a retired price keeps its seats. */
   private async syncCoManagedSubscription(tenantId: string, subscriptionId: string, db: Knex): Promise<void> {
     const recognized = await this.recognizedCoManagedPrices();
+    const operation = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId)
+      .where({ provider_reference: subscriptionId, state: 'completed' }).first('stripe_account', 'livemode');
+    const subscriptionRecord = await tenantScopedTable(db, 'stripe_subscriptions', tenantId)
+      .where({ stripe_subscription_external_id: subscriptionId }).first('stripe_account', 'livemode');
+    const stripeAccount = operation?.stripe_account ?? subscriptionRecord?.stripe_account;
+    const requestOptions = stripeAccount ? { stripeAccount } : undefined;
+    if (operation?.stripe_account) await tenantScopedTable(db, 'stripe_subscriptions', tenantId)
+      .where({ stripe_subscription_external_id: subscriptionId }).update({ stripe_account: operation.stripe_account, livemode: operation.livemode });
     const current = await tenantScopedTable(db, 'co_managed_entitlements', tenantId).first();
     if (current?.source === 'hosted' && current.source_reference !== subscriptionId) {
       const superseded = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId)
@@ -1742,9 +1768,9 @@ export class StripeService {
     if (!customer) throw new Error('Co-managed sponsor has no Stripe customer');
     const externalCustomerId = customer.stripe_customer_external_id;
     await reconcileHostedCoManagedEntitlement(db, tenantId, subscriptionId, async () => {
-      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] }, requestOptions);
       const baseSubscriptions: Stripe.Subscription[] = [];
-      for await (const candidate of this.stripe.subscriptions.list({ customer: externalCustomerId, status: 'all', limit: 100 })) {
+      for await (const candidate of this.stripe.subscriptions.list({ customer: externalCustomerId, status: 'all', limit: 100 }, requestOptions)) {
         baseSubscriptions.push(candidate);
       }
       const tenant = await tenantScopedTable(db, 'tenants', tenantId).first('product_code', 'plan');
@@ -1766,25 +1792,29 @@ export class StripeService {
   private async finalizeCoManagedCheckout(session: Stripe.Checkout.Session, tenantId: string, knex: Knex): Promise<void> {
     if (session.mode !== 'subscription' || !session.subscription) return;
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
-    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price.product'] });
-    const operationId = subscription.metadata?.operation_id ?? session.metadata?.operation_id;
-    if (operationId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) {
-      const operation = await tenantScopedTable(knex, 'co_managed_purchase_operations', tenantId)
-        .where('operation_id', operationId).whereIn('state', ['preparing', 'checkout']).first();
-      if (operation) {
+    const operationId = session.metadata?.operation_id;
+    const operation = operationId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)
+      ? await tenantScopedTable(knex, 'co_managed_purchase_operations', tenantId).where('operation_id', operationId).first()
+      : undefined;
+    const requestOptions = operation?.stripe_account ? { stripeAccount: operation.stripe_account } : undefined;
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price.product'] }, requestOptions);
+    const confirmedOperationId = subscription.metadata?.operation_id ?? operationId;
+    if (confirmedOperationId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(confirmedOperationId)) {
+      const pendingOperation = operation?.state === 'preparing' || operation?.state === 'checkout' ? operation : undefined;
+      if (pendingOperation) {
         const customer = await tenantScopedTable(knex, 'stripe_customers', tenantId).first();
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
         if (!customer || customerId !== customer.stripe_customer_external_id ||
             subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' ||
-            subscription.items.data.length !== 1 || subscription.items.data[0].quantity !== operation.quantity) {
+            subscription.items.data.length !== 1 || subscription.items.data[0].quantity !== pendingOperation.quantity) {
           throw new Error('Co-managed checkout does not match the authorized purchase');
         }
         const billed = subscription.items.data[0].price;
         // A pinned operation is held to exactly the reviewed price; an older one to any known price.
-        assertCoManagedPrice(billed, operation.price_id ? [operation.price_id] : await this.recognizedCoManagedPrices());
+        assertCoManagedPrice(billed, pendingOperation.price_id ? [pendingOperation.price_id] : await this.recognizedCoManagedPrices());
         // Finalize through the purchase lock order so replacement checkouts can become canonical
         // even if the browser never returns after paying. Does not raise capacity.
-        await runCoManagedPurchase(knex, { sponsorTenant: tenantId, operationId, quantity: operation.quantity },
+        await runCoManagedPurchase(knex, { sponsorTenant: tenantId, operationId: confirmedOperationId, quantity: pendingOperation.quantity },
           async () => ({ kind: 'updated', subscriptionId: subscription.id }));
       }
     }
@@ -1865,23 +1895,28 @@ export class StripeService {
     // Decide the terms BEFORE the operation is persisted: a resumed operation reuses what it
     // recorded; only a brand-new confirmation consults the catalog and compares the reviewed terms.
     const recorded = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId).where('operation_id', operationId).first();
-    let pinned: { offerVersionId: string | null; priceId: string } | undefined;
+    let pinned: { offerVersionId: string | null; priceId: string; stripeAccount?: string; livemode?: boolean } | undefined;
     if (recorded?.price_id) {
-      pinned = { offerVersionId: recorded.offer_version_id ?? null, priceId: recorded.price_id };
+      pinned = { offerVersionId: recorded.offer_version_id ?? null, priceId: recorded.price_id,
+        stripeAccount: recorded.stripe_account ?? (await (await this.getOfferCatalog()).scope()).stripeAccount,
+        livemode: recorded.livemode ?? (await (await this.getOfferCatalog()).scope()).livemode };
     } else if (!recorded) {
       const subscriptions: Stripe.Subscription[] = [];
       for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) subscriptions.push(sub);
       const terms = await this.coManagedTerms(subscriptions, recognized);
       if (terms.kind === 'new') {
         if (reviewedOfferRef && reviewedOfferRef !== this.offerRef(terms.offer)) throw new OfferTermsChangedError(reviewedOfferRef, terms.offer);
-        pinned = { offerVersionId: terms.offer.versionId, priceId: terms.offer.priceId };
+        pinned = { offerVersionId: terms.offer.versionId, priceId: terms.offer.priceId,
+          stripeAccount: terms.offer.scope.stripeAccount, livemode: terms.offer.scope.livemode };
       } else {
-        pinned = { offerVersionId: terms.versionId, priceId: terms.price.id };
+        const scope = await (await this.getOfferCatalog()).scope();
+        pinned = { offerVersionId: terms.versionId, priceId: terms.price.id, stripeAccount: scope.stripeAccount, livemode: scope.livemode };
       }
     }
     const result = await runCoManagedPurchase(db, { sponsorTenant: tenantId, quantity, operationId, ...(pinned ? { pinned } : {}) }, async (operation) => {
+      const requestOptions = operation.stripe_account ? { stripeAccount: operation.stripe_account } : undefined;
       const subscriptions: Stripe.Subscription[] = [];
-      for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) subscriptions.push(sub);
+      for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 }, requestOptions)) subscriptions.push(sub);
       if (!currentProSubscriptionExpiry(subscriptions, customerId, this.coManagedSponsorPriceIds(), recognized)) {
         throw new Error('A current Pro subscription is required to purchase co-managed seats');
       }
@@ -1901,11 +1936,11 @@ export class StripeService {
         return { kind: 'checkout', sessionId: session.id, clientSecret: session.client_secret };
       };
       if (operation.state === 'checkout' && operation.provider_reference) {
-        return readSession(await this.stripe.checkout.sessions.retrieve(operation.provider_reference));
+        return readSession(await this.stripe.checkout.sessions.retrieve(operation.provider_reference, {}, requestOptions));
       }
       // Recover a checkout created before a lost response/commit, including after Stripe's
       // short-lived request-idempotency cache has expired. Resume never creates a second charge.
-      for await (const session of this.stripe.checkout.sessions.list({ customer: customerId, limit: 100 })) {
+      for await (const session of this.stripe.checkout.sessions.list({ customer: customerId, limit: 100 }, requestOptions)) {
         if (session.metadata?.operation_id === operationId && session.metadata?.subscription_kind === 'co_managed') return readSession(session);
       }
       const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, recognized) && !['canceled', 'incomplete_expired'].includes(sub.status));
@@ -1917,12 +1952,12 @@ export class StripeService {
         // The existing item keeps its own price: a rotation never reprices it.
         assertCoManagedPrice(subscription.items.data[0].price, recognized);
         if (quantity === 0) {
-          await this.stripe.subscriptions.cancel(subscription.id, { invoice_now: true, prorate: true }, { idempotencyKey });
+          await this.stripe.subscriptions.cancel(subscription.id, { invoice_now: true, prorate: true }, { idempotencyKey, ...(requestOptions ?? {}) });
         } else if (subscription.items.data[0].quantity !== quantity || subscription.cancel_at_period_end) {
           await this.stripe.subscriptions.update(subscription.id, {
             items: [{ id: subscription.items.data[0].id, quantity }], cancel_at_period_end: false,
             payment_behavior: 'error_if_incomplete', proration_behavior: 'always_invoice',
-          }, { idempotencyKey });
+          }, { idempotencyKey, ...(requestOptions ?? {}) });
         }
         return { kind: 'updated', subscriptionId: subscription.id };
       }
@@ -1931,8 +1966,9 @@ export class StripeService {
       // resolves the current terms exactly as before.
       const priceId = operation.price_id ?? pinned?.priceId
         ?? (await (await this.getOfferCatalog()).resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL)).priceId;
-      assertCoManagedPrice(await this.stripe.prices.retrieve(priceId), [priceId]);
-      const metadata = { tenant_id: tenantId, subscription_kind: 'co_managed', operation_id: operationId };
+      assertCoManagedPrice(await this.stripe.prices.retrieve(priceId, requestOptions), [priceId]);
+      const metadata = { tenant_id: tenantId, subscription_kind: 'co_managed', operation_id: operationId,
+        billing_catalog_account: operation.stripe_account ?? '', billing_catalog_livemode: operation.livemode ? 'true' : 'false' };
       return readSession(await this.stripe.checkout.sessions.create({
         customer: customerId, ui_mode: 'embedded', mode: 'subscription',
         line_items: [{ price: priceId, quantity }], metadata, subscription_data: { metadata },
@@ -1942,7 +1978,29 @@ export class StripeService {
         // The editor re-reads the pending operation there and offers Resume; nothing is granted.
         redirect_on_completion: 'if_required',
         return_url: `${getStripeReturnBaseUrl()}/msp/account#account-co-managed`,
-      }, { idempotencyKey }));
+      }, { idempotencyKey, ...(requestOptions ?? {}) }));
+    }, async (trx, operation) => {
+      if (!operation.stripe_account || operation.livemode === null || operation.livemode === undefined) {
+        throw new Error('The pending co-managed purchase has no verified Stripe account identity; inspect and resume it after operator reconciliation.');
+      }
+      await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${operation.livemode ? 'live' : 'test'}`]);
+      const setting = await loadConfiguredBillingAccount(trx, operation.livemode);
+      const bootstrapMode = /^(sk|rk)_live_/.test(this.config.secretKey);
+      const bootstrapAccount = bootstrapMode === operation.livemode ? process.env.STRIPE_ACCOUNT_ID : undefined;
+      if ((setting ?? bootstrapAccount) !== operation.stripe_account) {
+        throw new Error('The Stripe catalog account changed while this purchase was being reviewed. Request a fresh purchase review.');
+      }
+    }, async (trx) => {
+      if (!pinned?.stripeAccount || pinned.livemode === undefined) {
+        throw new Error('A verified Stripe catalog scope is required before recording a purchase intent.');
+      }
+      await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${pinned.livemode ? 'live' : 'test'}`]);
+      const setting = await loadConfiguredBillingAccount(trx, pinned.livemode);
+      const bootstrapMode = /^(sk|rk)_live_/.test(this.config.secretKey);
+      const bootstrapAccount = bootstrapMode === pinned.livemode ? process.env.STRIPE_ACCOUNT_ID : undefined;
+      if ((setting ?? bootstrapAccount) !== pinned.stripeAccount) {
+        throw new Error('The Stripe catalog account changed while this purchase was being reviewed. Request a fresh purchase review.');
+      }
     });
     // Reconciliation, not this call, decides whether capacity rises.
     if (result.kind === 'updated' && result.subscriptionId) await this.syncCoManagedSubscription(tenantId, result.subscriptionId, db);

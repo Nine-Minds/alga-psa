@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => () => handler(mocks.user, { tenant: mocks.user.tenant }) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, getLicenseStateRow: mocks.license }));
+vi.mock('../../lib/stripe/offerCatalog/surfaceProbe', () => ({ withBillingCatalogContext: (work: () => unknown) => work() }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async (tenant: string) => ({ knex: { tenant } }),
   tenantDb: (_knex: unknown, tenant: string) => ({ table: (name: string) => { mocks.tenantDbArgs.push(`${tenant}:${name}`); return { first: mocks.tenantRow }; } }),

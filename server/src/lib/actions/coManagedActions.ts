@@ -12,8 +12,11 @@ import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoMa
   getCoManagedClientOverview as readCoManagedClientOverview } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
-// Registers the catalog-backed offer probe in EE; an empty module in CE, so the surface stays inert there.
-import '@enterprise/lib/stripe/offerCatalog/surfaceProbe';
+async function withBillingCatalogContext<T>(work: () => Promise<T>): Promise<T> {
+  if (!isEnterpriseEdition()) return work();
+  const { withBillingCatalogContext: run } = await import('@enterprise/lib/stripe/offerCatalog/surfaceProbe');
+  return run(work);
+}
 
 // Enabling and management actions gate on `admits` (flag AND entitlement) before
 // touching the database. The two overview reads (seat capacity and the client
@@ -60,8 +63,9 @@ export interface CoManagedPurchaseAvailability {
  */
 export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
   if (user.user_type !== 'internal') throw new Error('Permission denied');
-  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) return null;
   if (!await hasPermission(user, 'account_management', 'read')) throw new Error('Permission denied');
+  return withBillingCatalogContext(async () => {
+  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) return null;
   const { knex } = await createTenantKnex(tenant);
   const scoped = tenantDb(knex, tenant);
   const owner = await scoped.table('tenants').first('product_code', 'plan');
@@ -86,6 +90,7 @@ export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
     minimumQuantity: first.phase === 'established' ? state.allocated : Math.max(1, state.allocated),
     canPurchase: reason === 'available', canResume: reason === 'pending', reason };
   return { ...state, selfHosted, purchase: availability };
+  });
 });
 
 export const getCoManagedProvisioningOptions = withAuth(async (user, { tenant }, search: string = '', selectedClientId?: string) => {

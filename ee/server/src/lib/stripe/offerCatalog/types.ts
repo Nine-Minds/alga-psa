@@ -102,6 +102,8 @@ export interface CatalogOperator { tenantId: string; userId: string }
 export interface CatalogDeps {
   db: Knex;
   stripe: Pick<Stripe, 'prices'>;
+  /** Optional reference inventory used to refuse account switches with live billing references. */
+  subscriptions?: Pick<Stripe, 'subscriptions'>['subscriptions'];
   /** Trusted configuration: Stripe account and mode. Resolved lazily and memoised by the caller. */
   scope: () => Promise<CatalogScope>;
   env?: EnvLike;
