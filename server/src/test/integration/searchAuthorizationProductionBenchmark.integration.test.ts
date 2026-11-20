@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
@@ -37,6 +37,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
   let unrestrictedIds: string[];
 
   beforeAll(async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     ctx = await helpers.beforeAll({ cleanupTables: ['authorization_bundle_assignments', 'authorization_bundle_rules', 'authorization_bundle_revisions', 'authorization_bundles'] });
   }, HOOK_TIMEOUT);
 
@@ -104,7 +105,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
   }, HOOK_TIMEOUT);
 
   afterEach(async () => { await helpers.afterEach(); });
-  afterAll(async () => { await helpers.afterAll(); }, HOOK_TIMEOUT);
+  afterAll(async () => { await helpers.afterAll(); vi.restoreAllMocks(); }, HOOK_TIMEOUT);
 
   it('measures production resolver, evaluator/compiler and every request SQL statement', async () => {
     await runWithTenant(ctx.tenantId, async () => {
@@ -168,7 +169,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
         });
       }
 
-      // Match-count growth check on the compiled path: 150 -> 500 candidates.
+      // Match-count growth check under the restrictive policy: 150 -> 500 candidates.
       await tenantDb(db, ctx.tenantId).table('authorization_bundle_assignments').where({ bundle_id: bundleId }).delete();
       await createBundleAssignment(db, { tenant: ctx.tenantId, bundleId, targetType: 'user', targetId: ctx.user.user_id, actorUserId: ctx.user.user_id });
       const scaling: Array<Record<string, unknown>> = [];
@@ -186,7 +187,7 @@ describe('production search authorization PostgreSQL benchmark', () => {
         }
         scaling.push({ matches, readable, median_query_count_per_request: [...counts].sort((a, b) => a - b)[Math.floor(SAMPLES / 2)] });
       }
-      console.log(JSON.stringify({ revision: process.env.SEARCH_BENCH_REVISION ?? 'unrecorded', postgresVersion: (await db.raw('SHOW server_version')).rows[0].server_version, fixture: { matching_tickets: BROAD_MATCHES, readable_tickets: allowedIds.length, denied_tickets: BROAD_MATCHES - allowedIds.length, ticket_source: 'public.tickets UUID columns', search_source: 'public.app_search_index' }, procedure: { warmups: WARMUPS, samples: SAMPLES, concurrency: 1, statement_method: 'Knex query event on the transaction connection during runAppSearch, including principal resolution, policy resolution, evaluator/source loads, counts and pages' }, measurements, compiled_path_scaling: scaling }));
+      console.log(JSON.stringify({ revision: process.env.SEARCH_BENCH_REVISION ?? 'unrecorded', postgresVersion: (await db.raw('SHOW server_version')).rows[0].server_version, fixture: { matching_tickets: BROAD_MATCHES, readable_tickets: allowedIds.length, denied_tickets: BROAD_MATCHES - allowedIds.length, ticket_source: 'public.tickets UUID columns', search_source: 'public.app_search_index' }, procedure: { warmups: WARMUPS, samples: SAMPLES, concurrency: 1, statement_method: 'Knex query event on the transaction connection during runAppSearch, including principal resolution, policy resolution, evaluator/source loads, counts and pages' }, measurements, match_count_scaling: scaling }));
     });
   }, 900_000);
 });
