@@ -177,6 +177,24 @@ describe('deleteWorkItem authorization and scope', () => {
     expect(state.rawDeleteCalls).toBe(0);
   });
 
+  it('rolls back earlier deletions when an entry owner is outside the authorized sheet scope', async () => {
+    state.delegationDeniedFor = 'user-victim';
+    state.entries = [
+      entry('authorized-first'),
+      entry('unauthorized-second', { user_id: 'user-victim' }),
+    ];
+
+    await expect(remove()).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot access other users time sheets',
+    });
+
+    expect(state.coreCalls).toEqual(['authorized-first', 'unauthorized-second']);
+    expect(state.entries.map((item) => item.entry_id)).toEqual(['authorized-first', 'unauthorized-second']);
+    expect(recalculateMock).not.toHaveBeenCalled();
+    expect(publishEventMock).not.toHaveBeenCalled();
+    expect(state.rawDeleteCalls).toBe(0);
+  });
+
   it('keeps the coarse time_entry:delete permission check', async () => {
     state.canDelete = false;
     state.entries = [entry('entry-1')];
