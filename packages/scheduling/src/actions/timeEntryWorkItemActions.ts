@@ -289,6 +289,8 @@ export const deleteWorkItem = withAuth(async (
         time_sheet_id: validatedParams.timeSheetId,
       })
       .select('entry_id', 'user_id', 'invoiced', 'work_item_type', 'time_sheet_id', 'work_item_id')
+      // Keep both row-lock acquisition and billing reversal order deterministic.
+      .orderBy('entry_id', 'asc')
       .forUpdate();
 
     for (const entry of entries) {

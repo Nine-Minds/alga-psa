@@ -66,6 +66,7 @@ function setupQueryDb() {
           return query;
         },
         select: () => query,
+        orderBy: () => query,
         first: async () => tableName === 'time_sheets' ? { user_id: state.sheetOwner } : undefined,
         forUpdate: async () => state.entries.filter((entry) =>
           Object.entries(predicates).every(([key, value]) => entry[key] === value)

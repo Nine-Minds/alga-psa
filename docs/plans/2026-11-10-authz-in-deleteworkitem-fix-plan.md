@@ -3,7 +3,7 @@
 - **Card:** Security: authz in deleteWorkItem (`3ca79fa1-35a8-5a7d-bf6d-0af0ba94a76e`)
 - **Finding:** authz · high — `packages/scheduling/src/actions/timeEntryWorkItemActions.ts#deleteWorkItem`
 - **Source:** security review of PR #3987 (merge `e75baf12b57c`); the defect is pre-existing, not introduced by that PR.
-- **Status:** finding **confirmed**. No fix exists on this branch yet; this is a forward-looking plan.
+- **Status:** finding **confirmed**; the planned security fix is present on PR #4251. The follow-up billing proof and validation are recorded in the [human review guide](./2026-11-10-authz-in-deleteworkitem-review-guide.md).
 
 ---
 
@@ -149,6 +149,8 @@ special-case the application" standard.)
 ---
 
 ## 3. The proof (tests to add)
+
+The original proof proposal below describes the mocked-boundary coverage that was added with the fix. Review held because that suite mocked `deleteTimeEntryCore`, and the earlier live fixtures had no billing allocations. The follow-up review guide adds real-core PostgreSQL coverage for bucket and hour-block reversal, repeated/concurrent deletion, and transactional preservation when an invoiced row blocks a grouped delete. Those persisted assertions are the billing evidence for this plan.
 
 Add a unit test file `packages/scheduling/tests/timeEntryWorkItemActions.deleteWorkItem.authz.test.ts`,
 following the mocked-boundary pattern in
