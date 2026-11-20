@@ -91,6 +91,18 @@ describe('stripe offer catalog (postgres)', () => {
     expect(await db('stripe_offer_publications').orderBy('created_at').pluck('action')).toEqual(['publish', 'publish', 'restore']);
   });
 
+  it('publishing another offer does not replace the configured co-managed price', async () => {
+    const c = catalog();
+    await c.setAccountSetting({ actor: operator, livemode: false, stripeAccount: TEST.stripeAccount, priceId: 'price_a',
+      expectedAccount: null, expectedPriceId: null, confirmSwitch: true });
+    const current = await c.inspect(KEY, 'month');
+    await c.publishBinding({ actor: operator, offerKey: 'unrelated_offer', interval: 'month', priceId: 'price_b',
+      expectedCurrentVersionId: null, productId: 'prod_seat' });
+    expect(await c.inspectAccountSetting(false)).toMatchObject({ stripe_account: TEST.stripeAccount, price_id: 'price_a' });
+    expect((await c.inspect(KEY, 'month')).current?.price_id).toBe(current.current?.price_id);
+    expect((await c.resolveCurrentOffer(KEY, 'month')).priceId).toBe('price_a');
+  });
+
   it('T002: rejection matrix changes nothing', async () => {
     const c = catalog();
     const v1 = await c.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_a', expectedCurrentVersionId: null, productId: 'prod_seat' });

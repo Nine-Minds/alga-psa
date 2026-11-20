@@ -14,6 +14,18 @@ export async function loadBillingCatalogContext(): Promise<BillingCatalogContext
     const effective = await catalog.effectiveAccountSetting(livemode);
     stripeAccount = effective.stripeAccount;
     setting = await catalog.inspectAccountSetting(livemode);
+    // Legacy deployments can have only the price override. Let the existing key scope resolver
+    // discover its merchant, but only while no database catalog history governs this offer.
+    if ((!stripeAccount || effective.accountSource === 'ambiguous') &&
+        effective.accountSource !== 'ambiguous' && process.env.STRIPE_CO_MANAGED_USER_PRICE_ID &&
+        effective.historicalAccounts.length === 0 && !setting) {
+      const legacy = await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
+      if (legacy.source === 'legacy_env' && legacy.scope) {
+        stripeAccount = legacy.scope.stripeAccount;
+        return { mode: livemode ? 'live' : 'test', stripeAccount, priceId: legacy.priceId,
+          source: 'environment', sellable: true };
+      }
+    }
     if (!stripeAccount || effective.accountSource === 'ambiguous') throw new Error('Stripe catalog account is not configured unambiguously');
     const offer = await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, 'month');
     if (setting && setting.price_id !== offer.priceId) throw new Error('Configured account price does not match the current catalog version');

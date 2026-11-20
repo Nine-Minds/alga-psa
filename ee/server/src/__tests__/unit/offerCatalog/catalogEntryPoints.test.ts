@@ -10,8 +10,9 @@ const mocks = vi.hoisted(() => ({
   pageServed: true, pageOperational: false,
 }));
 
-vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: 'sponsor' }, ...args),
-  getSession: async () => ({ user: { tenant: 'sponsor' } }) }));
+vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: mocks.user.tenant }, ...args),
+  getCurrentUser: async () => mocks.user,
+  getSession: async () => ({ user: { tenant: mocks.user.tenant } }) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); } }));
 vi.mock('@alga-psa/db', () => ({
@@ -31,10 +32,6 @@ vi.mock('@/components/co-managed/CoManagedOverview', () => ({ default: () => nul
 vi.mock('@/components/co-managed/CoManagedCustomerHome', () => ({ default: () => null }));
 vi.mock('@enterprise/components/co-managed/CoManagedPurchaseOverview', () => ({ default: () => null }));
 vi.mock('@enterprise/components/co-managed/CoManagedPurchasePool', () => ({ default: () => null }));
-vi.mock('@/lib/co-managed/commercialAccess', () => ({ resolveCoManagedRootAccess: async () => ({
-  commercial: mocks.user.user_type === 'internal' && await mocks.resolve().then(() => true, () => false),
-  served: mocks.pageServed, operational: mocks.pageOperational,
-}) }));
 vi.mock('../../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
   getOfferCatalog: async () => ({ scope: mocks.scope, inspectAccountSetting: mocks.setting,
     deploymentLivemode: async () => false,
@@ -42,8 +39,10 @@ vi.mock('../../../lib/stripe/StripeService', () => ({ getStripeService: () => ({
     resolveCurrentOffer: mocks.resolve }),
   previewCoManagedSeats: mocks.preview, purchaseCoManagedSeats: mocks.purchase, getPublishableKey: async () => 'pk_test',
 }) }));
+vi.mock('../../../lib/features', () => ({ isEnterpriseEdition: () => true }));
 vi.mock('../../../../../../server/src/lib/features', () => ({ isEnterpriseEdition: () => true }));
 vi.mock('@enterprise/lib/stripe/offerCatalog/surfaceProbe', async () => import('../../../lib/stripe/offerCatalog/surfaceProbe'));
+vi.mock('@enterprise/lib/co-managed/purchaseDiscovery', async () => import('../../../lib/co-managed/purchaseDiscovery'));
 vi.mock('../../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: vi.fn() }));
 vi.mock('../../../lib/co-managed/admitSponsor', () => ({ admitCoManagedSponsor: vi.fn() }));
 vi.mock('@alga-psa/co-managed', () => ({
@@ -59,12 +58,15 @@ vi.mock('@alga-psa/licensing', async (importOriginal: () => Promise<typeof impor
 import { getCoManagedPurchaseState } from '../../../../../../server/src/lib/actions/coManagedActions';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '../../../lib/actions/coManagedBillingActions';
 import { resolveCoManagedPurchaseDiscovery } from '../../../lib/co-managed/purchaseDiscovery';
+import { loadBillingCatalogContext } from '../../../lib/stripe/offerCatalog/surfaceProbe';
 import CoManagedPage from '../../../../../../server/src/app/msp/co-managed/page';
+import { resolveCoManagedRootAccess } from '../../../../../../server/src/lib/co-managed/commercialAccess';
 import CoManagedPurchaseOverview from '@enterprise/components/co-managed/CoManagedPurchaseOverview';
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.user.user_type = 'internal';
+  mocks.user.tenant = 'sponsor';
   mocks.pageServed = true; mocks.pageOperational = false;
   mocks.permission.mockResolvedValue(true);
   mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'stripe' });
@@ -100,9 +102,14 @@ describe('independent first-purchase entry points', () => {
   });
 
   it('renders the actual first-purchase page for an eligible zero-seat admin and applies its access gate', async () => {
+    mocks.user.tenant = 'sponsor-page';
     mocks.pageServed = false;
+    expect(await resolveCoManagedPurchaseDiscovery(mocks.user, 'sponsor-page')).toEqual({ eligible: true });
+    expect(await resolveCoManagedRootAccess('sponsor-page')).toEqual({ commercial: true, served: false, operational: false });
     const page = await CoManagedPage({});
     expect(page.type).toBe(CoManagedPurchaseOverview);
+    expect(await loadBillingCatalogContext()).toMatchObject({ stripeAccount: 'acct_database', priceId: 'price_database', source: 'database', sellable: true });
+    expect(await getCoManagedPurchaseState()).toMatchObject({ capacity: 0, allocated: 0, purchase: { canPurchase: true } });
     expect(await previewCoManagedSeatsAction(1)).toMatchObject({ unitAmount: 1200, offerRef: 'version-1' });
     expect(await purchaseCoManagedSeatsAction({ quantity: 1, operationId: 'purchase-page', offerRef: 'version-1' }))
       .toMatchObject({ kind: 'checkout' });

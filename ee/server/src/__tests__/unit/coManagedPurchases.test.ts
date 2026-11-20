@@ -20,13 +20,16 @@ const checkout = (changes = {}) => ({ id: 'cs_co', customer: 'cus_msp', status: 
 
 function fixture() {
   const rows: Record<string, any[]> = { tenants: [{ tenant, product_code: 'psa', plan: 'pro', billing_source: 'stripe' }],
+    co_managed_purchase_operations: [],
     stripe_customers: [{ tenant, stripe_customer_external_id: 'cus_msp' }] };
   const db: any = (table: string) => {
     let matches = rows[table] ?? [];
     const query: any = {
       where: (key: string, value: unknown) => { matches = matches.filter(row => row[key] === value); return query; },
       whereIn: (key: string, values: unknown[]) => { matches = matches.filter(row => values.includes(row[key])); return query; },
+      whereNotNull: (key: string) => { matches = matches.filter(row => row[key] != null); return query; },
       first: async () => matches[0],
+      select: async () => matches,
     };
     return query;
   };
@@ -204,6 +207,47 @@ describe('shared offer catalog rotation', () => {
     await service.purchaseCoManagedSeats(tenant, 6, operationId, 'v2');
     expect(mocks.purchase.mock.calls[0][1].pinned).toEqual({ offerVersionId: 'v2', priceId: 'price_new', stripeAccount: 'acct_test', livemode: false });
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_new', quantity: 6 }] }), expect.anything());
+  });
+
+  it('uses only the current merchant for a first purchase when another historical merchant is inaccessible', async () => {
+    const { service, catalog } = rotated();
+    catalog.historicalAccounts = vi.fn(async () => ['acct_inaccessible_former']);
+    const scopes: string[] = [];
+    service.stripe.subscriptions.list = async function* (_params: unknown, options: { stripeAccount?: string }) {
+      scopes.push(options.stripeAccount ?? 'unscoped');
+      if (options.stripeAccount === 'acct_inaccessible_former') throw new Error('former merchant access denied');
+      yield service.__testProSubscription;
+    };
+    service.__testProSubscription = { id: 'sub_pro', customer: 'cus_msp', status: 'active', metadata: {},
+      current_period_end: Math.floor(Date.now() / 1000) + 3600, items: { data: [{ id: 'si_pro', quantity: 8, price: { id: 'price_pro' } }] } };
+    await expect(service.previewCoManagedSeats(tenant, 2)).resolves.toMatchObject({ unitAmount: 1300, monthlyTotal: 2600 });
+    await service.purchaseCoManagedSeats(tenant, 2, operationId, 'v2');
+    expect(scopes.length).toBeGreaterThan(0);
+    expect(scopes.every((account) => account === 'acct_test')).toBe(true);
+    expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({ line_items: [{ price: 'price_new', quantity: 2 }] }),
+      expect.objectContaining({ stripeAccount: 'acct_test' }));
+  });
+
+  it('uses a completed billing object’s persisted merchant for preview and quantity changes', async () => {
+    const { service, catalog, rows } = rotated();
+    catalog.historicalAccounts = vi.fn(async () => ['acct_previous']);
+    rows.co_managed_purchase_operations.push({ tenant, state: 'completed', operation_id: 'old-operation',
+      provider_reference: 'sub_previous', stripe_account: 'acct_previous', livemode: false, price_id: 'price_old', offer_version_id: 'v1' });
+    const oldSubscription = { ...onOldPrice(), id: 'sub_previous' };
+    service.stripe.subscriptions.retrieve.mockImplementation(async (id: string, _params: unknown, options: { stripeAccount?: string }) => {
+      if (id === 'sub_previous' && options.stripeAccount === 'acct_previous') return oldSubscription;
+      throw new Error('wrong merchant scope');
+    });
+    service.stripe.subscriptions.list = async function* (_params: unknown, options: { stripeAccount?: string }) {
+      yield service.__testProSubscription ?? { id: 'sub_pro', customer: 'cus_msp', status: 'active', metadata: {},
+        current_period_end: Math.floor(Date.now() / 1000) + 3600, items: { data: [{ id: 'si_pro', quantity: 8, price: { id: 'price_pro' } }] } };
+      if (options.stripeAccount === 'acct_previous') yield oldSubscription;
+    };
+    expect(await service.previewCoManagedSeats(tenant, 6)).toMatchObject({ unitAmount: 1149, offerRef: 'v1' });
+    expect(service.stripe.invoices.createPreview).toHaveBeenCalledWith(expect.anything(), { stripeAccount: 'acct_previous' });
+    await service.purchaseCoManagedSeats(tenant, 6, operationId);
+    expect(service.stripe.subscriptions.update).toHaveBeenCalledWith('sub_previous', expect.objectContaining({ items: [{ id: 'si_co', quantity: 6 }] }),
+      expect.objectContaining({ stripeAccount: 'acct_previous' }));
   });
 
   it('requires a fresh review, with nothing persisted or charged, when the terms changed before confirmation', async () => {

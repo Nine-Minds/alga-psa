@@ -414,7 +414,10 @@ export function createOfferCatalog(deps: CatalogDeps) {
         action = mode === 'seed' ? 'seed' : 'publish';
       }
       await trx(PUBLICATIONS).insert({ ...id, action, from_version_id: current?.version_id ?? null, to_version_id: version.version_id, actor: actor.userId });
-      await syncConfiguredPrice(trx, scope, actor.userId, version.price_id);
+      // Publishing another offer must not mutate the shared co-managed purchase setting.
+      if (input.offerKey === CO_MANAGED_SEAT_OFFER_KEY && input.interval === 'month') {
+        await syncConfiguredPrice(trx, scope, actor.userId, version.price_id);
+      }
       return { changed: true, action, version, previousVersionId: current?.version_id ?? null, terms };
     });
 

@@ -80,9 +80,25 @@ export async function runCoManagedPurchase(db: Knex, input: {
       const scoped = tenantDb(trx, input.sponsorTenant);
       const tenant = await scoped.table('tenants').forUpdate().first();
       if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro') throw new CoManagedPurchaseError('SPONSOR_NOT_ELIGIBLE');
-      const existing = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).first();
+      const existing = await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).forUpdate().first();
       if (existing) {
         if (existing.quantity !== input.quantity) throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        // A legacy pending operation may lack merchant columns. Its caller can recover these
+        // only from the operation's own historical Price mapping; persist that unique result while
+        // holding the operation/tenant lock so the provider retry observes the same pin.
+        if (input.pinned && existing.price_id && existing.price_id !== input.pinned.priceId) {
+          throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+        }
+        if (input.pinned && (existing.stripe_account == null || existing.livemode == null)) {
+          if (!existing.price_id || input.pinned.priceId !== existing.price_id ||
+              !input.pinned.stripeAccount || input.pinned.livemode === undefined) {
+            throw new CoManagedPurchaseError('OPERATION_CONFLICT');
+          }
+          await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
+            offer_version_id: existing.offer_version_id ?? input.pinned.offerVersionId,
+            stripe_account: input.pinned.stripeAccount, livemode: input.pinned.livemode,
+          });
+        }
         return;
       }
       if (await scoped.table('co_managed_purchase_operations').whereIn('state', IN_FLIGHT).first()) {

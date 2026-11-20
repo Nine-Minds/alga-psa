@@ -50,6 +50,8 @@ const previousProductMigration = require('../../../migrations/20260505140000_add
 const foundationMigration = require('../../../migrations/20261028130000_create_co_management_foundation.cjs');
 const purchaseMigration = require('../../../migrations/20261029120000_create_co_managed_purchase_operations.cjs');
 const pinMigration = require('../../../migrations/20261118090100_pin_co_managed_purchase_offer_terms.cjs');
+const offerCatalogMigration = require('../../../../ee/server/migrations/20261118090000_create_stripe_offer_catalog.cjs');
+const catalogAccountMigration = require('../../../../ee/server/migrations/20261120120000_add_stripe_catalog_account_settings.cjs');
 const allocationKindMigration = require('../../../migrations/20261111100000_add_co_managed_allocation_kind.cjs');
 const subscriptionItemMigration = require('../../../migrations/20261027090100_add_stripe_subscription_item_id.cjs');
 const stripeMigrations = [
@@ -145,6 +147,8 @@ beforeAll(async () => {
   await foundationMigration.up(db);
   await purchaseMigration.up(db);
   await pinMigration.up(db); // reviewed offer version and price pinned on the operation
+  await offerCatalogMigration.up(db);
+  await catalogAccountMigration.up(db);
   // The pool is read per allocation kind, so this hand-picked schema needs the kind column too.
   await allocationKindMigration.up(db);
 
@@ -208,6 +212,9 @@ describe('co-managed purchase against the Stripe emulator', () => {
     holder.flag = true;
     delete process.env.FORCE_CAPABILITIES;
     const { tenant, sponsor } = await sponsorFixture();
+    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1, price_id: CO_MANAGED_PRICE_ID,
+      product_id: 'prod_co_managed', is_current: true, published_by: 'test-fixture' }).onConflict(['stripe_account', 'livemode', 'price_id']).ignore();
     await control('seed/subscription', { customer: CUSTOMER_ID, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
 
     // Before any purchase the sponsor has no entitlement, so the gate refuses even with the flag on.
@@ -223,6 +230,7 @@ describe('co-managed purchase against the Stripe emulator', () => {
     const operationId = randomUUID();
     const started = await service.purchaseCoManagedSeats(tenant, 3, operationId);
     expect(started.kind).toBe('checkout');
+    expect(await operationRow(tenant, operationId)).toMatchObject({ stripe_account: 'acct_algasim', livemode: false, price_id: CO_MANAGED_PRICE_ID });
     expect((await state('checkout-sessions'))[0]).toMatchObject({ mode: 'subscription', status: 'open' });
 
     // Complete the emulator's hosted Checkout. The emulator emits the events; capture them but do not
@@ -236,7 +244,11 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await hasCoManagedEntitlement(tenant, db)).toBe(false);
 
     // A2: capacity goes 0 -> 3 through webhook reconciliation alone: no second purchase call.
-    await deliver(service, emitted);
+    await deliver(service, [emitted[0]]);
+    const subscriptionId = emitted.find((event: any) => event.type === 'customer.subscription.created')?.data.object.id;
+    expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'completed', provider_reference: subscriptionId,
+      stripe_account: 'acct_algasim', livemode: false });
+    await deliver(service, emitted.slice(1));
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 3, available: 3 });
     expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'completed', quantity: 3 });
     const coManagedSubscriptions = (await state('subscriptions')).filter((subscription) => subscription.metadata?.subscription_kind === 'co_managed');
@@ -296,6 +308,32 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(await isCoManagedPurchaseSurfaceOpen(tenant)).toBe(true);
     await service.handleWebhookEvent(update());
     expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 5 });
+  }, HOOK_TIMEOUT);
+
+  it('recovers a missing merchant pin from the operation Price under the real retry lock and retries in that scope', async () => {
+    const customerId = 'cus_co_managed_retry';
+    const { tenant, sponsor } = await sponsorFixture(customerId);
+    await control('seed/customer', { id: customerId, email: 'retry@example.test', name: 'Retry Sponsor' });
+    await control('seed/subscription', { customer: customerId, priceId: PRO_PRICE_ID, quantity: 7, status: 'active' });
+    const oldPriceId = 'price_co_managed_retired';
+    await control('seed/price', { id: oldPriceId, unitAmount: 999, currency: 'eur', interval: 'month', product: 'prod_co_managed' });
+    await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 1, price_id: CO_MANAGED_PRICE_ID,
+      product_id: 'prod_co_managed', is_current: true, published_by: 'test-fixture' }).onConflict(['stripe_account', 'livemode', 'price_id']).ignore();
+    const currentVersion = await db('stripe_offer_versions').where({ stripe_account: 'acct_algasim', livemode: false, price_id: CO_MANAGED_PRICE_ID }).first();
+    const [oldVersion] = await db('stripe_offer_versions').insert({ stripe_account: 'acct_algasim', livemode: false,
+      offer_key: 'co_managed_technician_seat', billing_interval: 'month', version_number: 2, price_id: oldPriceId,
+      product_id: 'prod_co_managed', is_current: false, published_by: 'test-fixture' }).returning('*');
+    const operationId = randomUUID();
+    await sponsor.table('co_managed_purchase_operations').insert({ tenant, operation_id: operationId, quantity: 2, state: 'preparing',
+      offer_version_id: oldVersion.version_id, price_id: oldPriceId, stripe_account: null, livemode: null });
+
+    const result = await new StripeService().purchaseCoManagedSeats(tenant, 2, operationId);
+    expect(result.kind).toBe('checkout');
+    expect(await operationRow(tenant, operationId)).toMatchObject({ state: 'checkout', offer_version_id: oldVersion.version_id,
+      price_id: oldPriceId, stripe_account: 'acct_algasim', livemode: false });
+    expect((await state('checkout-sessions')).at(-1)).toMatchObject({ line_items: [{ price: { unit_amount: 999 }, quantity: 2 }] });
+    expect(currentVersion.is_current).toBe(true);
   }, HOOK_TIMEOUT);
 
   it('scopes operation completion to the subscription it proves (a base renewal cannot close another purchase)', async () => {

@@ -65,9 +65,35 @@ export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'cat
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > MAX_CO_MANAGED_FULFILLMENT_SEATS) throw new Error('Invalid co-managed seat quantity');
   if (input.purchaseId !== undefined && !UUID.test(input.purchaseId)) throw new Error('purchaseId must be a UUID');
   return deps.db.transaction(async (trx) => {
+    const findExisting = async (): Promise<PortalPurchaseRow | undefined> => trx(PURCHASES)
+      .where({ checkout_session_id: input.checkoutSessionId })
+      .modify((q: Knex.QueryBuilder) => { if (input.purchaseId) q.orWhere({ purchase_id: input.purchaseId.toLowerCase() }); })
+      .first();
+    const returnPinnedBinding = async (existing: PortalPurchaseRow): Promise<PortalPurchaseRow> => {
+      if (existing.entitlement_id !== input.entitlementId || existing.license_tenant_id !== input.licenseTenantId ||
+          existing.offer_key !== input.offerKey || existing.billing_interval !== input.interval || existing.quantity !== input.quantity) {
+        throw new PortalPurchaseOwnershipError('checkout is bound to different entitlement or offer terms');
+      }
+      if (existing.checkout_session_id !== input.checkoutSessionId || (input.purchaseId && existing.purchase_id !== input.purchaseId.toLowerCase())) {
+        throw new PortalPurchaseOwnershipError('purchase id and checkout session are bound to different purchases');
+      }
+      const checkout = await deps.stripe.checkout.sessions.retrieve(input.checkoutSessionId, { expand: ['line_items'] },
+        { stripeAccount: existing.stripe_account });
+      const checkoutPriceIds = checkout.line_items?.data.map((item) => typeof item.price === 'string' ? item.price : item.price?.id) ?? [];
+      if (!checkoutPriceIds.includes(existing.price_id)) throw new Error('Portal checkout does not contain its pinned historical Price in the original merchant scope');
+      return existing;
+    };
+    let existing = await findExisting();
+    if (existing) {
+      await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${existing.livemode ? 'live' : 'test'}`]);
+      existing = await findExisting();
+      if (existing) return returnPinnedBinding(existing);
+    }
     // Shared with catalog switches: this binding and the selected merchant/price are one admission.
     const catalog = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
     await trx.raw('SELECT pg_advisory_xact_lock_shared(hashtext(?))', [`stripe-billing-catalog:${catalog.scope.livemode ? 'live' : 'test'}`]);
+    existing = await findExisting();
+    if (existing) return returnPinnedBinding(existing);
     const offer = await deps.catalog.resolveCurrentOffer(input.offerKey, input.interval);
     const ref = offer.versionId ?? `price:${offer.priceId}`;
     if (input.offerRef && input.offerRef !== ref) throw new OfferTermsChangedError(input.offerRef, offer);
@@ -75,17 +101,6 @@ export async function bindPortalPurchase(deps: Pick<FulfillmentDeps, 'db' | 'cat
     const checkout = await deps.stripe.checkout.sessions.retrieve(input.checkoutSessionId, { expand: ['line_items'] }, { stripeAccount: offer.scope.stripeAccount });
     const checkoutPriceIds = checkout.line_items?.data.map((item) => typeof item.price === 'string' ? item.price : item.price?.id) ?? [];
     if (!checkoutPriceIds.includes(offer.priceId)) throw new Error('Portal checkout does not contain the validated catalog price in this merchant scope');
-    const existing: PortalPurchaseRow | undefined = await trx(PURCHASES)
-      .where({ checkout_session_id: input.checkoutSessionId })
-      .modify((q: Knex.QueryBuilder) => { if (input.purchaseId) q.orWhere({ purchase_id: input.purchaseId }); })
-      .first();
-    if (existing) {
-      if (existing.entitlement_id !== input.entitlementId || existing.license_tenant_id !== input.licenseTenantId) throw new PortalPurchaseOwnershipError('checkout is bound to another entitlement');
-      if (existing.checkout_session_id !== input.checkoutSessionId || (input.purchaseId && existing.purchase_id !== input.purchaseId.toLowerCase())) {
-        throw new PortalPurchaseOwnershipError('purchase id and checkout session are bound to different purchases');
-      }
-      return existing;
-    }
     // write-admission: exempt — the authenticated storefront records a platform checkout binding for an appliance entitlement.
     const [row] = await trx(PURCHASES).insert({
       ...(input.purchaseId ? { purchase_id: input.purchaseId.toLowerCase() } : {}),

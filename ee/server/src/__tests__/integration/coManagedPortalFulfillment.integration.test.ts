@@ -57,6 +57,9 @@ describe('co-managed portal fulfillment (postgres)', () => {
     await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_other', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_1' })).rejects.toBeInstanceOf(PortalPurchaseOwnershipError);
     const current = await catalog.inspect(KEY, 'month');
     await catalog.publishBinding({ actor: operator, offerKey: KEY, interval: 'month', priceId: 'price_b', expectedCurrentVersionId: current.current!.version_id });
+    // An existing binding keeps its original price and merchant even after current terms rotate.
+    expect(await bindPortalPurchase({ db, catalog, stripe: portalStripe('price_a') }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY,
+      interval: 'month', quantity: 5, checkoutSessionId: 'cs_1', offerRef: current.current!.version_id })).toMatchObject({ price_id: 'price_a', stripe_account: 'acct_1' });
     await expect(bindPortalPurchase({ db, catalog, stripe: portalStripe('price_b') as any }, { entitlementId: 'ent_1', licenseTenantId: 'appliance-tenant', offerKey: KEY, interval: 'month', quantity: 5, checkoutSessionId: 'cs_2', offerRef: current.current!.version_id })).rejects.toBeInstanceOf(OfferTermsChangedError);
   });
 
