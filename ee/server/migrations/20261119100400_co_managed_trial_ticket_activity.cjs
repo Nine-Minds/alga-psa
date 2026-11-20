@@ -5,20 +5,7 @@ const { ensureTenantDistribution } = require(require.resolve('./utils/citusDistr
 }));
 
 exports.up = async function (knex) {
-  await knex.raw(`ALTER TABLE co_managed_seat_trial_milestones
-    ADD COLUMN IF NOT EXISTS event_id uuid NOT NULL DEFAULT gen_random_uuid(),
-    ADD COLUMN IF NOT EXISTS reported_at timestamptz`);
-  if (!await knex.schema.hasTable('co_managed_trial_ticket_activity')) {
-    await knex.schema.createTable('co_managed_trial_ticket_activity', table => {
-      table.uuid('tenant').notNullable();
-      table.uuid('trial_id').notNullable();
-      table.uuid('ticket_id').notNullable();
-      table.boolean('technician_worked').notNullable();
-      table.boolean('staff_worked').notNullable();
-      table.primary(['tenant', 'trial_id', 'ticket_id']);
-    });
-  }
-  await ensureTenantDistribution(knex, 'co_managed_trial_ticket_activity');
+  // Citus propagates function DDL on one connection per node, so run it before shard DDL.
   // The operational ticket journal records human mutations, with their actor and source. Keep
   // the qualifying scope at event time and merge concurrent contributions in either order.
   await knex.raw(`CREATE OR REPLACE FUNCTION record_hosted_co_managed_trial_ticket_work(uuid, uuid)
@@ -59,6 +46,20 @@ exports.up = async function (knex) {
       END IF;
       RETURN;
     END $$`);
+  await knex.raw(`ALTER TABLE co_managed_seat_trial_milestones
+    ADD COLUMN IF NOT EXISTS event_id uuid NOT NULL DEFAULT gen_random_uuid(),
+    ADD COLUMN IF NOT EXISTS reported_at timestamptz`);
+  if (!await knex.schema.hasTable('co_managed_trial_ticket_activity')) {
+    await knex.schema.createTable('co_managed_trial_ticket_activity', table => {
+      table.uuid('tenant').notNullable();
+      table.uuid('trial_id').notNullable();
+      table.uuid('ticket_id').notNullable();
+      table.boolean('technician_worked').notNullable();
+      table.boolean('staff_worked').notNullable();
+      table.primary(['tenant', 'trial_id', 'ticket_id']);
+    });
+  }
+  await ensureTenantDistribution(knex, 'co_managed_trial_ticket_activity');
 };
 
 exports.down = async function (knex) {

@@ -8,20 +8,26 @@ import { admitCoManagedSponsor } from '../../../../../server/src/lib/co-managed/
 import { usePaidSeatForTrial, type SeatTrialQuote } from '../co-managed/seatTrialConversion';
 import { reportSeatTrialMilestones } from '../co-managed/seatTrialAnalytics';
 import { readCoManagedSeatTrialAdmission } from '../co-managed/seatTrial';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { sendTeamInvitationEmail } from '@alga-psa/email';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { coManagedBrowserActor } from '../../../../../server/src/lib/co-managed/browserActor';
 import { prepareCoManagedSeatTrial, replaceCoManagedSeatTrialTechnician, resumeCoManagedSeatTrialInvitation, cancelCoManagedSeatTrial } from '../co-managed/seatTrial';
 
 const CAPABILITY = 'co-managed-seat' as const;
 
-async function requireTrialIntake(tenant: string) {
-  await requireCapabilityForAction(CAPABILITY, tenant, 'admits');
-  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) throw new Error('Trial intake is closed');
+function withTrialIntake<TArgs extends unknown[], TResult>(
+  action: (user: IUserWithRoles, context: AuthContext, ...args: TArgs) => Promise<TResult>,
+) {
+  return withAuth(async (user, context, ...args: TArgs) => {
+    await requireCapabilityForAction(CAPABILITY, context.tenant, 'admits');
+    if (!await isCoManagedPurchaseSurfaceOpen(context.tenant)) throw new Error('Trial intake is closed');
+    return action(user, context, ...args);
+  });
 }
 
 async function authorize(user: { user_id: string; user_type?: string }, tenant: string, clientId: string) {
@@ -54,10 +60,9 @@ async function deliver(user: { user_id: string; first_name?: string | null; last
   } catch { return { delivered: false }; }
 }
 
-export const prepareCoManagedSeatTrialAction = withAuth(async (user, { tenant }, input: {
+export const prepareCoManagedSeatTrialAction = withTrialIntake(async (user, { tenant }, input: {
   clientId: string; contactId: string; operationId: string; boards: Array<{ boardId: string; canCreate: boolean }>;
 }) => {
-  await requireTrialIntake(tenant);
   await admitCoManagedSponsor(tenant);
   const knex = await authorize(user, tenant, input.clientId);
   await getStripeService().refreshSeatTrialBase(tenant);
@@ -76,15 +81,13 @@ async function pilotClient(tenant: string, trialId: string) {
   return { knex, clientId: pilot.client_id as string, allocationId: pilot.allocation_id as string };
 }
 
-export const resumeCoManagedSeatTrialAction = withAuth(async (user, { tenant }, trialId: string) => {
-  await requireTrialIntake(tenant);
+export const resumeCoManagedSeatTrialAction = withTrialIntake(async (user, { tenant }, trialId: string) => {
   const { clientId, allocationId } = await pilotClient(tenant, trialId);
   const knex = await authorize(user, tenant, clientId);
   return { resent: true, ...(await deliver(user, tenant, await resumeCoManagedSeatTrialInvitation(knex, { tenant, trialId, allocationId }))) };
 });
 
-export const replaceCoManagedSeatTrialTechnicianAction = withAuth(async (user, { tenant }, input: { trialId: string; contactId: string }) => {
-  await requireTrialIntake(tenant);
+export const replaceCoManagedSeatTrialTechnicianAction = withTrialIntake(async (user, { tenant }, input: { trialId: string; contactId: string }) => {
   const { clientId, allocationId } = await pilotClient(tenant, input.trialId);
   const knex = await authorize(user, tenant, clientId);
   const result = await replaceCoManagedSeatTrialTechnician(knex, {

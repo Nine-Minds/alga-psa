@@ -42,6 +42,10 @@ import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createContact, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 const holder = vi.hoisted(() => ({ db: null as unknown as Knex }));
+vi.mock('@alga-psa/core/features', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/core/features')>(),
+  isEnterprise: true,
+}));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => holder.db }));
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => holder.db,

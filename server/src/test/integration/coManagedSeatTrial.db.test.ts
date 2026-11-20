@@ -18,6 +18,11 @@ import { writeTicketActivity } from '../../../../shared/lib/ticketActivity/write
 import { createCloseRulesFixture, insertTicket } from './helpers/closeRulesFixture';
 import { createClient, createUser, createTenant, ensureContactWithEmail } from '../../../test-utils/testDataFactory';
 
+vi.mock('@alga-psa/core/features', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/core/features')>(),
+  isEnterprise: true,
+}));
+
 const describeDb = await describeWithDb();
 
 describeDb('co-managed Seat trial admission on migrated PostgreSQL', { shuffle: false }, () => {

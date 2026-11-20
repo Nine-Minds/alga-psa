@@ -14,6 +14,7 @@
  */
 
 import type { Knex } from 'knex';
+import { isEnterprise } from '@alga-psa/core/features';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -211,13 +212,13 @@ export async function writeTicketActivity(
     ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
   };
 
-  const humanWork = actorType === TICKET_ACTIVITY_ACTOR.USER && Boolean(actor.userId) &&
+  const recordTrialWork = isEnterprise && actorType === TICKET_ACTIVITY_ACTOR.USER && Boolean(actor.userId) &&
     !viaPrincipalUserId && input.source === TICKET_ACTIVITY_SOURCE.UI;
   const record = async (db: Knex | Knex.Transaction) => {
     await tenantScopedTable(db, 'ticket_audit_logs', input.tenant).insert(entry);
-    if (humanWork) await db.raw('SELECT record_co_managed_trial_ticket_work(?, ?)', [input.tenant, auditId]);
+    if (recordTrialWork) await db.raw('SELECT record_co_managed_trial_ticket_work(?, ?)', [input.tenant, auditId]);
   };
-  if (humanWork && !knex.isTransaction) await knex.transaction(record);
+  if (recordTrialWork && !knex.isTransaction) await knex.transaction(record);
   else await record(knex);
   return auditId;
 }

@@ -16,6 +16,7 @@ export async function canDiscoverSeatTrial(user: { user_type?: string; tenant?: 
     return (await createClientScopeContext(knex, tenant, user as never)).permits('client', pilot.client_id);
   }
   // A client lookup from a closed tab is only for recovery of an existing pilot.
-  return !clientId && await isCoManagedPurchaseSurfaceOpen(tenant) && (await admits('co-managed-seat', tenant)).admitted &&
-    Boolean(await home.table('co_managed_trial_sponsors').where('base_until', '>', knex.fn.now()).first('tenant'));
+  // Check local trial eligibility before the offer probe can call Stripe from the sidebar.
+  return !clientId && Boolean(await home.table('co_managed_trial_sponsors').where('base_until', '>', knex.fn.now()).first('tenant')) &&
+    (await admits('co-managed-seat', tenant)).admitted && await isCoManagedPurchaseSurfaceOpen(tenant);
 }

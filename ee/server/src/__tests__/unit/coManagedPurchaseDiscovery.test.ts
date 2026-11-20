@@ -4,14 +4,26 @@ import { getCoManagedPurchaseDiscoveryAction } from '../../lib/actions/coManaged
 
 const mocks = vi.hoisted(() => ({
   surface: vi.fn(), permission: vi.fn(), license: vi.fn(), tenantRow: vi.fn(), tenantDbArgs: [] as string[],
+  trialSponsor: vi.fn(), pilot: vi.fn(), admits: vi.fn(), permits: vi.fn(),
   user: { user_id: 'actor', tenant: 'sponsor', user_type: 'internal' } as Record<string, unknown>,
 }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => () => handler(mocks.user, { tenant: mocks.user.tenant }) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
+vi.mock('@alga-psa/authorization/clientScopeAuthorization', () => ({
+  createClientScopeContext: async () => ({ permits: mocks.permits }),
+}));
+vi.mock('@alga-psa/core/capability', () => ({ admits: mocks.admits }));
 vi.mock('@alga-psa/licensing', () => ({ isCoManagedPurchaseSurfaceOpen: mocks.surface, getLicenseStateRow: mocks.license }));
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async (tenant: string) => ({ knex: { tenant } }),
-  tenantDb: (_knex: unknown, tenant: string) => ({ table: (name: string) => { mocks.tenantDbArgs.push(`${tenant}:${name}`); return { first: name === 'co_managed_seat_trials' ? async () => undefined : mocks.tenantRow }; } }),
+  createTenantKnex: async (tenant: string) => ({ knex: { tenant, fn: { now: () => new Date() } } }),
+  tenantDb: (_knex: unknown, tenant: string) => ({
+    table: (name: string) => {
+      mocks.tenantDbArgs.push(`${tenant}:${name}`);
+      if (name === 'co_managed_seat_trials') return { first: mocks.pilot };
+      if (name === 'co_managed_trial_sponsors') return { where: () => ({ first: mocks.trialSponsor }) };
+      return { first: mocks.tenantRow };
+    },
+  }),
 }));
 
 const principal = () => mocks.user as { user_type: string; tenant?: string };
@@ -23,6 +35,7 @@ beforeEach(() => {
   mocks.permission.mockResolvedValue(true);
   mocks.license.mockResolvedValue(null);
   mocks.tenantRow.mockResolvedValue({ product_code: 'psa', plan: 'pro', billing_source: 'stripe' });
+  mocks.admits.mockResolvedValue({ admitted: true });
 });
 
 describe('co-managed first-purchase discovery (commercial eligibility)', () => {
@@ -67,6 +80,30 @@ describe('co-managed first-purchase discovery (commercial eligibility)', () => {
     });
 
     expect(await Promise.race([getCoManagedPurchaseDiscoveryAction(), probeStarted.promise])).toBe(false);
+  });
+
+  it('discovers an eligible trial for an operator without account management permission', async () => {
+    mocks.permission.mockImplementation(async (_user, resource) => resource !== 'account_management');
+    mocks.trialSponsor.mockResolvedValue({ tenant: 'sponsor' });
+
+    expect(await getCoManagedPurchaseDiscoveryAction()).toBe(true);
+    mocks.admits.mockResolvedValue({ admitted: false });
+    mocks.surface.mockClear();
+    expect(await getCoManagedPurchaseDiscoveryAction()).toBe(false);
+    expect(mocks.surface).not.toHaveBeenCalled();
+  });
+
+  it('keeps an existing trial discoverable for an operator with access to its client during intake closure', async () => {
+    mocks.permission.mockImplementation(async (_user, resource) => resource !== 'account_management');
+    mocks.surface.mockResolvedValue(false);
+    mocks.pilot.mockResolvedValue({ client_id: 'pilot-client', state: 'active' });
+    mocks.permits.mockResolvedValue(true);
+
+    expect(await getCoManagedPurchaseDiscoveryAction()).toBe(true);
+    expect(mocks.permits).toHaveBeenCalledWith('client', 'pilot-client');
+    expect(mocks.surface).not.toHaveBeenCalled();
+    mocks.permits.mockResolvedValue(false);
+    expect(await getCoManagedPurchaseDiscoveryAction()).toBe(false);
   });
 
   it('the sidebar action answers with the same decision as a bare boolean (no billing data)', async () => {
