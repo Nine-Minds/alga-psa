@@ -701,6 +701,8 @@ describe('project task comment threading model', () => {
         }
         rival = second();
         await vi.waitFor(async () => {
+          // A cold connection pool may start the rival after this transaction's first activity snapshot.
+          await trx.raw('SELECT pg_stat_clear_snapshot()');
           const { rows: [{ waiting }] } = await trx.raw(
             'SELECT EXISTS (SELECT FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))) AS waiting',
             [pid],

@@ -14,6 +14,12 @@ import {
 import ProjectPage from '@alga-psa/projects/components/ProjectPage';
 import { CommentAudienceSelect } from '@alga-psa/tickets/components/ticket/CommentAudienceControl';
 import { useTicketIntegrationValue } from './useTicketIntegrationValue';
+import { uploadProjectTaskCommentDocument } from './composedClipboardActions';
+
+const MSP_PROJECT_DATA_SOURCE = Object.freeze({
+  ...nativeProjectDataSource,
+  uploadTaskCommentDocument: uploadProjectTaskCommentDocument,
+});
 
 /**
  * A task comment by a viewer the server restricts (a seat technician) names who can read it, with the same audience
@@ -28,14 +34,13 @@ const RESTRICTED_VIEWER_AUDIENCES: TaskCommentAudienceSlot = Object.freeze({
 
 /**
  * The MSP project screen. `surface` is what the server closes for the viewer (`getProjectSurfaceAccess`); it is
- * absent or empty for every MSP user, who then get the native data source object itself and no audience slot, so the
- * screen is exactly what it was. A restricted viewer gets the same native screen narrowed through the data source
+ * absent or empty for ordinary MSP users. A restricted viewer gets the same native screen narrowed through the data source
  * seam (frozen and hidden fields, no management controls, no service catalog).
  */
 export default function MspProjectPageClient(props: { params: Promise<{ id: string }>; surface?: ProjectSurfaceAccess }) {
   const contextValue = useTicketIntegrationValue();
   const surface = props.surface ?? OPEN_PROJECT_SURFACE;
-  const dataSource = useMemo(() => projectDataSourceForSurface(nativeProjectDataSource, surface), [surface]);
+  const dataSource = useMemo(() => projectDataSourceForSurface(MSP_PROJECT_DATA_SOURCE, surface), [surface]);
   const restricted = !isProjectSurfaceOpen(surface);
 
   const page = (
@@ -43,10 +48,9 @@ export default function MspProjectPageClient(props: { params: Promise<{ id: stri
       <ProjectPage params={props.params} />
     </TicketIntegrationProvider>
   );
-  if (!restricted) return page;
   return (
     <ProjectDataSourceProvider dataSource={dataSource}>
-      <TaskCommentAudienceProvider value={RESTRICTED_VIEWER_AUDIENCES}>{page}</TaskCommentAudienceProvider>
+      {restricted ? <TaskCommentAudienceProvider value={RESTRICTED_VIEWER_AUDIENCES}>{page}</TaskCommentAudienceProvider> : page}
     </ProjectDataSourceProvider>
   );
 }

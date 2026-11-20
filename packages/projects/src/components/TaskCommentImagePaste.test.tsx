@@ -2,10 +2,12 @@
 
 import '@testing-library/jest-dom/vitest';
 import React, { useRef, useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderComponent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TaskCommentForm } from './TaskCommentForm';
 import TaskComment from './TaskComment';
+import { ProjectDataSourceProvider } from '../context/ProjectDataSourceContext';
+import { nativeProjectDataSource } from '../lib/nativeProjectDataSource';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
 
 const mocks = vi.hoisted(() => ({
@@ -14,7 +16,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../actions/projectTaskCommentActions', () => ({ createTaskComment: mocks.create, updateTaskComment: mocks.update, deleteTaskComment: vi.fn() }));
 vi.mock('../actions/projectTaskCommentAttachmentDraftActions', () => ({
-  uploadProjectTaskCommentDocument: mocks.upload,
   discardProjectTaskCommentAttachmentDrafts: mocks.discard,
 }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ searchUsersForMentions: vi.fn() }));
@@ -52,6 +53,14 @@ vi.mock('@alga-psa/ui/editor', async importOriginal => {
     },
   };
 });
+
+const dataSource = { ...nativeProjectDataSource, uploadTaskCommentDocument: mocks.upload };
+
+function render(component: React.ReactElement) {
+  return renderComponent(component, {
+    wrapper: ({ children }) => <ProjectDataSourceProvider dataSource={dataSource}>{children}</ProjectDataSourceProvider>,
+  });
+}
 
 afterEach(() => vi.clearAllMocks());
 

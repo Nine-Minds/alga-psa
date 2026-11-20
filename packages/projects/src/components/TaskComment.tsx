@@ -17,8 +17,7 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { useRichTextUploadSession } from '@alga-psa/ui/editor';
-import { discardProjectTaskCommentAttachmentDrafts, uploadProjectTaskCommentDocument } from '../actions/projectTaskCommentAttachmentDraftActions';
+import { useTaskCommentUploadSession } from './useTaskCommentUploadSession';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -58,22 +57,9 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
-  const uploadSession = useRichTextUploadSession({
-    componentLabel: 'ProjectTaskCommentEdit',
-    commentAttachments: true,
-    scope: { entityType: 'project_task', entityId: comment.taskId },
-    userId: comment.userId,
-    trackDraftUploads: true,
-    onDiscard: () => handleCancelEdit(),
-    uploadDocumentAction: (formData, params) => {
-      if (!params.projectTaskId) throw new Error('Project Task upload requires a task scope.');
-      return uploadProjectTaskCommentDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId });
-    },
-    deleteDraftUploadsAction: input => discardProjectTaskCommentAttachmentDrafts({
-      projectTaskId: input.scope.entityId,
-      documentIds: input.documentIds,
-    }),
-  });
+  const uploadSession = useTaskCommentUploadSession(
+    'ProjectTaskCommentEdit', comment.taskId, currentUserId, () => handleCancelEdit(),
+  );
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
     try {
       const parsedContent = JSON.parse(comment.note || '');

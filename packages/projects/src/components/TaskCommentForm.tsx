@@ -11,8 +11,7 @@ import type { CommentAudience } from '@alga-psa/types';
 import { useTaskCommentAudience } from '../context/TaskCommentAudienceContext';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
-import { useRichTextUploadSession } from '@alga-psa/ui/editor';
-import { discardProjectTaskCommentAttachmentDrafts, uploadProjectTaskCommentDocument } from '../actions/projectTaskCommentAttachmentDraftActions';
+import { useTaskCommentUploadSession } from './useTaskCommentUploadSession';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -47,22 +46,9 @@ export function TaskCommentForm({
   const audienceSlot = useTaskCommentAudience();
   const asksAudience = audienceSlot !== null && !parentCommentId;
   const [audience, setAudience] = useState<CommentAudience | null>(null);
-  const uploadSession = useRichTextUploadSession({
-    componentLabel: 'ProjectTaskCommentForm',
-    commentAttachments: true,
-    scope: { entityType: 'project_task', entityId: taskId },
-    userId,
-    trackDraftUploads: true,
-    onDiscard: () => onCancel?.(),
-    uploadDocumentAction: (formData, params) => {
-      if (!params.projectTaskId) throw new Error('Project Task upload requires a task scope.');
-      return uploadProjectTaskCommentDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId });
-    },
-    deleteDraftUploadsAction: input => discardProjectTaskCommentAttachmentDrafts({
-      projectTaskId: input.scope.entityId,
-      documentIds: input.documentIds,
-    }),
-  });
+  const uploadSession = useTaskCommentUploadSession(
+    'ProjectTaskCommentForm', taskId, userId, () => onCancel?.(),
+  );
 
   const handleSubmit = async (): Promise<void> => {
     if (!editorRef.current || submittingRef.current || isSubmitting || uploadSession.isUploading || uploadSession.isDeletingDraftImages) {

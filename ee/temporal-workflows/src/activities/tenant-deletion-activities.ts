@@ -202,6 +202,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_bundle_mirrors',
   'ticket_comment_attachment_challenges',
   'ticket_comment_attachments',
+  'comment_attachment_drafts',
   'ticket_comment_email_deliveries',
   'comment_reactions',
   'vectors',

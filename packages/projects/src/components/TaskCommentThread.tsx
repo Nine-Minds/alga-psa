@@ -17,8 +17,7 @@ import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
-import { useRichTextUploadSession } from '@alga-psa/ui/editor';
-import { discardProjectTaskCommentAttachmentDrafts, uploadProjectTaskCommentDocument } from '../actions/projectTaskCommentAttachmentDraftActions';
+import { useTaskCommentUploadSession } from './useTaskCommentUploadSession';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
   getErrorMessage,
@@ -61,22 +60,9 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [isDrawerReplySubmitting, setIsDrawerReplySubmitting] = useState(false);
-  const drawerUploadSession = useRichTextUploadSession({
-    componentLabel: 'ProjectTaskCommentDrawerReply',
-    commentAttachments: true,
-    scope: { entityType: 'project_task', entityId: taskId },
-    userId: currentUser?.user_id,
-    trackDraftUploads: true,
-    onDiscard: () => setOpenPanelCommentId(null),
-    uploadDocumentAction: (formData, params) => {
-      if (!params.projectTaskId) throw new Error('Project Task upload requires a task scope.');
-      return uploadProjectTaskCommentDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId });
-    },
-    deleteDraftUploadsAction: input => discardProjectTaskCommentAttachmentDrafts({
-      projectTaskId: input.scope.entityId,
-      documentIds: input.documentIds,
-    }),
-  });
+  const drawerUploadSession = useTaskCommentUploadSession(
+    'ProjectTaskCommentDrawerReply', taskId, currentUser?.user_id, () => setOpenPanelCommentId(null),
+  );
   // These loaders await server actions and then set state. Nothing cancelled them
   // on unmount, so a late resolution reached React after teardown -- which surfaced
   // in CI as an unhandled "window is not defined" rejection from setIsLoading in the

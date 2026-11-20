@@ -2,15 +2,6 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
-
-/** Use the shared document upload engine with this task as the association target. */
-export async function uploadProjectTaskCommentDocument(
-  formData: FormData,
-  params: { userId: string; projectTaskId: string },
-) {
-  return uploadDocument(formData, { userId: params.userId, projectTaskId: params.projectTaskId, commentAttachmentDraft: true });
-}
 
 /** Withdraw the editor's uploads immediately. The recovery worker reclaims their unshared files. */
 export const discardProjectTaskCommentAttachmentDrafts = withAuth(async (user, { tenant }, input: {

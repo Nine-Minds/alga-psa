@@ -585,6 +585,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'ticket_bundle_mirrors', deletion: 'ordered' },
   { table: 'ticket_comment_attachment_challenges', deletion: 'ordered' },
   { table: 'ticket_comment_attachments', deletion: 'ordered' },
+  { table: 'comment_attachment_drafts', deletion: 'ordered' },
   { table: 'ticket_comment_email_deliveries', deletion: 'ordered' },
   { table: 'comment_reactions', deletion: 'ordered' },
   { table: 'vectors', deletion: 'ordered' },
