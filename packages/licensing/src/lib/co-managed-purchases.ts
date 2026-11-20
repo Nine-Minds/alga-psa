@@ -91,17 +91,20 @@ export async function runCoManagedPurchase(db: Knex, input: {
         // A legacy pending operation may lack merchant columns. Its caller can recover these
         // only from the operation's own historical Price mapping; persist that unique result while
         // holding the operation/tenant lock so the provider retry observes the same pin.
-        if (input.pinned && existing.price_id && existing.price_id !== input.pinned.priceId) {
+        const pinned = input.pinned;
+        if (pinned && existing.price_id && existing.price_id !== pinned.priceId) {
           throw new CoManagedPurchaseError('OPERATION_CONFLICT');
         }
-        if (input.pinned && (existing.stripe_account == null || existing.livemode == null)) {
-          if (!existing.price_id || input.pinned.priceId !== existing.price_id ||
-              !input.pinned.stripeAccount || input.pinned.livemode === undefined) {
+        if (pinned && (existing.stripe_account == null || existing.livemode == null)) {
+          if (!existing.price_id || !pinned.stripeAccount || pinned.livemode === undefined ||
+              (existing.stripe_account != null && existing.stripe_account !== pinned.stripeAccount) ||
+              (existing.livemode != null && existing.livemode !== pinned.livemode)) {
             throw new CoManagedPurchaseError('OPERATION_CONFLICT');
           }
+          // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
           await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
-            offer_version_id: existing.offer_version_id ?? input.pinned.offerVersionId,
-            stripe_account: input.pinned.stripeAccount, livemode: input.pinned.livemode,
+            offer_version_id: existing.offer_version_id ?? pinned.offerVersionId,
+            stripe_account: pinned.stripeAccount, livemode: pinned.livemode,
           });
         }
         return;

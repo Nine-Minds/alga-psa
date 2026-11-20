@@ -424,6 +424,24 @@ describe('co-managed purchase against the Stripe emulator', () => {
     expect(currentVersion.is_current).toBe(true);
   }, HOOK_TIMEOUT);
 
+  it.each([
+    { field: 'account', stripe_account: 'acct_original', livemode: null },
+    { field: 'mode', stripe_account: null, livemode: true },
+  ])('rejects merchant recovery when the locked operation has a conflicting $field', async ({ stripe_account, livemode }) => {
+    const { tenant, sponsor } = await sponsorFixture();
+    const operationId = randomUUID();
+    await sponsor.table('co_managed_purchase_operations').insert({ tenant, operation_id: operationId,
+      quantity: 2, state: 'preparing', price_id: CO_MANAGED_PRICE_ID, stripe_account, livemode });
+    const provider = vi.fn(async () => ({ kind: 'checkout' as const, sessionId: 'cs_unexpected', clientSecret: 'secret' }));
+
+    await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId, quantity: 2,
+      pinned: { offerVersionId: null, priceId: CO_MANAGED_PRICE_ID, stripeAccount: 'acct_algasim', livemode: false },
+    }, provider)).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+
+    expect(provider).not.toHaveBeenCalled();
+    expect(await operationRow(tenant, operationId)).toMatchObject({ stripe_account, livemode, state: 'preparing', provider_reference: null });
+  }, HOOK_TIMEOUT);
+
   it('scopes operation completion to the subscription it proves (a base renewal cannot close another purchase)', async () => {
     const { tenant, sponsor } = await sponsorFixture();
     const operationId = randomUUID();
