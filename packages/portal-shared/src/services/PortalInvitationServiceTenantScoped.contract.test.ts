@@ -25,26 +25,43 @@ function sectionFrom(startMarker: string): string {
 
 describe('portal invitation service tenant-scoped query contract', () => {
   it('uses structural tenant scoping for invitation creation reads', () => {
+    // One create path: the non-transactional twin had no callers and is gone.
     const transactionalCreate = sectionBetween(
       'static async createInvitationWithTransaction',
-      'static async createInvitation(contactId'
-    );
-    const directCreate = sectionBetween(
-      'static async createInvitation(contactId',
       'static async verifyToken'
     );
 
+    expect(source).not.toContain('static async createInvitation(contactId');
     expect(transactionalCreate).toContain('tenantDb(trx, ');
     expect(transactionalCreate).toContain(".table('contacts");
     expect(transactionalCreate).toContain(".table('portal_invitations");
-    expect(directCreate).toContain('tenantDb(knex, ');
-    expect(directCreate).toContain(".table('contacts");
-    expect(directCreate).toContain(".table('portal_invitations");
 
     expect(transactionalCreate).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(transactionalCreate).not.toMatch(/trx\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
-    expect(directCreate).not.toMatch(/knex\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
-    expect(directCreate).not.toMatch(/knex\('portal_invitations'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
+  });
+
+  it('computes the expiry in the database from the tenant\'s validity, on create and on resend', () => {
+    const transactionalCreate = sectionBetween(
+      'static async createInvitationWithTransaction',
+      'static async verifyToken'
+    );
+
+    expect(transactionalCreate).toContain("trx.raw('now() + make_interval(days => ?)', [validityDays])");
+    // The resend renews the row it reuses, so the stored expiry and the period
+    // the email states cannot drift apart.
+    expect(transactionalCreate).toContain('.update({ expires_at: expiresAt });');
+    expect(transactionalCreate).not.toContain("interval '24 hours'");
+  });
+
+  it('keeps expired invitations until the retention floor instead of deleting them on sight', () => {
+    expect(source).toContain('const PORTAL_INVITATION_RETENTION_DAYS = 90;');
+    const deletes = source.match(
+      /\.where\('expires_at', '<', [\s\S]{0,120}?\)\s*[\r\n]+\s*\.del\(\)/g
+    ) ?? [];
+    expect(deletes).toHaveLength(2);
+    for (const predicate of deletes) {
+      expect(predicate).toContain("now() - make_interval(days => ?)', [PORTAL_INVITATION_RETENTION_DAYS]");
+    }
   });
 
   it('keeps token tenant discovery explicit and scopes tenant-known token work structurally', () => {

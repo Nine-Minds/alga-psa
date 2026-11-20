@@ -16,6 +16,7 @@ import {
   portalEmailOwnerConflictMessage,
   type PortalEmailOwnerRow,
 } from '../lib/portalEmailOwner';
+import { resolvePortalInvitationValidityDays } from '../lib/portalInvitationValidity';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type {
@@ -642,6 +643,8 @@ interface PortalInvitationBatchContext {
   supportPhone: string;
   tenantSlug: string;
   portalBaseUrl: string;
+  /** The tenant's invitation validity, resolved once for the batch. */
+  invitationValidityDays: number;
 }
 
 async function resolvePortalInvitationBatchContext(
@@ -710,6 +713,9 @@ async function resolvePortalInvitationBatchContext(
   const tenantSettings = tenantSettingsRow?.settings || {};
   const supportEmail: string = tenantSettings.supportEmail || mspLocation.email;
   const supportPhone: string = tenantSettings.supportPhone || mspLocation.phone || '';
+  // How long these invitations last, from the same settings row: one resolver
+  // supplies the default and the allowed range for the whole product.
+  const invitationValidityDays = resolvePortalInvitationValidityDays(tenantSettingsRow?.settings);
 
   if (!supportEmail) {
     throw new PortalInvitationError(
@@ -744,7 +750,14 @@ async function resolvePortalInvitationBatchContext(
     );
   }
 
-  return { tenantDefaultClient, supportEmail, supportPhone, tenantSlug, portalBaseUrl };
+  return {
+    tenantDefaultClient,
+    supportEmail,
+    supportPhone,
+    tenantSlug,
+    portalBaseUrl,
+    invitationValidityDays,
+  };
 }
 
 /**
@@ -857,7 +870,14 @@ async function sendPortalInvitationForContact(
   }
   const relinked = orphanedUserIdToRelink !== null;
 
-  const { tenantDefaultClient, supportEmail, supportPhone, tenantSlug, portalBaseUrl } = batchContext;
+  const {
+    tenantDefaultClient,
+    supportEmail,
+    supportPhone,
+    tenantSlug,
+    portalBaseUrl,
+    invitationValidityDays,
+  } = batchContext;
 
   // Use a transaction to ensure atomicity
   const result: SendInvitationResult = await knex.transaction(async (trx) => {
@@ -870,7 +890,11 @@ async function sendPortalInvitationForContact(
     }
 
     // Create invitation within transaction
-    const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
+    const invitationResult = await PortalInvitationService.createInvitationWithTransaction(
+      contactId,
+      trx,
+      invitationValidityDays
+    );
     if (!invitationResult.success) {
       throw new PortalInvitationError(
         invitationResult.error || 'Portal invitation could not be created. Please try again.',
@@ -899,17 +923,16 @@ async function sendPortalInvitationForContact(
     setupUrl.searchParams.set('tenant', tenantSlug);
     const portalSetupUrl = setupUrl.toString();
 
-    // Calculate expiration time for display
-    const expirationTime = '24 hours';
-
-    // Send portal invitation email - if this fails, transaction will rollback
+    // Send portal invitation email - if this fails, transaction will rollback.
+    // The validity is the one the invitation was just stored with, and the
+    // email renders it in the recipient's own language.
     await sendPortalInvitationEmail({
       email: contact.email,
       contactName: contact.full_name,
       clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Recipient's own client name
       tenantName: tenantDefaultClient.client_name,  // MSP name (sender of the invitation)
       portalLink: portalSetupUrl,
-      expirationTime: expirationTime,
+      validityDays: invitationValidityDays,
       tenant: tenant,
       supportEmail,  // MSP's support email for reply-to
       supportPhone,  // MSP's support phone

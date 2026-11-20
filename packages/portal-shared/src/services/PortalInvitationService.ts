@@ -39,6 +39,13 @@ export interface TokenVerificationResult {
 
 const PORTAL_INVITATION_TENANT_DISCOVERY = 'tenant-discovery';
 
+/**
+ * How long an expired invitation is kept before it is deleted. Expiry is a
+ * state the MSP has to be able to see ("who never used their invitation?"), so
+ * rows are retained well past it instead of being swept the moment they lapse.
+ */
+const PORTAL_INVITATION_RETENTION_DAYS = 90;
+
 export class PortalInvitationService {
   /**
    * Generate a cryptographically secure token
@@ -48,11 +55,18 @@ export class PortalInvitationService {
   }
 
   /**
-   * Create a new portal invitation for a contact with transaction support
+   * Create a portal invitation for a contact, or renew the one it already has.
+   *
+   * `validityDays` is the tenant's resolved setting, and the expiry is computed
+   * in the database (`now() + make_interval`) to avoid timezone/DST drift. A
+   * resend reuses the active invitation's token but resets its expiry to the
+   * full period, so every link the contact was ever mailed stays valid and
+   * agrees with the period the email states.
    */
   static async createInvitationWithTransaction(
     contactId: string,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    validityDays: number
   ): Promise<{
     success: boolean;
     invitationId?: string;
@@ -87,7 +101,7 @@ export class PortalInvitationService {
 
       // Generate secure token
       const token = this.generateSecureToken();
-      // Compute expiration in the database to avoid timezone/DST drift
+      const expiresAt = trx.raw('now() + make_interval(days => ?)', [validityDays]);
 
       // Check if there's already an active invitation (using transaction)
       const existingInvitation = await tenantDb(trx, tenant).table('portal_invitations')
@@ -99,7 +113,13 @@ export class PortalInvitationService {
         .first();
 
       if (existingInvitation) {
-        // Reuse existing active invitation to allow resending without error
+        // Resending renews the link the contact already holds: without this a
+        // resend on the last day would mail a link that dies within hours
+        // while the email promises the full period.
+        await tenantDb(trx, tenant).table('portal_invitations')
+          .where({ invitation_id: existingInvitation.invitation_id, used_at: null })
+          .update({ expires_at: expiresAt });
+
         return {
           success: true,
           invitationId: existingInvitation.invitation_id,
@@ -114,94 +134,7 @@ export class PortalInvitationService {
           contact_id: contactId,
           token,
           email: contact.email,
-          // Use DB time for expiration: now() + 24 hours
-          expires_at: trx.raw("now() + interval '24 hours'"),
-          metadata: {
-            created_by: user.user_id,
-            contact_name: contact.full_name
-          }
-        })
-        .returning(['invitation_id', 'token']);
-
-      return {
-        success: true,
-        invitationId: invitation.invitation_id,
-        token: invitation.token
-      };
-
-    } catch (error) {
-      console.error('Error creating portal invitation:', error);
-      return { success: false, error: 'Failed to create invitation' };
-    }
-  }
-
-  /**
-   * Create a new portal invitation for a contact (non-transactional version)
-   */
-  static async createInvitation(contactId: string): Promise<{
-    success: boolean;
-    invitationId?: string;
-    token?: string;
-    error?: string;
-  }> {
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        return { success: false, error: 'Unauthorized' };
-      }
-
-      const { knex } = await createTenantKnex();
-      const tenant = await requireTenantId(knex);
-
-      // Check rate limit
-      const rateLimitResult = await checkPortalInvitationLimit(contactId);
-      if (!rateLimitResult.success) {
-        const errorMessage = await formatRateLimitError(rateLimitResult.msBeforeNext);
-        return { success: false, error: errorMessage };
-      }
-
-      // Verify contact exists and is a portal admin
-      const contact = await tenantDb(knex, tenant).table('contacts')
-        .where({ contact_name_id: contactId })
-        .first();
-
-      if (!contact) {
-        return { success: false, error: 'Contact not found' };
-      }
-
-      // Allow inviting any contact (not limited to client admins)
-
-      // Generate secure token
-      const token = this.generateSecureToken();
-      // Compute expiration in the database to avoid timezone/DST drift
-
-      // Check if there's already an active invitation
-      const existingInvitation = await tenantDb(knex, tenant).table('portal_invitations')
-        .where({
-          contact_id: contactId,
-          used_at: null
-        })
-        .where('expires_at', '>', knex.fn.now())
-        .first();
-
-      if (existingInvitation) {
-        // Reuse existing active invitation to allow resending without error
-        return {
-          success: true,
-          invitationId: existingInvitation.invitation_id,
-          token: existingInvitation.token
-        };
-      }
-
-      // Create invitation record
-      const [invitation] = await tenantDb(knex, tenant).table('portal_invitations')
-        .insert({
-          tenant,
-          contact_id: contactId,
-          token,
-          email: contact.email,
-          // Use DB time for expiration: now() + 24 hours
-          expires_at: knex.raw("now() + interval '24 hours'"),
+          expires_at: expiresAt,
           metadata: {
             created_by: user.user_id,
             contact_name: contact.full_name
@@ -253,9 +186,11 @@ export class PortalInvitationService {
 
         const tokenTenant = tokenInfo.tenant;
 
-        // Clean up expired tokens for this tenant (single-shard query)
+        // Clean up long-expired tokens for this tenant (single-shard query).
+        // Only rows past the retention floor: a lapsed invitation is what the
+        // MSP's "expired" view is made of.
         await tenantDb(trx, tokenTenant).table('portal_invitations')
-          .where('expires_at', '<', trx.fn.now())
+          .where('expires_at', '<', trx.raw('now() - make_interval(days => ?)', [PORTAL_INVITATION_RETENTION_DAYS]))
           .del();
         
         // Now fetch the full invitation with joins (single-shard query)
@@ -396,7 +331,11 @@ export class PortalInvitationService {
   }
 
   /**
-   * Clean up expired tokens
+   * Delete invitations that expired longer ago than the retention floor.
+   *
+   * Everything between expiry and the floor is kept on purpose: the MSP's
+   * contact list and the contact's Portal tab report an unused invitation as
+   * expired, and that state has to survive the next portal setup in the tenant.
    * @param trx - Optional transaction to use for cleanup
    */
   static async cleanupExpiredTokens(trx?: Knex.Transaction): Promise<number> {
@@ -406,9 +345,9 @@ export class PortalInvitationService {
 
       // Use provided transaction or create a new one
       const cleanup = async (tx: Knex.Transaction) => {
-        // Delete expired tokens for this tenant only (single-shard query)
+        // Delete long-expired tokens for this tenant only (single-shard query)
         const deletedRows = await tenantDb(tx, tenant).table('portal_invitations')
-          .where('expires_at', '<', tx.fn.now())
+          .where('expires_at', '<', tx.raw('now() - make_interval(days => ?)', [PORTAL_INVITATION_RETENTION_DAYS]))
           .del();
         
         const deletedCount = deletedRows || 0;

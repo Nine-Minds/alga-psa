@@ -13,7 +13,8 @@ interface SendPortalInvitationEmailParams {
   clientName: string;      // Recipient's own client company
   tenantName?: string;     // MSP sending the invitation
   portalLink: string;
-  expirationTime: string;
+  /** Tenant's invitation validity in whole days; rendered in the recipient's locale. */
+  validityDays: number;
   tenant: string;
   supportEmail?: string;   // MSP support contact shown to the recipient
   supportPhone?: string;
@@ -22,13 +23,23 @@ interface SendPortalInvitationEmailParams {
   clientId?: string;  // Client ID (from contact.company_id) for locale resolution when user doesn't exist yet
 }
 
+/**
+ * "7 days" / "7 Tage" / "1 day" in the recipient's own language. The templates
+ * interpolate the rendered string as `{{expirationTime}}`, so a German
+ * invitation no longer reads "läuft in 24 hours ab".
+ */
+function formatValidityDuration(locale: SupportedLocale, validityDays: number): string {
+  const days = Number.isFinite(validityDays) ? Math.max(1, Math.round(validityDays)) : 1;
+  return new Intl.NumberFormat(locale, { style: 'unit', unit: 'day', unitDisplay: 'long' }).format(days);
+}
+
 export async function sendPortalInvitationEmail({
   email,
   contactName,
   clientName,
   tenantName,
   portalLink,
-  expirationTime,
+  validityDays,
   tenant,
   supportEmail,
   supportPhone,
@@ -76,7 +87,7 @@ export async function sendPortalInvitationEmail({
         clientName,
         tenantName: tenantName || clientName,
         portalLink,
-        expirationTime,
+        expirationTime: formatValidityDuration(recipientLocale, validityDays),
         currentYear: new Date().getFullYear(),
         supportEmail: resolvedSupportEmail,
         supportPhone: resolvedSupportPhone,

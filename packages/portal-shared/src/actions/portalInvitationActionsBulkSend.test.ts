@@ -26,7 +26,15 @@ const state: {
   scopedContactIds: string[] | null;
   /** `null` means every client is in scope. */
   scopedClientIds: string[] | null;
-} = { contacts: [], portalUserContactIds: new Set(), scopedContactIds: null, scopedClientIds: null };
+  /** The tenant_settings row the batch context reads. */
+  tenantSettings: Record<string, unknown>;
+} = {
+  contacts: [],
+  portalUserContactIds: new Set(),
+  scopedContactIds: null,
+  scopedClientIds: null,
+  tenantSettings: {},
+};
 
 function contactsBuilder() {
   let selectedIds: string[] | null = null;
@@ -126,7 +134,7 @@ function tableBuilder(table: string) {
     return { where: () => ({ first: () => Promise.resolve({ email: 'support@nine.test', phone: '555' }) }) } as any;
   }
   if (table === 'tenant_settings') {
-    return { first: () => Promise.resolve({ settings: {} }) } as any;
+    return { first: () => Promise.resolve({ settings: state.tenantSettings }) } as any;
   }
   if (table === 'clients') {
     return { where: () => ({ first: () => Promise.resolve({ client_id: 'client-a', client_name: 'Acme' }) }) } as any;
@@ -226,6 +234,32 @@ describe('sendBulkPortalInvitations', () => {
     state.portalUserContactIds = new Set(['contact-has-user']);
     state.scopedContactIds = null;
     state.scopedClientIds = null;
+    state.tenantSettings = {};
+  });
+
+  it('sends every invitation of the batch with the tenant\'s own validity', async () => {
+    state.tenantSettings = { clientPortal: { invitationValidityDays: 14 } };
+
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+    await sendBulkPortalInvitations({ clientId: 'client-a', contactIds: ['contact-ok'] });
+
+    // The number the invitation was stored with is the number the email states.
+    expect(createInvitationMock).toHaveBeenCalledWith('contact-ok', expect.anything(), 14);
+    expect(sendPortalInvitationEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ validityDays: 14 }),
+    );
+  });
+
+  it('falls back to the default validity when the tenant has not configured one', async () => {
+    const { sendBulkPortalInvitations } = await import('./portalInvitationActions');
+
+    await sendBulkPortalInvitations({ clientId: 'client-a', contactIds: ['contact-ok'] });
+
+    expect(createInvitationMock).toHaveBeenCalledWith('contact-ok', expect.anything(), 7);
+    expect(sendPortalInvitationEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ validityDays: 7 }),
+    );
   });
 
   it('reports a per-contact status for a mixed batch and never aborts on one failure', async () => {

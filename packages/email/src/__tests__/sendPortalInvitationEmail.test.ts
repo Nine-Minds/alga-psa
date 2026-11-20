@@ -41,7 +41,7 @@ const params = {
   clientName: 'Example Client',
   tenantName: 'Example MSP',
   portalLink: 'https://portal.example.test/setup',
-  expirationTime: '24 hours',
+  validityDays: 7,
   tenant: 'tenant-1',
   supportEmail: 'support@example.test',
   fromName: 'Example MSP Portal',
@@ -78,5 +78,46 @@ describe('sendPortalInvitationEmail sender identity', () => {
       replyTo: 'support@example.test',
     }));
     expect(systemSendMock.mock.calls[0]?.[0]).not.toHaveProperty('from');
+  });
+});
+
+/**
+ * The tenant's validity is a number of days; what the recipient reads has to be
+ * their own language, not the English "24 hours" the invitation used to promise.
+ */
+describe('sendPortalInvitationEmail validity wording', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getConnectionMock.mockResolvedValue({});
+    resolveEmailLocaleMock.mockResolvedValue('en');
+    tenantSendMock.mockResolvedValue({ success: true });
+    systemSendMock.mockResolvedValue({ success: true });
+  });
+
+  // Which space ICU puts between the number and the unit is its business (fr
+  // uses a narrow no-break space), so compare on the wording.
+  const expirationTimeOf = () => String(
+    tenantSendMock.mock.calls[0]?.[0]?.templateData?.expirationTime ?? '',
+  ).replace(/\s/gu, ' ');
+
+  it.each([
+    ['en', 7, '7 days'],
+    ['en', 1, '1 day'],
+    ['de', 7, '7 Tage'],
+    ['de', 1, '1 Tag'],
+    ['fr', 3, '3 jours'],
+    ['es', 1, '1 día'],
+  ])('renders %s validity of %i day(s) as "%s"', async (locale, validityDays, expected) => {
+    resolveEmailLocaleMock.mockResolvedValue(locale);
+
+    await sendPortalInvitationEmail({ ...params, validityDays });
+
+    expect(expirationTimeOf()).toBe(expected);
+  });
+
+  it('never promises an expiry that already passed when handed a nonsense validity', async () => {
+    await sendPortalInvitationEmail({ ...params, validityDays: 0 });
+
+    expect(expirationTimeOf()).toBe('1 day');
   });
 });
