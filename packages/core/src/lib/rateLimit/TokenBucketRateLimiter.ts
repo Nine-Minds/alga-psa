@@ -8,6 +8,8 @@ export interface RateLimitResult {
   remaining: number;      // Tokens remaining after this request
   retryAfterMs?: number;  // Milliseconds until a token is available (if not allowed)
   reason?: string;
+  /** Infrastructure failure classification; consumers can apply scoped availability policy. */
+  failure?: 'eval-error';
 }
 
 /**
@@ -389,7 +391,7 @@ export class TokenBucketRateLimiter {
    * @param tenantId - The tenant ID
    * @param subjectId - Optional subject ID for per-subject rate limiting
    * @param tokens - Number of tokens to consume (default: 1)
-   * @returns RateLimitResult indicating if the request is allowed
+   * @returns RateLimitResult; EVAL exceptions are tagged as `eval-error` while remaining denied
    */
   async tryConsumeAtomic(
     namespace: string,
@@ -445,16 +447,16 @@ export class TokenBucketRateLimiter {
         ],
       });
     } catch (error) {
-      // EVAL threw or Redis returned an error reply: fail closed. Deny the
-      // request and never reset the bucket, which would credit the in-flight
-      // request; the negative `remaining` marks this as an abnormal denial.
+      // Do not reset the bucket on EVAL failure. Keep this as a denied result
+      // for existing atomic consumers; the email gate applies its established
+      // fail-open policy using the explicit infrastructure classification.
       logger.error('[TokenBucketRateLimiter] Atomic EVAL failed; denying (fail closed)', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+        errorName: error instanceof Error ? error.name : 'UnknownError',
         namespace,
         tenantId,
         subjectId,
       });
-      return { allowed: false, remaining: -1 };
+      return { allowed: false, remaining: -1, failure: 'eval-error' };
     }
 
     const parsed = this.parseAtomicReply(reply);

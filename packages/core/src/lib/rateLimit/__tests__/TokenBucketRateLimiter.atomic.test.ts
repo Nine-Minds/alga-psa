@@ -104,7 +104,7 @@ describe('TokenBucketRateLimiter.tryConsumeAtomic', () => {
         }),
       {},
     );
-    expect(await limiter.tryConsumeAtomic('api', 't1')).toEqual({ allowed: false, remaining: -1 });
+    expect(await limiter.tryConsumeAtomic('api', 't1')).toEqual({ allowed: false, remaining: -1, failure: 'eval-error' });
   });
 
   it('fails closed (denies) on malformed or partial EVAL replies', async () => {
