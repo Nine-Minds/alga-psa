@@ -30,6 +30,9 @@ describe('portal invitation setup tenant-scoped query contract', () => {
     // The user row is already committed by then, so the role write opens its own
     // transaction — the flag sync still commits with the role.
     expect(section).toContain('await withTransaction(knex, async (trx: Knex.Transaction) => {');
+    // Unchanged by alga-2026-0003347: while no portal user exists the flag IS
+    // the pre-seed, and it still picks the role the account is created with.
+    expect(section).toContain("const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';");
 
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/knex\('users'\)\s*[\r\n]+\s*\.where\(\{\s*user_id: existingUser\.user_id,\s*tenant\s*\}\)/);

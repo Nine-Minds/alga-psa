@@ -559,6 +559,45 @@ describe('clientPortalProvisioning built-in mutations', () => {
     expect(existingHarness.userRoleInserts).toHaveLength(0);
   });
 
+  // alga-2026-0003347: the configured default role decides the linked contact's
+  // portal-admin flag the moment the account exists. A contact pre-marked as a
+  // portal admin (the invitation pre-seed, set while no portal user existed)
+  // does not keep the flag when Entra creates its user with the 'User' role:
+  // the role write that lands here is the one that re-derives it, and
+  // provisioning never writes the flag itself.
+  it('lets the created role decide the contact portal-admin flag, pre-seed included', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [],
+      roleIdForDefaultRole: 'role-user-preseed',
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-preseed',
+        clientId: 'client-preseed',
+        managedTenantId: 'managed-preseed',
+        contactNameId: 'contact-preseed',
+        defaultRoleName: 'User',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-preseed',
+        email: 'preseed@example.com',
+        userPrincipalName: 'preseed@example.com',
+      })
+    );
+
+    // The non-admin role goes through addUserRoles, which re-derives
+    // contacts.is_client_admin from the role set (the derivation itself is
+    // pinned in packages/db/src/lib/userRoleWrites.test.ts).
+    expect(harness.userRoleInserts).toEqual([
+      { tenant: 'tenant-preseed', user_id: 'created-user-201', role_id: 'role-user-preseed' },
+    ]);
+    // No contacts write of its own: the flag is derived, never set here.
+    expect(harness.updates.some((update) => 'is_client_admin' in update)).toBe(false);
+  });
+
   it('skips new portal user provisioning when configured default role does not exist', async () => {
     const harness = setupKnexHarness({
       existingContactUsers: [],

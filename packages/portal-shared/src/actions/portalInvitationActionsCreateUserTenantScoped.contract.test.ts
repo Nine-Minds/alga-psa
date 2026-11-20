@@ -28,6 +28,9 @@ describe('portal invitation create-user tenant-scoped query contract', () => {
     // portal-admin flag sync and keeps its own tenant-scoping contract
     // (userRoleWritesTenantScoped.contract.test.ts); alga-2026-0003347.
     expect(section).toContain('await addUserRoles(trx, tenant, created.user_id, [targetRoleId]);');
+    // Unchanged: a caller that passes no roleId still falls back to the role the
+    // contact's pre-seeded flag asks for, which the write then re-derives from.
+    expect(section).toContain("const roleName = contact?.is_client_admin ? 'Admin' : 'User';");
 
     expect(section).not.toMatch(/trx\('contacts'\)\s*[\r\n]+\s*\.where\(\{\s*tenant,/);
     expect(section).not.toMatch(/trx\('users'\)\s*[\r\n]+\s*\.where\(\{\s*tenant/);
