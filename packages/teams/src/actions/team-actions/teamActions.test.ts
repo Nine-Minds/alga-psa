@@ -185,7 +185,16 @@ function teamReadFixtures(): Record<string, TableData> {
         unexpected_column: 'future-column-value',
       }],
     },
-    roles: { rows: [{ user_id: 'user-1', role_id: 'role-1', role_name: 'Technician', msp: true, client: false, tenant: 'tenant-1' }] },
+    roles: { rows: [{
+      user_id: 'user-1',
+      role_id: 'role-1',
+      role_name: 'Technician',
+      description: 'Support technician',
+      msp: true,
+      client: false,
+      tenant: 'tenant-1',
+      unexpected_role_column: 'internal-role-value',
+    }] },
   };
 }
 
@@ -194,6 +203,14 @@ function expectSafeTeamMember(member: Record<string, any>): void {
   expect(Object.keys(member)).not.toContain('hashed_password');
   expect(Object.keys(member)).not.toContain('two_factor_secret');
   expect(Object.keys(member)).not.toContain('unexpected_column');
+  expect(member.roles).toEqual([{
+    role_id: 'role-1',
+    role_name: 'Technician',
+    description: 'Support technician',
+    msp: true,
+    client: false,
+    tenant: 'tenant-1',
+  }]);
   expect(member).toMatchObject({
     user_id: 'user-1',
     username: 'alex',
