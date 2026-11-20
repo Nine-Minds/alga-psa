@@ -39,12 +39,15 @@ import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import User from '@alga-psa/db/models/user';
+import { getAdminConnection } from '@alga-psa/db/admin';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
 import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
 import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
+
+const USER_TENANT_DISCOVERY = 'tenant-discovery';
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
@@ -340,6 +343,15 @@ export class UserService extends BaseService<IUser> {
         throw new Error('A user with this email address already exists');
       }
 
+      // The same email may not exist for this user type in another tenant
+      // either, as userActions.addUser already enforces. Sign-in and password
+      // reset find an account by email + user type alone, so a second tenant's
+      // copy would leave the new user's welcome/reset link acting on whichever
+      // account that lookup returns first.
+      if (await this.emailExistsInAnotherTenant(data.email, targetUserType, context.tenant)) {
+        throw new Error('A user with this email address already exists');
+      }
+
       // Validate username uniqueness within tenant + user_type (allow same username across different types)
       const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
         .andWhere('username', data.username.toLowerCase())
@@ -441,6 +453,25 @@ export class UserService extends BaseService<IUser> {
       }, trx);
 
       return { user: enhancedUser as unknown as IUser, admission };
+  }
+
+  /**
+   * Whether `email` already belongs to a `userType` user of another tenant.
+   * Reads on the admin connection, outside the caller's transaction: the
+   * same-tenant case is checked in that transaction by the caller.
+   */
+  private async emailExistsInAnotherTenant(
+    email: string,
+    userType: 'internal' | 'client',
+    tenant: string
+  ): Promise<boolean> {
+    const db = await getAdminConnection();
+    const existing = await tenantDb(db, USER_TENANT_DISCOVERY)
+      .unscoped('users', 'global identity email uniqueness check before tenant selection')
+      .where({ email: email.toLowerCase(), user_type: userType })
+      .whereNot('tenant', tenant)
+      .first('user_id');
+    return Boolean(existing);
   }
 
   /**

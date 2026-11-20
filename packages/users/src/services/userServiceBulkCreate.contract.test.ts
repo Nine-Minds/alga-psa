@@ -39,6 +39,16 @@ const store = vi.hoisted(() => ({
   // only after its row is already written (the race).
   seatTripwire: new Set<string>(),
   roleIds: new Set<string>(),
+  // Users of other tenants, seen only through the admin connection's
+  // cross-tenant email check.
+  otherTenantUsers: [] as Array<Record<string, any>>,
+}));
+
+// The cross-tenant email check reads on the admin connection, outside the
+// batch transaction; its queries resolve against otherTenantUsers.
+const adminConnection = vi.hoisted(() => ({ admin: true }));
+vi.mock('@alga-psa/db/admin', () => ({
+  getAdminConnection: async () => adminConnection,
 }));
 
 // Only the two seat probes are doubled; the rejection predicate the service
@@ -89,6 +99,24 @@ vi.mock('@alga-psa/db/tenantDb', async (importOriginal) => ({
   tenantDb: (conn: any, tenant: string) => ({
     tenant,
     table: (expression: string) => buildQuery(frameOf(conn), tenant, expression.split(' ')[0]),
+    unscoped: (_table: string, _reason: string) => {
+      if (conn !== adminConnection) {
+        throw new Error('Cross-tenant read issued on a connection other than the admin connection');
+      }
+      const predicates: Array<(row: Record<string, any>) => boolean> = [];
+      const builder: any = {
+        where: (criteria: Record<string, any>) => {
+          predicates.push((row) => Object.entries(criteria).every(([key, value]) => row[key] === value));
+          return builder;
+        },
+        whereNot: (column: string, value: any) => {
+          predicates.push((row) => row[column] !== value);
+          return builder;
+        },
+        first: async () => store.otherTenantUsers.find((row) => predicates.every((predicate) => predicate(row))),
+      };
+      return builder;
+    },
     tenantJoin: () => undefined,
   }),
 }));
@@ -259,6 +287,7 @@ beforeEach(() => {
   store.batchRollbacks = 0;
   store.seatPreReject = new Set();
   store.seatTripwire = new Set();
+  store.otherTenantUsers = [];
   // The roles the batch references exist in this tenant, each flagged for the
   // portal it belongs to.
   store.committed.push({
@@ -297,6 +326,27 @@ describe('bulkCreateUsers', () => {
   it('sees users created earlier in the same batch, so a duplicate inside it is rejected', async () => {
     const result = await makeService().bulkCreateUsers(
       [newUser('a'), newUser('dup', { email: 'tech.a@example.com' }), newUser('c')],
+      context,
+      { skip_invalid: true },
+    );
+
+    expect(result).toMatchObject({ total_processed: 3, successful: 2, failed: 1 });
+    expect(result.errors[0]).toMatchObject({
+      index: 1,
+      error: 'A user with this email address already exists',
+    });
+    expect(committedEmails()).toEqual(['tech.a@example.com', 'tech.c@example.com']);
+  });
+
+  it('refuses an email another tenant already uses for the same user type', async () => {
+    store.otherTenantUsers.push(
+      { tenant: 'tenant-2', user_id: 'other-1', email: 'tech.b@example.com', user_type: 'internal' },
+      // Same address as a client user elsewhere: allowed, as in userActions.addUser.
+      { tenant: 'tenant-2', user_id: 'other-2', email: 'tech.c@example.com', user_type: 'client' },
+    );
+
+    const result = await makeService().bulkCreateUsers(
+      [newUser('a'), newUser('b'), newUser('c')],
       context,
       { skip_invalid: true },
     );
