@@ -1,6 +1,6 @@
-'use server'
-
-// Import and re-export async functions explicitly to comply with 'use server'
+// The defining modules own their 'use server' boundaries. Keep this facade a
+// plain re-export so Next uses each action's original server reference instead
+// of registering a second reference for the same function.
 
 import { getClientIdForWorkItem } from './timeEntryHelpers';
 import {

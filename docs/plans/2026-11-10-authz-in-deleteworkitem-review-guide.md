@@ -73,3 +73,11 @@ The existing walkthrough and SQL snapshots show selected-sheet UI deletion, cowo
 The fix plan remains the primary security specification. Its initial status (“No fix exists on this branch yet”) and proposed mocked-core test list predate the implementation and this repair. The current action also carries a third `workItemType` argument from the UI and scopes the locked query to that type, while the plan’s original signature describes only the work-item and sheet IDs. This additional scope matches the selected UI item and is covered by the retained security suite.
 
 Captain approval remains a separate gate. Start with the real-core billing test and its persisted assertions, then inspect the scheduling typecheck log. Review the implementation references and earlier UI evidence after those checks. No additional AI verification is required.
+
+## Preparation correction: preserve canonical server-action references
+
+The November 20 browser repeat found a separate refresh defect in the affected journey: `deleteWorkItem` returned HTTP 200 and committed the selected deletion, but the following `fetchTimeEntriesForTimeSheet` request returned HTTP 500 (`Cannot read properties of undefined (reading 'apply')`). The UI retained the deleted row and displayed “Failed to delete work item.” A managed restart and a fresh development compilation reproduced it.
+
+`timeEntryActions.ts` marked its re-export facade with `use server`, registering additional action references even though every defining module already owns that boundary. Keeping the facade as a plain re-export preserves the defining modules’ references. With that correction, the same browser action immediately removed the selected row and displayed “Work item deleted successfully.” No authorization or deletion-core behavior was changed.
+
+The real PostgreSQL suite passed 7/7, the focused authorization suite passed 5/5, and scheduling typecheck passed after the correction. Browser reproduction and successful repeat are the behavioral check for this compiler/runtime boundary; no source-string test was added. Evidence is saved beside the HTML guide as `refresh-investigation.json`, `clean-cache-refresh-failure.webm`, `facade-owner-result.json`, `facade-integration.log`, `facade-authz.log`, and `facade-typecheck.log`.
