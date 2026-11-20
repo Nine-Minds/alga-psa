@@ -7,7 +7,7 @@ import type { TenantScopedQuery } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
-const state = vi.hoisted(() => ({ readableIds: new Set<string>() }));
+const state = vi.hoisted(() => ({ readableIds: new Set<string>(), permissions: ['client:read'], aclOverride: undefined as any }));
 
 vi.mock('@alga-psa/search/acl', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/search/acl')>();
@@ -16,11 +16,12 @@ vi.mock('@alga-psa/search/acl', async (importOriginal) => {
     resolveSearchAclPrincipal: async (_knex: Knex, user: any, clientAccess: any) => ({
       userId: user.user_id,
       tenant: user.tenant,
-      permissions: ['client:read'],
+      permissions: state.permissions,
       roles: [],
       isInternal: true,
       clientAccess,
       authorizationUser: user,
+      ...(state.aclOverride ?? {}),
     }),
     verifyResultVisibility: async (_knex: Knex, _acl: unknown, rows: Array<{ id: string }>) =>
       rows.filter((row) => state.readableIds.has(row.id)),
@@ -84,7 +85,7 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
         required_permission text NOT NULL DEFAULT 'client:read'
       )
     `);
-    await db.raw(`CREATE TABLE ${TICKET_TABLE} (tenant uuid NOT NULL, ticket_id text NOT NULL, client_id uuid, PRIMARY KEY (tenant, ticket_id))`);
+    await db.raw(`CREATE TABLE ${TICKET_TABLE} (tenant uuid NOT NULL, ticket_id uuid NOT NULL, client_id uuid, PRIMARY KEY (tenant, ticket_id))`);
   }, 300_000);
 
   beforeEach(async () => {
@@ -105,6 +106,8 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
     });
     await db(TABLE).insert(rows);
     state.readableIds = new Set(READABLE_IDS);
+    state.permissions = ['client:read'];
+    state.aclOverride = undefined;
     rawCalls = 0;
     rankingTimes = [];
   });
@@ -152,8 +155,9 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
   }, 30_000);
 
   it('uses the ticket list SQL compiler to filter exact counts and stable pages in PostgreSQL', async () => {
+    const ticketIds = Array.from({ length: 24 }, () => randomUUID());
     const ticketHits = Array.from({ length: 24 }, (_, index) => {
-      const ticketId = `authz-${String(index + 1).padStart(3, '0')}`;
+      const ticketId = ticketIds[index];
       return {
         tenant: TENANT,
         object_type: 'ticket',
@@ -194,7 +198,10 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
       }],
     } as any;
     const builder = db(`${TICKET_TABLE} as t`).where('t.tenant', TENANT);
-    builder.whereRaw('t.ticket_id = s.object_id');
+    builder.whereRaw(
+      `t.ticket_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END`,
+      ['^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+    );
     const scopedQuery = { tenant: TENANT, builder } as unknown as TenantScopedQuery;
     const compiled = applyTicketReadAuthorizationSql(scopedQuery, db, TENANT, context);
     expect(compiled.supported).toBe(true);
@@ -221,18 +228,23 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
       rankingAsOf: MATCHED_AT,
       searchIndex: SEARCH_INDEX,
     };
+    const allowedTicketIds = ticketIds.slice(19).sort();
+    const allTicketIds = [...ticketIds].sort();
 
     const counts = await countSearchMatchesByType(searchOptions);
     expect(counts.ticket).toBe(5);
     const first = await runSearchQuery({ ...searchOptions, limit: 2 });
-    expect(first.map(({ id }) => id)).toEqual(['authz-020', 'authz-021']);
+    expect(first.map(({ id }) => id)).toEqual(allowedTicketIds.slice(0, 2));
     const nextCursor = encodeSearchCursor(first[1], MATCHED_AT);
     const second = await runSearchQuery({ ...searchOptions, limit: 2, cursor: nextCursor });
-    expect(second.map(({ id }) => id)).toEqual(['authz-022', 'authz-023']);
+    expect(second.map(({ id }) => id)).toEqual(allowedTicketIds.slice(2, 4));
     expect(new Set([...first, ...second].map(({ id }) => id)).size).toBe(4);
 
     const unrestrictedBuilder = db(`${TICKET_TABLE} as t`).where('t.tenant', TENANT);
-    unrestrictedBuilder.whereRaw('t.ticket_id = s.object_id');
+    unrestrictedBuilder.whereRaw(
+      `t.ticket_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END`,
+      ['^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+    );
     const unrestrictedContext = { ...context, ticketReadBundleNarrowingRules: [] };
     const unrestrictedCompiled = applyTicketReadAuthorizationSql(
       { tenant: TENANT, builder: unrestrictedBuilder } as unknown as TenantScopedQuery,
@@ -252,6 +264,110 @@ describe('authorized search cursors against PostgreSQL ranking', () => {
     const unrestrictedOptions = { ...searchOptions, acl: unrestrictedAcl as any };
     expect((await countSearchMatchesByType(unrestrictedOptions)).ticket).toBe(24);
     expect((await runSearchQuery({ ...unrestrictedOptions, limit: 2 })).map(({ id }) => id))
-      .toEqual(['authz-001', 'authz-002']);
+      .toEqual(allTicketIds.slice(0, 2));
+
+    state.permissions = ['ticket:read'];
+    state.aclOverride = {
+      ticketPolicySqlSupported: true,
+      ticketVisibilitySql: {
+        sql: `(s.object_type <> 'ticket' OR EXISTS (
+          SELECT 1 FROM ${TICKET_TABLE} t
+          WHERE t.tenant = ?::uuid
+            AND t.ticket_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END
+            AND t.client_id = ?::uuid
+        ))`,
+        bindings: [TENANT, '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', ALLOWED_CLIENT],
+      },
+    };
+    const appPage1 = await runAppSearch(rankingKnex, TENANT, USER, { query: 'needle', types: ['ticket'] as any, limit: 2 }, SEARCH_INDEX);
+    const appPage2 = await runAppSearch(rankingKnex, TENANT, USER, { query: 'needle', types: ['ticket'] as any, limit: 2, cursor: appPage1.nextCursor }, SEARCH_INDEX);
+    const appPage3 = await runAppSearch(rankingKnex, TENANT, USER, { query: 'needle', types: ['ticket'] as any, limit: 2, cursor: appPage2.nextCursor }, SEARCH_INDEX);
+    expect(appPage1.results.map(({ id }) => id)).toEqual(allowedTicketIds.slice(0, 2));
+    expect(appPage2.results.map(({ id }) => id)).toEqual(allowedTicketIds.slice(2, 4));
+    expect(appPage3.results.map(({ id }) => id)).toEqual(allowedTicketIds.slice(4));
+    expect(appPage1.nextCursor).toBeTruthy();
+    expect(appPage2.nextCursor).toBeTruthy();
+    expect(appPage3.nextCursor).toBeUndefined();
+    expect(new Set([...appPage1.results, ...appPage2.results, ...appPage3.results].map(({ id }) => id)).size).toBe(5);
+  }, 30_000);
+
+  it('returns a complete mixed 100-result page and terminates across later public cursors', async () => {
+    await db(TABLE).delete();
+    await db(TICKET_TABLE).delete();
+    const total = 205;
+    const tickets: Array<{ id: string; type: 'ticket' | 'client' }> = [];
+    const rows = Array.from({ length: total }, (_, index) => {
+      const id = index % 2 === 0 ? randomUUID() : `client-${String(index + 1).padStart(3, '0')}`;
+      const type = index % 2 === 0 ? 'ticket' as const : 'client' as const;
+      tickets.push({ id, type });
+      return {
+        tenant: TENANT,
+        object_type: type,
+        object_id: id,
+        title: 'Needle mixed result',
+        url: `/${type}/${id}`,
+        source_updated_at: MATCHED_AT,
+        metadata: JSON.stringify({}),
+        body: 'needle mixed',
+        required_permission: `${type}:read`,
+      };
+    });
+    rows.push({
+      tenant: TENANT,
+      object_type: 'ticket',
+      object_id: 'legacy-non-uuid-ticket-id',
+      title: 'Needle malformed indexed ID',
+      url: '/msp/tickets/legacy-non-uuid-ticket-id',
+      source_updated_at: MATCHED_AT,
+      metadata: JSON.stringify({}),
+      body: 'needle mixed',
+      required_permission: 'ticket:read',
+    } as any);
+    await db.batchInsert(TABLE, rows, 500);
+    await db.batchInsert(TICKET_TABLE, tickets.filter(({ type }) => type === 'ticket').map(({ id }) => ({
+      tenant: TENANT,
+      ticket_id: id,
+      client_id: ALLOWED_CLIENT,
+    })), 500);
+
+    state.permissions = ['client:read', 'ticket:read'];
+    state.readableIds = new Set(tickets.map(({ id }) => id));
+    state.aclOverride = {
+      ticketPolicySqlSupported: true,
+      ticketVisibilitySql: {
+        sql: `(s.object_type <> 'ticket' OR EXISTS (
+          SELECT 1 FROM ${TICKET_TABLE} t
+          WHERE t.tenant = ?::uuid
+            AND t.ticket_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END
+        ))`,
+        bindings: [TENANT, '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+      },
+    };
+
+    const pages: string[][] = [];
+    let cursor: string | undefined;
+    let final: Awaited<ReturnType<typeof runAppSearch>> | undefined;
+    do {
+      final = await runAppSearch(rankingKnex, TENANT, USER, {
+        query: 'needle',
+        types: ['ticket', 'client'] as any,
+        limit: 100,
+        cursor,
+      }, SEARCH_INDEX);
+      pages.push(final.results.map(({ id }) => id));
+      cursor = final.nextCursor;
+      if (pages.length > 4) throw new Error('100-result search cursor did not terminate');
+    } while (cursor);
+
+    const pageIds = pages.flat();
+    expect(pages.map((page) => page.length)).toEqual([100, 100, 5]);
+    expect(pageIds).toHaveLength(total);
+    expect(new Set(pageIds).size).toBe(total);
+    expect(new Set(pageIds)).toEqual(new Set(tickets.map(({ id }) => id)));
+    expect(final?.totalCount).toBe(total);
+    expect(final?.groups.ticket).toBe(103);
+    expect(final?.groups.client).toBe(102);
+    expect(pageIds.some((id) => tickets.find((hit) => hit.id === id)?.type === 'ticket')).toBe(true);
+    expect(pageIds.some((id) => tickets.find((hit) => hit.id === id)?.type === 'client')).toBe(true);
   }, 30_000);
 });

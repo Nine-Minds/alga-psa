@@ -15,7 +15,7 @@
       "F004"
     ],
     "description": "Compare compiled and record decisions with real tenant-scoped PostgreSQL records, including portal comment rules, mixed results, unsupported rules and resolver failure.",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
@@ -32,6 +32,6 @@
       "F004"
     ],
     "description": "Benchmark baseline and revised typeahead and later pages with equivalent results on a representative large fixture and report p95 and SQL statements per request for broad and restricted access.",
-    "implemented": false
+    "implemented": true
   }
 ]

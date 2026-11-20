@@ -147,7 +147,10 @@ function normalizeLimit(limit: number | undefined): number {
   if (!Number.isFinite(parsed)) {
     return 30;
   }
-  return Math.max(1, Math.min(Math.floor(parsed), 100));
+  // Public requests are capped at 100 by the search input schema. The query
+  // layer accepts one extra row so callers can determine whether a next page
+  // exists when the public limit is at its maximum.
+  return Math.max(1, Math.min(Math.floor(parsed), 101));
 }
 
 function normalizeOffset(offset: number | undefined): number {

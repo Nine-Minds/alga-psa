@@ -183,7 +183,12 @@ export async function resolveSearchAclPrincipal(
     }
     principal.ticketAuthorizationContext = context;
     const ticketQuery = tenantDb(knex, user.tenant).scoped('tickets as t');
-    ticketQuery.builder.whereRaw('t.ticket_id = s.object_id');
+    // Search indexes store identifiers as text while source identifiers are UUIDs.
+    // Guard the cast so unrelated mixed-search IDs remain harmless.
+    ticketQuery.builder.whereRaw(
+      `t.ticket_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END`,
+      ['^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+    );
     const ticketCompiled = applyTicketReadAuthorizationSql(ticketQuery, knex, user.tenant, context);
     if (!ticketCompiled.supported) {
       principal.ticketPolicySqlSupported = false;
@@ -204,7 +209,10 @@ export async function resolveSearchAclPrincipal(
     scoped.tenantJoin(commentQuery, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
     commentQuery
       .select('c.comment_id')
-      .whereRaw('c.comment_id = s.object_id')
+      .whereRaw(
+        `c.comment_id = CASE WHEN s.object_id ~* ? THEN s.object_id::uuid END`,
+        ['^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'],
+      )
       .whereNull('c.deleted_at')
       .where('c.publish_state', 'published');
     if (!principal.isInternal) {
