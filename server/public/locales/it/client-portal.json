@@ -165,6 +165,11 @@
           "cancelled": "Appuntamento annullato: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Non è stato possibile elaborare questa richiesta. Contatta il tuo fornitore di servizi per assistenza."
+        }
+      },
       "algadeskEmptyHint": "Quando i ticket vengono aggiornati, li vedrai qui."
     },
     "devices": {
@@ -293,13 +298,15 @@
         "contactMissingEmail": "Il contatto non ha un indirizzo e-mail.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido.",
         "userExistsForContact": "Esiste già un account utente per questo contatto.",
-        "portalUserAlreadyExists": "Esiste già un utente del portale per questo contatto.",
+        "portalUserAlreadyExists": "Esiste già un account per questo indirizzo e-mail. Accedi o reimposta la password dalla pagina di accesso.",
         "noDefaultClient": "Nessun cliente predefinito configurato per questo tenant.",
         "noDefaultLocation": "Il cliente predefinito non ha una posizione predefinita configurata.",
         "noLocationEmail": "La posizione del cliente non ha un'e-mail di contatto configurata.",
         "baseUrlNotConfigured": "L'URL di base dell'applicazione non è configurato.",
         "invitationNotFound": "Invito non trovato.",
-        "revokeFailed": "Non è stato possibile revocare l'invito. Riprova."
+        "revokeFailed": "Non è stato possibile revocare l'invito. Riprova.",
+        "batchLimitExceeded": "Troppi contatti in una sola richiesta. Invita meno contatti alla volta.",
+        "noTargetsSelected": "Seleziona almeno un contatto da invitare."
       }
     },
     "features": {
@@ -1169,6 +1176,10 @@
       "recordInvalid": "Uno dei record del gruppo di visibilità selezionati non è più valido. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un gruppo di visibilità con questi dati per questo cliente.",
       "invalidData": "Dati del gruppo di visibilità non validi. Verificare i dati del gruppo e le bacheche selezionate."
+    },
+    "roles": {
+      "lastMspAdmin": "Un tenant deve mantenere almeno un utente MSP Admin attivo.",
+      "lastRole": "Un utente deve mantenere almeno un ruolo. Assegnare prima un altro ruolo, quindi rimuovere questo."
     }
   }
 }

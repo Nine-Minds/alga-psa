@@ -398,6 +398,171 @@
     "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs"
   },
   "coManaged": {
+    "trial": {
+      "title": "15 dagars provperiod för en samförvaltad plats",
+      "description": "Bjud in en av kundens tekniker att arbeta på de tavlor du väljer. De 15 dagarna räknas från teknikerns första inloggning. Åtkomst kräver ett aktivt basabonnemang eller en pågående provperiod för basabonnemanget.",
+      "terms": "En betald plats kostar {{amount}} per månad. Provperioden avslutas utan avgift om du inte bekräftar att du vill använda betald kapacitet.",
+      "status": {
+        "active": "Aktiv",
+        "pending": "Väntar på första inloggningen",
+        "base_paused": "Basabonnemanget är pausat",
+        "expired": "Provperioden har löpt ut",
+        "paid": "En betald plats används",
+        "ended": "Provperioden är avslutad",
+        "checkout_pending": "Väntar på betalning"
+      },
+      "purchaseAwaitingVerification": "Köpet väntar på verifiering",
+      "conversionFailed": "Bytet till en betald plats slutfördes inte. Kontrollera vilka betalda platser som är tillgängliga eller försök genomföra köpet igen.",
+      "deadline": "Platsens provperiod slutar {{date}}.",
+      "baseUntil": "Den nuvarande basåtkomsten upphör {{date}}.",
+      "openSetup": "Öppna kundens platsinställningar",
+      "invite": "Bjud in tekniker i 15 dagar",
+      "resend": "Skicka inbjudan igen",
+      "replace": "Byt tekniker",
+      "cancelInvitation": "Återkalla inbjudan",
+      "restoreBase": "Återställ basåtkomst under Konto",
+      "resumePurchase": "Återuppta köpet",
+      "cancelConversion": "Avbryt bytet till en betald plats",
+      "spareSeatTerms": "Använd en tillgänglig betald plats nu. Det totala antalet platser i poolen förblir detsamma.",
+      "confirmSpareSeat": "Bekräfta användning av en betald plats",
+      "keepSeat": "Behåll den här platsen",
+      "refresh": "Uppdatera provperiodens status",
+      "returnToTrial": "Tillbaka till provperioden för kundens plats",
+      "notice": {
+        "invitationSaved": "Inbjudan har sparats. Försök skicka den igen nedan.",
+        "deliveryFailed": "Det gick inte att skicka inbjudan. Du kan försöka igen.",
+        "replacementSent": "Inbjudan har skickats till ersättaren.",
+        "replacementSaved": "Ersättaren har sparats. Försök skicka inbjudan igen."
+      },
+      "error": {
+        "boardChoicesFailed": "Det gick inte att läsa in de tillgängliga tavlorna.",
+        "actionFailed": "Åtgärden kunde inte slutföras. Uppdatera provperiodens status och försök igen.",
+        "paymentFailed": "Betalningen kunde inte slutföras. Kontrollera provperiodens status."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Den här arbetsytan har ingen samhanterad pool. Lägg till samhanterade platser för att använda detta.",
+        "lapsed": "Den samhanterade poolen har gått ut. Återställ den innan du lägger till platser.",
+        "capacity": "Poolen har inga platser kvar. Lägg till platser i poolen eller frigör några från en annan kund.",
+        "clientInactive": "Återaktivera kunden innan du aktiverar samhanterad IT.",
+        "clientNotFound": "Den här kunden är inte längre tillgänglig.",
+        "hasArrangement": "Den här kunden har redan samhanterad IT. Uppdatera för att se den."
+      },
+      "error": {
+        "operationConflict": "Begäran har redan skickats med andra uppgifter. Uppdatera och börja om.",
+        "invalidSeats": "Ange ett heltal för antal platser, minst 1.",
+        "invalidInvitation": "Välj en kontakt att bjuda in.",
+        "contactNotFound": "Den här kontakten finns inte längre. Välj en annan kontakt.",
+        "contactWrongClient": "Den här kontakten tillhör en annan kund. Välj en kontakt hos den här kunden.",
+        "contactInactive": "Den här kontakten är inaktiv. Aktivera kontakten först.",
+        "contactNoEmail": "Den här kontakten saknar e-postadress. Lägg först till en på kontakten.",
+        "contactHasSeat": "Den här kontakten har redan en plats eller en väntande inbjudan.",
+        "emailInUse": "Den här e-postadressen tillhör redan ett användarkonto. Använd en annan adress.",
+        "emailInvited": "Den här e-postadressen har redan en väntande inbjudan.",
+        "seatLimit": "Alla platser används. Lägg till platser eller dra tillbaka en inbjudan först.",
+        "poolLimit": "Poolen har inte så många platser tillgängliga.",
+        "allocationConflict": "Platserna ändrades medan du redigerade. Uppdatera och försök igen.",
+        "board": "En vald tavla är inte längre tillgänglig. Uppdatera och välj igen.",
+        "project": "Ett valt projekt är inte längre tillgängligt. Uppdatera och välj igen.",
+        "handoffUser": "Den valda personen är inte längre tillgänglig. Välj någon annan.",
+        "notPending": "Den här teknikern har redan godkänt, så inbjudan kan inte ändras.",
+        "arrangementGone": "Det här platsavtalet är inte längre aktivt. Uppdatera för att se status.",
+        "generic": "Det fungerade inte. Uppdatera och försök igen.",
+        "load": "Det gick inte att läsa in valen. Uppdatera och försök igen.",
+        "submit": "Begäran kanske inte slutfördes. Försök igen; den tillämpas inte två gånger."
+      },
+      "purchase": {
+        "checking": "Kontrollerar poolen…",
+        "review": "Poolen har för få platser. Granska köpet för att tilldela {{count}} platser.",
+        "waiting": "Väntar på att köpet slutförs. {{count}} platser tilldelas så snart poolen har dem.",
+        "stalled": "De nya platserna har inte dykt upp än. Kontrollera igen strax; du debiteras inte två gånger.",
+        "failed": "Betalningen gick inte igenom. Försök samma köp igen för att tilldela {{count}} platser.",
+        "check": "Kontrollera igen",
+        "cancel": "Avbryt",
+        "error": "Poolen kunde inte kontrolleras. Uppdatera och försök igen; inget debiteras två gånger."
+      },
+      "saved": "Sparat.",
+      "boards": {
+        "title": "Tavelomfattning",
+        "hint": "Tekniker arbetar med den här kundens ärenden på tavlorna som är markerade här. Utan markering ser de inga ärenden.",
+        "save": "Spara tavelomfattning",
+        "none": "Det finns inga tavlor att välja bland.",
+        "canCreate": "Kan skapa ärenden"
+      },
+      "projects": {
+        "title": "Delade projekt",
+        "hint": "Den här kundens projekt som dess tekniker kan öppna.",
+        "none": "Den här kunden har inga projekt att dela.",
+        "save": "Spara delade projekt"
+      },
+      "handoff": {
+        "title": "Standardvärden för överlämning",
+        "assignee": "Tilldela ärenden som överlämnas till dig till",
+        "nobody": "Lämna otilldelade",
+        "save": "Spara standardvärden för överlämning"
+      },
+      "client": {
+        "seatArrangement": "Platsavtal",
+        "summary": "Platsavtal: {{used}} av {{count}} platser används"
+      },
+      "technicians": {
+        "sent": "Inbjudan skickad.",
+        "notSent": "Platsen är reserverad, men e-postmeddelandet skickades inte. Skicka det igen.",
+        "name": "Namn",
+        "email": "E-post",
+        "status": "Status",
+        "active": "Aktiv",
+        "expired": "Inbjudan har gått ut",
+        "invited": "Inbjuden",
+        "resend": "Skicka igen",
+        "withdraw": "Dra tillbaka",
+        "title": "Tekniker",
+        "none": "Inga tekniker ännu.",
+        "invite": "Bjud in tekniker",
+        "withdrawTitle": "Dra tillbaka inbjudan",
+        "withdrawMessage": "Dra tillbaka inbjudan till {{email}}? Platsen går tillbaka till det här avtalet.",
+        "withdrawn": "Inbjudan har dragits tillbaka."
+      },
+      "panel": {
+        "title": "Platsavtal",
+        "usage": "{{used}} av {{count}} platser används",
+        "allocation": "Tilldelade platser",
+        "changeSeats": "Ändra platser"
+      },
+      "access": {
+        "title": "Åtkomst och överlämning"
+      },
+      "setup": {
+        "seats": "Antal platser",
+        "boards": "Tavlor i omfattningen",
+        "boardsHint": "Tekniker ser sitt företags ärenden endast på dessa tavlor.",
+        "technician": "Första tekniker",
+        "technicianHint": "Välj en kontakt hos den här kunden. De bjuds in via e-post.",
+        "submit": "Aktivera platser",
+        "title": "Platsavtal"
+      },
+      "contact": {
+        "label": "Tekniker",
+        "placeholder": "Välj en kontakt",
+        "addedNoEmail": "{{name}} lades till men saknar e-postadress och kan inte bjudas in ännu.",
+        "addedUnavailable": "{{name}} lades till men kan inte bjudas in.",
+        "unavailable": "Visas inte eftersom de är inaktiva, saknar e-post eller redan har plats eller inbjudan: {{count}}."
+      },
+      "chooser": {
+        "seat": "Plats",
+        "seatHint": "Kundens tekniker arbetar i ert PSA, begränsade till sitt företag.",
+        "workspace": "Arbetsyta",
+        "workspaceHint": "Kundens IT-team får en egen servicedesk och eskalerar till er.",
+        "description": "Välj hur den här kundens IT-team arbetar med er.",
+        "shape": "Samhanterad form",
+        "pool": "{{available}} av {{purchased}} platser tillgängliga. {{allocated}} tilldelade."
+      },
+      "states": {
+        "active": "Aktiv",
+        "ended": "Avslutad"
+      }
+    },
     "portableExport": {
       "title": "Exportera arbetsyta",
       "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
@@ -474,6 +639,10 @@
     },
     "loading": "Läser in kundlicenskapacitet…",
     "overview": {
+      "shape": "Form",
+      "state": "Status",
+      "seatsUsed": "Platser som används",
+      "seatsAllocated": "Tilldelade platser",
       "actions": "Åtgärder",
       "client": "Kund",
       "empty": "Inga samhanterade kunder matchar sökningen.",
@@ -567,6 +736,8 @@
     "proRequired": "En Pro PSA-prenumeration krävs för att sponsra kunders arbetsytor.",
     "loadError": "Det gick inte att läsa in kapaciteten för kundplatser. Försök igen.",
     "purchaseError": "Det gick inte att slutföra platsköpet. Du kan säkert återuppta det.",
+    "termsChanged": "Priset har ändrats sedan du granskade köpet. Granska de uppdaterade villkoren innan du bekräftar.",
+    "offerUnavailable": "Det går tillfälligt inte att köpa nya platser. Inget belopp har debiterats.",
     "checkoutExpired": "Den här betalningen har gått ut. Starta ett nytt köp för att fortsätta.",
     "grace": "Förnya din licens eller åtgärda kapacitetsbristen före {{date}} för att hålla kunders arbetsytor skrivbara.",
     "readOnly": "Anståndet tog slut den {{date}}. Återställ den licensierade kapaciteten för att återuppta ändringar i kunders arbetsytor.",
@@ -574,7 +745,19 @@
     "checkoutUnavailable": "Inbäddad betalning är inte tillgänglig. Försök igen när betalningsinställningen är reparerad.",
     "pendingCapacity_one": "Ett köp av {{count}} plats väntar.",
     "pendingCapacity_other": "Ett köp av {{count}} platser väntar.",
+    "buySeats": "Köp samhanterade platser",
+    "awaitingVerification_one": "Ditt köp av {{count}} plats väntar på betalningsverifiering. Platsen visas här när betalningen har bekräftats.",
+    "awaitingVerification_other": "Ditt köp av {{count}} platser väntar på betalningsverifiering. Platserna visas här när betalningen har bekräftats.",
+    "refreshStatus": "Uppdatera status",
+    "purchaseOnly": {
+      "intro": "Köp en pool med samhanterade platser här. Efter köpet tilldelar du platser till kunder från varje kundpost."
+    },
     "previewError": "Det gick inte att prissätta ändringen. Uppdatera och försök igen.",
+    "billingCustomerUnlinked": "Det gick inte att verifiera ett Stripe-faktureringskonto för den här arbetsytan. Kontakta supporten för att länka kontot.",
+    "proSubscriptionRequired": "Samhanterade platser kräver en giltig Pro-prenumeration. Kontrollera din prenumeration i kontohanteringen.",
+    "offerPaused": "Köp av nya platser är pausade. Kontakta din kontoansvariga för en uppdatering.",
+    "offerMisconfigured": "Erbjudandet för co-managed-platser är felkonfigurerat. Kontakta supporten.",
+    "offerTemporarilyUnavailable": "Prissättningen är tillfälligt otillgänglig. Försök igen om en liten stund.",
     "purchaseNeedsAdmin": "En kontoadministratör måste lägga till samförvaltad kapacitet.",
     "purchaseProviderUnconfigured": "Betalningsleverantören är inte konfigurerad.",
     "purchaseUnavailable": "Värdbaserat samförvaltat köp är inte tillgängligt i den här driftsättningen.",

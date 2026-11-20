@@ -15,12 +15,47 @@ import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress, EmailAttachment } from '../../types/email.types';
 import { normalizeTicketSubject } from './ticketSubject';
+import { htmlToVisibleText } from '@shared/lib/email/replyParser';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
 import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { persistReplyToken } from './replyTokenPersistence';
+import { lookupEmailTemplate } from './emailTemplateLookup';
+import { isTicketEmailTemplate, templateVariablesHiddenFromClients } from '@alga-psa/notifications/lib/templateVariables/ticketEmailAudience';
+
+/** The comment email in either rendering: the internal template or its client counterpart. */
+const isTicketCommentTemplate = (template: string): boolean => isTicketEmailTemplate(template, 'ticket-comment-added');
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
+
+const warnedHiddenVariables = new Set<string>();
+
+/**
+ * A client rendering of a ticket email only receives client-safe variables, so a template that
+ * references any other ticket variable renders it empty for clients. A tenant's customized
+ * template can do that without anyone noticing: warn, once per process for each tenant,
+ * template and set of variables.
+ */
+function warnAboutVariablesHiddenFromClients(
+  params: Pick<SendEmailParams, 'tenantId' | 'template' | 'context'>,
+  templateText: string,
+  templateSource: string,
+): void {
+  const recipient = params.context.recipient as { isInternal?: unknown } | undefined;
+  if (recipient?.isInternal !== false) return;
+  const hidden = templateVariablesHiddenFromClients(templateText);
+  if (hidden.length === 0) return;
+  const key = `${params.tenantId}:${params.template}:${hidden.join(',')}`;
+  if (warnedHiddenVariables.has(key)) return;
+  if (warnedHiddenVariables.size >= 1000) warnedHiddenVariables.clear();
+  warnedHiddenVariables.add(key);
+  logger.warn('[SendEventEmail] Template sent to a client references variables clients never receive; they render empty', {
+    tenantId: params.tenantId,
+    template: params.template,
+    templateSource,
+    variables: hidden,
+  });
+}
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
 const DEFAULT_REPLY_TOKEN_LIFETIME_DAYS = 30;
 
@@ -183,7 +218,63 @@ function projectSponsorEmailContext(context: Record<string, unknown>, redactions
     : { content: projected.commentContent, html: projected.commentHtml, text: projected.commentPreview,
       plainText: projected.commentPreview, rawContent: projected.commentRawContent,
       author: projected.authorName ?? 'A team member', isInternal: comment.isInternal };
-  return { ticket: safeTicket, comment: safeComment };
+  // `recipient` is set per recipient by the ticket email subscriber and names nobody.
+  return { ticket: safeTicket, comment: safeComment, ...(context.recipient ? { recipient: context.recipient } : {}) };
+}
+
+const PREHEADER_MAX_CHARS = 140;
+const HIDDEN_STYLE = 'display:none;max-height:0;overflow:hidden;';
+/**
+ * Invisible padding after the preheader excerpt. Mail clients build the preview from all text in
+ * order, hidden or not, so without it the preview reads the excerpt and then the same opening
+ * lines again from the visible body. The filler fills the preview width so the body is not reached.
+ */
+const PREHEADER_FILLER = '&zwnj;&nbsp;'.repeat(90);
+
+function escapeHtmlText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', middot: '\u00b7', copy: '\u00a9',
+  ndash: '\u2013', mdash: '\u2014', hellip: '\u2026',
+};
+
+/** htmlToVisibleText leaves most named entities encoded; decode them so escaping below is not double. */
+function decodeEntities(value: string): string {
+  return value.replace(/&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z]+));/g, (match, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()] ?? match;
+    const code = dec ? parseInt(dec, 10) : parseInt(hex, 16);
+    return Number.isFinite(code) && code <= 0x10ffff ? String.fromCodePoint(code) : match;
+  });
+}
+
+/**
+ * Inbox-preview excerpt: the first two non-empty lines of the rendered body,
+ * whitespace-collapsed and cut on a word boundary. Built only from rendered output
+ * (projection/suppression have already run), never from template variables.
+ */
+function buildPreheaderText(html: string, text: string): string {
+  // htmlToVisibleText keeps block line breaks (so "first two lines" is meaningful) and drops
+  // <style>/<script>; <head>/<title> text is dropped here. `text` is one collapsed line, so it
+  // is only a fallback.
+  const visible = htmlToVisibleText(html.replace(/<head\b[\s\S]*?<\/head>/gi, ' ').replace(/<title\b[\s\S]*?<\/title>/gi, ' '));
+  const source = visible.trim() ? visible : text;
+  const joined = decodeEntities(source)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' ');
+  if (joined.length <= PREHEADER_MAX_CHARS) return joined;
+  const cut = joined.slice(0, PREHEADER_MAX_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd();
 }
 
 function applyReplyMarkers(
@@ -202,13 +293,30 @@ function applyReplyMarkers(
     .join(' ');
 
   const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
-  const tokenString = footerLines[0];
 
-  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">${tokenString}</div>`;
-  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
+  // Token and boundary carry attributes only: any text in them would become the inbox preview.
+  // The token is also in the text part's bottom lines and the outbound Message-ID headers.
+  const hiddenToken = `<div ${attrs} style="${HIDDEN_STYLE}"></div>`;
+  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="${HIDDEN_STYLE}"></div>`;
+  const preheaderText = buildPreheaderText(html, text);
+  const hiddenPreheader = preheaderText
+    ? `<div data-alga-preheader="true" style="${HIDDEN_STYLE}">${escapeHtmlText(preheaderText)}<span>${PREHEADER_FILLER}</span></div>`
+    : '';
   const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
 
-  const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
+  const hiddenBlock = `${hiddenPreheader}${hiddenToken}${hiddenBoundary}`;
+
+  // Full documents (wrapEmailLayout): hidden block right after <body …> so it precedes all
+  // content, banner just before the last </body> so it stays inside the card document.
+  // Fragments: prepend the block, append the banner.
+  const bodyOpen = /<body\b[^>]*>/i.exec(html);
+  const withHidden = bodyOpen
+    ? `${html.slice(0, bodyOpen.index + bodyOpen[0].length)}${hiddenBlock}${html.slice(bodyOpen.index + bodyOpen[0].length)}`
+    : `${hiddenBlock}${html}`;
+  const bodyCloseIndex = withHidden.toLowerCase().lastIndexOf('</body>');
+  const augmentedHtml = bodyCloseIndex >= 0
+    ? `${withHidden.slice(0, bodyCloseIndex)}${visibleBanner}${withHidden.slice(bodyCloseIndex)}`
+    : `${withHidden}${visibleBanner}`;
 
   if (payload.ticketId) {
     footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
@@ -282,6 +390,37 @@ export function resolveDeliveryClaim(
   return null;
 }
 
+/** The locale an event email is rendered in; exported so callers can format values to match. */
+export async function resolveEventEmailLocale(
+  params: Pick<SendEmailParams, 'tenantId' | 'to' | 'locale' | 'recipientUserId' | 'recipientClientId'>,
+): Promise<SupportedLocale> {
+  if (params.locale) {
+    logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: params.locale });
+    return params.locale;
+  }
+
+  // Get recipient information for locale resolution
+  const baseInfo = params.recipientUserId
+    ? { email: params.to, userId: params.recipientUserId }
+    : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
+
+  // Merge in clientId if provided (for contacts without user accounts yet)
+  const recipientInfo = {
+    ...baseInfo,
+    ...(params.recipientClientId && { clientId: params.recipientClientId })
+  };
+
+  const recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
+  logger.debug('[SendEventEmail] Resolved recipient locale:', {
+    locale: recipientLocale,
+    email: params.to,
+    userId: recipientInfo.userId,
+    userType: recipientInfo.userType,
+    clientId: recipientInfo.clientId
+  });
+  return recipientLocale;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     let sponsorRedactions: readonly string[] | null = null;
@@ -295,7 +434,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
       const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (isTicketCommentTemplate(params.template) && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
     }
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
@@ -307,31 +446,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Resolve recipient locale for language-aware email templates
-    let recipientLocale: SupportedLocale;
-    if (params.locale) {
-      recipientLocale = params.locale;
-      logger.debug('[SendEventEmail] Using explicitly provided locale:', { locale: recipientLocale });
-    } else {
-      // Get recipient information for locale resolution
-      const baseInfo = params.recipientUserId
-        ? { email: params.to, userId: params.recipientUserId }
-        : await getUserInfoForEmail(params.tenantId, params.to) || { email: params.to };
-
-      // Merge in clientId if provided (for contacts without user accounts yet)
-      const recipientInfo = {
-        ...baseInfo,
-        ...(params.recipientClientId && { clientId: params.recipientClientId })
-      };
-
-      recipientLocale = await resolveEmailLocale(params.tenantId, recipientInfo);
-      logger.debug('[SendEventEmail] Resolved recipient locale:', {
-        locale: recipientLocale,
-        email: params.to,
-        userId: recipientInfo.userId,
-        userType: recipientInfo.userType,
-        clientId: recipientInfo.clientId
-      });
-    }
+    const recipientLocale = await resolveEventEmailLocale(params);
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);
@@ -345,124 +460,24 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     let emailSubject = params.subject;
     let templateSource = 'system';
 
-    logger.debug('[SendEventEmail] Looking up tenant template:', {
-      tenant: params.tenantId,
-      template: params.template,
-      locale: recipientLocale
-    });
-
     try {
-      // First try to get tenant-specific template in recipient's language
-      let tenantTemplateQuery = db.table('tenant_email_templates')
-        .where({
-          name: params.template,
-          language_code: recipientLocale
-        })
-        .first();
+      // The tenant's own template under this name, else the stock one.
+      const found = await lookupEmailTemplate(db, params.template, recipientLocale);
+      if (!found) {
+        throw new Error(`Template not found: ${params.template}`);
+      }
 
-      logger.debug('[SendEventEmail] Executing tenant template query (with locale):', {
-        sql: tenantTemplateQuery.toSQL().sql,
-        bindings: tenantTemplateQuery.toSQL().bindings,
-        locale: recipientLocale
+      logger.debug('[SendEventEmail] Found template:', {
+        source: found.source,
+        templateId: found.template.id,
+        templateName: found.template.name,
+        languageCode: found.template.language_code,
+        htmlContentLength: found.template.html_content?.length,
+        subject: found.template.subject
       });
-
-      let template = await tenantTemplateQuery;
-
-      // If no template found for recipient's locale, try English fallback
-      if (!template && recipientLocale !== 'en') {
-        logger.debug('[SendEventEmail] No template found for locale, trying English fallback');
-        tenantTemplateQuery = db.table('tenant_email_templates')
-          .where({
-            name: params.template,
-            language_code: 'en'
-          })
-          .first();
-
-        template = await tenantTemplateQuery;
-      }
-
-      // If still no template, try without language filter (legacy templates)
-      if (!template) {
-        logger.debug('[SendEventEmail] No language-specific template, trying legacy template');
-        tenantTemplateQuery = db.table('tenant_email_templates')
-          .where({
-            name: params.template
-          })
-          .whereNull('language_code')
-          .first();
-
-        template = await tenantTemplateQuery;
-      }
-
-      if (template) {
-        logger.debug('[SendEventEmail] Found tenant template:', {
-          templateId: template.id,
-          templateName: template.name,
-          tenant: template.tenant,
-          languageCode: template.language_code,
-          htmlContentLength: template.html_content?.length,
-          subject: template.subject
-        });
-        templateContent = template.html_content;
-        emailSubject = template.subject || params.subject;
-        templateSource = 'tenant';
-      } else {
-        logger.debug('[SendEventEmail] Tenant template not found, falling back to system template');
-
-        // Fall back to system template in recipient's language
-        let systemTemplateQuery = db.table('system_email_templates')
-          .where({
-            name: params.template,
-            language_code: recipientLocale
-          })
-          .first();
-
-        logger.debug('[SendEventEmail] Executing system template query (with locale):', {
-          sql: systemTemplateQuery.toSQL().sql,
-          bindings: systemTemplateQuery.toSQL().bindings,
-          locale: recipientLocale
-        });
-
-        let systemTemplate = await systemTemplateQuery;
-
-        // If no template found for recipient's locale, try English fallback
-        if (!systemTemplate && recipientLocale !== 'en') {
-          logger.debug('[SendEventEmail] No system template found for locale, trying English fallback');
-          systemTemplateQuery = db.table('system_email_templates')
-            .where({
-              name: params.template,
-              language_code: 'en'
-            })
-            .first();
-
-          systemTemplate = await systemTemplateQuery;
-        }
-
-        // If still no template, try without language filter (legacy templates)
-        if (!systemTemplate) {
-          logger.debug('[SendEventEmail] No language-specific system template, trying legacy template');
-          systemTemplateQuery = db.table('system_email_templates')
-            .where({ name: params.template })
-            .whereNull('language_code')
-            .first();
-
-          systemTemplate = await systemTemplateQuery;
-        }
-
-        if (!systemTemplate) {
-          throw new Error(`Template not found: ${params.template}`);
-        }
-
-        logger.debug('[SendEventEmail] Found system template:', {
-          templateId: systemTemplate.id,
-          templateName: systemTemplate.name,
-          languageCode: systemTemplate.language_code,
-          htmlContentLength: systemTemplate.html_content?.length,
-          subject: systemTemplate.subject
-        });
-        templateContent = systemTemplate.html_content;
-        emailSubject = systemTemplate.subject || params.subject;
-      }
+      templateContent = found.template.html_content;
+      emailSubject = found.template.subject || params.subject;
+      templateSource = found.source;
     } catch (error) {
       logger.error('[SendEventEmail] Error during template lookup:', {
         error,
@@ -477,6 +492,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     if (!templateContent) {
       throw new Error(`No template content found for: ${params.template}`);
     }
+
+    warnAboutVariablesHiddenFromClients(params, `${emailSubject}\n${templateContent}`, templateSource);
 
     logger.debug('[SendEventEmail] Using template:', {
       template: params.template,
@@ -495,10 +512,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
-    const attachmentCommentId = params.template === 'ticket-comment-added'
+    const attachmentCommentId = isTicketCommentTemplate(params.template)
       ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
     const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
-    if (params.template === 'ticket-comment-added' && params.commentSource) {
+    if (isTicketCommentTemplate(params.template) && params.commentSource) {
       const destinationTicketId = params.replyContext?.ticketId;
       // Bundling shares public updates, not document permissions. Recheck the
       // destination and source on every retry before preparing source files.
@@ -563,7 +580,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       sponsorRedactions = current.redactedFields ?? [];
       params = { ...params, context: projectSponsorEmailContext(params.context, sponsorRedactions) };
       const projectedTicket = params.context.ticket as Record<string, unknown> | undefined;
-      if (params.template === 'ticket-comment-added' && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
+      if (isTicketCommentTemplate(params.template) && projectedTicket?.title) params = { ...params, subject: `New Comment on Ticket: ${projectedTicket.title}` };
       if (projectCoManagedNotificationSnapshot(sponsorRedactions, { commentContent: '', commentPreview: '' }).conversationSuppressed) {
         params = { ...params, attachments: [], context: { ...params.context, comment: { content: '', html: '', text: '', plainText: '', rawContent: null, author: 'A team member' } } };
         attachmentDownloadText = '';
@@ -572,7 +589,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
-    if (params.coManagedRecipient && params.template === 'ticket-comment-added') {
+    if (params.coManagedRecipient && isTicketCommentTemplate(params.template)) {
       const title = (params.context.ticket as Record<string, unknown> | undefined)?.title;
       subject = `New Comment on Ticket: ${typeof title === 'string' ? title : 'Shared ticket'}`;
     }

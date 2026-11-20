@@ -165,6 +165,11 @@
           "cancelled": "Cita cancelada: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "No se pudo procesar esta solicitud. Póngase en contacto con su proveedor de servicios para obtener ayuda."
+        }
+      },
       "algadeskEmptyHint": "Cuando los tickets se actualicen, los verá aquí."
     },
     "devices": {
@@ -293,13 +298,15 @@
         "contactMissingEmail": "El contacto no tiene una dirección de correo electrónico.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida.",
         "userExistsForContact": "Ya existe una cuenta de usuario para este contacto.",
-        "portalUserAlreadyExists": "Ya existe un usuario del portal para este contacto.",
+        "portalUserAlreadyExists": "Ya existe una cuenta para esta dirección de correo electrónico. Inicie sesión o restablezca su contraseña desde la página de inicio de sesión.",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este inquilino.",
         "noDefaultLocation": "El cliente predeterminado no tiene una ubicación predeterminada configurada.",
         "noLocationEmail": "La ubicación del cliente no tiene un correo de contacto configurado.",
         "baseUrlNotConfigured": "La URL base de la aplicación no está configurada.",
         "invitationNotFound": "Invitación no encontrada.",
-        "revokeFailed": "No se pudo revocar la invitación. Inténtelo de nuevo."
+        "revokeFailed": "No se pudo revocar la invitación. Inténtelo de nuevo.",
+        "batchLimitExceeded": "Demasiados contactos en una sola solicitud. Invite a menos contactos a la vez.",
+        "noTargetsSelected": "Seleccione al menos un contacto para invitar."
       }
     },
     "features": {
@@ -1169,6 +1176,10 @@
       "recordInvalid": "Uno de los registros del grupo de visibilidad seleccionados ya no es válido. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
+    },
+    "roles": {
+      "lastMspAdmin": "Un inquilino debe conservar al menos un usuario MSP Admin activo.",
+      "lastRole": "Un usuario debe conservar al menos un rol. Asigne primero otro rol y luego quite este."
     }
   }
 }

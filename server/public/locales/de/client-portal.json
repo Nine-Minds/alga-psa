@@ -165,6 +165,11 @@
           "cancelled": "Termin abgesagt: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Diese Anfrage konnte nicht verarbeitet werden. Wenden Sie sich an Ihren Dienstleister, um Hilfe zu erhalten."
+        }
+      },
       "algadeskEmptyHint": "Wenn Tickets aktualisiert werden, sehen Sie sie hier."
     },
     "devices": {
@@ -293,13 +298,15 @@
         "contactMissingEmail": "Der Kontakt hat keine E-Mail-Adresse.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse.",
         "userExistsForContact": "Für diesen Kontakt existiert bereits ein Benutzerkonto.",
-        "portalUserAlreadyExists": "Für diesen Kontakt existiert bereits ein Portal-Benutzer.",
+        "portalUserAlreadyExists": "Für diese E-Mail-Adresse existiert bereits ein Konto. Bitte melden Sie sich an oder setzen Sie Ihr Passwort auf der Anmeldeseite zurück.",
         "noDefaultClient": "Für diesen Mandanten ist kein Standard-Kunde konfiguriert.",
         "noDefaultLocation": "Der Standard-Kunde hat keinen Standard-Standort konfiguriert.",
         "noLocationEmail": "Für den Kundenstandort ist keine Kontakt-E-Mail konfiguriert.",
         "baseUrlNotConfigured": "Die Basis-URL der Anwendung ist nicht konfiguriert.",
         "invitationNotFound": "Einladung nicht gefunden.",
-        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut."
+        "revokeFailed": "Die Einladung konnte nicht widerrufen werden. Bitte versuche es erneut.",
+        "batchLimitExceeded": "Zu viele Kontakte in einer Anfrage. Bitte laden Sie weniger Kontakte auf einmal ein.",
+        "noTargetsSelected": "Wählen Sie mindestens einen Kontakt zum Einladen aus."
       }
     },
     "features": {
@@ -1165,6 +1172,10 @@
       "recordInvalid": "Einer der ausgewählten Sichtbarkeitsgruppen-Datensätze ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
       "invalidData": "Ungültige Daten für die Sichtbarkeitsgruppe. Bitte überprüfen Sie die Angaben und die ausgewählten Boards."
+    },
+    "roles": {
+      "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
     }
   }
 }

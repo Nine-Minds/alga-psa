@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ComponentType } from 'react';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
-import { useCapability } from '@alga-psa/ui/hooks';
+import { useServedCapabilities } from '@alga-psa/ui/hooks';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -40,9 +40,8 @@ export default function CoManagedConversationFiles({ session, resource, staging,
   onCommentsChanged?: () => void;
 }) {
   const { t } = useTranslation('msp/licensing');
-  const { enabled } = useCapability('co-managed');
+  const served = useServedCapabilities();
   useEffect(() => { registerCoManagedAttachmentStager(); }, []);
-  const served = useMemo(() => new Set(enabled ? ['co-managed' as const] : []), [enabled]);
   const commentSlots = useMemo(() => resolveUiSlots<{ component: string }>('ticket.conversation.comment-attachments', served), [served]);
   const headerSlots = useMemo(() => resolveUiSlots<{ component: string }>('ticket.conversation.thread-header', served), [served]);
   const [disclosing, setDisclosing] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export default function CoManagedConversationFiles({ session, resource, staging,
   const unsent = useSyncExternalStore(session.subscribe, session.unsentFailure, session.unsentFailure);
   const staged = useSyncExternalStore(staging.subscribe, staging.getSnapshot, staging.getSnapshot);
   const snapshot = session.snapshot();
-  if (!enabled || !snapshot) return null;
+  if (!served.has('co-managed') || !snapshot) return null;
   const items = snapshot.items.filter(item => !item.deleted);
   const threads = [...new Set(items.map(item => `${item.storeTenant}:${item.threadId}`))];
   const writeAudiences = session.writeAudiences();

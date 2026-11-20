@@ -9,13 +9,11 @@ const {
   resolveEntraQueueToExistingMock,
   resolveEntraQueueToNewMock,
   getAllContactsMock,
-  getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraReconciliationQueueMock: vi.fn(),
   resolveEntraQueueToExistingMock: vi.fn(),
   resolveEntraQueueToNewMock: vi.fn(),
   getAllContactsMock: vi.fn(),
-  getAllClientsMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -31,7 +29,6 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 
 vi.mock('@alga-psa/clients/actions', () => ({
   getAllContacts: getAllContactsMock,
-  getAllClients: getAllClientsMock,
 }));
 
 // QuickAddContact drags next-auth into the module graph; the queue tests never open it.

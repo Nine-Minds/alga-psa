@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Finaliseren geselecteerd",
       "downloadPdf": "PDF downloaden",
       "sendEmail": "E-mail verzenden",
-      "unfinalize": "Finaliseren ongedaan maken"
+      "unfinalize": "Finaliseren ongedaan maken",
+      "recordPayment": "Betaling vastleggen",
+      "viewPayments": "Betalingen"
     },
     "status": {
       "finalized": "Afgerond"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Reden voor ongeldig maken...",
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
-      "voiding": "Ongeldig maken…"
+      "voiding": "Ongeldig maken…",
+      "algaOnly": "Alleen in AlgaPSA ongeldig maken (ontkoppelen van {{provider}})",
+      "algaOnlyWarning": "Het document in {{provider}} blijft precies zoals het is en deze factuur wordt ervan ontkoppeld, waardoor AlgaPSA en {{provider}} hierover niet meer overeenkomen."
     },
     "history": {
       "title": "Geschiedenis",
@@ -907,6 +911,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "geen"
+    },
+    "syncFeedback": {
+      "synced": "Factuur gesynchroniseerd met {{provider}}.",
+      "failed": "Synchronisatie met {{provider}} mislukt: {{reason}}",
+      "failedNoReason": "Synchronisatie met {{provider}} mislukt. Controleer de lijst met mislukte bewerkingen op de pagina van de boekhoudintegratie.",
+      "skipped": "De factuur is overgeslagen en niet naar {{provider}} verzonden: {{reason}}",
+      "skippedNoReason": "De factuur is overgeslagen en niet naar {{provider}} verzonden.",
+      "pending": "De factuur staat in de wachtrij voor synchronisatie met {{provider}}; deze is nog niet verwerkt.",
+      "unknown": "Kan niet bepalen of de factuur met {{provider}} is gesynchroniseerd.",
+      "notRun": "Synchronisatie met {{provider}} is niet uitgevoerd: {{reason}}",
+      "notRunNoReason": "Synchronisatie met {{provider}} is niet uitgevoerd.",
+      "error": "Synchronisatie mislukt: {{error}}",
+      "refusedNotFound": "Factuur niet gevonden.",
+      "refusedPaid": "Betaalde facturen worden niet met {{provider}} gesynchroniseerd.",
+      "refusedCancelled": "Ongeldig gemaakte of geannuleerde facturen worden niet met {{provider}} gesynchroniseerd.",
+      "cycleFailed": "Synchronisatie met {{provider}} mislukt: {{reason}} De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd.",
+      "cycleFailedNoReason": "Synchronisatie met {{provider}} mislukt. De factuur is niet verzonden; deze blijft in de wachtrij en wordt bij de volgende synchronisatie opnieuw geprobeerd."
     }
   },
   "templateEditor": {
@@ -2894,6 +2915,36 @@
       "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}.",
       "evaluationFailed": "Gegevensbinding van het sjabloon is mislukt: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Toegang geweigerd: voor het vastleggen van factuurbetalingen is de machtiging voor factuurbetalingen vereist.",
+      "invoiceNotFound": "Factuur niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "amountPositive": "Voer een betaalbedrag groter dan nul in.",
+      "methodRequired": "Kies een betaalmethode.",
+      "invalidDate": "Voer een geldige betaaldatum in.",
+      "noBalanceDue": "Deze factuur heeft geen openstaand bedrag.",
+      "statusNotPayable": "Kan geen betaling vastleggen voor een factuur met status: {{status}}.",
+      "overpaymentNotConfirmed": "Deze betaling is hoger dan het openstaande bedrag. Bevestig de overbetaling om deze vast te leggen.",
+      "recordFailed": "Het vastleggen van de betaling is mislukt. Probeer het opnieuw."
+    },
+    "void": {
+      "paymentsRecorded": "Draai de betalingen terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedManual": "Draai de in AlgaPSA vastgelegde betalingen ({{sources}}) terug voordat u deze factuur ongeldig maakt.",
+      "paymentsRecordedIntegration": "Deze factuur heeft betalingen uit uw boekhoudsysteem ({{sources}}). Verwijder of bewerk ze daar, dan draait de volgende synchronisatie ze hier terug, of draai ze alleen in AlgaPSA terug.",
+      "paymentsRecordedGateway": "Deze factuur heeft betalingen die via een betaalaanbieder zijn geïnd ({{sources}}). Betaal ze daar terug voordat u de factuur ongeldig maakt.",
+      "paymentsRecordedMixed": "Draai de betalingen op deze factuur ({{sources}}) terug voordat u deze ongeldig maakt.",
+      "creditNoteCreditApplied": "Op deze creditnota is krediet toegepast. Maak de kredietverwerking ongedaan voordat u deze ongeldig maakt."
+    },
+    "reversePayment": {
+      "permissionDenied": "Toegang geweigerd: voor het terugdraaien van factuurbetalingen is de machtiging voor factuurbetalingen vereist.",
+      "reasonRequired": "Er is een reden vereist om een betaling terug te draaien.",
+      "paymentNotFound": "Betaling niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notReversible": "Deze betaling kan niet worden teruggedraaid.",
+      "alreadyReversed": "Deze betaling is al teruggedraaid.",
+      "gatewayRefundRequired": "Deze betaling is via een betaalaanbieder geïnd ({{method}}). Betaal deze in plaats daarvan daar terug.",
+      "integrationOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze in {{provider}}, dan draait de volgende synchronisatie deze hier terug.",
+      "remoteMutateRequired": "Toegang geweigerd: een gesynchroniseerde betaling alleen in AlgaPSA terugdraaien vereist de machtiging voor externe boekhoudwijzigingen.",
+      "reverseFailed": "Het terugdraaien van de betaling is mislukt. Probeer het opnieuw."
     }
   },
   "periodTotal": {
@@ -2916,6 +2967,74 @@
     "blocked": {
       "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",
       "exporting": "Er wordt een boekhoudingsexport voor deze factuur voorbereid. Wacht tot deze is voltooid voordat u de factuur wijzigt."
+    }
+  },
+  "recordPayment": {
+    "title": "Betaling vastleggen",
+    "titleForInvoice": "Betaling vastleggen — {{invoiceNumber}}",
+    "loading": "Factuursaldo laden...",
+    "summary": {
+      "balanceDue": "Openstaand bedrag",
+      "alreadyPaid": "Al betaald"
+    },
+    "fields": {
+      "amount": "Bedrag",
+      "paymentDate": "Betaaldatum",
+      "method": "Betaalmethode",
+      "reference": "Referentie",
+      "notes": "Notities"
+    },
+    "placeholders": {
+      "reference": "Cheque- of transactienummer"
+    },
+    "methods": {
+      "manual": "Handmatig",
+      "check": "Cheque",
+      "bank_transfer": "Bankoverschrijving",
+      "cash": "Contant",
+      "other": "Overig"
+    },
+    "overpayment": {
+      "warning": "Deze betaling is {{excess}} hoger dan het openstaande bedrag van {{balanceDue}}.",
+      "confirm": "Deze overbetaling toch vastleggen"
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "record": "Betaling vastleggen"
+    },
+    "toasts": {
+      "recorded": "Betaling vastgelegd"
+    }
+  },
+  "invoicePayments": {
+    "title": "Betalingen",
+    "titleForInvoice": "Betalingen — {{invoiceNumber}}",
+    "loading": "Betalingen laden...",
+    "empty": "Er zijn geen betalingen vastgelegd voor deze factuur.",
+    "sources": {
+      "manual": "Vastgelegd in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Betaalaanbieder"
+    },
+    "fields": {
+      "reason": "Reden"
+    },
+    "actions": {
+      "reverse": "Betaling terugdraaien",
+      "confirmReverse": "Betaling terugdraaien",
+      "algaOnly": "Alleen in AlgaPSA terugdraaien",
+      "cancel": "Annuleren",
+      "close": "Sluiten"
+    },
+    "notes": {
+      "gatewayRefund": "Geïnd via een betaalaanbieder ({{method}}): betaal deze daar terug.",
+      "alreadyReversed": "Al teruggedraaid.",
+      "providerOwned": "Deze betaling komt uit betaling {{reference}} van {{provider}}. Verwijder of bewerk deze daar, dan draait de volgende synchronisatie deze hier terug.",
+      "algaOnlyWarning": "AlgaPSA en {{provider}} komen hierover niet meer overeen: de registratie in {{provider}} blijft precies zoals deze is en de betaling wordt hier ontkoppeld."
+    },
+    "toasts": {
+      "reversed": "Betaling teruggedraaid"
     }
   }
 }

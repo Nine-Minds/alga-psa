@@ -14,7 +14,8 @@ const state = vi.hoisted(() => ({
   trace: [] as string[],
   connected: false,
   exportInProgress: false,
-  blocker: null as string | null,
+  /** Structured refusal from the shared blocker: stable code + human sentence. */
+  blocker: null as { code: string; message: string; messageKey?: string } | null,
   voidOutcome: { ok: true } as { ok: true } | { ok: false; error: string },
   mapping: null as any,
   revokeRemoteMutateInTransaction: false,
@@ -224,18 +225,28 @@ describe('InvoiceService.voidInvoice', () => {
       expect(mocks.voidCore).not.toHaveBeenCalled();
     });
 
+    // The sentence names WHERE the payments came from, so the caller knows
+    // whether to reverse them here or fix them in the accounting system
+    // (alga-2026-0003364: 'Unwind payments before voiding.' was unactionable).
     it('refuses a paid invoice (recorded payments) with the canonical blocker as a 409', async () => {
-      state.blocker = 'Unwind payments before voiding.';
+      state.blocker = {
+        code: 'payments_recorded',
+        message: 'This invoice has payments from your accounting system (QuickBooks payment 3547). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.',
+        messageKey: 'msp/invoicing:errors.void.paymentsRecordedIntegration',
+      };
       await expect(service.voidInvoice('inv-1', context())).rejects.toMatchObject({
         statusCode: 409,
-        message: 'Unwind payments before voiding.',
+        message: expect.stringContaining('QuickBooks payment 3547'),
       });
       expect(state.trace).toEqual([]); // fast-fail: no transaction opened
       expect(mocks.voidCore).not.toHaveBeenCalled();
     });
 
     it('refuses a credit note with applied credit', async () => {
-      state.blocker = 'This credit note has applied credit. Unapply the credit before voiding.';
+      state.blocker = {
+        code: 'credit_note_credit_applied',
+        message: 'This credit note has applied credit. Unapply the credit before voiding.',
+      };
       await expect(service.voidInvoice('inv-1', context())).rejects.toMatchObject({
         statusCode: 409,
         message: expect.stringContaining('applied credit'),

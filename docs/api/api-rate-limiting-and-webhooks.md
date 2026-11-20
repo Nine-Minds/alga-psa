@@ -725,7 +725,7 @@ Use `event_filter.entity_ids` to match either the quote ID or its client ID. Use
 
 Acceptance includes `accepted_by_name`, `accepted_on_behalf`, and `selected_optional_item_ids`. Optional selections contain IDs only. Rejection includes `rejection_reason`. Conversion includes `conversion_targets` and destination IDs; a converted contract may still be a draft. Fetch `GET /api/v1/quotes/{id}` for line items, prices, and terms.
 
-Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval or requesting approval changes emits no event in this version.
+Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval, requesting approval changes, or archiving a quote (`POST /api/v1/quotes/{id}/archive`) emits no event in this version.
 
 ```json
 {

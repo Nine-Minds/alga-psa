@@ -23,7 +23,7 @@ import logger from './logger-universal';
 // Types
 // ---------------------------------------------------------------------------
 
-export type CapabilityKey = 'co-managed';
+export type CapabilityKey = 'co-managed' | 'co-managed-seat';
 export type CapabilityMode = 'admits' | 'serves';
 
 export type CapabilityReason =
@@ -213,7 +213,10 @@ function registry(): CapabilityRegistry {
   const host = globalThis as RegistryHost;
   if (!host[REGISTRY_KEY]) {
     const gates = new Map<CapabilityKey, CapabilityGateDefinition>();
+    // Two capabilities on one rollout flag: each has its own resolvers and its own
+    // FORCE_CAPABILITIES key, so either can be closed without moving the other.
     gates.set('co-managed', { capability: 'co-managed', featureFlag: 'release-v2-0-feature' });
+    gates.set('co-managed-seat', { capability: 'co-managed-seat', featureFlag: 'release-v2-0-feature' });
     host[REGISTRY_KEY] = { gates, cache: new Map() };
   }
   return host[REGISTRY_KEY]!;

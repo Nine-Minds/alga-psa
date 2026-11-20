@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Definalizza selezionato",
       "downloadPdf": "Scarica PDF",
       "sendEmail": "Invia e-mail",
-      "unfinalize": "Definalizza"
+      "unfinalize": "Definalizza",
+      "recordPayment": "Registra pagamento",
+      "viewPayments": "Pagamenti"
     },
     "status": {
       "finalized": "Finalizzata"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Motivo dell'annullamento...",
       "cancel": "Annulla",
       "confirm": "Annulla fattura",
-      "voiding": "Annullamento…"
+      "voiding": "Annullamento…",
+      "algaOnly": "Annulla solo in AlgaPSA (scollega da {{provider}})",
+      "algaOnlyWarning": "Il documento in {{provider}} resta invariato e questa fattura viene scollegata da esso, quindi AlgaPSA e {{provider}} non concorderanno su di essa."
     },
     "history": {
       "title": "Cronologia",
@@ -907,6 +911,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "nessuno"
+    },
+    "syncFeedback": {
+      "synced": "Fattura sincronizzata con {{provider}}.",
+      "failed": "Sincronizzazione con {{provider}} non riuscita: {{reason}}",
+      "failedNoReason": "Sincronizzazione con {{provider}} non riuscita. Controlla l’elenco delle operazioni in errore nella pagina dell’integrazione contabile.",
+      "skipped": "La fattura è stata ignorata e non è stata inviata a {{provider}}: {{reason}}",
+      "skippedNoReason": "La fattura è stata ignorata e non è stata inviata a {{provider}}.",
+      "pending": "La fattura è in coda per la sincronizzazione con {{provider}}; non è ancora stata elaborata.",
+      "unknown": "Impossibile determinare se la fattura è stata sincronizzata con {{provider}}.",
+      "notRun": "La sincronizzazione con {{provider}} non è stata eseguita: {{reason}}",
+      "notRunNoReason": "La sincronizzazione con {{provider}} non è stata eseguita.",
+      "error": "Sincronizzazione non riuscita: {{error}}",
+      "refusedNotFound": "Fattura non trovata.",
+      "refusedPaid": "Le fatture pagate non vengono sincronizzate con {{provider}}.",
+      "refusedCancelled": "Le fatture annullate non vengono sincronizzate con {{provider}}.",
+      "cycleFailed": "Sincronizzazione con {{provider}} non riuscita: {{reason}} La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione.",
+      "cycleFailedNoReason": "Sincronizzazione con {{provider}} non riuscita. La fattura non è stata inviata; resta in coda e verrà ritentata alla prossima sincronizzazione."
     }
   },
   "templateEditor": {
@@ -2894,6 +2915,36 @@
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
       "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}.",
       "evaluationFailed": "Associazione dei dati del modello non riuscita: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Autorizzazione negata: per registrare i pagamenti delle fatture è necessaria l'autorizzazione al pagamento delle fatture.",
+      "invoiceNotFound": "Fattura non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiorna la pagina e riprova.",
+      "amountPositive": "Inserisci un importo di pagamento maggiore di zero.",
+      "methodRequired": "Scegli un metodo di pagamento.",
+      "invalidDate": "Inserisci una data di pagamento valida.",
+      "noBalanceDue": "Questa fattura non ha un saldo da pagare.",
+      "statusNotPayable": "Impossibile registrare un pagamento per una fattura con stato: {{status}}.",
+      "overpaymentNotConfirmed": "Questo pagamento è superiore al saldo da pagare. Conferma il pagamento in eccesso per registrarlo.",
+      "recordFailed": "Registrazione del pagamento non riuscita. Riprova."
+    },
+    "void": {
+      "paymentsRecorded": "Storna i pagamenti prima di annullare.",
+      "paymentsRecordedManual": "Storna i pagamenti registrati in AlgaPSA ({{sources}}) prima di annullare questa fattura.",
+      "paymentsRecordedIntegration": "Questa fattura ha pagamenti provenienti dal tuo sistema contabile ({{sources}}). Eliminali o modificali lì e la prossima sincronizzazione li stornerà qui, oppure stornali solo in AlgaPSA.",
+      "paymentsRecordedGateway": "Questa fattura ha pagamenti incassati tramite un fornitore di pagamenti ({{sources}}). Rimborsali lì prima di annullarla.",
+      "paymentsRecordedMixed": "Storna i pagamenti di questa fattura ({{sources}}) prima di annullarla.",
+      "creditNoteCreditApplied": "Questa nota di credito ha credito applicato. Annulla l’applicazione del credito prima di annullarla."
+    },
+    "reversePayment": {
+      "permissionDenied": "Autorizzazione negata: per stornare i pagamenti delle fatture è necessaria l’autorizzazione al pagamento delle fatture.",
+      "reasonRequired": "È necessario un motivo per stornare un pagamento.",
+      "paymentNotFound": "Pagamento non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiorna la pagina e riprova.",
+      "notReversible": "Questo pagamento non può essere stornato.",
+      "alreadyReversed": "Questo pagamento è già stato stornato.",
+      "gatewayRefundRequired": "Questo pagamento è stato incassato tramite un fornitore di pagamenti ({{method}}). Rimborsalo invece lì.",
+      "integrationOwned": "Questo pagamento proviene dal pagamento {{reference}} di {{provider}}. Eliminalo o modificalo in {{provider}} e la prossima sincronizzazione lo stornerà qui.",
+      "remoteMutateRequired": "Autorizzazione negata: stornare un pagamento sincronizzato solo in AlgaPSA richiede l’autorizzazione di modifica remota della contabilità.",
+      "reverseFailed": "Storno del pagamento non riuscito. Riprova."
     }
   },
   "periodTotal": {
@@ -2916,6 +2967,74 @@
     "blocked": {
       "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci.",
       "exporting": "È in preparazione un’esportazione contabile per questa fattura. Attendi il completamento prima di modificarla."
+    }
+  },
+  "recordPayment": {
+    "title": "Registra pagamento",
+    "titleForInvoice": "Registra pagamento — {{invoiceNumber}}",
+    "loading": "Caricamento del saldo della fattura...",
+    "summary": {
+      "balanceDue": "Saldo da pagare",
+      "alreadyPaid": "Già pagato"
+    },
+    "fields": {
+      "amount": "Importo",
+      "paymentDate": "Data di pagamento",
+      "method": "Metodo di pagamento",
+      "reference": "Riferimento",
+      "notes": "Note"
+    },
+    "placeholders": {
+      "reference": "Numero di assegno o di transazione"
+    },
+    "methods": {
+      "manual": "Manuale",
+      "check": "Assegno",
+      "bank_transfer": "Bonifico bancario",
+      "cash": "Contanti",
+      "other": "Altro"
+    },
+    "overpayment": {
+      "warning": "Questo pagamento supera di {{excess}} il saldo da pagare di {{balanceDue}}.",
+      "confirm": "Registra comunque questo pagamento in eccesso"
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "record": "Registra pagamento"
+    },
+    "toasts": {
+      "recorded": "Pagamento registrato"
+    }
+  },
+  "invoicePayments": {
+    "title": "Pagamenti",
+    "titleForInvoice": "Pagamenti — {{invoiceNumber}}",
+    "loading": "Caricamento dei pagamenti...",
+    "empty": "Non è stato registrato alcun pagamento per questa fattura.",
+    "sources": {
+      "manual": "Registrato in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Fornitore di pagamenti"
+    },
+    "fields": {
+      "reason": "Motivo"
+    },
+    "actions": {
+      "reverse": "Storna pagamento",
+      "confirmReverse": "Storna pagamento",
+      "algaOnly": "Storna solo in AlgaPSA",
+      "cancel": "Annulla",
+      "close": "Chiudi"
+    },
+    "notes": {
+      "gatewayRefund": "Incassato tramite un fornitore di pagamenti ({{method}}): rimborsalo lì.",
+      "alreadyReversed": "Già stornato.",
+      "providerOwned": "Questo pagamento proviene dal pagamento {{reference}} di {{provider}}. Eliminalo o modificalo lì e la prossima sincronizzazione lo stornerà qui.",
+      "algaOnlyWarning": "AlgaPSA e {{provider}} non concorderanno su questo pagamento: la registrazione in {{provider}} resta invariata e il pagamento viene scollegato qui."
+    },
+    "toasts": {
+      "reversed": "Pagamento stornato"
     }
   }
 }

@@ -3,7 +3,8 @@
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getEntraSyncRunHistory, type EntraSyncHistoryRun } from '@alga-psa/integrations/actions';
+import { getEntraSyncRunHistory, type EntraSyncHistoryRun, type EntraSyncRunUserIssue } from '@alga-psa/integrations/actions';
+import { EntraSyncUserIssueList } from './entra/EntraSyncUserIssueList';
 
 interface EntraRunDetail {
   run: {
@@ -28,6 +29,8 @@ interface EntraRunDetail {
     ambiguous: number;
     inactivated: number;
     skipped?: number;
+    failed?: number;
+    userIssues?: EntraSyncRunUserIssue[];
     errorMessage: string | null;
   }>;
 }
@@ -173,6 +176,13 @@ export default function EntraSyncHistoryPanel() {
                         })}
                       </p>
                     ) : null}
+                    {typeof details.run?.summary?.failed === 'number' && details.run.summary.failed > 0 ? (
+                      <p className="text-xs text-destructive">
+                        {t('integrations.entra.syncHistory.details.summaryFailed', {
+                          count: details.run.summary.failed,
+                        })}
+                      </p>
+                    ) : null}
                     {details.tenantResults.length === 0 ? (
                       <p className="text-xs text-muted-foreground">{t('integrations.entra.syncHistory.details.noResults')}</p>
                     ) : (
@@ -199,6 +209,11 @@ export default function EntraSyncHistoryPanel() {
                           {tenant.errorMessage ? (
                             <p className="text-destructive">{tenant.errorMessage}</p>
                           ) : null}
+                          <EntraSyncUserIssueList
+                            failed={tenant.failed ?? 0}
+                            issues={tenant.userIssues ?? []}
+                            idPrefix={`entra-sync-history-issues-${tenant.managedTenantId ?? index}`}
+                          />
                         </div>
                       ))
                     )}

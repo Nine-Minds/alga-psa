@@ -41,23 +41,36 @@ run_cmd() {
   "$@"
 }
 
-# Serialize concurrent reconciles with an atomic symlink lock whose target is
-# the owner's PID. Claiming the lock and recording its owner happen in one
-# atomic step, so a holder that dies without running its cleanup trap — the
-# control-plane container being SIGKILLed mid-reconcile leaves no chance to
-# clean up — is detected as stale by the next caller and reclaimed, instead of
-# blocking every future reconcile until someone hand-deletes the lock.
-lock_reclaimed_if_stale() {
-  local owner
-  owner="$(readlink "$LOCK_PATH" 2>/dev/null || true)"
-  if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
-    # Best-effort reclaim: two callers racing over the same dead owner could
-    # momentarily both hold the lock. Reconciliation is idempotent kubectl
-    # applies, so an overlapping run is safe — a permanently wedged lock is not.
-    rm -f "$LOCK_PATH" 2>/dev/null
-    return
+# Serialize concurrent reconciles with a flock(2) advisory lock on a regular
+# file. The kernel owns the lock and drops it when the holding process exits
+# for any reason (normal exit, SIGKILL, a zombie is already exited), so there is
+# no owner record to go stale and no PID, zombie or identity check to get wrong.
+#
+# The lock file is NEVER unlinked. Deleting and recreating it would let a waiter
+# that already has the old inode open and a newcomer that creates a fresh one
+# both "hold" the lock.
+#
+# fd 9 is fixed because this script runs under bash, but the control-plane
+# entrypoint's `sh` has no `{fd}` redirection and we do not probe for it.
+#
+# The file contents (pid hostname boot_id startedAt) are diagnostics for an
+# operator reading storage-reconcile.log. No code reads them to decide ownership.
+migrate_legacy_lock() {
+  # Older builds used a symlink whose target was the owner's PID (or, older
+  # still, a mkdir directory). Remove either before opening the path: `exec 9>`
+  # follows a symlink and would create a file named after the PID next to the
+  # lock. Only ever remove a symlink or directory, never a regular file.
+  if [ -L "$LOCK_PATH" ]; then
+    rm -f -- "$LOCK_PATH"
+    echo "Removed legacy symlink storage reconcile lock at $LOCK_PATH."
+  elif [ -d "$LOCK_PATH" ]; then
+    # The legacy mkdir lock was always empty; never delete recursively.
+    if ! rmdir -- "$LOCK_PATH"; then
+      echo "Cannot remove legacy storage reconcile lock directory $LOCK_PATH (not empty?); remove it manually." >&2
+      exit 1
+    fi
+    echo "Removed legacy directory storage reconcile lock at $LOCK_PATH."
   fi
-  return 1
 }
 
 acquire_lock() {
@@ -65,21 +78,28 @@ acquire_lock() {
     return 0
   fi
 
+  if ! command -v flock >/dev/null 2>&1; then
+    echo "flock (util-linux) is required for the storage reconcile lock but was not found in PATH." >&2
+    exit 1
+  fi
+
   local attempts=0
   mkdir -p "$(dirname "$LOCK_PATH")"
   while :; do
-    if [ -d "$LOCK_PATH" ]; then
-      # mkdir-style lock directory from an older build. That scheme recorded
-      # no owner, so a surviving directory (always empty by construction) can
-      # only be stale: a live legacy holder and this build never run
-      # concurrently. Reclaim it before the ln attempt — `ln -s` against an
-      # existing directory would "succeed" by creating the link inside it.
-      rmdir "$LOCK_PATH" 2>/dev/null || true
-    fi
-    if ln -s "$$" "$LOCK_PATH" 2>/dev/null; then
-      break
-    fi
-    if lock_reclaimed_if_stale; then
+    migrate_legacy_lock
+    # Append mode creates the file but does not truncate it, so a waiter never
+    # wipes the holder's diagnostic line. Truncation happens only after we hold
+    # the lock.
+    exec 9>>"$LOCK_PATH"
+    if flock -n 9; then
+      # Migration race: another process may have removed the legacy symlink
+      # while we (or a peer) still had the old path open, leaving us locking an
+      # inode that is no longer at $LOCK_PATH. Only a lock on the inode that is
+      # currently at the path gives a single holder, so verify, else retry.
+      if [ "$(stat -L -c '%d:%i' /proc/self/fd/9 2>/dev/null)" = "$(stat -c '%d:%i' "$LOCK_PATH" 2>/dev/null)" ]; then
+        break
+      fi
+      exec 9>&-
       continue
     fi
     attempts=$((attempts + 1))
@@ -89,7 +109,10 @@ acquire_lock() {
     fi
     sleep 2
   done
-  trap 'rm -f "$LOCK_PATH" 2>/dev/null || true' EXIT INT TERM
+
+  local boot_id=""
+  boot_id="$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)"
+  printf '%s %s %s %s\n' "$$" "$(hostname 2>/dev/null || true)" "$boot_id" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$LOCK_PATH" || true
 }
 
 configure_kube_command() {

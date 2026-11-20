@@ -113,7 +113,8 @@
     "signOut": "Cerrar sesión",
     "coManaged": "TI cogestionada",
     "coManagedArchive": "Archivo de TI cogestionada",
-    "coManagedAdministration": "Acceso y administración"
+    "coManagedAdministration": "Acceso y administración",
+    "assetsAudits": "Auditorías de sitios"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",
@@ -236,6 +237,7 @@
       "descriptionPlaceholder": "Indique qué esperaba, qué ocurrió y qué cliente o factura está involucrado.",
       "replyTo": "Las respuestas se envían a {{email}}",
       "success": "Enviado al soporte de Nine Minds. Las respuestas se envían a {{email}}.",
+      "successWithTicket": "Enviado al soporte de Nine Minds como ticket {{ticketNumber}}. Las respuestas se envían a {{email}}.",
       "submit": "Enviar a Nine Minds",
       "sending": "Enviando…",
       "cancel": "Cancelar",

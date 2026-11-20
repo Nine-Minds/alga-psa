@@ -23,8 +23,10 @@ import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowC
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
 import { stripeApiOverride } from './stripeApiOverride';
-import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
-import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { countLicensedInternalUsers, lockCoManagedSponsorPool, reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
+import { bindTrialPurchase, reconcileTrialPurchase, releaseTrialPurchase, type SeatTrialQuote } from '../co-managed/seatTrialConversion';
+import { billingPeriodEnd, coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { CoManagedPurchaseBlockedError } from './coManagedPurchaseErrors';
 import {
   StripeOwnershipError,
   selectOwnedCustomer,
@@ -33,6 +35,14 @@ import {
 } from './stripeCustomerOwnership';
 import { dispatchPaymentEvent } from './paymentEventRegistry';
 import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
+import { bindPortalPurchase, deliverPendingFulfillments, handlePortalPurchaseEvent, PortalFulfillmentRetryableError, portalPurchaseIdOfEvent, reconcilePortalPurchase } from './coManagedFulfillment';
+import {
+  CO_MANAGED_SEAT_OFFER_KEY, OfferTermsChangedError, createOfferCatalog, createScopeResolver,
+  type CatalogOperator, type OfferCatalog, type ResolvedOffer,
+} from './offerCatalog';
+
+/** The one supported co-managed seat cadence. A new cadence is a new catalog identity, not a flag. */
+const CO_MANAGED_SEAT_INTERVAL = 'month' as const;
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -247,6 +257,7 @@ interface StripeSubscription {
   billing_interval: 'month' | 'year';
   current_period_start: Date | null;
   current_period_end: Date | null;
+  trial_end: Date | null;
   cancel_at: Date | null;
   canceled_at: Date | null;
   metadata: Record<string, any> | null;
@@ -971,7 +982,8 @@ export class StripeService {
         stripe_base_price_id: dbBasePrice?.stripe_price_id || null,
         billing_interval: billingInterval,
         current_period_start: new Date((subscription as any).current_period_start * 1000),
-        current_period_end: new Date((subscription as any).current_period_end * 1000),
+        current_period_end: new Date(billingPeriodEnd(subscription)),
+        trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
         canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
         metadata: subscription.metadata,
@@ -1076,11 +1088,7 @@ export class StripeService {
   }
 
   private async countActiveInternalUsers(knex: Knex, tenantId: string): Promise<number> {
-    const row = await tenantScopedTable(knex, 'users', tenantId)
-      .where({ user_type: 'internal', is_inactive: false })
-      .count('user_id as count')
-      .first();
-    return parseInt(String(row?.count ?? '0'), 10);
+    return countLicensedInternalUsers(knex, tenantId);
   }
 
   /**
@@ -1441,6 +1449,24 @@ export class StripeService {
     await this.ensureInitialized();
     logger.info(`[StripeService] Processing webhook event: ${event.type} (${event.id})`);
 
+    // Appliance co-managed seat purchases made in the licensing portal carry our
+    // `portal_purchase_id` marker and have no hosted tenant. Reconcile them first so
+    // the appliance lifecycle mirror never treats the add-on as the base subscription.
+    if (!tenantId && portalPurchaseIdOfEvent(event)) {
+      const deps = await this.fulfillmentDeps().catch((error) => {
+        throw new PortalFulfillmentRetryableError(`Portal purchase handling unavailable for ${event.id}: ${error instanceof Error ? error.message : String(error)}`, error);
+      });
+      const portal = await handlePortalPurchaseEvent(deps, event);
+      if (portal.handled) {
+        if (portal.outcome.kind === 'rejected') {
+          logger.error(`[StripeService] Portal co-managed purchase ${portal.purchaseId} rejected for ${event.id}: ${portal.outcome.message}`);
+        } else {
+          logger.info(`[StripeService] Portal co-managed purchase ${portal.purchaseId} reconciled for ${event.id} (${portal.outcome.kind})`);
+        }
+        return;
+      }
+    }
+
     // Appliance (self-hosted) subscriptions are minted by nm-store and have no
     // hosted tenant; their lifecycle is mirrored into the alga-license service
     // instead of the tenant tables. Hand them off before tenant resolution.
@@ -1625,20 +1651,91 @@ export class StripeService {
   }
 
   private coManagedHandlers?: ReturnType<typeof createCoManagedPaymentHandlers>;
+  private offerCatalogInstance?: OfferCatalog;
+  /** Last loaded RECOGNITION set (see refreshCoManagedRecognition); read synchronously by `claims`. */
+  private coManagedRecognition?: ReadonlySet<string>;
 
   private coManagedPaymentHandlers() {
     this.coManagedHandlers ??= createCoManagedPaymentHandlers({
-      priceId: () => process.env.STRIPE_CO_MANAGED_USER_PRICE_ID || undefined,
+      recognizedPrices: () => this.coManagedRecognition,
+      refreshRecognition: async () => (await this.refreshCoManagedRecognition()).size > 0,
       sync: (tenantId, subscriptionId, db) => this.syncCoManagedSubscription(tenantId, subscriptionId, db),
       finalizeCheckout: (session, tenantId, db) => this.finalizeCoManagedCheckout(session, tenantId, db),
     });
     return this.coManagedHandlers;
   }
 
-  /** Reconciles hosted capacity from CURRENT Stripe state (the only place capacity is raised). */
+  private async fulfillmentDeps() {
+    const catalog = await this.getOfferCatalog();
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
+    const { applyCoManagedFulfillment } = await import('../applianceConsole/algaLicenseAdminClient');
+    return { db: await getAdminConnection(), stripe: this.stripe, catalog, deliver: applyCoManagedFulfillment };
+  }
+
+  /** Operator catalog command (inspect / inventory / seed / publish / restore / pause / retry-fulfillments) run with the platform's
+   * own Stripe credential and the admin connection; the caller must already be a proven operator. */
+  async runCatalogOperatorCommand(command: string, args: string[], actor: CatalogOperator, locale: string): Promise<{ code: number; lines: string[] }> {
+    const { runCatalogCommand } = await import('./offerCatalog/cli');
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
+    const lines: string[] = [];
+    const code = await runCatalogCommand(command, args, { catalog: await this.getOfferCatalog(), db: await getAdminConnection(),
+      stripe: this.stripe, actor, locale, out: (line) => lines.push(line), retryFulfillments: () => this.retryCoManagedFulfillments() });
+    return { code, lines };
+  }
+
+  /** Persist a portal checkout -> appliance entitlement association before payment (F010). */
+  async bindCoManagedPortalPurchase(input: Parameters<typeof bindPortalPurchase>[1]) {
+    return bindPortalPurchase(await this.fulfillmentDeps(), input);
+  }
+
+  /** Reconcile one portal purchase from current Stripe state and deliver its fulfillment (F011-F013). */
+  async reconcileCoManagedPortalPurchase(purchaseId: string) {
+    return reconcilePortalPurchase(await this.fulfillmentDeps(), purchaseId);
+  }
+
+  /** Repair job: retry fulfillments whose delivery to the issuer failed. Never writes to Stripe. */
+  async retryCoManagedFulfillments() {
+    return deliverPendingFulfillments(await this.fulfillmentDeps());
+  }
+
+  /** The shared platform offer catalog, scoped by the configured Stripe account and mode. */
+  async getOfferCatalog(): Promise<OfferCatalog> {
+    await this.ensureInitialized();
+    if (!this.offerCatalogInstance) {
+      const { getAdminConnection } = await import('@alga-psa/db/admin');
+      this.offerCatalogInstance = createOfferCatalog({
+        db: await getAdminConnection(), stripe: this.stripe, scope: createScopeResolver(this.stripe, this.config.secretKey),
+      });
+    }
+    return this.offerCatalogInstance;
+  }
+
+  /**
+   * RECOGNITION: every Price ever bound to the co-managed seat offer (retired included). Used by the
+   * webhook claim, sponsor-subscription filter, subscription classifier and reconciliation. Reads
+   * only the catalog, so it keeps working while new sales are paused or failing closed.
+   */
+  private async refreshCoManagedRecognition(): Promise<ReadonlySet<string>> {
+    const catalog = await this.getOfferCatalog();
+    this.coManagedRecognition = await catalog.recognizedPriceIds(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL);
+    return this.coManagedRecognition;
+  }
+
+  private async recognizedCoManagedPrices(): Promise<ReadonlySet<string>> {
+    const prices = await this.refreshCoManagedRecognition();
+    if (!prices.size) throw new CoManagedPurchaseBlockedError('misconfigured');
+    return prices;
+  }
+
+  /** The offer reference a browser carries between review and confirmation. */
+  private offerRef(offer: { versionId: string | null; priceId: string }): string {
+    return offer.versionId ?? `price:${offer.priceId}`;
+  }
+
+  /** Reconciles hosted capacity from CURRENT Stripe state (the only place capacity is raised).
+   * RECOGNITION path: a subscription on a retired price keeps its seats. */
   private async syncCoManagedSubscription(tenantId: string, subscriptionId: string, db: Knex): Promise<void> {
-    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
-    if (!priceId) throw new Error('STRIPE_CO_MANAGED_USER_PRICE_ID is required for co-managed billing');
+    const recognized = await this.recognizedCoManagedPrices();
     const current = await tenantScopedTable(db, 'co_managed_entitlements', tenantId).first();
     if (current?.source === 'hosted' && current.source_reference !== subscriptionId) {
       const superseded = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId)
@@ -1648,6 +1745,7 @@ export class StripeService {
     const customer = await tenantScopedTable(db, 'stripe_customers', tenantId).first();
     if (!customer) throw new Error('Co-managed sponsor has no Stripe customer');
     const externalCustomerId = customer.stripe_customer_external_id;
+    let trialObserved = false;
     await reconcileHostedCoManagedEntitlement(db, tenantId, subscriptionId, async () => {
       const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
       const baseSubscriptions: Stripe.Subscription[] = [];
@@ -1657,8 +1755,17 @@ export class StripeService {
       const tenant = await tenantScopedTable(db, 'tenants', tenantId).first('product_code', 'plan');
       const proPriceIds = tenant?.product_code === 'psa' && tenant?.plan === 'pro' ? this.coManagedSponsorPriceIds() : [];
       return coManagedSnapshotFromStripe({ subscription, baseSubscriptions, sponsorTenant: tenantId,
-        customerId: externalCustomerId, coManagedPriceId: priceId, proPriceIds });
+        customerId: externalCustomerId, coManagedPriceId: recognized, proPriceIds });
+    }, async (trx, sponsor, snapshot) => {
+      if (snapshot.trialId) {
+        trialObserved = true;
+        await reconcileTrialPurchase(trx, sponsor, snapshot);
+      }
     });
+    if (trialObserved) {
+      const { reportSeatTrialMilestones } = await import('../co-managed/seatTrialAnalytics');
+      await reportSeatTrialMilestones(db, tenantId);
+    }
   }
 
   private coManagedSponsorPriceIds(): string[] {
@@ -1668,7 +1775,8 @@ export class StripeService {
   }
 
   /** A checkout completion binds the paid-for operation to its subscription, then reconciles. The
-   * return page itself grants nothing; capacity only moves inside `syncCoManagedSubscription`. */
+   * return page itself grants nothing; capacity only moves inside `syncCoManagedSubscription`.
+   * RECOGNITION path, additionally pinned: the billed price must be the one the operation recorded. */
   private async finalizeCoManagedCheckout(session: Stripe.Checkout.Session, tenantId: string, knex: Knex): Promise<void> {
     if (session.mode !== 'subscription' || !session.subscription) return;
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
@@ -1682,44 +1790,137 @@ export class StripeService {
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
         if (!customer || customerId !== customer.stripe_customer_external_id ||
             subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' ||
+            (operation.trial_id ?? null) !== (subscription.metadata?.seat_trial_id ?? null) ||
             subscription.items.data.length !== 1 || subscription.items.data[0].quantity !== operation.quantity) {
           throw new Error('Co-managed checkout does not match the authorized purchase');
         }
-        assertCoManagedPrice(subscription.items.data[0].price, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID!);
+        const billed = subscription.items.data[0].price;
+        // A pinned operation is held to exactly the reviewed price; an older one to any known price.
+        assertCoManagedPrice(billed, operation.price_id ? [operation.price_id] : await this.recognizedCoManagedPrices());
         // Finalize through the purchase lock order so replacement checkouts can become canonical
         // even if the browser never returns after paying. Does not raise capacity.
-        await runCoManagedPurchase(knex, { sponsorTenant: tenantId, operationId, quantity: operation.quantity },
+        await runCoManagedPurchase(knex, { sponsorTenant: tenantId, operationId, quantity: operation.quantity, trialId: operation.trial_id },
           async () => ({ kind: 'updated', subscriptionId: subscription.id }));
       }
     }
     await this.syncCoManagedSubscription(tenantId, subscription.id, knex);
   }
 
-  /** Quote for a pool target. Amount and currency come only from the configured Stripe price. */
+  /** Older signup rows initially estimated the billing period. Before issuing a pilot, freeze
+   * the provider's actual base terms into the same mirror used by the request-time reader. */
+  async refreshSeatTrialBase(tenant: string) {
+    await this.ensureInitialized();
+    const db = await getConnection(tenant);
+    const customer = await this.getOrImportCustomer(tenant);
+    const home = tenantDb(db, tenant);
+    const canonical = await home.table('stripe_subscriptions')
+      .where({ stripe_customer_id: customer.stripe_customer_id }).whereIn('status', ['active', 'trialing'])
+      .whereRaw("coalesce(metadata->>'addon_key', '') = '' AND coalesce(metadata->>'subscription_kind','') <> 'co_managed'")
+      .orderByRaw("(status = 'active') DESC").orderBy('created_at', 'desc').orderBy('stripe_subscription_id').first('*', db.raw('updated_at::text as mirror_version'));
+    if (!canonical) throw new Error('Current base subscription required');
+    const sub = await this.stripe.subscriptions.retrieve(canonical.stripe_subscription_external_id);
+    const cutoff = currentProSubscriptionExpiry([sub], customer.stripe_customer_external_id,
+      this.coManagedSponsorPriceIds(), await this.recognizedCoManagedPrices());
+    if (!cutoff || stripeMetadataClaimsOtherTenant(sub, tenant)) throw new Error('Current base subscription required');
+    const end = billingPeriodEnd(sub);
+    const trialEnd = sub.trial_end ? sub.trial_end * 1000 : null;
+    const cancelAt = sub.cancel_at ? sub.cancel_at * 1000 : null;
+    const millis = (value: Date | null) => value ? value.getTime() : null;
+    if (sub.status === canonical.status && end === millis(canonical.current_period_end) &&
+        trialEnd === millis(canonical.trial_end) && cancelAt === millis(canonical.cancel_at)) return;
+    const updated = await home.table('stripe_subscriptions').where({ stripe_subscription_id: canonical.stripe_subscription_id,
+      status: canonical.status }).whereRaw('updated_at IS NOT DISTINCT FROM ?::timestamptz', [canonical.mirror_version]).update({ status: sub.status, trial_end: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+      current_period_end: new Date(billingPeriodEnd(sub)), cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000) : null,
+      updated_at: db.fn.now() });
+    if (!updated) throw new Error('Base subscription changed. Retry the invitation.');
+  }
+
+  /** Close a still-payable checkout before releasing the operation. An already paid
+   * subscription is reconciled from Stripe, including after a lost provider response. */
+  async cancelSeatTrialPurchase(tenant: string, operationId: string) {
+    await this.ensureInitialized();
+    const db = await getConnection(tenant);
+    const subscription = await db.transaction(async trx => {
+      await lockCoManagedSponsorPool(trx, tenant);
+      const home = tenantDb(trx, tenant);
+      const pilot = await home.table('co_managed_seat_trials')
+        .where({ conversion_operation_id: operationId, conversion_state: 'pending' }).first('trial_id');
+      if (!pilot) return null;
+      const customer = await home.table('stripe_customers').first('stripe_customer_external_id');
+      const belongs = (metadata: Stripe.Metadata | null) => metadata?.tenant_id === tenant &&
+        metadata?.seat_trial_id === pilot.trial_id && metadata?.operation_id === operationId;
+      for await (const session of this.stripe.checkout.sessions.list({ customer: customer.stripe_customer_external_id, limit: 100 })) {
+        if (!belongs(session.metadata)) continue;
+        if (session.status === 'open') await this.stripe.checkout.sessions.expire(session.id);
+        else if (session.status === 'complete' && session.subscription) {
+          return typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
+        }
+        break;
+      }
+      for await (const sub of this.stripe.subscriptions.list({ customer: customer.stripe_customer_external_id, status: 'all', limit: 100 })) {
+        if (belongs(sub.metadata) && sub.status === 'active') return sub.id;
+      }
+      await releaseTrialPurchase(trx, tenant, operationId, 'cancelled');
+      return null;
+    });
+    if (subscription) await this.syncCoManagedSubscription(tenant, subscription, db);
+  }
+
+  async coManagedSeatPrice() {
+    await this.ensureInitialized();
+    const recognized = await this.recognizedCoManagedPrices();
+    const offer = await (await this.getOfferCatalog()).resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL);
+    const price = await this.stripe.prices.retrieve(offer.priceId);
+    assertCoManagedPrice(price, recognized);
+    return { unitAmount: price.unit_amount!, currency: price.currency };
+  }
+
+  /**
+   * Which terms does this pool change run on? An existing co-managed subscription keeps billing on
+   * its OWN item's price (RECOGNITION: a rotation never reprices it, F008). Only a brand-new pool is
+   * a new sale and uses the current catalog version (NEW-SALE selection, fails closed).
+   */
+  private async coManagedTerms(subscriptions: Stripe.Subscription[], recognized: ReadonlySet<string>): Promise<
+    { kind: 'existing'; subscription: Stripe.Subscription; price: Stripe.Price; versionId: string | null }
+    | { kind: 'new'; offer: ResolvedOffer }> {
+    const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, recognized) && !['canceled', 'incomplete_expired'].includes(sub.status));
+    if (existing.length > 1) throw new Error('Multiple co-managed subscriptions require reconciliation');
+    const catalog = await this.getOfferCatalog();
+    if (existing[0]) {
+      const subscription = existing[0];
+      if (subscription.items.data.length !== 1) throw new Error('Co-managed subscription ownership does not match');
+      const price = subscription.items.data[0].price;
+      assertCoManagedPrice(price, recognized);
+      // The version only labels the reference shown to the purchaser; billing never depends on it.
+      const classified = await catalog.scope().then((scope) => catalog.classifyPrice(scope, price.id)).catch(() => null);
+      return { kind: 'existing', subscription, price, versionId: classified?.versionId ?? null };
+    }
+    return { kind: 'new', offer: await catalog.resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL) };
+  }
+
+  /** Quote for a pool target. Amount and currency come only from the Stripe price the terms select. */
   async previewCoManagedSeats(tenantId: string, quantity: number): Promise<{
-    unitAmount: number; monthlyTotal: number; amountDue: number; currency: string;
+    unitAmount: number; monthlyTotal: number; amountDue: number; currency: string; offerRef: string;
   }> {
     await this.ensureInitialized();
     if (!Number.isInteger(quantity) || quantity < 0 || quantity > 100000) throw new Error('Invalid co-managed seat quantity');
     const db = await getConnection(tenantId);
     const tenant = await tenantScopedTable(db, 'tenants', tenantId).first();
     if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro' || tenant?.billing_source === 'manual') throw new Error('A hosted Pro PSA subscription is required');
-    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
-    if (!priceId) throw new Error('Co-managed pricing is not configured');
-    const price = await this.stripe.prices.retrieve(priceId);
-    assertCoManagedPrice(price, priceId);
+    const recognized = await this.recognizedCoManagedPrices();
     const customer = await this.getOrImportCustomer(tenantId);
     const subscriptions: Stripe.Subscription[] = [];
     for await (const sub of this.stripe.subscriptions.list({ customer: customer.stripe_customer_external_id, status: 'all', limit: 100 })) subscriptions.push(sub);
-    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), priceId)) throw new Error('A current Pro subscription is required');
-    const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, priceId) && !['canceled', 'incomplete_expired'].includes(sub.status));
-    if (existing.length > 1) throw new Error('Multiple co-managed subscriptions require reconciliation');
-    const subscription = existing[0];
-    const monthlyTotal = price.unit_amount! * quantity;
+    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), recognized)) {
+      throw new CoManagedPurchaseBlockedError('no_current_pro');
+    }
+    const terms = await this.coManagedTerms(subscriptions, recognized);
+    const price = terms.kind === 'existing' ? { unit_amount: terms.price.unit_amount!, currency: terms.price.currency } : { unit_amount: terms.offer.terms.unitAmount, currency: terms.offer.terms.currency };
+    const monthlyTotal = price.unit_amount * quantity;
     let amountDue = monthlyTotal;
-    if (subscription) {
-      if (subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' || subscription.items.data.length !== 1) throw new Error('Co-managed subscription ownership does not match');
-      assertCoManagedPrice(subscription.items.data[0].price, priceId);
+    if (terms.kind === 'existing') {
+      const subscription = terms.subscription;
+      if (subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed') throw new Error('Co-managed subscription ownership does not match');
       const preview = await this.stripe.invoices.createPreview({
         customer: customer.stripe_customer_external_id, subscription: subscription.id,
         subscription_details: quantity === 0
@@ -1728,27 +1929,52 @@ export class StripeService {
       });
       amountDue = preview.amount_due;
     }
-    return { unitAmount: price.unit_amount!, monthlyTotal, amountDue, currency: price.currency };
+    const offerRef = terms.kind === 'existing' ? this.offerRef({ versionId: terms.versionId, priceId: terms.price.id }) : this.offerRef(terms.offer);
+    return { unitAmount: price.unit_amount, monthlyTotal, amountDue, currency: price.currency, offerRef };
   }
 
   /** Dedicated customer-seat pool; never calls ordinary MSP seat mutation APIs and never carries a
-   * base-Pro price. `quantity` is the absolute pool target. */
-  async purchaseCoManagedSeats(tenantId: string, quantity: number, operationId: string): Promise<CoManagedPurchaseResult> {
+   * base-Pro price. `quantity` is the absolute pool target. `reviewedOfferRef` is the reference the
+   * purchaser reviewed (from `previewCoManagedSeats`); when the current terms differ a fresh review
+   * is required (OfferTermsChangedError). A confirmed operation is pinned to its reviewed price. */
+  async purchaseCoManagedSeats(tenantId: string, quantity: number, operationId: string,
+    reviewed?: string | { trialId: string; allocationId?: string; quote: SeatTrialQuote }): Promise<CoManagedPurchaseResult> {
+    const trial = typeof reviewed === 'object' ? reviewed : undefined;
+    const reviewedOfferRef = typeof reviewed === 'string' ? reviewed : undefined;
     await this.ensureInitialized();
     const db = await getConnection(tenantId);
     const tenant = await tenantScopedTable(db, 'tenants', tenantId).first();
     if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro' || tenant?.billing_source === 'manual') {
       throw new Error('A hosted Pro PSA subscription is required; self-hosted capacity uses signed licenses');
     }
-    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
-    if (!priceId) throw new Error('Co-managed pricing is not configured');
-    assertCoManagedPrice(await this.stripe.prices.retrieve(priceId), priceId);
+    const recognized = await this.recognizedCoManagedPrices();
     const customer = await this.getOrImportCustomer(tenantId);
     const customerId = customer.stripe_customer_external_id;
-    const result = await runCoManagedPurchase(db, { sponsorTenant: tenantId, quantity, operationId }, async (operation) => {
+    // Decide the terms BEFORE the operation is persisted: a resumed operation reuses what it
+    // recorded; only a brand-new confirmation consults the catalog and compares the reviewed terms.
+    const recorded = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId).where('operation_id', operationId).first();
+    let pinned: { offerVersionId: string | null; priceId: string } | undefined;
+    if (recorded?.price_id) {
+      pinned = { offerVersionId: recorded.offer_version_id ?? null, priceId: recorded.price_id };
+    } else if (!recorded) {
       const subscriptions: Stripe.Subscription[] = [];
       for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) subscriptions.push(sub);
-      if (!currentProSubscriptionExpiry(subscriptions, customerId, this.coManagedSponsorPriceIds(), priceId)) {
+      const terms = await this.coManagedTerms(subscriptions, recognized);
+      if (terms.kind === 'new') {
+        if (reviewedOfferRef && reviewedOfferRef !== this.offerRef(terms.offer)) throw new OfferTermsChangedError(reviewedOfferRef, terms.offer);
+        pinned = { offerVersionId: terms.offer.versionId, priceId: terms.offer.priceId };
+      } else {
+        pinned = { offerVersionId: terms.versionId, priceId: terms.price.id };
+      }
+    }
+    const result = await runCoManagedPurchase(db, { sponsorTenant: tenantId, quantity, operationId,
+      trialId: trial?.trialId,
+      bindIntent: trial ? trx => bindTrialPurchase(trx, tenantId, trial.trialId, operationId, trial.quote, trial.allocationId) : undefined,
+      ...(pinned ? { pinned } : {}),
+    }, async (operation) => {
+      const subscriptions: Stripe.Subscription[] = [];
+      for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) subscriptions.push(sub);
+      if (!currentProSubscriptionExpiry(subscriptions, customerId, this.coManagedSponsorPriceIds(), recognized)) {
         throw new Error('A current Pro subscription is required to purchase co-managed seats');
       }
       const readSession = (session: Stripe.Checkout.Session): CoManagedPurchaseResult => {
@@ -1774,25 +2000,47 @@ export class StripeService {
       for await (const session of this.stripe.checkout.sessions.list({ customer: customerId, limit: 100 })) {
         if (session.metadata?.operation_id === operationId && session.metadata?.subscription_kind === 'co_managed') return readSession(session);
       }
-      const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, priceId) && !['canceled', 'incomplete_expired'].includes(sub.status));
+      const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, recognized) && !['canceled', 'incomplete_expired'].includes(sub.status));
       if (existing.length > 1) throw new Error('Multiple co-managed subscriptions require reconciliation');
       const subscription = existing[0];
       const idempotencyKey = `co-managed:${tenantId}:${operationId}`;
+      const intent = operation.trial_id ? await tenantScopedTable(db, 'co_managed_seat_trials', tenantId)
+        .where({ conversion_operation_id: operationId, conversion_state: 'pending' }).first('conversion_quote', 'client_id', 'trial_id') : null;
+      if (operation.trial_id && !intent) throw new Error('Trial purchase is no longer pending');
+      if (intent && subscription?.metadata?.operation_id === operationId && subscription.items.data[0]?.quantity === quantity) {
+        return { kind: 'updated', subscriptionId: subscription.id };
+      }
+      if (intent) {
+        const quote = await this.previewCoManagedSeats(tenantId, quantity);
+        const approved: SeatTrialQuote = intent.conversion_quote;
+        if ((subscription?.items.data[0]?.quantity ?? 0) + 1 !== quantity || approved.quantity !== quantity ||
+            quote.amountDue !== approved.amountDue || quote.monthlyTotal !== approved.monthlyTotal || quote.currency !== approved.currency) {
+          throw new Error('Trial purchase quote changed');
+        }
+      }
       if (subscription) {
         if (subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' || subscription.items.data.length !== 1) throw new Error('Co-managed subscription ownership does not match');
-        assertCoManagedPrice(subscription.items.data[0].price, priceId);
+        // The existing item keeps its own price: a rotation never reprices it.
+        assertCoManagedPrice(subscription.items.data[0].price, recognized);
         if (quantity === 0) {
           await this.stripe.subscriptions.cancel(subscription.id, { invoice_now: true, prorate: true }, { idempotencyKey });
         } else if (subscription.items.data[0].quantity !== quantity || subscription.cancel_at_period_end) {
           await this.stripe.subscriptions.update(subscription.id, {
             items: [{ id: subscription.items.data[0].id, quantity }], cancel_at_period_end: false,
+            ...(intent ? { metadata: { operation_id: operationId, seat_trial_id: intent.trial_id } } : {}),
             payment_behavior: 'error_if_incomplete', proration_behavior: 'always_invoice',
           }, { idempotencyKey });
         }
         return { kind: 'updated', subscriptionId: subscription.id };
       }
       if (quantity === 0) return { kind: 'updated', subscriptionId: null };
-      const metadata = { tenant_id: tenantId, subscription_kind: 'co_managed', operation_id: operationId };
+      // A new checkout bills the recorded price. An operation that predates the catalog (no pin)
+      // resolves the current terms exactly as before.
+      const priceId = operation.price_id ?? pinned?.priceId
+        ?? (await (await this.getOfferCatalog()).resolveCurrentOffer(CO_MANAGED_SEAT_OFFER_KEY, CO_MANAGED_SEAT_INTERVAL)).priceId;
+      assertCoManagedPrice(await this.stripe.prices.retrieve(priceId), [priceId]);
+      const metadata = { tenant_id: tenantId, subscription_kind: 'co_managed', operation_id: operationId,
+        ...(intent ? { seat_trial_id: String(intent.trial_id) } : {}) };
       return readSession(await this.stripe.checkout.sessions.create({
         customer: customerId, ui_mode: 'embedded', mode: 'subscription',
         line_items: [{ price: priceId, quantity }], metadata, subscription_data: { metadata },
@@ -1801,9 +2049,16 @@ export class StripeService {
         // page is entitlement-gated and 404s for a first purchase whose webhook has not landed yet.
         // The editor re-reads the pending operation there and offers Resume; nothing is granted.
         redirect_on_completion: 'if_required',
-        return_url: `${getStripeReturnBaseUrl()}/msp/account#account-co-managed`,
+        return_url: intent ? `${getStripeReturnBaseUrl()}/msp/clients/${intent.client_id}?tab=co-managed`
+          : `${getStripeReturnBaseUrl()}/msp/account#account-co-managed`,
       }, { idempotencyKey }));
+    }).catch(async error => {
+      if (trial && (error?.type === 'StripeCardError' || error?.message === 'Trial purchase quote changed')) {
+        await releaseTrialPurchase(db, tenantId, operationId, 'failed');
+      }
+      throw error;
     });
+    if (trial && result.kind === 'expired') await releaseTrialPurchase(db, tenantId, operationId, 'failed');
     // Reconciliation, not this call, decides whether capacity rises.
     if (result.kind === 'updated' && result.subscriptionId) await this.syncCoManagedSubscription(tenantId, result.subscriptionId, db);
     return result;
@@ -2086,7 +2341,8 @@ export class StripeService {
       quantity,
       billing_interval: billingInterval,
       current_period_start: new Date((subscription as any).current_period_start * 1000),
-      current_period_end: new Date((subscription as any).current_period_end * 1000),
+      current_period_end: new Date(billingPeriodEnd(subscription)),
+      trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
       cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
       canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
       metadata: updatedMetadata,
@@ -2604,16 +2860,7 @@ export class StripeService {
   }
 
   private async getActiveInternalUserCount(tenantId: string): Promise<number> {
-    const knex = await getConnection(tenantId);
-    const result = await tenantScopedTable(knex, 'users', tenantId)
-      .where({
-        user_type: 'internal',
-        is_inactive: false,
-      })
-      .count('user_id as count')
-      .first();
-
-    return parseInt((result?.count as string | undefined) || '0', 10);
+    return countLicensedInternalUsers(await getConnection(tenantId), tenantId);
   }
 
   private async getProductUpgradeContext(tenantId: string): Promise<ProductUpgradeContext> {

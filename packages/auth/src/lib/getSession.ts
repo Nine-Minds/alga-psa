@@ -1,6 +1,7 @@
 import type { Session } from 'next-auth';
 
 import logger from '@alga-psa/core/logger';
+import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { headers } from 'next/headers';
 import { getSessionCookieName } from './session';
 
@@ -97,6 +98,13 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
     return null;
   }
 
+  if (userType === 'internal' && !getApiKeyUserOverride()) {
+    const { admitSeatTrialSession } = await import('@enterprise/lib/co-managed/seatTrialSession');
+    if (!await admitSeatTrialSession(tenant, userId, sessionId)) {
+      await logSessionRejection('seat_trial_access');
+      return null;
+    }
+  }
   return session;
 }
 

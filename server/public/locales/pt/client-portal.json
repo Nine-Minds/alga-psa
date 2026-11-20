@@ -159,6 +159,11 @@
           "cancelled": "Consulta cancelada: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Não foi possível processar esta solicitação. Entre em contato com o seu provedor de serviços para obter ajuda."
+        }
+      },
       "algadeskEmptyHint": "Quando os tickets forem atualizados, você os verá aqui."
     },
     "devices": {
@@ -287,13 +292,15 @@
         "contactMissingEmail": "O contato não possui um endereço de e-mail.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido.",
         "userExistsForContact": "Já existe uma conta de usuário para este contato.",
-        "portalUserAlreadyExists": "Já existe um usuário do portal para este contato.",
+        "portalUserAlreadyExists": "Já existe uma conta para este endereço de e-mail. Faça login ou redefina sua senha na página de login.",
         "noDefaultClient": "Nenhum cliente padrão está configurado para este locatário.",
         "noDefaultLocation": "O cliente padrão não possui nenhum local padrão configurado.",
         "noLocationEmail": "A localização do cliente não possui email de contato configurado.",
         "baseUrlNotConfigured": "A URL base do aplicativo não está configurada.",
         "invitationNotFound": "Convite não encontrado.",
-        "revokeFailed": "Falha ao revogar o convite. Por favor, tente novamente."
+        "revokeFailed": "Falha ao revogar o convite. Por favor, tente novamente.",
+        "batchLimitExceeded": "Contatos demais em uma única solicitação. Convide menos contatos por vez.",
+        "noTargetsSelected": "Selecione pelo menos um contato para convidar."
       }
     },
     "features": {
@@ -1163,6 +1170,10 @@
       "recordInvalid": "Um dos registros de grupo de visibilidade selecionados não é mais válido. Atualize a página e tente novamente.",
       "duplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
       "invalidData": "Dados do grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados."
+    },
+    "roles": {
+      "lastMspAdmin": "Um tenant deve manter pelo menos um usuário MSP Admin ativo.",
+      "lastRole": "Um usuário deve manter pelo menos uma função. Atribua outra função primeiro e depois remova esta."
     }
   },
   "tabs": {

@@ -263,6 +263,7 @@ applicationUrl: ""  # Set to your application URL (e.g., https://example.com)
 # precedence over applicationUrl.
 applicationUrlSecret: {}
 publicBaseUrl: ""  # Public URL used in recipient-facing links (e.g., https://example.com)
+publicWebhookBaseUrl: "" # Optional public origin for provider callback URLs.
 
 # Namespace override (optional)
 namespace: ""

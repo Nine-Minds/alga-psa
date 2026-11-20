@@ -5,6 +5,11 @@ import type { ContactFilterStatus } from './types';
 import { ContactModel } from '../models/contactModel';
 import { attachContactLocations } from '../models/contactLocation';
 
+/** ANDs the caller's row restriction onto the contact query (alias `contacts`), before rows are read. */
+export interface ContactReadOptions {
+  narrowQuery?: (query: Knex.QueryBuilder) => void;
+}
+
 type ContactSortBy = 'full_name' | 'created_at' | 'email' | 'phone_number';
 
 function getDefaultPhoneNumber(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
@@ -60,10 +65,12 @@ function withLocations<T extends { contact_name_id: string }>(
 export async function getContactByContactNameId(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  contactNameId: string
+  contactNameId: string,
+  options: ContactReadOptions = {}
 ): Promise<IContact | null> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name');
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
   const baseContact = await query
     .where({
@@ -84,7 +91,8 @@ export async function getContactsByClient(
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: ContactSortBy = 'full_name',
-  sortDirection: 'asc' | 'desc' = 'asc'
+  sortDirection: 'asc' | 'desc' = 'asc',
+  options: ContactReadOptions = {}
 ): Promise<IContact[]> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
@@ -95,6 +103,7 @@ export async function getContactsByClient(
       }
     })
     .orderBy('contacts.full_name', 'asc');
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
 
   const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
@@ -106,12 +115,14 @@ export async function getContactsByClient(
 export async function getAllActiveContacts(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
-  sortDirection: 'asc' | 'desc' = 'asc'
+  sortDirection: 'asc' | 'desc' = 'asc',
+  options: ContactReadOptions = {}
 ): Promise<IContact[]> {
   const query = tenantScopedTable(knexOrTrx, tenant, 'contacts')
     .select('contacts.*', 'clients.client_name')
     .andWhere('contacts.is_inactive', false)
     .orderBy('contacts.full_name', sortDirection);
+  options.narrowQuery?.(query);
   tenantDb(knexOrTrx, tenant).tenantJoin(query, 'clients', 'contacts.client_id', 'clients.client_id', { type: 'left' });
   const hydrated = await ContactModel.hydrateContactsWithPhoneNumbers((await query) as any[], tenant, knexOrTrx as Knex.Transaction) as IContact[];
   const contacts = await withLocations(knexOrTrx, tenant, hydrated as Array<IContact & { contact_name_id: string }>);

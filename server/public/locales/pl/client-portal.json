@@ -165,6 +165,11 @@
           "cancelled": "Wizyta anulowana: {{name}}"
         }
       },
+      "descriptions": {
+        "service_request": {
+          "failed": "Nie udało się przetworzyć tego zgłoszenia. Skontaktuj się ze swoim dostawcą usług, aby uzyskać pomoc."
+        }
+      },
       "algadeskEmptyHint": "Gdy zgłoszenia zostaną zaktualizowane, zobaczysz je tutaj."
     },
     "devices": {
@@ -293,13 +298,15 @@
         "contactMissingEmail": "Kontakt nie ma adresu e-mail.",
         "contactInvalidEmail": "Kontakt ma nieprawidłowy adres e-mail.",
         "userExistsForContact": "Konto użytkownika już istnieje dla tego kontaktu.",
-        "portalUserAlreadyExists": "Użytkownik portalu już istnieje dla tego kontaktu.",
+        "portalUserAlreadyExists": "Konto dla tego adresu e-mail już istnieje. Zaloguj się lub zresetuj hasło na stronie logowania.",
         "noDefaultClient": "Nie skonfigurowano domyślnego klienta dla tej organizacji.",
         "noDefaultLocation": "Domyślny klient nie ma skonfigurowanej domyślnej lokalizacji.",
         "noLocationEmail": "Lokalizacja klienta nie ma skonfigurowanego kontaktowego adresu e-mail.",
         "baseUrlNotConfigured": "Bazowy adres URL aplikacji nie jest skonfigurowany.",
         "invitationNotFound": "Nie znaleziono zaproszenia.",
-        "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie."
+        "revokeFailed": "Nie udało się cofnąć zaproszenia. Spróbuj ponownie.",
+        "batchLimitExceeded": "Zbyt wiele kontaktów w jednym żądaniu. Zaproś mniej kontaktów naraz.",
+        "noTargetsSelected": "Wybierz co najmniej jeden kontakt do zaproszenia."
       }
     },
     "features": {
@@ -1169,6 +1176,10 @@
       "recordInvalid": "Jeden z wybranych rekordów grupy widoczności nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
       "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
+    },
+    "roles": {
+      "lastMspAdmin": "Organizacja musi zachować co najmniej jednego aktywnego użytkownika z rolą MSP Admin.",
+      "lastRole": "Użytkownik musi zachować co najmniej jedną rolę. Najpierw przypisz inną rolę, a potem usuń tę."
     }
   }
 }

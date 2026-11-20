@@ -22,6 +22,7 @@ import {
   assertNoDelegationHeaders,
 } from '@product/service-principals/entry';
 import { isInteractiveUserType } from '@alga-psa/types';
+import { isRecordCreateDeniedError } from '@alga-psa/authorization/recordCreateAuthorization';
 
 /** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */
 export interface ApiPrincipal {
@@ -133,6 +134,7 @@ const APPLICATION_ERROR_STATUS: Record<string, number> = {
   CO_MANAGED_ALLOCATION_CONFLICT: 409,
   CO_MANAGED_INVITATION_INVALID: 409,
   CO_MANAGED_READ_ONLY: 423,
+  API_CREDENTIALS_REFUSED: 403,
   HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
@@ -271,7 +273,10 @@ export async function buildAuthenticatedApiContext(
     userId: keyRecord.user_id,
     tenant: keyRecord.tenant,
     apiKeyId: keyRecord.api_key_id,
-    user,
+    // The subject resolver reads `apiKeyId` off the user, so every authorization path that
+    // receives this user (kernel checks, read narrowing, create checks) folds in the bundles
+    // assigned to the key. Stamped here once so no controller has to remember it.
+    user: keyRecord.api_key_id ? ({ ...user, apiKeyId: keyRecord.api_key_id } as SafeApiUser) : user,
     kind: 'user',
     principal: { userId: keyRecord.user_id, userType: user.user_type, kind: 'user' },
     actAsUserId: null,
@@ -464,7 +469,11 @@ export function withQueryValidation(schema: ZodSchema) {
  * Error handling middleware
  */
 export function handleApiError(rawError: any): NextResponse {
-  const error = mapServicePrincipalError(rawError);
+  // A create the subject's scope refuses (a record of a client outside it) is the same 403 as a permission refusal,
+  // whichever write path raised it.
+  const error = mapServicePrincipalError(
+    isRecordCreateDeniedError(rawError) ? new ForbiddenError(rawError.message) : rawError
+  );
   const redactedDetails = redactSensitiveFields(error.details);
   const redactedStack = process.env.NODE_ENV === 'development' ? error.stack : undefined;
 

@@ -18,7 +18,7 @@ const parsed: { tokens: Record<string, string> } = { tokens: {} };
 vi.mock('@alga-psa/core/capability', () => ({ serves: (...a: unknown[]) => (servesMock as any)(...a), admits: async () => ({ admitted: true }) }));
 function qb(first: unknown) {
   const b: any = {};
-  for (const m of ['select', 'where', 'whereNotNull', 'andWhereRaw', 'whereRaw', 'orderBy']) b[m] = vi.fn().mockReturnThis();
+  for (const m of ['select', 'where', 'whereNotNull', 'whereIn', 'andWhereRaw', 'whereRaw', 'orderBy']) b[m] = vi.fn().mockReturnThis();
   b.andWhere = vi.fn((arg: unknown) => { if (typeof arg === 'function') (arg as any).call({ whereRaw: vi.fn().mockReturnThis(), orWhereRaw: vi.fn().mockReturnThis() }); return b; });
   b.first = vi.fn().mockResolvedValue(first);
   b.then = (res: any, rej: any) => Promise.resolve([]).then(res, rej);
@@ -43,6 +43,18 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   createCommentFromEmail: (...a: unknown[]) => createCommentFromEmailMock(...a), processEmailAttachment: async () => ({ success: true }),
 }));
 vi.mock('../processInboundEmailArtifacts', () => ({ processInboundEmailArtifactsBestEffort: async () => undefined }));
+// Every co-managed refusal must reach the single quarantine surfacing call (alga-2026-0003119).
+const surfaceQuarantineMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('../inboundQuarantine', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../inboundQuarantine')>()),
+  surfaceInboundQuarantine: (...a: unknown[]) => surfaceQuarantineMock(...a),
+}));
+function expectSurfaced(reason: string) {
+  expect(surfaceQuarantineMock).toHaveBeenCalledTimes(1);
+  expect(surfaceQuarantineMock).toHaveBeenCalledWith(expect.objectContaining({
+    tenant: 'tenant-1', providerId: 'p1', messageId: 'msg-1', reason, ticketId: 'ticket-1', matchedBy: 'reply_token',
+  }));
+}
 
 const writes: any[] = [];
 const acks: any[] = [];
@@ -124,6 +136,7 @@ describe('inbound reply token matrix (CM L5)', () => {
     findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'fallback-ticket' });
     const result = await inbound('cm2:abc', { headers: {} });
     expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
+    expectSurfaced('co_managed_token_refused');
     expect(createCommentFromEmailMock).not.toHaveBeenCalled();
     expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
     expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
@@ -160,6 +173,7 @@ describe('inbound reply token matrix (CM L5)', () => {
     admission = { admitted: false, reason, acknowledge: true };
     const result = await inbound(token);
     expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
+    expectSurfaced('co_managed_token_refused');
     expect(writes).toHaveLength(0);
     expect(createCommentFromEmailMock).not.toHaveBeenCalled();
     expect(acks).toHaveLength(1);
@@ -190,6 +204,7 @@ describe('inbound reply token matrix (CM L5)', () => {
       admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
       const result: any = await inbound('cm2:abc', { headers: {} }, { collectDiagnostics: true });
       expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated', ticketId: 'ticket-1', matchedBy: 'reply_token' });
+      expectSurfaced('co_managed_sender_unauthenticated');
       expect(writes).toHaveLength(0);
       expect(acks).toHaveLength(0);
       expect(createCommentFromEmailMock).not.toHaveBeenCalled();
@@ -277,6 +292,7 @@ describe('inbound reply token matrix (CM L5)', () => {
       threadRow.value = { collaboration_audience: 'shared_it', is_internal: true };
       const result: any = await inbound('cm2:abc', {}, { collectDiagnostics: true });
       expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_unserved', ticketId: 'ticket-1' });
+      expectSurfaced('co_managed_token_unserved');
       expect(result.diagnostics?.threading?.failureReason).toBe('co_managed_token_unserved');
       expect(createCommentFromEmailMock).not.toHaveBeenCalled();
       expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();

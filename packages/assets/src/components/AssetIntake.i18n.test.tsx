@@ -24,18 +24,25 @@ vi.mock('react-hot-toast', () => ({ toast: { success: h.toast } }));
 vi.mock('../actions/assetNumberingActions', () => ({
   findAssetByScannedTag: h.find, completeScannedAssetReservation: h.complete,
   createMinimalAssetForLabelIntake: h.create, updateClientAssetPrefix: h.save, activateAssetTagUniqueness: h.activate,
-  listAssetClientPrefixes: vi.fn(async () => [{ client_id: 'c1', client_name: 'Acme', asset_prefix: null }]),
+  listAssetClientPrefixes: vi.fn(async () => [{ client_id: 'c2', client_name: 'Globex', asset_prefix: 'GX', is_inactive: false }]),
   listAssetTagAudit: vi.fn(async () => [{ audit_id: 'audit1', asset_id: 'a1', asset_tag: '', normalized_tag: 'ABC', reason: 'blank', resolved_at: null }]),
   getAssetSequenceContinuationReview: vi.fn(async () => ({ scannedTags: 12, numericSuffixTags: 8, maximumSuffix: '42', suggestedNextValue: '43', examples: ['OLD-42'] })),
   markAssetTagAuditReviewed: vi.fn(),
+  canManageAssetNumbering: vi.fn(async () => true),
 }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: ({ label, id, ...props }: any) => <><label htmlFor={id}>{label}</label><input id={id} {...props} /></> }));
 vi.mock('@alga-psa/ui/components/Label', () => ({ Label: (props: any) => <label {...props} /> }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <>{children}</> }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) => isOpen ? <div role="dialog" aria-label={title}>{children}</div> : null,
+  Dialog: ({ isOpen, title, children, footer }: any) => isOpen ? <div role="dialog" aria-label={title}>{children}{footer}</div> : null,
   DialogContent: ({ children }: any) => <>{children}</>,
+  DialogDescription: ({ children }: any) => <p>{children}</p>,
+  DialogFooter: ({ children }: any) => <>{children}</>,
+}));
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
+  DataTable: ({ data, columns }: any) => <table><tbody>{data.map((row: any, index: number) => <tr key={index}>{columns.map((column: any, c: number) =>
+    <td key={c}>{column.render ? column.render(row[column.dataIndex], row, index) : row[column.dataIndex]}</td>)}</tr>)}</tbody></table>,
 }));
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: ({ onSelect }: any) => <button onClick={() => onSelect('c1')}>Acme</button> }));
 vi.mock('@alga-psa/ui/components/labels/LabelPrintDialog', () => ({ LabelPrintDialog: ({ isOpen, ids }: any) => isOpen ? <output data-testid="print-asset">{ids.join(',')}</output> : null }));
@@ -96,6 +103,19 @@ describe('asset intake with shipped translations', () => {
     expect(missing).not.toHaveBeenCalled();
   });
 
+  it('resumes from a printed label inside the label-first intake dialog', async () => {
+    h.find.mockResolvedValue({ kind: 'asset', asset: { asset_id: 'a2' } });
+    const { missing } = await renderLocalized(<LabelFirstAssetIntake />);
+    fireEvent.click(screen.getByRole('button', { name: 'Réception par étiquette préalable' }));
+    expect(screen.queryByLabelText('Scanner ou saisir une étiquette')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre depuis une étiquette' }));
+    fireEvent.change(screen.getByLabelText('Scanner ou saisir une étiquette'), { target: { value: 'TAG-7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rechercher un actif' }));
+    await waitFor(() => expect(h.push).toHaveBeenCalledWith('/msp/assets/a2'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(missing).not.toHaveBeenCalled();
+  });
+
   it.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'xx', 'yy'])('resolves intake and numbering settings in %s without missing-key fallbacks', async locale => {
     const { i18n, missing } = await renderLocalized(<><LabelFirstAssetIntake /><AssetNumberingSettings /></>, locale);
     const t = i18n.getFixedT(locale, 'msp/settings');
@@ -104,7 +124,11 @@ describe('asset intake with shipped translations', () => {
     expect(screen.getByText(t('assets.numbering.continuationExamples', { examples: 'OLD-42' }), { exact: false })).toBeTruthy();
     expect(screen.getByRole('link', { name: t('assets.numbering.blankTag') })).toBeTruthy();
     expect(screen.getByText(t('assets.numbering.normalizedTag', { tag: 'ABC' }), { exact: false })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Acme'), { target: { value: 'AC' } });
+    expect(screen.getByText('GX')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: t('assets.numbering.addPrefix') }));
+    expect(screen.getByRole('dialog', { name: t('assets.numbering.addPrefixTitle') })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Acme' }));
+    fireEvent.change(screen.getByLabelText(t('assets.numbering.columns.prefix')), { target: { value: 'AC' } });
     fireEvent.click(screen.getByRole('button', { name: i18n.t('actions.save', { ns: 'common' }) }));
     await waitFor(() => expect(h.toast).toHaveBeenCalledWith(t('assets.numbering.prefixSaved')));
     expect(h.save).toHaveBeenCalledWith('c1', 'AC');
@@ -112,7 +136,7 @@ describe('asset intake with shipped translations', () => {
     await waitFor(() => expect(h.toast).toHaveBeenCalledWith(t('assets.numbering.uniquenessEnabled')));
     h.create.mockRejectedValueOnce(null);
     fireEvent.click(screen.getByRole('button', { name: ta('labelFirstIntake.start') }));
-    expect(screen.getByRole('dialog', { name: ta('labelFirstIntake.title') })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: ta('labelFirstIntake.start') })).toBeTruthy();
     expect(screen.getByText(ta('labelFirstIntake.help'))).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Acme' }));
     fireEvent.click(screen.getByRole('button', { name: ta('labelFirstIntake.createPrint') }));

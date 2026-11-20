@@ -308,6 +308,36 @@
       "expiresPrefix": "Läuft ab:",
       "revoke": "Widerrufen",
       "revoking": "Wird widerrufen..."
+    },
+    "seatTechnicians": {
+      "title": "Seat-Techniker",
+      "description": "Personen, die über den Co-Managed-Seat eines Kunden in Ihrer PSA arbeiten. Sie zählen nicht zu Ihren lizenzierten Benutzern.",
+      "clientUnavailable": "Kunde nicht verfügbar",
+      "effectiveAccess": "Effektiver Zugriff",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "client": "Kunde",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "state": {
+        "active": "Aktiv",
+        "invited": "Einladung ausstehend"
+      },
+      "dialog": {
+        "title": "Effektiver Zugriff für {{name}}",
+        "help": "Wählen Sie ein Ticket, um zu sehen, ob dieser Seat-Techniker es lesen kann und warum.",
+        "ticket": "Ticket",
+        "ticketPlaceholder": "Ticket auswählen ...",
+        "checking": "Zugriff wird geprüft ...",
+        "allowed": "{{name}} kann dieses Ticket lesen.",
+        "denied": "{{name}} kann dieses Ticket nicht lesen.",
+        "noReasons": "Es wurden keine weiteren Details gemeldet.",
+        "error": "Der Zugriff konnte nicht geprüft werden. Versuchen Sie es erneut.",
+        "close": "Schließen",
+        "unavailable": "Der effektive Zugriff kann für dieses Ticket in dieser Edition oder Konfiguration nicht geprüft werden."
+      }
     }
   },
   "userDetails": {
@@ -2177,6 +2207,8 @@
       },
       "title": "Variablenreferenz für E-Mail-Vorlagen",
       "panelTitle": "Vorlagenvariablen",
+      "mspOnly": "Nur MSP",
+      "clientSafeHelp": "Wird an Kunden gesendet. Variablen nur für MSP sind nicht verfügbar.",
       "inferredContract": "Wird derzeit nicht gesendet. Dieser Vertrag wird aus der Vorlage abgeleitet.",
       "empty": "Keine passenden Variablen.",
       "example": "Beispiel:",
@@ -2685,7 +2717,8 @@
         "general": {
           "title": "Allgemein",
           "defaultClient": "Standardkunde für verwaiste Datensätze",
-          "defaultClientHelp": "Kontakte und Assets, deren Organisation nicht ermittelt werden kann, werden diesem Kunden zugeordnet."
+          "defaultClientHelp": "Kontakte und Assets, deren Organisation nicht ermittelt werden kann, werden diesem Kunden zugeordnet.",
+          "clearDefaultClient": "Leeren"
         },
         "saved": "Konfiguration gespeichert. Führen Sie die Vorprüfung aus, um sie anhand der bereitgestellten Datensätze zu validieren.",
         "saving": "Wird gespeichert…",
@@ -3033,7 +3066,8 @@
         "preparingPreview": "Vorschau wird vorbereitet…",
         "linking": "Konten werden verknüpft…",
         "unlinking": "Verknüpfung der Konten wird aufgehoben…",
-        "bulkLabel": "SSO-Massenaktionen {{location}}"
+        "bulkLabel": "SSO-Massenaktionen {{location}}",
+        "disabledSelectUsers": "Wählen Sie zuerst mindestens einen Benutzer aus."
       },
       "table": {
         "email": "E-Mail",
@@ -4123,7 +4157,9 @@
       "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
       "nameRequired": "Rollenname ist erforderlich.",
       "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
-      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits.",
+      "lastMspAdmin": "Ein Mandant muss mindestens einen aktiven MSP-Admin-Benutzer behalten.",
+      "lastRole": "Ein Benutzer muss mindestens eine Rolle behalten. Weisen Sie zuerst eine andere Rolle zu und entfernen Sie dann diese."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -4209,7 +4245,7 @@
   },
   "loginPolicy": {
     "title": "Anmelderichtlinie",
-    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
+    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort oder Single Sign-on anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
     "requireSso": {
       "title": "Single Sign-On für MSP-Mitarbeitende erzwingen",
       "body": "Interne Benutzer müssen sich mit Google, Microsoft oder Ihrem Keycloak-Anbieter anmelden. Passwort-Anmeldung und Passwort-Zurücksetzen sind gesperrt, außer für die unten genannten Notfall-Administratoren.",
@@ -4241,10 +4277,21 @@
         "not_found": "Der Benutzer existiert nicht mehr."
       }
     },
+    "clientPortalSso": {
+      "title": "Anmeldeoptionen im Kundenportal",
+      "body": "Wählen Sie, welche Single-Sign-on-Anbieter auf der Anmeldeseite Ihres Kundenportals erscheinen. Aufgeführt sind nur Anbieter, über die sich Ihre Organisation anmelden kann. Die Anmeldung per Passwort bleibt unverändert.",
+      "providers": {
+        "google": "Google",
+        "azure-ad": "Microsoft",
+        "keycloak": "Keycloak"
+      },
+      "noneAvailable": "Für Ihre Organisation ist kein Single-Sign-on-Anbieter konfiguriert. Richten Sie in den Single-Sign-on-Einstellungen einen ein, um ihn im Kundenportal anzubieten."
+    },
     "guard": {
       "sso_provider_required": "Richten Sie mindestens einen Single-Sign-On-Anbieter ein, bevor Sie Single Sign-On erzwingen.",
       "break_glass_required": "Wählen Sie mindestens einen Notfall-Administrator aus, bevor Sie Single Sign-On erzwingen.",
-      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein."
+      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein.",
+      "client_portal_sso_provider_invalid": "Wählen Sie nur unterstützte Single-Sign-on-Anbieter."
     },
     "errors": {
       "load": "Die Anmelderichtlinie konnte nicht geladen werden.",
@@ -4550,7 +4597,7 @@
     "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen.",
     "blockedAccess": "Der API- und MCP-Zugriff auf Dienstprinzipale wird unter Pro sofort gesperrt. Vorhandene Einträge bleiben zur Bereinigung verfügbar."
   },
-"tagDisplay": {
+  "tagDisplay": {
     "title": "Auf Chips anzeigen",
     "subtitle": "Tags, die neben Kontakten und Kunden in Ticketlisten, Ticketköpfen und Auswahllisten angezeigt werden.",
     "loading": "Wird geladen…",
@@ -4578,7 +4625,6 @@
       "title": "Asset-Nummerierung",
       "description": "Eine mandantenweite Nummernfolge wird mit dem Präfix des jeweiligen Kunden formatiert. Vorschau und Druck vergeben keine Nummern. Nicht verwendete vergebene Nummern hinterlassen Lücken und werden nie erneut verwendet.",
       "clientPrefixes": "Kundenpräfixe",
-      "noPrefix": "Kein Präfix",
       "prefixSaved": "Kundenpräfix gespeichert",
       "uniquenessEnabled": "Eindeutige Asset-Tags sind aktiviert",
       "legacyAudit": "Prüfung bestehender Tags",
@@ -4592,7 +4638,25 @@
       "continuationReview": "Die Bestandsprüfung hat {{scanned}} gespeicherte Tags geprüft; {{numeric}} haben numerische Suffixe. Das höchste Suffix ist {{maximum}}; prüfen Sie den Startwert {{next}}. Dies ist nur ein Hinweis. Geben Sie oben den genehmigten Fortsetzungswert ein und speichern Sie ihn. Diese Prüfung verbraucht keinen Wert der Nummernfolge.",
       "continuationExamples": "Beispiele: {{examples}}",
       "blankTag": "(leerer Tag)",
-      "normalizedTag": "Normalisiert: {{tag}}"
+      "normalizedTag": "Normalisiert: {{tag}}",
+      "loadFailed": "Einstellungen zur Asset-Nummerierung konnten nicht geladen werden",
+      "readOnly": "Sie können die Asset-Nummerierung ansehen. Für Änderungen ist die Berechtigung zum Aktualisieren der Systemeinstellungen erforderlich.",
+      "columns": {
+        "client": "Kunde",
+        "prefix": "Präfix"
+      },
+      "addPrefix": "Präfix hinzufügen",
+      "addPrefixTitle": "Kundenpräfix hinzufügen",
+      "editPrefixTitle": "Kundenpräfix bearbeiten",
+      "prefixHelp": "Bis zu 10 Buchstaben, Ziffern oder Bindestriche.",
+      "edit": "Bearbeiten",
+      "remove": "Entfernen",
+      "removeTitle": "Präfix entfernen?",
+      "removeMessage": "Präfix für {{client}} entfernen? Neue Asset-Nummern für diesen Kunden erhalten kein Präfix. Vorhandene Tags bleiben unverändert.",
+      "prefixRemoved": "Kundenpräfix entfernt",
+      "noPrefixes": "Noch keine Kundenpräfixe.",
+      "openMenu": "Menü öffnen",
+      "inactive": "Inaktiv"
     }
   }
 }

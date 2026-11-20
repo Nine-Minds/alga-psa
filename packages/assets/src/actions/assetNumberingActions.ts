@@ -1,5 +1,6 @@
 'use server';
 
+import { assertAssetCreateAllowed } from '../lib/assetCreateAuthorization';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { previewNextAssetTag, reserveAssetNumber, normalizeAssetTag, effectiveAssetTagSql } from '../lib/assetNumbering';
@@ -29,6 +30,7 @@ export const createMinimalAssetForLabelIntake = withAuth(async (user, { tenant }
   if (!await hasPermission(user, 'asset', 'create')) throw new Error('Permission denied: Cannot create assets');
   const { knex } = await createTenantKnex();
   const asset = await withTransaction(knex, async (trx) => {
+    await assertAssetCreateAllowed(trx, tenant, user, clientId);
     const reserved = await reserveAssetNumber(trx, { tenant, clientId, createdBy: user.user_id });
     return createAssetInTransaction(trx, tenant, user.user_id, {
       asset_type: 'unknown',
@@ -69,6 +71,7 @@ export const completeScannedAssetReservation = withAuth(async (user, { tenant },
       throw new Error('This printed asset reservation is no longer available for intake');
     }
     if (!reservation.client_id) throw new Error('This asset reservation has no client. Recreate it through label-first intake.');
+    await assertAssetCreateAllowed(trx, tenant, user, reservation.client_id);
     return createAssetInTransaction(trx, tenant, user.user_id, {
       asset_type: 'unknown',
       client_id: reservation.client_id,
@@ -145,7 +148,7 @@ export const releaseAssetNumberReservation = withAuth(async (user, { tenant }, r
 });
 
 export const listAssetTagAudit = withAuth(async (user, { tenant }) => {
-  if (!await hasPermission(user, 'settings', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
+  if (!await hasPermission(user, 'asset', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
   const { knex } = await createTenantKnex();
   return tenantDb(knex, tenant).table('asset_tag_audit')
     .orderBy('discovered_at', 'asc')
@@ -153,16 +156,16 @@ export const listAssetTagAudit = withAuth(async (user, { tenant }) => {
 });
 
 export const listAssetClientPrefixes = withAuth(async (user, { tenant }) => {
-  if (!await hasPermission(user, 'settings', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
+  if (!await hasPermission(user, 'asset', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
   const { knex } = await createTenantKnex();
   return tenantDb(knex, tenant).table('clients')
-    .where('is_inactive', false)
-    .select('client_id', 'client_name', 'asset_prefix')
+    .whereNotNull('asset_prefix')
+    .select('client_id', 'client_name', 'asset_prefix', 'is_inactive')
     .orderBy('client_name', 'asc');
 });
 
 export const getAssetSequenceContinuationReview = withAuth(async (user, { tenant }) => {
-  if (!await hasPermission(user, 'settings', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
+  if (!await hasPermission(user, 'asset', 'read')) throw new Error('Permission denied: Cannot view asset numbering settings');
   const { knex } = await createTenantKnex();
   const rows = await tenantDb(knex, tenant).table('assets').select('asset_tag');
   const suffixes = rows.flatMap((row: { asset_tag: string | null }) => {
@@ -179,8 +182,10 @@ export const getAssetSequenceContinuationReview = withAuth(async (user, { tenant
   };
 });
 
+export const canManageAssetNumbering = withAuth(async (user) => hasPermission(user, 'system_settings', 'update'));
+
 export const updateClientAssetPrefix = withAuth(async (user, { tenant }, clientId: string, rawPrefix: string) => {
-  if (!await hasPermission(user, 'settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
+  if (!await hasPermission(user, 'system_settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
   const prefix = rawPrefix.replace(/^ +| +$/g, '').replace(/[a-z]/g, (letter) => letter.toUpperCase());
   if (prefix && (prefix.length > 10 || !/^[A-Z0-9-]+$/.test(prefix))) {
     return { success: false, error: 'Use up to 10 letters, digits, or hyphens' };
@@ -203,7 +208,7 @@ export const updateClientAssetPrefix = withAuth(async (user, { tenant }, clientI
 });
 
 export const markAssetTagAuditReviewed = withAuth(async (user, { tenant }, auditId: string, note: string) => {
-  if (!await hasPermission(user, 'settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
+  if (!await hasPermission(user, 'system_settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
   const resolutionNote = note.trim();
   if (resolutionNote.length < 8) throw new Error('Add a short note describing the human reconciliation decision');
   const { knex } = await createTenantKnex();
@@ -216,7 +221,7 @@ export const markAssetTagAuditReviewed = withAuth(async (user, { tenant }, audit
 });
 
 export const activateAssetTagUniqueness = withAuth(async (user, { tenant }) => {
-  if (!await hasPermission(user, 'settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
+  if (!await hasPermission(user, 'system_settings', 'update')) throw new Error('Permission denied: Cannot update asset numbering settings');
   const { knex } = await createTenantKnex();
   return withTransaction(knex, (trx) => activateAssetTagUniquenessForTenant(trx, tenant, user.user_id));
 });

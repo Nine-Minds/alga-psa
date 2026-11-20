@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The first test's `await import('./interactionActions')` pays this file's
+// module-transform cost against the per-test clock; comfortably sub-second
+// locally, but a loaded CI runner blew the 5s default at 5216ms (run
+// 44399064673 / @alga-psa/clients:test).
+vi.setConfig({ testTimeout: 20_000 });
+
+// The client-scope create gate needs a real connection; it is covered by the T008 integration test.
+vi.mock('@alga-psa/authorization/recordCreateAuthorization', () => ({ assertRecordCreateAllowed: vi.fn(async () => undefined), isRecordCreateDeniedError: () => false }));
+
 const hoisted = vi.hoisted(() => ({
   assertMspPermissionMock: vi.fn(),
   hasPermissionAsyncMock: vi.fn(),

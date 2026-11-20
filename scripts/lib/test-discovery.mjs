@@ -101,7 +101,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/tenantTableManifest.test.ts'
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url|portal-domain-redirect-uri-gate)\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|appliance-check-in-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|product-upgrade-co-managed-activity|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|appliance-check-in-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|product-upgrade-co-managed-activity|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|entra-sync-record-tenant-result|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)
@@ -151,7 +151,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
 // Collections come from the runners, not from a second interpretation of
 // their include/exclude globs. Inventory proves discoverability only; execution
 // evidence is separately required before a suite can satisfy readiness.
-export function reconcileDiscovery({ root, candidates, collections, exclusions = [], today = new Date().toISOString().slice(0, 10) }) {
+export function reconcileDiscovery({ root, candidates, collections, exclusions = [], delegations = [], today = new Date().toISOString().slice(0, 10) }) {
   const failures = [];
   const normalize = (file) => normalizeTestFile(file, root);
   const files = candidates.map(normalize);
@@ -180,6 +180,26 @@ export function reconcileDiscovery({ root, candidates, collections, exclusions =
       collectedBy.get(file).push(runner);
     }
   }
+  const delegatedBy = new Map();
+  for (const delegation of delegations) {
+    const file = normalize(delegation.file);
+    const parent = normalize(delegation.parent);
+    if (!candidateSet.has(file)) failures.push(`Stale delegated test worker (not a candidate): ${file}`);
+    if (!candidateSet.has(parent)) failures.push(`Delegated test parent is not a candidate: ${parent}`);
+    if (!delegation.reason?.trim()) failures.push(`Delegated test worker requires a reason: ${file}`);
+    if (delegatedBy.has(file)) failures.push(`Duplicate delegated test worker: ${file}`);
+    else delegatedBy.set(file, parent);
+    if (collectedBy.has(file)) {
+      failures.push(`Delegated test worker is also directly collected: ${file}`);
+      continue;
+    }
+    const parentRunners = collectedBy.get(parent);
+    if (!parentRunners?.length) {
+      failures.push(`No runner collects delegated test parent: ${parent}`);
+      continue;
+    }
+    collectedBy.set(file, [...parentRunners]);
+  }
   const excluded = new Map();
   for (const exclusion of exclusions) {
     const file = normalize(exclusion.file);
@@ -201,7 +221,12 @@ export function reconcileDiscovery({ root, candidates, collections, exclusions =
   return {
     schemaVersion: 1, status: failures.length ? 'failed' : 'passed',
     candidates: files, unmatched,
-    tests: files.map((file) => ({ file, runners: collectedBy.get(file) ?? [], exclusion: excluded.get(file) ?? null })),
+    tests: files.map((file) => ({
+      file,
+      runners: collectedBy.get(file) ?? [],
+      exclusion: excluded.get(file) ?? null,
+      ...(delegatedBy.has(file) ? { delegatedBy: delegatedBy.get(file) } : {}),
+    })),
     failures,
   };
 }

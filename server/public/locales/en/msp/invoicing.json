@@ -605,7 +605,9 @@
       "unfinalizeSelected": "Unfinalize Selected",
       "downloadPdf": "Download PDF",
       "sendEmail": "Send Email",
-      "unfinalize": "Unfinalize"
+      "unfinalize": "Unfinalize",
+      "recordPayment": "Record Payment",
+      "viewPayments": "Payments"
     },
     "status": {
       "finalized": "Finalized"
@@ -893,7 +895,9 @@
       "reasonPlaceholder": "Reason for voiding...",
       "cancel": "Cancel",
       "confirm": "Void Invoice",
-      "voiding": "Voiding..."
+      "voiding": "Voiding...",
+      "algaOnly": "Void in AlgaPSA only (unlink from {{provider}})",
+      "algaOnlyWarning": "The {{provider}} document is left exactly as it is and this invoice is unlinked from it, so AlgaPSA and {{provider}} will disagree about it."
     },
     "history": {
       "title": "History",
@@ -907,6 +911,23 @@
       },
       "change": "{{from}} → {{to}}",
       "none": "none"
+    },
+    "syncFeedback": {
+      "synced": "Invoice synced to {{provider}}.",
+      "failed": "{{provider}} sync failed: {{reason}}",
+      "failedNoReason": "{{provider}} sync failed. Check the Errored ops list on the accounting integration page.",
+      "skipped": "Invoice was skipped and not sent to {{provider}}: {{reason}}",
+      "skippedNoReason": "Invoice was skipped and not sent to {{provider}}.",
+      "pending": "Invoice is queued for {{provider}} sync; it has not been processed yet.",
+      "unknown": "Could not determine whether the invoice was synced to {{provider}}.",
+      "notRun": "{{provider}} sync did not run: {{reason}}",
+      "notRunNoReason": "{{provider}} sync did not run.",
+      "error": "Sync failed: {{error}}",
+      "refusedNotFound": "Invoice not found.",
+      "refusedPaid": "Paid invoices are not synced to {{provider}}.",
+      "refusedCancelled": "Voided or cancelled invoices are not synced to {{provider}}.",
+      "cycleFailed": "{{provider}} sync failed: {{reason}} The invoice was not sent; it stays queued and is retried on the next sync.",
+      "cycleFailedNoReason": "{{provider}} sync failed. The invoice was not sent; it stays queued and is retried on the next sync."
     }
   },
   "templateEditor": {
@@ -2894,6 +2915,36 @@
       "missingField": "Missing required invoice template field.",
       "missingFieldNamed": "Missing required invoice template field: {{field}}.",
       "evaluationFailed": "Template data binding failed: {{details}}"
+    },
+    "recordPayment": {
+      "permissionDenied": "Permission denied: recording invoice payments requires the invoice payment permission.",
+      "invoiceNotFound": "Invoice not found. It may have been updated or deleted. Please refresh and try again.",
+      "amountPositive": "Enter a payment amount greater than zero.",
+      "methodRequired": "Choose a payment method.",
+      "invalidDate": "Enter a valid payment date.",
+      "noBalanceDue": "This invoice has no balance due.",
+      "statusNotPayable": "Cannot record a payment for an invoice with status: {{status}}.",
+      "overpaymentNotConfirmed": "This payment is more than the balance due. Confirm the overpayment to record it.",
+      "recordFailed": "Failed to record the payment. Please try again."
+    },
+    "void": {
+      "paymentsRecorded": "Unwind payments before voiding.",
+      "paymentsRecordedManual": "Reverse the payments recorded in AlgaPSA ({{sources}}) before voiding this invoice.",
+      "paymentsRecordedIntegration": "This invoice has payments from your accounting system ({{sources}}). Delete or edit them there and the next sync will reverse them here, or reverse them in AlgaPSA only.",
+      "paymentsRecordedGateway": "This invoice has payments taken through a payment provider ({{sources}}). Refund them there before voiding.",
+      "paymentsRecordedMixed": "Unwind the payments on this invoice ({{sources}}) before voiding it.",
+      "creditNoteCreditApplied": "This credit note has applied credit. Unapply the credit before voiding."
+    },
+    "reversePayment": {
+      "permissionDenied": "Permission denied: reversing invoice payments requires the invoice payment permission.",
+      "reasonRequired": "A reason is required to reverse a payment.",
+      "paymentNotFound": "Payment not found. It may have been updated or deleted. Please refresh and try again.",
+      "notReversible": "This payment cannot be reversed.",
+      "alreadyReversed": "This payment has already been reversed.",
+      "gatewayRefundRequired": "This payment was taken through a payment provider ({{method}}). Refund it there instead.",
+      "integrationOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it in {{provider}} and the next sync will reverse it here.",
+      "remoteMutateRequired": "Permission denied: reversing a synced payment in AlgaPSA only requires the accounting remote-mutate permission.",
+      "reverseFailed": "Failed to reverse the payment. Please try again."
     }
   },
   "periodTotal": {
@@ -2916,6 +2967,74 @@
     "blocked": {
       "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.",
       "exporting": "An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice."
+    }
+  },
+  "recordPayment": {
+    "title": "Record Payment",
+    "titleForInvoice": "Record Payment — {{invoiceNumber}}",
+    "loading": "Loading invoice balance...",
+    "summary": {
+      "balanceDue": "Balance due",
+      "alreadyPaid": "Already paid"
+    },
+    "fields": {
+      "amount": "Amount",
+      "paymentDate": "Payment date",
+      "method": "Payment method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "placeholders": {
+      "reference": "Check or transaction number"
+    },
+    "methods": {
+      "manual": "Manual",
+      "check": "Check",
+      "bank_transfer": "Bank Transfer",
+      "cash": "Cash",
+      "other": "Other"
+    },
+    "overpayment": {
+      "warning": "This payment is {{excess}} more than the balance due of {{balanceDue}}.",
+      "confirm": "Record this overpayment anyway"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "record": "Record Payment"
+    },
+    "toasts": {
+      "recorded": "Payment recorded"
+    }
+  },
+  "invoicePayments": {
+    "title": "Payments",
+    "titleForInvoice": "Payments — {{invoiceNumber}}",
+    "loading": "Loading payments...",
+    "empty": "No payments have been recorded for this invoice.",
+    "sources": {
+      "manual": "Recorded in AlgaPSA",
+      "quickbooks": "QuickBooks",
+      "xero": "Xero",
+      "gateway": "Payment provider"
+    },
+    "fields": {
+      "reason": "Reason"
+    },
+    "actions": {
+      "reverse": "Reverse payment",
+      "confirmReverse": "Reverse payment",
+      "algaOnly": "Reverse in AlgaPSA only",
+      "cancel": "Cancel",
+      "close": "Close"
+    },
+    "notes": {
+      "gatewayRefund": "Taken through a payment provider ({{method}}): refund it there instead.",
+      "alreadyReversed": "Already reversed.",
+      "providerOwned": "This payment came from {{provider}} payment {{reference}}. Delete or edit it there and the next sync will reverse it here.",
+      "algaOnlyWarning": "AlgaPSA and {{provider}} will disagree about this payment: the {{provider}} record is left exactly as it is and the payment is unlinked here."
+    },
+    "toasts": {
+      "reversed": "Payment reversed"
     }
   }
 }

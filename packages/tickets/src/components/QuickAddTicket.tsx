@@ -254,6 +254,7 @@ export function QuickAddTicket({
   const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // True once a "Create + View" navigation has been handed to onViewCreatedTicket. The
   // navigation is a slow RSC fetch during which this modal is still mounted; keep the actions
@@ -273,6 +274,7 @@ export function QuickAddTicket({
   );
   const [descriptionEditorInstanceKey, setDescriptionEditorInstanceKey] = useState(0);
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
+  const [assignedToWasEdited, setAssignedToWasEdited] = useState(Boolean(prefilledAssignedTo));
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
   const [tempAdditionalAgents, setTempAdditionalAgents] = useState<
     { user_id: string; first_name: string; last_name: string; temp_id: string }[]
@@ -474,6 +476,7 @@ export function QuickAddTicket({
         }
         if (prefilledAssignedTo) {
           setAssignedTo(prefilledAssignedTo);
+          setAssignedToWasEdited(true);
         }
         if (prefilledDueDate) {
           setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -712,14 +715,15 @@ export function QuickAddTicket({
     if (!updateMetadata) return;
 
     updateMetadata({
-      helperText: error || undefined,
+      helperText: error || validationErrors.join('\n') || undefined,
       open: open,
     });
-  }, [error, open]);
+  }, [error, validationErrors, open]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setError(null);
+      setValidationErrors([]);
     }
   };
 
@@ -778,24 +782,6 @@ export function QuickAddTicket({
     clearErrorIfSubmitted();
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
-
-    // Pre-fill assigned agent and team from board's defaults if not already set
-    if (!assignedTo && newBoardId) {
-      if (selectedBoard?.default_assigned_team_id) {
-        // Resolve current team lead dynamically
-        const defaultTeam = teams.find(t => t.team_id === selectedBoard.default_assigned_team_id);
-        if (defaultTeam?.manager_id) {
-          setAssignedTo(defaultTeam.manager_id);
-        } else if (selectedBoard.default_assigned_to) {
-          setAssignedTo(selectedBoard.default_assigned_to);
-        }
-      } else if (selectedBoard?.default_assigned_to) {
-        setAssignedTo(selectedBoard.default_assigned_to);
-      }
-    }
-    if (!assignedTeamId && selectedBoard?.default_assigned_team_id) {
-      setAssignedTeamId(selectedBoard.default_assigned_team_id);
-    }
 
     const priorityType = selectedBoard?.priority_type || 'custom';
     const defaultPriorityId = getBoardDefaultPriorityId(selectedBoard, priorities);
@@ -863,6 +849,7 @@ export function QuickAddTicket({
     // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
     applyLocation(source.location_id ?? null, source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
+    setAssignedToWasEdited(source.assigned_to != null);
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
       source.additional_agents.map((agent) => ({
@@ -1037,6 +1024,7 @@ export function QuickAddTicket({
     setDescriptionContent(parseTicketRichTextContent(prefilledDescription || ''));
     setDescriptionEditorInstanceKey((current) => current + 1);
     setAssignedTo(prefilledAssignedTo || '');
+    setAssignedToWasEdited(Boolean(prefilledAssignedTo));
     setAssignedTeamId(null);
     setTempAdditionalAgents(
       prefilledAdditionalAgents?.length
@@ -1092,6 +1080,7 @@ export function QuickAddTicket({
       setDueDate(undefined);
     }
     setError(null);
+    setValidationErrors([]);
     setHasAttemptedSubmit(false);
     ticketCreatedRef.current = false;
     setTicketCreated(false);
@@ -1285,11 +1274,13 @@ export function QuickAddTicket({
     }
     setHasAttemptedSubmit(true);
 
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join('\n'));
+    const missingFields = validateForm();
+    setValidationErrors(missingFields);
+    if (missingFields.length > 0) {
+      setError(null);
       return;
     }
+    setError(null);
 
     createInFlightRef.current = true;
     setIsSubmitting(true);
@@ -1305,7 +1296,12 @@ export function QuickAddTicket({
         : descriptionContent;
 
       formData.append('description', serializeTicketRichTextContent(descriptionForCreate));
-      formData.append('assigned_to', assignedTo);
+      // An untouched empty picker means the caller omitted assignment, so the
+      // shared create path can apply board defaults. A deliberate clear keeps
+      // the empty value to preserve explicit-unassigned intent.
+      if (assignedTo || assignedToWasEdited) {
+        formData.append('assigned_to', assignedTo);
+      }
       formData.append('board_id', boardId);
       formData.append('status_id', statusId);
 
@@ -1610,16 +1606,22 @@ export function QuickAddTicket({
             </div>
           ) : (
             <>
-                  {hasAttemptedSubmit && error && (
+              {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
                     <p className="font-medium mb-2">{t('quickAdd.requiredFieldsHeading', 'Please fill in the required fields:')}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      {error.split('\n').map((err, index) => (
+                      {validationErrors.map((err, index) => (
                         <li key={index}>{err}</li>
                       ))}
                     </ul>
                   </AlertDescription>
+                </Alert>
+              )}
+
+              {hasAttemptedSubmit && error && (
+                <Alert variant="destructive" className="mb-4" data-testid="quick-add-ticket-error">
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
@@ -1825,13 +1827,16 @@ export function QuickAddTicket({
                         value={assignedTo}
                         onValueChange={(value) => {
                           setAssignedTo(value);
+                          setAssignedToWasEdited(true);
                           setAssignedTeamId(null);
                           clearErrorIfSubmitted();
                         }}
                         onTeamSelect={(teamId) => {
+                          setAssignedToWasEdited(true);
                           const team = teams.find(t => t.team_id === teamId);
                           if (team?.manager_id) {
                             setAssignedTo(team.manager_id);
+                            setAssignedToWasEdited(true);
                           }
                           setAssignedTeamId(teamId);
                           // Expand team members into additional agents
@@ -1890,6 +1895,7 @@ export function QuickAddTicket({
                             const team = teams.find(t => t.team_id === teamId);
                             if (team?.manager_id) {
                               setAssignedTo(team.manager_id);
+                              setAssignedToWasEdited(true);
                             }
                             setAssignedTeamId(teamId);
                             const members = team?.members || [];

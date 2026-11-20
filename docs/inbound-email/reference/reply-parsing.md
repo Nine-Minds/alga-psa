@@ -6,9 +6,14 @@ This reference outlines how inbound replies are parsed and how outbound notifica
 
 Every notification sent through `sendEventEmail` now includes reply-friendly markers:
 
-- A visible banner rendered at the top of the message that reads `--- Please reply above this line ---`.
-- A hidden `<div>` element with `data-alga-reply-token`, `data-alga-ticket-id`, and related attributes so the parser can recover the originating entity.
+- A hidden preheader `<div data-alga-preheader>` holding the first two visible lines of the rendered body (about 140 characters, cut at a word boundary, HTML-escaped; omitted when the body is empty). Mail clients use the first text of an HTML email as the inbox preview, so this keeps the preview showing the notification's content instead of the reply token or the boundary banner.
+- A hidden, textless `<div>` element with `data-alga-reply-token`, `data-alga-ticket-id`, and related attributes so the parser can recover the originating entity, followed by a textless boundary `<div>`. These carry their data only in attributes and still come before all template content.
+- A visible `--- Please reply above this line ---` banner. In the HTML part it is rendered **below** the message body; in the plain-text part it stays above the body.
 - Plain-text footers (`[ALGA-REPLY-TOKEN …]`, `ALGA-TICKET-ID:…`, etc.) appended to the text version to cover clients that strip HTML elements.
+
+For full-document HTML templates, the hidden block (preheader, token, boundary, in that order) is inserted immediately after `<body …>` and the banner immediately before the closing `</body>`, so nothing is emitted after `</html>`. Template fragments get the hidden block prepended and the banner appended.
+
+Replies still resolve without visible token text: the parser merges tokens from the HTML `data-*` attributes with the plain-text `[ALGA-REPLY-TOKEN …]` lines, and the inbound workflow falls back to `In-Reply-To`/`References`/thread id. An HTML-only reply whose client strips `data-*` attributes resolves by threading headers alone.
 
 When a corresponding event provides a `replyContext`, a conversation token is generated, persisted to the `email_reply_tokens` table, and embedded into the outbound email. Tokens capture:
 
@@ -20,14 +25,15 @@ The `email_reply_tokens` table keeps the mapping so the inbound workflow can res
 
 ## Parser Heuristics
 
-`server/src/lib/email/replyParser.ts` applies a layered set of heuristics:
+`shared/lib/email/replyParser.ts` applies a layered set of heuristics:
 
-1. **Explicit boundary** – trims at `--- Please reply above this line ---` or localized variants.
-2. **Token stripping** – removes `[ALGA-REPLY-TOKEN …]` and ID footers from the sanitized body.
-3. **Provider headers** – recognises Gmail (`On … wrote:`), Outlook quoting, Microsoft Graph forwarded headers, and drops quoted history.
-4. **Quote filtering** – skips `>` prefixed lines while still allowing inline responses after quoted blocks.
-5. **Signature trimming** – strips common signatures (`Thanks,`, `Best regards,`, `Sent from …`) within the trailing 12 lines.
-6. **Fallback** – if everything is removed the original body is retained and flagged as low confidence.
+1. **Preheader removal** – strips `data-alga-preheader` elements (nested-safe) before token extraction and trimming, so a reply that lost the boundary does not inherit the preview excerpt as comment text. Emails sent with the older layout (token text inside the hidden div, banner at the top) still parse unchanged.
+2. **Explicit boundary** – trims at `--- Please reply above this line ---` or localized variants.
+3. **Token stripping** – removes `[ALGA-REPLY-TOKEN …]` and ID footers from the sanitized body.
+4. **Provider headers** – recognises Gmail (`On … wrote:`), Outlook quoting, Microsoft Graph forwarded headers, and drops quoted history.
+5. **Quote filtering** – skips `>` prefixed lines while still allowing inline responses after quoted blocks.
+6. **Signature trimming** – strips common signatures (`Thanks,`, `Best regards,`, `Sent from …`) within the trailing 12 lines.
+7. **Fallback** – if everything is removed the original body is retained and flagged as low confidence.
 
 The parser returns:
 

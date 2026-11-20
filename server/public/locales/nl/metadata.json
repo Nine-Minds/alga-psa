@@ -366,6 +366,10 @@
       },
       "custody": {
         "title": "Apparatuur in bewaring"
+      },
+      "audits": {
+        "title": "Locatieaudits",
+        "detailTitle": "Locatieaudit"
       }
     },
     "chat": {
@@ -448,6 +452,9 @@
       "title": "Serviceaanvragen",
       "detail": {
         "fallbackTitle": "Serviceaanvraag"
+      },
+      "formBuilder": {
+        "title": "Formulierbouwer"
       }
     },
     "technicianDispatch": {

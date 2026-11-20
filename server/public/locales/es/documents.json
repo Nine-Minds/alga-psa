@@ -29,6 +29,7 @@
     "invoiceTitle": "FACTURA",
     "issueDate": "Fecha de emisión",
     "locationSubtotal": "Subtotal por ubicación",
+    "unassignedLocation": "Toda la cotización",
     "monthly": "Mensual",
     "monthlyItems": "Artículos mensuales",
     "monthlyTotal": "Total mensual",
@@ -179,6 +180,7 @@
     "upload": {
       "fileRequired": "Elija un archivo antes de subirlo.",
       "typeNotAllowed": "Este tipo de archivo no está permitido.",
+      "contentMismatch": "El contenido de este archivo no coincide con su tipo de archivo, por lo que no se ha subido. Compruebe que ha elegido el archivo correcto.",
       "sessionRequired": "Se requiere su sesión para subir documentos. Inicie sesión de nuevo."
     }
   },

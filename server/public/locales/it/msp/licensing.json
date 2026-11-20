@@ -398,6 +398,171 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "trial": {
+      "title": "Prova di 15 giorni per una postazione cogestita",
+      "description": "Invita un tecnico del cliente a lavorare sulle bacheche che scegli. I 15 giorni decorrono dal suo primo accesso. Per accedere occorre un abbonamento di base attivo o una prova attiva del piano di base.",
+      "terms": "Una postazione a pagamento costa {{amount}} al mese. La prova termina senza addebiti, a meno che non confermi la capacità a pagamento.",
+      "status": {
+        "active": "Attiva",
+        "pending": "In attesa del primo accesso",
+        "base_paused": "Abbonamento di base in pausa",
+        "expired": "Prova scaduta",
+        "paid": "Postazione a pagamento in uso",
+        "ended": "Prova terminata",
+        "checkout_pending": "In attesa del pagamento"
+      },
+      "purchaseAwaitingVerification": "Acquisto in attesa di verifica",
+      "conversionFailed": "Il passaggio a una postazione a pagamento non è stato completato. Verifica la capacità a pagamento disponibile o riprova a effettuare l’acquisto.",
+      "deadline": "La prova della postazione termina il {{date}}.",
+      "baseUntil": "L’accesso di base attuale termina il {{date}}.",
+      "openSetup": "Apri la configurazione della postazione del cliente",
+      "invite": "Invita il tecnico per 15 giorni",
+      "resend": "Invia nuovamente l’invito",
+      "replace": "Sostituisci il tecnico",
+      "cancelInvitation": "Annulla l’invito",
+      "restoreBase": "Ripristina l’accesso di base in Account",
+      "resumePurchase": "Riprendi l’acquisto",
+      "cancelConversion": "Annulla la conversione della postazione",
+      "spareSeatTerms": "Usa subito una postazione a pagamento disponibile. Il totale delle postazioni del gruppo rimane invariato.",
+      "confirmSpareSeat": "Conferma l’uso di una postazione a pagamento",
+      "keepSeat": "Mantieni questa postazione",
+      "refresh": "Aggiorna lo stato della prova",
+      "returnToTrial": "Torna alla prova della postazione del cliente",
+      "notice": {
+        "invitationSaved": "Invito salvato. Riprova a inviarlo qui sotto.",
+        "deliveryFailed": "Invio non riuscito. Puoi riprovare.",
+        "replacementSent": "Invito inviato al tecnico sostitutivo.",
+        "replacementSaved": "Tecnico sostitutivo salvato. Riprova a inviare l’invito."
+      },
+      "error": {
+        "boardChoicesFailed": "Impossibile caricare le bacheche disponibili.",
+        "actionFailed": "Impossibile completare l’operazione. Aggiorna lo stato della prova e riprova.",
+        "paymentFailed": "Impossibile completare il pagamento. Controlla lo stato della prova."
+      }
+    },
+    "seat": {
+      "blocker": {
+        "sponsorNotEligible": "Questo spazio di lavoro non ha un pool cogestito. Aggiungi postazioni cogestite per usarlo.",
+        "lapsed": "Il pool cogestito è scaduto. Ripristinalo prima di aggiungere postazioni.",
+        "capacity": "Il pool non ha più postazioni disponibili. Aggiungi postazioni al pool o liberane alcune da un altro cliente.",
+        "clientInactive": "Riattiva questo cliente prima di abilitare l’IT cogestita.",
+        "clientNotFound": "Questo cliente non è più disponibile.",
+        "hasArrangement": "Questo cliente ha già l’IT cogestita. Aggiorna per vederla."
+      },
+      "error": {
+        "operationConflict": "Questa richiesta è già stata inviata con dettagli diversi. Aggiorna e ricomincia.",
+        "invalidSeats": "Inserisci un numero intero di postazioni, almeno 1.",
+        "invalidInvitation": "Scegli un contatto da invitare.",
+        "contactNotFound": "Questo contatto non è più disponibile. Scegli un altro contatto.",
+        "contactWrongClient": "Questo contatto appartiene a un altro cliente. Scegli un contatto di questo cliente.",
+        "contactInactive": "Questo contatto è inattivo. Riattivalo prima.",
+        "contactNoEmail": "Questo contatto non ha un indirizzo email. Aggiungine uno al contatto prima.",
+        "contactHasSeat": "Questo contatto ha già un posto o un invito in sospeso.",
+        "emailInUse": "Questa email appartiene già a un account utente. Usa un altro indirizzo.",
+        "emailInvited": "Questa email ha già un invito in sospeso.",
+        "seatLimit": "Tutte le postazioni sono in uso. Aggiungi postazioni o ritira prima un invito.",
+        "poolLimit": "Il pool non ha così tante postazioni disponibili.",
+        "allocationConflict": "Le postazioni sono cambiate durante la modifica. Aggiorna e riprova.",
+        "board": "Una bacheca selezionata non è più disponibile. Aggiorna e scegli di nuovo.",
+        "project": "Un progetto selezionato non è più disponibile. Aggiorna e scegli di nuovo.",
+        "handoffUser": "La persona selezionata non è più disponibile. Scegli un’altra persona.",
+        "notPending": "Questo tecnico ha già accettato, quindi l’invito non può essere modificato.",
+        "arrangementGone": "Questo accordo di postazioni non è più attivo. Aggiorna per vederne lo stato.",
+        "generic": "Non ha funzionato. Aggiorna e riprova.",
+        "load": "Impossibile caricare le opzioni. Aggiorna e riprova.",
+        "submit": "La richiesta potrebbe non essere stata completata. Riprova; non verrà applicata due volte."
+      },
+      "purchase": {
+        "checking": "Controllo del pool…",
+        "review": "Il pool ha troppi pochi posti. Rivedi l'acquisto per assegnare {{count}} posti.",
+        "waiting": "In attesa del completamento dell'acquisto. I {{count}} posti verranno assegnati non appena il pool li avrà.",
+        "stalled": "I nuovi posti non sono ancora comparsi. Controlla di nuovo a breve; non ti verrà addebitato due volte.",
+        "failed": "Il pagamento non è andato a buon fine. Riprova lo stesso acquisto per assegnare {{count}} posti.",
+        "check": "Controlla di nuovo",
+        "cancel": "Annulla",
+        "error": "Impossibile controllare il pool. Aggiorna e riprova; nulla viene addebitato due volte."
+      },
+      "saved": "Salvato.",
+      "boards": {
+        "title": "Ambito delle bacheche",
+        "hint": "I tecnici lavorano i ticket di questo cliente sulle bacheche selezionate qui. Se non ne è selezionata nessuna, non vedono ticket.",
+        "save": "Salva ambito delle bacheche",
+        "none": "Non ci sono bacheche tra cui scegliere.",
+        "canCreate": "Può creare ticket"
+      },
+      "projects": {
+        "title": "Progetti condivisi",
+        "hint": "Progetti di questo cliente che i suoi tecnici possono aprire.",
+        "none": "Questo cliente non ha progetti da condividere.",
+        "save": "Salva progetti condivisi"
+      },
+      "handoff": {
+        "title": "Impostazioni predefinite del passaggio",
+        "assignee": "Assegna i ticket passati a te a",
+        "nobody": "Lascia non assegnato",
+        "save": "Salva impostazioni predefinite del passaggio"
+      },
+      "client": {
+        "seatArrangement": "Accordo di postazioni",
+        "summary": "Accordo di postazioni: {{used}} di {{count}} postazioni in uso"
+      },
+      "technicians": {
+        "sent": "Invito inviato.",
+        "notSent": "La postazione è riservata, ma l’email non è stata inviata. Invia di nuovo.",
+        "name": "Nome",
+        "email": "Email",
+        "status": "Stato",
+        "active": "Attivo",
+        "expired": "Invito scaduto",
+        "invited": "Invitato",
+        "resend": "Invia di nuovo",
+        "withdraw": "Ritira",
+        "title": "Tecnici",
+        "none": "Ancora nessun tecnico.",
+        "invite": "Invita tecnico",
+        "withdrawTitle": "Ritira invito",
+        "withdrawMessage": "Ritirare l’invito per {{email}}? La postazione torna a questo accordo.",
+        "withdrawn": "Invito ritirato."
+      },
+      "panel": {
+        "title": "Accordo di postazioni",
+        "usage": "{{used}} di {{count}} postazioni in uso",
+        "allocation": "Postazioni assegnate",
+        "changeSeats": "Modifica postazioni"
+      },
+      "access": {
+        "title": "Accesso e passaggio"
+      },
+      "setup": {
+        "seats": "Numero di postazioni",
+        "boards": "Bacheche nell’ambito",
+        "boardsHint": "I tecnici vedono i ticket della loro azienda solo su queste bacheche.",
+        "technician": "Primo tecnico",
+        "technicianHint": "Scegli un contatto di questo cliente. Viene invitato via email.",
+        "submit": "Abilita postazioni",
+        "title": "Accordo di postazioni"
+      },
+      "contact": {
+        "label": "Tecnico",
+        "placeholder": "Scegli un contatto",
+        "addedNoEmail": "{{name}} è stato aggiunto ma non ha un indirizzo email, quindi non può ancora essere invitato.",
+        "addedUnavailable": "{{name}} è stato aggiunto ma non può essere invitato.",
+        "unavailable": "Non elencati perché inattivi, senza email o con già un posto o un invito: {{count}}."
+      },
+      "chooser": {
+        "seat": "Postazione",
+        "seatHint": "I tecnici del cliente lavorano nel tuo PSA, limitati alla loro azienda.",
+        "workspace": "Spazio di lavoro",
+        "workspaceHint": "Il team IT del cliente ha un proprio service desk e inoltra in escalation a te.",
+        "description": "Scegli come il team IT di questo cliente lavora con te.",
+        "shape": "Formula cogestita",
+        "pool": "{{available}} di {{purchased}} postazioni disponibili. {{allocated}} assegnate."
+      },
+      "states": {
+        "active": "Attivo",
+        "ended": "Terminato"
+      }
+    },
     "portableExport": {
       "title": "Esporta area di lavoro",
       "description": "Scarica un archivio portabile e crittografato dei record e dei file della tua area di lavoro.",
@@ -474,6 +639,10 @@
     },
     "loading": "Caricamento della capacità di postazioni per i clienti…",
     "overview": {
+      "shape": "Formula",
+      "state": "Stato",
+      "seatsUsed": "Postazioni in uso",
+      "seatsAllocated": "Postazioni assegnate",
       "actions": "Azioni",
       "client": "Cliente",
       "empty": "Nessun cliente cogestito corrisponde a questa ricerca.",
@@ -567,6 +736,8 @@
     "proRequired": "Per sponsorizzare gli spazi di lavoro dei clienti è richiesto un abbonamento PSA Pro.",
     "loadError": "Impossibile caricare la capacità delle postazioni cliente. Riprova.",
     "purchaseError": "Impossibile completare l'acquisto delle postazioni. Puoi riprenderlo in sicurezza.",
+    "termsChanged": "Il prezzo è cambiato dopo la verifica. Controlla le condizioni aggiornate prima di confermare.",
+    "offerUnavailable": "L’acquisto di nuovi posti è temporaneamente non disponibile. Non è stato addebitato alcun importo.",
     "checkoutExpired": "Questo checkout è scaduto. Avvia un nuovo acquisto per continuare.",
     "grace": "Rinnova la licenza o risolvi la carenza di capacità entro il {{date}} per mantenere modificabili gli spazi di lavoro dei clienti.",
     "readOnly": "Il periodo di tolleranza è terminato il {{date}}. Ripristina la capacità in licenza per riprendere le modifiche agli spazi di lavoro dei clienti.",
@@ -574,7 +745,19 @@
     "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
     "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
     "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "buySeats": "Acquista posti in co-gestione",
+    "awaitingVerification_one": "Il tuo acquisto di {{count}} posto è in attesa della verifica del pagamento. Il posto comparirà qui dopo la conferma del pagamento.",
+    "awaitingVerification_other": "Il tuo acquisto di {{count}} posti è in attesa della verifica del pagamento. I posti compariranno qui dopo la conferma del pagamento.",
+    "refreshStatus": "Aggiorna stato",
+    "purchaseOnly": {
+      "intro": "Acquista qui un pool di posti in co-gestione. Dopo l'acquisto, assegna i posti ai clienti dalla scheda di ciascun cliente."
+    },
     "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "billingCustomerUnlinked": "Impossibile verificare un account di fatturazione Stripe per questo spazio di lavoro. Contatta l’assistenza per collegarlo.",
+    "proSubscriptionRequired": "Le postazioni in cogestione richiedono un abbonamento Pro in corso. Verifica il tuo abbonamento in Gestione account.",
+    "offerPaused": "Gli acquisti di nuovi posti sono sospesi. Contatta il tuo account manager per aggiornamenti.",
+    "offerMisconfigured": "L’offerta di posti co-gestiti non è configurata correttamente. Contatta il supporto.",
+    "offerTemporarilyUnavailable": "Il servizio di determinazione dei prezzi è temporaneamente non disponibile. Riprova tra poco.",
     "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
     "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",
     "purchaseUnavailable": "L'acquisto di co-gestione ospitata non è disponibile in questa distribuzione.",

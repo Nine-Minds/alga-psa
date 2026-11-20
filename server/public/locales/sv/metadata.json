@@ -220,6 +220,10 @@
       "title": "Tillgångar",
       "custody": {
         "title": "Utrustning i förvar"
+      },
+      "audits": {
+        "title": "Platsgranskningar",
+        "detailTitle": "Platsgranskning"
       }
     },
     "billing": {
@@ -448,7 +452,10 @@
       "detail": {
         "fallbackTitle": "Tjänsteförfrågan"
       },
-      "title": "Tjänsteförfrågningar"
+      "title": "Tjänsteförfrågningar",
+      "formBuilder": {
+        "title": "Formulärbyggare"
+      }
     },
     "settings": {
       "extensions": {

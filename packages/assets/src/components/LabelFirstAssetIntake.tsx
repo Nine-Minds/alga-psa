@@ -8,10 +8,12 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { createMinimalAssetForLabelIntake } from '../actions/assetNumberingActions';
+import { AssetTagScanLookup } from './AssetTagScanLookup';
 
 export default function LabelFirstAssetIntake() {
   const { t } = useTranslation('msp/assets');
   const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<'print' | 'resume'>('print');
   const [printing, setPrinting] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -35,12 +37,20 @@ export default function LabelFirstAssetIntake() {
   };
 
   return <>
-    <Button id="label-first-asset-intake-button" variant="outline" onClick={() => setIsOpen(true)}>
+    <Button id="label-first-asset-intake-button" variant="outline" onClick={() => { setMode('print'); setIsOpen(true); }}>
       {t('labelFirstIntake.start', { defaultValue: 'Label-first intake' })}
     </Button>
-    <Dialog id="label-first-asset-intake-dialog" isOpen={isOpen} onClose={() => setIsOpen(false)} title={t('labelFirstIntake.title', { defaultValue: 'Start label-first intake' })}>
+    <Dialog id="label-first-asset-intake-dialog" isOpen={isOpen} onClose={() => setIsOpen(false)} title={t('labelFirstIntake.start', { defaultValue: 'Label-first intake' })}>
       <DialogContent>
-        <div className="space-y-4">
+        <div className="mb-4 flex gap-2" role="group">
+          <Button id="label-first-intake-mode-print" variant={mode === 'print' ? 'default' : 'outline'} aria-pressed={mode === 'print'} onClick={() => setMode('print')}>
+            {t('labelFirstIntake.modePrint', { defaultValue: 'Print new labels' })}
+          </Button>
+          <Button id="label-first-intake-mode-resume" variant={mode === 'resume' ? 'default' : 'outline'} aria-pressed={mode === 'resume'} onClick={() => setMode('resume')}>
+            {t('labelFirstIntake.modeResume', { defaultValue: 'Resume from label' })}
+          </Button>
+        </div>
+        {mode === 'resume' ? <AssetTagScanLookup onOpened={() => setIsOpen(false)} /> : <div className="space-y-4">
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('labelFirstIntake.help', { defaultValue: 'Create a minimal durable asset record, then print two copies of its tag. Scan either copy later to finish this same record.' })}</p>
           {error && <p role="alert" className="text-sm text-[rgb(var(--badge-danger-text))]">{error}</p>}
           <div>
@@ -54,7 +64,7 @@ export default function LabelFirstAssetIntake() {
               {saving ? t('labelFirstIntake.creating', { defaultValue: 'Creating…' }) : t('labelFirstIntake.createPrint', { defaultValue: 'Create and print pair' })}
             </Button>
           </div>
-        </div>
+        </div>}
       </DialogContent>
     </Dialog>
     {assetId && <LabelPrintDialog isOpen={printing} onClose={() => setPrinting(false)} labelClass="asset-identity" ids={[assetId]} idPrefix="label-first-intake-print" />}

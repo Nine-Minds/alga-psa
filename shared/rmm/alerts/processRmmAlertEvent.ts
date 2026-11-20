@@ -179,8 +179,8 @@ async function processTriggered(
       };
     }
 
+    // No tenant here: Citus rejects an UPDATE that sets the distribution column.
     const baseRow = {
-      tenant: event.tenantId,
       integration_id: event.integrationId,
       external_alert_id: event.externalAlertId,
       external_device_id: event.externalDeviceId ?? null,
@@ -208,7 +208,7 @@ async function processTriggered(
         .update({ ...baseRow, ticket_id: null, resolved_at: null, suppressed_by_window_id: null });
     } else {
       const inserted = await db.table('rmm_alerts')
-        .insert({ ...baseRow, created_at: new Date().toISOString() })
+        .insert({ tenant: event.tenantId, ...baseRow, created_at: new Date().toISOString() })
         .returning(['alert_id']);
       alertId = inserted[0].alert_id;
     }
@@ -225,7 +225,7 @@ async function processTriggered(
     if (matchedWindow) {
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ status: 'suppressed', suppressed_by_window_id: matchedWindow.window_id });
+        .update({ status: 'suppressed', suppressed_by_window_id: matchedWindow.window_id, updated_at: new Date().toISOString() });
       return {
         outcome: 'suppressed',
         alertId,
@@ -243,7 +243,7 @@ async function processTriggered(
     if (evaluation.rule) {
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ matched_rule_id: evaluation.rule.rule_id });
+        .update({ matched_rule_id: evaluation.rule.rule_id, updated_at: new Date().toISOString() });
     }
 
     const actions = parseActions(evaluation.rule, warnings);
@@ -281,10 +281,10 @@ async function processTriggered(
       const occurrence = Number(sibling.occurrence_count ?? 1) + 1;
       await db.table('rmm_alerts')
         .where({ alert_id: alertId })
-        .update({ ticket_id: sibling.ticket_id });
+        .update({ ticket_id: sibling.ticket_id, updated_at: new Date().toISOString() });
       await db.table('rmm_alerts')
         .where({ alert_id: sibling.sibling_alert_id })
-        .update({ occurrence_count: occurrence, last_occurrence_at: event.occurredAt });
+        .update({ occurrence_count: occurrence, last_occurrence_at: event.occurredAt, updated_at: new Date().toISOString() });
       await addAlertInternalNote(
         trx,
         event.tenantId,
@@ -315,7 +315,7 @@ async function processTriggered(
     });
     await db.table('rmm_alerts')
       .where({ alert_id: alertId })
-      .update({ ticket_id: ticket.ticket_id, auto_ticket_created: true });
+      .update({ ticket_id: ticket.ticket_id, auto_ticket_created: true, updated_at: new Date().toISOString() });
 
     return {
       outcome: 'ticket_created',
@@ -390,7 +390,7 @@ async function processReset(
       if (!ticket) {
         await db.table('rmm_alerts')
           .where({ alert_id: existing.alert_id })
-          .update({ ticket_id: null });
+          .update({ ticket_id: null, updated_at: new Date().toISOString() });
         warnings.push(`Linked ticket ${existing.ticket_id} no longer exists; alert resolved without ticket update`);
         existing.ticket_id = null;
       }
@@ -452,7 +452,7 @@ async function processReset(
             }
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
-              .update({ status: 'auto_resolved' });
+              .update({ status: 'auto_resolved', updated_at: new Date().toISOString() });
             await addAlertInternalNote(
               trx,
               event.tenantId,

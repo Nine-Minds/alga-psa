@@ -1,5 +1,6 @@
 'use server'
 
+import { assertRecordCreateAllowed } from '@alga-psa/authorization/recordCreateAuthorization';
 import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -13,7 +14,7 @@ import type {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { isEnterprise, unparseCSV } from '@alga-psa/core';
+import { unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
@@ -27,7 +28,7 @@ import {
   isMspUser,
 } from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
-import { assertContactIsNotSharedMailbox, clearContactLinksBeforeDelete, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import { assertContactIsNotSharedMailbox, deleteContactCascade, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -54,6 +55,7 @@ import {
   parseSubmittedFields
 } from '@alga-psa/validation';
 import { collectReportContactIds } from '../../lib/managerSubtree';
+import { createClientScopeContext } from '@alga-psa/authorization/clientScopeAuthorization';
 import { attachContactLocations } from '../../lib/contactLocations';
 import {
   getContactLocationCount as readContactLocationCount,
@@ -315,6 +317,21 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
   return fallback;
 }
 
+/** The shared create gate for every MSP contact create: the candidate contact's client must be in the subject's scope. */
+async function assertContactCreateInScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: Parameters<typeof assertRecordCreateAllowed>[1]['user'],
+  clientId: string | null | undefined,
+): Promise<void> {
+  await assertRecordCreateAllowed(trx, {
+    tenant,
+    user,
+    resourceType: 'contact',
+    record: { clientId: clientId ?? null },
+  }, 'contact');
+}
+
 async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
   // Create and CSV import go through here, so the cross-client location refusal has to be named
   // on this path too — otherwise it reaches the caller as the generic "failed to create" fallback.
@@ -400,32 +417,6 @@ function normalizeOptionalText(value: string | null | undefined): string | undef
   return trimmedValue ? trimmedValue : undefined;
 }
 
-async function cleanupEntraReferencesBeforeContactDelete(
-  trx: Knex.Transaction,
-  tenantId: string,
-  contactId: string
-): Promise<void> {
-  if (!isEnterprise) {
-    return;
-  }
-
-  const queueTableExists = await trx('information_schema.tables')
-    .where({ table_schema: 'public', table_name: 'entra_contact_reconciliation_queue' })
-    .first('table_name');
-
-  if (!queueTableExists) {
-    return;
-  }
-
-  await tenantScopedTable(trx, 'entra_contact_reconciliation_queue', tenantId)
-    .where({ resolved_contact_id: contactId })
-    .update({
-      resolved_contact_id: null,
-      updated_at: trx.fn.now(),
-    });
-}
-
-
 export const getContactByContactNameId = withAuth(async (
   user,
   { tenant },
@@ -441,7 +432,12 @@ export const getContactByContactNameId = withAuth(async (
     await assertMspPermission(user, 'contact', 'read', `Permission denied: ${await contactText('errors.contact.permissions.readContacts')}`, db);
 
     // Fetch contact with client information
-    const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // An out-of-scope contact reads as not found: the in-scope check carries the same SQL predicate as the lists.
+      const scope = await createClientScopeContext(trx, tenant, user);
+      if (!(await scope.permits('contact', contactNameId))) return null;
+      return ContactModel.getContactById(contactNameId, tenant, trx);
+    });
     if (!contact) {
       return null;
     }
@@ -506,46 +502,9 @@ export const deleteContact = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('contact', contactId, db, tenant, async (trx, tenantId) => {
-      await deleteEntityTags(trx, contactId, 'contact');
-
-      // Clean up child records owned by the contact
-      await tenantScopedTable(trx, 'contact_phone_numbers', tenantId).where({ contact_name_id: contactId }).delete();
-      await tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId).where({ contact_name_id: contactId }).delete();
-      await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
-      await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
-
-      await clearContactLinksBeforeDelete(trx, tenantId, contactId);
-
-      // Unlink from any RMM org mapping using this contact as its default
-      // notification contact (no FK; Citus rejects ON DELETE SET NULL).
-      await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
-        .where({ default_contact_id: contactId })
-        .update({ default_contact_id: null });
-
-      const contactRecord = await tenantScopedTable(trx, 'contacts', tenantId)
-        .where({ contact_name_id: contactId })
-        .select('notes_document_id')
-        .first();
-
-      if (contactRecord?.notes_document_id) {
-        await tenantScopedTable(trx, 'document_block_content', tenantId)
-          .where({ document_id: contactRecord.notes_document_id })
-          .delete();
-
-        await tenantScopedTable(trx, 'document_associations', tenantId)
-          .where({ document_id: contactRecord.notes_document_id })
-          .delete();
-
-        await tenantScopedTable(trx, 'documents', tenantId)
-          .where({ document_id: contactRecord.notes_document_id })
-          .delete();
-      }
-
-      await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, contactId);
-
-      const deleted = await tenantScopedTable(trx, 'contacts', tenantId)
-        .where({ contact_name_id: contactId })
-        .delete();
+      const deleted = await deleteContactCascade(trx, tenantId, contactId, {
+        deleteTags: (tagTrx, id) => deleteEntityTags(tagTrx, id, 'contact'),
+      });
 
       if (!deleted || deleted === 0) {
         throw new Error(await contactText('errors.contact.deleteRecordFailed'));
@@ -662,6 +621,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const q = scopedDb.table('contacts as c');
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'c')).apply(q);
       scopedDb.tenantJoin(q, 'users as u', 'u.contact_id', 'c.contact_name_id', {
         type: 'left',
         on(join) {
@@ -739,6 +699,7 @@ export const addContact = withAuth(async (
     // Use the shared ContactModel to create the contact.
     // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertContactCreateInScope(trx, tenant, user, createInput.client_id);
       const contact = await ContactModel.createContact(createInput, tenant, trx);
       // Same transaction as the contact: a cross-client location rolls the contact back too.
       const locations = contactData.locations === undefined
@@ -1605,6 +1566,7 @@ export const importContactsFromCSV = withAuth(async (
                 contactData.primary_location_name,
               );
 
+            await assertContactCreateInScope(trx, tenant, user, contactToCreate.client_id);
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
             if (resolvedLocations !== undefined) {
               await replaceContactLocations(
@@ -1801,9 +1763,10 @@ export const getContactByEmail = withAuth(async (
     );
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContact = await tenantScopedTable(trx, 'contacts', tenant)
-        .where({ email: email.toLowerCase(), client_id: clientId })
-        .first<{ contact_name_id: string }>();
+      const existingContactQuery = tenantScopedTable(trx, 'contacts', tenant)
+        .where({ email: email.toLowerCase(), client_id: clientId });
+      (await (await createClientScopeContext(trx, tenant, user)).narrowing('contact', 'contacts')).apply(existingContactQuery);
+      const existingContact = await existingContactQuery.first<{ contact_name_id: string }>();
 
       if (!existingContact) {
         return null;
@@ -1878,6 +1841,7 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertContactCreateInScope(trx, tenant, user, clientId);
       const created = await ContactModel.createContact({
         full_name: structural.data.full_name,
         email: normalizedEmail,
@@ -2337,6 +2301,49 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
       return expected;
     }
     console.error('[contactActions.getClientPortalVisibilityGroupById]', error);
+    throw error;
+  }
+});
+
+/**
+ * The contact's currently stored visibility-group assignment. The portal tab reloads this
+ * instead of trusting the server-component `contact` prop, which keeps its original value
+ * for the lifetime of the page and would otherwise redisplay a stale group after a change.
+ */
+export const getClientPortalVisibilityGroupAssignmentForContact = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<{ group_id: string | null } | VisibilityGroupActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      // Same in-scope check getContactByContactNameId runs before a single-contact read:
+      // an out-of-scope contact reads as not found, never leaking which rows exist.
+      const scope = await createClientScopeContext(trx, tenant, user);
+      if (!(await scope.permits('contact', contactId))) {
+        throw await contactError('errors.contact.notFound');
+      }
+
+      const contact = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
+        .first('portal_visibility_group_id') as { portal_visibility_group_id: string | null } | undefined;
+
+      if (!contact) {
+        throw await contactError('errors.contact.notFound');
+      }
+
+      return { group_id: contact.portal_visibility_group_id ?? null };
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('[contactActions.getClientPortalVisibilityGroupAssignmentForContact]', error);
     throw error;
   }
 });

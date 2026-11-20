@@ -288,7 +288,7 @@ spec:
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
           - name: SERVER_ACTIONS_BODY_LIMIT
-            value: "{{ .Values.server.serverActionsBodyLimit | default "200mb" }}"
+            value: "{{ .Values.server.serverActionsBodyLimit | default "26mb" }}"
           - name: SEARCH_INDEX_LIVE
             value: {{ ternary "true" "false" (.Values.server.searchIndexLive | default false) | quote }}
           - name: RATE_LIMIT_ENFORCE
@@ -504,7 +504,7 @@ spec:
           - name: STORAGE_LOCAL_BASE_PATH
             value: "{{ .Values.config.storage.providers.local.base_path | default "/data/files" }}"
           - name: STORAGE_LOCAL_MAX_FILE_SIZE
-            value: "{{ .Values.config.storage.providers.local.max_file_size | default 104857600 }}"
+            value: "{{ .Values.config.storage.providers.local.max_file_size | default 524288000 }}"
           - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
             value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "*/*" }}"
           - name: STORAGE_LOCAL_RETENTION_DAYS
@@ -538,7 +538,7 @@ spec:
             value: "{{ .Values.config.storage.providers.s3.endpoint }}"
           {{- end }}
           - name: STORAGE_S3_MAX_FILE_SIZE
-            value: "{{ .Values.config.storage.providers.s3.max_file_size | default "104857600" }}"
+            value: "{{ .Values.config.storage.providers.s3.max_file_size | default 524288000 }}"
           - name: STORAGE_S3_ALLOWED_MIME_TYPES
             value: "{{ join "," .Values.config.storage.providers.s3.allowed_mime_types | default "*/*" }}"
           - name: STORAGE_S3_RETENTION_DAYS
@@ -679,6 +679,10 @@ spec:
           # Public base URL for links in emails and client-side code
           - name: NEXT_PUBLIC_BASE_URL
             value: "{{ $publicAppUrl }}"
+          {{- if .Values.publicWebhookBaseUrl }}
+          - name: PUBLIC_WEBHOOK_BASE_URL
+            value: "{{ .Values.publicWebhookBaseUrl }}"
+          {{- end }}
           # App URL for Stripe redirects (can differ from host for blue/green testing)
           - name: NEXT_PUBLIC_APP_URL
             value: "{{ $publicAppUrl }}"
@@ -985,6 +989,15 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: ALGA_LICENSE_SERVICE_SECRET
+          {{- end }}
+          # HMAC key for signing in-app support requests to nm-store's
+          # /api/support/intake (hosted only; read via getAppSecret).
+          {{- if and .Values.secrets .Values.secrets.VENDOR_SUPPORT_INTAKE_SECRET }}
+          - name: VENDOR_SUPPORT_INTAKE_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: VENDOR_SUPPORT_INTAKE_SECRET
           {{- end }}
 
           # Non-sensitive Stripe configuration

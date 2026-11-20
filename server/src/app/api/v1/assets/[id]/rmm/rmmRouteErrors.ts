@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { ASSET_RMM_ERROR_RESPONSE_SOURCE } from '@alga-psa/authorization/recordProjection';
+import { reprojectUnderDecision, type AuthorizedProjection } from 'server/src/lib/api/controllers/authorizationKernel';
 
 type RmmRouteError = {
   message: string;
@@ -90,6 +92,15 @@ export function rmmRouteErrorFrom(error: unknown): RmmRouteError | null {
   return expected?.[1] ?? null;
 }
 
-export function rmmErrorResponse(error: RmmRouteError): NextResponse {
-  return NextResponse.json({ error: error.message }, { status: error.status });
+export function rmmErrorResponse(
+  error: RmmRouteError,
+  assetProjection?: AuthorizedProjection<Record<string, any>>,
+): NextResponse {
+  const projected = assetProjection
+    ? reprojectUnderDecision(assetProjection, { error: error.message }, ASSET_RMM_ERROR_RESPONSE_SOURCE)
+    : null;
+  const message = assetProjection
+    ? projected?.error ?? 'The RMM operation could not be completed.'
+    : error.message;
+  return NextResponse.json({ error: message }, { status: error.status });
 }

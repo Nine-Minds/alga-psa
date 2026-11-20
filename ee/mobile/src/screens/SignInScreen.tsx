@@ -104,7 +104,7 @@ export function SignInScreen() {
     } finally {
       setCapabilitiesLoading(false);
     }
-  }, [baseUrl]);
+  }, [baseUrl, t]);
 
   useEffect(() => {
     void fetchCapabilities();

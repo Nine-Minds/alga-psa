@@ -1,6 +1,6 @@
 export * from './rule';
 export * from './dates';
-export { listOccurrenceDates } from './listOccurrenceDates';
+export { listOccurrenceDates, listNextOccurrenceDates } from './listOccurrenceDates';
 export {
   adjustForNonBusinessDays,
   MAX_BUSINESS_DAY_WALK,

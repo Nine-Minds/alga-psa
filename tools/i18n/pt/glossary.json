@@ -2607,6 +2607,7 @@
       "ID",
       "JSON",
       "KB",
+      "Keycloak",
       "Keycloak / OpenID Connect",
       "OK",
       "PDF",
@@ -2745,7 +2746,10 @@
       "status",
       "{{actor}} • {{eventType}}",
       "Natural",
-      "Layout"
+      "Layout",
+      "MacBook Air 13\"",
+      "Dell Latitude 5450",
+      "Lenovo ThinkPad T14"
     ],
     "caseInsensitive": [
       "api",
