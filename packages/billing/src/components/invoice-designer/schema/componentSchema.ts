@@ -1458,6 +1458,14 @@ const UNPAGINATED_COMPONENT_TYPES: ReadonlySet<DesignerComponentType> = new Set(
  * Pagination belongs on every block, not only on containers: authors reach for
  * it on the block they want on its own page — a line-items table as readily as
  * a section — and wrapping that block in a container first is not an answer.
+ *
+ * It is deliberately not filtered by block type. What decides whether a forced
+ * break is honoured is the PARENT's layout, not the child's kind: a block in a
+ * column stack fragments, a block among a row's items has its break swallowed
+ * (measured in real Chromium — see pageBreaks.pdf.test.ts). A label in a
+ * column can open a page; the same label inside a totals row cannot. Offering
+ * the toggle by type would therefore both hide it where it works and show it
+ * where it does not, so every block is offered it and the parent decides.
  */
 const withPaginationPanel = (
   schemas: Record<DesignerComponentType, DesignerComponentSchema>

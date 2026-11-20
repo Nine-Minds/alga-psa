@@ -119,7 +119,7 @@ describe('template print behaviour', () => {
 
     expect(html).toMatch(/id="break-1"[^>]*style="[^"]*break-after:\s*page/);
     expect(html).toMatch(/id="signature-page"[^>]*style="[^"]*break-before:\s*page/);
-    // Both forced-break dividers are addressable for print rules.
+    // Both forced-break dividers are marked as what they are in the output.
     expect(html).toMatch(/id="break-1"[^>]*class="[^"]*ast-page-break/);
     expect(html).toMatch(/id="trailing-break"[^>]*class="[^"]*ast-page-break/);
     // The trailing one has nothing after it, so honouring it would print a blank

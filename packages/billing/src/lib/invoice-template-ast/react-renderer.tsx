@@ -1007,8 +1007,11 @@ const renderNode = (
       );
     }
     case 'divider': {
-      // The designer's Page Break block exports as a rule-less divider whose only
-      // job is the forced break; mark it so print rules can address it.
+      // The designer's Page Break block exports as a rule-less divider whose only job is
+      // the forced break, so it is marked as one in the output — the same way every node
+      // carries its `ast-node-type-*` class. No stylesheet selects it today: the one rule
+      // it needs, dropping a break that ends the document, depends on document order
+      // rather than on a selector, so it is applied inline just below.
       const forcesPageBreak = isRecord(node.style?.inline) && node.style.inline.breakAfter === 'page';
       const dividerStyle =
         forcesPageBreak && ctx.trailingNodeIds.has(node.id)
