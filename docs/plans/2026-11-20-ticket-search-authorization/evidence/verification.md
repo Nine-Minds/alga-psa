@@ -1,17 +1,25 @@
 # Search authorization repair verification
 
-Tested implementation revision: `1850eefecb` (`1850eefecb` is the exact committed tree tested below). Governing specification: [PRD](../PRD.md).
+Governing specification: [PRD](../PRD.md). Tested implementation revision: `e3ad618d24d244e7e4161dfc7a1b7e67de75385e`.
 
-## Completed checks
+## Completed checks at the tested revision
 
-- Workspace package typechecks: `npx tsc --noEmit -p packages/tickets/tsconfig.json` and `npx tsc --noEmit -p packages/search/tsconfig.json` — passed at `1850eefecb`.
-- Package build targets: `npx nx run search:build` and `npx nx run tickets:build` — passed at `1850eefecb`. The supported tickets target is Nx; the direct workspace build script is not used.
-- Affected Vitest suites: search authorization regression, search actions, API search controller, ACL, query, app search, PostgreSQL ranking cursor, five Bento-read authz tests, two sibling-record authz tests, and ticket record authorization — 10 files, 98 tests passed at `1850eefecb`.
-- PostgreSQL ranking cursor suite: 2 tests passed at `1850eefecb`. Its isolated randomized fixture verifies 24 indexed tickets under unrestricted policy, and 5 of 24 under a restrictive selected-client policy. A 19-ticket denied prefix precedes readable tickets; exact totals and unique stable pages are asserted until the cursor terminates.
-- Seven-read regression coverage: five Bento protected reads plus both sibling reads passed in the affected suites at `1850eefecb`.
+- `npx tsc --noEmit -p packages/tickets/tsconfig.json` — passed.
+- `npx tsc --noEmit -p packages/search/tsconfig.json` — passed.
+- `npx nx run search:build` — passed.
+- `npx nx run tickets:build` — passed. The supported tickets target is Nx; the direct workspace build script was not used. Nx reported dependency build outputs matched cache.
+- Affected Vitest suites: search authorization regression, search actions, API search controller, ACL, query/ranking, app search, PostgreSQL ranking cursor, production-schema search authorization, production-path benchmark, five Bento-read authorization tests, two sibling-read authorization tests, and ticket record authorization — 11 files, 98 tests passed.
+- PostgreSQL fixtures use actual `tickets.ticket_id` and `comments.comment_id` UUID columns with text `app_search_index.object_id`. Coverage exercises guarded UUID comparisons (including malformed mixed-search IDs), exact counts, restrictive and unrestricted policies, live/deleted/missing/foreign-tenant comment records, requester audience, scheduled/deleted publication states, mixed result types, genuinely compiler-unsupported constraint fallback, fail-closed policy resolution, and evaluator parity.
+- The PostgreSQL cursor suite follows five compiled readable tickets through three public pages to the final ticket and cursor termination. The public maximum test follows 205 mixed matches through pages of 100, 100 and 5, with unique identities, exact totals/groups, and termination.
+- The seven-read suites cover all five Bento reads and both sibling reads.
 
-The application server was not started. No application server build service was requested.
+The production-path benchmark is recorded separately in [benchmark.md](benchmark.md) and is pinned to baseline `5cdc72b0d450943c6b92b0f7fb856920f89e44e7` and revised `e3ad618d24d244e7e4161dfc7a1b7e67de75385e`.
 
-## Scope still open
+The application server was not started. No fresh browser walkthrough or production handoff was performed. The November 3 live-smoke recording in the external guide remains historical evidence for the baseline only.
 
-The plan checklist deliberately leaves T002 and T004 false. The current PostgreSQL search regression covers ticket SQL policy pagination, but does not yet compare production compiled and record decisions for comment audience/tenant cases, mixed types, unsupported policies and resolver failure in one real PostgreSQL fixture. The benchmark below uses the same visibility-evaluator stub on both revisions to isolate candidate scan/query work; it does not include the baseline's per-record authorization resolver SQL or prove end-to-end equivalence of all comment policies. No fresh browser walkthrough or production handoff was performed.
+## Pre-fix behavioral reproductions
+
+Both regressions were run against pre-fix implementation revision `7b20448d1e490793c31fcc1048c8493b0e7b9d1e` in an isolated detached worktree:
+
+- The production-schema authorization test failed while running compiled counts with PostgreSQL `operator does not exist: uuid = text` for the ticket/comment correlation. The same suite passes on revised `e3ad618d24d244e7e4161dfc7a1b7e67de75385e`.
+- The supplied `/tmp/pr4133-lead-review-max-page.test.ts` reproduction returned 100 results and total 1,500 but failed because `nextCursor` was `undefined`. The revised PostgreSQL test verifies three terminating mixed-result pages of 100, 100 and 5.
