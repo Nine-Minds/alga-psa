@@ -134,14 +134,13 @@ describe('useRichTextUploadSession', () => {
     expect(upload).toHaveBeenLastCalledWith(expect.any(FormData), { userId: 'user-1', projectTaskId: 'task-2' });
   });
 
-  it('keeps overlapping outgoing and current task uploads isolated for later cancellation', async () => {
+  it.each([false, true])('isolates overlapping uploads when the editor returns to its original task: %s', async (returnToOriginalTask) => {
     let finishA!: (result: unknown) => void;
     let finishB!: (result: unknown) => void;
     const discard = vi.fn(async ({ documentIds }: { scope: { entityId: string }; documentIds: string[] }) => ({ deletedDocumentIds: documentIds, failures: [] }));
-    const upload = vi.fn((_formData: FormData, params: { projectTaskId?: string }) => new Promise(resolve => {
-      if (params.projectTaskId === 'task-A') finishA = resolve;
-      else finishB = resolve;
-    }));
+    const upload = vi.fn()
+      .mockImplementationOnce(() => new Promise(resolve => { finishA = resolve; }))
+      .mockImplementationOnce(() => new Promise(resolve => { finishB = resolve; }));
     const { result, rerender, unmount } = renderHook(({ taskId }) => useRichTextUploadSession({
       componentLabel: 'scope-race-test', commentAttachments: true,
       scope: { entityType: 'project_task', entityId: taskId }, userId: 'user-1',
@@ -152,6 +151,9 @@ describe('useRichTextUploadSession', () => {
     let uploadA!: Promise<string>;
     await act(async () => { uploadA = result.current.uploadFile(new File(['A'], 'a.png', { type: 'image/png' })); });
     rerender({ taskId: 'task-B' });
+    const currentTask = returnToOriginalTask ? 'task-A' : 'task-B';
+    if (returnToOriginalTask) rerender({ taskId: currentTask });
+    expect(result.current.isUploading).toBe(false);
     let uploadB!: Promise<string>;
     await act(async () => { uploadB = result.current.uploadFile(new File(['B'], 'b.png', { type: 'image/png' })); });
     finishB({ success: true, document: { document_id: 'doc-B', file_id: '00000000-0000-4000-8000-000000000032', document_name: 'b.png', mime_type: 'image/png' } });
@@ -165,7 +167,7 @@ describe('useRichTextUploadSession', () => {
 
     await act(async () => { await result.current.requestDiscard(); });
     expect(discard).toHaveBeenLastCalledWith({
-      scope: { entityType: 'project_task', entityId: 'task-B' }, documentIds: ['doc-B'],
+      scope: { entityType: 'project_task', entityId: currentTask }, documentIds: ['doc-B'],
     });
     unmount();
   });

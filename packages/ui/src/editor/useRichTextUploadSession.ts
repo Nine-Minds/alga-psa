@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import {
@@ -60,45 +60,25 @@ export function useRichTextUploadSession({
   translate = (_key, options) => String(options?.defaultValue ?? _key),
   toastApi = toast,
 }: UseRichTextUploadSessionOptions) {
-  const [draftClipboardImages, setDraftClipboardImages] = useState<RichTextDraftClipboardImage[]>(
-    []
-  );
   const [showDraftCancelDialog, setShowDraftCancelDialog] = useState(false);
   const [isDeletingDraftImages, setIsDeletingDraftImages] = useState(false);
-  const [pendingUploadsByScope, setPendingUploadsByScope] = useState<Record<string, number>>({});
-  const scopeKey = scope ? `${scope.entityType}:${scope.entityId}` : 'none';
-  const clipboardUploadSequenceRef = useRef(0);
-  const trackedByScopeRef = useRef(new Map<string, RichTextDraftClipboardImage[]>());
-  const pendingByScopeRef = useRef(new Map<string, Set<Promise<string>>>());
-  const cancellingScopesRef = useRef(new Set<string>());
-  const scopeRef = useRef(scope);
-  const scopeKeyRef = useRef(scopeKey);
-  scopeRef.current = scope;
-  scopeKeyRef.current = scopeKey;
-  const pendingUploads = pendingUploadsByScope[scopeKey] ?? 0;
-
-  const getTracked = (key: string) => trackedByScopeRef.current.get(key) ?? [];
-  const setTracked = (key: string, uploads: RichTextDraftClipboardImage[]) => {
-    trackedByScopeRef.current.set(key, uploads);
-    if (scopeKeyRef.current === key) setDraftClipboardImages([...uploads]);
-  };
-  const addPending = (key: string, amount: number) => setPendingUploadsByScope(current => {
-    const next = { ...current, [key]: Math.max(0, (current[key] ?? 0) + amount) };
-    if (next[key] === 0) delete next[key];
-    return next;
-  });
-  const pendingFor = (key: string) => pendingByScopeRef.current.get(key) ?? new Set<Promise<string>>();
-
-  useEffect(() => {
-    setDraftClipboardImages([...getTracked(scopeKey)]);
-  }, [scopeKey]);
-
+  // Each visit owns its pending promises and draft IDs, even when a task is reopened
+  // while its previous editor is still waiting for an upload to finish.
+  const session = useMemo(() => ({
+    uploads: [] as RichTextDraftClipboardImage[],
+    pending: new Set<Promise<string>>(),
+    cancelling: false,
+    sequence: 0,
+  }), [scope?.entityType, scope?.entityId]);
+  const [, refreshSession] = useReducer((n: number) => n + 1, 0);
+  const draftClipboardImages = session.uploads;
+  const pendingUploads = session.pending.size;
   const resetDraftTracking = useCallback(() => {
-    trackedByScopeRef.current.delete(scopeKey);
-    cancellingScopesRef.current.delete(scopeKey);
-    setDraftClipboardImages([]);
-    clipboardUploadSequenceRef.current = 0;
-  }, [scopeKey]);
+    session.uploads = [];
+    session.cancelling = false;
+    session.sequence = 0;
+    refreshSession();
+  }, [session]);
 
   const refreshDocuments = useCallback(async () => {
     if (!onDocumentsChanged) {
@@ -117,7 +97,8 @@ export function useRichTextUploadSession({
   }, [componentLabel, onDocumentsChanged, scope, userId]);
 
   const performUpload = useCallback(
-    async (file: File, uploadScope: RichTextUploadScope | null | undefined, uploadScopeKey: string): Promise<string> => {
+    async (file: File): Promise<string> => {
+      const uploadScope = scope;
       if (!uploadScope) {
         throw new Error('Upload scope is required for clipboard image upload.');
       }
@@ -137,7 +118,7 @@ export function useRichTextUploadSession({
         throw new Error(validation.error);
       }
 
-      const sequence = (clipboardUploadSequenceRef.current += 1);
+      const sequence = (session.sequence += 1);
       const timestamp = new Date();
       const renamedFile = !file.type.startsWith('image/') ? file : renameClipboardImageForUpload({
         file,
@@ -201,11 +182,15 @@ export function useRichTextUploadSession({
         : resolveDefaultDocumentViewUrl(uploadedDocument);
 
       if (trackDraftUploads || commentAttachments) {
-        const tracked = getTracked(uploadScopeKey);
+        const tracked = session.uploads;
         if (!tracked.some(item => item.documentId === uploadedDocument.document_id)) {
-          tracked.push({ documentId: uploadedDocument.document_id,
-            fileId: uploadedDocument.file_id || '', name: uploadedDocument.document_name || fallbackName, url: viewUrl });
-          setTracked(uploadScopeKey, tracked);
+          session.uploads = [...tracked, {
+            documentId: uploadedDocument.document_id,
+            fileId: uploadedDocument.file_id || '',
+            name: uploadedDocument.document_name || fallbackName,
+            url: viewUrl,
+          }];
+          refreshSession();
         }
       }
 
@@ -220,7 +205,7 @@ export function useRichTextUploadSession({
 
       await refreshDocuments();
 
-      if (cancellingScopesRef.current.has(uploadScopeKey)) throw new DOMException('Attachment upload canceled', 'AbortError');
+      if (session.cancelling) throw new DOMException('Attachment upload canceled', 'AbortError');
       return viewUrl;
     },
     [
@@ -228,6 +213,7 @@ export function useRichTextUploadSession({
       commentAttachments,
       refreshDocuments,
       scope,
+      session,
       toastApi,
       trackDraftUploads,
       uploadDocumentAction,
@@ -236,19 +222,22 @@ export function useRichTextUploadSession({
     ]
   );
 
-  const performUploadRef = useRef(performUpload);
-  performUploadRef.current = performUpload;
-
-  const uploadFile = useCallback(async (file: File) => {
-    addPending(scopeKey, 1);
-    if (cancellingScopesRef.current.has(scopeKey)) { addPending(scopeKey, -1); throw new Error('Draft cancellation is in progress'); }
-    const pending = performUploadRef.current(file, scope, scopeKey);
-    const pendingForScope = pendingFor(scopeKey);
-    pendingForScope.add(pending);
-    pendingByScopeRef.current.set(scopeKey, pendingForScope);
-    try { return await pending; }
-    finally { pendingForScope.delete(pending); addPending(scopeKey, -1); }
-  }, [scope, scopeKey]);
+  const uploadInCurrentSession = async (file: File) => {
+    if (session.cancelling) throw new Error('Draft cancellation is in progress');
+    const pending = performUpload(file);
+    session.pending.add(pending);
+    refreshSession();
+    try {
+      return await pending;
+    } finally {
+      session.pending.delete(pending);
+      refreshSession();
+    }
+  };
+  // BlockNote retains its initial callback. Read the current user and session at paste time.
+  const uploadRef = useRef(uploadInCurrentSession);
+  uploadRef.current = uploadInCurrentSession;
+  const uploadFile = useCallback((file: File) => uploadRef.current(file), []);
 
   const cleanupUploads = useCallback(async (uploads: RichTextDraftClipboardImage[], targetScope = scope) => {
     if (!uploads.length || !targetScope) return { deletedDocumentIds: [], failures: [] };
@@ -264,66 +253,47 @@ export function useRichTextUploadSession({
           { scope: targetScope, documentIds: uploads.map(image => image.documentId) }
         );
   }, [commentAttachments, deleteDraftUploadsAction, discardCommentAttachmentDraftsAction, scope]);
-  const cleanupUploadsRef = useRef(cleanupUploads);
-  cleanupUploadsRef.current = cleanupUploads;
 
   const reconcileDraftUploads = useCallback(async (savedContent: string) => {
     const referencedIds = new Set(Array.from(
       savedContent.matchAll(/(?:\/api\/documents\/(?:view|download)\/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi),
       match => match[1].toLowerCase()
     ));
-    const tracked = getTracked(scopeKey);
+    const tracked = session.uploads;
     const committed = tracked.filter(image => referencedIds.has(image.fileId.toLowerCase()) || referencedIds.has(image.documentId.toLowerCase()));
     const abandoned = tracked.filter(image => !committed.includes(image));
+    const completed = new Set(committed.map(image => image.documentId));
     try {
       const result = await cleanupUploads(abandoned);
-      const removed = new Set(result.deletedDocumentIds);
-      const failed = abandoned.filter(image => !removed.has(image.documentId));
-      setTracked(scopeKey, [...committed, ...failed]);
+      result.deletedDocumentIds.forEach(id => completed.add(id));
       if (result.failures.length) toastApi.error('Some unused pasted images could not be cleaned up.');
     } catch (error) {
       console.error(`[${componentLabel}] Failed reconciling saved draft images`, error);
       toastApi.error('Some unused pasted images could not be cleaned up.');
-      setTracked(scopeKey, [...committed, ...abandoned]);
     }
-    // The referenced rows were promoted atomically by comment save; they are no longer drafts.
-    setTracked(scopeKey, getTracked(scopeKey).filter(image => !committed.includes(image)));
-    clipboardUploadSequenceRef.current = 0;
-  }, [cleanupUploads, componentLabel, scopeKey, toastApi]);
+    session.uploads = session.uploads.filter(image => !completed.has(image.documentId));
+    session.sequence = 0;
+    refreshSession();
+  }, [cleanupUploads, componentLabel, session, toastApi]);
 
   // A parent can dismiss the editor or change tasks without going through its cancel button.
-  // Wait for in-flight uploads to register, then remove only this scope's still-owned drafts.
   useEffect(() => {
-    const cleanupScope = scope;
-    cancellingScopesRef.current.delete(scopeKey);
+    session.cancelling = false;
     return () => {
-      cancellingScopesRef.current.add(scopeKey);
-      void Promise.allSettled([...pendingFor(scopeKey)]).then(async () => {
-        const uploads = [...getTracked(scopeKey)];
-        if (!uploads.length) {
-          if (scopeKeyRef.current !== scopeKey) cancellingScopesRef.current.delete(scopeKey);
-          return;
-        }
+      session.cancelling = true;
+      void Promise.allSettled([...session.pending]).then(async () => {
+        if (!session.cancelling || !session.uploads.length) return;
         try {
-          const result = await cleanupUploadsRef.current(uploads, cleanupScope);
+          const result = await cleanupUploads(session.uploads, scope);
           if (result.failures.length) console.error(`[${componentLabel}] Failed cleaning drafts after editor dismissal`, result.failures);
         } catch (error) {
           console.error(`[${componentLabel}] Failed cleaning drafts after editor dismissal`, error);
-        } finally {
-          const dismissedIds = new Set(uploads.map(image => image.documentId));
-          const currentScope = scopeRef.current;
-          if (currentScope?.entityType !== cleanupScope?.entityType || currentScope?.entityId !== cleanupScope?.entityId) {
-            setTracked(scopeKey, getTracked(scopeKey).filter(image => !dismissedIds.has(image.documentId)));
-            cancellingScopesRef.current.delete(scopeKey);
-          } else {
-            trackedByScopeRef.current.delete(scopeKey);
-          }
         }
       });
     };
-  // The callback ref avoids treating an inline server-action adapter as a scope change.
+  // A new session is created when the scope identity changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope?.entityId, scope?.entityType]);
+  }, [session]);
 
   const requestDiscard = useCallback(() => {
     if (trackDraftUploads && draftClipboardImages.length > 0) {
@@ -347,11 +317,11 @@ export function useRichTextUploadSession({
 
   const deleteTrackedDraftClipboardImages = useCallback(async () => {
     if (commentAttachments) {
-      cancellingScopesRef.current.add(scopeKey);
+      session.cancelling = true;
       setIsDeletingDraftImages(true);
-      await Promise.allSettled([...pendingFor(scopeKey)]);
+      await Promise.allSettled([...session.pending]);
     } else if (pendingUploads > 0) return;
-    const tracked = getTracked(scopeKey);
+    const tracked = session.uploads;
     if (!scope) {
       toastApi.error('Upload scope is missing for draft image deletion.');
       return;
@@ -407,7 +377,7 @@ export function useRichTextUploadSession({
       console.error(`[${componentLabel}] Failed deleting draft clipboard images:`, error);
       toastApi.error('Failed to delete pasted images.');
     } finally {
-      cancellingScopesRef.current.delete(scopeKey);
+      session.cancelling = false;
       setIsDeletingDraftImages(false);
     }
   }, [
@@ -422,7 +392,7 @@ export function useRichTextUploadSession({
     refreshDocuments,
     resetDraftTracking,
     scope,
-    scopeKey,
+    session,
     toastApi,
   ]);
 

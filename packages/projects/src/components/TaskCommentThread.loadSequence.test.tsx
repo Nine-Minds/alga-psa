@@ -37,7 +37,7 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', async (importOriginal) => ({
 
 vi.mock('@alga-psa/ui/editor', () => ({
   hasEditorContent: (blocks: any[]) => blocks.some(block => block.type === 'image' || block.content?.some((item: any) => item.type !== 'text' || item.text?.trim())),
-  useRichTextUploadSession: () => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), requestDiscard: vi.fn(), isUploading: false, isDeletingDraftImages: false }),
+  useRichTextUploadSession: () => ({ uploadFile: vi.fn(), resetDraftTracking: vi.fn(), reconcileDraftUploads: vi.fn(), requestDiscard: vi.fn(), isUploading: false, isDeletingDraftImages: false }),
   DEFAULT_BLOCK: [{ type: 'paragraph', content: [{ type: 'text', text: '', styles: {} }] }],
   RichTextViewer: () => <div data-automation-id="rich-text-viewer" />,
   // A stateful stand-in for the rich-text editor: its text lives in this instance's

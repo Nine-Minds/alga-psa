@@ -282,6 +282,11 @@ export default function TextEditor({
     }
 
     const trimmed = trimTrailingPlaceholderBlocks(splitEmbeddedNewlineBlocks(blocks));
+    // BlockNote adds a caret paragraph after a media insertion. Restore it on
+    // reopen so a user can paste again after a final, non-editable media block.
+    if (editable && MEDIA_BLOCK_TYPES.has(trimmed[trimmed.length - 1]?.type ?? '')) {
+      return [...trimmed, ...DEFAULT_BLOCK];
+    }
     return trimmed.length > 0 ? trimmed : DEFAULT_BLOCK;
   })();
 

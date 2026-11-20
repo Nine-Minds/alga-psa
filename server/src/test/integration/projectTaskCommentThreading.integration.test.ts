@@ -57,7 +57,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
-import { claimProjectTaskCommentDraftsForDiscard } from '../../../../packages/projects/src/actions/projectTaskCommentAttachmentDraftActions';
+import { discardProjectTaskCommentAttachmentDrafts } from '../../../../packages/projects/src/actions/projectTaskCommentAttachmentDraftActions';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 
 const blockNote = (text: string) => JSON.stringify([
@@ -96,7 +96,7 @@ describe('project task comment threading model', () => {
     expect(context).toBeTruthy();
     dbRef.knex = knex;
     dbRef.tenant = context.tenant;
-    userRef.user = { user_id: context.user_id, user_type: 'internal' };
+    userRef.user = await scopedDb().table('users').where({ user_id: context.user_id }).first();
   });
 
   afterAll(async () => {
@@ -680,24 +680,69 @@ describe('project task comment threading model', () => {
       return { documentId, fileId };
     };
 
+    const save = (fileId: string) => createTaskComment({
+      taskId: context.task_id,
+      note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${fileId}` }, children: [] }]),
+    });
+    const discard = (documentId: string) =>
+      discardProjectTaskCommentAttachmentDrafts({ projectTaskId: context.task_id, documentIds: [documentId] });
+
+    // Keep the winner's transaction open until Postgres sees the rival waiting on it.
+    async function contend<T, R>(first: () => Promise<T>, second: () => Promise<R>) {
+      let rival!: Promise<R>;
+      const winner = await knex.transaction(async trx => {
+        const { rows: [{ pid }] } = await trx.raw('SELECT pg_backend_pid() AS pid');
+        let result: T;
+        dbRef.knex = trx;
+        try {
+          result = await first();
+        } finally {
+          dbRef.knex = knex;
+        }
+        rival = second();
+        await vi.waitFor(async () => {
+          const { rows: [{ waiting }] } = await trx.raw(
+            'SELECT EXISTS (SELECT FROM pg_stat_activity WHERE ? = ANY(pg_blocking_pids(pid))) AS waiting',
+            [pid],
+          );
+          expect(waiting).toBe(true);
+        }, { timeout: 5000 });
+        return result;
+      });
+      return [winner, await rival] as const;
+    }
+
     try {
       const saveWinner = await makeDraft();
-      const savedCommentId = await createTaskComment({
-        taskId: context.task_id,
-        note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${saveWinner.fileId}` }, children: [] }]),
-      });
+      const [savedCommentId, retained] = await contend(
+        () => save(saveWinner.fileId),
+        () => discard(saveWinner.documentId),
+      );
+      if (typeof savedCommentId !== 'string') throw new Error('Expected a saved comment');
       fixtures.find(row => row.documentId === saveWinner.documentId)!.commentId = savedCommentId;
-      expect(await claimProjectTaskCommentDraftsForDiscard(knex, dbRef.tenant, context.task_id, actorId, [saveWinner.documentId]))
-        .toMatchObject({ claimed: [], failures: [] });
+      expect(retained).toEqual({ deletedDocumentIds: [], failures: [] });
       expect(await db.table('comment_attachment_drafts').where({ document_id: saveWinner.documentId }).first('state', 'comment_id'))
         .toMatchObject({ state: 'attached', comment_id: savedCommentId });
 
       const discardWinner = await makeDraft();
-      expect(await claimProjectTaskCommentDraftsForDiscard(knex, dbRef.tenant, context.task_id, actorId, [discardWinner.documentId]))
-        .toMatchObject({ claimed: [{ document_id: discardWinner.documentId }], failures: [] });
-      await db.table('document_associations').where({ document_id: discardWinner.documentId }).delete();
-      await db.table('documents').where({ document_id: discardWinner.documentId }).delete();
-      await db.table('external_files').where({ file_id: discardWinner.fileId }).delete();
+      const withdrawn = { deletedDocumentIds: [discardWinner.documentId], failures: [] };
+      const [discarded] = await contend(
+        () => discard(discardWinner.documentId),
+        () => expect(save(discardWinner.fileId)).rejects.toThrow(/expired, discarded/),
+      );
+      expect(discarded).toEqual(withdrawn);
+      expect(await discard(discardWinner.documentId)).toEqual(withdrawn);
+      const reader = await db.table('users').where({ user_id: actorId }).first();
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant, reader, discardWinner.fileId)).toBeNull();
+
+      // Reclaim storage through the same worker that handles an abandoned upload.
+      const { cleanupCommentAttachmentDrafts } = await import('@/lib/jobs/handlers/cleanupCommentAttachmentDrafts');
+      const removeFile = vi.fn().mockResolvedValue(undefined);
+      await cleanupCommentAttachmentDrafts(knex, dbRef.tenant, removeFile);
+      expect(removeFile).toHaveBeenCalledWith(discardWinner.fileId, actorId, expect.anything());
+      expect(await db.table('documents').where({ document_id: discardWinner.documentId }).first()).toBeUndefined();
+      expect(await getAuthorizedDocumentByFileId(knex, dbRef.tenant, reader, saveWinner.fileId))
+        .toMatchObject({ document_id: saveWinner.documentId });
       await expect(createTaskComment({
         taskId: context.task_id,
         note: JSON.stringify([{ type: 'image', props: { url: `/api/documents/view/${discardWinner.fileId}` }, children: [] }]),

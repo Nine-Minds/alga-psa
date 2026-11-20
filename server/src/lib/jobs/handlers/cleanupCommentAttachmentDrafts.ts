@@ -69,11 +69,11 @@ export async function cleanupCommentAttachmentDrafts(conn: Knex, tenant: string,
             if (ref.table_name === 'document_associations') continue;
             if (await scoped.table(ref.table_name).where(ref.column_name, row.document_id).first()) return preserveSharedContent();
           }
-          const ids = [...new Set([document.file_id, document.preview_file_id].filter(Boolean))] as string[];
+          const ids = [...new Set([document.file_id, document.preview_file_id, document.thumbnail_file_id].filter(Boolean))] as string[];
           for (const fileId of ids) {
             const file = await scoped.table('external_files').where({ file_id: fileId }).forUpdate().first();
             if (file && await scoped.table('external_files').where({ storage_path: file.storage_path }).whereNot('file_id', fileId).whereNull('deleted_at').first()) return preserveSharedContent();
-            if (await scoped.table('documents').whereNot('document_id', row.document_id).where(q => q.where('file_id', fileId).orWhere('preview_file_id', fileId)).first()) return preserveSharedContent();
+            if (await scoped.table('documents').whereNot('document_id', row.document_id).where(q => q.where('file_id', fileId).orWhere('preview_file_id', fileId).orWhere('thumbnail_file_id', fileId)).first()) return preserveSharedContent();
             for (const ref of fileRefs) {
               const query = scoped.table(ref.table_name).where(ref.column_name, fileId);
               if (ref.table_name === 'documents') query.whereNot('document_id', row.document_id);
@@ -94,7 +94,7 @@ export async function cleanupCommentAttachmentDrafts(conn: Knex, tenant: string,
             if (!file || file.deleted_at) return;
             if (await scoped.table('external_files').where({ storage_path: file.storage_path })
               .whereNot('file_id', fileId).whereNull('deleted_at').first()) return;
-            if (await scoped.table('documents').where(q => q.where('file_id', fileId).orWhere('preview_file_id', fileId)).first()) return;
+            if (await scoped.table('documents').where(q => q.where('file_id', fileId).orWhere('preview_file_id', fileId).orWhere('thumbnail_file_id', fileId)).first()) return;
             for (const ref of fileRefs) {
               if (await scoped.table(ref.table_name).where(ref.column_name, fileId).first()) return;
             }

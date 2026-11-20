@@ -95,12 +95,13 @@ describe('comment recovery schedule discovery (PostgreSQL)', () => {
 
   it('discovers and physically cleans an expired Project Task draft without ticket activity', async () => {
     const tenant = randomUUID(), user = randomUUID(), task = randomUUID();
-    const file = randomUUID(), document = randomUUID();
+    const file = randomUUID(), thumbnail = randomUUID(), document = randomUUID();
     await trx('tenants').insert({ tenant, client_name: 'Task draft cleanup discovery', email: 'task-cleanup@example.test', product_code: 'psa' });
     const table = (name: string) => dbModule.tenantDb(trx, tenant).table(name);
     await table('users').insert({ tenant, user_id: user, username: user, email: 'task-cleanup@example.test', hashed_password: 'unused', user_type: 'internal', is_inactive: false });
     await table('external_files').insert({ tenant, file_id: file, file_name: 'expired.png', original_name: 'expired.png', mime_type: 'image/png', file_size: 8, storage_path: `task-cleanup/${file}`, uploaded_by_id: user });
-    await table('documents').insert({ tenant, document_id: document, document_name: 'expired.png', file_id: file, mime_type: 'image/png', file_size: 8, user_id: user, created_by: user, is_client_visible: true });
+    await table('external_files').insert({ tenant, file_id: thumbnail, file_name: 'thumb.png', original_name: 'thumb.png', mime_type: 'image/png', file_size: 4, storage_path: `task-cleanup/${thumbnail}`, uploaded_by_id: user });
+    await table('documents').insert({ tenant, document_id: document, document_name: 'expired.png', file_id: file, thumbnail_file_id: thumbnail, mime_type: 'image/png', file_size: 8, user_id: user, created_by: user, is_client_visible: true });
     await table('document_associations').insert({ tenant, document_id: document, entity_type: 'project_task', entity_id: task });
     await table('comment_attachment_drafts').insert({ tenant, entity_type: 'project_task', entity_id: task, document_id: document, file_id: file, created_by: user, state: 'draft', expires_at: new Date(0) });
     const remove = vi.spyOn(StorageService, 'deleteFile').mockImplementation(async () => undefined as any);
@@ -110,6 +111,7 @@ describe('comment recovery schedule discovery (PostgreSQL)', () => {
     await reconcileScheduledCommentPublications(false, tenant);
 
     expect(remove).toHaveBeenCalledWith(file, user, expect.anything());
+    expect(remove).toHaveBeenCalledWith(thumbnail, user, expect.anything());
     expect(await table('documents').where({ document_id: document }).first()).toBeUndefined();
     expect((await table('comment_attachment_drafts').where({ document_id: document }).first()).cleanup_completed_at).toBeTruthy();
     expect(await table('ticket_comment_attachments').where({ tenant })).toHaveLength(0);
