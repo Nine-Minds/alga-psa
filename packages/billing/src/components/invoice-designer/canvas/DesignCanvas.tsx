@@ -1272,14 +1272,14 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
 	      return {
 	        content: (
 	          <div
-	            className="w-full h-full flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
+	            className="w-full h-full flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-text-400))] dark:text-[rgb(var(--color-text-500))]"
 	            data-automation-id="designer-canvas-page-break"
 	          >
-	            <span aria-hidden className="h-0 flex-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
+	            <span aria-hidden className={clsx('h-0 flex-1 border-t border-dashed', INVOICE_BORDER_COLOR_CLASS)} />
 	            <span className="whitespace-nowrap">
 	              {t?.('designer.canvas.pageBreakLabel', { defaultValue: 'Page break' }) ?? 'Page break'}
 	            </span>
-	            <span aria-hidden className="h-0 flex-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
+	            <span aria-hidden className={clsx('h-0 flex-1 border-t border-dashed', INVOICE_BORDER_COLOR_CLASS)} />
 	          </div>
 	        ),
 	      };
