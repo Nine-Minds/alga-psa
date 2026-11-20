@@ -692,6 +692,18 @@ const coerceBreakBeforeAfter = (value: unknown): DesignerNodeStyle['breakAfter']
   return undefined;
 };
 
+/** The fragmentation hints of an inline style, with every other declaration dropped. */
+const pickBreakInlineStyles = (
+  inline: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => {
+  if (!inline) return undefined;
+  const picked: Record<string, unknown> = {};
+  for (const key of ['breakBefore', 'breakAfter', 'breakInside'] as const) {
+    if (inline[key] !== undefined) picked[key] = inline[key];
+  }
+  return Object.keys(picked).length > 0 ? picked : undefined;
+};
+
 const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
   if (
     value === 'flex-start' ||
@@ -1962,8 +1974,15 @@ export const importTemplateAstToWorkspace = (
         depth: number
       ): WorkspaceNode => {
         const def = getDefinition(designerType);
-        const size = parseSizeFromStyle(inputNode);
-        const inline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        // A Page Break is written out as a zero-height, rule-less divider (see the export
+        // above) so nothing of it reaches the page. Those marks are the writer's, not the
+        // author's: handed back as editable style, `height: 0` collapses the canvas marker
+        // band to a hairline on reopen. So the block reopens as the block the palette
+        // inserts — the forced break, at the palette's own size.
+        const isPageBreakNode = designerType === 'page-break';
+        const size = isPageBreakNode ? {} : parseSizeFromStyle(inputNode);
+        const rawInline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
+        const inline = isPageBreakNode ? pickBreakInlineStyles(rawInline) : rawInline;
         const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
         const preferredDirection = inputNode.type === 'stack' ? inputNode.direction : undefined;
         const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline, preferredDirection);
